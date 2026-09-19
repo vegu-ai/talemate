@@ -17,7 +17,6 @@ export const CHARACTER_KNOWLEDGE_MODES = [
         cons: [
             'A present character sees the full reader prose, private thoughts included',
             'Leaks are yours to catch and fix by hand',
-            'The reminder and limit switches are approximate',
         ],
         pickIf: 'Your model is small or older, the story has few secrets, or the scene is mostly you and one character.',
     },
@@ -35,7 +34,7 @@ export const CHARACTER_KNOWLEDGE_MODES = [
             'One extra analytical request per passage (slower, costs more)',
             'Needs a strong, reliable model, or analyses fail and pause generation',
             'Cannot be turned off once the story has history',
-            'No Unlearn or Never Learn for knowledge a character already has',
+            'Cannot revoke knowledge a character already perceived',
         ],
         pickIf: 'Your model is current and reliable, the story depends on who knows what, and several characters are active who know different things.',
         modelGuidanceUrl: MODEL_EXPECTATIONS_DOCS_URL,

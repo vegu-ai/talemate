@@ -198,7 +198,6 @@ def analysis_evidence_fingerprint(
         "disclosures": [
             item.model_dump(mode="json") for item in read.disclosures.values()
         ],
-        "facts": scene.world_state.model_dump(include={"facts"}, mode="json"),
         "description": scene.description,
         "intention": scene.intent_state.model_dump(mode="json"),
     }

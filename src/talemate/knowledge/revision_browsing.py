@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from talemate.knowledge.perspective_models import content_digest
 
 if TYPE_CHECKING:
-    from talemate.knowledge.schema import Fact, KnowledgeEdge
+    from talemate.knowledge.schema import KnowledgeEdge
     from talemate.tale_mate import Scene
 
 
@@ -86,39 +86,6 @@ def stale_archive_ids(scene: "Scene") -> set[str]:
     return affected
 
 
-def fact_current(scene: "Scene", fact: "Fact") -> bool:
-    independent = (
-        fact.text_edited
-        or fact.link_edited
-        or any(
-            edge.target == fact.id
-            and edge.source == "manual"
-            and edge.kind != "unlearn"
-            for edge in scene.world_state.knowledge
-        )
-    )
-    if independent:
-        return True
-    stale = stale_archive_ids(scene)
-    if fact.contributions:
-        # the contributions carry their own revision tracking
-        summary_sources = {
-            item.source.id
-            for item in fact.contributions
-            if item.source.kind == "summary"
-        }
-        return not summary_sources or bool(summary_sources - stale)
-    if fact.archive_id in stale:
-        return False
-    return revision_source_current(scene, fact.message_id, fact.message_digest)
-
-
-def current_facts(scene: "Scene") -> list["Fact"]:
-    return [
-        fact for fact in scene.world_state.facts.values() if fact_current(scene, fact)
-    ]
-
-
 def edge_current(scene: "Scene", edge: "KnowledgeEdge") -> bool:
     return revision_source_current(scene, edge.message_id)
 
@@ -136,10 +103,6 @@ def has_stale_revisions(scene: "Scene") -> bool:
 
 def memory_document_current(scene: "Scene", document) -> bool:
     meta = getattr(document, "meta", {}) or {}
-    if meta.get("typ") == "fact":
-        identity = meta.get("knowledge_id", getattr(document, "id", None))
-        fact = scene.world_state.facts.get(identity)
-        return fact is not None and fact_current(scene, fact)
     if meta.get("knowledge_kind") == "message":
         try:
             identity = int(meta.get("knowledge_id"))

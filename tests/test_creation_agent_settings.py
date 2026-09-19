@@ -137,17 +137,19 @@ async def test_reused_project_preserves_prior_file_and_unrelated_overrides(
     prior_path = Path(scene.save_dir) / "agent-settings" / "agent-settings.json"
     prior = SceneAgentSettings(filepath=prior_path)
     prior.set_value("narrator", "unrelated", "keep", 42)
-    prior.set_value("conversation", "character_knowledge", "ledger", False)
+    prior.set_value("conversation", "character_knowledge", "memory_pass", False)
     await prior.write_to_file()
     prior_bytes = prior_path.read_bytes()
     scene.agent_overrides = prior
     settings = CreationAgentSettings(
-        snapshot(PRESETS["legacy"]["balanced"]), lambda: True
+        snapshot(PRESETS["legacy"]["minimal"]), lambda: True
     )
     settings.install(scene)
     await settings.persist(scene)
     assert scene.agent_overrides.get_value("narrator", "unrelated", "keep") == 42
-    assert prior.get_value("conversation", "character_knowledge", "ledger") is False
+    assert (
+        prior.get_value("conversation", "character_knowledge", "memory_pass") is False
+    )
     assert prior_path.read_bytes() == prior_bytes
     assert scene.agent_overrides.filepath != prior_path
 
@@ -170,7 +172,7 @@ async def test_invalid_snapshot_is_atomic(creation_env, invalid):
     before = globals_snapshot()
     with pytest.raises(ValueError):
         CreationAgentSettings(
-            {**snapshot(PRESETS["legacy"]["balanced"]), **invalid}, lambda: True
+            {**snapshot(PRESETS["legacy"]["minimal"]), **invalid}, lambda: True
         )
     assert creation_env.agent_overrides is None
     assert globals_snapshot() == before
@@ -178,7 +180,7 @@ async def test_invalid_snapshot_is_atomic(creation_env, invalid):
 
 async def test_pending_settings_cannot_be_written_by_another_caller(creation_env):
     settings = CreationAgentSettings(
-        snapshot(PRESETS["legacy"]["balanced"]), lambda: True
+        snapshot(PRESETS["legacy"]["minimal"]), lambda: True
     )
     settings.install(creation_env)
     with pytest.raises(OSError, match="creation is still in progress"):
@@ -188,7 +190,7 @@ async def test_pending_settings_cannot_be_written_by_another_caller(creation_env
 async def test_superseded_creation_never_persists(creation_env):
     current = True
     settings = CreationAgentSettings(
-        snapshot(PRESETS["legacy"]["balanced"]), lambda: current
+        snapshot(PRESETS["legacy"]["minimal"]), lambda: current
     )
     settings.install(creation_env)
     current = False
@@ -208,7 +210,7 @@ async def test_failed_or_cancelled_persistence_removes_only_owned_file(
     before = globals_snapshot()
     current = True
     settings = CreationAgentSettings(
-        snapshot(PRESETS["legacy"]["balanced"]), lambda: current
+        snapshot(PRESETS["legacy"]["minimal"]), lambda: current
     )
     settings.install(creation_env)
 
@@ -235,7 +237,7 @@ async def test_new_story_installs_before_activation_and_preserves_unsaved_lifecy
 ):
     import talemate.load as loader
 
-    values = PRESETS[mode]["balanced"]
+    values = PRESETS[mode]["thorough"]
     observed = []
 
     async def player(scene, **kwargs):
@@ -284,11 +286,11 @@ async def test_real_card_loader_pins_before_player_setup_and_saves_link(
     if reused:
         default = SceneAgentSettings(filepath=default_path)
         default.set_value("conversation", "generation_override", "length", 384)
-        default.set_value("conversation", "character_knowledge", "ledger", False)
+        default.set_value("conversation", "character_knowledge", "memory_pass", False)
         await default.write_to_file()
         prior_bytes = default_path.read_bytes()
     assert creation_env.agent_overrides is None
-    values = PRESETS[mode]["balanced"]
+    values = PRESETS[mode]["thorough"]
     observed = []
     original = card._setup_player_character_from_options
 
@@ -369,7 +371,7 @@ async def test_failed_new_story_does_not_persist_creation_settings(
             creation_env,
             "$NEW_SCENE$",
             scene_initialization=SceneInitialization(
-                agent_settings=snapshot(PRESETS["legacy"]["balanced"])
+                agent_settings=snapshot(PRESETS["legacy"]["minimal"])
             ),
         )
     assert not list(Path(creation_env.save_dir).rglob("creation-*.json"))

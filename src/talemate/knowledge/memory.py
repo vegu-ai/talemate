@@ -6,7 +6,6 @@ from talemate.exceptions import GenerationCancelled
 from talemate.knowledge.reinforcements import entry_binding, reinforcement_entry_context
 
 from talemate.knowledge.bucket import visibility_key
-from talemate.knowledge.facts import fact_memory_document
 from talemate.knowledge.formatting import format_message_view
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspectives import (
@@ -14,7 +13,7 @@ from talemate.knowledge.perspectives import (
     select_character_view,
 )
 from talemate.knowledge.schema import EntryVisibility
-from talemate.knowledge.supported_facts import character_fact, source_visible
+from talemate.knowledge.summaries import source_visible
 
 
 log = structlog.get_logger(__name__)
@@ -199,22 +198,6 @@ def audience_documents(scene, *, groups=None, read=None):
             },
             tuple(name for name in disclosure.audience if name in scene.character_data),
         )
-    for fact in scene.world_state.facts.values():
-        group = ("fact", fact.id, 0)
-        if not wanted(group):
-            continue
-        names = {name for item in fact.contributions for name in item.audience}
-        for name in sorted(names & scene.character_data.keys()):
-            projected = character_fact(scene, fact, name, read=read, cache=coverage)
-            if projected is not None:
-                document = fact_memory_document(projected)
-                add(
-                    group,
-                    ("fact", fact.id),
-                    document["text"],
-                    document["meta"],
-                    (name,),
-                )
     return documents
 
 

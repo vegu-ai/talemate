@@ -44,7 +44,7 @@ def departures(scene: Scene) -> dict:
 
 
 def append_transition(scene: Scene, transition: CharacterTransitionMessage) -> None:
-    # Context scaffolding must not dispatch passage analysis or fact extraction.
+    # Context scaffolding must not dispatch passage analysis.
     scene.history.append(transition)
     bind_message_source(scene, transition)
     scene.saved = False

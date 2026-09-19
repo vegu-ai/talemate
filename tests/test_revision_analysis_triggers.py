@@ -306,8 +306,6 @@ async def test_automatic_baseline_return_restores_results_without_analyzing_orig
 async def test_effective_eligibility_does_not_enable_perceptions(flow, mode):
     t = flow
     t.scene.knowledge_eligibility = mode
-    t.summarizer.write_config("archive", "extract_facts", False)
-    get_agent("conversation").write_config("character_knowledge", "ledger", False)
     message = NarratorMessage(message="The brass key is here.")
     await t.scene.push_history(message)
     assert t.request.await_count == int(mode == "perception")

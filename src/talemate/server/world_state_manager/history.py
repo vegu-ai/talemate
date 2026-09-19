@@ -8,7 +8,6 @@ from talemate.history import (
     history_with_relative_time,
     rebuild_history,
     HistoryEntry,
-    ArchiveEntry,
     update_history_entry,
     regenerate_history_entry,
     collect_source_entries,
@@ -19,8 +18,6 @@ from talemate.history import (
     compute_layer_stats,
     collect_time_passages,
 )
-from talemate.knowledge.facts import facts_for_entry
-from talemate.knowledge.chronology import fact_display
 from talemate.knowledge.presence import layer_entry_presence
 from talemate.knowledge.schema import EntryVisibility
 from talemate.scene_message import TimePassageMessage
@@ -93,8 +90,6 @@ class HistoryMixin:
             self.scene.archived_history, self.scene.ts, layer=0
         )
         summarizer = get_agent("summarizer")
-        for row, stored in zip(history, self.scene.archived_history):
-            self._complete_base_row(row, stored)
 
         layered_history = []
 
@@ -184,8 +179,6 @@ class HistoryMixin:
         entry = await regenerate_history_entry(self.scene, payload.entry)
         log.debug("regenerate_history_entry (done)", entry=entry)
         row = entry.model_dump()
-        if entry.layer == 0:
-            self._complete_base_row(row, self.scene.archived_history[entry.index])
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
@@ -194,16 +187,6 @@ class HistoryMixin:
             }
         )
         await self.signal_operation_done()
-
-    def _complete_base_row(self, row: dict, stored: dict) -> dict:
-        row["facts"] = [
-            fact_display(self.scene, fact)
-            for fact in facts_for_entry(self.scene, row["id"])
-        ]
-        row["facts_unavailable_reason"] = get_agent(
-            "summarizer"
-        ).fact_source_unavailable_reason(self.scene, ArchiveEntry(**stored))
-        return row
 
     async def handle_inspect_history_entry(self, data):
         """

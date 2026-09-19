@@ -51,19 +51,7 @@ describe('explicit character disclosures', () => {
 });
 
 
-it('shows a failed extraction only for the selected character', () => {
-    const { vm } = model();
-    const message = { type: 'world_state_manager', action: 'disclosure_indexed', data: { name: 'Cara', facts_status: 'failed' } };
-    vm.handleMessage(message);
-    expect(vm.factsWarning).toBeNull();
-    message.data.name = 'Bob';
-    vm.handleMessage(message);
-    expect(vm.factsWarning).toContain('The information is saved');
-    expect(vm.factsWarning).toContain('Knowledge in the user guide');
-    message.data.facts_status = 'ok';
-    vm.handleMessage(message);
-    expect(vm.factsWarning).toBeNull();
-});
+
 
 it('clears busy for its rejected request even if the character name was missing', () => {
     const { vm } = model();

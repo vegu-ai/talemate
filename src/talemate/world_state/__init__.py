@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any, Union
 
 import structlog
-from pydantic import BaseModel, Field, PrivateAttr, model_serializer
+from pydantic import BaseModel, Field, PrivateAttr, model_serializer, model_validator
 
 import talemate.instance as instance
 from talemate.emit import emit
@@ -12,9 +12,7 @@ import talemate.game.focal.schema as focal_schema
 from talemate.game.schema import ConditionGroup
 from talemate.knowledge.schema import (
     EntryVisibility,
-    Fact,
     KnowledgeEdge,
-    Topic,
     ReinforcementEntry,
 )
 from talemate.knowledge.mode import character_knowledge_enabled
@@ -283,11 +281,27 @@ class WorldState(BaseModel):
     # grant / revoke edges: the only per-character knowledge state that is stored
     knowledge: list[KnowledgeEdge] = Field(default_factory=list)
 
-    facts: dict[str, Fact] = Field(default_factory=dict)
-    fact_counter: int = 0
-    # topics over the facts (part E); the fact count at the last clustering
-    topics: dict[str, Topic] = Field(default_factory=dict)
-    topics_fact_count: int = 0
+    @model_validator(mode="before")
+    @classmethod
+    def discard_obsolete_fact_data(cls, data):
+        """Development saves may carry the removed learned-facts store."""
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        fact_ids = set(data.pop("facts", {}) or {})
+        for key in ("fact_counter", "topics", "topics_fact_count"):
+            data.pop(key, None)
+        edges = []
+        for edge in data.get("knowledge", []):
+            raw = edge.model_dump() if isinstance(edge, KnowledgeEdge) else edge
+            if (
+                raw.get("kind") != "unlearn"
+                and raw.get("target") not in fact_ids
+                and not raw.get("anchor")
+            ):
+                edges.append(edge)
+        data["knowledge"] = edges
+        return data
 
     @property
     def agent(self):
@@ -624,7 +638,7 @@ class WorldState(BaseModel):
         # and remove them
 
         reinforcement = self.reinforce[idx]
-        # knowledge.memory reaches this module through instance/facts.
+        # Avoid the knowledge.memory / instance import cycle.
         from talemate.knowledge.memory import invalidate_memory_audiences
 
         direct_source = reinforcement.perspective_source

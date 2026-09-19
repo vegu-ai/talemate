@@ -6,32 +6,17 @@ import json
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
-from types import SimpleNamespace
 from weakref import WeakKeyDictionary
 
 import structlog
 
 from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
-from talemate.knowledge.facts import (
-    _drop_restatements,
-    _promote_restatement,
-    prune_summary_facts,
-)
-from talemate.knowledge.message_facts import (
-    binding_state,
-    detach_message_fact,
-    rebind_message_facts,
-    remove_message_facts,
-)
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspective_models import content_digest
 from talemate.knowledge.revision_browsing import (
     affected_archive_ids,
-    defer_revision_work,
 )
-from talemate.knowledge.schema import Fact, KnowledgeEdge
-from talemate.knowledge.topics import refresh_topics
 from talemate.scene_message import CharacterMessage, RevisionIndexRepair
 
 _active_transaction = ContextVar("revision_refresh_transaction", default=None)
@@ -44,23 +29,13 @@ log = structlog.get_logger(__name__)
 @dataclass(frozen=True)
 class RevisionOperations:
     perceptions: bool = False
-    extract_facts: bool = False
-    learn_facts: bool = False
 
     @property
     def any(self) -> bool:
-        return self.perceptions or self.extract_facts or self.learn_facts
+        return self.perceptions
 
     def names(self) -> tuple[str, ...]:
-        return tuple(
-            name
-            for name, enabled in (
-                ("perceptions", self.perceptions),
-                ("facts", self.extract_facts),
-                ("learning", self.learn_facts),
-            )
-            if enabled
-        )
+        return ("perceptions",) if self.perceptions else ()
 
 
 def revision_operations(scene, message) -> RevisionOperations:
@@ -87,23 +62,7 @@ def revision_operations(scene, message) -> RevisionOperations:
             perceptions=eligible_passage(message)
             and bool(relevant_audiences(scene, message))
         )
-    summarizer = get_agent("summarizer")
-    conversation = get_agent("conversation")
-    # facts come from archived spans only: a line outside every span has
-    # nothing to refresh
-    extraction = bool(
-        summarizer.enabled
-        and summarizer.resolve_enabled("archive")
-        and summarizer.resolve_config("archive", "extract_facts")
-        and affected_archive_ids(scene, message)
-    )
-    learning = bool(
-        isinstance(message, CharacterMessage)
-        and conversation.enabled
-        and conversation.resolve_enabled("character_knowledge")
-        and conversation.resolve_config("character_knowledge", "ledger")
-    )
-    return RevisionOperations(extract_facts=extraction, learn_facts=learning)
+    return RevisionOperations()
 
 
 def _identity(scene, message, operations: RevisionOperations) -> str:
@@ -119,116 +78,38 @@ def _identity(scene, message, operations: RevisionOperations) -> str:
     return hashlib.sha256(json.dumps(values, sort_keys=True).encode()).hexdigest()
 
 
-def _phase_identity(scene, message, phase: str, recent=None, *, journal=None) -> str:
+def _phase_identity(scene, message) -> str:
+    from talemate.agents.summarize.perceptions import (
+        perception_context,
+        perception_intention,
+    )
+
     summarizer = get_agent("summarizer")
-    state = message.revision_state
+    context = perception_context(scene, message)
+    context["passage"]["provenance"].pop("revision", None)
     values = {
         "message": message.id,
         "digest": message.revision_digest(),
-        "recent": (
-            recent if recent is not None else _historical_context(scene, message)[0]
-        ),
         "eligibility": scene.knowledge_eligibility,
-    }
-    if phase == "perceptions":
-        from talemate.agents.summarize.perceptions import (
-            perception_context,
-            perception_intention,
-        )
-
-        context = perception_context(scene, message)
-        context["passage"]["provenance"].pop("revision", None)
-        values["context"] = context
-        values["intention"] = perception_intention(scene)
-        values["settings"] = {
+        "context": context,
+        "intention": perception_intention(scene),
+        "settings": {
             "enabled": summarizer.resolve_enabled("perceptions"),
             "repair": summarizer.resolve_config("perceptions", "automatic_repair"),
-        }
-    else:
-        journal = (
-            journal
-            if journal is not None
-            else (state.refresh_journal if state else None)
-        )
-        facts = _normalized_fact_inputs(scene, message, journal, phase)
-        if phase == "extract":
-            stripped = {}
-            for identity, fact in facts.items():
-                fact = _without_message_fact_support(fact, message)
-                if fact is not None:
-                    stripped[identity] = fact
-            facts = stripped
-        values["facts"] = facts
-    if phase == "extract":
-        values["settings"] = {
-            "method": summarizer.resolve_config("archive", "method"),
-            "instructions": summarizer.resolve_config("archive", "instructions"),
-            "dedupe": summarizer.resolve_config("archive", "fact_dedupe_distance"),
-        }
-        if _affected_history_entries(scene, message):
-            values["archive_inputs"] = _archive_phase_inputs(
-                scene, message, phase, journal=journal
-            )
-    elif phase == "learn":
-        conversation = get_agent("conversation")
-        values["settings"] = {
-            "ledger": conversation.resolve_config("character_knowledge", "ledger"),
-            "absence_window": conversation.resolve_config(
-                "character_knowledge", "absence_window"
-            ),
-        }
+        },
+    }
     return hashlib.sha256(
         json.dumps(values, sort_keys=True, default=str).encode()
     ).hexdigest()
 
 
-def _receipts_current(
-    scene,
-    message,
-    operations: RevisionOperations,
-    *,
-    state=None,
-    journal=None,
-) -> bool:
+def _receipts_current(scene, message, operations: RevisionOperations, *, state=None):
     state = state or message.revision_state
-    if state is None:
-        return False
-    expected = (
-        ("perceptions", "refresh:perceptions", operations.perceptions),
-        ("extract", "refresh:extract", operations.extract_facts),
-        ("learn", "refresh:learn", operations.learn_facts),
+    return state is not None and (
+        not operations.perceptions
+        or state.phase_receipts.get("refresh:perceptions")
+        == _phase_identity(scene, message)
     )
-    return all(
-        not enabled
-        or (phase == "extract" and _extraction_rebuilt(message, state))
-        or state.phase_receipts.get(receipt)
-        == _phase_identity(scene, message, phase, journal=journal)
-        for phase, receipt, enabled in expected
-    )
-
-
-def _rebuild_receipt(message) -> str:
-    return f"rebuild:{message.revision_digest()}"
-
-
-def _extraction_rebuilt(message, state=None) -> bool:
-    """
-    A full history rebuild extracted this text's facts. The receipt names the
-    text only: the fact inputs of an extract receipt change with every later
-    learning, and the rebuilt chapters stay extracted.
-    """
-    state = state or message.revision_state
-    receipt = state.phase_receipts.get("refresh:extract") if state else None
-    return bool(receipt and receipt == _rebuild_receipt(message))
-
-
-def _learning_owed_after_rebuild(scene, message, operations=None) -> bool:
-    """A rebuild commits the selected text and leaves its learning owed."""
-    if "refresh:learn" in message.revision_state.phase_receipts:
-        return False
-    if not _extraction_rebuilt(message):
-        return False
-    return (operations or revision_operations(scene, message)).learn_facts
 
 
 def revision_requires_refresh(scene, message, operations=None) -> bool:
@@ -246,8 +127,6 @@ def _revision_work_required(scene, message, operations=None) -> bool:
         and message.revision_state.status in ("running", "failed")
     ):
         return True
-    if _learning_owed_after_rebuild(scene, message, operations):
-        return True
     if not character_knowledge_enabled(scene) or (
         len(message.versions) <= 1 and message.revision_state.serial == 0
     ):
@@ -260,15 +139,6 @@ def _revision_work_required(scene, message, operations=None) -> bool:
     return False
 
 
-def _owed_operations(message, operations: RevisionOperations):
-    """The phases the payload names; it hashes no fact inputs, for speed."""
-    if not (operations.extract_facts and _extraction_rebuilt(message)):
-        return operations
-    return RevisionOperations(
-        perceptions=operations.perceptions, learn_facts=operations.learn_facts
-    )
-
-
 def revision_refresh_payload(scene, message) -> dict:
     operations = revision_operations(scene, message)
     pending_repair = bool(
@@ -278,23 +148,14 @@ def revision_refresh_payload(scene, message) -> dict:
     dirty = pending_repair or work_required
     repair_only = pending_repair and not work_required
     status = message.revision_state.status if message.revision_state else "clean"
-    owed = _owed_operations(message, operations)
     if repair_only:
         label = "Update knowledge"
         explanation = "This version is restored; its saved knowledge needs updating."
         running = "Updating knowledge…"
-    elif owed.perceptions:
+    elif operations.perceptions:
         label = "Analyze perceptions"
         explanation = "Perception analysis for this version has not run yet."
         running = "Analyzing perceptions…"
-    elif owed.extract_facts or pending_repair:
-        label = "Refresh facts"
-        explanation = "Facts for this version have not been refreshed yet."
-        running = "Refreshing facts…"
-    elif owed.learn_facts:
-        label = "Learn from dialogue"
-        explanation = "Learning from dialogue for this version has not run yet."
-        running = "Learning from dialogue…"
     else:
         label = explanation = running = None
     return {
@@ -308,7 +169,7 @@ def revision_refresh_payload(scene, message) -> dict:
             ),
             "required": dirty and (operations.any or pending_repair),
             "status": status,
-            "operations": ["index_repair"] if repair_only else list(owed.names()),
+            "operations": ["index_repair"] if repair_only else list(operations.names()),
             "label": label,
             "explanation": explanation,
             "running_label": running,
@@ -321,13 +182,8 @@ def revision_refresh_payload(scene, message) -> dict:
     }
 
 
-def _scene_owned(scene, operations: RevisionOperations) -> bool:
-    summarizer = get_agent("summarizer")
-    if summarizer.scene is not scene:
-        return False
-    if operations.learn_facts and get_agent("conversation").scene is not scene:
-        return False
-    return True
+def _scene_owned(scene) -> bool:
+    return get_agent("summarizer").scene is scene
 
 
 def _memory_scene_owned(scene) -> bool:
@@ -343,7 +199,7 @@ def _current(
 ) -> bool:
     operations = revision_operations(scene, message)
     return bool(
-        _scene_owned(scene, operations)
+        _scene_owned(scene)
         and (expected_operations is None or operations == expected_operations)
         and any(entry is message for entry in scene.history)
         and message.revision_state is not None
@@ -353,129 +209,6 @@ def _current(
 
 def _dump(value):
     return value.model_dump(mode="json") if value is not None else None
-
-
-def _restore_fact_data(message, current_data, written, original, *, world_state=None):
-    """Remove one transaction-owned fact delta from a serialized live record."""
-    if current_data == written:
-        return original, True
-    if current_data is None or written is None:
-        return current_data, False
-    current = Fact.model_validate(current_data)
-    if original is None:
-        # the same rule as a message removal: a restatement takes over, an
-        # independent fact goes on unbound as the author's, the rest goes
-        _drop_restatements(current, lambda item: item.message_id == message.id)
-        if current.message_id == message.id:
-            holder = (
-                world_state
-                if world_state is not None
-                else SimpleNamespace(knowledge=[])
-            )
-            if not detach_message_fact(holder, current, edges=world_state is not None):
-                return None, False
-        elif current.text_edited or current.link_edited:
-            current.source = "manual"
-        return _dump(current), False
-
-    merged = dict(current_data)
-    written_data = written or {}
-    structured = {"restated_by", "known_by", "restatements"}
-    for key in (
-        current_data.keys() | written_data.keys() | original.keys()
-    ) - structured:
-        if current_data.get(key) != written_data.get(key):
-            continue
-        if key in original:
-            merged[key] = original[key]
-        else:
-            merged.pop(key, None)
-
-    original_restatements = original.get("restatements", 0)
-    written_restatements = written_data.get("restatements", 0)
-    current_restatements = current_data.get("restatements", 0)
-    owned_restatements = written_restatements - original_restatements
-    merged["restatements"] = max(0, current_restatements - owned_restatements)
-
-    original_known = original.get("known_by", {})
-    written_known = written_data.get("known_by", {})
-    current_known = dict(current_data.get("known_by", {}))
-    for character in original_known.keys() | written_known.keys():
-        if current_known.get(character) != written_known.get(character):
-            continue
-        if character in original_known:
-            current_known[character] = original_known[character]
-        else:
-            current_known.pop(character, None)
-    merged["known_by"] = current_known
-
-    def key(record):
-        return (
-            record.get("message_id"),
-            record.get("message_digest"),
-            record.get("archive_id"),
-        )
-
-    original_keys = {key(record) for record in original.get("restated_by", ())}
-    written_keys = {key(record) for record in written_data.get("restated_by", ())}
-    restored = [
-        record
-        for record in current_data.get("restated_by", ())
-        if key(record) not in written_keys - original_keys
-    ]
-    present = {key(record) for record in restored}
-    restored.extend(
-        record
-        for record in original.get("restated_by", ())
-        if key(record) in original_keys - written_keys and key(record) not in present
-    )
-    merged["restated_by"] = restored
-    return merged, False
-
-
-def _normalized_fact_inputs(scene, message, journal, phase: str) -> dict:
-    """Live fact inputs with this transaction's own unconsumed effects removed."""
-    facts = {
-        identity: _dump(fact) for identity, fact in scene.world_state.facts.items()
-    }
-    for mutation in reversed((journal or {}).get("mutations", ())):
-        if (
-            mutation.get("restored")
-            or mutation.get("group") != "facts"
-            or (phase == "learn" and mutation.get("phase") != "learn")
-        ):
-            continue
-        identity = mutation["identity"]
-        restored, _ = _restore_fact_data(
-            message,
-            facts.get(identity),
-            mutation.get("after"),
-            mutation.get("before"),
-        )
-        if restored is None:
-            facts.pop(identity, None)
-        else:
-            facts[identity] = restored
-    return facts
-
-
-def _without_message_fact_support(fact_data, message):
-    """Remove only this passage's provenance while retaining independent support."""
-    fact = Fact.model_validate(fact_data)
-    _drop_restatements(fact, lambda item: item.message_id == message.id)
-    if fact.message_id == message.id and not _promote_restatement(fact):
-        fact.message_id = None
-        fact.message_digest = None
-        if not (
-            fact.contributions
-            or fact.text_edited
-            or fact.link_edited
-            or fact.source == "manual"
-        ):
-            return None
-    if fact.text_edited or fact.link_edited:
-        fact.source = "manual"
-    return _dump(fact)
 
 
 def _perspective_snapshot(scene) -> dict:
@@ -500,19 +233,6 @@ def _restore_perspective_record(scene, identity: str, written, original) -> None
     source.knowledge = (
         SourcePerspectives.model_validate(original) if original is not None else None
     )
-
-
-def _restore_fact_record(scene, message, identity, written, original) -> bool:
-    current = scene.world_state.facts.get(identity)
-    current_data = _dump(current)
-    restored, exact = _restore_fact_data(
-        message, current_data, written, original, world_state=scene.world_state
-    )
-    if restored is None:
-        scene.world_state.facts.pop(identity, None)
-    elif restored != current_data:
-        scene.world_state.facts[identity] = Fact.model_validate(restored)
-    return exact
 
 
 def _record_snapshot(scene, message) -> dict:
@@ -545,50 +265,20 @@ def _record_snapshot(scene, message) -> dict:
     return {
         "knowledge": _dump(message.knowledge),
         "perspectives": _perspective_snapshot(scene),
-        "facts": {
-            identity: _dump(fact) for identity, fact in scene.world_state.facts.items()
-        },
-        "edges": {edge.id: _dump(edge) for edge in scene.world_state.knowledge},
         "archives": archives,
         "archive_positions": archive_positions,
     }
 
 
-def _message_evidence_ids(scene, message) -> tuple[set[str], set[str], set[str]]:
-    archive_ids = affected_archive_ids(scene, message)
-    fact_ids = {
-        identity
-        for identity, fact in scene.world_state.facts.items()
-        if fact.message_id == message.id
-        or fact.archive_id in archive_ids
-        or any(
-            item.message_id == message.id or item.archive_id in archive_ids
-            for item in fact.restated_by
-        )
-        or any(
-            item.source.kind == "summary" and item.source.id in archive_ids
-            for item in fact.contributions
-        )
-    }
-    edge_ids = {
-        edge.id
-        for edge in scene.world_state.knowledge
-        if edge.message_id == message.id or edge.target in fact_ids
-    }
-    return archive_ids, fact_ids, edge_ids
-
-
 def _message_has_revision_work(scene, message) -> bool:
     journal = message.revision_state.refresh_journal or {}
-    if journal.get("mutations") or journal.get("pending_fact_memory_ids"):
-        return True
-    return any(_message_evidence_ids(scene, message))
+    return bool(journal.get("mutations") or affected_archive_ids(scene, message))
 
 
 def _journal(scene, message) -> dict:
     state = message.revision_state
     snapshot = _record_snapshot(scene, message)
-    archive_ids, fact_ids, edge_ids = _message_evidence_ids(scene, message)
+    archive_ids = affected_archive_ids(scene, message)
     return {
         "baseline_digest": state.baseline_digest,
         "baseline_index": state.baseline_index,
@@ -603,15 +293,13 @@ def _journal(scene, message) -> dict:
         "baseline": {
             "knowledge": snapshot["knowledge"],
             "perspectives": {},
-            "facts": {identity: snapshot["facts"][identity] for identity in fact_ids},
-            "edges": {identity: snapshot["edges"][identity] for identity in edge_ids},
             "archives": {
                 key: value
                 for key, value in snapshot["archives"].items()
                 if value.get("id") in archive_ids
             },
         },
-        "writes": {"perspectives": {}, "facts": {}, "edges": {}, "archives": {}},
+        "writes": {"perspectives": {}, "archives": {}},
         "phase_writes": {},
         "mutations": [],
     }
@@ -651,7 +339,7 @@ def _record_transaction_writes(scene, message, before: dict, phase: str) -> None
                 "after": after["knowledge"],
             }
         )
-    for group in ("perspectives", "facts", "edges", "archives"):
+    for group in ("perspectives", "archives"):
         base_group = dict(baseline.get(group, {}))
         write_group = dict(writes.get(group, {}))
         for identity in before[group].keys() | after[group].keys():
@@ -737,8 +425,7 @@ def restore_revision_baseline(scene, message) -> bool:
     journal = state.refresh_journal if state else None
     if not journal or message.revision_digest() != journal.get("baseline_digest"):
         return False
-    touched = _restore_mutation_log(scene, message, journal)
-    touched.update(journal.get("pending_fact_memory_ids", ()))
+    _restore_mutation_log(scene, message, journal)
     archives = {
         mutation["identity"]
         for mutation in journal.get("mutations", ())
@@ -746,15 +433,8 @@ def restore_revision_baseline(scene, message) -> bool:
     } | set(journal.get("writes", {}).get("archives", {}))
     pending = state.pending_index_repair
     if pending:
-        touched.update(pending.fact_ids)
         archives.update(pending.archive_ids)
-    repair = (
-        RevisionIndexRepair(fact_ids=sorted(touched), archive_ids=sorted(archives))
-        if touched or archives
-        else None
-    )
-    if touched:
-        get_agent("summarizer").queue_fact_memory(scene, touched)
+    repair = RevisionIndexRepair(archive_ids=sorted(archives)) if archives else None
     message.mark_revision_committed(tuple(journal.get("baseline_features", ())))
     message.set_revision_status(
         "clean",
@@ -819,9 +499,8 @@ def _replace_archive(scene, identity: str, value, position=None) -> None:
         entries.insert(insert_at, value)
 
 
-def _restore_mutation_log(scene, message, journal) -> set[str]:
+def _restore_mutation_log(scene, message, journal) -> None:
     """Undo this transaction's actual writes, newest first."""
-    touched_facts = set()
     for mutation in reversed(journal.get("mutations", ())):
         if mutation.get("restored"):
             continue
@@ -838,24 +517,11 @@ def _restore_mutation_log(scene, message, journal) -> set[str]:
                 )
         elif group == "perspectives":
             _restore_perspective_record(scene, identity, after, before)
-        elif group == "facts":
-            _restore_fact_record(scene, message, identity, after, before)
-            touched_facts.add(identity)
-        elif group == "edges":
-            edges = {edge.id: edge for edge in scene.world_state.knowledge}
-            if _dump(edges.get(identity)) != after:
-                continue
-            if before is None:
-                edges.pop(identity, None)
-            else:
-                edges[identity] = KnowledgeEdge.model_validate(before)
-            scene.world_state.knowledge = list(edges.values())
         elif group == "archives" and _find_archive(scene, identity) == after:
             _replace_archive(
                 scene, identity, before, position=mutation.get("before_position")
             )
         mutation["restored"] = True
-    return touched_facts
 
 
 async def _rollback_transaction_writes(scene, message, journal=None) -> None:
@@ -864,92 +530,8 @@ async def _rollback_transaction_writes(scene, message, journal=None) -> None:
     journal = journal or (state.refresh_journal if state else None)
     if not journal:
         return
-    touched_facts = _restore_mutation_log(scene, message, journal)
-    pending_facts = set(journal.get("pending_fact_memory_ids", ())) | touched_facts
-    journal["pending_fact_memory_ids"] = sorted(pending_facts)
-    summarizer = get_agent("summarizer")
-    if pending_facts:
-        summarizer.queue_fact_memory(scene, pending_facts)
+    _restore_mutation_log(scene, message, journal)
     await reconcile_revision_archive_vectors(scene, journal)
-    if (
-        pending_facts
-        and summarizer.scene is scene
-        and _memory_scene_owned(scene)
-        and await summarizer.flush_fact_memory(scene)
-    ):
-        journal["pending_fact_memory_ids"] = []
-
-
-def _remove_message_evidence_impl(scene, message, *, facts: bool) -> set[str]:
-    """
-    Returns the ids of the facts whose memory document must follow: the
-    removed ones, and the ones the removal promoted or unbound.
-    """
-    before = {
-        identity: binding_state(fact)
-        for identity, fact in scene.world_state.facts.items()
-    }
-    removed = (
-        remove_message_facts(scene.world_state, message.id, keep_rules=True)
-        if facts
-        else set()
-    )
-    changed = removed | {
-        identity
-        for identity, fact in scene.world_state.facts.items()
-        if identity in before and binding_state(fact) != before[identity]
-    }
-    old_edges = [
-        edge
-        for edge in scene.world_state.knowledge
-        if edge.message_id == message.id and edge.source != "manual"
-    ]
-    for edge in scene.world_state.knowledge:
-        if edge.message_id == message.id and edge.source == "manual":
-            edge.message_id = None
-    scene.world_state.knowledge = [
-        edge
-        for edge in scene.world_state.knowledge
-        if (edge.target not in removed or edge.anchor is not None)
-        and (edge.message_id != message.id or edge.source == "manual")
-    ]
-    for edge in old_edges:
-        fact = scene.world_state.facts.get(edge.target)
-        if fact is None or fact.known_by.get(edge.character) not in (
-            "inferred",
-            "told",
-        ):
-            continue
-        # an unlearn or revoke edge on the pair does not teach the fact
-        if not any(
-            other.character == edge.character
-            and other.target == edge.target
-            and other.kind == "grant"
-            for other in scene.world_state.knowledge
-        ):
-            fact.known_by.pop(edge.character, None)
-    return changed
-
-
-def _remove_message_evidence(scene, message, *, facts: bool) -> set[str]:
-    with capture_revision_mutations(scene, message=message):
-        return _remove_message_evidence_impl(scene, message, facts=facts)
-
-
-def _historical_context(scene, message) -> tuple[list[str], list[str] | None, int]:
-    index = scene.history.index(message)
-    recent = [
-        str(entry)
-        for entry in scene.history[max(0, index - 12) : index]
-        if entry.typ in ("character", "narrator", "director") and not entry.hidden
-    ]
-    metadata = message.meta or {}
-    historical_ts = metadata.get("ts")
-    return (
-        recent,
-        message.present,
-        int(scene.ts if historical_ts is None else historical_ts),
-    )
 
 
 def _affected_history_entries(scene, message):
@@ -970,98 +552,12 @@ def _affected_history_entries(scene, message):
     return entries
 
 
-def _archive_phase_inputs(scene, message, phase: str, *, journal=None) -> dict:
-    """Resolve the live archive/source inputs while discounting our own writes."""
-    archives = _record_snapshot(scene, message)["archives"]
-    state = message.revision_state
-    journal = (
-        journal if journal is not None else (state.refresh_journal if state else None)
-    )
-    phase_writes = (
-        (journal or {}).get("phase_writes", {}).get(phase, {}).get("archives", {})
-    )
-    for identity, written in phase_writes.items():
-        if archives.get(identity) != written:
-            continue
-        original = (journal or {}).get("baseline", {}).get("archives", {}).get(identity)
-        if original is None:
-            archives.pop(identity, None)
-        else:
-            archives[identity] = original
-    # only the lines inside the affected base spans feed the regeneration; a
-    # line appended after them is not one of its inputs
-    spans = [
-        (entry.start, entry.end)
-        for entry in _affected_history_entries(scene, message)
-        if entry.layer == 0 and entry.start is not None and entry.end is not None
-    ]
-    return {
-        "history": [
-            {
-                "id": entry.id,
-                "text": str(entry),
-                "hidden": entry.hidden,
-                "present": entry.present,
-                "meta": entry.meta,
-            }
-            for index, entry in enumerate(scene.history)
-            if any(start <= index <= end for start, end in spans)
-        ],
-        "archives": archives,
-        "include_previous": get_agent("summarizer").resolve_config(
-            "archive", "include_previous"
-        ),
-    }
-
-
-async def _refresh_affected_archives(
-    scene,
-    message,
-    identity: str,
-    phase: str,
-    operations: RevisionOperations,
-):
-    from talemate.history import regenerate_history_entry
-
-    def still_current():
-        return _current(scene, message, identity, operations) and (
-            _phase_identity(scene, message, phase) == phase_identity
-        )
-
-    phase_identity = _phase_identity(scene, message, phase)
-    for entry in _affected_history_entries(scene, message):
-        refreshed = await regenerate_history_entry(
-            scene, entry, still_current=still_current
-        )
-        if not still_current():
-            raise GenerationCancelled("The scene changed during history refresh")
-        if entry.layer == 0 and refreshed.facts_status == "failed":
-            raise ValueError("Archived fact extraction was missing or malformed")
-
-
 async def _invalidate_affected_archives(scene, message):
     entries = _affected_history_entries(scene, message)
     if not entries:
         return set()
     archive_ids = {entry.id for entry in entries if entry.id}
-    before = {
-        identity: binding_state(fact)
-        for identity, fact in scene.world_state.facts.items()
-    }
-    with capture_revision_mutations(scene, message=message):
-        removed = prune_summary_facts(scene.world_state, archive_ids, keep_rules=True)
-    # a fact the prune keeps can still change: a promotion, a dropped
-    # restatement, an unbind; its memory document follows
-    changed = removed | {
-        identity
-        for identity, fact in scene.world_state.facts.items()
-        if identity in before and binding_state(fact) != before[identity]
-    }
-    if changed:
-        get_agent("summarizer").queue_fact_memory(scene, changed)
-    # A disabled feature performs deterministic cleanup only: remove the stale
-    # summaries and their dependent layers so ordinary archive building can
-    # recreate them from the revised source later.
+    # Drop stale summaries so ordinary archive building can recreate them.
     affected_by_layer = {}
     for entry in entries:
         affected_by_layer.setdefault(entry.layer, set()).add(entry.index)
@@ -1169,12 +665,12 @@ async def _refresh_perceptions(scene, message, identity, operations):
             scene, before_message_id=message.id, still_current=operation_current
         )
     while True:
-        perception_identity = _phase_identity(scene, message, "perceptions")
+        perception_identity = _phase_identity(scene, message)
 
         def still_current():
             if not operation_current():
                 return False
-            if _phase_identity(scene, message, "perceptions") != perception_identity:
+            if _phase_identity(scene, message) != perception_identity:
                 raise PerceptionInputsChanged
             return True
 
@@ -1225,114 +721,14 @@ async def _refresh_perceptions(scene, message, identity, operations):
 async def _refresh(scene, message, identity: str, operations: RevisionOperations):
     from talemate.agents.summarize.perceptions import perception_results_current
 
-    summarizer = get_agent("summarizer")
     begin_revision_transaction(scene, message)
     await reconcile_revision_archive_vectors(scene, None)
     message.set_revision_status("running")
     scene.emit_status()
-    recent, present, ts = _historical_context(scene, message)
     rollback_journal = None
     try:
         if operations.perceptions:
             await _refresh_perceptions(scene, message, identity, operations)
-
-        extract_identity = _phase_identity(scene, message, "extract", recent)
-        if (
-            operations.extract_facts
-            and not _extraction_rebuilt(message)
-            and message.revision_state.phase_receipts.get("refresh:extract")
-            != extract_identity
-        ):
-            receipts = dict(message.revision_state.phase_receipts)
-            if operations.learn_facts:
-                # Extraction cleanup can revoke a prior learning phase's grants.
-                # Never reuse that receipt after its output has been removed.
-                receipts.pop("refresh:learn", None)
-                message.set_revision_status("running", phase_receipts=receipts)
-            with revision_phase(scene, message, "extract"):
-                removed = _remove_message_evidence(scene, message, facts=True)
-            if removed:
-                summarizer.queue_fact_memory(scene, removed)
-
-            def still_current():
-                return _current(scene, message, identity, operations) and (
-                    _phase_identity(scene, message, "extract") == extract_identity
-                )
-
-            with revision_phase(scene, message, "extract"):
-                await _refresh_affected_archives(
-                    scene, message, identity, "extract", operations
-                )
-            receipts = {
-                **message.revision_state.phase_receipts,
-                "refresh:extract": extract_identity,
-            }
-            message.set_revision_status("running", phase_receipts=receipts)
-            await refresh_topics(scene, still_current=still_current)
-        elif not operations.extract_facts:
-            # nothing re-extracts this line (Extract facts is off, or the
-            # summarizer is): its facts stay, bound to the edited text. The
-            # journal records the rebind, so a rollback undoes it.
-            with (
-                revision_phase(scene, message, "extract"),
-                capture_revision_mutations(scene, message=message),
-            ):
-                rebound = rebind_message_facts(
-                    scene.world_state,
-                    message.id,
-                    content_digest(message.perception_text),
-                )
-            if rebound:
-                summarizer.queue_fact_memory(scene, rebound)
-
-        learn_identity = _phase_identity(scene, message, "learn", recent)
-        if (
-            operations.learn_facts
-            and message.revision_state.phase_receipts.get("refresh:learn")
-            != learn_identity
-        ):
-            character = scene.get_character(message.character_name)
-            if character is None:
-                character = next(
-                    (
-                        candidate
-                        for candidate in scene.character_data.values()
-                        if candidate.name.lower() == message.character_name.lower()
-                    ),
-                    None,
-                )
-            if character is not None:
-
-                def learning_current():
-                    return _current(scene, message, identity, operations) and (
-                        _phase_identity(scene, message, "learn") == learn_identity
-                    )
-
-                with revision_phase(scene, message, "learn"):
-                    learned = await get_agent("conversation").record_learned_facts(
-                        character,
-                        str(message),
-                        message=message,
-                        present_override=present,
-                        recent_lines_override=recent,
-                        ts_override=ts,
-                        still_current=learning_current,
-                        replace_message_evidence=True,
-                        require_validated_result=True,
-                    )
-                if learned is None:
-                    raise ValueError("Fact learning response was missing or malformed")
-            if not _current(scene, message, identity, operations):
-                raise GenerationCancelled(
-                    "The selected version changed during fact learning"
-                )
-            if _phase_identity(scene, message, "learn") != learn_identity:
-                raise GenerationCancelled("Fact inputs changed during learning")
-            receipts = {
-                **message.revision_state.phase_receipts,
-                "refresh:learn": learn_identity,
-            }
-            message.set_revision_status("running", phase_receipts=receipts)
 
         def transaction_current():
             return (
@@ -1344,10 +740,6 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
                 )
             )
 
-        await summarizer.flush_fact_memory(scene)
-        if not transaction_current():
-            raise GenerationCancelled("The selected version changed during refresh")
-        await refresh_topics(scene, still_current=transaction_current)
         if not transaction_current():
             raise GenerationCancelled("The selected version changed during indexing")
         await scene.attempt_auto_save()
@@ -1373,7 +765,6 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
                 message,
                 operations,
                 state=pending_state,
-                journal=rollback_journal,
             )
         ):
             if message.revision_state is committed_state:
@@ -1401,7 +792,7 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
             await _rollback_transaction_writes(scene, message, journal=rollback_journal)
             if (
                 rollback_journal is not None
-                and _scene_owned(scene, revision_operations(scene, message))
+                and _scene_owned(scene)
                 and any(entry is message for entry in scene.history)
             ):
                 try:
@@ -1433,13 +824,6 @@ async def _repair_restored_indexes(scene, message) -> bool:
             raise GenerationCancelled(
                 "The selection changed during restored index repair"
             )
-        summarizer = get_agent("summarizer")
-        if pending.fact_ids:
-            with defer_revision_work():
-                summarizer.queue_fact_memory(scene, pending.fact_ids)
-            complete = await summarizer.flush_fact_memory(scene) and complete
-        if complete:
-            await refresh_topics(scene, still_current=still_current)
     except GenerationCancelled:
         raise
     except Exception as exc:
@@ -1473,25 +857,14 @@ async def _refresh_revision(scene, message, identity, operations):
             message.mark_revision_committed()
             await scene.attempt_auto_save()
             return revision_refresh_payload(scene, message)
-        summarizer = get_agent("summarizer")
         identity = _identity(scene, message, operations)
         begin_revision_transaction(scene, message)
         rollback_journal = None
         try:
             with revision_phase(scene, message, "disabled"):
-                removed = _remove_message_evidence(scene, message, facts=True)
                 await _invalidate_affected_archives(scene, message)
-            if removed:
-                summarizer.queue_fact_memory(scene, removed)
-            await summarizer.flush_fact_memory(scene)
             if not _current(scene, message, identity, operations):
                 raise GenerationCancelled("The scene changed during revision cleanup")
-            await refresh_topics(
-                scene,
-                still_current=lambda: _current(scene, message, identity, operations),
-            )
-            if not _current(scene, message, identity, operations):
-                raise GenerationCancelled("The scene changed during revision indexing")
             await scene.attempt_auto_save()
             if not _current(scene, message, identity, operations):
                 raise GenerationCancelled(
@@ -1517,7 +890,7 @@ async def _refresh_revision(scene, message, identity, operations):
             await _rollback_transaction_writes(scene, message, journal=rollback_journal)
             if (
                 rollback_journal is not None
-                and _scene_owned(scene, revision_operations(scene, message))
+                and _scene_owned(scene)
                 and any(entry is message for entry in scene.history)
             ):
                 try:
@@ -1569,66 +942,13 @@ def revisions_before_rebuild(scene) -> list:
     ]
 
 
-def remove_revised_evidence(scene, messages: list) -> None:
-    """
-    Called once the rebuild dropped the chapter facts: a changed passage loses
-    the rest of its old text's evidence under a rebuild journal, so browsing
-    back to the old text after a cancelled rebuild restores it. Any other
-    journal goes: it names archive entries and facts the rebuild replaces.
-    """
-    summarizer = get_agent("summarizer")
-    for message in messages:
-        if message.revision_matches_baseline:
-            continue
-        journal = message.revision_state.refresh_journal
-        if not (journal and journal.get("rebuild")):
-            message.set_revision_status(
-                message.revision_state.status, refresh_journal=None
-            )
-            begin_revision_transaction(scene, message)
-            message.set_revision_status(
-                message.revision_state.status,
-                refresh_journal={
-                    **message.revision_state.refresh_journal,
-                    "rebuild": True,
-                },
-            )
-        removed = _remove_message_evidence(scene, message, facts=True)
-        if removed:
-            summarizer.queue_fact_memory(scene, removed)
-
-
 def settle_revisions_after_rebuild(scene, messages: list) -> None:
-    """
-    After a completed rebuild every chapter's facts come from the selected
-    text, so each passage commits its selection. With learning from dialogue
-    on, a changed passage records its extraction as rebuilt and owes only its
-    learning. A pending index repair moves to the scene's repair, which runs
-    before the next generation.
-    """
     for message in messages:
         if not any(entry is message for entry in scene.history):
             continue
         preserve_revision_index_repair(scene, message)
-        state = message.revision_state
-        changed = not message.revision_matches_baseline
-        operations = revision_operations(scene, message)
-        message.mark_revision_committed(
-            tuple(name for name in operations.names() if name != "learning")
-            if changed
-            else state.completed_features
-        )
-        receipts = dict(message.revision_state.phase_receipts)
-        if changed and operations.learn_facts:
-            receipts.pop("refresh:learn", None)
-            receipts["refresh:extract"] = _rebuild_receipt(message)
-        message.set_revision_status(
-            message.revision_state.status,
-            phase_receipts=receipts,
-            pending_index_repair=None,
-        )
-        if _learning_owed_after_rebuild(scene, message, operations):
-            message.set_revision_status("deferred")
+        message.mark_revision_committed()
+        message.set_revision_status("clean", pending_index_repair=None)
 
 
 def preserve_revision_index_repair(scene, message) -> None:
@@ -1638,8 +958,6 @@ def preserve_revision_index_repair(scene, message) -> None:
     if pending is None:
         return
     _archive_vector_repairs.setdefault(scene, set()).update(pending.archive_ids)
-    if pending.fact_ids:
-        get_agent("summarizer").queue_fact_memory(scene, pending.fact_ids)
 
 
 async def _repair_scene_indexes(scene) -> None:

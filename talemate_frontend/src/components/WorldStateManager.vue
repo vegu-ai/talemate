@@ -8,7 +8,6 @@
         <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
         <v-toolbar rounded="md" density="compact" color="mutedbg" class="pl-2 mb-1">
 
-
             <v-menu>
                 <template v-slot:activator="{ props }">
                     <v-btn v-bind="props" :disabled="isInputDisabled()" icon :color="scene.saved ? 'muted' : 'secondary'">
@@ -99,16 +98,6 @@
                 />
             </v-window-item>
 
-            <!-- FACTS -->
-
-            <v-window-item value="facts">
-                <WorldStateManagerFacts ref="facts"
-                :app-busy="appBusy"
-                :app-ready="appReady"
-                :visible="tab === 'facts'"
-                />
-            </v-window-item>
-
             <!-- CONTEXT DB -->
 
             <v-window-item value="contextdb">
@@ -153,11 +142,9 @@ import WorldStateManagerContextDB from './WorldStateManagerContextDB.vue';
 import WorldStateManagerPins from './WorldStateManagerPins.vue';
 import WorldStateManagerScene from './WorldStateManagerScene.vue';
 import WorldStateManagerHistory from './WorldStateManagerHistory.vue';
-import WorldStateManagerFacts, { FACTS_TAB_TITLE } from './WorldStateManagerFacts.vue';
 import WorldStateManagerSuggestions from './WorldStateManagerSuggestions.vue';
 import GenerationOptions from './GenerationOptions.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
-
 
 export default {
     name: 'WorldStateManager',
@@ -168,7 +155,7 @@ export default {
         WorldStateManagerPins,
         WorldStateManagerScene,
         WorldStateManagerHistory,
-        WorldStateManagerFacts,
+
         WorldStateManagerSuggestions,
         GenerationOptions,
     },
@@ -220,11 +207,6 @@ export default {
                     name: "history",
                     title: "History",
                     icon: "mdi-clock",
-                },
-                {
-                    name: "facts",
-                    title: FACTS_TAB_TITLE,
-                    icon: "mdi-format-list-checks",
                 },
                 {
                     name: "contextdb",
@@ -375,7 +357,6 @@ export default {
             this.generationOptions = options;
         },
 
-    
         emitEditorState(tab, meta) {
 
             if(meta === undefined) {
@@ -395,8 +376,7 @@ export default {
                 tool = this.$refs.contextdb;
             } else if(tab === 'history') {
                 tool = this.$refs.history;
-            } else if(tab === 'facts') {
-                tool = this.$refs.facts;
+
             } else if(tab === 'pins') {
                 tool = this.$refs.pins;
             } else if(tab === 'suggestions') {

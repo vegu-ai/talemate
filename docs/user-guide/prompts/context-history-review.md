@@ -11,17 +11,17 @@ The context review panel is available as the **Scene Context** tab within the [P
 3. The initial context preview loads automatically
 4. Choose **Scene (default)** or an active character under **View context for**
 
-![Character context preview with excluded passages and facts](../../img/0.40.0/context-history-review-overview.png)
+![Character context preview with the exclusions sidebar](../../img/0.40.0/context-history-review-overview.png)
 
 ## Character previews
 
 **Scene (default)** keeps the shared scene preview. Selecting a character uses that character's Conversation settings: Standard presence and knowledge filtering, or stored character views and audience summaries in Character perspectives. Introductions follow their recorded opening audience, so a character who arrives later does not receive the opening. A selected summary that contains the opening needs no separate introduction or token reservation. Scene (default) follows the shared author-facing rule: a separate introduction appears only when no summaries or dialogue expanded from them are selected.
 
-The character view adds **Known facts (eligible)**, enabled **Unknown fact reminders** in Standard mode, and enabled **Analysis fact inputs** or **Analysis evidence**. **Cached analysis** appears only when a current result already exists. Its compact evidence summary names the authored inputs, world-state snapshot, disclosures, selected history identities, token budget and enforced boundary. **Show full analysis evidence** expands the exact original evidence locally, with its own token count; it does not make another request. Hidden history is excluded from both knowledge totals and evidence.
+In Character perspectives mode the character view adds **Analysis evidence**. **Cached analysis** appears only when a current result already exists. Its compact evidence summary names the authored inputs, world-state snapshot, disclosures, selected history identities, token budget and enforced boundary. **Show full analysis evidence** expands the exact original evidence locally, with its own token count; it does not make another request. Hidden history is excluded from both knowledge totals and evidence.
 
-These are eligible context inputs, not a replay of a previously generated reply; dynamic memory retrieval and new analysis are not run by Refresh. If required perceptions are still running, failed or deferred, the preview says so explicitly and refreshes once when the matching work becomes ready, while preserving budget edits, the selected character and the previous preview. Fact lists share the normal chronology and supersession rules, including the optional formerly clause. Every eligible fact is considered; facts that do not fit the section budget appear under Excluded.
+These are eligible context inputs, not a replay of a previously generated reply; dynamic memory retrieval and new analysis are not run by Refresh. If required perceptions are still running, failed or deferred, the preview says so explicitly and refreshes once when the matching work becomes ready, while preserving budget edits, the selected character and the previous preview.
 
-The **Excluded** sidebar lists passages and facts with a reason, including **Absent**, **Not in audience**, **Below chronology floor**, **Superseded**, and **Over token budget**. Archive and layer exclusions retain their source identities. Counts cover all recorded exclusions; the panel shows up to 20 shortened samples per reason. Each item names the section it was excluded from. A fact excluded from Known facts may still appear in a Standard-mode unknown-fact reminder. Excluded text is inspection information for you; it is not appended to the character's rendered history or known facts.
+The **Excluded** sidebar lists passages with a reason, including **Absent**, **Not in audience** and **Over token budget**. Archive and layer exclusions retain their source identities. Counts cover all recorded exclusions; the panel shows up to 20 shortened samples per reason. Each item names the section it was excluded from. Excluded text is inspection information for you; it is not appended to the character's rendered history.
 
 **Refresh** keeps the selected character and your budget edits. **Apply** saves history settings scene-wide, for every character. Selecting a character does not create character-specific budget settings or change what that character knows.
 
@@ -37,7 +37,6 @@ The preview displays the context broken into color-coded sections:
 | **Archived (Base Summarization)** | Orange | Standard summaries of archived dialogue, providing moderate detail for recent past events. |
 | **Dialogue** | Blue | Recent verbatim dialogue and narration from the scene history. |
 | **Introduction / Disclosures** | Blue / Green | Eligible opening text and disclosures in Character perspectives. |
-| **Known facts / Unknown fact reminders** | Green | Eligible fact lists using the character's knowledge and the current fact settings. |
 | **Analysis** | Teal | Existing analysis and the evidence used for character analysis; no analysis is generated by the preview. |
 
 Each section header shows:

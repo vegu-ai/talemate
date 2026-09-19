@@ -32,11 +32,11 @@ describe('the shared constant', () => {
         expect(mode('legacy').title).toBe('Standard');
         expect(mode('perception').title).toBe('Character perspectives');
     });
-    it.each(CHARACTER_KNOWLEDGE_MODES)('$title carries a summary, 3-4 pros, 3-4 cons and a pick-this-if line', (mode) => {
+    it.each(CHARACTER_KNOWLEDGE_MODES)('$title carries a summary, 3-4 pros, 2-4 cons and a pick-this-if line', (mode) => {
         expect(mode.summary.length).toBeGreaterThan(40);
         expect(mode.pros.length).toBeGreaterThanOrEqual(3);
         expect(mode.pros.length).toBeLessThanOrEqual(4);
-        expect(mode.cons.length).toBeGreaterThanOrEqual(3);
+        expect(mode.cons.length).toBeGreaterThanOrEqual(2);
         expect(mode.cons.length).toBeLessThanOrEqual(4);
         expect(mode.pickIf).toMatch(/\.$/);
     });

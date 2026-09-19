@@ -52,8 +52,6 @@ def mock_conversation_agent_for_registry():
     # rag_build is called by templates - needs to be an async function
     conv.rag_build = AsyncMock(return_value=[])
     conv.knowledge_perspective = AsyncMock(return_value=None)
-    conv.absence_block = AsyncMock(return_value=[])
-    conv.awareness_line = AsyncMock(return_value=None)
     return conv
 
 

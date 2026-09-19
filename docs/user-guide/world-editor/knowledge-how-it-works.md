@@ -2,22 +2,16 @@
 
 Character knowledge is an exploratory experiment in keeping characters' knowledge separate over long-form AI storytelling. The problem is that the reader can see the whole story while each character has only lived through part of it. As the story grows, summaries and memories must preserve that distinction too. The system tries to carry those boundaries into each reply; how successfully it will do so over long stories remains to be seen. This reference is for readers who want to follow that internal flow and understand its decisions.
 
-The diagrams trace what is recorded, which requests run, and how the results reach a character's context in each story mode. For everyday use, start with the [Knowledge guide](/talemate/user-guide/world-editor/knowledge/) or the [knowledge hub](/talemate/user-guide/world-state/#knowledge-hub). The [Conversation](/talemate/user-guide/agents/conversation/settings/#character-knowledge), [Summarizer](/talemate/user-guide/agents/summarizer/settings/#fact-chronology) and [Memory](/talemate/user-guide/agents/memory/settings/#retrieval) pages describe the individual controls.
+The diagrams trace what is recorded, which requests run, and how the results reach a character's context in each story mode. For everyday use, start with the [Knowledge guide](/talemate/user-guide/world-editor/knowledge/) or the [knowledge hub](/talemate/user-guide/world-state/#knowledge-hub). The [Conversation](/talemate/user-guide/agents/conversation/settings/#character-knowledge), [Summarizer](/talemate/user-guide/agents/summarizer/settings/#character-perspectives) and [Memory](/talemate/user-guide/agents/memory/settings/#retrieval) pages describe the individual controls.
 
 ## The pieces
 
-Your finished line appears at once, with the spinner naming any perception or learning pass still running; the next reply waits for those passes to finish.
+- **Presence** records who was in the scene for each passage. Standard mode uses this to select history; a chapter summary records everyone present for any part of it.
+- **Character views** replace reader prose in Character perspectives mode. Each view records what its audience perceived.
+- **Known by** controls access to authored sheets, details, world entries, static history and pins.
+- **Disclosures** establish selected information for a character in Character perspectives mode without inventing dialogue.
 
-Browse a line's versions freely. For changed text, choose **Analyze perceptions** in Character perspectives mode or **Refresh facts** in Standard mode, or send your next line or choice to run the same required update first. The World Editor's History tab marks each history entry that contains such a passage with a chip that runs the same update. Reading, moving keyboard focus and changing tabs never start it.
-
-- **Presence.** Every line records who was in the scene; a chapter summary records everyone who was there for any part of it.
-- **Facts.** Short statements the Summarizer records from a chapter, each **Routine (1)**, **State (2)** or **Milestone (3)**. Edit them in [History](/talemate/user-guide/world-editor/history/#facts), or list, filter and manage them all in the [Facts tab](/talemate/user-guide/world-editor/facts/).
-- **Known by.** Every sheet entry and world entry is known by everyone, only its owner (**Nobody** for a world entry), or specific characters. See [Visibility](/talemate/user-guide/world-editor/knowledge/#visibility).
-- **The character's knowledge.** All of the above plus what the story taught them; the [Knowledge tab](/talemate/user-guide/world-editor/knowledge/#topics-and-coverage) lists it.
-
-**Why record presence, facts and access separately?** Presence records who could witness a passage; a fact keeps a specific piece of information available after summarization; access settings cover information established outside dialogue. None alone answers every knowledge question. Keeping the source and the grant distinct lets a later disclosure teach a fact without rewriting who was there originally.
-
-**Why separate browsing from analysis?** Looking at another version should not silently rewrite what characters know or start a request. Explicit analysis, or the next generation that needs it, brings the evidence up to date before that evidence is used.
+Your finished line appears immediately. In Character perspectives mode, dependent generation waits for its perception analysis. Browsing revisions starts no analysis; **Analyze perceptions** or sending the next line refreshes the selected version. Standard mode settles summary cleanup without a knowledge request.
 
 ## A character leaves and returns
 
@@ -51,46 +45,19 @@ flowchart TD
 
 ## Standard mode: one line is said
 
-Knowledge follows presence. One switch adds learning from dialogue; the chapter summary records facts.
+The passage records who was present. No knowledge request follows it. When enough history accumulates, the Summarizer writes a chapter summary with the same audience metadata.
 
 ```mermaid
 flowchart TD
-    A["A character says a line"] --> B["The line joins the story,<br/>with everyone who was in the scene"]
-    B --> C{"Track learning from dialogue on?"}
-    C -- "no" --> Z["Nothing more this turn"]
-    C -- "yes" --> D{"Does a listener have recent<br/>recorded facts they do not know?"}
-    D -- "no" --> Z
-    D -- "yes" --> E["One request: which of those facts<br/>did the line make plain to each listener?"]
-    E --> F["Each listener now knows those facts"]
-
-    S["Later: the Summarizer<br/>summarizes the chapter"] --> T{"Extract facts on?"}
-    T -- "no" --> Y["Summary only"]
-    T -- "yes" --> U["Up to 12 facts worth remembering,<br/>each Routine, State or Milestone,<br/>each tied to the line it came from"]
-    U --> V{"Does a fact repeat one<br/>already recorded?"}
-    V -- "yes" --> W["The recorded fact is refreshed:<br/>it counts as restated now,<br/>and everyone present learns it"]
-    V -- "no" --> X["A new fact, known to<br/>everyone who was present"]
-    X --> X2["A fact that updates an earlier one<br/>carries a link to that fact"]
+    A[Passage with recorded presence] --> B[Live history]
+    B --> C[Chapter summary when due]
+    B --> D[History selected by presence]
+    C --> D
+    D --> E[Missed intervals become gap lines]
+    E --> F[Character reply]
 ```
 
-**The line joins the story** with the list of who was in the scene, speaker included. Everyone on the list has heard it; nobody else has. A line with no presence list counts as heard by everyone.
-
-**Track learning from dialogue** (off by default) gathers the recent facts each listener does not know. If there are none, nothing is sent. Otherwise one request asks which of them the line made plain to each listener; those listeners now know them. A hint or a question does not count.
-
-**The chapter summary** records facts when **Extract facts** is on: up to twelve, only facts whose loss could make a later scene go wrong. This is where facts from the shared story come from; a line still in the live history has none, and the AI reads the text itself until the chapter is summarized. Each fact is tied to the line it came from: everyone present for that line knows it, its time is that line's scene time, and it follows the line. Deleting the line removes the fact (a restating line takes over as its origin; a fact with a hand-added Learn rule, or an edited fact, stays, no longer tied to a line), editing the line puts it out of date until the chapter is refreshed, and editing an earlier time passage moves its time marker.
-
-**Why learning and extraction are different steps.** A line can teach a listener something already recorded without creating a new fact. The learning pass therefore asks about known gaps, and skips the request when there are none. Extraction happens with the chapter summary so it can select lasting information from the source text in that request. Binding each fact to its source line preserves who witnessed it and lets edits invalidate the evidence that actually changed.
-
-**Restatements.** A fact that repeats a recorded one is not stored twice: the model names the recorded fact it repeats, and a repeat it did not name is still caught within the **Fact matching tolerance**. The recorded fact counts as restated at that line, so it is [fresh again](#facts-age), and anyone present learns it.
-
-**Linked facts.** A fact that updates an earlier one carries a link to it; History shows an arrow chip. A character who knows the newer fact no longer gets the older one in their reply; one who has not learned it still does. History and the Knowledge tab keep every fact and link.
-
-**Why restate and link?** Repeated information should refresh one fact rather than accumulate duplicate rows. A changed state needs a new fact linked to the old one: one character may know the update while another still believes the earlier state. The optional *formerly* clause gives that change a little context without adding another fact row to the prompt.
-
-??? note "Details"
-    - A presence list is missing on lines from stories written before presence was recorded, and on lines said while no character is active; a summary that contains such a line is known to everyone.
-    - The speaker learns nothing from their own line. Learned facts leave the listener's unknown-fact reminders and enter their memory.
-    - A restatement keeps the fact's text, importance and original time; the restating line sets when it was last seen.
-    - With **Show formerly clause** on (default, under Fact chronology), a newer fact can include its immediate predecessor when both are prompt candidates, as a short *formerly* clause of at most 240 characters, with no second time marker or extra request. For A → B → C, C can show B as formerly; A is omitted. Turning the setting off removes the clause while keeping superseded facts out of the prompt for characters who know their successor.
+A missing presence list means shared history. Everyone present sees the complete passage, including any private thoughts in the reader prose. Authored visibility and Learn / Never Learn rules separately govern entries and memories.
 
 ## Character perspectives mode: one line is said
 
@@ -128,98 +95,32 @@ flowchart TD
 
 **Why explicit visibility and disclosures?** A sheet or world entry can exist before the story establishes who knows it. Visibility lets the author define that access, while a disclosure records a deliberate change in knowledge at a specific moment without fabricating a conversation.
 
-**What the character remembers.** Only what they have evidence for: their views, summaries and disclosures, the entries they may know, and the facts drawn from their views. A memory search cannot grant more.
+**What the character remembers.** Their views, audience summaries and disclosures, plus authored entries they may know. Similarity ranks these eligible memories; it cannot grant access.
 
-**Shared facts.** Characters present for a passage can share facts extracted from it when their own views cite the supporting moment. If Alice's extraction records a public interaction that Bob's extraction missed, Bob can receive it as **Inferred from shared evidence**. A present subject gets the fact when their own view cites the span; otherwise not. Being named or mentioned through an alias does not override a missing citation. Pending, failed and omitted views cannot receive the fact this way.
-
-The existing analysis marks fully perceived spans, and each extracted fact can cite one. During extraction, the embedding service compares the fact with all spans in its source, including every message feeding a chapter summary. A better match only blocks the citation when that competing span is outside the audience's perceived set. The model can therefore choose a public span containing pronouns even when another public span scores higher. Sharing requires the recipient to cite the chosen span and to have perceived every higher-scoring competitor; a private competitor in another source message can veto the transfer. Spans are never widened, and sharing adds no prose comparison, tolerance setting or generation request. This check does not prove that the model preserved every qualification. Similar-fact matching uses **Fact matching tolerance**, and a recipient who already holds a close phrasing of the same moment does not receive another row. Evidence is offered as short excerpts within the model's context budget.
-
-**Why require cited shared evidence?** Independent extractions can miss the same public fact for different characters. Shared evidence recovers that omission without treating a mere name mention as proof of knowledge. The private-competitor check is deliberately conservative: a plausible public citation does not justify sharing a fact better supported by something the recipient did not perceive.
-
-In a character's **Knowledge** pane, unknown fact rows explain why: **Citation not supported** when a higher-scoring span outside the audience’s view vetoed a citation, **No contribution from [name]'s view**, **Not in their view** when a citation is missing, **Not present**, **View pending or failed**, **View being rebuilt** when evidence is stale, or **Private moment** for an explicitly omitted view. The topic count uses the same known facts as these rows.
-
-Views saved without evidence references need their perceptions regenerated before rebuilding facts can share them. Existing scenes are not automatically reanalyzed on load or fact rebuild; each old view stays excluded from reconciliation until you regenerate it. No evidence is guessed from the old prose.
-
-**Retired here:** Track learning from dialogue, Remind about unknown facts, Topic knowledge overview and Match known facts. Never Learn and Unlearn rules cannot be created. **Refine memories with AI** stays.
-
-??? note "Details"
-    - The request carries what each character already knows from the previous passages and their disclosures, so the analysis has evidence for existing knowledge instead of needing to invent an observation to explain it.
-    - When a chapter is summarized, each character gets a summary from their own views, once their views of the chapter are complete. Characters with identical views share one request, and that request is where facts come from: each fact names the passage it came from. Facts belong to the extracting audience and can reach other present characters through shared evidence from the same passage; presence elsewhere in the chapter is not enough. Linked facts work as in Standard mode.
-    - With **Extract facts** on, a disclosure also becomes searchable facts.
+The perception request includes prior character views, disclosures and short scene intentions. It retains source IDs for provenance and invalidation. It does not require markup or a fixed prose shape; double quotes identify dialogue. The model must preserve a public interaction's concrete subject and speech act in each replacement view while leaving private content out.
 
 ## What a character's reply is built from
 
 ```mermaid
-flowchart LR
-    R["The character's reply"]
-    S["Character sheets<br/>Only entries the character may know<br/>(Known by, Learn / Never Learn rules)"] --> R
-    H["The story so far"] --> R
-    H1["Standard: the shared story.<br/>With Limit to character knowledge on,<br/>the parts they missed become a gap line:<br/>(Name was away for 2 days.)"] --> H
-    H2["Character perspectives:<br/>their own views, their summaries<br/>and their disclosures, in story order"] --> H
-    M["Memories<br/>Only what the character may know,<br/>ranked by relevance and Recency weight,<br/>repeats dropped by the Diversity threshold,<br/>Cross-encoder rerank optional"] --> R
-    M1["Refine memories with AI (optional):<br/>one request rewrites the memories<br/>from the character's point of view"] --> M
-    F["Facts (Standard only)<br/>What the character does not know:<br/>Remind about unknown facts<br/>What they are aware of:<br/>Topic knowledge overview"] --> R
-    A["Scene Analysis (Standard only)<br/>The Summarizer's analysis lists the<br/>character's known and unknown facts"] --> R
-    T["Fact chronology<br/>Older facts fade unless they are<br/>important, restated, or about<br/>someone in the scene"] --> F
-    T --> M
-    T --> A
+flowchart TD
+    M{Story mode} -->|Standard| S[History filtered by presence]
+    M -->|Character perspectives| P[Character views and audience summaries]
+    S --> H[Selected history and re-entry bridge]
+    P --> H
+    A[Accessible authored entries and pins] --> R[Reply context]
+    H --> R
+    D[Disclosures in Character perspectives] --> R
+    K[Eligible memory search results] --> O{Refine memories with AI enabled?}
+    O -->|No| R
+    O -->|Yes, uncached nonempty results| L[One optional refinement request]
+    L --> R
 ```
 
-**Character sheets.** Only the entries the character may know; in Standard mode a Learn rule adds one and a Never Learn rule removes one.
-
-**The story so far.** Standard mode uses the shared story; with **Limit to character knowledge** on, what the character missed becomes one gap line, such as *(Edwin was away for 2 days.)*. Character perspectives mode uses their own views, chapter summaries and disclosures, in story order.
-
-**The introduction.** The opening stays with the characters active when it was established; a later arrival does not receive it through filtered history or its derived knowledge. Character perspectives shares that opening text within its recorded audience without another request. The introduction and selected history share a token budget. A character receives a separate opening only when their selected summaries do not already carry it; those summaries need no extra intro reservation. The reader retains the opening. Shared author-facing history, including the narrator and director, inserts a separate introduction only when no summaries or dialogue expanded from them are selected.
-
-**Why keep introduction audiences?** An opening is still an event with an audience. Supplying it to a later arrival would reveal an unwitnessed part of the story; supplying it separately when selected summaries already contain it would spend context twice on the same material.
-
-**Inspect a character's context.** In Prompt Manager → **Scene Context**, choose an active character to inspect their history, eligible facts and existing analysis. **Excluded** shows reasons and counts, including archive/layer exclusions and fact budget cuts, with bounded samples. Refresh generates no reply or analysis; Apply saves history settings scene-wide. See [Scene Context History Review](/talemate/user-guide/prompts/context-history-review/).
-
-**Memories.** The Memory agent finds what fits the last lines among what the character may know, ranked by relevance; **Recency weight** moves newer ones up, the **Diversity threshold** drops near-repeats, and **Cross-encoder rerank** (off by default) reorders the top results locally. The result is cached until the story or the memory changes. **Refine memories with AI** adds one request that keeps the useful memories, rewritten from the character's point of view. With Character perspectives, memory brings back the character's passages that are no longer in the current story context; passages the reply prompt already renders are left out.
-
-**Why filter before recalling?** A relevant memory is not necessarily something this character knows. Access and evidence determine eligibility first; relevance, recency and diversity then choose among eligible memories. Optional refinement can rewrite that selection from the character's point of view, but retrieval is not a new grant of knowledge. Scene Context inspection makes the selected material and exclusions visible without generating another answer.
-
-**Facts and reminders (Standard only).** **Remind about unknown facts** lists the recent facts the character does not know, so the AI keeps them from acting on those. **Topic knowledge overview** states which topics they know all, some or nothing of. The Summarizer's Scene Analysis, when on for conversation, lists their known and unknown facts. No request is added.
-
-**Why retain Standard reminders?** Shared reader prose can contain information the speaker does not know. Unknown-fact reminders tell the model which recorded knowledge gaps still apply; the topic overview gives a compact picture of coverage. These are aids to generation, not proof that a reply will respect every boundary. Character perspectives instead builds the story context from that character's views.
-
-### Facts age
-
-A fact scores its importance divided by one plus its age over its half-life: **Milestone (3)** halves every 90 days, **State (2)** every 14, **Routine (1)** every 2, counted from the last restatement. Facts newer than the **Recent facts window** (3 days) always stay eligible; older ones need a score above the **Older facts score floor** (0.5) or must concern a character in the scene. That exception matches recorded subjects and character aliases; only facts without subjects fall back to a name match in their text, so a ship fact containing “will” is not retained merely because Will is present. Rendered facts carry a time such as *(21 Days ago)*. Aging never erases knowledge; the settings sit under [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology).
-
-**Why age facts instead of forgetting them?** A long story can retain more facts than a reply needs. Importance, recency and current subjects help choose what is useful now, while keeping the underlying record available for later scenes. Restatements renew relevance without changing when the original event happened.
-
-??? note "Details"
-    - Director notes and the character's own state notes stay in the story part.
-    - In Standard mode, **Match known facts** admits a memory of a missed event when it closely matches a fact the character knows. **Entity lookup** places a named absent character's description first. Editing a memory, a world entry or a character detail refreshes the cache.
-    - The unknown-fact list takes the newest **Recent facts to check** facts, ranks them by chronology and cuts to **Unknown-fact reminders**. The topic overview needs Topics in the Memory agent.
-    - With the defaults, a fact about absent people leaves the prompts after 3 days (Routine), 42 (State) or 450 (Milestone). The effort slider leaves these settings alone.
+Chapter summaries compress history. Character perspectives groups equivalent audience inputs for summaries, preserves explicit omissions and repairs missing groups without exposing reader prose. Standard summaries use their recorded presence. Retrieval respects those boundaries before ranking; optional recency, diversity and local reranking affect relevance only.
 
 ## The effort slider and what it switches
 
-The **Character knowledge effort** slider sets the knowledge switches of the Conversation, Summarizer and Memory agents together; each stop adds to the one below it. It sits in the knowledge hub's **Thoroughness** section, the **Create New Story** dialog and the Conversation agent's settings. In the hub the switches it drives are in the **Individual settings** pane under it, which starts closed and counts how many are on. Change a switch by hand and the slider moves to the stop the settings then match, or shows **Custom** when they match none.
-
-```mermaid
-flowchart LR
-    subgraph "Character perspectives"
-        direction TB
-        P1["Minimal<br/>The analysis after each passage<br/>Extract facts"] --> P2["Light<br/>+ Topics"]
-        P2 --> P3["Balanced<br/>+ Automatically repair analysis"]
-        P3 --> P4["Thorough<br/>+ Refine memories with AI"]
-    end
-    subgraph Standard
-        direction TB
-        S0["Off<br/>Character Knowledge off<br/>The full scene history for everyone"] --> S1["Minimal<br/>Character Knowledge<br/>Limit to character knowledge<br/>Extract facts"]
-        S1 --> S2["Light<br/>+ Remind about unknown facts<br/>+ Topic knowledge overview<br/>+ Topics<br/>+ Match known facts"]
-        S2 --> S3["Balanced<br/>+ Track learning from dialogue<br/>(one request)"]
-        S3 --> S4["Thorough<br/>+ Refine memories with AI<br/>(two per applicable line)"]
-        S4 --> S5["Ultra<br/>Unknown-fact reminders 10<br/>Recent facts to check 100"]
-    end
-```
-
-In Standard mode, Off is Talemate before character knowledge: every character sees the full scene history. Light adds every helper that costs no request, Balanced one request per applicable line, Thorough two per applicable line, and Ultra wider reminders. In Character perspectives mode the analysis is mandatory, so Minimal is the floor and there is no Off and no Ultra; Thorough adds memory refinement. A Standard scene on Off that switches modes lands on Minimal. A new story starts on Balanced; switching modes carries the stop over, and Ultra lands on Thorough. The [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets) tables list every switch and the model each stop asks for.
-
-**Why an effort slider with individual settings?** Knowledge keeping spans several agents, so presets make the combined request cost easier to choose. Individual settings retain control over the mechanisms; **Custom** makes a departure from a preset visible. The groups in the hub are independent agent sections.
+The [effort tables](/talemate/user-guide/world-editor/knowledge/#effort-presets) list every stop, its request cost and the creation defaults. Standard offers **Off**, **Minimal** and **Thorough**. Character perspectives offers **Minimal**, **Balanced** and **Thorough**. The optional switches are memory refinement and, in Character perspectives, automatic repair of missing or invalid views. The required perception and audience-summary requests remain part of that mode.
 
 ## Which mode to pick
 
@@ -237,6 +138,6 @@ flowchart TD
     Q3 -- "yes" --> CP["Character perspectives<br/>Replies use recorded character views.<br/>Cannot be turned off once<br/>the story has history."]
 ```
 
-**Standard** adds no mandatory perception request after each passage; a present character receives the full reader prose, with Learn / Never Learn rules for recorded knowledge access. Optional learning and refinement still have their own costs. **Character perspectives** builds replies from recorded views, aiming to preserve differences between characters' experiences. It adds one request per passage, needs a [strong model](/talemate/getting-started/model-expectations/) and cannot be turned off once the story has history. [Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode) has the full comparison, and **Compare modes** shows the same two cards wherever the mode is named in the interface.
+**Standard** adds no mandatory perception request after each passage; a present character receives the full reader prose, with Learn / Never Learn rules for recorded knowledge access. Optional AI memory refinement has its own request cost. **Character perspectives** builds replies from recorded views, aiming to preserve differences between characters' experiences. It adds one request per passage, needs a [strong model](/talemate/getting-started/model-expectations/) and cannot be turned off once the story has history. [Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode) has the full comparison, and **Compare modes** shows the same two cards wherever the mode is named in the interface.
 
 **Why keep both approaches?** Standard reuses shared prose and offers explicit knowledge controls; Character perspectives records a separate evidential view before later generation depends on it. That adds requests and a larger derived record in exchange for more explicit separation. The mode decision is about which experiment fits the story and its cost, not a guarantee that either approach will keep every secret or inference correct.

@@ -19,14 +19,13 @@ describe('effective effort explanation', () => {
     });
     it('distinguishes triggers and conditional costs at Thorough', () => {
         const result = effortExplanation('legacy', 'thorough', [], true);
-        expect(result.cost).toContain('when listeners have unknown recent facts');
         expect(result.cost).toContain('uncached retrieved memories');
         expect(result.cost).not.toContain('character return');
     });
     it('uses scene overrides even when the stop is unchanged', () => {
-        const agents = agentsAt('legacy', 'light');
-        agents[0].data.scene_overrides = { actions: { character_knowledge: { config: { ledger: { value: true } } } } };
-        expect(effortExplanation('legacy', 'light', agents).cost).toBe('1 after a character line when listeners have unknown recent facts.');
+        const agents = agentsAt('legacy', 'minimal');
+        agents[0].data.scene_overrides = { actions: { character_knowledge: { config: { memory_pass: { value: true } } } } };
+        expect(effortExplanation('legacy', 'minimal', agents).cost).toBe('1 before a generated reply with uncached retrieved memories.');
     });
     it('custom disabled memory work does not inherit nearest-stop cost or benefit', () => {
         const agents = agentsAt('legacy', 'thorough', { 'conversation.character_knowledge.memory_pass': false });

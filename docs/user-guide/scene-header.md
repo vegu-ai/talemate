@@ -50,7 +50,7 @@ When nobody is in the scene the item reads **No active characters**.
 
 A small version of the **Character knowledge effort** slider for the scene's story mode: the current stop, such as **Balanced**, and a short slider to move it. Hover over the stop, or move to it with the keyboard, to read what it costs and what it may help with, the same explanation the full slider shows. A stop you pick here does exactly what the slider in a character's [knowledge hub](/talemate/user-guide/world-editor/knowledge/#effort-presets) does: it is saved as a scene override, and your global agent settings stay as they are.
 
-For example, when a long conversation starts to feel slow, drag it from **Thorough** down to **Light** without opening the World State panel.
+For example, when a long conversation starts to feel slow, drag it from **Thorough** down to **Minimal** without opening the World State panel.
 
 The control stays usable at **Off**, so you can turn character knowledge back on from the header. It is unavailable while the agents have not reported yet and while another knowledge settings change is being applied or waits for a scene save; hover over the stop, or move to it with the keyboard, to read which. When a change waits for a scene save, for example because you cancelled the **Save Scene** dialog of a story that has no save file yet, a :material-content-save-alert-outline: button appears next to the control: it offers **Save and apply** and **Discard change**, as the knowledge hub does. When a change could not be saved, the same explanation names the reason.
 

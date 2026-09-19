@@ -120,10 +120,7 @@ that row, the background tooltip also says "Use Make real to promote."
 
 ### Knowledge changes
 
-A small dot beside a character marks new Learn, Never Learn or Unlearn rules, or new facts
-attributed to them when a section of the story is summarized. Several changes share one
-dot. Hover over it or focus it with the keyboard to see the affected facts and entries,
-labelled **Added**, **Revoked** or **Unlearned**. Click it to open that character's **Knowledge** tab.
+A small dot beside a character marks new Learn or Never Learn rules, or an explicit disclosure. Several changes share one dot. Hover over it or focus it with the keyboard to see the affected entries, labelled **Added** or **Revoked**. Click it to open that character's **Knowledge** tab.
 
 The dot fades after eight seconds; hovering or focusing pauses that timer. Inactive
 characters can have a dot beside their name in the **Inactive** section too. When that
@@ -131,7 +128,7 @@ section is collapsed, its header shows a dot listing the affected characters; cl
 to expand the section. The Knowledge tab refreshes when new changes arrive.
 
 Ordinary messages, snapshot refreshes, loading a scene and playthrough do not trigger the
-dot. Regenerating or deleting old facts and removing existing knowledge rules stay silent.
+dot. Removing existing knowledge rules stays silent.
 These notifications add no AI requests.
 
 ### Knowledge hub
@@ -144,21 +141,9 @@ row, beside the call-into-scene button.
 you click inside it; press Escape or click elsewhere to close it. It adds no AI requests: it
 reads the current state and writes settings.
 
-![world state knowledge hub](/talemate/img/0.40.0/world-state-knowledge-hub-1.png)
+**What the character knows** shows the newest **Disclosures** in a Character perspectives story or **Entry access rules** (Learn and Never Learn) in a Standard story, with a count. The list shows at most five entries. **Open Knowledge tab** opens the full list in the World Editor, where you establish knowledge or adjust rules.
 
-**What the character knows** lists eligible facts ranked by importance and recency, as the character holds
-them (in a Character perspectives story that is their own view of a passage, not the author's
-record), each with its topic while [Topics](/talemate/user-guide/agents/memory/settings/#topics)
-is enabled, a relative time marker such as **(21 Days ago)**, and a count of all the facts they know.
-The Summarizer's [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology)
-settings keep recent facts and select older ones by score or mention of a present character.
-This selection leaves the character's knowledge intact. It is followed by the newest of the
-character's **Disclosures** in a Character perspectives story or **Entry access rules**
-(Learn, Never Learn and Unlearn) in a Standard story, again with the count. Both lists show at most five entries.
-**Open Knowledge tab** jumps to the character's
-[Knowledge tab](/talemate/user-guide/world-editor/knowledge/) in the World Editor, which holds
-the full lists and the known facts by topic table, and where you establish knowledge or adjust
-rules.
+![world state knowledge hub](/talemate/img/0.40.0/world-state-knowledge-hub-1.png)
 
 **Story mode** shows the **Character perspectives** switch while the scene has no history and no
 archived history, exactly as in [Scene Settings](/talemate/user-guide/world-editor/scene/settings/).
@@ -172,27 +157,21 @@ for the scene.
 
 ![knowledge hub mode comparison](/talemate/img/0.40.0/world-state-knowledge-hub-compare.png)
 
-The count line under the ranked facts is a link to the character's Knowledge tab, where every known fact is listed by topic.
-
-The menu header shows the story mode. **Thoroughness** starts with the **Character knowledge effort** slider (see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets)): one drag sets the settings in the pane below to a tuned stop, with the stop's extra requests and model expectation under it; a manual change shows whichever stop the settings then match, and **Custom** when they match none.
-
-![knowledge hub effort slider](/talemate/img/0.40.0/world-state-knowledge-hub-effort.png)
+While the mode can still be changed, the menu header shows the story mode. **Thoroughness** starts with the **Character knowledge effort** slider (see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets)): one drag sets the settings in the pane below to a tuned stop, with the stop's extra requests and model expectation under it; a manual change shows whichever stop the settings then match, and **Custom** when they match none.
 
 Then comes a summary line naming the
 options that add a request and are on ("No extra requests per line" when none is). Below it sits
 **Individual settings**, a pane that is closed when the application loads and counts the switches
-it holds, for example "7 of 9 on". The count is over every switch the pane draws, the group
+it holds, for example "2 of 3 on". The count is over every switch the pane draws, the group
 switches and the settings under them alike, and a setting under a group switch that is off counts
 as off. Opening the pane on one character leaves it open on the others until the page is
 reloaded. Open it for the settings that shape knowledge keeping, grouped by agent, with the same
 labels, descriptions and cost notes as the agent settings:
 
-- Conversation → Character Knowledge: the group switch, Limit to character knowledge, Remind
-  about unknown facts, Topic knowledge overview, Refine memories with AI, Track learning from
-  dialogue
-- Summarizer → Summarization: Extract facts
-- Memory → Retrieval: Match known facts
-- Memory → Topics: the group switch
+- Conversation → Character Knowledge: the group switch, Limit to character knowledge in Standard mode, and Refine memories with AI.
+- Summarizer → Character Perspectives: Automatically repair analysis, in Character perspectives mode.
+
+![knowledge hub effort slider](/talemate/img/0.40.0/world-state-knowledge-hub-effort.png)
 
 Group headers and toggles share one checkbox column; a group without a master checkbox keeps
 the space so its label lines up. A :material-plus-circle-outline: icon marks an option that adds
@@ -260,7 +239,6 @@ Beneath the description there are additional shortcuts.
 :material-exit-run: **Take out of the scene** removes an active character from the scene, as described in [Taking a character out of the scene](#taking-a-character-out-of-the-scene).
 
 :material-human-greeting: **Make real** If the world state has picked up a background character that is not yet an interactive character, this will allow you to convert them into an interactive character.
-
 
 The action is withheld when the entry's name overlaps the name of a character the scene already has, active or inactive — `Ana's sister` while `Ana` is on the roster, for example. Making that entry real would add a second character for what may be the same person, so the [creative tools](/talemate/user-guide/scenario-tools/#creative-tools) menu leaves such an entry out of its **Introduce** list too. If it really is somebody else, create them with **Introduce new character (Directed)**.
 

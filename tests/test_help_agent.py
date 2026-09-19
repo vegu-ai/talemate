@@ -248,7 +248,6 @@ def test_find_docs_real_index_smoke():
         "opening audience derivation on load",
         "scoped graph memory access",
         "intro_present",
-        "FactContribution competitor vetoes",
         "context_review",
         "push_history",
         "before_memory",
@@ -262,9 +261,7 @@ def test_find_docs_scene_processing_api_routes(query):
     ]
 
 
-@pytest.mark.parametrize(
-    "symbol,limit", [("SourceReference", 1), ("FactContribution", 2)]
-)
+@pytest.mark.parametrize("symbol,limit", [("SourceReference", 1)])
 def test_find_docs_perspective_symbols_keep_code_spelling_near_top(symbol, limit):
     results = docs.find_docs(symbol, limit=limit)
     result = next(
@@ -290,12 +287,8 @@ def test_find_docs_perspective_symbols_keep_code_spelling_near_top(symbol, limit
         ("scene analysis caching", "user-guide/agents/summarizer/settings.md"),
         ("stored views", "dev/character-perspectives.md"),
         ("audience summaries", "dev/character-perspectives.md"),
-        ("duplicate suppression", "dev/character-perspectives.md"),
         ("portrait cadence", "dev/character-perspectives.md"),
-        ("shared facts", "user-guide/world-editor/knowledge-how-it-works.md"),
-        ("citation not supported", "user-guide/world-editor/knowledge-how-it-works.md"),
-        ("regenerate old views", "user-guide/world-editor/knowledge-how-it-works.md"),
-        ("six diagrams", "user-guide/world-editor/knowledge-how-it-works.md"),
+        ("flow diagrams", "user-guide/world-editor/knowledge-how-it-works.md"),
         ("reply inputs", "user-guide/world-editor/knowledge-how-it-works.md"),
         (
             "character knowledge flow reference",
@@ -1502,19 +1495,15 @@ def test_read_clients_unified_api_key(settings_env):
     "query,page",
     [
         ("learn never learn rules", "knowledge.md"),
-        ("unlearn a fact", "knowledge.md"),
-        ("awareness overview names each character once", "knowledge-how-it-works.md"),
         ("first save continuation retry discard", "knowledge.md"),
         ("intro audiences", "knowledge-how-it-works.md"),
         ("browse revisions before keeping a version", "knowledge-how-it-works.md"),
-        ("memory ranking", "knowledge-how-it-works.md"),
+        ("reply inputs and memory ranking", "knowledge-how-it-works.md"),
         (
             "mode decision tree model secrets cast size cost",
             "knowledge-how-it-works.md",
         ),
         ("revision browsing", "knowledge-how-it-works.md"),
-        ("private competitor vetoes", "knowledge-how-it-works.md"),
-        ("supersedes links", "history/index.md"),
         ("collapsed return entries automatic timing arrival notes", "knowledge.md"),
         ("character activation arrival note", "knowledge.md"),
     ],

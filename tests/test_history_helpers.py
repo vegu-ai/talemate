@@ -55,8 +55,6 @@ from talemate.history import (
     update_history_entry,
     update_time_passage_by_id,
 )
-from talemate.knowledge.perspective_models import content_digest
-from talemate.knowledge.schema import Fact
 from talemate.scene_message import (
     CharacterMessage,
     DirectorMessage,
@@ -1060,16 +1058,6 @@ class TestDeleteTimePassageFromTheChat:
                 }
             ]
         ]
-        scene.world_state.facts = {
-            "F1": Fact(
-                id="F1",
-                text="after the hour",
-                message_id=c.id,
-                message_digest=content_digest(c.perception_text),
-                ts=3600,
-                last_seen_ts=3600,
-            )
-        }
         scene.start_ts = 0
         scene.ts = 3600
         return tp
@@ -1085,11 +1073,7 @@ class TestDeleteTimePassageFromTheChat:
             for layer in scene.layered_history
             for entry in layer
         ]
-        facts = [
-            (fact.id, fact.ts, fact.last_seen_ts)
-            for fact in scene.world_state.facts.values()
-        ]
-        return entries, layers, facts
+        return entries, layers
 
     @pytest.mark.asyncio
     async def test_chat_delete_matches_the_history_view_delete(self, real_scene):
@@ -1106,7 +1090,6 @@ class TestDeleteTimePassageFromTheChat:
         assert self._timeline(real_scene) == (
             [(0, 0, 0), (0, 1, 2)],
             [(0, 0, 0)],
-            [("F1", 0, 0)],
         )
         assert real_scene.ts == from_view.ts == 0
 

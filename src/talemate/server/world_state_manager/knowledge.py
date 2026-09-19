@@ -1,29 +1,12 @@
-from typing import Literal
-
 import pydantic
-import structlog
 
-from talemate.agents.summarize.missing_facts import MissingFactsRefused
-from talemate.history import HistoryEntry
 from talemate.instance import get_agent
-from talemate.knowledge.catalog import FactQuery, list_facts
-from talemate.knowledge.facts import UNSET, update_fact
-from talemate.knowledge.chronology import fact_display
-from talemate.knowledge.perspectives import source_reference
-from talemate.knowledge.topics import refresh_topics
-from talemate.knowledge.schema import EntryVisibility, FactImportance, KnowledgeEdge
-from talemate.status import background_task, set_loading_label
-
-log = structlog.get_logger("talemate.server.world_state_manager.knowledge")
+from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge
+from talemate.status import background_task
 
 
 class CharacterKnowledgePayload(pydantic.BaseModel):
     name: str
-
-
-class TopicFactsPayload(pydantic.BaseModel):
-    name: str
-    topic_ids: list[str] = pydantic.Field(min_length=1)
 
 
 class DisclosurePayload(pydantic.BaseModel):
@@ -53,66 +36,7 @@ class WorldEntryVisibilityPayload(pydantic.BaseModel):
     visibility: EntryVisibility
 
 
-class UpdateFactPayload(pydantic.BaseModel):
-    """A patch: a field that is present is authored, an absent one is left alone."""
-
-    fact_id: str
-    text: str | None = None
-    importance: FactImportance | None = None
-    supersedes: str | None = None
-
-    @pydantic.field_validator("text")
-    @classmethod
-    def _text(cls, value):
-        if value is None:
-            return None
-        value = " ".join(value.split())
-        if not value:
-            raise ValueError("Fact text must not be empty")
-        return value
-
-
-class FactIdPayload(pydantic.BaseModel):
-    fact_id: str
-
-
-class FactIdsPayload(pydantic.BaseModel):
-    fact_ids: list[str] = pydantic.Field(min_length=1)
-
-
-class CharacterFactsPayload(FactIdsPayload):
-    name: str
-
-
-class RegenerateFactsPayload(pydantic.BaseModel):
-    entry: HistoryEntry
-
-
-class MissingFactsPayload(pydantic.BaseModel):
-    run_id: str
-
-
 class KnowledgeMixin:
-    async def handle_get_fact_source(self, data):
-        payload = FactIdPayload(**data)
-        fact = self.scene.world_state.facts.get(payload.fact_id)
-        message = (
-            self.scene.get_message(fact.message_id)
-            if fact and fact.message_id is not None
-            else None
-        )
-        self.websocket_handler.queue_put(
-            {
-                "type": "world_state_manager",
-                "action": "fact_source",
-                "data": {
-                    "fact_id": payload.fact_id,
-                    "message_id": message.id if message is not None else None,
-                    "text": str(message) if message is not None else None,
-                },
-            }
-        )
-
     async def _send_character_knowledge(
         self, name: str, *, request_id: str | None = None
     ):
@@ -129,25 +53,6 @@ class KnowledgeMixin:
     async def handle_get_character_knowledge(self, data):
         payload = CharacterKnowledgePayload(**data)
         await self._send_character_knowledge(payload.name)
-
-    async def handle_get_topic_facts(self, data):
-        payload = TopicFactsPayload(**data)
-        rows = self.world_state_manager.get_topics_facts(
-            payload.name, payload.topic_ids
-        )
-        self.websocket_handler.queue_put(
-            {
-                "type": "world_state_manager",
-                "action": "topic_facts",
-                "data": {
-                    "name": payload.name,
-                    "topics": {
-                        topic_id: [fact.model_dump() for fact in facts]
-                        for topic_id, facts in rows.items()
-                    },
-                },
-            }
-        )
 
     @background_task("Recording character disclosure")
     async def handle_grant_disclosure(self, data):
@@ -172,9 +77,7 @@ class KnowledgeMixin:
             payload.name, request_id=data.get("request_id")
         )
         await self.signal_operation_done(allow_auto_save=False)
-        status = await get_agent("summarizer").rebuild_supported_facts(
-            scene, [source_reference(scene, "disclosure", disclosure.id)]
-        )
+        await get_agent("memory").ensure_audience_index(scene)
         if self.scene is scene:
             await self._send_character_knowledge(
                 payload.name, request_id=data.get("request_id")
@@ -186,7 +89,6 @@ class KnowledgeMixin:
                     "data": {
                         "name": payload.name,
                         "id": disclosure.id,
-                        "facts_status": status,
                     },
                 }
             )
@@ -225,181 +127,3 @@ class KnowledgeMixin:
         )
         await self.handle_get_world({})
         await self.signal_operation_done()
-
-    def _emit_fact(self, action, fact):
-        self.websocket_handler.queue_put(
-            {
-                "type": "world_state_manager",
-                "action": action,
-                "data": fact_display(self.scene, fact),
-            }
-        )
-
-    async def handle_list_facts(self, data):
-        query = FactQuery(**{k: v for k, v in data.items() if k != "request_id"})
-        page = list_facts(self.scene, query)
-        self.websocket_handler.queue_put(
-            {
-                "type": "world_state_manager",
-                "action": "facts",
-                **(
-                    {"request_id": data["request_id"]}
-                    if data.get("request_id") is not None
-                    else {}
-                ),
-                "data": page.model_dump(),
-            }
-        )
-
-    async def handle_update_fact(self, data):
-        payload = UpdateFactPayload(**data)
-        try:
-            fact = await update_fact(
-                self.scene,
-                payload.fact_id,
-                text=payload.text if payload.text is not None else UNSET,
-                importance=payload.importance
-                if payload.importance is not None
-                else UNSET,
-                supersedes=payload.supersedes
-                if "supersedes" in payload.model_fields_set
-                else UNSET,
-            )
-        except ValueError as exc:
-            await self.signal_operation_failed(str(exc), failed_action="update_fact")
-            return
-        if fact is None:
-            log.warning("update_fact: unknown fact id", fact_id=payload.fact_id)
-            await self.signal_operation_done()
-            return
-        await refresh_topics(self.scene, force=True)
-        self._emit_fact("fact_updated", fact)
-        await self.signal_operation_done()
-
-    def _remove_fact(self, fact_id):
-        world_state = self.scene.world_state
-        fact = world_state.facts.pop(fact_id, None)
-        if fact is None:
-            return None
-        world_state.knowledge = [
-            edge for edge in world_state.knowledge if edge.target != fact.id
-        ]
-        for other in world_state.facts.values():
-            if other.supersedes == fact.id:
-                other.supersedes = None
-        return fact
-
-    async def _finish_deleting(self, removed):
-        await get_agent("memory").delete({"ids": [fact.id for fact in removed]})
-        await refresh_topics(self.scene, force=True)
-        for fact in removed:
-            self.websocket_handler.queue_put(
-                {
-                    "type": "world_state_manager",
-                    "action": "fact_deleted",
-                    "data": {"fact_id": fact.id, "archive_id": fact.archive_id},
-                }
-            )
-        await self.signal_operation_done()
-
-    async def handle_delete_fact(self, data):
-        payload = FactIdPayload(**data)
-        fact = self._remove_fact(payload.fact_id)
-        if fact is None:
-            await self.signal_operation_done()
-            return
-        await self._finish_deleting([fact])
-
-    async def handle_delete_facts(self, data):
-        payload = FactIdsPayload(**data)
-        removed = [
-            fact
-            for fact in (self._remove_fact(fact_id) for fact_id in payload.fact_ids)
-            if fact is not None
-        ]
-        if not removed:
-            await self.signal_operation_done()
-            return
-        await self._finish_deleting(removed)
-
-    async def handle_grant_facts(self, data):
-        payload = CharacterFactsPayload(**data)
-        try:
-            self.world_state_manager.grant_facts(payload.name, payload.fact_ids)
-        except ValueError as exc:
-            await self.signal_operation_failed(str(exc), failed_action="grant_facts")
-            return
-        await self._send_character_knowledge(payload.name)
-        await self.signal_operation_done()
-
-    async def handle_unlearn_facts(self, data):
-        payload = CharacterFactsPayload(**data)
-        try:
-            self.world_state_manager.unlearn_facts(payload.name, payload.fact_ids)
-        except ValueError as exc:
-            await self.signal_operation_failed(str(exc), failed_action="unlearn_facts")
-            return
-        await self._send_character_knowledge(payload.name)
-        await self.signal_operation_done()
-
-    @background_task("Regenerating facts")
-    async def handle_regenerate_facts(self, data):
-        payload = RegenerateFactsPayload(**data)
-        summarizer = get_agent("summarizer")
-        status = await summarizer.regenerate_facts(payload.entry)
-        self.websocket_handler.queue_put(
-            {
-                "type": "world_state_manager",
-                "action": "facts_regenerated",
-                "data": {"entry_id": payload.entry.id, "facts_status": status},
-            }
-        )
-        await self.signal_operation_done()
-        await self.handle_request_scene_history({})
-
-    @background_task("Generating missing facts")
-    async def handle_generate_missing_facts(self, data):
-        payload = MissingFactsPayload(**data)
-        scene = self.scene
-        summarizer = get_agent("summarizer")
-        state = {"run_id": payload.run_id}
-
-        async def progress(update):
-            state.update(update)
-            set_loading_label(
-                f"Generating missing facts ({state['done']}/{state['total']})"
-            )
-            self._send_missing_facts("missing_facts_progress", dict(state))
-            if state["done"] and self.scene is scene:
-                await self.handle_request_scene_history({})
-
-        error = None
-        try:
-            state.update(
-                await summarizer.generate_missing_facts(scene, progress=progress)
-            )
-        except MissingFactsRefused as exc:
-            error = str(exc)
-            await self.signal_operation_failed(
-                error, failed_action="generate_missing_facts"
-            )
-            return
-        except BaseException as exc:
-            error = str(exc) or type(exc).__name__
-            raise
-        finally:
-            self._send_missing_facts("missing_facts_done", {**state, "error": error})
-        if self.scene is scene:
-            await self.signal_operation_done()
-
-    async def handle_stop_missing_facts(self, data):
-        get_agent("summarizer").stop_missing_facts(self.scene)
-
-    def _send_missing_facts(
-        self,
-        action: Literal["missing_facts_progress", "missing_facts_done"],
-        state: dict,
-    ):
-        self.websocket_handler.queue_put(
-            {"type": "world_state_manager", "action": action, "data": state}
-        )

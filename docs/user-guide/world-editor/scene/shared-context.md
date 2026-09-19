@@ -191,7 +191,7 @@ A linked scene takes the shared world entries each time it is loaded. The shared
 !!! info "Static History Only"
     Only **static history entries** (manually created base entries) can be shared. Summarized history layers cannot be shared directly.
 
-Each shared entry keeps its distance from the start of the scene. For example, one scene shares "The war ended" 10 years before its start. A second scene that uses the same shared context shows the entry 10 years before its own start. If a shared entry is older than everything in the second scene's history, the second scene's timeline moves back to make room for it, and its own entries and facts keep their age.
+Each shared entry keeps its distance from the start of the scene. For example, one scene shares "The war ended" 10 years before its start. A second scene that uses the same shared context shows the entry 10 years before its own start. If a shared entry is older than everything in the second scene's history, the second scene's timeline moves back to make room for it, and its own entries keep their age.
 
 !!! tip "Sharing Summarized Content"
     To share summarized scene progression, use the **Summarize to World Entry** button in the History tools menu. This creates a world entry from your scene's progress that can then be marked as shared.

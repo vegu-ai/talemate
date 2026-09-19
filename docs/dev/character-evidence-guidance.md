@@ -48,10 +48,7 @@ admitted batch; the next generated response captures a new baseline. A stale bat
 cancels through both chat and autonomous direction without an internal-error result
 or a follow-up LLM request. Completed action results are persisted individually.
 
-New-mode actor context omits secret-valued absence lists and topic-awareness
-assertions, even if the legacy switches are enabled. It supplies generic evidence
-rules instead. The analytical absence and topic helpers remain for legacy use and
-author reports.
+Actor context supplies the generic evidence rules alongside the character's projected history.
 
 `knowledge.advice.advice_context` assembles an audience's prompt material;
 `advice_fingerprint` identifies cache freshness. Neither calls an LLM or requires a

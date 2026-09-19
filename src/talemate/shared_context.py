@@ -103,7 +103,7 @@ class SharedContext(pydantic.BaseModel):
         distance from the scene start as from the start of the scene that
         wrote it. A file without `start_ts` was written when the newest static
         entry was the scene start. An entry older than the zero moves the
-        scene's timeline forward; returns the ids of the facts that moved.
+        scene's timeline forward.
         """
         entries = [entry.model_dump(exclude_none=True) for entry in self.static_history]
         writer_start = (
@@ -113,11 +113,11 @@ class SharedContext(pydantic.BaseModel):
             entry["ts"] += scene.start_ts - writer_start
         oldest = min((entry["ts"] for entry in entries), default=0)
         if oldest >= 0:
-            return entries, set()
-        shifted = shift_scene_timeline(scene, -oldest)
+            return entries
+        shift_scene_timeline(scene, -oldest)
         for entry in entries:
             entry["ts"] -= oldest
-        return entries, shifted
+        return entries
 
     async def update_to_scene(self, scene: "Scene") -> bool:
         """
@@ -169,18 +169,14 @@ class SharedContext(pydantic.BaseModel):
                     if entry.get("end") is not None
                 ]
                 if relative:
-                    static_entries, shifted = self._place_static_history(scene)
+                    static_entries = self._place_static_history(scene)
                 else:
                     static_entries = [
                         entry.model_dump(exclude_none=True)
                         for entry in self.static_history
                     ]
-                    shifted = set()
                 # replace archived_history with shared static entries first, then summarized
                 scene.archived_history = static_entries + summarized_entries
-                if shifted:
-                    scene.refresh_fact_times(shifted)
-                self._follow_static_audiences(scene)
                 # a load writes every entry to memory once the store is ready
                 entries = static_entries if scene_is_loading.get() is None else []
                 for entry in entries:
@@ -192,16 +188,6 @@ class SharedContext(pydantic.BaseModel):
                         await emit_archive_add(scene, ArchiveEntry(**entry))
             except Exception as e:
                 log.error("apply static history failed", error=e)
-
-    @staticmethod
-    def _follow_static_audiences(scene: "Scene"):
-        """A Known by another linked scene set reaches the facts this scene recorded."""
-        from talemate.instance import get_agent
-        from talemate.knowledge.facts import follow_static_audiences
-
-        changed = follow_static_audiences(scene)
-        if changed:
-            get_agent("summarizer").queue_fact_memory(scene, changed)
 
     async def apply_characters(self, scene: "Scene"):
         for name, character_data in list(self.character_data.items()):

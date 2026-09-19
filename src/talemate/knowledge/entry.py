@@ -19,12 +19,8 @@ from talemate.knowledge.changes import (
     edge_change,
     edge_changes_knowledge,
     emit_knowledge_changes,
-    lift_unlearn,
-    lifted_unlearns,
 )
-from talemate.knowledge.revision_browsing import current_edges
 from talemate.knowledge.schema import EdgeKind, EntryVisibility, KnowledgeEdge
-from talemate.knowledge.topics import awareness_line, coverage
 
 if TYPE_CHECKING:
     from talemate.game.engine.context_id import ContextIDItem
@@ -45,7 +41,7 @@ __all__ = [
 
 SHEET_KINDS = {"description", "attribute", "detail"}
 VISIBILITY_KINDS = SHEET_KINDS | {"world_entry"}
-PRESENCE_KINDS = {"history", "fact"}
+PRESENCE_KINDS = {"history"}
 
 
 def resolve_character_names(scene: "Scene", names: Iterable[str]) -> list[str]:
@@ -84,7 +80,6 @@ class EntryKnowledge(pydantic.BaseModel):
     present: list[str] | None = None
     grants: list[KnowledgeEdge] = pydantic.Field(default_factory=list)
     revokes: list[KnowledgeEdge] = pydantic.Field(default_factory=list)
-    unlearns: list[KnowledgeEdge] = pydantic.Field(default_factory=list)
 
     @property
     def has_visibility(self) -> bool:
@@ -122,10 +117,6 @@ class EntryKnowledge(pydantic.BaseModel):
             parts.append("grants: " + ", ".join(_edge_text(e) for e in self.grants))
         if self.revokes:
             parts.append("revokes: " + ", ".join(_edge_text(e) for e in self.revokes))
-        if self.unlearns:
-            parts.append(
-                "unlearned: " + ", ".join(_edge_text(e) for e in self.unlearns)
-            )
         return "; ".join(parts)
 
 
@@ -239,9 +230,6 @@ def _item_from_id(scene: "Scene", entry_id: str) -> KnowledgeItem | None:
             if raw.get("id") == entry_id:
                 return _history_item(scene, layer_index + 1, raw)
 
-    fact = scene.world_state.facts.get(entry_id)
-    if fact is not None:
-        return KnowledgeItem(id=fact.id, kind="fact", present=fact.present)
     return None
 
 
@@ -258,8 +246,6 @@ def entry_text(scene, item: KnowledgeItem):
         if item.kind == "detail":
             return character.details.get(key[len("detail.") :])
         return character.base_attributes.get(key)
-    if item.kind == "fact":
-        return scene.world_state.facts[item.id].text
     for entries in [scene.archived_history, *scene.layered_history]:
         for entry in entries:
             if entry.get("id") == item.id:
@@ -287,7 +273,6 @@ def entry_knowledge(scene: "Scene", entry: "str | ContextIDItem") -> EntryKnowle
         if e.target == item.id
         and not (e.kind != "grant" and character_knowledge_enabled(scene))
     ]
-    lifted = _lifted_unlearns(scene)
     return EntryKnowledge(
         id=item.id,
         kind=item.kind,
@@ -296,12 +281,7 @@ def entry_knowledge(scene: "Scene", entry: "str | ContextIDItem") -> EntryKnowle
         present=item.present,
         grants=[e for e in edges if e.kind == "grant"],
         revokes=[e for e in edges if e.kind == "revoke"],
-        unlearns=[e for e in edges if e.kind == "unlearn" and e.id not in lifted],
     )
-
-
-def _lifted_unlearns(scene: "Scene") -> set[str]:
-    return lifted_unlearns(current_edges(scene))
 
 
 def known_by_line(scene: "Scene", entry: "str | ContextIDItem") -> str:
@@ -352,7 +332,6 @@ def set_edge(
             for e in scene.world_state.knowledge
             if not (e.character == edge.character and e.target == edge.target)
         ]
-    lift_unlearn(scene.world_state, edge.character, edge.target)
     scene.world_state.knowledge.append(edge)
     if edge_changes_knowledge(edge, previous, scene.world_state.knowledge):
         emit_knowledge_changes(scene, [edge_change(edge)])
@@ -368,24 +347,18 @@ def sheet_visibility_key(entry: EntryKnowledge) -> str:
 def character_knowledge_report(scene: "Scene", name: str) -> str:
     """
     Author report: disclosures in perception mode, grants/revokes with entry labels,
-    the restricted entries they can see, the topic coverage and the awareness
-    line.
+    and the restricted entries they can see.
     """
     targets = scene.world_state_manager.knowledge_targets()
     labels = {t.id: t.label for t in targets}
     index = KnowledgeIndex.from_scene(scene)
-    edges = [
-        e
-        for e in scene.world_state.knowledge
-        if e.character == name and e.anchor is None
-    ]
-    lifted = _lifted_unlearns(scene)
+    edges = [e for e in scene.world_state.knowledge if e.character == name]
 
     def edge_lines(kind: EdgeKind) -> list[str]:
         return [
             f"- {labels.get(e.target, e.target)}: {_edge_detail(e)}"
             for e in edges
-            if e.kind == kind and e.id not in lifted
+            if e.kind == kind
         ]
 
     restricted = []
@@ -423,26 +396,15 @@ def character_knowledge_report(scene: "Scene", name: str) -> str:
         lines += disclosures
     grants = edge_lines("grant")
     revokes = edge_lines("revoke")
-    unlearns = edge_lines("unlearn")
     lines.append("Grants:" if grants else "Grants: none")
     lines += grants
     if not character_knowledge_enabled(scene):
         lines.append("Revokes:" if revokes else "Revokes: none")
         lines += revokes
-        if unlearns:
-            lines.append("Unlearned (known again after any later learning):")
-            lines += unlearns
     lines.append(
         f"Restricted entries {name} can see:"
         if restricted
         else f"Restricted entries {name} can see: none"
     )
     lines += restricted
-    rows = coverage(scene, name)
-    if rows:
-        lines.append("Topic coverage (accessible / total recorded facts):")
-        lines += [f"- {row.name}: {row.known} / {row.total}" for row in rows]
-    awareness = awareness_line(scene, name)
-    if awareness:
-        lines.append(f"Awareness: {awareness}")
     return "\n".join(lines)

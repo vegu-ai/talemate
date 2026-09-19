@@ -34,14 +34,6 @@
             <v-card-text class="pt-2 pb-2">
                 <v-progress-linear v-if="loading" indeterminate color="primary" height="2"></v-progress-linear>
                 <template v-else-if="knowledge">
-                    <div v-if="knowledge.known_facts.length">
-                        <div v-for="fact in knowledge.known_facts" :key="fact.id" class="text-body-small py-1 knowledge-hub-fact">
-                            <span v-if="fact.topic" class="text-mutedheader mr-1">{{ fact.topic }}:</span><span class="text-medium-emphasis fact-time mr-1">({{ fact.time || 'Time unknown' }})</span>{{ fact.text }}
-                        </div>
-                    </div>
-                    <a href="#" class="text-body-small text-muted d-block knowledge-hub-count" @click.prevent="openKnowledge">{{ factsCount }}</a>
-                    <div v-if="!knowledge.perception_mode && knowledge.awareness" class="text-body-small text-muted mt-1">{{ knowledge.awareness }}.</div>
-
                     <div class="text-body-small text-mutedheader mt-2">
                         {{ knowledge.perception_mode ? 'Disclosures' : 'Entry access rules' }} ({{ entriesTotal }})
                     </div>
@@ -193,7 +185,6 @@ import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
 import KnowledgePendingSave from './KnowledgePendingSave.vue';
 import SceneOverrideResetControl from './SceneOverrideResetControl.vue';
 import { effortMode, effortPinPatch, queueEffortAcrossSwitch } from '@/utils/knowledgeEffort';
-import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { resolveKnowledgeToggles, switchTally, thoroughnessSummary } from '@/utils/knowledgeHub';
 import {
     effortOverrideState,
@@ -250,15 +241,14 @@ export default {
             open: false,
             loading: false,
             knowledge: null,
-            topicsSeen: true,
-            chronologySeen: null,
+
         };
     },
     computed: {
         sceneData() {
             return this.scene ? this.scene()?.data : null;
         },
-        chronologyMoment() {
+        knowledgeMoment() {
             return JSON.stringify([this.sceneData?.scene_ts, this.sceneData?.characters?.map(character => character.name)]);
         },
         perspectives() {
@@ -310,11 +300,7 @@ export default {
         individualOpen() {
             return individualPane.open ? INDIVIDUAL_PANE : undefined;
         },
-        // an agent that has not reported yet is taken as on
-        topicsOn() {
-            const topics = this.groups.find((group) => group.agent === 'memory' && group.action === 'topics');
-            return topics ? topics.enabled : true;
-        },
+
         // One list for both modes: a disclosure is what was given, a rule is
         // what was allowed or blocked. The record lists them oldest first.
         allEntries() {
@@ -339,15 +325,10 @@ export default {
         entriesTotal() {
             return this.allEntries.length;
         },
-        factsCount() {
-            const total = this.knowledge?.known_facts_total || 0;
-            if (!total) return 'No known facts yet.';
-            const shown = this.knowledge.known_facts.length;
-            return shown < total ? `${shown} of ${total} known facts, ranked by importance and recency.` : `${total} known fact${total === 1 ? '' : 's'}.`;
-        },
+
     },
     watch: {
-        chronologyMoment() {
+        knowledgeMoment() {
             if (this.open) this.request();
         },
         // the record's shape follows the scene mode
@@ -370,7 +351,6 @@ export default {
         },
         onToggle(opened) {
             if (!opened) return;
-            this.topicsSeen = this.topicsOn;
             this.request();
         },
         request() {
@@ -419,23 +399,9 @@ export default {
             return true;
         },
         handleMessage(data) {
-            if (data.type === 'agent_status' && data.name === 'summarizer' && data.data?.actions?.fact_chronology) {
-                const value = JSON.stringify([data.data?.actions?.fact_chronology, data.data?.scene_overrides?.actions?.fact_chronology]);
-                if (this.open && value !== this.chronologySeen) this.request();
-                this.chronologySeen = value;
-            }
             if (data.type === 'system' && data.id === 'scene.loaded') {
                 this.knowledge = null;
                 this.loading = false;
-                return;
-            }
-            // the topic labels and the awareness line follow the Memory agent's
-            // Topics switch, and its status echoes after the backend applied it
-            if (data.type === 'agent_status' && data.name === 'memory') {
-                const actions = data.data?.actions || {};
-                const on = effectiveActionEnabled(actions, data.data?.scene_overrides || {}, 'topics');
-                if (this.open && on !== this.topicsSeen) this.request();
-                this.topicsSeen = on;
                 return;
             }
             if (data.type === 'knowledge_changed') {
@@ -444,12 +410,6 @@ export default {
                 return;
             }
             if (data.type !== 'world_state_manager') return;
-            if (data.action === 'fact_updated' || data.action === 'fact_deleted') {
-                // the listed text carries the rendered formerly clause and the
-                // ranking follows importance, so the payload is fetched again
-                if (this.open) this.request();
-                return;
-            }
             if (data.action !== 'character_knowledge') return;
             if (data.data?.name !== this.name) return;
             this.knowledge = data.data;
@@ -500,12 +460,6 @@ export default {
 }
 .knowledge-hub-toggle {
     padding-inline-start: 40px;
-}
-.knowledge-hub-fact {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
 }
 .knowledge-hub-toggle-off :deep(.v-list-item-title) {
     opacity: var(--v-disabled-opacity);

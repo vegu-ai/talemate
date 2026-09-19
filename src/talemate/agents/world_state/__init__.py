@@ -226,7 +226,6 @@ class WorldStateAgent(
             iterate=3,
             filter=filter,
             over_fetch=3 if filter else 1,
-            ranking_viewer=viewer,
             **(
                 {"viewer": viewer}
                 if viewer is not None and character_knowledge_enabled(self.scene)

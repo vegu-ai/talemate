@@ -2,7 +2,6 @@ added:
 - "Inactive characters in the World panel now have a Manage character button that opens their profile in the World Editor, without calling them into the scene."
 changed:
 - "The inference parameter selector in the pinned inference panel is now labelled Action Type, and Settings > Presets > Inference uses the same name for Conversation, Creative and the other action types. The stored presets and their parameters are unchanged."
-- "World Editor > History lists the facts of each entry in a Facts (N) section that starts collapsed."
 fixed:
 - "The duration in the Debug tools and Prompts prompt lists no longer wraps onto a line of its own when the list becomes scrollable."
 - "The scene header is centered in the scene area again; it sat a few pixels to the right."

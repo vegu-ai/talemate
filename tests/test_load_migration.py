@@ -38,7 +38,7 @@ from talemate.changelog import (
     reconstruct_scene_data,
 )
 from talemate.history import add_history_entry, history_with_relative_time
-from talemate.knowledge.chronology import fact_time
+from talemate.knowledge.timeline import record_time
 from talemate.load import SceneInitialization, load_scene_from_data
 from talemate.load import new_scene as new_scene_data
 from talemate.util.time import migrate_scene_time
@@ -509,16 +509,14 @@ def _static_scene_data(
     return data
 
 
-def _with_fact(data: dict, ts: int) -> dict:
+def _with_world_entry(data: dict, ts: int) -> dict:
     data["world_state"] = {
         **data.get("world_state", {}),
-        "facts": {
+        "manual_context": {
             "F1": {
                 "id": "F1",
                 "text": "Kaira checked the hull.",
-                "ts": ts,
-                "last_seen_ts": ts,
-                "source": "manual",
+                "meta": {"ts": ts},
             }
         },
     }
@@ -547,8 +545,8 @@ def _timeline(scene) -> tuple:
             for layer in scene.layered_history
         ],
         {
-            fact.id: (fact.ts, fact.last_seen_ts)
-            for fact in scene.world_state.facts.values()
+            entry.id: entry.meta.get("ts")
+            for entry in scene.world_state.manual_context.values()
         },
     )
 
@@ -596,12 +594,15 @@ async def test_a_new_scene_places_shared_static_history_from_its_start(new_scene
 
 @pytest.mark.asyncio
 async def test_an_older_shared_entry_keeps_every_age_in_the_other_scene(new_scene):
-    first_data = _with_fact(
+    first_data = _with_world_entry(
         _static_scene_data(10 * YEAR, [("war", 0), ("lighthouse", 5 * YEAR)]),
         10 * YEAR + DAY,
     )
     first = await _load(new_scene, first_data)
-    assert fact_time(first, first.world_state.facts["F1"]) == "1 Hour ago"
+    assert (
+        record_time(first, first.world_state.manual_context["F1"].meta["ts"])
+        == "1 Hour ago"
+    )
     first_data["shared_context"] = await _write_shared_context(first)
 
     second = await _load(
@@ -617,7 +618,10 @@ async def test_an_older_shared_entry_keeps_every_age_in_the_other_scene(new_scen
         ("war", "10 Years ago"),
         ("lighthouse", "5 Years ago"),
     ]
-    assert fact_time(first, first.world_state.facts["F1"]) == "1 Hour ago"
+    assert (
+        record_time(first, first.world_state.manual_context["F1"].meta["ts"])
+        == "1 Hour ago"
+    )
     before = _timeline(first)
     reloaded = await _load(new_scene, await _save(first))
     assert _timeline(reloaded) == before
@@ -633,7 +637,7 @@ async def test_an_older_save_keeps_the_start_of_a_shared_file_from_this_version(
     writer_timeline = _timeline(writer)
 
     # an older version started this scene at its newest static entry (5y)
-    older_data = _with_fact(
+    older_data = _with_world_entry(
         _static_scene_data(
             None,
             [("war", 0), ("lighthouse", 5 * YEAR)],
@@ -648,7 +652,10 @@ async def test_an_older_save_keeps_the_start_of_a_shared_file_from_this_version(
         ("lighthouse", "5 Years ago"),
     ]
     assert older.start_ts == 10 * YEAR
-    assert fact_time(older, older.world_state.facts["F1"]) == "1 Hour ago"
+    assert (
+        record_time(older, older.world_state.manual_context["F1"].meta["ts"])
+        == "1 Hour ago"
+    )
     await _save(older)
 
     writer = await _load(new_scene, writer_data)
@@ -853,7 +860,7 @@ async def test_a_new_linked_scene_reads_a_shared_file_without_a_start(
 
 @pytest.mark.asyncio
 async def test_a_scene_that_loads_its_own_shared_file_changes_nothing(new_scene):
-    data = _with_fact(
+    data = _with_world_entry(
         _static_scene_data(10 * YEAR, [("war", 0), ("storm", 10 * YEAR + DAY)]),
         10 * YEAR + DAY,
     )
@@ -876,15 +883,15 @@ async def test_linking_in_session_moves_the_history_in_memory(new_scene, monkeyp
     )
     filename = await _write_shared_context(writer)
 
-    # a scene of this version with a summary, a layer and a fact
-    data = _with_fact(_read_fixture(), 3 * MONTH + DAY)
+    # a scene of this version with a summary, a layer and a world entry
+    data = _with_world_entry(_read_fixture(), 3 * MONTH + DAY)
     data["start_ts"] = 3 * MONTH
     scene = await _load(new_scene, data)
     rows = history_with_relative_time(scene.archived_history, scene.ts)
     layer = history_with_relative_time(scene.layered_history[0], scene.ts)
     summary_age = [row["time"] for row in rows if row["end"] is not None]
-    fact_age = fact_time(scene, scene.world_state.facts["F1"])
-    assert fact_age == "1 Hour ago"
+    entry_age = record_time(scene, scene.world_state.manual_context["F1"].meta["ts"])
+    assert entry_age == "1 Hour ago"
 
     reimported = []
 
@@ -911,7 +918,10 @@ async def test_linking_in_session_moves_the_history_in_memory(new_scene, monkeyp
         row["time"]
         for row in history_with_relative_time(scene.layered_history[0], scene.ts)
     ] == [row["time"] for row in layer]
-    assert fact_time(scene, scene.world_state.facts["F1"]) == fact_age
+    assert (
+        record_time(scene, scene.world_state.manual_context["F1"].meta["ts"])
+        == entry_age
+    )
 
 
 class _SharedContextHandler(SharedContextMixin):

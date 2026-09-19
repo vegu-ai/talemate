@@ -504,15 +504,6 @@ def _set_source_perspectives(
     read = PerspectiveReadContext(scene)
     for output in parsed:
         _validate_audience(scene, output.audience)
-        if output.evidence_spans:
-            from talemate.knowledge.evidence import passage_spans
-
-            if kind != "message" or max(output.evidence_spans) >= len(
-                passage_spans(source.text)
-            ):
-                raise ValueError(
-                    "Evidence must reference an offered span of this message"
-                )
         if not _passages_fresh(
             scene,
             output.passage_provenance,
@@ -785,11 +776,6 @@ def _source_content_changed(
     *,
     layer: int = 0,
 ) -> PerspectiveInvalidation | None:
-    if kind == "message":
-        # message_facts imports supported_facts, which imports this module.
-        from talemate.knowledge.message_facts import invalidate_message_facts
-
-        invalidate_message_facts(scene)
     if scene.knowledge is None:
         return
     source = _find(scene, (kind, source_id, layer))
@@ -835,10 +821,10 @@ def source_content_changed(
 def source_deleted(
     scene: "Scene", reference: SourceReference | None, *, message_id: int | None = None
 ) -> PerspectiveInvalidation | None:
-    # message_facts imports supported_facts, which imports this module.
-    from talemate.knowledge.message_facts import invalidate_message_facts
+    # emit imports scene_message, which imports this module.
+    from talemate.knowledge.changes import detach_missing_message_edges
 
-    invalidate_message_facts(scene)
+    detach_missing_message_edges(scene)
     if reference is None and message_id is not None and scene.knowledge is not None:
         reference = SourceReference(kind="message", id=message_id, revision=1)
     if reference is not None:
@@ -1103,24 +1089,17 @@ def shift_perspective_times(scene: "Scene", shift: int) -> None:
     )
 
 
-def reset_perspectives(scene: "Scene") -> set[str]:
+def reset_perspectives(scene: "Scene") -> None:
+    from talemate.knowledge.changes import detach_missing_message_edges
     from talemate.knowledge.memory import invalidate_memory_audiences
 
-    # Facts are disposable; resetting durable sources also removes their index.
-    removed = {
-        key for key, fact in scene.world_state.facts.items() if fact.contributions
-    }
-    for key in removed:
-        del scene.world_state.facts[key]
-    scene.world_state.knowledge = [
-        edge for edge in scene.world_state.knowledge if edge.target not in removed
-    ]
+    detach_missing_message_edges(scene)
+
     if scene.knowledge is not None:
         scene.knowledge = scene.knowledge.model_copy(update={"disclosures": ()})
     for entry in scene.archived_history:
         entry.pop("knowledge", None)
     invalidate_memory_audiences(scene)
-    return removed
 
 
 def rename_perspective_audiences(scene: "Scene", old: str, new: str) -> None:

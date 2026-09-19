@@ -57,44 +57,12 @@
                         </v-btn>
                     </div>
 
-                    <v-card-title class="d-flex align-center">
-                        History
-                        <v-tooltip v-if="missingFactsCount && !factsRun" location="top" max-width="360" :text="missingFactsTooltip">
-                            <template #activator="{ props }">
-                                <span v-bind="props" class="ml-3">
-                                    <v-btn size="small" variant="text" color="primary" prepend-icon="mdi-format-list-checks" :disabled="missingFactsDisabled" @click="generateMissingFacts">
-                                        Generate missing facts
-                                        <v-chip size="x-small" label class="ml-2">{{ missingFactsCount }}</v-chip>
-                                    </v-btn>
-                                </span>
-                            </template>
-                        </v-tooltip>
-                    </v-card-title>
-                    <div v-if="factsRun" class="d-flex align-center ga-3 mb-2 missing-facts-progress">
-                        <v-progress-linear :model-value="factsRunPercent" color="primary" height="6" rounded></v-progress-linear>
-                        <span class="text-body-small text-no-wrap">Generating facts: {{ factsRun.done }} of {{ factsRun.total }}</span>
-                        <v-tooltip location="top" text="Stop after the entry in progress. Entries done so far keep their facts.">
-                            <template #activator="{ props }">
-                                <v-btn v-bind="props" size="small" variant="text" color="cancel" prepend-icon="mdi-stop" :disabled="factsRunStopping" @click="stopMissingFacts">
-                                    {{ factsRunStopping ? 'Stopping…' : 'Stop' }}
-                                </v-btn>
-                            </template>
-                        </v-tooltip>
-                    </div>
-                    <div v-else-if="factsResult" class="text-body-small text-medium-emphasis mb-2">{{ factsResultText }}</div>
-
-                    <div class="text-body-small text-medium-emphasis mb-2 facts-pointer">
-                        Each summarized entry lists the facts recorded from it. All facts are listed in the Facts tab.
-                    </div>
-
                     <v-card-title>Summarized History</v-card-title>
 
                     <template v-for="(item, index) in interleavedHistory" :key="historyItemKey(item, index)">
                         <WorldStateManagerHistoryEntry
                             v-if="item.type === 'entry'"
                             :entry="item.data"
-                            :facts-open="openFactEntries.includes(item.data.id)"
-                            @update:facts-open="(open) => setFactsOpen(item.data.id, open)"
                             :character-names="characterNames"
                             :perception-mode="perceptionMode"
                             :refreshes="entryRefreshes[item.data.id] || []"
@@ -106,9 +74,7 @@
                             :app-ready="appReady"
                             :app-config="appConfig"
                             :generation-options="generationOptions"
-                            :extract-facts-enabled="extractFactsOn"
                             :busy="busyEntry && busyEntry === item.data.id"
-                            @source="openFactSource"
                             @busy="(entry_id) => setBusyEntry(entry_id)"
                             @collapse="(layer, entry_id) => collapseSourceEntries(layer, entry_id)" />
 
@@ -158,8 +124,6 @@
                     </v-card>
 
                     <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="entry.id ?? l_index"
-                    :facts-open="openFactEntries.includes(entry.id)"
-                    @update:facts-open="(open) => setFactsOpen(entry.id, open)"
                     :entry="entry"
                     :app-busy="appBusy"
                     :app-config="appConfig"
@@ -172,16 +136,6 @@
     </v-window>
 
     <WorldStateManagerHistoryAdd v-model="showAddDialog" :generation-options="generationOptions" @add="addHistoryEntry" />
-    <v-dialog :model-value="factSource !== null" max-width="720" @update:model-value="value => { if (!value) factSource = null; }">
-        <v-card title="Source message">
-            <v-card-subtitle v-if="factSource?.message_id != null">Message {{ factSource.message_id }}</v-card-subtitle>
-            <v-card-text>
-                <v-progress-linear v-if="factSource?.loading" indeterminate color="primary" />
-                <div v-else class="text-body-large" style="white-space: pre-wrap">{{ factSource?.text ?? 'The source message is no longer available.' }}</div>
-            </v-card-text>
-            <v-card-actions><v-spacer /><v-btn @click="factSource = null">Close</v-btn></v-card-actions>
-        </v-card>
-    </v-dialog>
     </div>
 </template>
 
@@ -189,12 +143,9 @@
 import WorldStateManagerHistoryEntry from './WorldStateManagerHistoryEntry.vue';
 import WorldStateManagerHistoryAdd from './WorldStateManagerHistoryAdd.vue';
 import WorldStateManagerTimePassageEntry from './WorldStateManagerTimePassageEntry.vue';
-import WorldStateManagerFactRow from './WorldStateManagerFactRow.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
-import { EXTRACT_FACTS_OFF_HINT, extractFactsEnabled, missingFactsSummary, needsFacts } from '@/utils/historyFacts';
 import { newUuid } from '@/utils/uuid';
 import { perspectivesEnabled } from '@/utils/sceneSettings';
-
 
 export default {
     name: 'WorldStateManagerHistory',
@@ -202,7 +153,7 @@ export default {
         WorldStateManagerHistoryEntry,
         WorldStateManagerHistoryAdd,
         WorldStateManagerTimePassageEntry,
-        WorldStateManagerFactRow,
+
     },
     props: {
         generationOptions: Object,
@@ -219,7 +170,7 @@ export default {
     data() {
         return {
             history: [],
-            factSource: null,
+
             layered_history: [],
             time_passages: [],
             busy: false,
@@ -228,11 +179,7 @@ export default {
             showAddDialog: false,
             layerStats: {},
             layerStatsLoading: {},
-            factsRun: null,
-            factsRunStopping: false,
-            factsResult: null,
-            // ids of the entries whose Facts section is expanded; emptied on every open
-            openFactEntries: [],
+
             // message id -> request id of a refresh run from this tab
             refreshRequests: {},
             // message id -> the error of the last refresh run from this tab
@@ -245,9 +192,7 @@ export default {
         }
     },
     watch: {
-        visible(val) {
-            if (val) this.openFactEntries = [];
-        },
+
         entryRefreshes() {
             this.pruneRefreshes();
         },
@@ -269,14 +214,13 @@ export default {
         },
     },
     computed: {
-        // archive id -> the required refreshes that change that entry's facts;
-        // learning from dialogue changes what listeners know, not the entry
+        // archive id -> required perspective or memory refreshes for that entry
         entryRefreshes() {
             const byEntry = {};
             for (const item of this.scene?.data?.revision_refreshes || []) {
                 const refresh = item.revision_refresh;
                 if (!refresh?.required) continue;
-                if (!refresh.operations?.some((operation) => ['facts', 'perceptions', 'index_repair'].includes(operation))) continue;
+                if (!refresh.operations?.some((operation) => ['perceptions', 'index_repair'].includes(operation))) continue;
                 for (const archiveId of item.archive_ids || []) {
                     (byEntry[archiveId] ||= []).push(item);
                 }
@@ -343,30 +287,10 @@ export default {
         summaryEntriesExist() {
             return this.history.some(e => e.start !== null && e.end !== null);
         },
-        extractFactsOn() {
-            return extractFactsEnabled(this.getAgents());
-        },
-        missingFactsCount() {
-            return this.history.filter(needsFacts).length;
-        },
-        missingFactsDisabled() {
-            return this.extractFactsOn === false || this.appBusy || !this.appReady || this.busy;
-        },
-        missingFactsTooltip() {
-            if (this.extractFactsOn === false) return EXTRACT_FACTS_OFF_HINT;
-            const count = this.missingFactsCount;
-            return `Extract facts for the ${count} ${count === 1 ? 'entry' : 'entries'} without facts, oldest first, one request each. Entries that have facts are left alone.`;
-        },
-        factsRunPercent() {
-            return this.factsRun?.total ? (this.factsRun.done / this.factsRun.total) * 100 : 0;
-        },
-        factsResultText() {
-            return missingFactsSummary(this.factsResult);
-        },
+
     },
     inject:[
         'getWebsocket',
-        'getAgents',
         'registerMessageHandler',
         'unregisterMessageHandler',
         'setWaitingForInput',
@@ -375,12 +299,8 @@ export default {
     methods:{
         reset() {
             this.history = [];
-            this.factSource = null;
             this.time_passages = [];
             this.busy = false;
-            this.factsRun = null;
-            this.factsRunStopping = false;
-            this.factsResult = null;
             this.refreshRequests = {};
             this.refreshErrors = {};
             this.refreshSelections = {};
@@ -413,11 +333,6 @@ export default {
         historyItemKey(item, index) {
             const id = item.type === 'entry' ? item.data.id : item.data.message_id;
             return `${item.type}_${id ?? 'index_' + index}`;
-        },
-
-        setFactsOpen(entryId, open) {
-            const others = this.openFactEntries.filter((id) => id !== entryId);
-            this.openFactEntries = open ? [...others, entryId] : others;
         },
 
         collapseSourceEntries(layer, entry_id) {
@@ -469,36 +384,6 @@ export default {
             }));
         },
 
-        generateMissingFacts() {
-            this.factsResult = null;
-            this.factsRunStopping = false;
-            this.factsRun = { run_id: newUuid(), total: this.missingFactsCount, done: 0 };
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'generate_missing_facts',
-                run_id: this.factsRun.run_id,
-            }));
-        },
-        ownsFactsRun(data) {
-            return !!this.factsRun && data?.run_id === this.factsRun.run_id;
-        },
-        stopMissingFacts() {
-            this.factsRunStopping = true;
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'stop_missing_facts',
-            }));
-        },
-        updateFact(fact) {
-            for (const entry of this.history) {
-                entry.facts = (entry.facts || []).map((existing) => existing.id === fact.id ? fact : existing);
-            }
-        },
-        removeFact(id) {
-            for (const entry of this.history) {
-                entry.facts = (entry.facts || []).filter((fact) => fact.id !== id);
-            }
-        },
         runRefresh(item) {
             const refresh = item.revision_refresh;
             const requestId = `history-refresh:${item.id}:${newUuid()}`;
@@ -543,10 +428,7 @@ export default {
                 this.refreshErrors = { ...this.refreshErrors, [messageId]: message.error.message || 'The refresh failed.' };
             }
         },
-        openFactSource(fact) {
-            this.factSource = { fact_id: fact.id, message_id: fact.message_id, loading: true };
-            this.getWebsocket().send(JSON.stringify({ type: 'world_state_manager', action: 'get_fact_source', fact_id: fact.id }));
-        },
+
         handleMessage(message) {
             if (message.type === 'knowledge_changed') {
                 if (this.visible) this.requestSceneHistory();
@@ -577,12 +459,6 @@ export default {
                     const layerIndex = parseInt(this.tab.split('_')[1]);
                     this.requestLayerStats(layerIndex);
                 }
-            } else if (message.action === 'fact_updated') {
-                this.updateFact(message.data);
-            } else if (message.action === 'fact_deleted') {
-                this.removeFact(message.data.fact_id);
-            } else if (message.action === 'fact_source') {
-                if (this.factSource?.fact_id === message.data.fact_id) this.factSource = { ...message.data, loading: false };
             } else if (message.action == 'layer_stats') {
                 this.layerStats = {...this.layerStats, [message.data.layer]: message.data};
                 this.layerStatsLoading = {...this.layerStatsLoading, [message.data.layer]: false};
@@ -621,13 +497,6 @@ export default {
                     this.layered_history[entry.layer - 1] = this.layered_history[entry.layer - 1].map(e => e.id === entry.id ? entry : e);
                 }
                 this.busyEntry = null;
-            } else if (message.action === 'missing_facts_progress') {
-                if (this.ownsFactsRun(message.data)) this.factsRun = message.data;
-            } else if (message.action === 'missing_facts_done') {
-                if (!this.ownsFactsRun(message.data)) return;
-                this.factsRun = null;
-                this.factsRunStopping = false;
-                this.factsResult = message.data;
             } else if (message.action == 'operation_done') {
                 this.busyEntry = null;
                 if (message.failed_action === 'set_history_entry_known_by') this.knownByRefusals += 1;

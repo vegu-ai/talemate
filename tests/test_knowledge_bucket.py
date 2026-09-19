@@ -19,7 +19,7 @@ def doc(id, meta, text="x"):
 
 @pytest.fixture
 def index():
-    return KnowledgeIndex(grants=set(), revokes=set(), unlearns=set())
+    return KnowledgeIndex(grants=set(), revokes=set())
 
 
 # ---------------------------------------------------------------------------
@@ -105,19 +105,13 @@ class TestInBucket:
             item = KnowledgeItem(id=kind, kind=kind, owner="Bob")
             assert index.in_bucket("Alice", item), kind
 
-    def test_fact_follows_presence(self, index):
-        item = KnowledgeItem(id="F1", kind="fact", present=["Bob"])
-        assert not index.in_bucket("Alice", item)
-        assert index.in_bucket("Bob", item)
-
     def test_grant_overrides_absence_and_visibility(self):
         index = KnowledgeIndex(
             grants={("Alice", "F1"), ("Alice", "Bob.detail.secret")},
             revokes=set(),
-            unlearns=set(),
         )
         assert index.in_bucket(
-            "Alice", KnowledgeItem(id="F1", kind="fact", present=["Bob"])
+            "Alice", KnowledgeItem(id="F1", kind="history", present=["Bob"])
         )
         assert index.in_bucket(
             "Alice",
@@ -133,10 +127,9 @@ class TestInBucket:
         index = KnowledgeIndex(
             grants={("Alice", "F1")},
             revokes={("Alice", "F1"), ("Bob", "Bob.age")},
-            unlearns=set(),
         )
         assert not index.in_bucket(
-            "Alice", KnowledgeItem(id="F1", kind="fact", present=["Alice"])
+            "Alice", KnowledgeItem(id="F1", kind="history", present=["Alice"])
         )
         # even the owner, when a revoke names them
         assert not index.in_bucket(

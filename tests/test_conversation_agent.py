@@ -20,13 +20,9 @@ The full ``build_prompt_default`` pathway is left to template-baseline
 tests; here we patch ``build_prompt`` so converse can be tested end-to-end.
 """
 
-from unittest.mock import AsyncMock
-
 import pytest
 
 import talemate.client.context as client_context_module
-from talemate.events import GameLoopNewMessageEvent
-from talemate.scene_message import NarratorMessage
 from talemate.agents.conversation import (
     ConversationAgent,
 )
@@ -388,45 +384,6 @@ class TestConverse:
         # should still be prefixed with "Alice: " by the converse path.
         assert msg.message.startswith("Alice: ")
         assert "Hello there" in msg.message
-
-    async def test_new_character_line_reaches_the_ledger(
-        self, conversation_scene, alice
-    ):
-        scene, conversation, alice_actor = conversation_scene
-        conversation.actions["character_knowledge"].config["ledger"].value = True
-        conversation.record_learned_facts = AsyncMock(return_value={})
-        try:
-            line = CharacterMessage("Alice: I found the key.")
-            await conversation.on_new_message(
-                GameLoopNewMessageEvent(
-                    scene=scene, event_type="game_loop_new_message", message=line
-                )
-            )
-            conversation.record_learned_facts.assert_awaited_once()
-            character, text = conversation.record_learned_facts.await_args.args
-            assert character is alice
-            assert text == "Alice: I found the key."
-
-            # narration is not a character line
-            await conversation.on_new_message(
-                GameLoopNewMessageEvent(
-                    scene=scene,
-                    event_type="game_loop_new_message",
-                    message=NarratorMessage("The wind picks up."),
-                )
-            )
-            assert conversation.record_learned_facts.await_count == 1
-
-            # off: nothing
-            conversation.actions["character_knowledge"].config["ledger"].value = False
-            await conversation.on_new_message(
-                GameLoopNewMessageEvent(
-                    scene=scene, event_type="game_loop_new_message", message=line
-                )
-            )
-            assert conversation.record_learned_facts.await_count == 1
-        finally:
-            conversation.actions["character_knowledge"].config["ledger"].value = False
 
     async def test_converse_narrative_format(self, conversation_scene, alice):
         scene, conversation, alice_actor = conversation_scene

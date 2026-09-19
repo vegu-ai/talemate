@@ -52,7 +52,7 @@ async def test_edited_pending_submission_is_ready_at_conversation_prompt(
     submission, monkeypatch
 ):
     t = submission
-    t.summarizer.summarize.side_effect = GenerationCancelled("older refresh cancelled")
+    t.cleanup.side_effect = GenerationCancelled("older refresh cancelled")
     message = CharacterMessage(message="Alice: I take the key.", source="player")
     with pytest.raises(GenerationCancelled):
         await t.scene.push_history(message, emit_message=True)
@@ -63,9 +63,8 @@ async def test_edited_pending_submission_is_ready_at_conversation_prompt(
     assert message.history_dispatch_pending
     assert revision_requires_refresh(t.scene, message)
     conversation = get_agent("conversation")
-    assert not conversation.knowledge_ledger
-    t.summarizer.summarize.side_effect = None
-    t.summarizer.summarize.return_value = ("The key is ruby.", [])
+    t.cleanup.side_effect = None
+    t.cleanup.return_value = True
     prompts = []
 
     async def build_prompt(*args, **kwargs):
@@ -79,9 +78,9 @@ async def test_edited_pending_submission_is_ready_at_conversation_prompt(
         await conversation.converse(t.scene.get_character("Bob").actor)
     assert prompts == [message.id]
     # the edited player line sits outside every archive: nothing to re-extract
-    assert t.summarizer.summarize.await_count == 2
+    assert t.cleanup.await_count == 2
     await catch_up_revisions(t.scene)
-    assert t.summarizer.summarize.await_count == 2
+    assert t.cleanup.await_count == 2
 
 
 @pytest.mark.asyncio
@@ -89,7 +88,7 @@ async def test_edited_pending_submission_is_ready_at_conversation_prompt(
 @pytest.mark.parametrize(
     "failure", [GenerationCancelled, asyncio.CancelledError, RuntimeError]
 )
-@pytest.mark.parametrize("boundary", ["archive", "tts", "learning"])
+@pytest.mark.parametrize("boundary", ["archive", "tts"])
 async def test_archive_retry_preserves_completed_real_listeners(
     submission,
     monkeypatch,
@@ -107,28 +106,15 @@ async def test_archive_retry_preserves_completed_real_listeners(
     calls = []
     archive_attempts = []
     tts_attempts = []
-    learning_attempts = []
 
     async def summarize(*args, **kwargs):
         archive_attempts.append(args[0])
         if boundary == "archive" and len(archive_attempts) == 1:
             raise failure("dispatch interrupted")
-        return "The old key is silver.", []
+        return "The old key is silver."
 
     def connect(scene):
         conversation = get_agent("conversation")
-        conversation.write_enabled("character_knowledge", boundary == "learning")
-        conversation.write_config(
-            "character_knowledge", "ledger", boundary == "learning"
-        )
-
-        async def learn(*args, **kwargs):
-            learning_attempts.append(kwargs["message"].id)
-            if len(learning_attempts) == 1:
-                raise failure("dispatch interrupted")
-            return {}
-
-        monkeypatch.setattr(conversation, "record_learned_facts", learn)
         summarizer = get_agent("summarizer")
         summarizer.write_enabled("archive", True)
         summarizer.write_config("archive", "threshold", 1)
@@ -150,7 +136,6 @@ async def test_archive_retry_preserves_completed_real_listeners(
 
         monkeypatch.setattr(tts, "generate", generate)
         isolate_signals("push_history", "push_history.after", "game_loop_new_message")
-        scene.signals["game_loop_new_message"].connect(conversation.on_new_message)
         scene.signals["game_loop_new_message"].connect(tts.on_game_loop_new_message)
         scene.signals["push_history.after"].connect(summarizer.on_push_history)
         return conversation
@@ -173,7 +158,6 @@ async def test_archive_retry_preserves_completed_real_listeners(
         await catch_up_revisions(scene)
     assert len(archive_attempts) == (2 if boundary == "archive" else 1)
     assert len(tts_attempts) == (2 if boundary == "tts" else 1)
-    assert len(learning_attempts) == (2 if boundary == "learning" else 0)
     assert len(scene.archived_history) == 1
     assert calls == [message.id]
     assert not message.history_dispatch_pending

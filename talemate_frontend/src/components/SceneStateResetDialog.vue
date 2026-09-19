@@ -67,7 +67,7 @@
                             </template>
                         </v-checkbox>
                         <div class="text-body-small text-muted ml-8">
-                            Static entries are pre-established backstory not tied to scene progression. Including them also removes their facts and the Learn, Never Learn and Unlearn rules set on them.
+                            Static entries are pre-established backstory not tied to scene progression. Including them also removes the Learn and Never Learn rules set on them.
                         </div>
                     </div>
 
@@ -288,8 +288,8 @@ export default {
             }
             if (this.options.wipeHistory) {
                 items.push(this.options.wipeHistoryIncludeStatic
-                    ? 'Wipe all history, facts and rules (including static entries)'
-                    : 'Wipe history, facts and rules (preserve static)');
+                    ? 'Wipe all history and rules (including static entries)'
+                    : 'Wipe history and rules (preserve static)');
             }
             if (this.options.resetIntentState) {
                 items.push('Reset Intent State');

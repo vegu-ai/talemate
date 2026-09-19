@@ -280,35 +280,6 @@ async def test_evidence_change_during_generation_is_cancelled_without_retry(
 
 
 @pytest.mark.asyncio
-async def test_actor_absence_and_topic_assertions_are_not_called_in_new_mode(
-    advice, monkeypatch
-):
-    scene, _ = advice
-    conversation = get_agent("conversation")
-    absence = AsyncMock(side_effect=AssertionError("secret absence called"))
-    awareness = AsyncMock(side_effect=AssertionError("topic assertion called"))
-    monkeypatch.setattr(conversation, "absence_block", absence)
-    monkeypatch.setattr(conversation, "awareness_line", awareness)
-    prompt = Prompt.get(
-        "conversation.character-knowledge",
-        vars={"scene": scene, "talking_character": scene.character_data["Bob"]},
-    )
-    assert "character evidence rules" in prompt.render().lower()
-    absence.assert_not_awaited()
-    awareness.assert_not_awaited()
-    scene.knowledge_eligibility = "legacy"
-    absence.side_effect = None
-    awareness.side_effect = None
-    absence.return_value = ["LEGACY-ABSENCE"]
-    awareness.return_value = "LEGACY-AWARENESS"
-    text = Prompt.get(
-        "conversation.character-knowledge",
-        vars={"scene": scene, "talking_character": scene.character_data["Bob"]},
-    ).render()
-    assert "LEGACY-ABSENCE" in text and "LEGACY-AWARENESS" in text
-
-
-@pytest.mark.asyncio
 async def test_dialogue_uses_validated_guidance_instead_of_unscoped_context(advice):
     scene, _ = advice
     conversation = get_agent("conversation")

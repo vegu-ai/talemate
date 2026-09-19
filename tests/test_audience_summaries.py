@@ -6,9 +6,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 import talemate.emit.async_signals
-import talemate.agents.summarize as summarize_module
 import talemate.agents.summarize.audience_summaries as audience_summary_module
-from talemate.knowledge.schema import ParsedFact
 
 from talemate.character import Character
 from talemate.context import ActiveScene
@@ -102,7 +100,6 @@ def summary_scene(scene, monkeypatch, request):
         ]
     ]
     summarizer = get_agent("summarizer")
-    summarizer.actions["archive"].config["extract_facts"].value = False
     summarizer.connect(scene)
     calls = []
 
@@ -454,8 +451,8 @@ async def test_base_archive_creation_generates_audience_views(
 
     async def summarize(text, **kwargs):
         calls.append((text, kwargs))
-        if kwargs.get("return_facts"):
-            return "Complete reader summary.", None
+        if not kwargs.get("audience"):
+            return "Complete reader summary."
         return text
 
     monkeypatch.setattr(summarizer, "summarize", summarize)
@@ -896,29 +893,6 @@ async def test_author_hooks_are_explicit_at_request_boundary(
 
 
 @pytest.mark.asyncio
-async def test_audience_facts_request_uses_scoped_contract(summary_scene, monkeypatch):
-    _, summarizer, _ = summary_scene
-    summarizer.actions["archive"].config["extract_facts"].value = True
-    prompts = []
-
-    async def request(uid, client, kind, **kwargs):
-        prompts.append(str(Prompt.get(uid, vars=kwargs["vars"])))
-        return "SUMMARY: Alice made a claim.", {
-            "summary": "Alice made a claim.",
-            "facts": '[{"text":"Alice made a claim."}]',
-        }
-
-    monkeypatch.setattr(Prompt, "request", request)
-    summary, facts = await type(summarizer).summarize(
-        summarizer, CLAIM, audience=("Bob",), return_facts=True, skip_author_hooks=True
-    )
-    assert summary == "Alice made a claim."
-    assert facts == [ParsedFact(text="Alice made a claim.")]
-    assert "Extract only what the supplied audience perspective supports" in prompts[0]
-    assert PRIVATE not in prompts[0]
-
-
-@pytest.mark.asyncio
 async def test_audience_failure_cannot_interrupt_reader_finalization(
     summary_scene, monkeypatch
 ):
@@ -929,20 +903,15 @@ async def test_audience_failure_cannot_interrupt_reader_finalization(
     summarizer.actions["archive"].enabled = True
     summarizer.actions["archive"].config["threshold"].value = 1
     monkeypatch.setattr(summarizer, "analyze_dialoge", AsyncMock(return_value=None))
-    facts = [ParsedFact(text="Alice made a claim.")]
 
     async def respond(text, **kwargs):
-        if kwargs.get("return_facts"):
-            return "Reader summary.", facts
+        if not kwargs.get("audience"):
+            return "Reader summary."
         raise GenerationCancelled("audience cancelled")
 
     monkeypatch.setattr(summarizer, "summarize", respond)
-    store = AsyncMock()
-    topics = AsyncMock()
     after = AsyncMock()
     status = Mock()
-    monkeypatch.setattr(summarize_module, "store_facts", store)
-    monkeypatch.setattr(summarize_module, "refresh_topics", topics)
     monkeypatch.setattr(
         talemate.emit.async_signals.get("agent.summarization.after_build_archive"),
         "send",
@@ -950,8 +919,6 @@ async def test_audience_failure_cannot_interrupt_reader_finalization(
     )
     monkeypatch.setattr(scene, "emit_status", status)
     assert await summarizer.build_archive(scene)
-    store.assert_not_awaited()
-    topics.assert_not_awaited()
     after.assert_awaited_once()
     status.assert_called_once()
     assert scene.archived_history[0]["ts"] == 0

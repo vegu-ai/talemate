@@ -3,7 +3,6 @@ import json
 import threading
 from unittest.mock import AsyncMock, Mock
 
-import numpy as np
 import pytest
 import test_memory_audiences
 
@@ -14,13 +13,11 @@ from talemate.config import get_config
 from talemate.history import ArchiveEntry
 from talemate.instance import get_agent
 from talemate.knowledge.disclosures import grant_disclosure
-from talemate.knowledge.facts import update_fact
-from talemate.knowledge.perspectives import set_source_perspectives, source_reference
-from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge, ParsedFact, Topic
-from talemate.knowledge.supported_facts import replace_source_facts
+from talemate.knowledge.perspectives import set_source_perspectives
+from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge
 from talemate.prompts import Prompt
 from talemate.regenerate import regenerate
-from talemate.scene_message import DirectorMessage, NarratorMessage
+from talemate.scene_message import DirectorMessage
 from talemate.tale_mate import Scene
 from talemate.world_state import Reinforcement
 
@@ -128,11 +125,6 @@ async def test_filtered_candidate_cutoff_and_no_similarity_rescue(rag, monkeypat
         query_embeddings=[[1.0, 0.0]], n_results=10, where={"region": "harbor"}
     )
     assert set(global_nearest["ids"][0]) <= set(crowded)
-    monkeypatch.setattr(
-        memory,
-        "_gate_anchors",
-        AsyncMock(side_effect=AssertionError("Access rescue called")),
-    )
     result = await memory.multi_query(
         ["harbor"], limit=1, viewer="Elmer", region="harbor", filter=lambda doc: True
     )
@@ -141,19 +133,7 @@ async def test_filtered_candidate_cutoff_and_no_similarity_rescue(rag, monkeypat
     def rejected(doc):
         return False
 
-    rejected.known_fact_ids = lambda: {"F1"}
-    rejected.gateable = lambda doc: True
-    rescue = AsyncMock(return_value=set())
-    monkeypatch.setattr(memory, "near_duplicates_against", rescue)
     assert await memory.multi_query(["harbor"], viewer="Elmer", filter=rejected) == []
-    rescue.assert_not_awaited()
-    # Positive control: this is an actual rescue-capable filter, not a lambda
-    # that would stop before the similarity path regardless of the mode.
-    rescue.return_value = {doc.id for doc in result}
-    assert (
-        await memory._apply_filter(result, rejected, 0.1, {"F1": [1.0, 0.0]}) == result
-    )
-    rescue.assert_awaited_once()
 
 
 async def test_metadata_and_id_paths_return_only_supported_variants(rag):
@@ -166,58 +146,10 @@ async def test_metadata_and_id_paths_return_only_supported_variants(rag):
     memory.invalidate_audience_index()
     assert await conversation.entity_lookup(["Zed was named."], viewer="Elmer") == []
     assert await memory.get_document("Zed.description.0", viewer="Elmer") == {}
-    fact = scene.world_state.facts["F1"]
-    fact.text = "Author correction: Marie has no lantern."
-    fact.text_edited = True
-    memory.invalidate_audience_index()
-    documents = await memory.get_document("F1", viewer="Elmer")
-    assert len(documents) == 1
-    assert next(iter(documents.values())).raw.endswith(
-        "Author correction: Marie has no lantern."
-    )
-    assert all(identity.startswith("knowledge:") for identity in documents)
-    assert await memory.get_document("F1", viewer="Marie") == {}
+    docs = await memory.get_documents_by_meta({"region": "harbor"}, viewer="Elmer")
+    assert {doc.raw for doc in docs.values()} == {"Common rain lore."}
+    assert all(identity.startswith("knowledge:") for identity in docs)
     assert any("Reader secret" in doc.raw for doc in await memory.get("lantern"))
-
-
-async def test_topic_candidates_and_centroids_use_eligible_fact_variants(
-    rag, monkeypatch
-):
-    scene, memory, _, _ = rag
-    private = NarratorMessage("Private source.")
-    scene.history.append(private)
-    set_source_perspectives(
-        scene,
-        "message",
-        private.id,
-        [{"audience": ["Marie"], "text": "Secret cargo.", "status": "ready"}],
-    )
-    await replace_source_facts(
-        scene,
-        [
-            (
-                source_reference(scene, "message", private.id),
-                ("Marie",),
-                [
-                    ParsedFact(text=f"Secret cargo {i}.", subjects=["Marie"])
-                    for i in range(12)
-                ],
-            )
-        ],
-    )
-    for identity, fact in scene.world_state.facts.items():
-        if identity != "F1":
-            fact.restatements = 100
-    scene.world_state.topics = {
-        "T1": Topic(id="T1", name="Cargo", fact_ids=list(scene.world_state.facts))
-    }
-    monkeypatch.setattr(
-        memory, "embed_text", AsyncMock(return_value=np.array([1.0, 0.0]))
-    )
-    found = await memory._topic_first("lantern", [], None, viewer="Elmer")
-    assert len(found) == 1 and found[0].raw.endswith("Marie carries a lantern.")
-    assert found[0].meta["knowledge_id"] == "F1"
-    assert await memory._topic_first("lantern", found, None, viewer="Elmer") == []
 
 
 @pytest.mark.parametrize("method", ["queries", "questions"])
@@ -483,69 +415,6 @@ async def test_cache_hit_is_refused_while_memory_write_is_in_flight(rag, monkeyp
     assert await conversation.rag_get_cache(character) is None
 
 
-async def test_topic_data_reused_across_queries_and_invalidated(rag, monkeypatch):
-    scene, memory, message, _ = rag
-    scene.world_state.topics = {"T1": Topic(id="T1", name="Lantern", fact_ids=["F1"])}
-    metadata = AsyncMock(wraps=memory.get_documents_by_meta)
-    vectors = AsyncMock(wraps=memory.get_embeddings)
-    groups = Mock(wraps=memory._audience_topic_groups)
-    monkeypatch.setattr(memory, "get_documents_by_meta", metadata)
-    monkeypatch.setattr(memory, "get_embeddings", vectors)
-    monkeypatch.setattr(memory, "_audience_topic_groups", groups)
-    for query in ("lantern", "light", "harbor"):
-        assert await memory._topic_first(query, [], None, viewer="Elmer")
-    assert metadata.await_count == vectors.await_count == groups.call_count == 1
-    assert not await memory._topic_first("lantern", [], None, viewer="Marie")
-    assert metadata.await_count == 2
-    await scene.world_state_manager.set_world_entry_visibility(
-        "lore", EntryVisibility(mode="owner")
-    )
-    await memory._topic_first("lantern", [], None, viewer="Elmer")
-    assert metadata.await_count == 3
-    scene.world_state.topics["T1"].fact_ids = []
-    assert not await memory._topic_first("lantern", [], None, viewer="Elmer")
-    assert metadata.await_count == 4
-    scene.world_state.topics["T1"].fact_ids = ["F1"]
-    assert await memory._topic_first("lantern", [], None, viewer="Elmer")
-    views(scene, message, public="Marie put the lantern down.")
-    assert not await memory._topic_first("lantern", [], None, viewer="Elmer")
-
-
-async def test_cached_topic_dates_follow_scene_time_without_refetch(rag, monkeypatch):
-    scene, memory, _, _ = rag
-    scene.world_state.topics = {"T1": Topic(id="T1", name="Lantern", fact_ids=["F1"])}
-    metadata = AsyncMock(wraps=memory.get_documents_by_meta)
-    vectors = AsyncMock(wraps=memory.get_embeddings)
-    groups = Mock(wraps=memory._audience_topic_groups)
-    monkeypatch.setattr(memory, "get_documents_by_meta", metadata)
-    monkeypatch.setattr(memory, "get_embeddings", vectors)
-    monkeypatch.setattr(memory, "_audience_topic_groups", groups)
-    initial = await memory._topic_first("lantern", [], None, viewer="Elmer")
-    assert len(initial) == 1
-    scene.ts += 86400
-    current = await memory._topic_first("light", [], None, viewer="Elmer")
-    assert current[0].id == initial[0].id
-    assert current[0].raw == initial[0].raw == "Marie carries a lantern."
-    assert str(current[0]) != str(initial[0])
-    assert (
-        str(current[0])
-        == f"({memory.convert_ts_to_date_prefix(current[0].meta['ts'])}) {current[0].raw}"
-    )
-    assert metadata.await_count == vectors.await_count == groups.call_count == 1
-    seen = []
-
-    def current_age_only(doc):
-        seen.append(str(doc))
-        return str(doc) == str(current[0])
-
-    assert (
-        await memory._topic_first("light", [], current_age_only, viewer="Elmer")
-        == current
-    )
-    assert seen == [str(current[0])]
-    assert metadata.await_count == vectors.await_count == 1
-
-
 @pytest.mark.parametrize("mode", ["direction", "internal_monologue"])
 @pytest.mark.parametrize("guidance", [None, "Live guidance replaces stored direction."])
 async def test_retrieval_keeps_only_own_direction_with_configured_format(
@@ -748,9 +617,7 @@ async def configure_cached_rag(rag, monkeypatch, mode, viewer, method):
     return None if viewer == "author" else scene.character_data["Elmer"]
 
 
-async def cached_reply_turn(
-    rag, monkeypatch, mode, *, archive_during_push=False, ledger_grant=False
-):
+async def cached_reply_turn(rag, monkeypatch, mode, *, archive_during_push=False):
     scene, memory, _, conversation = rag
     character = await configure_cached_rag(
         rag, monkeypatch, mode, "character", "queries"
@@ -780,12 +647,6 @@ async def cached_reply_turn(
         "analyze_text_and_extract_context_via_queries",
         query,
     )
-    if mode == "legacy":
-        monkeypatch.setattr(
-            conversation.actions["character_knowledge"].config["ledger"],
-            "value",
-            True,
-        )
     calls = {}
     dialogue_prompts = []
     reply = 0
@@ -795,16 +656,6 @@ async def cached_reply_turn(
         calls[prompt.uid] = calls.get(prompt.uid, 0) + 1
         if prompt.uid == "conversation.memory-pass":
             return '<ITEMS><ITEM n="1">The harbor will close at dusk.</ITEM></ITEMS>'
-        if prompt.uid == "conversation.knowledge-ledger":
-            return (
-                '<LEDGER>{"Marie": ["F1"]}</LEDGER>'
-                if ledger_grant
-                else "<LEDGER>{}</LEDGER>"
-            ) + (
-                '<FACTS>[{"text": "Elmer says the tide is '
-                'rising.", "importance": 2, "subjects": ["Elmer", "tide"], '
-                '"known_by": ["Marie"], "supersedes": null}]</FACTS>'
-            )
         if prompt.uid == "summarizer.perceptions":
             views = [
                 {
@@ -813,7 +664,6 @@ async def cached_reply_turn(
                     "text": f"{item['name']} hears Elmer reply.",
                     "knowledge_ids": [],
                     "passage_ids": [],
-                    "evidence_spans": [],
                 }
                 for item in prompt.vars["context"]["cast"]
             ]
@@ -862,51 +712,6 @@ async def test_regenerate_reuses_query_and_memory_pass(rag, monkeypatch, mode):
     assert all(
         "The harbor will close at dusk." in prompt for prompt in dialogue_prompts
     )
-
-
-async def test_standard_regenerate_ignores_reply_ledger_grant(rag, monkeypatch):
-    scene, _, _, _ = rag
-    original, query, calls, _ = await cached_reply_turn(
-        rag, monkeypatch, "legacy", ledger_grant=True
-    )
-    grant = next(
-        edge
-        for edge in scene.world_state.knowledge
-        if edge.character == "Marie"
-        and edge.target == "F1"
-        and edge.source == "inferred"
-    )
-    assert grant.message_id == original.id
-
-    assert await regenerate(scene) == [original]
-    assert query.await_count == 1
-    assert calls["conversation.memory-pass"] == 1
-
-
-async def test_standard_regenerate_ignores_ledger_when_knowledge_filter_is_off(
-    rag, monkeypatch
-):
-    scene, _, _, conversation = rag
-    monkeypatch.setattr(
-        conversation.actions["character_knowledge"].config["perspective_filter"],
-        "value",
-        False,
-    )
-    original, query, calls, _ = await cached_reply_turn(
-        rag, monkeypatch, "legacy", ledger_grant=True
-    )
-    assert conversation.rag_knowledge_viewer(scene.character_data["Elmer"]) is None
-    assert any(
-        edge.character == "Marie"
-        and edge.target == "F1"
-        and edge.source == "inferred"
-        and edge.message_id == original.id
-        for edge in scene.world_state.knowledge
-    )
-
-    assert await regenerate(scene) == [original]
-    assert query.await_count == 1
-    assert calls["conversation.memory-pass"] == 1
 
 
 async def test_viewerless_regenerate_refreshes_after_intro_edit(rag, monkeypatch):
@@ -1085,14 +890,16 @@ async def test_memory_pass_cache_tracks_resolved_preset_values(rag, monkeypatch)
 
 
 @pytest.mark.parametrize("mode", ["legacy", "perception"])
-@pytest.mark.parametrize("change", ["manual_fact", "archive"])
+@pytest.mark.parametrize("change", ["world_entry", "archive"])
 async def test_unrelated_write_invalidates_query_and_memory_pass(
     rag, monkeypatch, mode, change
 ):
     scene, _, _, _ = rag
     _, query, calls, _ = await cached_reply_turn(rag, monkeypatch, mode)
-    if change == "manual_fact":
-        await update_fact(scene, "F1", text="The lantern was extinguished.")
+    if change == "world_entry":
+        await scene.world_state_manager.save_world_entry(
+            "lore", "The lantern was extinguished.", {}
+        )
     else:
         await scene.push_archive(ArchiveEntry(text="A new harbor archive."))
 
@@ -1440,7 +1247,7 @@ async def test_scoped_metadata_rejects_legacy_and_id_lists_filter_sources(
 ):
     _, memory, _, _ = rag
     documents = await memory.get_document(["F1", "lore", "missing"], viewer="Elmer")
-    assert {doc.meta["knowledge_id"] for doc in documents.values()} == {"F1", "lore"}
+    assert {doc.meta["knowledge_id"] for doc in documents.values()} == {"lore"}
     assert all(identity.startswith("knowledge:") for identity in documents)
     assert await memory.get_document([], viewer="Elmer") == {}
     rag[0].knowledge_eligibility = "legacy"

@@ -62,12 +62,8 @@ from talemate.history import (
     count_summary_layers,
     message_removed,
 )
-from talemate.knowledge.message_facts import prune_missing_message_facts
-from talemate.knowledge.timeline import refresh_fact_times
 from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.memory import invalidate_memory_audiences
-from talemate.knowledge.facts import fact_memory_document, prune_summary_facts
-from talemate.knowledge.topics import topics_on_load
 from talemate.knowledge.perspective_models import SceneKnowledge
 from talemate.knowledge.perspectives import (
     bind_message_source,
@@ -1818,20 +1814,9 @@ class Scene(Emitter):
         try:
             ts = self.ts
             self._fix_time()
-            self.refresh_fact_times()
         except Exception:
             log.error("fix_time", exc=traceback.format_exc())
             self.ts = ts
-
-    def refresh_fact_times(self, moved: set[str] = frozenset()):
-        """
-        Facts follow the timeline: their time is the time at their message.
-        `moved` names facts whose time already changed, for the memory.
-        """
-        changed = set(moved) | refresh_fact_times(self)
-        if changed:
-            get_agent("summarizer").queue_fact_memory(self, changed)
-        return changed
 
     def _fix_time(self):
         starting_time = self.start_ts
@@ -2314,39 +2299,22 @@ class Scene(Emitter):
         if archive_entries:
             await memory.add_many(archive_entries)
 
-        fact_documents = [
-            fact_memory_document(fact) for fact in self.world_state.facts.values()
-        ]
-        if fact_documents:
-            await memory.add_many(fact_documents)
-
         for character in self.characters:
             await character.commit_to_memory(memory)
 
         await self.world_state.commit_to_memory(memory)
         await memory.rebuild_audience_index()
 
-        # topic centroids are not persisted; cluster when nothing is stored yet
-        await topics_on_load(self)
-
     def reset(self):
         # remove messages
         self.history = []
         self.agent_state.get("conversation", {}).pop(DEPARTURES_KEY, None)
-        dropped_facts = reset_perspectives(self)
-        # the story the facts came from is gone: a hand grant keeps none
-        dropped_facts.update(prune_missing_message_facts(self, edges=False))
+        reset_perspectives(self)
 
         # clear out archived history, but keep pre-established history
-        summarized_ids = {
-            ah.get("id")
-            for ah in self.archived_history
-            if ah.get("end") is not None and ah.get("id")
-        }
         self.archived_history = [
             ah for ah in self.archived_history if ah.get("end") is None
         ]
-        dropped_facts.update(prune_summary_facts(self.world_state, summarized_ids))
 
         self.layered_history = []
         self.sync_time()
@@ -2354,8 +2322,6 @@ class Scene(Emitter):
         self.world_state.reset()
 
         self.filename = ""
-
-        return dropped_facts
 
     async def remove_all_actors(self):
         for actor in self.actors:

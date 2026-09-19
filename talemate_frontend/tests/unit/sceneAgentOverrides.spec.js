@@ -24,8 +24,8 @@ describe('the scene-only coordinator payload', () => {
     it('sends a sparse per-agent patch, never a replacement override', () => {
         const { sent, coordinator, done } = harness();
         coordinator.applySceneAgentValues([
-            setEntry('conversation', 'character_knowledge', { ledger: true, memory_pass: true }),
-            setEntry('memory', 'topics', {}, false),
+            setEntry('conversation', 'character_knowledge', { memory_pass: true, memory_pass: true }),
+            setEntry('memory', 'retrieval', {}, false),
         ]);
         expect(sent).toHaveLength(1);
         const conversation = sent[0];
@@ -34,7 +34,7 @@ describe('the scene-only coordinator payload', () => {
             action: 'save_scene_overrides',
             agent_type: 'conversation',
             scene_identity: 'scene-1',
-            patch: { set: { actions: { character_knowledge: { config: { ledger: { value: true }, memory_pass: { value: true } } } } }, clear: [] },
+            patch: { set: { actions: { character_knowledge: { config: { memory_pass: { value: true }, memory_pass: { value: true } } } } }, clear: [] },
         });
         expect(conversation.override).toBeUndefined();
         expect(conversation.filename).toBe(DEFAULT_SCENE_AGENT_SETTINGS_FILENAME);
@@ -45,8 +45,8 @@ describe('the scene-only coordinator payload', () => {
     it('serializes the agents: the next patch waits for the acknowledgement', () => {
         const { sent, coordinator, done } = harness();
         coordinator.applySceneAgentValues([
-            setEntry('conversation', 'character_knowledge', { ledger: true }),
-            setEntry('memory', 'topics', {}, false),
+            setEntry('conversation', 'character_knowledge', { memory_pass: true }),
+            setEntry('memory', 'retrieval', {}, false),
         ]);
         expect(sent).toHaveLength(1);
         expect(coordinator.busy).toBe(true);
@@ -58,10 +58,10 @@ describe('the scene-only coordinator payload', () => {
 
     it('reuses the link for later patches instead of naming the file again', () => {
         const { sent, coordinator, done } = harness();
-        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { ledger: true })]);
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
         expect(sent[0].filename).toBe(DEFAULT_SCENE_AGENT_SETTINGS_FILENAME);
         done({ request_id: sent[0].request_id });
-        coordinator.applySceneAgentValues([setEntry('memory', 'topics', {}, false)]);
+        coordinator.applySceneAgentValues([setEntry('memory', 'retrieval', {}, false)]);
         expect(sent[1].filename).toBeUndefined();
     });
 
@@ -69,19 +69,19 @@ describe('the scene-only coordinator payload', () => {
         const { sent, coordinator } = harness({
             scene: { data: { id: 'scene-1', filename: 's.json', project_name: 'p', agent_settings_file: 'existing.json' } },
         });
-        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { ledger: true })]);
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
         expect(sent[0].filename).toBeUndefined();
     });
 
     it('sends clear entries without a config as an enable clear', () => {
         const { sent, coordinator } = harness();
         coordinator.clearSceneAgentValues([
-            { agent: 'memory', action: 'topics' },
-            { agent: 'memory', action: 'retrieval', config: 'similarity_gate' },
+            { agent: 'memory', action: 'retrieval' },
+            { agent: 'memory', action: 'retrieval', config: 'recency_weight' },
         ]);
         expect(sent[0].patch).toEqual({
             set: { actions: {} },
-            clear: [{ action: 'topics' }, { action: 'retrieval', config: 'similarity_gate' }],
+            clear: [{ action: 'retrieval' }, { action: 'retrieval', config: 'recency_weight' }],
         });
     });
 });
@@ -89,7 +89,7 @@ describe('the scene-only coordinator payload', () => {
 describe('the coordinator request correlation', () => {
     it('ignores an acknowledgement for a request it did not send', () => {
         const { sent, coordinator, done } = harness();
-        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { ledger: true })]);
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
         done({ request_id: 'someone-else' });
         expect(coordinator.inFlight).not.toBeNull();
         done({ request_id: sent[0].request_id });
@@ -107,8 +107,8 @@ describe('the coordinator request correlation', () => {
             onError,
         });
         coordinator.applySceneAgentValues([
-            setEntry('conversation', 'character_knowledge', { ledger: true }),
-            setEntry('memory', 'topics', {}, false),
+            setEntry('conversation', 'character_knowledge', { memory_pass: true }),
+            setEntry('memory', 'retrieval', {}, false),
         ]);
         coordinator.handleMessage({
             type: 'agent_config', action: 'operation_done', request_id: sent[0].request_id,
@@ -123,7 +123,7 @@ describe('the coordinator request correlation', () => {
         expect(state.busy).toBe(false);
         expect(state.error).toBe('disk full');
         // only a deliberate later action clears it
-        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { ledger: false })]);
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: false })]);
         expect(state.error).toBeNull();
     });
 });
@@ -131,7 +131,7 @@ describe('the coordinator request correlation', () => {
 describe('the coordinator scene binding', () => {
     it('drops queued work when the scene loads', () => {
         const { sent, coordinator } = harness();
-        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { ledger: true })]);
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
         coordinator.handleMessage({ type: 'system', id: 'scene.loaded' });
         expect(coordinator.busy).toBe(false);
         expect(sent).toHaveLength(1);
@@ -139,13 +139,13 @@ describe('the coordinator scene binding', () => {
 
     it('drops queued work at load start and binds the generation the next scene_status reports', () => {
         const { sent, coordinator, scene } = harness();
-        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { ledger: true })]);
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
         expect(sent).toHaveLength(1);
         coordinator.handleMessage({ type: 'system', id: 'scene.loading' });
         expect(coordinator.busy).toBe(false);
         scene.data = { id: 'scene-B', filename: 'b.json', project_name: 'p', agent_settings_file: null };
         coordinator.handleMessage({ type: 'scene_status', data: scene.data });
-        coordinator.applySceneAgentValues([setEntry('memory', 'topics', {}, false)]);
+        coordinator.applySceneAgentValues([setEntry('memory', 'retrieval', {}, false)]);
         expect(sent[1].scene_identity).toBe('scene-B');
     });
 
@@ -155,7 +155,7 @@ describe('the coordinator scene binding', () => {
         coordinator.handleMessage({ type: 'system', id: 'scene.loaded' });
         scene.data = { id: 'scene-B', filename: 'b.json', project_name: 'p', agent_settings_file: null };
         coordinator.handleMessage({ type: 'scene_status', data: scene.data });
-        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { ledger: true })]);
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
         expect(sent).toHaveLength(1);
         expect(sent[0].scene_identity).toBe('scene-B');
     });
@@ -163,8 +163,8 @@ describe('the coordinator scene binding', () => {
     it('reset forgets the generation for a transport teardown and the next scene_status rebinds it', () => {
         const { sent, coordinator, scene } = harness();
         coordinator.applySceneAgentValues([
-            setEntry('conversation', 'character_knowledge', { ledger: true }),
-            setEntry('memory', 'topics', {}, false),
+            setEntry('conversation', 'character_knowledge', { memory_pass: true }),
+            setEntry('memory', 'retrieval', {}, false),
         ]);
         expect(coordinator.busy).toBe(true);
         coordinator.reset();
@@ -172,7 +172,7 @@ describe('the coordinator scene binding', () => {
         expect(coordinator.identity).toBeNull();
         coordinator.handleMessage({ type: 'scene_status', data: scene.data });
         expect(coordinator.identity).toBe('scene-1');
-        coordinator.applySceneAgentValues([setEntry('memory', 'topics', {}, false)]);
+        coordinator.applySceneAgentValues([setEntry('memory', 'retrieval', {}, false)]);
         expect(sent[sent.length - 1].scene_identity).toBe('scene-1');
     });
 
@@ -190,7 +190,7 @@ describe('the coordinator scene binding', () => {
         const { sent, state, coordinator } = harness({
             scene: { data: { id: 'scene-1', filename: null, project_name: null } },
         });
-        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { ledger: true })]);
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
         expect(sent).toHaveLength(0);
         expect(state.error).toBe('Save the scene to change its knowledge settings.');
     });
@@ -199,23 +199,23 @@ describe('the coordinator scene binding', () => {
 describe('the coordinator link reconciliation', () => {
     it('re-names the file after the scene reports the link was removed', () => {
         const { sent, coordinator, done, scene } = harness();
-        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { ledger: true })]);
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
         expect(sent[0].filename).toBe(DEFAULT_SCENE_AGENT_SETTINGS_FILENAME);
         done({ request_id: sent[0].request_id });
         // World Editor unlinks without changing the scene id
         scene.data = { ...scene.data, agent_settings_file: null };
         coordinator.handleMessage({ type: 'scene_status', data: scene.data });
-        coordinator.applySceneAgentValues([setEntry('memory', 'topics', {}, false)]);
+        coordinator.applySceneAgentValues([setEntry('memory', 'retrieval', {}, false)]);
         expect(sent[1].filename).toBe(DEFAULT_SCENE_AGENT_SETTINGS_FILENAME);
     });
 
     it('keeps the first link while a pre-link scene_status still reports no file', () => {
         const { sent, coordinator, done, scene } = harness();
-        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { ledger: true })]);
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
         // a frame emitted before the link landed reports no file
         coordinator.handleMessage({ type: 'scene_status', data: { ...scene.data, agent_settings_file: null } });
         done({ request_id: sent[0].request_id });
-        coordinator.applySceneAgentValues([setEntry('memory', 'topics', {}, false)]);
+        coordinator.applySceneAgentValues([setEntry('memory', 'retrieval', {}, false)]);
         expect(sent[1].filename).toBeUndefined();
     });
 });

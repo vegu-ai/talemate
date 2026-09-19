@@ -15,14 +15,8 @@ import {
 export const KNOWLEDGE_TOGGLES = Object.freeze([
     { agent: 'conversation', action: 'character_knowledge', config: null },
     { agent: 'conversation', action: 'character_knowledge', config: 'perspective_filter' },
-    { agent: 'conversation', action: 'character_knowledge', config: 'absence_block' },
-    { agent: 'conversation', action: 'character_knowledge', config: 'awareness_line' },
     { agent: 'conversation', action: 'character_knowledge', config: 'memory_pass' },
-    { agent: 'conversation', action: 'character_knowledge', config: 'ledger' },
-    { agent: 'summarizer', action: 'archive', config: 'extract_facts' },
     { agent: 'summarizer', action: 'perceptions', config: 'automatic_repair' },
-    { agent: 'memory', action: 'retrieval', config: 'similarity_gate' },
-    { agent: 'memory', action: 'topics', config: null },
 ]);
 
 export const PERSPECTIVES_ANALYSIS_COST = 'Summarizer analysis after each passage';

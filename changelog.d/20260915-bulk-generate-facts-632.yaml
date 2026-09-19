@@ -1,7 +1,0 @@
-added:
-- "History: Generate missing facts extracts the facts of every entry that has none, oldest first."
-changed:
-- "Generating or regenerating the facts of an existing history entry, character perspective or disclosure asks only for the facts, instead of writing and discarding a new summary."
-- "History: Generate facts is unavailable while the Summarizer's Extract facts setting is off."
-- "Regenerating the facts or the summary of an older history entry offers as known facts only the facts that can be placed before that entry, and a fact can supersede only a fact it was offered, so an older entry can no longer replace a fact from a later one."
-- "Facts-only requests fire the new node events agent.summarization.extract_facts.before and .after instead of the summarize events, and a per-action override for them uses the summarizer action extract_facts."

@@ -29,18 +29,17 @@ def submission(scene, monkeypatch, isolate_signals, tmp_path):
     monkeypatch.setattr(type(scene), "save_dir", property(lambda self: str(tmp_path)))
     monkeypatch.setattr(type(scene), "auto_save", property(lambda self: True))
     monkeypatch.setattr(scene, "add_to_recent_scenes", AsyncMock())
-    monkeypatch.setattr(summarizer, "flush_fact_memory", AsyncMock(return_value=True))
     monkeypatch.setattr(conversation, "finalize_message_avatar", AsyncMock())
     scene.name, scene.filename = "Submission", "submission.json"
     started, release = asyncio.Event(), asyncio.Event()
     order, visible, ready_at_dispatch = [], [], []
 
-    async def extract(*args, **kwargs):
+    async def cleanup_archive(*args, **kwargs):
         order.append("refresh-start")
         started.set()
         await asyncio.wait_for(release.wait(), 5)
         order.append("refresh-end")
-        return "The key is silver.", []
+        return True
 
     async def dispatch(event):
         order.append("dispatch")
@@ -51,7 +50,8 @@ def submission(scene, monkeypatch, isolate_signals, tmp_path):
             visible.append((message.id, str(message)))
             order.append("visible")
 
-    monkeypatch.setattr(summarizer, "summarize", AsyncMock(side_effect=extract))
+    cleanup = AsyncMock(side_effect=cleanup_archive)
+    monkeypatch.setattr(get_agent("memory"), "delete", cleanup)
     monkeypatch.setattr("talemate.tale_mate.emit", emit)
     scene.signals["push_history"].connect(dispatch)
     with ActiveScene(scene):
@@ -59,6 +59,7 @@ def submission(scene, monkeypatch, isolate_signals, tmp_path):
             scene=scene,
             previous=previous,
             summarizer=summarizer,
+            cleanup=cleanup,
             started=started,
             release=release,
             order=order,
@@ -96,7 +97,7 @@ async def test_player_line_is_visible_and_saved_during_refresh(submission, kind)
 @pytest.mark.parametrize("error", [RuntimeError, GenerationCancelled])
 async def test_failed_refresh_retains_input_and_resumes_after_reload(submission, error):
     t = submission
-    t.summarizer.summarize.side_effect = error("refresh interrupted")
+    t.cleanup.side_effect = error("refresh interrupted")
     message = CharacterMessage(message="Alice: I will take the key.", source="player")
     with pytest.raises(error, match="refresh interrupted"):
         await t.scene.push_history(message, emit_message=True)
@@ -113,8 +114,8 @@ async def test_failed_refresh_retains_input_and_resumes_after_reload(submission,
         dispatched.extend(entry.id for entry in event.messages)
 
     t.scene.signals["push_history"].connect(dispatch)
-    t.summarizer.summarize.side_effect = None
-    t.summarizer.summarize.return_value = ("The key is silver.", [])
+    t.cleanup.side_effect = None
+    t.cleanup.return_value = True
     await catch_up_revisions(t.scene)
     await catch_up_revisions(t.scene)
     assert dispatched == [message.id]
@@ -194,13 +195,13 @@ async def test_generated_message_still_waits_before_acceptance(
 async def test_player_emit_false_survives_retry_without_presentation(submission):
     t = submission
     message = CharacterMessage(message="Alice: Quietly take the key.", source="player")
-    t.summarizer.summarize.side_effect = GenerationCancelled("cancelled")
+    t.cleanup.side_effect = GenerationCancelled("cancelled")
     with pytest.raises(GenerationCancelled):
         await t.scene.push_history(message, emit_message=False)
     assert t.visible == []
     assert t.scene.history[-1] is message
-    t.summarizer.summarize.side_effect = None
-    t.summarizer.summarize.return_value = ("The key is silver.", [])
+    t.cleanup.side_effect = None
+    t.cleanup.return_value = True
     await catch_up_revisions(t.scene)
     assert t.visible == []
     assert t.ready_at_dispatch == [True]
@@ -241,41 +242,6 @@ async def test_two_accepted_lines_dispatch_in_history_order(submission):
     assert t.ready_at_dispatch == [True, True]
     assert not first.history_dispatch_pending
     assert not second.history_dispatch_pending
-
-
-@pytest.mark.asyncio
-async def test_delayed_learning_uses_accepted_presence_and_preceding_lines(
-    submission, monkeypatch
-):
-    t = submission
-    conversation = get_agent("conversation")
-    conversation.write_enabled("character_knowledge", True)
-    conversation.write_config("character_knowledge", "ledger", True)
-    learn = AsyncMock(return_value={})
-    monkeypatch.setattr(conversation, "record_learned_facts", learn)
-    t.scene.signals["game_loop_new_message"].connect(conversation.on_new_message)
-    first = CharacterMessage(message="Alice: I take the key.", source="player")
-    second = CharacterMessage(message="Alice: I open the door.", source="player")
-    one = asyncio.create_task(t.scene.push_history(first, emit_message=True))
-    await asyncio.wait_for(t.started.wait(), 5)
-    t.scene.active_characters = ["Alice"]
-    two = asyncio.create_task(t.scene.push_history(second, emit_message=True))
-    t.release.set()
-    await asyncio.wait_for(asyncio.gather(one, two), 5)
-    first_calls = [
-        call for call in learn.await_args_list if call.kwargs.get("message") is first
-    ]
-    assert len(first_calls) == 1
-    assert first_calls[0].kwargs["present_override"] == ["Alice", "Bob"]
-    assert first_calls[0].kwargs["recent_lines_override"] == [str(t.previous)]
-    second_calls = [
-        call for call in learn.await_args_list if call.kwargs.get("message") is second
-    ]
-    assert len(second_calls) == 1
-    assert second_calls[0].kwargs["recent_lines_override"] == [
-        str(t.previous),
-        str(first),
-    ]
 
 
 @pytest.mark.asyncio

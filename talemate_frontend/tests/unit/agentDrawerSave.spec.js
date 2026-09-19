@@ -16,16 +16,14 @@ const storedActions = {
         character_knowledge: {
             enabled: true,
             config: fields({
-                perspective_filter: false, absence_block: false,
-                absence_limit: 11, absence_window: 23,
-                awareness_line: false, ledger: true, memory_pass: false,
+                perspective_filter: false, memory_pass: false,
             }),
         },
     },
     memory: {
         retrieval: {
             enabled: true,
-            config: fields({ similarity_gate: false, recency_weight: 0.2 }),
+            config: fields({ recency_weight: 0.2 }),
         },
     },
 };

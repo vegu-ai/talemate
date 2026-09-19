@@ -100,7 +100,6 @@
 <script>
 import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
 import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
-import { DEFAULT_EFFORT } from '@/constants/knowledgeEffort';
 import { effortMode, globalEffortAgents, stopForMode } from '@/utils/knowledgeEffort';
 
 export default {
@@ -122,7 +121,7 @@ export default {
     return {
       sceneName: '',
       characterKnowledge: false,
-      effort: DEFAULT_EFFORT,
+      effort: null,
       knowledgeUiVersion: 0,
       assistWithSetup: false,
       selectedWritingStyle: null,
@@ -134,7 +133,7 @@ export default {
       if (val) {
         this.sceneName = '';
         this.characterKnowledge = false;
-        this.effort = DEFAULT_EFFORT;
+        this.effort = null;
         this.knowledgeUiVersion += 1;
         this.assistWithSetup = false;
         this.selectedWritingStyle = null;

@@ -17,15 +17,15 @@
     evidence. Covers advice_context, advice_fingerprint, RAG, cache freshness, stale Focal action batches and evidence budgets.
 - path: dev/character-memory-retrieval.md
   title: Character memory retrieval
-  summary: 'Character-scoped memory retrieval in perception scenes: rag_build, rag_build_for_author, projected query inputs,
-    Chroma audience eligibility, scoped metadata and ID lookups, entity/topic supplementation and optional AI memory passes.
-    Documents cache invalidation, index revisions, retryable failures and memory_viewer template enforcement.'
+  summary: Character-scoped retrieval uses projected history, Chroma audience eligibility, scoped metadata and ID lookups,
+    entity descriptions and optional AI memory refinement. Covers source fingerprints, cache invalidation, collection ownership,
+    retryable failures and memory_viewer enforcement.
 - path: dev/character-perspectives.md
   title: Character perspective records
   summary: intro_knowledge, SourceReference intro, intro_present, opening audience derivation on load; scoped graph memory
     access. Stored views, audience summaries, context_review, push_history, agent.conversation.finalized, portrait cadence,
     before_memory, scene.history_ready, evidence_boundary/evidence_budget, swap_revision/commit_revision, pending_perception_messages,
-    deep retrieval, FactContribution competitor vetoes, duplicate suppression. Tracked age.
+    deep retrieval. Tracked age.
 - path: dev/howto/add-a-worldstate-template-type.md
   title: Adding a new world-state template
   summary: 'Developer walkthrough for adding a world-state template type using Writing Style phrase detection: register a
@@ -136,15 +136,14 @@
     Linux and Docker installation, the Setup Wizard, client connection and scene interaction.
 - path: user-guide/agents/conversation/index.md
   title: Overview
-  summary: Conversation/Actor agent generates character dialogue and actions. Legacy scenes use optional presence filtering
-    and absence blocks; opted-in perception scenes use audience views and disclosures, with no separate learned-this-turn
-    pass or topic-awareness assertions.
+  summary: Conversation generates character replies using presence-filtered history and memories in Standard mode, and stored
+    audience views in Character perspectives. Limit to character knowledge controls the Standard filter; Refine memories with
+    AI optionally selects and rewrites retrieved memories.
 - path: user-guide/agents/conversation/settings.md
   title: Settings
-  summary: Conversation agent settings for client, prompt caching, dialogue format, generation length, jiggle, task and actor
-    instructions, scene intent and writing style. Character Knowledge covers the effort slider, knowledge filtering, unknown-fact
-    reminders, topic overview, Refine memories with AI and dialogue learning; activation chips show in every scene, the re-entry
-    bridge and Arrival Note need Limit to character knowledge in Standard mode and are always on in Character perspectives.
+  summary: Conversation settings for generation format, instructions, scene intent, writing style and long-term memory. Character
+    Knowledge offers effort presets, presence-filtered history and optional AI memory refinement; return bridges and Arrival
+    Notes add no request.
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
   summary: Autocomplete partial text with Ctrl/Cmd+Enter in dialogue, message editing, attributes, details, descriptions,
@@ -217,9 +216,8 @@
     scenes.'
 - path: user-guide/agents/memory/embeddings.md
   title: Embeddings
-  summary: Manage built-in and custom presets for local sentence transformers, hosted OpenAI/OpenRouter drivers and Client
-    API. Covers model/client inputs, downloads, trust/device controls, distance/search/topic thresholds, and the Local/Fast/GPU
-    Recommendation flags.
+  summary: Manage local and API embedding presets, model and client inputs, downloads, trust and CPU/CUDA device controls.
+    Explains distance and search thresholds, embedding dimensions, and shipped Local/Fast/GPU presets.
 - path: user-guide/agents/memory/index.md
   title: Overview
   summary: Memory agent manages long-term memory with embeddings and ChromaDB. Cached retrievals refresh after edits or deletions
@@ -231,10 +229,8 @@
     API automatically. Explains the client/status banner and reverting to a local embedding in Memory settings.
 - path: user-guide/agents/memory/settings.md
   title: Settings
-  summary: Memory settings configure embeddings and live CPU/CUDA switching, API keys, topic clustering, and Standard-only
-    topic awareness and known-fact matching. Retrieval uses recency, diversity, entity lookup and optional reranking; chronology
-    filters eligibility without reordering, while Standard topic additions and Perspectives audience facts preserve their
-    respective ordering.
+  summary: Select embeddings and switch CPU/CUDA devices. Retrieval ranks eligible memories using recency, diversity, entity
+    descriptions and optional local cross-encoder reranking, with no text-generation requests.
 - path: user-guide/agents/memory/testing.md
   title: Testing Embeddings
   summary: Test embeddings through Debug Tools → Memory by inspecting generation-time requests, result distances and selected
@@ -266,11 +262,8 @@
     investigation. Deep analysis can retrieve additional historical context but may add many prompts.'
 - path: user-guide/agents/summarizer/settings.md
   title: Settings
-  summary: 'Summarization settings: thresholds, methods, chapter facts tied to their source lines, matching tolerance, chronology,
-    subject aliases, formerly clauses, perspective repair and layered history. Covers tracked blindfold and other character
-    states with last-confirmed age; regenerating perception analysis until inputs stabilize or cancellation, scene analysis
-    caching, resuming Deep Analysis Context retrieval, cancellable Waiting for knowledge updates, system-abort warnings, and
-    scene-history token budgets, Best Fit, dialogue ratios and summary boundaries.'
+  summary: Summarization thresholds, methods and instructions, audience-view analysis and optional automatic repair. Covers
+    layered history, scene analysis and caching, character evidence, history budgets and best-fit selection.
 - path: user-guide/agents/visualizer/backends/a1111.md
   title: AUTOMATIC1111
   summary: Legacy AUTOMATIC1111 text-to-image backend setup with API URL, steps, sampler, schedule, CFG, keyword/descriptive
@@ -626,9 +619,9 @@
     path subtitles, slash paths, Game State Editor entry points and full JSON editing.'
 - path: user-guide/howto/create-a-new-scene/create-empty-scene.md
   title: Create an empty scene
-  summary: Create New Story from Home, name it, choose writing style/director persona, set knowledge effort, select Standard
-    or Character perspectives from compact cards, and optionally request Director assistance. Set the outline and save; mode
-    can change in Scene Settings only while history and archived history are empty.
+  summary: Create New Story from Home, choose a writing style and director persona, set the outline and save. Standard starts
+    at Minimal effort; Character perspectives defaults to Balanced, with mode changes allowed only while history and archived
+    history are empty; Director assistance is optional.
 - path: user-guide/howto/create-a-new-scene/create-npc.md
   title: Add an AI controlled character
   summary: Add an AI-controlled NPC through Create Character with AI Generation Instructions and optional example dialogue.
@@ -697,11 +690,9 @@
     stopping pods and connecting to port 7860.'
 - path: user-guide/interacting.md
   title: Interacting with the scene
-  summary: 'Scene interaction syntax and shortcuts: quoted dialogue, asterisk actions, Tab act-as, @ quick actions, #/## director
-    nudges and Ctrl+Enter autocomplete. Covers auto progress, cancellation, Continue, and selecting Original/Regenerated/Revised/Continued
-    message versions that become active scene text. Analyze perceptions (Character perspectives), Refresh facts or Learn from
-    dialogue (Standard), the History tab refresh chip, the next sent line, or a choice updates stale knowledge; pointer movement,
-    keyboard focus and tab changes stay browsing.'
+  summary: Send dialogue or narration, regenerate and continue messages, and browse or edit revisions. Analyze perceptions
+    refreshes character views; Update knowledge retries index work. Covers revision ownership, accepted player lines, cancellation
+    and saving.
 - path: user-guide/node-editor/core-concepts/collector_nodes.md
   title: Collector Nodes
   summary: Dict/List Collector nodes aggregate dynamic inputs with key inference or Make Key-Value Pair tuples, ordered lists
@@ -938,10 +929,9 @@
     player_character, reason, prefix, ! command handling and abort_condition branches that interrupt the input loop.
 - path: user-guide/node-editor/reference/nodes/knowledge.md
   title: Knowledge Nodes
-  summary: Knowledge nodes query facts, current state, relationships, visibility and character reports; Facts About ranks
-    importance and recency, fact text outputs apply chronology selection and relative time markers, while Relationship Timeline
-    raw facts remain oldest first. Perception reports include disclosures and supported-fact access; revokes and awareness
-    lines are legacy-only, and Grant Knowledge establishes disclosures with mode-aware director callbacks and confirmation.
+  summary: Knowledge nodes report entry visibility and character access, set Known by, and grant or revoke authored knowledge.
+    Grant Knowledge creates disclosures in Character perspectives; director metadata and confirmation adapters use the selected
+    mode.
 - path: user-guide/node-editor/reference/nodes/prompt.md
   title: Prompt Nodes
   summary: Prompt nodes build Jinja2 prompts with scene, character, memory, game state and dynamic context toggles; load templates
@@ -1031,9 +1021,8 @@
     from here using revision state or trimmed legacy history.
 - path: user-guide/prompts/context-history-review.md
   title: Scene Context History Review
-  summary: Scene Context in Prompt Manager previews Scene or an active character using Conversation history selection. Covers
-    eligible facts, existing analysis, archive/layer and fact exclusion reasons with counts and capped samples, intro/summary
-    rules, budget cuts, the client context-window default, Refresh and scene-wide Apply; previews make no AI requests.
+  summary: Preview reader or character context without generation. Shows selected history, existing analysis evidence, presence/audience/budget
+    exclusions with capped samples, and pending perception status. Budget edits remain local until Apply.
 - path: user-guide/prompts/deduplication.md
   title: Prompt Deduplication
   summary: Prompt deduplication removes near-duplicate long lines but is off by default because it can damage structured content
@@ -1094,9 +1083,8 @@
     Playthrough.
 - path: user-guide/scene-state-reset.md
   title: Reset Scene State
-  summary: Reset Scene State selectively rebuilds Context DB/RAG, clears history with optional static-backstory preservation,
-    resets intent/phase tracking, removes agent caches by agent or key, and deletes chosen reinforcements. Includes entry
-    counts, confirmation and reset use cases for stale context.
+  summary: 'Reset selected scene state: conversation and summaries, optionally static backstory, memory database, intent state,
+    agent state and reinforcements. Explains preserved static entries and confirmation before wiping history.'
 - path: user-guide/templates/attribute.md
   title: Character Attribute
   summary: Create Character Attribute templates for traits, skills or properties, set attribute names and generation priority,
@@ -1237,12 +1225,6 @@
   summary: Browse and search the Memory Agent context database using embedding relevance; adjust Search Strictness from 0.1
     to 2.0 via the active preset distance_mod. Covers persisted search tuning, preferred World/Characters editing and Reset
     reimport with loss of manually added database-only entries.
-- path: user-guide/world-editor/facts.md
-  title: Facts
-  summary: World Editor Facts tab lists every recorded fact with source, topic, audience (who knows it and how) and supersedes
-    arrows. Combinable filters (text, character knows/does not know/is a subject, topic, importance, source, superseded, Latest
-    summarized entry), sorting and paging; row actions (edit, set or clear supersedes, Learn or Never Learn for a character
-    in Standard mode, inspect source, remove) and selection actions (delete, Learn for a character) as one request each.
 - path: user-guide/world-editor/generation-settings.md
   title: Generation Settings
   summary: World Editor Generation Settings apply one-off Ctrl/Cmd-click instructions, Alt-click rewrites, Ctrl+Alt guided
@@ -1250,10 +1232,8 @@
     and history-entry seed instructions, excluding live dialogue/narration.
 - path: user-guide/world-editor/history/index.md
   title: History
-  summary: History manages static entries, chapter summaries and layered history with compression statistics. Covers message-bound
-    facts in a collapsed Facts (N) section per entry, Known by on static entries in Standard stories, importance and time
-    markers, supersedes links, editing, source inspection, regeneration, generating missing facts in bulk, stale facts after
-    revisions with a refresh chip on the entry, extraction from predefined history and time-passage edits.
+  summary: Manage static backstory, base summaries and layered history. Covers presence badges, static Known by, perception
+    refresh chips, editing and regeneration, time passages, compression statistics and resetting history.
 - path: user-guide/world-editor/history/layered-history.md
   title: Layered History
   summary: Layered History compresses dialogue into base summaries and successively smaller layers to preserve a full-timeline
@@ -1261,15 +1241,14 @@
     tools and context-budget review.
 - path: user-guide/world-editor/knowledge-how-it-works.md
   title: 'Character knowledge: flow reference'
-  summary: Experimental reference with six diagrams—re-entry bridges, arrival notes, automatic timing, activation and deactivation
-    chips, Thorough/Balanced, retry/regeneration. Shared facts, reply inputs, memory ranking, Intro audiences, revision browsing,
-    browse revisions before keeping a version, awareness overview names each character once, citation not supported, regenerate
-    old views, private competitor vetoes, mode decision tree (model, cost).
+  summary: Flow diagrams for presence filtering, character views, audience summaries, reply inputs and memory ranking. Explains
+    intro audiences, revision browsing before keeping a version, re-entry bridges, Arrival Notes, automatic timing, activation/deactivation
+    chips, retry/regeneration and the mode decision tree (model, secrets, cast size, cost).
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
   summary: Standard and Character perspectives knowledge, effort presets, request costs, scene overrides and first-save continuation,
-    retry or discard. Covers Learn, Never Learn and Unlearn rules, Known by visibility, disclosures, topics, retrieval, activation
-    and deactivation chips with automatic timing and arrival notes, and zero-request re-entry bridges.
+    retry or discard. Covers Learn / Never Learn rules, Known by visibility, disclosures, retrieval, activation and deactivation
+    chips with automatic timing and arrival notes, and zero-request re-entry bridges.
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: Pins keep context entries or character details in AI prompts, with manual activation, AI yes/no conditions and
@@ -1323,8 +1302,6 @@
     Reinforcement clears accumulated generation data.
 - path: user-guide/world-state.md
   title: World State
-  summary: World panel snapshots, entity highlights/manual additions, tracked states, character activation, Manage Character
-    for inactive characters, name protection and knowledge-change dots; knowledge hub ranked facts/topics, disclosures/access
-    rules, knowledge effort slider, locked story mode note or unlocked mode comparison, scene overrides with setting/group/all
-    resets. Covers durable refresh/wipe, cadence and Pin to context; pinned snapshot regeneration restores a verified previous
-    snapshot or clears snapshot content with a notice.
+  summary: World State shows characters, tracked states and snapshots, presence controls, portraits and knowledge-change notifications.
+    The knowledge hub shows disclosures or access rules, mode comparison, effort presets, request costs and scene override
+    controls.

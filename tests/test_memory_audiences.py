@@ -15,11 +15,9 @@ from talemate.knowledge.disclosures import grant_disclosure
 from talemate.knowledge.perspectives import (
     set_source_perspectives,
     source_content_changed,
-    source_reference,
     reset_perspectives,
 )
-from talemate.knowledge.schema import EntryVisibility, ParsedFact
-from talemate.knowledge.supported_facts import replace_source_facts
+from talemate.knowledge.schema import EntryVisibility
 from talemate.scene_message import NarratorMessage
 from talemate.tale_mate import Actor
 from talemate.world_state import ManualContext
@@ -112,16 +110,6 @@ async def indexed_scene(scene, monkeypatch, tmp_path, chroma_clients):
             ],
         )
         await memory.add(message.message, uid="reader", typ="history")
-        await replace_source_facts(
-            scene,
-            [
-                (
-                    source_reference(scene, "message", message.id),
-                    ("Elmer",),
-                    [ParsedFact(text="Marie carries a lantern.", subjects=["Marie"])],
-                )
-            ],
-        )
         yield scene, memory, message
         state = memory._audience_state(scene)
         if state.task is not None:
@@ -156,8 +144,7 @@ async def test_real_chroma_union_selects_supported_text_and_composes_scopes(
     assert len(calls) == 1
     assert "$or" in str(calls[0]["where"])
     assert await contents(memory, region="harbor") == {"Common rain lore."}
-    facts = await contents(memory, typ="fact")
-    assert facts == {"Marie carries a lantern."}
+    assert await contents(memory, typ="fact") == set()
     assert await contents(memory, character="Marie", typ="fact") == set()
     author = await contents(memory, viewer=None)
     assert any("Reader secret" in text for text in author)
@@ -203,7 +190,7 @@ async def test_authored_sheet_visibility_uses_audience_not_subject(indexed_scene
     }
 
 
-async def test_supported_rename_resyncs_views_facts_and_visibility(indexed_scene):
+async def test_supported_rename_resyncs_views_and_visibility(indexed_scene):
     scene, memory, _ = indexed_scene
     await scene.world_state_manager.set_world_entry_visibility(
         "lore", EntryVisibility(mode="list", characters=["Elmer"])
@@ -219,7 +206,7 @@ async def test_supported_rename_resyncs_views_facts_and_visibility(indexed_scene
     )
 
 
-async def test_source_edit_removes_stale_views_and_facts_but_keeps_disclosure(
+async def test_source_edit_removes_stale_views_but_keeps_disclosure(
     indexed_scene,
 ):
     scene, memory, message = indexed_scene
@@ -259,12 +246,12 @@ async def test_source_edit_removes_stale_views_and_facts_but_keeps_disclosure(
 
 async def test_hidden_sources_are_not_searchable(indexed_scene):
     _, memory, message = indexed_scene
-    assert await contents(memory, typ="fact")
+    assert any("Marie carries a lantern." in text for text in await contents(memory))
     message.hide()
     assert await contents(memory, typ="fact") == set()
     assert not any("lantern" in text for text in await contents(memory))
     message.unhide()
-    assert await contents(memory, typ="fact") == {"Marie carries a lantern."}
+    assert any("Marie carries a lantern." in text for text in await contents(memory))
 
 
 async def test_rebuild_and_metadata_replacement_remove_obsolete_audiences(
@@ -346,20 +333,6 @@ async def test_unchanged_and_unrelated_documents_are_not_reembedded(
     )
     await contents(memory)
     assert calls and all(meta["knowledge_source"] == "lore" for meta in calls)
-
-
-async def test_author_fact_edit_reaches_the_character_projection(indexed_scene):
-    from talemate.knowledge.facts import update_fact
-
-    scene, memory, _ = indexed_scene
-    fact = next(iter(scene.world_state.facts.values()))
-    await update_fact(
-        scene, fact.id, text="A later author correction.", importance=fact.importance
-    )
-    assert await contents(memory, typ="fact") == {"A later author correction."}
-    assert "A later author correction." in await contents(
-        memory, viewer=None, typ="fact"
-    )
 
 
 async def test_shared_current_cast_does_not_authorize_a_future_character(indexed_scene):
@@ -534,16 +507,15 @@ async def test_cast_membership_updates_without_character_memory_writes(indexed_s
     )
 
 
-async def test_reset_without_facts_removes_indexed_history_and_disclosures(
+async def test_reset_removes_indexed_history_and_disclosures(
     indexed_scene,
 ):
     scene, memory, _ = indexed_scene
-    scene.world_state.facts.clear()
     grant_disclosure(scene, "Elmer", "lore", text="An independent remembered detail.")
     assert any("lantern" in text for text in await contents(memory))
     assert "An independent remembered detail." in await contents(memory)
     scene.history = []
-    assert reset_perspectives(scene) == set()
+    assert reset_perspectives(scene) is None
     assert await contents(memory) == {"Common rain lore."}
 
 
@@ -720,23 +692,10 @@ async def test_removed_source_without_notification_drops_cached_rows(
             [{"audience": ["Elmer"], "text": "A layered memory.", "status": "ready"}],
             layer=1,
         )
-        reference = source_reference(scene, "summary", "L7", layer=1)
-        await replace_source_facts(
-            scene,
-            [
-                (
-                    reference,
-                    ("Elmer",),
-                    [ParsedFact(text="A layered fact.", subjects=["Marie"])],
-                )
-            ],
-        )
         removed_text = "A layered memory."
-        removed_fact = "A layered fact."
     else:
-        removed_text = removed_fact = "Marie carries a lantern."
+        removed_text = "Marie carries a lantern."
     assert removed_text in await contents(memory, typ="history")
-    assert removed_fact in await contents(memory, typ="fact")
     state = memory._audience_state(scene)
     if state.task:
         await state.task
@@ -749,11 +708,9 @@ async def test_removed_source_without_notification_drops_cached_rows(
         await memory.add("An unrelated canonical update.", uid="unrelated")
     result = await contents(memory)
     assert removed_text not in result
-    assert removed_fact not in await contents(memory, typ="fact")
     assert "Common rain lore." in result
     stored = memory.db.get(where={"knowledge_index": True}, include=["documents"])
     assert removed_text not in stored["documents"]
-    assert removed_fact not in stored["documents"]
 
 
 async def test_rename_you_refreshes_owner_and_list_authored_audiences(indexed_scene):

@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING
-from types import EllipsisType
 import structlog
 import pydantic
 from talemate.agents.base import (
@@ -21,11 +20,6 @@ from talemate.agents.context import active_agent
 from talemate.agents.base import RagBuildSubInstructionEmission
 from contextvars import ContextVar
 from talemate.knowledge.mode import character_knowledge_enabled
-from talemate.knowledge.standard_analysis import (
-    standard_analysis_context,
-    standard_analysis_enabled,
-    standard_analysis_fingerprint,
-)
 from talemate.knowledge.advice import (
     KnowledgeAnalysisType,
     advice_record_is_current,
@@ -244,9 +238,6 @@ class SceneAnalyzationMixin:
             boundary=boundary,
             budget=evidence_budget,
         )
-        standard_fp = standard_analysis_fingerprint(
-            scene, character, emission_type, self._analysis_evidence_budget
-        )
         analysis = None
 
         # self.set_scene_states and self.get_scene_state to store
@@ -297,7 +288,6 @@ class SceneAnalyzationMixin:
                 character,
                 self.analysis_length,
                 evidence_key=(boundary, evidence_budget, fingerprint),
-                standard_fp=standard_fp,
             )
 
         if not analysis:
@@ -430,13 +420,6 @@ class SceneAnalyzationMixin:
         ):
             return None
 
-        if cached_analysis.get(
-            "standard_knowledge_fp"
-        ) != standard_analysis_fingerprint(
-            self.scene, character, typ, self._analysis_evidence_budget
-        ):
-            return None
-
         if character_knowledge_enabled(self.scene):
             character = advice_character(self.scene, character, typ=typ)
             if not self._analysis_record_is_current(
@@ -464,7 +447,6 @@ class SceneAnalyzationMixin:
         character: "Character | None" = None,
         *,
         evidence_fp: str | None = None,
-        standard_fp: str | None | EllipsisType = ...,
         boundary: list[int] | None = None,
         evidence_budget: int | None = None,
     ):
@@ -479,18 +461,12 @@ class SceneAnalyzationMixin:
             )
             if boundary is None:
                 boundary = current_boundary
-        # Preserve a captured disabled-state fingerprint if settings change mid-request.
-        if standard_fp is ...:
-            standard_fp = standard_analysis_fingerprint(
-                self.scene, character, typ, self._analysis_evidence_budget
-            )
 
         self.set_scene_states(
             **{
                 f"cached_analysis_{typ}": {
                     "fp": fingerprint,
                     "guidance": analysis,
-                    "standard_knowledge_fp": standard_fp,
                     **advice_record_metadata(
                         self,
                         character,
@@ -694,7 +670,6 @@ class SceneAnalyzationMixin:
         length: int = 1024,
         *,
         evidence_key=None,
-        standard_fp: str | None | EllipsisType = ...,
     ) -> str:
         """
         Analyzes the current scene progress and gives a suggestion for the next action.
@@ -714,10 +689,6 @@ class SceneAnalyzationMixin:
             )
         else:
             boundary, evidence_budget, fingerprint = evidence_key
-        if standard_fp is ...:
-            standard_fp = standard_analysis_fingerprint(
-                scene, character, typ, self._analysis_evidence_budget
-            )
         scoped = boundary is not None
         deep_analysis = self.deep_analysis and self.long_term_memory_enabled
         analysis_sub_type = await self.analyze_scene_sub_type(typ)
@@ -726,11 +697,6 @@ class SceneAnalyzationMixin:
             "max_tokens": self.client.max_token_length,
             "scene": self.scene,
             "character": character,
-            "standard_knowledge": await standard_analysis_context(
-                scene, character, self._analysis_evidence_budget
-            )
-            if standard_analysis_enabled(scene, character, typ)
-            else None,
             "evidence": advice_context(scene, character, self._analysis_evidence_budget)
             if scoped
             else None,
@@ -778,7 +744,6 @@ class SceneAnalyzationMixin:
             result,
             character,
             evidence_fp=fingerprint,
-            standard_fp=standard_fp,
             boundary=boundary,
             evidence_budget=evidence_budget,
         )

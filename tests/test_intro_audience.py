@@ -16,9 +16,7 @@ from talemate.knowledge.perspectives import (
     validate_saved_knowledge,
 )
 from talemate.knowledge.rename import rename_knowledge_references
-from talemate.knowledge.schema import ParsedFact
 from talemate.knowledge.snapshots import snapshot_audience_context
-from talemate.knowledge.supported_facts import contributions_for_source
 from talemate.load import load_scene_from_data
 from talemate.scene_message import CharacterMessage, NarratorMessage
 from talemate.tale_mate import Actor, Scene
@@ -137,7 +135,7 @@ def test_explicit_empty_audience_beats_history_and_roster(intro_scene):
 
 
 @pytest.mark.asyncio
-async def test_deterministic_intro_supports_analysis_memory_and_facts(intro_scene):
+async def test_deterministic_intro_supports_analysis_and_memory(intro_scene):
     scene = intro_scene
     scene.knowledge_eligibility = "perception"
     scene.set_intro(INTRO)
@@ -162,13 +160,6 @@ async def test_deterministic_intro_supports_analysis_memory_and_facts(intro_scen
     }
     assert cast["Alice"]["established_knowledge"][0]["text"] == INTRO
     assert cast["Bob"]["established_knowledge"] == []
-    parsed = [ParsedFact(text="A ruby is beneath the sundial.")]
-    contributions = await contributions_for_source(
-        scene, reference, ("Alice", "Player"), parsed
-    )
-    assert contributions[0].audience == ("Alice", "Player")
-    with pytest.raises(ValueError, match="current source"):
-        await contributions_for_source(scene, reference, ("Bob",), parsed)
 
 
 def test_intro_edit_invalidates_old_evidence_and_stamps_new_audience(intro_scene):
@@ -293,7 +284,7 @@ async def test_first_summary_does_not_attribute_intro_to_a_different_audience(
     summarizer.actions["archive"].config["threshold"].value = 100000
     summarizer.actions["manage_scene_history"].config["best_fit"].value = False
     summarizer.actions["manage_scene_history"].config["enforce_boundary"].value = True
-    summarize = AsyncMock(return_value=("A summary of the exchange.", None))
+    summarize = AsyncMock(return_value="A summary of the exchange.")
     monkeypatch.setattr(summarizer, "summarize", summarize)
     monkeypatch.setattr(summarizer, "analyze_dialoge", AsyncMock(return_value=None))
     with ActiveScene(scene):

@@ -13,24 +13,11 @@ from talemate.knowledge.perspectives import (
 from talemate.knowledge.perspective_models import SourceReference
 
 
-def render_line_texts(texts, lines) -> str:
-    """
-    The text a fact request reads: every line that has a message id carries
-    it as a `[id]` prefix, so a fact can name the line it came from.
-    """
-    return "\n\n".join(
-        f"[{line}] {text}" if line is not None else text
-        for text, line in zip(texts, lines, strict=True)
-    )
-
-
 @dataclass(frozen=True)
 class SummaryInput:
     status: Literal["ready", "omitted", "pending"]
     texts: tuple[str, ...] = ()
     sources: tuple[SourceReference, ...] = ()
-    # the message id behind each text; None for a disclosure
-    lines: tuple[int | None, ...] = ()
 
 
 def summary_entry(scene, identity, layer):
@@ -104,7 +91,7 @@ def summary_inputs(scene, entry, layer, *, read=None):
         names.update(name for view in stored["views"] for name in view["audience"])
     results = {}
     for name in sorted(names):
-        texts, sources, lines = [], [], []
+        texts, sources = [], []
         complete = True
         for item, reference in zip(entries, references, strict=True):
             if isinstance(item, Disclosure) and name not in item.audience:
@@ -128,14 +115,10 @@ def summary_inputs(scene, entry, layer, *, read=None):
                     if layer == 0
                     else view.text
                 )
-                lines.append(
-                    item.id if layer == 0 and not isinstance(item, Disclosure) else None
-                )
         results[name] = SummaryInput(
             "ready" if complete and texts else "omitted" if complete else "pending",
             tuple(texts),
             tuple(sources),
-            tuple(lines),
         )
     return results
 
@@ -206,3 +189,13 @@ def summary_coverage(
             )
     cache[key] = frozenset(covered)
     return cache[key]
+
+
+def source_visible(source, character, *, read, cache):
+    """Hidden passages cannot remain available through their summaries."""
+    ids = summary_coverage(source, character, read=read, cache=cache)
+    return all(
+        not owner.owner.hidden
+        for identity in ids
+        for owner in read.sources.get(("message", identity, 0), ())
+    )

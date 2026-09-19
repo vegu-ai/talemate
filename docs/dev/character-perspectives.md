@@ -4,8 +4,7 @@ These APIs are the persistence contract for the character-knowledge series.
 They use the [public scene opt-in](scene-format.md#public-opt-in).
 The summarizer generates message perspectives through the lifecycle below.
 Perception-mode actor recent history and character-facing editor context use
-stored views and audience summaries. Source-supported fact extraction and graph
-queries extend those same records. RAG input and the
+stored views and audience summaries. RAG input and the
 optional memory pass also use viewer-specific evidence.
 
 ## Saved representation
@@ -31,19 +30,19 @@ use the scene-aware operations below to publish changes.
 | `PerspectiveView.text` | Complete replacement prose, present only when ready. Never an annotation appended to reader prose. |
 | `PerspectiveView.sources` | Computational dependencies on source revisions and optionally specific views. Every recipient must have current source references. Ready output additionally requires transitively readable (ready) evidence. Omitted, pending and failed outputs can cite current non-ready evidence. |
 | `PerspectiveView.passage_provenance` | Direct analytical inputs, each a `PassageProvenance(message_id, content_digest, revision)`; revision is optional for untracked historical prose. These reference reader passages without granting audience access or following their views' dependencies. Generated ready and omitted views always record their own passage, plus specifically cited prior physical context. |
-| `Disclosure` | Independent `id`, `revision`, `text`, `audience`, `acquired` and `provenance`. Its own text is learning evidence; no fact ID is required and no containing summary is unlocked. |
+| `Disclosure` | Independent `id`, `revision`, `text`, `audience`, `acquired` and `provenance`. Its own text is learning evidence; no containing summary is unlocked. |
 | `Disclosure.provenance` | Historical source references validated at creation and retained after an original source changes or disappears. Provenance is not a computational dependency. |
 | `SceneKnowledge.last_order` | Highest allocated acquisition order, at least as large as every saved acquisition. A new source/disclosure receives the next order. |
 
 Preserve attribution and uncertainty in prose: “Alice said the ledger burned”
 does not assert that it burned or that the listener believes her. Storage performs
-no belief inference or fact extraction.
+no belief inference.
 
 ### Introduction source
 
 Scenes persist `intro_present` separately from the existing `intro` text. In perception mode, `intro_knowledge` holds a deterministic ready view of that text for the recorded audience, addressed by `SourceReference(kind="intro", id="intro", ...)`. It uses the existing revision, citation, memory-index and snapshot-evidence checks. Intro replacement invalidates dependent evidence; it does not request a perception rewrite.
 
-Character history projection includes the eligible introduction within its token budget. It remains a separate opening source rather than creating another audience-summary or fact-extraction request. Standard collectors first select history with the full budget, then allocate a separate eligible intro only if the selected summaries do not carry it for that viewer. A summary that already carries the opening costs no separate intro reservation. If the reduced allocation selects an opening summary instead of dialogue, collection keeps that summary so the character retains the opening, accepting the unused intro reservation. Opening coverage skips static history notes and follows the original archive indices through layered and best-fit selection. Unscoped callers (`perspective=None`, including director, creator and author-facing templates) keep the separate intro only when no summaries or dialogue expanded from them are selected. The shared first archive only includes the intro when its entire known dialogue audience witnessed it; `intro_included: false` keeps the opening available separately to its own audience.
+Character history projection includes the eligible introduction within its token budget. It remains a separate opening source rather than creating another audience-summary request. Standard collectors first select history with the full budget, then allocate a separate eligible intro only if the selected summaries do not carry it for that viewer. A summary that already carries the opening costs no separate intro reservation. If the reduced allocation selects an opening summary instead of dialogue, collection keeps that summary so the character retains the opening, accepting the unused intro reservation. Opening coverage skips static history notes and follows the original archive indices through layered and best-fit selection. Unscoped callers (`perspective=None`, including director, creator and author-facing templates) keep the separate intro only when no summaries or dialogue expanded from them are selected. The shared first archive only includes the intro when its entire known dialogue audience witnessed it; `intro_included: false` keeps the opening available separately to its own audience.
 
 Missing audiences on load use the first narrative message's explicit presence, otherwise the restored active roster. Explicit empty lists survive. This is a one-time load convention for saves predating the field, not historical reconstruction.
 
@@ -51,7 +50,7 @@ Missing audiences on load use the first narrative message's explicit presence, o
 
 The Summarizer `context_review` WebSocket action accepts an optional active `character` and echoes `request_id`. The Conversation template and preview use `history_context` to resolve the same history audience and director-message settings. Standard previews reuse the history collectors; Perspectives previews obtain entry metadata from `project_character_history(entries=...)`, so labels do not introduce another selector.
 
-`knowledge.review` adds the existing fact, absence and analysis renderers plus author-facing exclusion diagnostics. The selectors report exclusions through `ContextDiagnostics`, including base archive and layer identities; counts cover all decisions while samples are capped at 20 per reason and 500 characters. Known facts use the shared bounded renderer and report budget cuts. Character previews derive their default budget from the Conversation client’s context window. Exclusions are separate from rendered character sections. Previewing never generates missing analysis or runs dynamic RAG retrieval, and history-budget overrides do not mutate agent settings. The existing Apply action remains scene-wide.
+`knowledge.review` adds the analysis renderer and author-facing exclusion diagnostics. The selectors report exclusions through `ContextDiagnostics`, including base archive and layer identities; counts cover all decisions while samples are capped at 20 per reason and 500 characters. Character previews derive their default budget from the Conversation client’s context window. Exclusions are separate from rendered character sections. Previewing never generates missing analysis or runs dynamic RAG retrieval, and history-budget overrides do not mutate agent settings. The existing Apply action remains scene-wide.
 
 ## Publish and select
 
@@ -132,7 +131,7 @@ Changed automatically finalized versions use the same guarded revision-refresh j
 
 Visible producers call `Scene.push_history(..., emit_message=True)`. Publication
 follows text-changing hooks and precedes perception analysis, automatic portraits,
-new-message hooks (including the dialogue ledger and voice preparation), and
+new-message hooks (including voice preparation), and
 archiving. The call still awaits those passes before dependent generation. The
 default `False` preserves history-only pushes, including on cancellation.
 
@@ -177,7 +176,7 @@ no relevant cast receives no empty record; the live lifecycle defers it until a 
 is available. This runtime deferral does not backfill untracked history after reload.
 
 The shared scene-mode predicate from `talemate.knowledge.mode` governs all
-new requests. The legacy learned-this-turn ledger is disabled only in this mode.
+new requests.
 Activation uses the public new-story opt-in; perception does not manage character activation.
 
 The shared `summarizer.perceptions` prompt makes one analytical request per
@@ -191,7 +190,7 @@ the audience's ready views from that window and earlier disclosures, and authore
 character descriptions/details and all current character tracked states. Tracked
 states are independent of the passage window and insertion mode. Their record-age
 prefix uses the state's `updated_ts`: time since its answer was last set or
-confirmed, using the same time formatter as facts. A successful refresh confirms
+confirmed, using the shared time formatter. A successful refresh confirms
 the state even when its answer is unchanged. Explicit answer saves follow that
 same rule. Configuration-only saves send `answer_confirmed=false` through the
 world-state websocket and manager APIs; an unchanged answer then keeps its age.
@@ -206,9 +205,11 @@ complete replacement view per character, or an explicit omission. Validation
 keeps the first valid view for each requested canonical audience. Unrequested
 audiences, extra fields and model-supplied identities/references are ignored.
 Invalid views leave their audience missing; they do not discard valid siblings.
-The response includes explicit `knowledge_ids`, `passage_ids`, and `evidence_spans`
-arrays per audience. The first two name supplied prior inputs actually used;
-`evidence_spans` names fully perceived sentence/line spans of the current passage.
+The response includes explicit `knowledge_ids` and `passage_ids` arrays per audience,
+naming supplied prior inputs actually used. Replacement prose preserves the public
+interaction's concrete subject and speech act while excluding private content. The
+host does not split or parse passage markup or require a message shape; double
+quotes identifying dialogue is the accepted convention.
 An explicit empty array means no citations in that category. The host
 drops unknown or cross-audience knowledge IDs with audience/ID warnings and
 resolves offered IDs to its own references. Unknown physical citations are also
@@ -381,7 +382,7 @@ The public creation opt-in is documented in [Saved scene format](scene-format.md
 Conversation scene analysis records `evidence_boundary` (the pre-reply history IDs)
 and `evidence_budget` beside its existing advice metadata. Its fingerprint hashes
 that prefix, selected source/view revisions and the bounded audience evidence,
-plus authored description/intention, visibility, disclosures and recorded facts.
+plus authored description/intention, visibility and disclosures.
 It does not hash the global audience-index revision, the unrendered scene clock,
 or reader-only snapshot fields. The selected snapshot remains an input because
 the analysis prompt renders it. A concurrent history change still cancels an
@@ -409,42 +410,22 @@ text only from the authoritative `message_edited` echo. `commit_revision` accept
 reject obsolete receipts; its explicit button and next-send catch-up join one scene-local
 coordinator job. Selection ownership covers the live agent scene, active state, message,
 canonical digest and metadata, active index and serial. Each phase separately receipts the
-history, facts, settings and perspective dependencies it consumes. Every publication,
+history, settings and perspective dependencies it consumes. Every publication,
 index and persistence await revalidates the applicable identity. Successful swaps echo `revision_swapped`;
 rejected swaps return a correlated `operation_done` error with `failed_action=swap_revision`.
 
-In Character perspectives mode the coordinator uses the perception lock, repairs dependent
-summaries, flushes fact memory and then publishes completion. In Standard mode it reruns
-fact extraction against every archive summary whose source range contains the passage
-(a passage outside every summary has no facts), then runs the dialogue ledger against its
-historical speaker, presence, timestamp and preceding lines. Extraction and learning have separate
-persisted receipts, so retrying a failed learning phase does not repeat successful extraction
-unless one of that extraction's own inputs changed. A transaction journal records baseline
-records and each phase's last writes; returning to the baseline restores only writes the
-transaction still owns. A fact records the message it came from and the messages that restated it,
-so removing one message does not remove another restatement, authored correction, summary
-contribution or manual grant. With no eligible operation, selection leaves stale derived
-archive/fact cleanup for commit or next-send catch-up, without a model call. In Standard
-mode, if this message has no affected archives, fact bindings, edges or journal
-mutations, that catch-up skips snapshots
-and indexing. Browsing marks the scene unsaved; commit with auto save enabled or
-the next normal scene save persists the selection.
+In Character perspectives mode the coordinator uses the perception lock, repairs dependent summaries, synchronizes the audience index and then publishes completion. The persisted perception receipt allows completed work to survive retries while its inputs remain current. A transaction journal records the baseline and owned view/archive writes; returning to the baseline restores only writes the transaction still owns, leaving unrelated authored grants intact.
 
-A restored baseline with current analysis but pending index work offers **Update
-knowledge**, not perception analysis. Index failures retain their pending IDs but
-do not block new messages. Empty archive records remove their vectors. When a
-message is deleted or popped, its archive IDs transfer to the scene backlog, which
-catch-up retries even if no remaining message needs revision work. Its fact IDs go
-to the summarizer's normal background queue; catch-up does not flush unrelated fact
-work. An explicit **Update knowledge** action reports a failure when repair remains
-pending, while next-send catch-up stays non-blocking.
+In Standard mode there is no knowledge analysis phase. Selection leaves stale derived archive cleanup for commit or next-send catch-up, without a model call. With no affected archive or journal mutation, catch-up skips snapshots and indexing. Browsing marks the scene unsaved; commit with auto save enabled or the next normal scene save persists the selection.
+
+A restored baseline with current analysis but pending index work offers **Update knowledge**. Index failures retain their pending archive IDs but do not block new messages. Empty archive records remove their vectors. Deleting or popping a message transfers its pending archive IDs to the scene backlog for later catch-up. An explicit **Update knowledge** action reports a failure when repair remains pending, while next-send catch-up stays non-blocking.
 
 Pointer movement, focus changes and tab switches never commit. `server/api.py` catches up
 before accepting a line or choice, `ConversationAgent.converse` guards direct generation,
 the Narrator's common generation wrapper guards direct actions and auto-narration, and
 `Scene.push_history` is the final common boundary before a new message is recorded.
-Browse invalidation retains dirty fact-memory and audience-index state while deferring their
-wakeups; ledger, TTS and avatar selection do not subscribe to swaps or `message_edited`.
+Browse invalidation retains dirty audience-index state while deferring its wakeup;
+TTS and avatar selection do not subscribe to swaps or `message_edited`.
 `scene_status.data.revision_refreshes` publishes each message's effective, mode-specific
 operation and correlated selection state so the chat, History and Knowledge surfaces agree.
 
@@ -549,7 +530,7 @@ pending and cannot produce a falsely ready summary.
 Static or untracked historical entries are not reconstructed.
 
 Audience summary prompts receive selected source prose, with no reader previous
-summaries or global extracted facts. The source text includes established claims
+summaries. The source text includes established claims
 and beliefs; prompt instructions preserve speakers, attribution and uncertainty,
 and forbid inventing events or converting a reported claim into world truth.
 The audience lifecycle explicitly passes `skip_author_hooks=True` at the request
@@ -559,8 +540,7 @@ an audience. Configured archive instructions (base requests), explicit extra
 instructions, scene intention/context, and generation-option writing style still
 reach the templates as shared authored guidance. These inputs remain the author's
 responsibility and are not converted to character knowledge by this step. Reader
-summary calls keep their existing hooks. Base audience calls can return supported
-facts in that same request, as described below. These constraints reduce exposure but cannot
+summary calls keep their existing hooks. These constraints reduce exposure but cannot
 guarantee that an LLM preserves every nuance; live prompt/output evaluation checks
 attributed claims alongside deterministic orchestration and persistence tests.
 
@@ -608,220 +588,26 @@ Debug event `character_history.skip_summary` records the summary ID, viewer and
 availability when projection descends to source views, without logging prose.
 
 
-## Source-supported facts and scoped graph queries
-
-In perception mode, enabled archive fact extraction runs in the existing base
-**audience** summary request (`summarize(..., audience=..., return_facts=True,
-skip_author_hooks=True, line_ids=True)`); each view text carries its message id and each
-returned fact names the line it came from (`message_id`), or is dropped. Message views are
-not fact sources: `saved_fact_sources` offers base summaries and disclosures only. Reader
-calls publish complete summaries without reader facts; layered calls add no extraction
-request. Explicit omissions add no facts.
-The host supplies the audience from the selected view and ignores model `known_by`
-claims. Previous-fact context is the intersection of evidence available to every
-member of that audience, never the global fact list. Fact extraction remains off
-when the existing Extract Facts setting is disabled. Legacy extraction/deduplication
-keeps its existing behavior.
-
-`Fact.contributions` is a tuple of immutable `FactContribution` records in
-`talemate.knowledge.schema`. Each stores the exact source/view revision, audience,
-acquisition order/time, extracted text, subjects, optional event `time_scope`,
-an optional accessible `supersedes` ID, optional `evidence` (message ID, revision,
-span index), optional `inferred_from` (the donor's concrete source/view revision),
-`citation_rejected` (a failed extraction-time citation check), and
-`evidence_competitors` (references to spans scoring higher than the citation).
-An unknown extraction `evidence_id` drops with a warning; the fact remains local
-with `evidence=None`. A summary contribution uses the latest
-ready input acquisition as its conservative span-end learning bound, not the time
-archiving happened. Creating an old archive later cannot reorder it after a newer
-disclosure. Facts within the same span share that bound; event-time distinctions
-remain explicit in their prose and `time_scope`, without inferred timestamps.
-Message/summary contributions require a
-specific view ID and revision. Disclosure contributions reference the independent
-disclosure itself. These are derived snapshots: saved perspectives and disclosures
-remain the durable evidence, and no learning record depends on a disposable fact ID.
-Old facts omit this field when empty; old scenes need no reconstruction.
-
-`replace_source_facts(scene, batches)` accepts `(source_reference, audience,
-parsed_facts)` batches, validates all source views before publication, and replaces
-only those source/view contributions. Contributions from other passages, summaries
-or disclosures survive even when they share a combined fact. Valid empty extraction
-removes only the requested contribution. Source changes use `perspectives_changed`
-to prune stale evidence and refresh the affected memory documents in the existing
-background lifecycle. Sibling views and unrelated branches are not re-extracted.
-Removing an audience member preserves the other recipients; renames follow audience
-names without rewriting historical prose. Reset, Reset Scene State with history
-wiping, and progress-reset exports discard the source-derived index as well as its
-sources, retaining authored facts. Progress-retaining saves/exports preserve both.
-
-The exact path combines whitespace-normalized text and identical subject sets and
-time qualifiers from the same source, regardless of which span each extraction cites.
-Equivalent views of that source can
-combine; different sources stay separate even with the same explicit ISO date or
-timestamp. A calendar date identifies neither an occurrence nor a shared event.
-The prompt example requests `time_scope` with a null case and omits model-assigned
-audiences. Dates must be literally supported in both extracted text and extraction
-input; an unsupported normalized date drops only the optional scope (with a debug
-log), preserving the fact and its source-local identity.
-Acquisition time is not event time;
-"holds the key" versus "held the key", attributed claims versus observations, and
-uncertainty qualifiers must remain in the extracted text. The existing embedding
-matcher also compares same-source, same-span candidates with compatible time scopes
-and supersession links. Subject lists need not be identical: after matching text,
-nonempty lists must intersect after casefolded alias expansion with `aliases_for`.
-Merges retain each audience's wording and evidence; an audience already represented
-by the merge does not also receive an inferred contribution. Before any transfer,
-a recipient's contribution from the same source and span within **Fact matching
-tolerance** also prevents a duplicate row, even when the pair could not merge.
-
-`contributions_for_source` scores each fact against the original sentence/line
-spans of every dependency message returned by `message_views` for its donor view.
-This includes the full input of a summary, not just the message containing the
-citation. Spans are never widened to include neighbouring text. The per-message
-cache keeps one embedding batch and one score vector per fact text/message revision;
-all embedding batches run in `asyncio.to_thread`. Normalized vectors and cached
-pairwise distances also serve deduplication.
-
-The model's choice within an audience's offered set is accepted. Only a span
-outside that set with a strictly higher cosine score vetoes the citation; ties do
-not. There is no support tolerance. Extraction records the higher-scoring span
-references in `evidence_competitors`. If any lies outside the extracting audience's
-own offered set, the citation is logged as `citation not supported`, with
-`evidence=None` and `citation_rejected=True`; the fact remains local.
-
-A recipient needs a ready view citing the original span and every retained
-competitor. A competitor outside their offered set blocks transfer with the same
-log and **Citation not supported** reason. This allows pronoun-bearing public spans
-to cite their original wording even when another public span scores higher, while
-a better-matching private span in any donor dependency vetoes sharing. No recipient
-prose is embedded and no score is recomputed for transfer or later reads.
-
-The recipient must not be explicitly absent; `present=None` is unknown and does
-not cut. Subjects and aliases cannot bypass the citation or competitor checks.
-Inference records the donor revision and is invalidated when its supporting views
-change; publication rechecks sources after embedding calls. The general memory
-comparison methods and stored-vector **Match known facts** all measure Euclidean
-distance on normalized vectors, independent of raw embedding magnitudes.
-
-Extraction offers IDs with excerpts of at most 160 characters. The evidence block
-uses at most one eighth of the client's context limit, further reduced by input
-tokens, the requested response, and 2048 tokens reserved for prompt instructions.
-No evidence list is built when fact extraction is off. Views saved without
-`evidence_spans` remain usable for their existing audience but cannot reconcile
-until explicitly regenerated. Loading or rebuilding facts does not automatically
-reanalyze those views. Explicit empty arrays remain serialized so they are distinct
-from the absent field on old saves.
-
-Fact rows distinguish **Citation not supported** (an extraction or recipient competitor veto),
-**Not in their view** (no citation), **Not present**,
-**View being rebuilt** (stale evidence), **View pending or failed**, and
-**Private moment** (an explicit omission). Pending status takes priority. Multi-topic
-queries share a source read context and coverage cache for these reasons.
-
-The shared contract intentionally adds no belief engine or confidence score:
-structural checks and relative span ranking cannot prove the model preserved every
-semantic qualification or reject an invented fact absent from all passage spans. The extraction prompt forbids invented events and requires
-attribution, uncertainty and established beliefs to survive; live evaluation and
-regression tests exercise those requirements without claiming a semantic guarantee.
-
-`SummarizeAgent.rebuild_supported_facts(scene, sources=None)` rebuilds from saved
-views/disclosures, including when all fact IDs were discarded. Passing source
-references limits requests and replacement work to those sources; a reference with
-`view_id` limits it to that view. Full explicit rebuild enumerates base summaries,
-uncovered saved passage views and independent disclosures. Coverage is tracked per
-concrete view revision and audience member, and only ready summary groups cover
-passages. Failed or pending summary groups leave ready passage evidence available
-for direct extraction. Full rebuild skips pending or failed passage views too;
-explicitly requesting such a view still fails instead of publishing a successful
-rebuild. Ready and omitted views remain eligible. A partly covered shared passage view is
-extracted for its whole audience. Base extraction reads
-the summary's saved source views by ID, preserving speaker formatting, rather than
-stale positional archive ranges. It does not reconstruct missing historical views.
-
-All requested results are staged and revalidated against current revisions before
-replacing the index. Missing/malformed extraction or a changed source returns
-`failed` with visible Retry/Cancel; it cannot publish a successful partial rebuild.
-An explicit empty source list or disabled extraction returns `None`. A valid empty
-FACTS list is successful. A valid audience summary remains ready when its FACTS
-block fails; only facts are marked failed, with visible retry. A later successful
-sibling summary does not clear that failure. Both the fact-failure dialog and
-explicit fact regeneration retry saved summary groups without replacing their prose, view identity, revision or dependent views.
-The dialog pins the concrete published view before waiting; if that view disappears
-or changes while the dialog is open, Retry stops without requesting sibling views.
-Successful rebuilds update the persisted base entry's `facts_status` as well as
-runtime audience failures, so a save/reload or later summary check cannot resurrect
-a repaired failure. A partial audience repair keeps other failed groups marked.
-
-Equivalent replacements preserve fact IDs, including unchanged local rebuilds.
-Canonical author edits are preserved when contribution sets match, even when a
-single-view replacement changes the order of two equivalent contributions.
-Removed facts lose incoming knowledge edges and supersession references in both
-canonical records and contributions. Publication rejects self-links and cycles
-across both forms of supersession, preserving existing valid links first.
-Memory I/O errors report failure even if the canonical source-supported index was
-already installed. Pending upserts and deletions remain in the per-scene dirty
-queue until written, including retries of an already-empty extraction. The mirror
-serializes writes and drains changes queued during I/O. Switching scenes pauses
-this work with its keys retained rather than raising a generation cancellation;
-resuming that scene can drain its queue. The existing background `regenerate_facts` route uses this operation for
-one base entry, keeps reader prose intact, and reports its actual `facts_status`.
-Async callers must run rebuilds off the websocket receive loop so retry responses
-can be dispatched. No new public mode or request kind is introduced.
-
-Local rebuild cost is limited to changed/requested source audience groups: one
-facts-only request per group (`SummarizeAgent.extract_facts`, template
-`summarizer.extract-facts`), without regenerating unrelated summaries or
-replaying a scene's learning history. The request reads the group's saved source
-views with its stored audience summary as context and writes no summary; a
-disclosure is read from its own text. Its FACTS block has the same format and
-extractor as the summary request's. Source indexing, exact-match lookup, and
-selection checks still scan stored records; this is not a constant-time graph
-index. Background invalidation updates affected fact documents and preserves
-independent contributions. Full-scene extraction occurs only when explicitly
-requesting a full rebuild.
-
-`facts_about`, `current_state`, `relationship_timeline` and `superseded_chain` in
-`talemate.knowledge.graph` accept an explicit `character` argument. Omit it for
-existing global author queries. The Current State and Relationship Timeline nodes
-also expose an optional character input; an empty string means the global query.
-`superseded_chain(character=...)` rejects legacy mode with `ValueError` instead of
-silently returning an unscoped chain. `bucket(scene, character)` is scoped.
-In the new mode these queries select current supporting contributions before
-entity matching and return that character's text and acquisition evidence only.
-An inaccessible superseding update cannot
-replace their last-known evidence; an author edit of the record's text does, for every character (`Fact.text_edited`). An authored link (`Fact.link_edited`) holds the record's `supersedes` through rebuilds, while a character view always takes its chain from its own contributions. A later witnessed update carries its own time
-and order; disclosure time stays independent of its historical provenance. Hidden
-passages are excluded through their derived facts too. Facts without supported
-contributions are absent from this scoped derived index. Authored entries use visibility,
-explicit learning uses disclosures, and character retrieval uses audience records.
-
-Known limits: facts acquired from one source share its acquisition
-order. Ties retain extraction/insertion order; the model's list is not a finer
-verified event chronology. New-mode fact updates prune obsolete topic membership
-but do not recluster topics in this path. Neither limitation changes the source
-contribution boundary.
-
-
 ## Explicit grants and disclosures
 
 `knowledge.disclosures.grant_disclosure(scene, character, target, text=..., whole_entry=False)` uses the canonical entry classifier and the same offered target set as the Knowledge tab before creating a `Disclosure`. Partial grants require nonblank supplied text and retain it verbatim, even if the source value is non-textual. Only whole-entry copying requires textual source content. Store collisions follow the existing classifier precedence; description paragraph IDs fold onto their entry. An explicit whole-entry request snapshots the current entry text. Empty, removed and unresolved targets are rejected before any acquisition counter, disclosure or edge changes. These are author assertions; the grant performs no semantic inference and invents no dialogue. Director routing remains model-mediated and subject to its normal write confirmation.
 
-`Disclosure.origin` records the selected entry ID as historical provenance, including authored entries and disposable fact IDs. When the selected source has a perspective revision, `provenance` also retains that SourceReference. Neither grants access to the origin nor acts as a computational dependency. The independent disclosure reference is what downstream summaries and fact contributions cite.
+`Disclosure.origin` records the selected entry ID as historical provenance, including authored entries. When the selected source has a perspective revision, `provenance` also retains that SourceReference. Neither grants access to the origin nor acts as a computational dependency. The independent disclosure reference is what downstream summaries cite.
 
 `Disclosure.message_id_boundary` stores the greatest existing scene-message ID at creation (zero in empty history). IDs already have a monotonic allocator; reload advances it beyond saved disclosure boundaries even if the boundary message was deleted. `disclosure_positions` places each record after surviving history at or below that boundary. The existing `acquired.order` breaks ties between disclosures, while `acquired.ts` records story time. The boundary is required; this unreleased format has no migration for boundary-free foundation records. No message is inserted and reader history remains unchanged.
 
 `project_character_history` inserts only the viewer’s disclosures, counts their tokens, respects revision prefixes, and avoids both skipping and duplicating disclosures when using summaries. Base summary inputs interleave disclosures before the subsequent passage, never into an archive wholly preceding their acquisition. Layered summaries inherit their references and prose from base views. A ready summary missing a required disclosure is bypassed for safe source views. Perception’s established-knowledge context uses the same message boundary to avoid backdating a grant during delayed analysis.
 
-The GrantKnowledge node and author websocket action share target validation. The author handler runs in the background so optional fact-extraction retry dialogs leave the receive loop available; it reports the disclosure before indexing and saves once after indexing finishes. Both pre-indexing and post-indexing `character_knowledge` frames echo the grant’s `request_id`; the tab completes a disclosure submission only for its matching frame, so a late indexing refresh cannot clear a later request. Rejected requests emit the normal correlated operation failure. The tab refreshes after indexing and shows failed extraction status. Both use `rebuild_supported_facts` with the independent disclosure reference, under the existing extraction setting. No new request kind or fact identity scheme is introduced. Extraction failure retains the disclosure and is not reported as a successful fact rebuild. The original source can be regenerated without replacing the disclosure contribution. `knowledge_changed` identifies the disclosure itself; its label is the selected text, never the containing archive.
+The GrantKnowledge node and author websocket action share target validation. Both call the memory agent's `ensure_audience_index(scene)` after saving the disclosure, without a model request. The author handler runs in the background, reports the disclosure before indexing, and saves once after indexing finishes. Both pre-indexing and post-indexing `character_knowledge` frames echo the grant's `request_id`; the tab completes only its matching submission. Rejected requests emit the normal correlated operation failure. The original source can be regenerated without replacing the independent disclosure. `knowledge_changed` identifies the disclosure itself; its label is the selected text, never the containing archive.
 
 User-facing partial/whole wording is documented in the Knowledge guide. The shared mode predicate remains the only eligibility check; legacy grants keep their edge semantics.
 
-The director module uses Grant Knowledge Metadata and Grant Knowledge Confirmation adapters over the existing focal metadata and string formatter. Both select their content using the shared mode predicate: legacy examples and confirmations remain unchanged, while perception grants show selected information and the whole-entry choice. The character report labels disclosures and restricted entries separately and retains supplemental grants and recorded-fact coverage. Revokes and topic-awareness assertions are legacy-only.
+The director module uses Grant Knowledge Metadata and Grant Knowledge Confirmation adapters over the existing focal metadata and string formatter. Both select their content using the shared mode predicate: legacy examples and confirmations remain unchanged, while perception grants show selected information and the whole-entry choice. The character report labels disclosures and restricted entries separately and retains supplemental grants. Revokes are legacy-only.
 
 
 ## Searchable effective audiences
 
-In opted-in perception scenes, `knowledge.memory.audience_documents(scene)` builds a derived character index in the existing memory collection. It reuses `select_character_view`, `character_fact`, independent disclosures and authored `EntryVisibility`. Ready audience views replace reader prose; hidden, pending, failed, omitted and unsupported content is not indexed for characters. Fact documents use each character's supported wording until the author edits the record's text (`Fact.text_edited`); an edited text replaces every character's wording, while each character's own supersession chain stays per view (`Fact.link_edited` protects only the record's own link). Authored sheets, world entries and static history follow their author-managed visibility. An event known to the entire current cast is still audience-limited, not common lore for future characters. Legacy edges do not authorize these records.
+In opted-in perception scenes, `knowledge.memory.audience_documents(scene)` builds a derived character index in the existing memory collection. It reuses `select_character_view`, independent disclosures and authored `EntryVisibility`. Ready audience views replace reader prose; hidden, pending, failed, omitted and unsupported content is not indexed for characters. Authored sheets, world entries and static history follow their author-managed visibility. An event known to the entire current cast is still audience-limited, not common lore for future characters. Legacy edges do not authorize these records.
 
 Canonical reader/author memory documents remain available. Managed character variants have derived `knowledge:` IDs and the following metadata:
 
@@ -834,10 +620,12 @@ Canonical reader/author memory documents remain available. Managed character var
 | `knowledge_id` | Canonical source/entry ID used by scoped ID lookups; multiple derived variants may represent it. |
 | `knowledge_fingerprint` | Internal reconciliation digest. Unchanged documents are not re-embedded. |
 
-`await memory.get(query, viewer="Elmer", **restrictions)` performs one Chroma similarity query over managed records satisfying **common OR audience contains Elmer**, ANDed with every existing metadata/subject restriction and the pin-only exclusion. Unknown viewers or a viewer supplied outside perception mode are rejected. Ordinary author `get` and metadata lookups retain canonical records without character duplicates. [Character memory retrieval](character-memory-retrieval.md) documents projected RAG inputs, scoped entity/topic additions and ID lookups, AI retrieval and cache validity.
+`await memory.get(query, viewer="Elmer", **restrictions)` performs one Chroma similarity query over managed records satisfying **common OR audience contains Elmer**, ANDed with every existing metadata/subject restriction and the pin-only exclusion. Unknown viewers or a viewer supplied outside perception mode are rejected. Ordinary author `get` and metadata lookups retain canonical records without character duplicates. [Character memory retrieval](character-memory-retrieval.md) documents projected RAG inputs, scoped entity additions and ID lookups, AI retrieval and cache validity.
 
 Chroma 1.5.0 or later is required for array metadata and `$contains`; the project lock uses 1.5.9. Real temporary-collection tests exercise the metadata union and replacement behavior. Empty metadata arrays are invalid. Audience replacement removes obsolete managed variants before writing their replacements, so old recipients cannot survive a metadata merge. If an index write fails, dirty state is retained and an explicit scoped read must successfully synchronize before it can return results; query errors propagate rather than masquerading as an empty successful result. Author queries log synchronization failures and continue querying canonical records using `knowledge_index != True`, which includes unmarked rows written before the gate was enabled even if the first reconciliation fails, while excluding managed character variants.
 
-The memory agent uses `event.affected` to rederive changed sources and their supported facts, retaining indexed source associations even when another event listener has already pruned the live facts. Canonical writes refresh their authored, summary or fact groups without rederiving unrelated views. Before reusing cached records, synchronization also checks the current source map: message or summary groups removed without notifications, including truncated layered history, are dropped along with their unsupported fact variants. Full derivation is reserved for initialization, reconciliation and broad invalidations such as cast changes, perspective resets, visibility edits and deletions. Background updates coalesce changes; scoped reads wait for them and retry if the scene's index revision changes during a query. A scene/collection switch discards the operation instead of writing to or returning the next scene's data. Direct index calls refuse writes while memory is readonly or its collection is not ready; dirty work remains for a later retry.
+The memory agent uses `event.affected` to rederive changed sources. Canonical writes refresh their authored or summary groups without rederiving unrelated views. Before reusing cached records, synchronization checks the current source map and drops message or summary groups removed without notifications, including truncated layered history. Full derivation is reserved for initialization, reconciliation and broad invalidations such as cast changes, perspective resets, visibility edits and deletions. Background updates coalesce changes; scoped reads wait for them and retry if the scene's index revision changes during a query. A scene/collection switch discards the operation instead of writing to or returning the next scene's data. Direct index calls refuse writes while memory is readonly or its collection is not ready; dirty work remains for a later retry.
 
 `await memory.rebuild_audience_index()` reconstructs managed records from scene sources; `Scene.commit_to_memory` includes it. Initialization reconciles a reopened new-mode collection, including stale persisted variants, and marks pre-existing canonical rows without removing their other metadata. Rebuilding does not reconstruct legacy knowledge or add an LLM request.
+
+Development saves from the removed learned-facts experiment load by discarding old fact storage, fact edges, topic data, `facts_status`, `evidence_spans` and fact-only revision receipts. This is an unreleased load boundary, with no migration or reconstruction. Stored memory documents explicitly typed as facts cannot enter direct, metadata or similarity retrieval.

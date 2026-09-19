@@ -1,3 +1,0 @@
-fixed:
-- "World Editor > Reset Scene State: wiping the history including static entries now removes the facts those entries recorded, and the Learn, Never Learn and Unlearn rules the author set on them. A fact kept only by a hand grant goes with them; a fact whose text or link the author edited is kept as a manual entry."
-- "Character Knowledge: regenerating a history entry that moves its Learn, Never Learn and Unlearn rules onto a fact that already has rules now keeps the result of setting the same rules by hand, so a moved Learn lifts an earlier Never Learn and a newer Learn is never refused."

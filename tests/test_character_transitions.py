@@ -32,7 +32,7 @@ from talemate.tale_mate import Actor
 @pytest.mark.parametrize("route", ["chat", "chat-narrated", "world-editor"])
 @pytest.mark.parametrize("best_fit", [False, True])
 @pytest.mark.parametrize("seconds", [0, 172800])
-@pytest.mark.parametrize("knowledge_source", ["history", "fact", "memory"])
+@pytest.mark.parametrize("knowledge_source", ["history", "memory"])
 async def test_ui_absence_excludes_player_and_npc_lines_from_return_context(
     scene, monkeypatch, route, best_fit, seconds, knowledge_source
 ):
@@ -47,10 +47,7 @@ async def test_ui_absence_excludes_player_and_npc_lines_from_return_context(
     from talemate.game.engine.nodes.tools.analysis import ensure_registry_loaded
     from talemate.game.engine.nodes.ux import EmitElement
     from talemate.game.engine.ux.schema import UXSelection
-    from talemate.knowledge.facts import SpanLine, store_facts
-    from talemate.knowledge.perspective_models import content_digest
     from talemate.knowledge.presence import presence_metadata
-    from talemate.knowledge.schema import ParsedFact
     from talemate.server.world_state_manager import WorldStateManagerPlugin
 
     scene.knowledge_eligibility = "legacy"
@@ -134,25 +131,6 @@ async def test_ui_absence_excludes_player_and_npc_lines_from_return_context(
         await scene.push_history(npc_line)
         assert set(player_line.present) == {"Barry Largo", "Elmer"}
         assert set(npc_line.present) == {"Barry Largo", "Elmer"}
-        fact_text = "Barry Largo greeted Elmer at the gate."
-        if knowledge_source == "fact":
-            facts = await store_facts(
-                scene,
-                None,
-                [ParsedFact(text=fact_text, message_id=player_line.id)],
-                0.15,
-                lines={
-                    player_line.id: SpanLine(
-                        message_id=player_line.id,
-                        message_digest=content_digest(str(player_line)),
-                        present=player_line.present,
-                        ts=scene.ts,
-                    )
-                },
-            )
-            assert len(facts) == 1
-            assert facts[0].message_id == player_line.id
-            assert set(facts[0].present) == {"Barry Largo", "Elmer"}
         if seconds:
             await scene.push_history(
                 TimePassageMessage(ts=seconds, message="Two days pass.")
@@ -222,20 +200,7 @@ async def test_ui_absence_excludes_player_and_npc_lines_from_return_context(
             assert "Everyone gathers by the gate." in text
             assert "Welcome back, Nora." in text
             assert text.count("Nora has returned") == 1
-        if knowledge_source == "fact":
-            absence_lines = await conversation.absence_block(
-                scene.get_character("Nora")
-            )
-            assert len(absence_lines) == 1
-            assert fact_text in absence_lines[0]
-            assert fact_text not in "\n".join(histories[0])
-            assert fact_text not in "\n".join(histories[1])
-            assert dialogue_prompt.count(fact_text) == 1
-            assert (
-                "Nora has not learned any of the following. Do not let Nora act on, "
-                "refer to, or react to these:\n- " + absence_lines[0]
-            ) in dialogue_prompt
-        elif knowledge_source == "memory":
+        if knowledge_source == "memory":
             assert known_memory in dialogue_prompt
         assert "Hello Elmer!" in "\n".join(scene.context_history(budget=8192))
 
@@ -538,7 +503,7 @@ async def test_immediate_return_requires_no_generation(returning_scene, monkeypa
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("lines,seconds", [(1, 0), (0, 3600), (3, 172800)])
-async def test_return_records_absence_without_generating_or_storing_facts(
+async def test_return_records_absence_without_generation(
     returning_scene, monkeypatch, lines, seconds
 ):
     from talemate.knowledge.transitions import transition_payload
@@ -549,7 +514,6 @@ async def test_return_records_absence_without_generating_or_storing_facts(
     transition = await leave_and_return(scene, lines=lines, seconds=seconds)
     assert transition.returning
     assert absence_seconds(scene, transition) == seconds
-    assert not scene.world_state.facts
     assert set(transition_payload(scene, transition)) == {
         "type",
         "id",
@@ -587,12 +551,11 @@ async def test_world_editor_return_completes_without_generation(
     await asyncio.wait_for(task, timeout=10)
     assert latest_transition(scene, "Nora").returning
     assert any(frame.get("action") == "character_activated" for frame in frames)
-    assert not scene.world_state.facts
     request.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_archive_never_extracts_transition_as_story(returning_scene):
+async def test_archive_excludes_transition_chips(returning_scene):
     scene = returning_scene
     transition = await leave_and_return(scene, lines=1)
     add_line(scene, "Nora sets her pack down.", ["Nora", "Mara"])
@@ -600,9 +563,6 @@ async def test_archive_never_extracts_transition_as_story(returning_scene):
     summarizer = get_agent("summarizer")
     span = summarizer.collect_archive_span(scene)
     assert transition not in span.dialogue_entries
-    from talemate.history import span_bindings
-
-    assert transition.id not in span_bindings(scene, [transition])
 
 
 @pytest.mark.asyncio

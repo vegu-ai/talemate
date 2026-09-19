@@ -16,7 +16,6 @@ from talemate.exceptions import GenerationCancelled
 from talemate import exceptions
 from talemate.instance import get_agent
 from talemate.load import load_scene, new_scene
-from talemate.knowledge.schema import Fact
 from talemate.scene_message import (
     CharacterMessage,
     ContextInvestigationMessage,
@@ -33,13 +32,12 @@ load_env = test_load_character_activation.load_env
 
 @pytest.fixture
 def dialogue(scene, monkeypatch):
-    """Track learning from dialogue on, with a mocked ledger answer."""
+    """Publish dialogue without extra analytical requests."""
     from talemate.prompts import Prompt
 
     conversation = get_agent("conversation")
     config = conversation.actions["character_knowledge"]
     config.enabled = True
-    config.config["ledger"].value = True
     scene.character_data = {
         name: Character(name=name, is_player=name == "Alice")
         for name in ("Alice", "Edwin", "Mara")
@@ -63,7 +61,7 @@ def dialogue(scene, monkeypatch):
         memory, "compare_strings", AsyncMock(return_value={"euclidean_distance": 0.01})
     )
     monkeypatch.setattr(scene, "emit_status", Mock())
-    request = AsyncMock(return_value=("", {"ledger": json.dumps({})}))
+    request = AsyncMock()
     monkeypatch.setattr(Prompt, "request", request)
     with ActiveScene(scene):
         yield scene, conversation, memory, request
@@ -202,7 +200,7 @@ async def test_every_visible_type_publishes_after_edit_before_hooks(
         assert published[0][2].message == message.message
 
     async def hook(event):
-        calls.append("ledger/tts")
+        calls.append("tts")
         assert len(published) == 1
 
     async def archive(event):
@@ -214,7 +212,7 @@ async def test_every_visible_type_publishes_after_edit_before_hooks(
     scene.signals["push_history.after"].connect(archive)
     monkeypatch.setattr(get_agent("summarizer"), "finalize_perceptions", analyze)
     await scene.push_history(message, emit_message=True)
-    assert calls == ["edit", "perceptions", "ledger/tts", "archive"]
+    assert calls == ["edit", "perceptions", "tts", "archive"]
     assert len(published) == 1
     assert published[0][0] == message.typ
     assert published[0][2].id == message.id
@@ -251,40 +249,6 @@ async def test_batch_filters_empty_director_and_emits_each_line_once(
     ]
     await publication_scene.push_history(messages, emit_message=True)
     assert [r[2].id for r in published] == [messages[0].id, messages[2].id]
-
-
-@pytest.mark.asyncio
-async def test_real_ledger_grants_after_publication_and_records_no_fact(
-    dialogue, published, isolate_signals
-):
-    scene, conversation, _, request = dialogue
-    scene.active = True
-    old_fact = Fact(
-        id="F100", text="The key is under the lantern.", ts=500, present=["Alice"]
-    )
-    scene.world_state.facts[old_fact.id] = old_fact
-    isolate_signals("push_history", "push_history.after", "game_loop_new_message")
-    scene.signals["game_loop_new_message"].connect(conversation.on_new_message)
-    response = request.return_value
-    response[1]["ledger"] = '{"Edwin": ["F100"]}'
-
-    async def record(*args, **kwargs):
-        assert [r[0] for r in published] == ["character"]
-        assert "Edwin" not in old_fact.known_by
-        return response
-
-    request.side_effect = record
-    await scene.push_history(
-        CharacterMessage(
-            message="Alice: I moved into the lighthouse.", source="player"
-        ),
-        emit_message=True,
-    )
-    request.assert_awaited_once()
-    assert old_fact.known_by["Edwin"] == "inferred"
-    # the ledger grants; facts come from the archive step only
-    assert list(scene.world_state.facts) == [old_fact.id]
-    assert "knowledge_changed" in [r[0] for r in published][1:]
 
 
 @pytest.mark.asyncio
@@ -355,8 +319,6 @@ async def test_avatar_runs_after_line_and_updates_its_saved_id(
 async def test_load_publishes_hydrated_history_before_indexing(
     load_env, published, tmp_path, monkeypatch
 ):
-    import json
-
     scene = load_env
     data = new_scene()
     data["intro"] = "The lighthouse is quiet."
@@ -502,7 +464,7 @@ async def test_portrait_failure_does_not_skip_new_message_or_archive_hooks(
         event.avatar = "missing-asset"
 
     async def new_message(event):
-        order.append("ledger-tts")
+        order.append("tts")
 
     async def archive(event):
         order.append("archive")
@@ -511,7 +473,7 @@ async def test_portrait_failure_does_not_skip_new_message_or_archive_hooks(
     scene.signals["game_loop_new_message"].connect(new_message)
     scene.signals["push_history.after"].connect(archive)
     await scene.push_history(message, emit_message=True)
-    assert order == ["ledger-tts", "archive"]
+    assert order == ["tts", "archive"]
     assert [item[0] for item in published] == ["character"]
 
 

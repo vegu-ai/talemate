@@ -121,22 +121,7 @@ describe('what the character knows', () => {
         expect(closed.sent).toEqual([]);
     });
 
-    it('re-reads the record when the Memory agent reports a Topics flip, only while open', () => {
-        const memoryStatus = (enabled) => ({ type: 'agent_status', name: 'memory', data: { actions: { topics: { enabled, can_be_disabled: true } }, scene_overrides: {} } });
-        const vm = hub({ open: true });
-        vm.onToggle(true);
-        vm.sent.length = 0;
-        vm.handleMessage({ type: 'agent_status', name: 'summarizer', data: {} });
-        vm.handleMessage(memoryStatus(true));
-        expect(vm.sent).toEqual([]);
-        vm.handleMessage(memoryStatus(false));
-        expect(vm.sent.map((m) => m.action)).toEqual(['get_character_knowledge']);
-        vm.handleMessage(memoryStatus(false));
-        expect(vm.sent).toHaveLength(1);
-        const closed = hub();
-        closed.handleMessage(memoryStatus(false));
-        expect(closed.sent).toEqual([]);
-    });
+
 
     it('forgets the record when another scene loads', () => {
         const vm = hub();
@@ -168,14 +153,7 @@ describe('what the character knows', () => {
         expect(vm.entriesTotal).toBe(7);
     });
 
-    it('counts the known facts the record was capped to', () => {
-        const vm = hub();
-        expect(vm.factsCount).toBe('No known facts yet.');
-        vm.handleMessage(knowledgeFrame('Nora', { known_facts: [{ id: 'F9', text: 'The key is brass.', topic: 'key' }], known_facts_total: 1 }));
-        expect(vm.factsCount).toBe('1 known fact.');
-        vm.handleMessage(knowledgeFrame('Nora', { known_facts: Array.from({ length: 5 }, (_, i) => ({ id: `F${i}`, text: `fact ${i}` })), known_facts_total: 37 }));
-        expect(vm.factsCount).toBe('5 of 37 known facts, ranked by importance and recency.');
-    });
+
 
     it('lists the disclosures in a Character perspectives scene', () => {
         const vm = hub();
@@ -192,18 +170,7 @@ describe('what the character knows', () => {
     });
 });
 
-describe('the Memory Topics switch the fact topics follow', () => {
-    const memory = (enabled) => ({
-        name: 'memory', label: 'Memory', data: { scene_overrides: {} },
-        actions: { topics: { enabled, can_be_disabled: true, label: 'Topics', config: {} } },
-    });
 
-    it('is on while the Memory agent has not reported, and follows its Topics switch', () => {
-        expect(hub().topicsOn).toBe(true);
-        expect(hub({ agents: [memory(true)] }).topicsOn).toBe(true);
-        expect(hub({ agents: [memory(false)] }).topicsOn).toBe(false);
-    });
-});
 
 describe('the story mode switch', () => {
     it('sends the shared scene settings payload', () => {
@@ -255,15 +222,15 @@ const conversation = (config, enabled = true) => ({
     name: 'conversation', label: 'Conversation', data: { scene_overrides: {} },
     actions: { character_knowledge: { enabled, can_be_disabled: true, label: 'Character Knowledge', config } },
 });
-const ledgerField = { type: 'bool', label: 'Track learning from dialogue', value: false, note_on_value: { true: { text: 'One more request after a character message.' } } };
+const memoryField = { type: 'bool', label: 'Refine memories with AI', value: false, note_on_value: { true: { text: 'One more request after a character message.' } } };
 
 describe('the thoroughness toggles', () => {
     it('hands a toggle to the scene-only writer', () => {
-        const vm = hub({ agents: [conversation({ ledger: ledgerField })] });
+        const vm = hub({ agents: [conversation({ memory_pass: memoryField })] });
         const [group] = vm.groups;
         expect(vm.toggleConfig(group, group.toggles[0])).toBe(true);
         expect(vm.applySceneAgentValues).toHaveBeenCalledWith([
-            { agent: 'conversation', action: 'character_knowledge', config: { ledger: true } },
+            { agent: 'conversation', action: 'character_knowledge', config: { memory_pass: true } },
         ], `${group.toggles[0].label}: On`);
         expect(vm.toggleAgentConfig).not.toHaveBeenCalled();
         expect(vm.toggleGroup(group)).toBe(true);
@@ -280,7 +247,7 @@ describe('the thoroughness toggles', () => {
     });
 
     it('refuses a toggle while its group is off', () => {
-        const vm = hub({ agents: [conversation({ ledger: ledgerField }, false)] });
+        const vm = hub({ agents: [conversation({ memory_pass: memoryField }, false)] });
         const [group] = vm.groups;
         expect(group.enabled).toBe(false);
         expect(vm.toggleConfig(group, group.toggles[0])).toBe(false);
@@ -288,8 +255,8 @@ describe('the thoroughness toggles', () => {
     });
 
     it('summarizes the extra requests of what is on', () => {
-        const vm = hub({ agents: [conversation({ ledger: { ...ledgerField, value: true } })] });
-        expect(vm.summary.text).toBe('Extra requests: Track learning from dialogue');
+        const vm = hub({ agents: [conversation({ memory_pass: { ...memoryField, value: true } })] });
+        expect(vm.summary.text).toBe('Extra requests: Refine memories with AI');
     });
 });
 
@@ -298,7 +265,7 @@ describe('the thoroughness toggles', () => {
 describe('the app delegates to the agent drawer', () => {
     const agent = {
         name: 'conversation',
-        actions: { character_knowledge: { enabled: true, config: { ledger: { value: false } } } },
+        actions: { character_knowledge: { enabled: true, config: { memory_pass: { value: false } } } },
     };
     const drawer = () => ({ toggleAction: vi.fn(), toggleSubConfig: vi.fn() });
 
@@ -306,11 +273,11 @@ describe('the app delegates to the agent drawer', () => {
         const aiAgent = drawer();
         const toggleAgentConfig = lift(talemateApp, 'toggleAgentConfig', 'TalemateApp.vue');
         const self = { getAgents: () => [agent], $refs: { aiAgent } };
-        expect(toggleAgentConfig.call(self, 'conversation', 'character_knowledge', 'ledger')).toBe(true);
+        expect(toggleAgentConfig.call(self, 'conversation', 'character_knowledge', 'memory_pass')).toBe(true);
         expect(aiAgent.toggleSubConfig).toHaveBeenCalledWith(
-            agent, 'character_knowledge', 'ledger', agent.actions.character_knowledge.config.ledger);
+            agent, 'character_knowledge', 'memory_pass', agent.actions.character_knowledge.config.memory_pass);
         expect(toggleAgentConfig.call(self, 'conversation', 'character_knowledge', 'missing')).toBe(false);
-        expect(toggleAgentConfig.call(self, 'narrator', 'character_knowledge', 'ledger')).toBe(false);
+        expect(toggleAgentConfig.call(self, 'narrator', 'character_knowledge', 'memory_pass')).toBe(false);
         expect(aiAgent.toggleSubConfig).toHaveBeenCalledTimes(1);
     });
 
@@ -356,12 +323,12 @@ describe('where the hub sits', () => {
 
 describe('the hub origin indicators and resets', () => {
     it('reads Global settings with no override and Scene override once one key is pinned', () => {
-        const vm = hub({ agents: agentsAt('legacy', 'light') });
+        const vm = hub({ agents: agentsAt('legacy', 'minimal') });
         expect(vm.effortOrigin.any).toBe(false);
         expect(vm.effortOriginTooltip).toMatch(/global agent settings/);
 
-        const agents = agentsAt('legacy', 'light');
-        agents[1].data.scene_overrides = { actions: { archive: { config: { extract_facts: { value: true } } } } };
+        const agents = agentsAt('legacy', 'minimal');
+        agents[0].data.scene_overrides = { actions: { character_knowledge: { config: { memory_pass: { value: true } } } } };
         const mixed = hub({ agents });
         expect(mixed.effortOrigin.any).toBe(true);
         expect(mixed.effortOrigin.complete).toBe(false);
@@ -369,45 +336,47 @@ describe('the hub origin indicators and resets', () => {
     });
 
     it('clears one group\'s owned keys through the scene-only writer', () => {
-        const agents = agentsAt('legacy', 'light');
-        agents[1].data.scene_overrides = { actions: { archive: { config: { extract_facts: { value: true } } } } };
+        const agents = agentsAt('legacy', 'minimal');
+        agents[0].data.scene_overrides = { actions: { character_knowledge: { config: { memory_pass: { value: true } } } } };
         const vm = hub({ agents });
-        const group = vm.groups.find((g) => g.action === 'archive');
+        const group = vm.groups.find((g) => g.action === 'character_knowledge');
         expect(group.ownedOverridden).toBe(true);
         vm.clearGroup(group);
         expect(vm.clearSceneAgentValues).toHaveBeenCalledWith([
-            { agent: 'summarizer', action: 'archive', config: 'extract_facts' },
+            { agent: 'conversation', action: 'character_knowledge' },
+            { agent: 'conversation', action: 'character_knowledge', config: 'perspective_filter' },
+            { agent: 'conversation', action: 'character_knowledge', config: 'memory_pass' },
         ]);
     });
 
     it('clears only one setting through its own reset control', () => {
-        const agents = agentsAt('legacy', 'light');
-        agents[1].data.scene_overrides = { actions: { archive: { config: { extract_facts: { value: true } } } } };
+        const agents = agentsAt('legacy', 'minimal');
+        agents[0].data.scene_overrides = { actions: { character_knowledge: { config: { memory_pass: { value: true } } } } };
         const vm = hub({ agents });
-        const group = vm.groups.find((g) => g.action === 'archive');
-        const toggle = group.toggles.find((item) => item.key === 'extract_facts');
+        const group = vm.groups.find((g) => g.action === 'character_knowledge');
+        const toggle = group.toggles.find((item) => item.key === 'memory_pass');
         vm.clearToggle(group, toggle);
         expect(vm.clearSceneAgentValues).toHaveBeenCalledWith([
-            { agent: 'summarizer', action: 'archive', config: 'extract_facts' },
+            { agent: 'conversation', action: 'character_knowledge', config: 'memory_pass' },
         ]);
     });
 
     it('clears the whole hub across both modes, hidden keys included', () => {
-        const agents = agentsAt('legacy', 'light');
-        agents[0].data.scene_overrides = { actions: { character_knowledge: { config: { absence_limit: { value: 7 } } } } };
+        const agents = agentsAt('legacy', 'minimal');
+        agents[0].data.scene_overrides = { actions: { character_knowledge: { config: { perspective_filter: { value: 7 } } } } };
         const vm = hub({ agents });
         expect(vm.hubOverridden).toBe(true);
         vm.clearHub();
         expect(vm.clearSceneAgentValues).toHaveBeenCalledWith(expect.arrayContaining([
-            { agent: 'conversation', action: 'character_knowledge', config: 'absence_limit' },
+            { agent: 'conversation', action: 'character_knowledge', config: 'perspective_filter' },
             { agent: 'summarizer', action: 'perceptions', config: 'automatic_repair' },
         ]));
     });
 
     it('hands an unsaved scene change to the save-and-resume writer', () => {
-        const vm = hub({ scene: { ...sceneData, filename: null }, agents: agentsAt('legacy', 'light') });
+        const vm = hub({ scene: { ...sceneData, filename: null }, agents: agentsAt('legacy', 'minimal') });
         expect(vm.settingsLocked).toBe(false);
-        vm.applyEffort('light');
+        vm.applyEffort('minimal');
         expect(vm.applySceneAgentValues).toHaveBeenCalledOnce();
     });
 
@@ -431,34 +400,15 @@ describe('the hub origin indicators and resets', () => {
     });
 });
 
-describe('fact chronology refreshes', () => {
-    it('refreshes when only the scene score-floor override changes', () => {
-        const vm = hub({ open: true });
-        const frame = value => ({ type: 'agent_status', name: 'summarizer', data: {
-            actions: { fact_chronology: { config: { score_floor: { value: 0.5 } } } },
-            scene_overrides: { actions: { fact_chronology: { config: { score_floor: { value } } } } },
-        } });
-        vm.handleMessage(frame(0.5));
-        const before = vm.sent.length;
-        vm.handleMessage(frame(2));
-        expect(vm.sent.slice(before).map(item => item.action)).toEqual(['get_character_knowledge']);
-        vm.handleMessage(frame(2));
-        expect(vm.sent).toHaveLength(before + 1);
-    });
+describe('knowledge refreshes', () => {
+
     it('refreshes the open hub on scene time or presence changes', () => {
         const vm = hub({ open: true });
-        Hub.watch.chronologyMoment.call(vm);
+        Hub.watch.knowledgeMoment.call(vm);
         expect(vm.sent).toHaveLength(1);
         vm.open = false;
-        Hub.watch.chronologyMoment.call(vm);
+        Hub.watch.knowledgeMoment.call(vm);
         expect(vm.sent).toHaveLength(1);
     });
-    it('refreshes once for changed Summarizer chronology settings without an AI request', () => {
-        const vm = hub({ open: true });
-        const frame = value => ({ type: 'agent_status', name: 'summarizer', data: { actions: { fact_chronology: { config: { recent_window: { value } } } } } });
-        vm.handleMessage(frame(3));
-        vm.handleMessage(frame(3));
-        vm.handleMessage(frame(7));
-        expect(vm.sent.map(item => item.action)).toEqual(['get_character_knowledge', 'get_character_knowledge']);
-    });
+
 });

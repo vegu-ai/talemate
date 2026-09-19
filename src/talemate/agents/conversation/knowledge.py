@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-import talemate.emit.async_signals as async_signals
 from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
@@ -13,48 +12,25 @@ from talemate.agents.base import (
     set_processing,
 )
 from talemate.agents.context import active_agent
-from talemate.agents.conversation.response_specs import (
-    KNOWLEDGE_LEDGER_SPEC,
-    MEMORY_PASS_SPEC,
-)
+from talemate.agents.conversation.response_specs import MEMORY_PASS_SPEC
 from talemate.agents.memory.schema import MemoryDocument
 from talemate.client import presets
-from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
-from talemate.knowledge.absence import (
-    ABSENCE_LIMIT,
-    ABSENCE_WINDOW,
-    absence_facts,
-    render_absence_lines,
-)
 from talemate.knowledge.bucket import KnowledgeIndex
-from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
 from talemate.knowledge.mode import (
     character_knowledge_enabled as perception_mode_enabled,
 )
-from talemate.knowledge.processing import evidence_writer
-from talemate.knowledge.revision_refresh import _historical_context
-from talemate.knowledge.schema import KnowledgeEdge
-from talemate.knowledge.topics import awareness_line as topic_awareness_line
 from talemate.prompts import Prompt
-from talemate.scene_message import CharacterMessage
-from talemate.util.data import extract_json
 
 if TYPE_CHECKING:
-    from talemate.events import GameLoopNewMessageEvent
     from talemate.tale_mate import Character
 
 __all__ = [
     "CharacterKnowledgeMixin",
     "pass_items",
-    "parse_ledger",
-    "normalize_fact_id",
 ]
 
 log = structlog.get_logger("talemate.agents.conversation.knowledge")
-
-LEDGER_FACTS_PER_CHARACTER = 20
-HISTORICAL_UNSET = object()
 
 
 def pass_items(blocks: list[dict] | None) -> list[tuple[int, str]]:
@@ -70,45 +46,6 @@ def pass_items(blocks: list[dict] | None) -> list[tuple[int, str]]:
     return items
 
 
-def normalize_fact_id(value: str) -> str:
-    """`f12`, `[F12]`, `12` and `F12` all name fact F12."""
-    cleaned = str(value).strip().strip("[]()").strip().upper()
-    if cleaned.isdigit():
-        cleaned = f"F{cleaned}"
-    return cleaned
-
-
-def parse_ledger(text: str | None) -> dict[str, list[str]] | None:
-    """`{"Name": ["F3", ...]}` from a `<LEDGER>` answer; None when unreadable."""
-    if text is None:
-        return None
-    text = text.strip()
-    if not text:
-        return None
-    fenced = re.match(r"^```[a-zA-Z]*\s*(.*?)\s*```$", text, re.DOTALL)
-    if fenced:
-        text = fenced.group(1)
-    data = None
-    try:
-        data = json.loads(text)
-    except ValueError:
-        # prose around the JSON: extract_json returns (string, object)
-        try:
-            _, data = extract_json(text)
-        except Exception:
-            data = None
-    if not isinstance(data, dict):
-        return None
-    ledger: dict[str, list[str]] = {}
-    for name, ids in data.items():
-        if isinstance(ids, str):
-            ids = [ids]
-        if not isinstance(ids, list):
-            continue
-        ledger[str(name)] = [normalize_fact_id(i) for i in ids if str(i).strip()]
-    return ledger
-
-
 class CharacterKnowledgeMixin:
     """
     What the speaking character knows, applied to the conversation prompt.
@@ -122,42 +59,12 @@ class CharacterKnowledgeMixin:
             can_be_disabled=True,
             icon="mdi-head-lightbulb-outline",
             label="Character Knowledge",
-            description="Help characters respond using what they know. In Standard mode, use the controls below to limit memories, remind the AI about unknown facts, and track learning from dialogue. Choose Character perspectives when creating a story for separate character views of events. Refine memories with AI works in either mode.",
+            description="Help characters respond using what they know. In Standard mode, limit history and memories to their own experience. Choose Character perspectives when creating a story for separate character views of events. Refine memories with AI works in either mode.",
             config={
                 "perspective_filter": AgentActionConfig(
                     type="bool",
                     label="Limit to character knowledge",
                     description="Leave out events the character missed and memories they do not know. Turn on to base replies on their own experience; turn off to use the shared history and memories.",
-                    value=True,
-                ),
-                "absence_block": AgentActionConfig(
-                    type="bool",
-                    label="Remind about unknown facts",
-                    description="Tell the AI which recent facts the character does not know. Turn on if characters act on information they missed.",
-                    value=True,
-                ),
-                "absence_limit": AgentActionConfig(
-                    type="number",
-                    label="Unknown-fact reminders",
-                    description="Limit how many unknown facts are listed for the AI. Raise to include more reminders; lower to keep the prompt shorter.",
-                    value=ABSENCE_LIMIT,
-                    min=1,
-                    max=20,
-                    step=1,
-                ),
-                "absence_window": AgentActionConfig(
-                    type="number",
-                    label="Recent facts to check",
-                    description="Choose how many recent facts to check for unknown-fact reminders. Raise to cover older facts; lower to focus on the newest.",
-                    value=ABSENCE_WINDOW,
-                    min=5,
-                    max=200,
-                    step=5,
-                ),
-                "awareness_line": AgentActionConfig(
-                    type="bool",
-                    label="Topic knowledge overview",
-                    description="Give the AI a short overview of which topics the character knows about. Turn on for topic-level reminders; requires Topics in the Memory agent.",
                     value=True,
                 ),
                 "memory_pass": AgentActionConfig(
@@ -169,18 +76,6 @@ class CharacterKnowledgeMixin:
                         True: AgentActionNote(
                             color="primary",
                             text="One more request before each generated character reply that has retrieved memories, using the World State agent's client.",
-                        ),
-                    },
-                ),
-                "ledger": AgentActionConfig(
-                    type="bool",
-                    label="Track learning from dialogue",
-                    description="Ask the AI what listeners learned from each character message and add those facts to their knowledge. Turn on to track information shared in dialogue.",
-                    value=False,
-                    note_on_value={
-                        True: AgentActionNote(
-                            color="primary",
-                            text="One more request after a character message when a listener has recent facts they do not know, using the World State agent's client.",
                         ),
                     },
                 ),
@@ -216,84 +111,15 @@ class CharacterKnowledgeMixin:
         )
 
     @property
-    def knowledge_absence_block(self) -> bool:
-        return self.character_knowledge_enabled and self.resolve_config(
-            "character_knowledge", "absence_block"
-        )
-
-    @property
-    def knowledge_absence_limit(self) -> int:
-        return int(self.resolve_config("character_knowledge", "absence_limit"))
-
-    @property
-    def knowledge_absence_window(self) -> int:
-        return int(self.resolve_config("character_knowledge", "absence_window"))
-
-    @property
-    def knowledge_awareness_line(self) -> bool:
-        return self.character_knowledge_enabled and bool(
-            self.resolve_config("character_knowledge", "awareness_line")
-        )
-
-    async def awareness_line(self, character: "Character | None") -> str | None:
-        """Which topics the character knows all, some or nothing of; None when nothing qualifies."""
-        if (
-            perception_mode_enabled(self.scene)
-            or character is None
-            or not self.knowledge_awareness_line
-        ):
-            return None
-        line = topic_awareness_line(self.scene, character.name)
-        log.debug("awareness line", character=character.name, line=line)
-        return line
-
-    @property
     def knowledge_memory_pass(self) -> bool:
         return self.character_knowledge_enabled and bool(
             self.resolve_config("character_knowledge", "memory_pass")
         )
 
     @property
-    def knowledge_ledger(self) -> bool:
-        if perception_mode_enabled(self.scene):
-            return False
-        return self.character_knowledge_enabled and bool(
-            self.resolve_config("character_knowledge", "ledger")
-        )
-
-    @property
     def knowledge_analysis_client(self):
         """The client the opt-in requests use (the World State agent's)."""
         return get_agent("world_state").client
-
-    def connect(self, scene):
-        super().connect(scene)
-        # the ledger runs on every character line the scene records, the
-        # player's included: listeners learn from what is said to them
-        async_signals.get("game_loop_new_message").connect(self.on_new_message)
-
-    async def on_new_message(self, event: "GameLoopNewMessageEvent"):
-        if event.scene is not self.scene:
-            return
-        message = event.message
-        if not isinstance(message, CharacterMessage):
-            return
-        if not self.knowledge_ledger:
-            return
-        character = self.scene.get_character(message.character_name)
-        if character is None:
-            return
-        kwargs = {}
-        if message.history_dispatch_pending:
-            recent, present, ts = _historical_context(self.scene, message)
-            kwargs = {
-                "recent_lines_override": recent,
-                "present_override": present,
-                "ts_override": ts,
-            }
-        await self.record_learned_facts(
-            character, str(message), message=message, **kwargs
-        )
 
     def rag_knowledge_viewer(self, character: "Character | None") -> str | None:
         """
@@ -348,49 +174,10 @@ class CharacterKnowledgeMixin:
             )
         return self.scene.context_history(budget=budget, **params.model_dump())
 
-    async def absence_block(self, character: "Character | None") -> list[str]:
-        if (
-            perception_mode_enabled(self.scene)
-            or character is None
-            or not self.knowledge_absence_block
-        ):
-            log.debug(
-                "absence_block skipped",
-                character=character.name if character else None,
-                enabled=self.knowledge_absence_block,
-            )
-            return []
-        dedupe = get_agent("summarizer").archive_fact_dedupe_distance
-        facts = await absence_facts(
-            self.scene,
-            character.name,
-            limit=self.knowledge_absence_limit,
-            window=self.knowledge_absence_window,
-            dedupe_distance=dedupe,
-        )
-        lines = render_absence_lines(facts, self.scene)
-        log.debug("absence_block", character=character.name, lines=len(lines))
-        return lines
-
-    # opt-in requests
-
     async def rag_process_context(self, character, context):
         if character is None or not context or not self.knowledge_memory_pass:
             return context
         return await self.memory_pass(character, context)
-
-    def _recent_lines(self) -> list[str]:
-        """The last few scene lines, oldest first (collect_messages yields newest first)."""
-        lines = [
-            str(message)
-            for message in self.scene.collect_messages(
-                max_iterations=100,
-                max_messages=self.long_term_memory_num_messages,
-                typ=["character", "narrator", "director"],
-            )
-        ]
-        lines.reverse()
-        return lines
 
     @set_processing
     async def memory_pass(
@@ -537,155 +324,3 @@ class CharacterKnowledgeMixin:
         if current_cache is rag_cache and current_cache is not None:
             current_cache.setdefault("processed", {})[cache_key] = list(passed)
         return passed
-
-    # the signal path (a player line) has no active agent; the request needs one
-    @set_processing
-    @evidence_writer
-    async def record_learned_facts(
-        self,
-        character: "Character",
-        line: str,
-        *,
-        message: CharacterMessage | None = None,
-        present_override=HISTORICAL_UNSET,
-        recent_lines_override: list[str] | None = None,
-        ts_override: int | None = None,
-        still_current=None,
-        replace_message_evidence: bool = False,
-        require_validated_result: bool = False,
-    ) -> dict[str, list[str]] | None:
-        """
-        Track listener learning: which of the recorded facts a listener did
-        not know the line made plain to them. Facts themselves come from the
-        archive step; this pass only grants.
-        """
-        if not self.knowledge_ledger or not line or not line.strip():
-            return {}
-
-        scene = self.scene
-        present = (
-            present_override
-            if present_override is not HISTORICAL_UNSET
-            else scene.active_characters
-        )
-        witnesses = present if present is not None else scene.active_characters
-        listeners = [name for name in witnesses if name != character.name]
-
-        def remove_evidence():
-            if replace_message_evidence and message is not None:
-                from talemate.knowledge.revision_refresh import (
-                    _remove_message_evidence,
-                )
-
-                _remove_message_evidence(scene, message, facts=False)
-
-        if not listeners:
-            if still_current is not None and not still_current():
-                raise GenerationCancelled(
-                    "The selected version changed during fact learning"
-                )
-            remove_evidence()
-            return {}
-
-        dedupe = get_agent("summarizer").archive_fact_dedupe_distance
-        absence: dict[str, list] = {}
-        for name in listeners:
-            facts = await absence_facts(
-                scene,
-                name,
-                limit=LEDGER_FACTS_PER_CHARACTER,
-                window=self.knowledge_absence_window,
-                dedupe_distance=dedupe,
-            )
-            if facts:
-                absence[name] = facts
-
-        if not absence:
-            log.debug("ledger skipped: every listener knows the recent facts")
-            if still_current is not None and not still_current():
-                raise GenerationCancelled(
-                    "The selected version changed during fact learning"
-                )
-            remove_evidence()
-            return {}
-
-        recent = (
-            list(recent_lines_override)
-            if recent_lines_override is not None
-            else self._recent_lines()
-        )
-        # the line is already in the history when the signal arrives
-        if recent and recent[-1] == line:
-            recent = recent[:-1]
-        _, extracted = await Prompt.request(
-            "conversation.knowledge-ledger",
-            self.knowledge_analysis_client,
-            "analyze_freeform",
-            vars={
-                "scene": scene,
-                "max_tokens": self.knowledge_analysis_client.max_token_length,
-                "line": line,
-                "recent_lines": recent,
-                "speaker": character.name,
-                "listeners": ", ".join(absence.keys()),
-                "absence": absence,
-            },
-            response_spec=KNOWLEDGE_LEDGER_SPEC,
-        )
-        if still_current is not None and not still_current():
-            raise GenerationCancelled(
-                "The selected version changed during fact learning"
-            )
-        ledger = parse_ledger(extracted.get("ledger"))
-        if ledger is None:
-            log.warning(
-                "ledger: answer not readable, no grants made",
-                speaker=character.name,
-                answer=extracted.get("ledger"),
-            )
-            return None if require_validated_result else {}
-        remove_evidence()
-        from talemate.knowledge.revision_refresh import capture_revision_mutations
-
-        learned: dict[str, list[str]] = {}
-        with capture_revision_mutations(scene):
-            for name, fact_ids in ledger.items():
-                offered = {fact.id: fact for fact in absence.get(name, [])}
-                for fact_id in fact_ids:
-                    fact = (
-                        scene.world_state.facts.get(fact_id)
-                        if fact_id in offered
-                        else None
-                    )
-                    if fact is None:
-                        log.warning(
-                            "ledger: fact id not among the listener's unknown facts",
-                            listener=name,
-                            fact_id=fact_id,
-                            offered=list(offered),
-                        )
-                        continue
-                    fact.known_by[name] = "inferred"
-                    scene.world_state.knowledge.append(
-                        KnowledgeEdge(
-                            character=name,
-                            target=fact.id,
-                            kind="grant",
-                            source="inferred",
-                            message_id=message.id if message is not None else None,
-                            ts=scene.ts,
-                            note=f"learned from {character.name}",
-                        )
-                    )
-                    learned.setdefault(name, []).append(fact.id)
-
-        emit_knowledge_changes(
-            scene,
-            [
-                KnowledgeChange(character=name, target=fact_id)
-                for name, fact_ids in learned.items()
-                for fact_id in fact_ids
-            ],
-        )
-        log.debug("ledger", speaker=character.name, learned=learned)
-        return learned

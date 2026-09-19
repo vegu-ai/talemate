@@ -131,7 +131,7 @@ async def test_intention_changes_discard_inflight_response_and_change_receipt(
     message = CharacterMessage(message="Alice: Hello.")
     scene.history.append(message)
     summarizer._register_perception_sources(scene, [message])
-    before = _phase_identity(scene, message, "perceptions")
+    before = _phase_identity(scene, message)
 
     async def analyze(*args, **kwargs):
         if request.await_count == 1:
@@ -149,7 +149,7 @@ async def test_intention_changes_discard_inflight_response_and_change_receipt(
 
     assert request.await_count == 2
     assert all(view.text != "Stale." for view in message.knowledge.views)
-    assert _phase_identity(scene, message, "perceptions") != before
+    assert _phase_identity(scene, message) != before
 
 
 @pytest.mark.asyncio

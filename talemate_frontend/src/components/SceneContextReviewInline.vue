@@ -49,7 +49,7 @@
 
     <template v-else>
       <v-card variant="text" class="text-body-small text-muted mb-4 px-2">
-        <template v-if="selectedCharacter">History follows {{ selectedCharacter }}'s Conversation settings. Knowledge sections show eligible facts and existing analysis. Refresh never generates analysis.</template>
+        <template v-if="selectedCharacter">History follows {{ selectedCharacter }}'s Conversation settings. Knowledge sections show existing analysis. Refresh never generates analysis.</template>
         <template v-else>This is a preview of how the scene history will be rendered into context for AI prompts. Adjust the settings below to change how the context budget is distributed, then click Refresh to see the effect.</template>
       </v-card>
 
@@ -221,7 +221,7 @@
                 <v-expansion-panel-text>
                   <div v-for="(count, reason) in preview.exclusion_counts" :key="reason" class="text-body-small mb-1">{{ exclusionReason(reason) }}: {{ count }}</div>
                   <div v-if="preview.exclusion_total > preview.exclusions?.length" class="text-body-small text-medium-emphasis mb-2">Showing up to 20 samples per reason; passage text is shortened.</div>
-                  <div v-if="!preview.exclusions?.length" class="text-body-small">No presence, audience or chronology exclusions.</div>
+                  <div v-if="!preview.exclusions?.length" class="text-body-small">No presence or audience exclusions.</div>
                   <div v-for="item in preview.exclusions" :key="`${item.kind}:${item.id}:${item.layer}:${item.reason}`" class="exclusion-entry py-2">
                     <v-chip size="x-small" color="warning" variant="tonal">{{ exclusionReason(item.reason) }}</v-chip>
                     <div class="text-body-small text-medium-emphasis mt-1">{{ item.section }} · {{ item.id }}<template v-if="item.layer != null && item.kind === 'layer'"> · layer {{ item.layer }}</template></div>
@@ -602,7 +602,7 @@ export default {
     },
 
     exclusionReason(reason) {
-      return { budget: 'Over token budget', absent: 'Absent', not_in_audience: 'Not in audience', chronology_floor: 'Below chronology floor', superseded: 'Superseded', hidden: 'Hidden', blocked: 'Blocked', pending: 'Perspective pending', failed: 'Perspective failed', omitted: 'View omitted' }[reason] || reason;
+      return { budget: 'Over token budget', absent: 'Absent', not_in_audience: 'Not in audience', hidden: 'Hidden', blocked: 'Blocked', pending: 'Perspective pending', failed: 'Perspective failed', omitted: 'View omitted' }[reason] || reason;
     },
 
     sectionIcon(section) {

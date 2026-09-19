@@ -1,4 +1,0 @@
-added:
-- "History: a fact listed under an entry that restated it shows a Restated chip, whose tooltip tells when the fact was first recorded."
-fixed:
-- "Summarizing no longer makes facts look older than the history entry they came from. It counted a time passage twice, which moved the scene time and the entry times forward until the scene was reloaded."

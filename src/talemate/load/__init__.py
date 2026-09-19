@@ -14,8 +14,8 @@ import structlog
 
 import talemate.instance as instance
 from talemate import Actor, Character, Player, Scene
-from talemate.knowledge.facts import follow_static_audiences
 from talemate.knowledge.intro import initialize_intro_audience
+from talemate.knowledge.perspective_models import SourcePerspectives
 from talemate.character import (
     deactivate_character,
     activate_character,
@@ -42,10 +42,6 @@ from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import ScenePerspectives, load_game_state_path_settings
 from talemate.scene.format import CURRENT_SCENE_FORMAT_VERSION, read_scene_format
-from talemate.knowledge.message_facts import (
-    prune_legacy_facts,
-    prune_missing_message_facts,
-)
 from talemate.knowledge.reinforcements import reinforcement_source_keys
 from talemate.knowledge.perspectives import (
     bind_perspective_sources,
@@ -54,7 +50,6 @@ from talemate.knowledge.perspectives import (
 )
 from talemate.history import legacy_start_ts, validate_history
 from talemate.knowledge.timeline import (
-    shift_fact_times,
     shift_knowledge_edge_times,
     shift_world_entry_times,
 )
@@ -456,6 +451,13 @@ async def load_scene_from_data(
     scene.history = _load_history(scene_data["history"])
     scene.archived_history = scene_data["archived_history"]
     scene.layered_history = scene_data.get("layered_history", [])
+    for entries in [scene.archived_history, *scene.layered_history]:
+        for entry in entries:
+            entry.pop("facts_status", None)
+            if entry.get("knowledge") is not None:
+                entry["knowledge"] = SourcePerspectives.model_validate(
+                    entry["knowledge"]
+                ).model_dump(mode="json")
     # a save from an older version has no start: its own static entries give it
     own_start_ts = scene_data.get("start_ts")
     if own_start_ts is None:
@@ -504,7 +506,7 @@ async def load_scene_from_data(
 
     import_scene_node_definitions(scene)
 
-    # the shared static history can move the timeline before the saved facts,
+    # the shared static history can move the timeline before the saved
     # knowledge edges, reinforcement passages, world entries and intro
     # perspectives are loaded: they arrive on the old timeline and are moved
     # by the same amount
@@ -517,13 +519,8 @@ async def load_scene_from_data(
         scene.saved_memory_session_id = scene_data.get("saved_memory_session_id", None)
         scene.memory_session_id = scene_data.get("memory_session_id", None)
         world_state_data = scene_data.get("world_state", {})
-        legacy_facts = prune_legacy_facts(
-            world_state_data, scene_data.get("archived_history", [])
-        )
         scene.world_state = WorldState(**world_state_data)
         scene.world_state.validate_snapshot_audiences(scene.character_data)
-        # the shared static history was applied before the facts were loaded
-        follow_static_audiences(scene)
         scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.agent_state = scene_data.get("agent_state", {})
         scene.game_state_watch_paths = scene_data.get("game_state_watch_paths", [])
@@ -537,7 +534,6 @@ async def load_scene_from_data(
         )
         if not start_from_shared_entries:
             late_shift = scene.start_ts - own_start_ts
-            shift_fact_times(scene, late_shift)
             shift_knowledge_edge_times(scene, late_shift)
             shift_direct_source_times(scene, late_shift)
             shift_world_entry_times(scene, late_shift)
@@ -569,21 +565,6 @@ async def load_scene_from_data(
     advance_message_id(
         max((key[1] for key in reinforcement_source_keys(scene)), default=0)
     )
-    # a message written after an unlearn edge must read as newer than it, and
-    # a new line must not take the id a waiting rule's line had
-    advance_message_id(
-        max(
-            (
-                max(
-                    edge.message_id_boundary or 0,
-                    edge.anchor.message_id or 0 if edge.anchor else 0,
-                )
-                for edge in scene.world_state.knowledge
-            ),
-            default=0,
-        )
-    )
-
     asset_data = scene_data.get("assets", {})
     scene.assets.cover_image = asset_data.get("cover_image", None)
     scene.assets.backdrop = asset_data.get("backdrop", None)
@@ -597,11 +578,6 @@ async def load_scene_from_data(
     loading_status("Initializing long-term memory...")
 
     await memory.set_db()
-    removed_facts = prune_missing_message_facts(scene) | (
-        legacy_facts if not reset else set()
-    )
-    if removed_facts:
-        await memory.delete({"ids": sorted(removed_facts)})
     # await memory.remove_unsaved_memory()
 
     await scene.world_state_manager.remove_all_empty_pins()

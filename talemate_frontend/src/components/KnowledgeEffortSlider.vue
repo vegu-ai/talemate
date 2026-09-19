@@ -114,8 +114,8 @@ export default {
     // the agents replace their whole action set on every status frame, so one
     // that was in flight while the knob moved would drag it back
     derivedStop() {
-      if (this.value !== null) return this.stops.includes(this.value) ? this.value : DEFAULT_EFFORT;
-      if (this.live.stop === null) return DEFAULT_EFFORT;
+      if (this.value !== null) return this.stops.includes(this.value) ? this.value : DEFAULT_EFFORT[this.mode];
+      if (this.live.stop === null) return DEFAULT_EFFORT[this.mode];
       return this.live.stop === 'custom' ? this.live.nearest : this.live.stop;
     },
     shownStop() {

@@ -12,15 +12,15 @@ from talemate.agents.summarize.websocket_handler import SummarizeWebsocketHandle
 from talemate.character import Character
 from talemate.context import ActiveScene
 from talemate.instance import get_agent
-from talemate.knowledge.chronology import DAY
-from talemate.knowledge.perspectives import set_source_perspectives, source_reference
+from talemate.knowledge.perspectives import set_source_perspectives
 from talemate.knowledge.review import character_context_review
 from talemate.knowledge.readiness import perception_readiness
-from talemate.knowledge.schema import Fact, ParsedFact
-from talemate.knowledge.supported_facts import contributions_for_source
 from talemate.prompts import Prompt
-from talemate.scene_message import NarratorMessage, TimePassageMessage
+from talemate.scene_message import NarratorMessage
 from talemate.tale_mate import Actor
+
+
+DAY = 86400
 
 
 @pytest.fixture(params=["legacy", "perception"])
@@ -204,101 +204,6 @@ async def test_overrides_do_not_mutate_scene_settings(review_scene):
     assert preview["summary"]["dialogue_ratio"] == 75
     assert preview["summary"]["best_fit"] is False
     assert summ.actions["manage_scene_history"].model_dump() == before
-
-
-def _place(scene, message, ts):
-    """
-    Keep the history on a timeline: messages ordered by their scene time,
-    with a time passage bridging each gap, so a message-bound fact reads
-    the time the fixture intends.
-    """
-    times = scene.__dict__.setdefault("_fixture_times", {})
-    times[message.id] = ts
-    messages = sorted(
-        (m for m in scene.history if not isinstance(m, TimePassageMessage)),
-        key=lambda m: (times.get(m.id, 0), m.id),
-    )
-    rebuilt = []
-    current = 0
-    for item in messages:
-        target = times.get(item.id, 0)
-        if target > current:
-            rebuilt.append(TimePassageMessage(ts=target - current, message="later"))
-            current = target
-        rebuilt.append(item)
-    scene.history = rebuilt
-
-
-async def add_fact(
-    scene, identity, text, *, audience=("Alice", "Bob"), age=0, supersedes=None
-):
-    fact = Fact(
-        id=identity,
-        text=text,
-        present=list(audience),
-        subjects=["sextant"],
-        ts=scene.ts - age * DAY,
-        importance=1,
-        supersedes=supersedes,
-    )
-    if scene.knowledge_eligibility == "perception":
-        message = NarratorMessage(message=text, present=list(audience))
-        scene.history.append(message)
-        _place(scene, message, fact.ts)
-        ts = scene.ts
-        scene.ts = fact.ts
-        set_source_perspectives(
-            scene,
-            "message",
-            message.id,
-            [{"audience": audience, "status": "ready", "text": text}],
-        )
-        source = source_reference(scene, "message", message.id)
-        fact.contributions = await contributions_for_source(
-            scene,
-            source,
-            audience,
-            [
-                ParsedFact(
-                    text=text, importance=1, subjects=["sextant"], supersedes=supersedes
-                )
-            ],
-        )
-        scene.ts = ts
-    scene.world_state.facts[identity] = fact
-    return fact
-
-
-@pytest.mark.asyncio
-async def test_fact_audience_chronology_and_supersession_exclusions(review_scene):
-    scene = review_scene
-    await add_fact(scene, "F1", "A private fact.", audience=("Alice",))
-    await add_fact(scene, "F2", "A stale routine fact.", age=500)
-    await add_fact(scene, "F3", "The sextant was in the drawer.")
-    await add_fact(scene, "F4", "The sextant is in the bag.", supersedes="F3")
-    preview = await character_context_review(scene, scene.character_data["Bob"])
-    excluded = {
-        item["id"]: item["reason"]
-        for item in preview["exclusions"]
-        if item["kind"] == "fact"
-    }
-    assert excluded == {
-        "F1": "not_in_audience",
-        "F2": "chronology_floor",
-        "F3": "superseded",
-    }
-    facts = next(
-        item
-        for item in preview["sections"]
-        if item["label"] == "Known facts (eligible)"
-    )
-    text = "\n".join(facts["entries"])
-    assert "[F4]" in text and "formerly:" in text
-    assert "[F1]" not in text and "[F2]" not in text and "[F3]" not in text
-    assert any(
-        item["type"] == "analysis" and item["entries"] for item in preview["sections"]
-    )
-    Prompt.request.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -518,41 +423,6 @@ async def test_oversized_intro_is_reported_instead_of_overrunning_budget(
 
 
 @pytest.mark.asyncio
-async def test_preview_includes_all_eligible_facts_and_budget(
-    review_scene,
-):
-    scene = review_scene
-    for index in range(30):
-        await add_fact(scene, f"F{index}", f"The sextant record {index} is known.")
-    preview = await character_context_review(
-        scene,
-        scene.character_data["Bob"],
-        ContextHistoryPreviewOverrides(max_budget=4000),
-    )
-    facts = next(
-        section
-        for section in preview["sections"]
-        if section["label"] == "Known facts (eligible)"
-    )
-    assert len(facts["entries"]) == 30
-    assert all(line.startswith("- [") for line in facts["entries"])
-    small = await character_context_review(
-        scene,
-        scene.character_data["Bob"],
-        ContextHistoryPreviewOverrides(max_budget=90),
-    )
-    included = next(
-        section
-        for section in small["sections"]
-        if section["label"] == "Known facts (eligible)"
-    )["entries"]
-    assert len(included) + small["exclusion_counts"]["budget"] == 30
-    assert (
-        len([item for item in small["exclusions"] if item["reason"] == "budget"]) <= 20
-    )
-
-
-@pytest.mark.asyncio
 @pytest.mark.parametrize("best_fit", [False, True])
 async def test_archive_and_layer_exclusions_come_from_history_selectors(
     review_scene, best_fit
@@ -617,23 +487,27 @@ async def test_character_preview_uses_client_window_and_bounds_exclusion_samples
         type(conversation.client), "max_token_length", property(lambda self: 2048)
     )
     for i in range(45):
-        await add_fact(
-            scene, f"F{i}", "A long private fact. " * 100, audience=("Alice",)
+        message = NarratorMessage(
+            message=f"Private exchange {i}. " * 100, present=["Alice"]
         )
+        scene.history.append(message)
+        if scene.knowledge_eligibility == "perception":
+            set_source_perspectives(
+                scene,
+                "message",
+                message.id,
+                [{"audience": ["Alice"], "status": "ready", "text": str(message)}],
+            )
+    reason = (
+        "not_in_audience" if scene.knowledge_eligibility == "perception" else "absent"
+    )
     preview = await character_context_review(
         scene, scene.character_data["Bob"], ContextHistoryPreviewOverrides(max_budget=0)
     )
     assert preview["budget"]["total"] == 2048
-    assert preview["exclusion_counts"]["not_in_audience"] >= 45
+    assert preview["exclusion_counts"][reason] >= 45
     assert (
-        len(
-            [
-                item
-                for item in preview["exclusions"]
-                if item["reason"] == "not_in_audience"
-            ]
-        )
-        == 20
+        len([item for item in preview["exclusions"] if item["reason"] == reason]) == 20
     )
     assert all(len(item["text"]) <= 500 for item in preview["exclusions"])
 

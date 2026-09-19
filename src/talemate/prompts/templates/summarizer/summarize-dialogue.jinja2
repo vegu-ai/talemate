@@ -1,7 +1,6 @@
 {#-
 Extractors:
   - summary: AfterAnchorExtractor("SUMMARY:")
-  - with extract_facts: summary stops at <FACTS>; facts: AnchorExtractor("<FACTS>", "</FACTS>")
 
 Override example:
   {{ set_after_anchor_extractor("summary", "MY_MARKER:") }}
@@ -25,15 +24,7 @@ Override example:
 {% endfor %}
 <|CLOSE_SECTION|>
 {% endif -%}
-{% if extract_facts and previous_facts -%}
-<|SECTION:KNOWN FACTS|>
-Facts already recorded from earlier chapters. Reference an id in "supersedes" when a new fact replaces one of these.
-Record age is display metadata, not part of the fact text. Do not copy it into extracted facts.
-{% for fact in previous_facts %}
-- {{ render_fact(fact, extraction=True) }}
-{%- endfor %}
-<|CLOSE_SECTION|>
-{% endif -%}
+
 <|SECTION:{{ summary_target.upper() }} (To be summarized)|>
 
 SUMMARIZE THIS CONTENT:
@@ -41,9 +32,7 @@ SUMMARIZE THIS CONTENT:
 {{ dialogue }}
 
 END OF CONTENT TO SUMMARIZE
-{% if line_ids %}
-Each line starts with its bracketed line id, such as [1043]. The ids are references for the facts list only: never copy an id into the summary.
-{% endif %}
+
 <|CLOSE_SECTION|>
 {% if generation_options and generation_options.writing_style %}
 <|SECTION:WRITING STYLE|>
@@ -96,9 +85,7 @@ Your response must follow this format:
 ANALYSIS: <brief analysis the cross over point from previous chapters to {{ summary_target }}. How does {{ summary_target }} start and what should be in the summary.>
 {% if scene and scene.writing_style %}WRITING STYLE: <brief understanding of the writing style requirements and the story intention. Note at least one example where you will apply it.>{% endif %}
 SUMMARY: <summary of {{ summary_target }} based on analysis.{{ max_length }}>
-{% if extract_facts -%}
-{% include "fact-list-instructions.jinja2" %}
-{% endif -%}
+
 {% include "response-length.jinja2" %}
 <|CLOSE_SECTION|>
 

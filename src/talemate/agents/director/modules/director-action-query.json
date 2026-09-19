@@ -1390,7 +1390,7 @@
         "group": "Query",
         "action_id": "query.character_knowledge",
         "action_title": "Character Knowledge",
-        "description_chat": "Learn what one character knows: their knowledge grants and revokes, the restricted entries they can see, and their topic coverage. Use it before deciding whether a character can act on some information.",
+        "description_chat": "Learn what one character knows: their knowledge grants and revokes, the restricted entries they can see, and their disclosures. Use it before deciding whether a character can act on some information.",
         "description_scene_direction": "",
         "instruction_examples": [
           "What does Alice know about the hidden door?",
@@ -1445,7 +1445,7 @@
       "title": "AI Function Callback Metadata",
       "id": "4637482f-e19b-47b3-b086-6a3fefa72a8b",
       "properties": {
-        "instructions": "Use this function to learn what one character knows: their knowledge grants and revokes, the restricted entries they can see, and how much of each topic they know. This reads the record directly; it is not a semantic query.",
+        "instructions": "Use this function to learn what one character knows: their knowledge grants and revokes, the restricted entries they can see, and their disclosures. This reads the record directly; it is not a semantic query.",
         "examples": [
           {
             "character": "Detective Rivera"

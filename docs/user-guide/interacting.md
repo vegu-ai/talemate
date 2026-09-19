@@ -93,7 +93,7 @@ Character and narrator messages (and context investigation results) keep a histo
 The paginator shows:
 
 - **Left / right arrows** to step between versions.
-- **Analyze perceptions** in a Character perspectives story, or **Refresh facts** in Standard mode, when the selected text needs its derived knowledge updated. A passage that owes only learning from dialogue shows **Learn from dialogue** instead: for example a character line that no chapter contains yet, or a line whose chapter facts **Regenerate All History** already rebuilt. The tooltip explains what is pending and notes that sending your next line runs the same work automatically.
+- **Analyze perceptions** in a Character perspectives story when the selected text needs new character views. **Update knowledge** retries pending memory-index work when the views are already current. The tooltip explains the pending work; sending your next line runs it automatically.
 - A **counter** (for example `2/3`) telling you which version you are viewing and how many exist in total.
 - A **tag** describing where the version you are currently looking at came from:
     - **Original** -- the message as it was first generated.
@@ -101,7 +101,7 @@ The paginator shows:
     - **Revised** -- a version that the [Editor agent](/talemate/user-guide/agents/editor) automatically rewrote.
     - **Continued** -- a version created by continuing the message (see below).
 
-Browsing changes the active text immediately without running analysis or saving the scene. The selection is saved with your next scene save, or after **Analyze perceptions**, **Refresh facts**, **Learn from dialogue** or **Update knowledge** succeeds with auto save enabled. Until then the scene is marked unsaved. The arrows wait for the server to acknowledge each selection before the displayed text changes, so delayed replies cannot leave the counter and text on different versions. In the World Editor's History tab, the history entry that contains a changed passage shows a chip with the same label while that passage's facts are out of date; click the chip to run the update from there. Sending your next line also runs it. Reading, scrolling, moving keyboard focus and changing tabs do not start a request.
+Browsing changes the active text immediately without running analysis or saving the scene. The selection is saved with your next scene save, or after **Analyze perceptions** or **Update knowledge** succeeds with auto save enabled. Until then the scene is marked unsaved. The arrows wait for the server to acknowledge each selection before the displayed text changes, so delayed replies cannot leave the counter and text on different versions. In the World Editor's History tab, the history entry that contains a changed passage shows a chip with the same label while that passage's perspectives are out of date; click the chip to run the update from there. Sending your next line also runs it. Reading, scrolling, moving keyboard focus and changing tabs do not start a request.
 
 Double-clicking a message, editing its text and pressing Enter saves the edit without starting analysis. The action or your next send/choice updates the edited passage. Unchanged edits and canceled edits require no new analysis.
 
@@ -109,9 +109,9 @@ Your submitted character or narrator line appears immediately while any required
 
 Automatic revision completes before Character perspectives analyzes the generated message. It analyzes the final accepted text once and marks that version ready; sending your next line does not repeat successful analysis of that unchanged version. Failed analysis leaves the action available for retry.
 
-Character perspectives analyzes the chosen passage and repairs dependent summaries. Standard mode re-extracts facts when archive fact extraction is enabled and re-evaluates what listeners learned from a character line when dialogue learning is enabled. The refresh uses the message's historical speaker, presence and preceding lines. A failed later phase can be retried without repeating an already successful extraction. Returning to the version from before the failed refresh restores its facts immediately. If saved knowledge still needs updating, **Update knowledge** or your next send retries that work without repeating successful analysis. If the update remains unavailable, it stays pending and you can continue the story. When neither relevant feature is enabled, no analysis button or model request appears. Any cleanup waits until you send your next line, and the selection remains unsaved until the scene is saved.
+Character perspectives analyzes the chosen passage and repairs dependent summaries. Standard mode settles affected summary cleanup without a knowledge request. Returning to the baseline restores evidence still owned by the revision transaction. If the memory index needs repair, **Update knowledge** or your next send retries it without repeating current analysis. Index work remains pending when unavailable, while the story can continue.
 
-Revision controls appear on the **most recent** supported message. The arrows and counter appear once it has more than one version; a required analysis or fact-refresh action also appears after an in-place edit with only one version.
+Revision controls appear on the **most recent** supported message. The arrows and counter appear once it has more than one version; **Analyze perceptions** also appears after an in-place edit with only one version when analysis is required.
 
 !!! note "The version you view is the one that sticks"
     Whichever version you have selected in the paginator becomes the message's active text. That is the version saved with the scene, and the version the AI builds on when it continues the scene. Browsing to an earlier version and leaving it selected effectively rolls the message back to that version.

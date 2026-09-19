@@ -29,13 +29,9 @@ from talemate.world_state.templates import GenerationOptions
 from talemate.exceptions import GenerationCancelled
 from talemate.context import handle_generation_cancelled
 from talemate.events import ArchiveEvent
-from talemate.knowledge.facts import SpanLine, drop_facts_for_entries, facts_for_entry
-from talemate.knowledge.schema import INTRO_LINE, Fact, FactsStatus
 from talemate.knowledge.memory import invalidate_memory_audiences
-from talemate.knowledge.perspective_models import PerspectiveSourceModel, content_digest
+from talemate.knowledge.perspective_models import PerspectiveSourceModel
 from talemate.knowledge.timeline import (
-    message_times,
-    shift_fact_times,
     shift_knowledge_edge_times,
     shift_world_entry_times,
 )
@@ -65,7 +61,6 @@ __all__ = [
     "reimport_history",
     "compute_layer_stats",
     "collect_time_passages",
-    "span_bindings",
     "render_span",
     "SPAN_LINE_EXCLUDED_TYPES",
 ]
@@ -96,7 +91,6 @@ class ArchiveEntry(PerspectiveSourceModel):
     ts: int = 0
     present: list[str] | None = None
     intro_included: bool | None = None
-    facts_status: FactsStatus | None = None
 
 
 class LayeredArchiveEntry(ArchiveEntry):
@@ -119,8 +113,6 @@ class HistoryEntry(PerspectiveSourceModel):
     end: int | None = None
     present: list[str] | None = None
     intro_included: bool | None = None
-    facts_status: FactsStatus | None = None
-    facts: list[Fact] = pydantic.Field(default_factory=list)
 
     @property
     def is_static(self) -> bool:
@@ -409,7 +401,6 @@ def history_with_relative_time(
             start=entry.get("start", None),
             end=entry.get("end", None),
             present=entry.get("present", None),
-            facts_status=entry.get("facts_status", None),
             knowledge=entry.get("knowledge"),
             intro_included=entry.get("intro_included"),
         ).model_dump()
@@ -417,27 +408,10 @@ def history_with_relative_time(
     ]
 
 
-def span_bindings(
-    scene: "Scene", messages: list[SceneMessage], *, times: dict[int, int] | None = None
-) -> dict[int, SpanLine]:
-    """The binding a fact receives from each line of an extraction span."""
-    times = times if times is not None else message_times(scene)
-    return {
-        message.id: SpanLine(
-            message_id=message.id,
-            message_digest=content_digest(message.perception_text),
-            present=message.present,
-            ts=times.get(message.id),
-        )
-        for message in messages
-        if message.typ not in SPAN_LINE_EXCLUDED_TYPES
-    }
-
-
 def render_span(messages: list[SceneMessage], *, intro: str | None = None) -> str:
-    """The span as the extraction sees it: every line prefixed with its id."""
-    lines = [f"[{INTRO_LINE}] {intro}"] if intro else []
-    lines.extend(f"[{message.id}] {message}" for message in messages)
+    """The source text for a summary, including the opening when available."""
+    lines = [intro] if intro else []
+    lines.extend(str(message) for message in messages)
     return "\n".join(lines)
 
 
@@ -661,7 +635,6 @@ async def rebuild_history(
     rebuilds all history for a scene
     """
     from talemate.knowledge.revision_refresh import (
-        remove_revised_evidence,
         revisions_before_rebuild,
         settle_revisions_after_rebuild,
     )
@@ -670,14 +643,6 @@ async def rebuild_history(
     revisions = revisions_before_rebuild(scene)
 
     # clear out archived history, but keep pre-established history
-    await drop_facts_for_entries(
-        scene,
-        {
-            ah.get("id")
-            for ah in scene.archived_history
-            if ah.get("end") is not None and ah.get("id")
-        },
-    )
     scene.archived_history = [
         ah for ah in scene.archived_history if ah.get("end") is None
     ]
@@ -685,8 +650,6 @@ async def rebuild_history(
     scene.layered_history = []
 
     await purge_all_history_from_memory()
-
-    remove_revised_evidence(scene, revisions)
 
     scene.saved = False
 
@@ -813,7 +776,7 @@ async def update_history_entry(
         archive_entry = ArchiveEntry(
             **{
                 **scene.archived_history[entry.index],
-                **entry.model_dump(exclude_none=True, exclude={"facts", "knowledge"}),
+                **entry.model_dump(exclude_none=True, exclude={"knowledge"}),
             }
         )
         with capture_revision_mutations(scene):
@@ -900,7 +863,7 @@ async def regenerate_history_entry(
         summarized = "\n\n".join(entry.text for entry in new_archive_entries)
 
     elif isinstance(archive_entry, ArchiveEntry):
-        summarized, facts_status = await summarizer.summarize_with_facts(
+        summarized = await summarizer.summarize_entry(
             archive_entry,
             extra_context=await summarizer.previous_summaries(
                 archive_entry, scene=scene
@@ -909,8 +872,6 @@ async def regenerate_history_entry(
             scene=scene,
             still_current=still_current,
         )
-        entry.facts_status = facts_status
-        entry.facts = facts_for_entry(scene, entry.id)
 
     entry.text = summarized
 
@@ -1031,14 +992,13 @@ async def add_history_entry(scene: "Scene", text: str, offset: int) -> ArchiveEn
         new_ts=new_ts,
     )
 
-    shifted: set[str] = set()
     moved = new_ts < 0
 
     # Zero is the oldest event: an entry older than that moves the whole
     # timeline, the scene start included, forward so the entry sits at zero.
     if moved:
         log.debug("offset is before the oldest event, shifting timeline", shift=-new_ts)
-        shifted = shift_scene_timeline(scene, -new_ts)
+        shift_scene_timeline(scene, -new_ts)
         new_ts = 0
 
     if first_summary is not None:
@@ -1068,7 +1028,7 @@ async def add_history_entry(scene: "Scene", text: str, offset: int) -> ArchiveEn
     if not inserted:
         scene.archived_history.append(archive_entry.model_dump(exclude_none=True))
 
-    _timeline_moved(scene, shifted)
+    scene.sync_time()
     await reimport_history(scene)
     if moved:
         await world_entry_times_moved(scene)
@@ -1119,23 +1079,14 @@ async def delete_history_entry(scene: "Scene", entry: HistoryEntry) -> ArchiveEn
         ]
         + [scene.start_ts]
     )
-    shifted = shift_scene_timeline(scene, -oldest)
+    shift_scene_timeline(scene, -oldest)
 
-    _timeline_moved(scene, shifted)
+    scene.sync_time()
     await reimport_history(scene)
     if oldest:
         await world_entry_times_moved(scene)
 
     return removed_entry
-
-
-def _timeline_moved(scene: "Scene", shifted: set[str]):
-    """
-    After a static entry changed the timeline: the clock is the time at the
-    newest message again, and the facts follow their messages.
-    """
-    scene.sync_time()
-    scene.refresh_fact_times(shifted)
 
 
 async def world_entry_times_moved(scene: "Scene"):
@@ -1175,7 +1126,7 @@ def _shift_entry_ts(entry: dict, shift: int):
             entry[key] = shift_ts(entry[key], shift)
 
 
-def shift_scene_timeline(scene: "Scene", shift: int) -> set[str]:
+def shift_scene_timeline(scene: "Scene", shift: int) -> None:
     """Shift *every* timeline reference in the scene by the provided number of seconds.
 
     The function mutates the scene in place:
@@ -1183,19 +1134,16 @@ def shift_scene_timeline(scene: "Scene", shift: int) -> set[str]:
     1. ``scene.ts`` and ``scene.start_ts`` – scene time and scene start
     2. ``ts``, ``ts_start``, ``ts_end`` of every entry in ``scene.archived_history``
     3. Same fields for every entry in every layer in ``scene.layered_history``
-    4. The stored times of every fact
-    5. The acquisition stamps of every knowledge source and disclosure, and
+    4. The acquisition stamps of every knowledge source and disclosure, and
        the time of every knowledge edge
-    6. The scene time a world entry records
+    5. The scene time a world entry records
 
     ``shift`` can be positive (move forward in time) or negative (move backward).
-
-    Returns the ids of the facts whose time changed.
     """
 
     if shift == 0:
         # No-op
-        return set()
+        return
 
     # 1) shift scene timestamp and scene start
     scene.ts = shift_ts(scene.ts, shift)
@@ -1210,11 +1158,9 @@ def shift_scene_timeline(scene: "Scene", shift: int) -> set[str]:
         for entry in layer:
             _shift_entry_ts(entry, shift)
 
-    # 4) shift facts, acquisition stamps and knowledge edges
-    changed = shift_fact_times(scene, shift)
+    # 4) shift acquisition stamps and knowledge edges
     shift_knowledge_edge_times(scene, shift)
     shift_perspective_times(scene, shift)
     shift_world_entry_times(scene, shift)
     # an audience document's ts comes from an acquisition stamp or from the entry
     invalidate_memory_audiences(scene)
-    return changed

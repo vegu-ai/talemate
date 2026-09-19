@@ -10,13 +10,9 @@ from talemate.knowledge.perspective_models import (
     PerspectiveView,
     SceneKnowledge,
     SourcePerspectives,
-    SourceReference,
     content_digest,
 )
 from talemate.knowledge.schema import (
-    Fact,
-    FactContribution,
-    FactRestatement,
     KnowledgeEdge,
 )
 from talemate.scene_message import CharacterMessage, ReinforcementMessage
@@ -147,39 +143,24 @@ def test_shift_scene_timeline_noop(scene_factory):
         copy.deepcopy(scene.layered_history),
     )
 
-    assert shift_scene_timeline(scene, 0) == set()
+    assert shift_scene_timeline(scene, 0) is None
 
     assert scene.ts == pre_state[0]
     assert scene.archived_history == pre_state[1]
     assert scene.layered_history == pre_state[2]
 
 
-def test_shift_scene_timeline_moves_the_scene_start_and_the_facts(scene_factory):
+def test_shift_scene_timeline_moves_the_scene_start(scene_factory):
     scene = scene_factory(7200, archived=[{"ts": 0}])
     scene.start_ts = 3600
-    scene.world_state.facts = {
-        "F1": Fact(
-            id="F1",
-            text="bound",
-            ts=3600,
-            last_seen_ts=5400,
-            restated_by=(FactRestatement(message_id=2, ts=5400),),
-        ),
-        "F2": Fact(id="F2", text="manual", ts=7000, last_seen_ts=7000),
-        "F3": Fact(id="F3", text="no time"),
-    }
 
-    assert shift_scene_timeline(scene, 1800) == {"F1", "F2"}
+    assert shift_scene_timeline(scene, 1800) is None
 
     assert (scene.ts, scene.start_ts) == (9000, 5400)
-    f1, f2, f3 = scene.world_state.facts.values()
-    assert (f1.ts, f1.last_seen_ts, f1.restated_by[0].ts) == (5400, 7200, 7200)
-    assert (f2.ts, f2.last_seen_ts) == (8800, 8800)
-    assert (f3.ts, f3.last_seen_ts) == (None, None)
 
     # clamped to zero like the entries
     shift_scene_timeline(scene, -6000)
-    assert (scene.start_ts, f1.ts, f1.last_seen_ts) == (0, 0, 1200)
+    assert scene.start_ts == 0
 
 
 # ---------------------------------------------------------------------------
@@ -255,22 +236,6 @@ def perception_scene(scene_factory):
             ),
         ),
     )
-    contribution = FactContribution(
-        audience=("Alice",),
-        source=SourceReference(
-            kind="summary", id="base-a", revision=1, view_id="v1", view_revision=1
-        ),
-        acquired=Acquisition(order=4, ts=1800),
-        text="they met",
-    )
-    scene.world_state.facts = {
-        "F1": Fact(id="F1", text="they met", ts=1800, last_seen_ts=1800),
-        "F2": Fact(
-            id="F2",
-            text="independent",
-            contributions=(contribution,),
-        ),
-    }
     scene.world_state.knowledge = [
         KnowledgeEdge(id="e1", character="Alice", target="F1", ts=1200),
         KnowledgeEdge(id="e2", character="Alice", target="F2"),
@@ -298,8 +263,6 @@ def _orders(scene):
     orders.append(scene.archived_history[0]["knowledge"]["acquired"]["order"])
     orders.append(scene.layered_history[0][0]["knowledge"]["acquired"]["order"])
     orders.append(scene.knowledge.disclosures[0].acquired.order)
-    facts = scene.world_state.facts
-    orders.append(facts["F2"].contributions[0].acquired.order)
     return orders
 
 
@@ -307,7 +270,7 @@ def test_shift_scene_timeline_moves_every_acquisition_stamp(perception_scene):
     scene = perception_scene
     orders = _orders(scene)
 
-    assert shift_scene_timeline(scene, 1800) == {"F1", "F2"}
+    assert shift_scene_timeline(scene, 1800) is None
 
     assert _stamps(scene) == [2400, 5400, 4800, 3600, 3600]
     disclosure = scene.knowledge.disclosures[0]
@@ -316,8 +279,6 @@ def test_shift_scene_timeline_moves_every_acquisition_stamp(perception_scene):
         disclosure.origin_scene_ts,
         disclosure.away_scene_ts,
     ) == (7200, 6600, 6800)
-    facts = scene.world_state.facts
-    assert facts["F2"].contributions[0].acquired.ts == 3600
     assert [edge.ts for edge in scene.world_state.knowledge] == [3000, None]
     # only the times move
     assert _orders(scene) == orders
@@ -335,8 +296,6 @@ def test_shift_scene_timeline_clamps_every_acquisition_stamp(perception_scene):
         disclosure.origin_scene_ts,
         disclosure.away_scene_ts,
     ) == (0, 0, 0)
-    facts = scene.world_state.facts
-    assert facts["F2"].contributions[0].acquired.ts == 0
     assert [edge.ts for edge in scene.world_state.knowledge] == [0, None]
 
 
@@ -362,7 +321,7 @@ def test_shift_scene_timeline_leaves_the_knowledge_memory_alone_without_a_shift(
         talemate.history, "invalidate_memory_audiences", invalidated.append
     )
 
-    assert shift_scene_timeline(perception_scene, 0) == set()
+    assert shift_scene_timeline(perception_scene, 0) is None
 
     assert invalidated == []
 

@@ -12,14 +12,14 @@ export function effortMode(perspectives) {
 }
 
 // A stop the target table lacks lands on the nearest stop that table has:
-// Standard Ultra on Thorough, Standard Off on Minimal. A stop the ranking does
+// Standard Off on Minimal, perspectives Balanced on Standard Minimal. A stop the ranking does
 // not know at all lands on the default rather than on an end of the track,
 // where it would silently switch character knowledge off.
 export function stopForMode(stop, mode) {
     const stops = EFFORT_STOPS[mode];
     if (stops.includes(stop)) return stop;
     const rank = EFFORT_ORDER.indexOf(stop);
-    if (rank === -1) return stopForMode(DEFAULT_EFFORT, mode);
+    if (rank === -1) return DEFAULT_EFFORT[mode];
     const distance = (candidate) => Math.abs(EFFORT_ORDER.indexOf(candidate) - rank);
     return stops.reduce((best, candidate) => (distance(candidate) < distance(best) ? candidate : best));
 }
@@ -202,7 +202,6 @@ export function effortExplanation(mode, stop, agents = [], preview = false) {
     const enabled = value(`${ck}.enabled`) === true;
     const perspectives = mode === 'perception';
     const memory = enabled && value(`${ck}.memory_pass`) === true;
-    const learning = enabled && !perspectives && value(`${ck}.ledger`) === true;
     const repair = perspectives && value('summarizer.perceptions.automatic_repair') === true;
     const requests = [];
     const retries = [];
@@ -213,22 +212,16 @@ export function effortExplanation(mode, stop, agents = [], preview = false) {
     } else if (enabled && value(`${ck}.perspective_filter`)) {
         benefits.push('keep characters within what they know');
     }
-    if (learning) {
-        requests.push('1 after a character line when listeners have unknown recent facts');
-        benefits.push('track what listeners learn');
-    }
     if (memory) {
         requests.push('1 before a generated reply with uncached retrieved memories');
         benefits.push('focus recalled memories');
     }
 
     if (repair) retries.push('+1 for missing/invalid character views');
-    if (!benefits.length && value('memory.topics.enabled')) benefits.push('organize recalled facts by topic');
-    if (!benefits.length && value('summarizer.archive.extract_facts')) benefits.push('retain facts alongside summaries');
     return {
         cost: requests.length ? requests.join('; ') + '.' : 'No extra requests.',
         retries: retries.length ? retries.join('; ') + '.' : '',
         benefit: benefits.length ? 'May help ' + benefits.join(', ') + '.' : 'No character-knowledge assistance.',
-        caveat: perspectives || learning || memory ? 'Reliable structured output recommended.' : '',
+        caveat: perspectives || memory ? 'Reliable structured output recommended.' : '',
     };
 }

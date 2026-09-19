@@ -16,12 +16,7 @@ function agentsAt(mode, stop, overrides = {}) {
     const characterKnowledge = mode === 'legacy'
         ? {
             perspective_filter: bool('Limit to character knowledge', v(`${ck}.perspective_filter`)),
-            absence_block: bool('Remind about unknown facts', v(`${ck}.absence_block`)),
-            absence_limit: number('Unknown-fact reminders', v(`${ck}.absence_limit`)),
-            absence_window: number('Recent facts to check', v(`${ck}.absence_window`)),
-            awareness_line: bool('Topic knowledge overview', v(`${ck}.awareness_line`)),
             memory_pass: bool('Refine memories with AI', v(`${ck}.memory_pass`), 'One more request before each reply.'),
-            ledger: bool('Track learning from dialogue', v(`${ck}.ledger`), 'One more request after a character message.'),
         }
         : {
             memory_pass: bool('Refine memories with AI', v(`${ck}.memory_pass`), 'One more request before each reply.'),
@@ -32,16 +27,13 @@ function agentsAt(mode, stop, overrides = {}) {
         } },
         { name: 'summarizer', label: 'Summarizer', data: { scene_overrides: {} }, actions: {
             archive: { enabled: true, can_be_disabled: true, label: 'Summarization', config: {
-                extract_facts: bool('Extract facts', v('summarizer.archive.extract_facts')),
             } },
             ...(mode === 'perception' ? { perceptions: { enabled: true, label: 'Character Perspectives', config: {
                 automatic_repair: bool('Automatically repair analysis', v('summarizer.perceptions.automatic_repair'), 'One more Summarizer request when a view is invalid.'),
             } } } : {}),
         } },
         { name: 'memory', label: 'Memory', data: { scene_overrides: {} }, actions: {
-            topics: { enabled: v('memory.topics.enabled'), can_be_disabled: true, label: 'Topics', config: {} },
-            retrieval: { enabled: true, label: 'Retrieval', config: mode === 'legacy'
-                ? { similarity_gate: bool('Match known facts', v('memory.retrieval.similarity_gate')) } : {} },
+            retrieval: { enabled: true, label: 'Retrieval', config: {} },
         } },
     ];
 }

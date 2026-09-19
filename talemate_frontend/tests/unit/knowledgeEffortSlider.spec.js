@@ -124,7 +124,7 @@ describe('the effort slider against the status frames of its own write', () => {
 
     it('carries an Off pick that is still in its debounce to Minimal, the nearest stop the other table has', async () => {
         vi.useFakeTimers();
-        state.agents = agentsAt('legacy', 'ultra');
+        state.agents = agentsAt('legacy', 'thorough');
         await nextTick();
         vm.pick(index('off'));
         state.mode = 'perception';
@@ -134,43 +134,43 @@ describe('the effort slider against the status frames of its own write', () => {
 
     it('holds the knob where the drag left it while a stale frame arrives', async () => {
         vm.startDrag();
-        vm.pick(index('ultra'));
+        vm.pick(index('thorough'));
         await nextTick();
-        expect(vm.shownStop).toBe('ultra');
+        expect(vm.shownStop).toBe('thorough');
 
-        deliver('conversation', agentsAt('legacy', 'light'));
+        deliver('conversation', agentsAt('legacy', 'minimal'));
         await nextTick();
-        expect(vm.shownStop, 'a frame from before the drag moved the knob').toBe('ultra');
+        expect(vm.shownStop, 'a frame from before the drag moved the knob').toBe('thorough');
         expect(vm.custom).toBe(false);
     });
 
     it('holds it after the drag ends, until a frame carries the values that were sent', async () => {
-        state.agents = agentsAt('legacy', 'light');
+        state.agents = agentsAt('legacy', 'minimal');
         await nextTick();
-        dragTo('balanced');
-        expect(applied).toEqual(['balanced']);
+        dragTo('off');
+        expect(applied).toEqual(['off']);
         // Light→Balanced is one key on one agent: the receipt cannot lean on
         // the other two agents reporting
         expect([...vm.awaiting.keys()]).toEqual(['conversation.character_knowledge']);
         await nextTick();
-        expect(vm.shownStop).toBe('balanced');
+        expect(vm.shownStop).toBe('off');
 
         // the conversation agent starts an action and reports its pre-save state
-        deliver('conversation', agentsAt('legacy', 'light'));
+        deliver('conversation', agentsAt('legacy', 'minimal'));
         await nextTick();
-        expect(vm.shownStop, 'a busy frame from before the save released the hold').toBe('balanced');
+        expect(vm.shownStop, 'a busy frame from before the save released the hold').toBe('off');
         expect(vm.awaiting.size).toBe(1);
     });
 
     it('follows the agents again once a frame reports the values that were sent', async () => {
-        state.agents = agentsAt('legacy', 'light');
+        state.agents = agentsAt('legacy', 'minimal');
         await nextTick();
-        dragTo('balanced');
+        dragTo('off');
         await nextTick();
-        deliver('conversation', agentsAt('legacy', 'balanced'));
+        deliver('conversation', agentsAt('legacy', 'off'));
         await nextTick();
         expect(vm.heldStop).toBeNull();
-        expect(vm.shownStop).toBe('balanced');
+        expect(vm.shownStop).toBe('off');
 
         deliver('conversation', agentsAt('legacy', 'minimal'));
         await nextTick();
@@ -178,92 +178,75 @@ describe('the effort slider against the status frames of its own write', () => {
     });
 
     it('keeps the knob under the finger when the previous send is answered mid-drag', async () => {
-        state.agents = agentsAt('legacy', 'light');
+        state.agents = agentsAt('legacy', 'minimal');
         await nextTick();
-        dragTo('balanced');
+        dragTo('off');
         await nextTick();
         expect([...vm.awaiting.keys()]).toEqual(['conversation.character_knowledge']);
 
         // the user starts a second drag before the first write is answered
         vm.startDrag();
-        vm.pick(index('ultra'));
+        vm.pick(index('thorough'));
         await nextTick();
-        expect(vm.shownStop).toBe('ultra');
+        expect(vm.shownStop).toBe('thorough');
 
-        deliver('conversation', agentsAt('legacy', 'balanced'));
+        deliver('conversation', agentsAt('legacy', 'off'));
         await nextTick();
-        expect(vm.shownStop, 'the first write\'s answer moved the knob under the finger').toBe('ultra');
-        expect(vm.heldStop).toBe('ultra');
+        expect(vm.shownStop, 'the first write\'s answer moved the knob under the finger').toBe('thorough');
+        expect(vm.heldStop).toBe('thorough');
     });
 
     it('sends nothing while the drag is in progress, however long it rests on a stop', () => {
         vi.useFakeTimers();
         vm.startDrag();
-        vm.pick(index('light'));
+        vm.pick(index('minimal'));
         vi.advanceTimersByTime(2000);
         expect(applied, 'a stop the drag only passed over was saved').toEqual([]);
-        vm.pick(index('balanced'));
+        vm.pick(index('off'));
         vi.advanceTimersByTime(2000);
         expect(applied).toEqual([]);
-        vm.finish(index('ultra'));
-        expect(applied).toEqual(['ultra']);
+        vm.finish(index('thorough'));
+        expect(applied).toEqual(['thorough']);
     });
 
     it('sends once for a press on the track, which reports the move before the drag starts', () => {
         vi.useFakeTimers();
         // Vuetify's handleStart: onSliderMove, then onSliderStart
-        vm.pick(index('light'));
+        vm.pick(index('minimal'));
         vm.startDrag();
         vi.advanceTimersByTime(2000);
         expect(applied, 'the stop the press landed on was saved on its own').toEqual([]);
-        vm.pick(index('ultra'));
-        vm.finish(index('ultra'));
-        expect(applied).toEqual(['ultra']);
+        vm.pick(index('thorough'));
+        vm.finish(index('thorough'));
+        expect(applied).toEqual(['thorough']);
     });
 
     it('keeps a second keyboard step when the first one is answered inside its debounce', async () => {
         vi.useFakeTimers();
-        state.agents = agentsAt('legacy', 'light');
+        state.agents = agentsAt('legacy', 'minimal');
         await nextTick();
         // an arrow key reaches pick() without a drag start
-        vm.pick(index('balanced'));
+        vm.pick(index('off'));
         vi.advanceTimersByTime(SEND_DEBOUNCE);
-        expect(applied).toEqual(['balanced']);
+        expect(applied).toEqual(['off']);
 
         vm.pick(index('thorough'));
-        deliver('conversation', agentsAt('legacy', 'balanced'));
+        deliver('conversation', agentsAt('legacy', 'off'));
         await nextTick();
         vi.advanceTimersByTime(SEND_DEBOUNCE);
-        expect(applied, 'the answer to the first step swallowed the second').toEqual(['balanced', 'thorough']);
+        expect(applied, 'the answer to the first step swallowed the second').toEqual(['off', 'thorough']);
     });
 
-    it('waits for every action a patch touches on one agent', async () => {
-        // Minimal to Light writes memory.topics and memory.retrieval
-        dragTo('light');
-        await nextTick();
-        expect([...vm.awaiting.keys()]).toEqual(
-            expect.arrayContaining(['memory.topics', 'memory.retrieval']),
-        );
 
-        // the write reached one of the two actions when this frame was emitted
-        deliver('memory', agentsAt('legacy', 'light', { 'memory.retrieval.similarity_gate': false }));
-        await nextTick();
-        expect([...vm.awaiting.keys()]).toContain('memory.retrieval');
-        expect([...vm.awaiting.keys()]).not.toContain('memory.topics');
-
-        deliver('memory', agentsAt('legacy', 'light'));
-        await nextTick();
-        expect([...vm.awaiting.keys()]).not.toContain('memory.retrieval');
-    });
 
     it('debounces the tick-click path and sends once', () => {
         vi.useFakeTimers();
-        vm.pick(index('light'));
-        vm.pick(index('balanced'));
+        vm.pick(index('minimal'));
+        vm.pick(index('off'));
         vi.advanceTimersByTime(100);
         expect(applied).toEqual([]);
         vi.advanceTimersByTime(250);
-        expect(applied).toEqual(['balanced']);
+        expect(applied).toEqual(['off']);
     });
 
     it('neither sends nor holds when the stop is the one the agents already sit on', () => {
@@ -276,7 +259,7 @@ describe('the effort slider against the status frames of its own write', () => {
 
     it('carries a pick that is still in its debounce into the mode the user switched to', async () => {
         vi.useFakeTimers();
-        vm.pick(index('ultra'));
+        vm.pick(index('thorough'));
         state.mode = 'perception';
         await nextTick();
         expect(applied, 'the pick was dropped by the mode switch').toEqual(['thorough']);
@@ -286,10 +269,10 @@ describe('the effort slider against the status frames of its own write', () => {
     it('clamps a held stop the mode has no row for', async () => {
         state.mode = 'perception';
         await nextTick();
-        vm.heldStop = 'ultra';
+        vm.heldStop = 'off';
         await nextTick();
-        expect(EFFORT_STOPS.perception).not.toContain('ultra');
-        expect(vm.shownStop).not.toBe('ultra');
+        expect(EFFORT_STOPS.perception).not.toContain('off');
+        expect(vm.shownStop).not.toBe('off');
         expect(() => vm.cost).not.toThrow();
     });
 
@@ -306,14 +289,14 @@ describe('the effort slider against the status frames of its own write', () => {
 
     it('lets go of a stop the agents never report, so the knob cannot freeze', () => {
         vi.useFakeTimers();
-        dragTo('ultra');
-        expect(vm.heldStop).toBe('ultra');
+        dragTo('thorough');
+        expect(vm.heldStop).toBe('thorough');
         vi.advanceTimersByTime(4000);
         expect(vm.heldStop).toBeNull();
     });
 
     it('prices a Custom state by what is actually on, not the nearest stop', async () => {
-        state.agents = agentsAt('legacy', 'thorough', { 'conversation.character_knowledge.ledger': false });
+        state.agents = agentsAt('legacy', 'thorough', { 'conversation.character_knowledge.perspective_filter': false });
         await nextTick();
         expect(vm.custom).toBe(true);
         expect(vm.cost).not.toContain('after a character line');
@@ -324,10 +307,10 @@ describe('the effort slider against the status frames of its own write', () => {
         app.unmount();
         host.remove();
         mount({ pin: true });
-        state.agents = agentsAt('legacy', 'light');
+        state.agents = agentsAt('legacy', 'minimal');
         await nextTick();
-        dragTo('balanced');
-        expect(applied).toEqual(['balanced']);
+        dragTo('off');
+        expect(applied).toEqual(['off']);
         expect([...vm.awaiting.keys()]).toContain('conversation.character_knowledge');
 
         // the same values read off the globals are not the receipt
@@ -335,19 +318,11 @@ describe('the effort slider against the status frames of its own write', () => {
         await nextTick();
         expect([...vm.awaiting.keys()]).toContain('conversation.character_knowledge');
 
-        const pinned = agentsAt('legacy', 'balanced');
-        pinned[0].data.scene_overrides = { actions: { character_knowledge: { enabled: true, config: {
-            perspective_filter: { value: true },
-            absence_block: { value: true },
-            awareness_line: { value: true },
-            absence_limit: { value: 5 },
-            absence_window: { value: 30 },
-            memory_pass: { value: false },
-            ledger: { value: true },
-        } } } };
+        const pinned = agentsAt('legacy', 'off');
+        pinned[0].data.scene_overrides = { actions: { character_knowledge: { enabled: false } } };
         deliver('conversation', pinned);
         await nextTick();
-        expect([...vm.awaiting.keys()]).not.toContain('conversation.character_knowledge');
+        expect(vm.awaiting).toBeNull();
     });
 });
 
@@ -379,7 +354,7 @@ describe('the compact form', () => {
 
     it('labels a Custom state as Custom', async () => {
         remount({ compact: true });
-        state.agents = agentsAt('legacy', 'thorough', { 'conversation.character_knowledge.ledger': false });
+        state.agents = agentsAt('legacy', 'thorough', { 'conversation.character_knowledge.perspective_filter': false });
         await nextTick();
         expect(host.querySelector('.knowledge-effort-stop').textContent.trim()).toBe('Custom');
     });

@@ -84,39 +84,19 @@ Disable this if you want the AI to generate dialogue without following the scene
 
 ## :material-head-lightbulb-outline: Character Knowledge
 
-The section opens with the **Character knowledge effort** slider. One stop sets this group and the Summarizer and Memory knowledge settings together, as an unsaved edit of this page; see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets) for what each stop turns on and what it asks of your model.
+The section opens with the **Character knowledge effort** slider. One stop sets this group and the Summarizer knowledge settings together, as an unsaved edit of this page; see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets) for what each stop turns on and what it asks of your model.
 
-Help characters respond using what they know. In **Standard** mode, use this group to limit memories, remind the AI about unknown facts, and track learning from dialogue. The controls below apply to Standard mode unless stated otherwise. [Character knowledge: flow reference](/talemate/user-guide/world-editor/knowledge-how-it-works/) shows what each switch does, with diagrams.
+Help characters respond using what they know. In **Standard** mode, use this group to filter history and memories by character knowledge. The controls below apply to Standard mode unless stated otherwise. [Character knowledge: flow reference](/talemate/user-guide/world-editor/knowledge-how-it-works/) shows what each switch does, with diagrams.
 
-The **Character Knowledge** master switch also supplies **Known facts** and **Unknown recent facts** to the Summarizer's [conversation analysis](/talemate/user-guide/agents/summarizer/settings/#conversation), when Scene Analysis is enabled. These lists apply even if **Limit to character knowledge** or **Remind about unknown facts** is off. Turning the master switch off removes them. Each list uses up to one sixth of the analysis client's context budget, plus headings, reserved from scene history; they add no AI request and are omitted when neither list has facts that fit.
+**Character perspectives**, chosen when creating a new story or importing a character card, gives characters separate views of events and memories. It can also be changed in Scene Settings while history and archived history are empty. It replaces Standard-mode history filtering; **Limit to character knowledge** is hidden while that mode is active. **Refine memories with AI** remains available in either mode. This group does not change the story's mode. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for setup, cost and retry guidance.
 
-**Character perspectives**, chosen when creating a new story or importing a character card, gives characters separate views of events and memories. It can also be changed in Scene Settings while history and archived history are empty. It replaces the Standard-mode filtering and learning controls, which are hidden while that mode is active. **Refine memories with AI** remains available in either mode. This group does not change the story's mode. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for setup, cost and retry guidance.
+Limiting knowledge and character return transitions need no extra request. **Refine memories with AI** adds a request when it runs and is off by default.
 
 ![Conversation agent character knowledge settings](/talemate/img/0.40.0/conversation-character-knowledge-settings.png)
-
-Limiting knowledge, adding reminders and character return transitions need no extra request. **Refine memories with AI** and **Track learning from dialogue** normally add one request when they run and are off by default.
 
 ##### Limit to character knowledge
 
 Leave out events the character missed and return only memories they know. **Turn on to base replies on their own experience; turn off to use the shared history and memories.** The filter also covers context investigations and world or other-character state notes. The character's own stored state notes and director guidance remain available; neither splits an absence into multiple markers. Missed history is replaced by one gap line, including when it crosses the summarized/live boundary in Best Fit mode. On by default.
-
-##### Remind about unknown facts
-
-Tell the AI which recent facts the character does not know. **Turn on if characters act on information they missed.** A fact is always a candidate for a character's list when the character is one of its subjects, or when it was recorded while the character was away from the scene; those candidates come first, ranked by importance and age, and the **Recent facts to check** pool supplies the rest. These reminders guide the model; they cannot guarantee its response. Nothing is added when there are no facts to list. On by default. In Standard mode the same lists reach the scene analysis before it writes about the character's next line, and the analysis marks anything the character does not know as unknown to them.
-
-##### Unknown-fact reminders
-
-Limit how many unknown facts are listed for the AI (default 5). **Raise to include more reminders; lower to keep the prompt shorter.** Within the **Recent facts to check** pool, eligible facts are ranked by the Summarizer's [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology) importance and recency score before this limit is applied.
-
-##### Recent facts to check
-
-Choose how many of the newest recorded facts to check for unknown-fact reminders (default 30). **Raise to cover older facts; lower to focus on the newest.** The pool follows original fact creation order; a restatement refreshes a fact's chronology score but does not move it into this pool. Facts that name the character, or were recorded while the character was away, are candidates whatever their age and do not use the pool. Chronology selection and ranking apply within the pool, while **Unknown-fact reminders** limits how many appear in total.
-
-##### Topic knowledge overview
-
-Give the AI a short overview of which topics the character knows about. **Turn on for topic-level reminders**, and enable [Topics in the Memory agent](/talemate/user-guide/agents/memory/settings/#topics). On by default, with no extra request.
-
-For example: `Edwin knows all of the Sorena, some of the sextant, nothing of the boat`. Only topics with at least three facts count; at most six are listed, largest first. The overview is omitted when no topic qualifies. It describes recorded facts, not everything a character understands.
 
 ##### Return transitions
 
@@ -134,12 +114,6 @@ reply and the available memory sources are unchanged. Changing the refinement mo
 client settings or resolved inference preset runs it again. Standard semantic-only
 retrieval does not publish a shared cached result, so there is no refinement to reuse
 in that configuration.
-
-##### Track learning from dialogue
-
-Ask the AI what listeners learned from each character message and add those facts to their knowledge. **Turn on to track information shared in dialogue.** It checks recent recorded facts the listeners do not know, so it can recognize retold information rather than discover arbitrary new facts. Learned facts become available in memory and leave the unknown-fact reminders. The speaker does not learn from their own message; player messages are included. Each learned fact takes effect immediately; use **Unlearn** on the fact in the character’s **Knowledge** tab to take it back. A learning in a later line also lifts an earlier Unlearn, for as long as that line is in the story. The ledger judges with recent dialogue and situational context and errs toward learning when the substance is conveyed, while hints, questions and merely related facts still do not count.
-
-Off by default. Uses **one more request after a character message when a listener has recent facts they do not know**, through the World State agent's client. No request is sent when every listener already knows those facts. Available in Standard mode only. The pass adds recorded facts to what listeners know; it records no new facts. Facts come from the Summarizer's chapter summaries only, so a line still in the live history has none to learn yet.
 
 ## Long Term Memory
 

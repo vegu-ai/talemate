@@ -4,9 +4,6 @@ from typing import Union
 import pydantic
 import structlog
 
-from talemate.instance import get_agent
-from talemate.knowledge.facts import drop_dead_anchors, drop_facts_for_entries
-from talemate.knowledge.message_facts import prune_missing_message_facts
 from talemate.knowledge.perspectives import reset_perspectives
 
 log = structlog.get_logger("talemate.server.world_state_manager.scene_state_reset")
@@ -91,23 +88,7 @@ class SceneStateResetMixin:
             scene.history = []
             scene.agent_state.get("conversation", {}).pop(DEPARTURES_KEY, None)
             scene.layered_history = []
-            removed = reset_perspectives(scene)
-            removed.update(prune_missing_message_facts(scene, edges=False))
-            if removed:
-                await get_agent("memory").delete({"ids": sorted(removed)})
-
-            await drop_facts_for_entries(
-                scene,
-                {
-                    ah.get("id")
-                    for ah in scene.archived_history
-                    if ah.get("id")
-                    and (
-                        ah.get("end") is not None or payload.wipe_history_include_static
-                    )
-                },
-                keep_rules=False,
-            )
+            reset_perspectives(scene)
 
             if payload.wipe_history_include_static:
                 scene.archived_history = []
@@ -124,9 +105,6 @@ class SceneStateResetMixin:
                 reset_summary.append(
                     f"Wiped history ({history_count} messages, {removed_count} archived, {layered_count} layered), kept {len(static_entries)} static entries"
                 )
-
-            # an author rule that waits on a wiped entry goes with the entry
-            drop_dead_anchors(scene)
 
             scene.sync_time()
 

@@ -27,7 +27,7 @@ function harness({ saved = false, immutable = false } = {}) {
 }
 
 const entries = () => [
-    { agent: 'conversation', action: 'character_knowledge', config: { ledger: true } },
+    { agent: 'conversation', action: 'character_knowledge', config: { memory_pass: true } },
     { agent: 'memory', action: 'topics', enabled: false, config: {} },
 ];
 const flush = async () => { await Promise.resolve(); await Promise.resolve(); };
@@ -37,7 +37,7 @@ describe('hub save-dialog continuation', () => {
         const h = harness();
         const input = entries();
         h.coordinator.applySceneAgentValues(input, 'Thorough');
-        input[0].config.ledger = false;
+        input[0].config.memory_pass = false;
         expect(h.vm.$refs.input.open).toBe(true);
         expect(h.sent).toEqual([]);
         h.vm.submit('my-quest');
@@ -53,7 +53,7 @@ describe('hub save-dialog continuation', () => {
         h.receive(h.savedFrame());
         await flush();
         expect(h.sent).toHaveLength(2);
-        expect(h.sent[1]).toMatchObject({ scene_identity: 'scene-1', patch: { set: { actions: { character_knowledge: { config: { ledger: { value: true } } } } } } });
+        expect(h.sent[1]).toMatchObject({ scene_identity: 'scene-1', patch: { set: { actions: { character_knowledge: { config: { memory_pass: { value: true } } } } } } });
         h.receive(h.savedFrame());
         await flush();
         expect(h.sent).toHaveLength(2);

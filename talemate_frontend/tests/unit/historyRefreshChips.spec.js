@@ -12,8 +12,8 @@ const refresh = (id, operations, extra = {}) => ({
     archive_ids: ['A1'],
     revision_refresh: {
         required: true, operations, scene_id: 'scene-1', message_id: id, selection_index: 1,
-        selection_digest: `digest-${id}`, selection_serial: 2, label: 'Refresh facts',
-        explanation: 'Facts for this version have not been refreshed yet.', running_label: 'Refreshing facts…',
+        selection_digest: `digest-${id}`, selection_serial: 2, label: 'Analyze perceptions',
+        explanation: 'Perception analysis for this version has not run yet.', running_label: 'Analyzing perceptions…',
     },
     ...extra,
 });
@@ -28,13 +28,13 @@ function historyTab(refreshes) {
 }
 
 describe('the History tab refresh chips', () => {
-    it('go to the entries that contain a passage whose refresh changes their facts', () => {
+    it('go to the entries that contain a passage whose refresh invalidates their character views', () => {
         const vm = historyTab([
-            refresh(4, ['facts'], { archive_ids: ['A1', 'L1'] }),
+            refresh(4, ['perceptions'], { archive_ids: ['A1', 'L1'] }),
             refresh(5, ['perceptions']),
             refresh(6, ['index_repair'], { archive_ids: ['A2'] }),
             refresh(7, ['learning']),
-            { id: 8, revision_refresh: { required: false, operations: ['facts'] } },
+            { id: 8, revision_refresh: { required: false, operations: ['perceptions'] } },
         ]);
         expect(Object.fromEntries(Object.entries(vm.entryRefreshes).map(([id, items]) => [id, items.map((item) => item.id)]))).toEqual({
             A1: [4, 5], L1: [4], A2: [6],
@@ -42,7 +42,7 @@ describe('the History tab refresh chips', () => {
     });
 
     it("run the paginator's refresh request and settle on its answer", () => {
-        const vm = historyTab([refresh(4, ['facts'])]);
+        const vm = historyTab([refresh(4, ['perceptions'])]);
         vm.runRefresh(vm.entryRefreshes.A1[0]);
         const [frame] = vm.sent;
         expect(frame).toMatchObject({
@@ -58,7 +58,7 @@ describe('the History tab refresh chips', () => {
     });
 
     it('drop a run or an error once its passage changed or no longer needs the refresh', () => {
-        const vm = historyTab([refresh(4, ['facts']), refresh(5, ['facts'])]);
+        const vm = historyTab([refresh(4, ['perceptions']), refresh(5, ['perceptions'])]);
         vm.runRefresh(vm.entryRefreshes.A1[0]);
         vm.runRefresh(vm.entryRefreshes.A1[1]);
         vm.handleMessage({ type: 'scene_message', action: 'operation_done', request_id: vm.sent[1].request_id, failed_action: 'commit_revision', error: { message: 'The refresh failed.' } });
@@ -66,7 +66,7 @@ describe('the History tab refresh chips', () => {
         expect(Object.keys(vm.refreshRequests)).toEqual(['4']);
         expect(Object.keys(vm.refreshErrors)).toEqual(['5']);
 
-        const reselected = refresh(4, ['facts']);
+        const reselected = refresh(4, ['perceptions']);
         reselected.revision_refresh.selection_digest = 'digest-4-other';
         vm.scene.data.revision_refreshes = [reselected];
         History.watch.entryRefreshes.call(vm);
@@ -83,14 +83,14 @@ describe('the History tab refresh chips', () => {
     });
 
     it('forget every run when the tab resets for another scene', () => {
-        const vm = historyTab([refresh(4, ['facts'])]);
+        const vm = historyTab([refresh(4, ['perceptions'])]);
         vm.runRefresh(vm.entryRefreshes.A1[0]);
         vm.reset();
         expect([vm.refreshRequests, vm.refreshErrors, vm.refreshSelections]).toEqual([{}, {}, {}]);
     });
 
     it('keep a refused run on the chip until the next run', () => {
-        const vm = historyTab([refresh(4, ['facts'])]);
+        const vm = historyTab([refresh(4, ['perceptions'])]);
         vm.runRefresh(vm.entryRefreshes.A1[0]);
         const requestId = vm.sent[0].request_id;
         vm.handleMessage({ type: 'scene_message', action: 'operation_done', request_id: requestId, failed_action: 'commit_revision', error: { message: 'The selected version changed.' } });
@@ -112,8 +112,8 @@ describe('a history entry refresh chip', () => {
             setup: (chipProps, { slots, emit }) => () => h('button', { class: 'chip', 'data-color': chipProps.color, disabled: chipProps.disabled, onClick: () => emit('click') }, slots.default?.()),
         });
         const onRefresh = vi.fn();
-        app = createApp({ ...HistoryEntry, components: { ...HistoryEntry.components, ContextualGenerate: Empty, ConfirmActionInline: Empty, WorldStateManagerFactRow: Empty, EntryVisibilitySelect: Empty } }, {
-            entry: { id: 'A1', layer: 0, index: 0, text: 'Alice rang the bell.', ts: 0, start: 0, end: 3, facts: [] },
+        app = createApp({ ...HistoryEntry, components: { ...HistoryEntry.components, ContextualGenerate: Empty, ConfirmActionInline: Empty, EntryVisibilitySelect: Empty } }, {
+            entry: { id: 'A1', layer: 0, index: 0, text: 'Alice rang the bell.', ts: 0, start: 0, end: 3 },
             onRefresh,
             ...props,
         });
@@ -122,24 +122,24 @@ describe('a history entry refresh chip', () => {
         for (const name of ['VCard', 'VCardTitle', 'VIcon', 'VCardText', 'VCardActions', 'VSpacer', 'VList', 'VProgressCircular', 'VTooltip', 'VBtn']) app.component(name, Container);
         app.component('VChip', Chip);
         app.mount(host);
-        return { onRefresh, chips: () => [...host.querySelectorAll('.chip')].filter((chip) => chip.textContent.includes('Refresh')) };
+        return { onRefresh, chips: () => [...host.querySelectorAll('.entry-refresh')] };
     }
 
     it('names the refresh, explains it and runs it on click', async () => {
-        const item = refresh(4, ['facts']);
+        const item = refresh(4, ['perceptions']);
         const { onRefresh, chips } = mount({ refreshes: [item] });
         const [chip] = chips();
-        expect(chip.textContent).toContain('Refresh facts');
-        expect(chip.textContent).toContain('Passage 4: Facts for this version have not been refreshed yet. Click to run it now.');
+        expect(chip.textContent).toContain('Analyze perceptions');
+        expect(chip.textContent).toContain('Passage 4: Perception analysis for this version has not run yet. Click to run it now.');
         chip.click();
         await nextTick();
         expect(onRefresh).toHaveBeenCalledWith(item);
     });
 
     it('shows the running label while its run is open and the error of a refused run', () => {
-        const item = refresh(4, ['facts']);
+        const item = refresh(4, ['perceptions']);
         let view = mount({ refreshes: [item], refreshRequests: { 4: 'history-refresh:4' } });
-        expect(view.chips()[0].textContent).toContain('Refreshing facts…');
+        expect(view.chips()[0].textContent).toContain('Analyzing perceptions…');
         expect(view.chips()[0].disabled).toBe(true);
         app.unmount();
         host.remove();

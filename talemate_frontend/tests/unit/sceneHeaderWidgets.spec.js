@@ -27,7 +27,7 @@ function instance(component, fields) {
     return vm;
 }
 
-function headerEffort({ mode = 'legacy', agents = agentsAt(mode, 'light'), overrides = { busy: false, error: null } } = {}) {
+function headerEffort({ mode = 'legacy', agents = agentsAt(mode, 'minimal'), overrides = { busy: false, error: null } } = {}) {
     return instance(HeaderEffort, {
         mode,
         getAgents: () => agents,
@@ -48,8 +48,8 @@ describe('the header knowledge effort control', () => {
     });
 
     it('sends exactly what the hub slider sends for the same stop and mode', () => {
-        for (const [mode, stop] of [['legacy', 'off'], ['legacy', 'ultra'], ['perception', 'balanced']]) {
-            const agents = agentsAt(mode, 'light');
+        for (const [mode, stop] of [['legacy', 'off'], ['legacy', 'thorough'], ['perception', 'minimal']]) {
+            const agents = agentsAt(mode, 'minimal');
             const scene = { knowledge_eligibility: mode, filename: 'scene.json', project_name: 'proj' };
             const hub = instance(Hub, {
                 name: 'Nora',
@@ -70,7 +70,7 @@ describe('the header knowledge effort control', () => {
         const vm = headerEffort({ agents: agentsAt('legacy', 'off') });
         expect(vm.disabledReason).toBeNull();
         expect(vm.notice).toBeNull();
-        vm.applyEffort('balanced');
+        vm.applyEffort('minimal');
         expect(vm.applySceneAgentValues).toHaveBeenCalledTimes(1);
     });
 
@@ -155,7 +155,7 @@ function mountApp(root, injections = {}, vuetify = DARK) {
         getWebsocket: () => ({ send: vi.fn() }),
         registerMessageHandler: (fn) => handlers.push(fn),
         unregisterMessageHandler: (fn) => handlers.splice(handlers.indexOf(fn), 1),
-        getAgents: () => agentsAt('legacy', 'light'),
+        getAgents: () => agentsAt('legacy', 'minimal'),
         applySceneAgentValues: vi.fn(),
         sceneOverridesState: () => ({ busy: false, error: null }),
         retrySceneOverrides: vi.fn(),
@@ -458,6 +458,6 @@ describe('a slot with a text item and both widgets', () => {
         expect(kinds).toEqual(['text', 'text', 'characters', 'effort']);
         expect(root.querySelector('.scene-header__item').textContent).toContain('12');
         expect(root.querySelector('.scene-header-characters button').getAttribute('aria-label')).toBe('Open Nora in the World Editor');
-        expect(root.querySelector('.knowledge-effort-stop').textContent.trim()).toBe('Light');
+        expect(root.querySelector('.knowledge-effort-stop').textContent.trim()).toBe('Minimal');
     });
 });

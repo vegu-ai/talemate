@@ -13,7 +13,6 @@ from talemate.agents.base import (
     AgentActionNote,
 )
 from talemate.knowledge.bucket import KnowledgeIndex, knowledge_digest
-from talemate.knowledge.chronology import ranked_fact_documents
 from talemate.knowledge.context import ContextHistoryMessage, project_character_history
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspective_models import content_digest
@@ -192,11 +191,8 @@ class MemoryRAGMixin:
             memory.retrieval_recency_weight,
             memory.retrieval_mmr_threshold,
             memory.retrieval_entity_lookup,
-            memory.retrieval_similarity_gate,
             memory.retrieval_rerank,
             memory.max_distance,
-            memory.topics_enabled,
-            memory.topics_similarity_threshold,
             getattr(self.client, "max_token_length", None),
         )
         scope = (
@@ -269,7 +265,7 @@ class MemoryRAGMixin:
         return cache[key]
 
     def _canonical_memory_digest(self, boundary_ids: set[int]) -> str:
-        """Hash author-visible records, excluding facts sourced after the boundary."""
+        """Hash author-visible memory records."""
         memory = instance.get_agent("memory")
         db = getattr(memory, "db", None)
         if db is None:
@@ -281,20 +277,12 @@ class MemoryRAGMixin:
                 where={"knowledge_index": {"$ne": True}},
             )
             records = []
-            facts = self.scene.world_state.facts
             for identity, document, meta in zip(
                 stored.get("ids", ()),
                 stored.get("documents", ()),
                 stored.get("metadatas", ()),
             ):
                 meta = meta or {}
-                fact = facts.get(identity)
-                if (
-                    fact is not None
-                    and fact.message_id is not None
-                    and fact.message_id not in boundary_ids
-                ):
-                    continue
                 records.append((identity, document, meta))
             return hashlib.sha256(
                 json.dumps(
@@ -316,11 +304,10 @@ class MemoryRAGMixin:
     def _audience_memory_digest(
         self, character: "Character", boundary_ids: set[int], state
     ) -> str:
-        """Hash the viewer's indexed sources without later message-bound facts."""
+        """Hash the viewer's indexed sources."""
 
         def build():
             eligible = []
-            facts = self.scene.world_state.facts
             for identity, document in state.documents.items():
                 meta = document["meta"]
                 if not (
@@ -328,15 +315,6 @@ class MemoryRAGMixin:
                     or character.name in meta.get("knowledge_audience", ())
                 ):
                     continue
-                group = document["group"]
-                if group[0] == "fact":
-                    fact = facts.get(group[1])
-                    if (
-                        fact is not None
-                        and fact.message_id is not None
-                        and fact.message_id not in boundary_ids
-                    ):
-                        continue
                 eligible.append(identity)
             return hashlib.sha256(json.dumps(sorted(eligible)).encode()).hexdigest()
 
@@ -377,22 +355,6 @@ class MemoryRAGMixin:
                 audience_collection_revision=state.collection_revision,
                 audience_sources=self._audience_memory_digest(
                     character, boundary_ids, state
-                ),
-                topics=tuple(
-                    (
-                        key,
-                        tuple(
-                            fact_id
-                            for fact_id in topic.fact_ids
-                            if (
-                                (fact := self.scene.world_state.facts.get(fact_id))
-                                is None
-                                or fact.message_id is None
-                                or fact.message_id in boundary_ids
-                            )
-                        ),
-                    )
-                    for key, topic in self.scene.world_state.topics.items()
                 ),
             )
         else:
@@ -501,11 +463,7 @@ class MemoryRAGMixin:
 
         cache = self.rag_cache_entry(character)
         if cache is not None:
-            return ranked_fact_documents(
-                self.scene,
-                cache["content"],
-                character=self.rag_knowledge_viewer(character),
-            )
+            return cache["content"]
 
         return None
 
@@ -657,7 +615,6 @@ class MemoryRAGMixin:
         semantic_context = await self.semantic_context(
             num_messages=self.long_term_memory_num_messages,
             filter=memory_filter,
-            ranking_viewer=viewer,
             **({"viewer": viewer} if scoped else {}),
         )
 
@@ -798,7 +755,6 @@ class MemoryRAGMixin:
         max_response_tokens: int = 1024,
         filter: Callable | None = None,
         viewer: str | None = None,
-        ranking_viewer: str | None = None,
     ):
         """Will retrieve context from the long term memory based on semantic similarity
 
@@ -869,8 +825,6 @@ class MemoryRAGMixin:
             iterate=5,
             filter=filter,
             over_fetch=3 if filter is not None else 1,
-            topic_first=True,
-            ranking_viewer=ranking_viewer,
             **({"viewer": viewer} if viewer is not None else {}),
         )
 

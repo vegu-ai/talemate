@@ -531,7 +531,6 @@
 <script>
 import { v4 as uuidv4 } from 'uuid';
 import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
-import { DEFAULT_EFFORT } from '@/constants/knowledgeEffort';
 import { effortMode, globalEffortAgents, stopForMode } from '@/utils/knowledgeEffort';
 import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
 
@@ -583,7 +582,7 @@ export default {
       newCharacterName: '',
       options: defaultOptions(),
       characterKnowledge: false,
-      effort: DEFAULT_EFFORT,
+      effort: null,
       knowledgeUiVersion: 0,
       analysisRequestId: null,
       showGenerationOptions: false,
@@ -634,7 +633,7 @@ export default {
   methods: {
     async open(fileData = null, filePath = null, filename = null) {
       this.cancel();
-      this.effort = DEFAULT_EFFORT;
+      this.effort = null;
       const result = new Promise((resolve) => { this.resolveCallback = resolve; });
       // Reset to defaults
       this.options = defaultOptions();
@@ -840,7 +839,7 @@ export default {
     },
     cancel() {
       this.analysisRequestId = null;
-      this.effort = DEFAULT_EFFORT;
+      this.effort = null;
       this.characterKnowledge = false;
       this.showModal = false;
       if (this.resolveCallback) {

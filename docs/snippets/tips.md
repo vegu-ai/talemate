@@ -90,12 +90,11 @@ cache semantic-only results. Standard semantic-only retrieval remains uncached.
 
 Regenerating a reply reuses a published result only when the story before that reply,
 the memory sources available to the retrieval, and its settings are unchanged. New or
-edited world entries, character details, facts and archives refresh affected cached
-results, as do relevant knowledge visibility, topic and memory-collection changes.
-When retrieval is limited to character knowledge, learning edges tied to the reply
+edited world entries, character details and archives refresh affected cached
+results, as do relevant knowledge visibility and memory-collection changes.
+When retrieval is limited to character knowledge, access rules tied to the reply
 being regenerated do not count as earlier sources. Without
-that limit, learning edges do not affect retrieval. Changes to older retained facts
-or learning edges, including a fact restatement, still refresh affected results.
+that limit, access rules do not affect retrieval. Changes to older retained access rules still refresh affected results.
 A retrieval already in progress can finish with its earlier context. A result built
 before one of those inputs changed is not reused after the change.
 
@@ -122,7 +121,7 @@ In opted-in perception scenes, actor guidance and conversation analysis use
 the character’s stored evidence and last-known context. Cached advice is reused only
 for the same audience and unchanged evidence. Reader planning remains available,
 but its advice must not assume that characters know private reader information.
-Actor prompts omit the legacy unknown-fact lists and topic-awareness assertions.
+Actor prompts use only the character evidence described above.
 See [Character evidence in guidance and analysis](/talemate/dev/character-evidence-guidance/)
 for the development boundary and model-compliance limits. Legacy scenes retain the
 settings behavior described above.

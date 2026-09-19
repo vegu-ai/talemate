@@ -21,7 +21,7 @@ import talemate.emit.async_signals as async_signals
 from conftest import MockScene, bootstrap_scene
 from talemate.character import Character
 from talemate.exceptions import GenerationCancelled
-from talemate.knowledge.schema import Fact, KnowledgeEdge
+from talemate.knowledge.schema import KnowledgeEdge
 from talemate.scene_message import (
     CharacterMessage,
     DirectorMessage,
@@ -1542,11 +1542,11 @@ class TestReset:
     def test_reset_detaches_retained_edges_from_wiped_messages(self, real_scene):
         message = _char_msg("I learned the route.")
         real_scene.history = [message]
-        real_scene.world_state.facts = {
-            "F1": Fact(id="F1", text="The route is safe.", source="manual")
-        }
         edge = KnowledgeEdge(
-            character="Bob", target="F1", message_id=message.id, source="inferred"
+            character="Bob",
+            target="world-entry",
+            message_id=message.id,
+            source="inferred",
         )
         real_scene.world_state.knowledge = [edge]
 

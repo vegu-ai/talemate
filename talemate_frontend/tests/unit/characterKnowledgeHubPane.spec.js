@@ -90,11 +90,7 @@ const agents = () => ([
             },
         },
     },
-    {
-        name: 'memory', label: 'Memory', data: { scene_overrides: {} },
-        actions: { topics: { enabled: true, can_be_disabled: true, label: 'Topics', config: {} } },
-    },
-]);
+ ]);
 
 const sceneData = { knowledge_eligibility: 'legacy', can_change_knowledge_eligibility: true, filename: 'scene.json', project_name: 'proj' };
 
@@ -141,7 +137,7 @@ describe('the hub before anything is opened', () => {
         const text = host.textContent;
         expect(text).toContain('Character knowledge effort');
         expect(text).toContain('Individual settings');
-        expect(text).toContain('3 of 4 on');
+        expect(text).toContain('2 of 3 on');
         for (const label of SWITCH_LABELS) expect(text, `${label} is rendered while the pane is collapsed`).not.toContain(label);
         expect(host.querySelector('.panel-text')).toBeNull();
     });
@@ -155,48 +151,12 @@ describe('the hub before anything is opened', () => {
         const text = host.textContent;
         for (const label of SWITCH_LABELS) expect(text, `${label} is missing from the open pane`).toContain(label);
         expect(text).toContain('Conversation / Character Knowledge');
-        expect(text).toContain('Memory / Topics');
         host.querySelector('.panel-title').click();
         await nextTick();
         expect(host.textContent).not.toContain(SWITCH_LABELS[0]);
     });
 
-    it('keeps Summarization and Retrieval as independent sections', async () => {
-        const applySceneAgentValues = vi.fn();
-        const getAgents = () => [
-            {
-                name: 'summarizer', label: 'Summarizer', data: { scene_overrides: {} },
-                actions: { archive: { enabled: true, label: 'Summarization', config: { extract_facts: bool('Extract facts', true) } } },
-            },
-            {
-                name: 'memory', label: 'Memory', data: { scene_overrides: {} },
-                actions: {
-                    retrieval: { enabled: true, label: 'Retrieval', config: { similarity_gate: bool('Match known facts', true) } },
-                    topics: { enabled: true, can_be_disabled: true, label: 'Topics', config: {} },
-                },
-            },
-        ];
-        const vm = mount(Hub, { name: 'Nora' }, { getAgents, applySceneAgentValues });
-        vm.open = true;
-        await nextTick();
-        host.querySelector('.panel-title').click();
-        await nextTick();
-        const sections = [...host.querySelectorAll('.knowledge-hub-section')];
-        expect(sections.map(section => section.querySelector('.knowledge-hub-group button').textContent.trim())).toEqual([
-            'Summarizer / Summarization', 'Memory / Retrieval', 'Memory / Topics',
-        ]);
-        expect(new Set(sections.map(section => section.parentElement)).size).toBe(1);
-        for (const [index, label] of [[0, 'Extract facts'], [1, 'Match known facts']]) {
-            const toggle = sections[index].querySelector('.knowledge-hub-toggle');
-            expect(toggle.textContent).toContain(label);
-            expect(toggle.classList.contains('knowledge-hub-toggle-off')).toBe(false);
-            toggle.click();
-        }
-        expect(applySceneAgentValues.mock.calls).toEqual([
-            [[{ agent: 'summarizer', action: 'archive', config: { extract_facts: false } }], 'Extract facts: Off'],
-            [[{ agent: 'memory', action: 'retrieval', config: { similarity_gate: false } }], 'Match known facts: Off'],
-        ]);
-    });
+
 
     it('carries the pane state to a hub that opens afterwards, within the page', async () => {
         const first = mount(Hub, { name: 'Nora' });
@@ -230,13 +190,13 @@ describe('the hub before anything is opened', () => {
     });
 
     it('shows the retained choice and wires retry and discard after a cancelled save', async () => {
-        const state = reactive({ busy: true, pendingSave: true, savingScene: false, pendingLabel: 'Topics: Off', error: 'Save cancelled.' });
+        const state = reactive({ busy: true, pendingSave: true, savingScene: false, pendingLabel: 'Character Knowledge: Off', error: 'Save cancelled.' });
         const retrySceneOverrides = vi.fn();
         const discardSceneOverrides = vi.fn();
         const vm = mount(Hub, { name: 'Nora' }, { sceneOverridesState: () => state, retrySceneOverrides, discardSceneOverrides });
         vm.open = true;
         await nextTick();
-        expect(host.textContent).toContain('Pending: Topics: Off');
+        expect(host.textContent).toContain('Pending: Character Knowledge: Off');
         expect(host.textContent).toContain('Save cancelled.');
         const retry = [...host.querySelectorAll('button')].find(button => button.textContent === 'Save and apply');
         retry.click();

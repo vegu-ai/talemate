@@ -29,10 +29,8 @@ class AudienceIndexState:
     task: asyncio.Task | None = None
     documents: dict = field(default_factory=dict)
     documents_revision: int = -1
-    fact_sources: dict = field(default_factory=dict)
     dirty: set | None = None
     collection_revision: int = 0
-    topics: dict = field(default_factory=dict)
 
 
 class AudienceMemoryMixin:
@@ -53,25 +51,12 @@ class AudienceMemoryMixin:
         if groups.intersection(reinforcement_source_keys(scene)):
             # Generated details/world entries select the reinforcement's view too.
             groups.add(("authored",))
-        # Other signal listeners may already have pruned the live contributions.
-        groups.update(
-            group
-            for group, sources in self._audience_state(scene).fact_sources.items()
-            if groups.intersection(sources)
-        )
-        groups.update(
-            ("fact", fact.id, 0)
-            for fact in scene.world_state.facts.values()
-            if any(item.source.key in groups for item in fact.contributions)
-        )
         self.invalidate_audience_index(scene, groups=groups)
 
     def invalidate_audience_writes(self, documents, *, scene=None):
         groups = {("authored",)}
         for document in documents:
-            if document.get("meta", {}).get("typ") == "fact":
-                groups.add(("fact", document["id"], 0))
-            elif document.get("meta", {}).get("typ") == "history":
+            if document.get("meta", {}).get("typ") == "history":
                 groups.add(("summary", document["id"], 0))
         self.invalidate_audience_index(scene, groups=groups)
 
@@ -81,7 +66,6 @@ class AudienceMemoryMixin:
             return
         state = self._audience_state(scene)
         state.revision += 1
-        state.topics.clear()
         if groups is None or reconcile:
             state.dirty = None
         elif state.dirty is not None:
@@ -158,7 +142,6 @@ class AudienceMemoryMixin:
                 if state.db is not db:
                     state.db = db
                     state.collection_revision += 1
-                    state.topics.clear()
                     state.applied = -1
                     state.documents_revision = -1
                     state.fingerprints = None
@@ -177,31 +160,12 @@ class AudienceMemoryMixin:
                         state.dirty.update(removed)
                         if removed.intersection(reinforcement_source_keys(scene)):
                             state.dirty.add(("authored",))
-                        state.dirty.update(
-                            group
-                            for group, sources in state.fact_sources.items()
-                            if removed.intersection(sources)
-                        )
                         state.revision += 1
-                        state.topics.clear()
                 if state.applied == state.revision and state.fingerprints is not None:
                     return
                 revision = state.revision
                 dirty = state.dirty
                 updated = audience_documents(scene, groups=dirty, read=read)
-                if dirty is None:
-                    state.fact_sources.clear()
-                else:
-                    for group in dirty:
-                        state.fact_sources.pop(group, None)
-                state.fact_sources.update(
-                    (
-                        ("fact", fact.id, 0),
-                        tuple(item.source.key for item in fact.contributions),
-                    )
-                    for fact in scene.world_state.facts.values()
-                    if dirty is None or ("fact", fact.id, 0) in dirty
-                )
                 for document in updated.values():
                     meta = document["meta"]
                     meta.setdefault("source", "talemate")

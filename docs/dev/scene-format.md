@@ -54,7 +54,7 @@ process policy. Reconstruction validates its source before applying overrides, a
 
 ## Accepted player message dispatch
 
-A player character or narrator message enters history before deferred fact refresh.
+A player character or narrator message enters history before deferred revision cleanup.
 While its history processing is unfinished, its serialized message includes
 `history_dispatch_pending: true` and `history_dispatch_completed`, a list of
 completed listener and finalizer keys. The normal auto-save policy persists both;
@@ -78,7 +78,7 @@ delivery then raises `GenerationCancelled` without recording completion, so the
 message remains pending for retry. Node cooldown and unavailable graph state use
 this result; ordinary delivery still skips them without interrupting the signal.
 Perception and avatar finalizers have separate completion keys; the conversation
-listener also records synchronous entry-turn consumption before awaiting learning.
+listener also records synchronous entry-turn consumption before awaiting downstream hooks.
 These checkpoints preserve completed work across cancellation and saved reload;
 an interrupted receiver remains responsible for retrying its own unfinished work.
 

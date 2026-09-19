@@ -12,22 +12,19 @@ const canMakeReal = lift(source, 'canMakeReal', 'WorldState.vue');
 const characterKindTooltip = lift(source, 'characterKindTooltip', 'WorldState.vue');
 const knowledgeSource = readSource(fileURLToPath(new URL('../../src/components/WorldStateManagerCharacterKnowledge.vue', import.meta.url)));
 const handleKnowledgeMessage = lift(knowledgeSource, 'handleMessage', 'WorldStateManagerCharacterKnowledge.vue');
-const change = (character = 'Mara', target = 'F1', kind = 'grant') => ({
+const change = (character = 'Mara', target = 'lore-1', kind = 'grant') => ({
     character, target, kind, label: 'The key is under the mat.',
 });
 
 describe('mounted character Knowledge tab', () => {
-    it('requests fresh knowledge once for its own character in a batched event and drops the topic cache', () => {
-        const host = { character: { name: 'Mara' }, request: vi.fn(), requestTopicFacts: vi.fn(), openTopics: ['T1', 'T2'], topicFacts: { T1: [] } };
-        handleKnowledgeMessage.call(host, { type: 'knowledge_changed', data: { changes: [change(), change('Mara', 'F2')] } });
+    it('requests fresh knowledge once for its own character in a batched event', () => {
+        const host = { character: { name: 'Mara' }, request: vi.fn() };
+        handleKnowledgeMessage.call(host, { type: 'knowledge_changed', data: { changes: [change(), change('Mara', 'lore-2')] } });
         expect(host.request).toHaveBeenCalledOnce();
-        expect(host.topicFacts).toEqual({});
-        expect(host.requestTopicFacts).toHaveBeenCalledTimes(1);
-        expect(host.requestTopicFacts).toHaveBeenCalledWith(['T1', 'T2']);
     });
 
     it('ignores unrelated characters and an unselected tab', () => {
-        const host = { character: { name: 'Mara' }, request: vi.fn(), requestTopicFacts: vi.fn(), openTopics: [], topicFacts: {} };
+        const host = { character: { name: 'Mara' }, request: vi.fn() };
         handleKnowledgeMessage.call(host, { type: 'knowledge_changed', data: { changes: [change('Edwin')] } });
         host.character = null;
         handleKnowledgeMessage.call(host, { type: 'knowledge_changed', data: { changes: [change()] } });
@@ -122,7 +119,7 @@ describe('transient knowledge changes', () => {
     });
 
     it('aggregates entries per existing character and distinguishes revocations', () => {
-        notifications.add([change(), change(), change('Mara', 'F1', 'revoke'),
+        notifications.add([change(), change(), change('Mara', 'lore-1', 'revoke'),
             change('Edwin'), change('a stranger')], ['Mara', 'Edwin']);
         expect([...visible.keys()]).toEqual(['Mara', 'Edwin']);
         expect(visible.get('Mara').map((c) => c.kind)).toEqual(['grant', 'revoke']);
@@ -132,7 +129,7 @@ describe('transient knowledge changes', () => {
         notifications.add([change()], ['Mara']);
         vi.advanceTimersByTime(7999);
         expect(visible.has('Mara')).toBe(true);
-        notifications.add([change('Mara', 'F2')], ['Mara']);
+        notifications.add([change('Mara', 'lore-2')], ['Mara']);
         vi.advanceTimersByTime(7999);
         expect(visible.get('Mara')).toHaveLength(2);
         vi.advanceTimersByTime(1);
@@ -159,7 +156,7 @@ describe('transient knowledge changes', () => {
         notifications.add([change()], ['Mara']);
         notifications.pause('Mara', 'focus', true);
         vi.advanceTimersByTime(2000);
-        notifications.add([change('Mara', 'F2')], ['Mara']);
+        notifications.add([change('Mara', 'lore-2')], ['Mara']);
         vi.advanceTimersByTime(20000);
         expect(visible.get('Mara')).toHaveLength(2);
         notifications.pause('Mara', 'focus', false);

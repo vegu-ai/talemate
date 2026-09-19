@@ -15,7 +15,6 @@ import pydantic
 import structlog
 
 import talemate.save as save
-from talemate.knowledge.facts import prune_serialized_facts
 from talemate.scene_agent_settings import AGENT_SETTINGS_DIRNAME
 from talemate.tale_mate import Scene
 
@@ -67,11 +66,6 @@ def scene_export_json(scene: Scene, options: ExportOptions) -> str:
 
     if options.reset_progress:
         data["history"] = []
-        summarized_ids = {
-            ah.get("id")
-            for ah in data["archived_history"]
-            if ah.get("end") is not None and ah.get("id")
-        }
         data["archived_history"] = [
             {key: value for key, value in ah.items() if key != "knowledge"}
             for ah in data["archived_history"]
@@ -80,7 +74,6 @@ def scene_export_json(scene: Scene, options: ExportOptions) -> str:
         if data.get("knowledge") is not None:
             data["knowledge"] = {**data["knowledge"], "disclosures": []}
         data["layered_history"] = []
-        prune_serialized_facts(data["world_state"], summarized_ids, reset_history=True)
         data["world_state"].update(
             characters={},
             items={},

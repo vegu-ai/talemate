@@ -1,7 +1,6 @@
 """
-Retrieval (#394 part G): recency term, diversity threshold, similarity
-knowledge gate, entity lookup by id, cross-encoder rerank, the conversation
-opt-ins (the AI memory pass, the ledger) and the character.activated signal.
+Retrieval: recency, diversity, entity lookup, cross-encoder reranking,
+the optional AI memory pass and the character.activated signal.
 """
 
 from itertools import combinations
@@ -12,8 +11,6 @@ import pytest
 import numpy as np
 
 from talemate.agents.conversation.knowledge import (
-    normalize_fact_id,
-    parse_ledger,
     pass_items,
 )
 from talemate.agents.conversation.response_specs import MEMORY_PASS_SPEC
@@ -29,8 +26,8 @@ from talemate.character import Character
 from talemate.context import ActiveScene
 from talemate.instance import get_agent
 from talemate.knowledge.bucket import KnowledgeIndex
-from talemate.knowledge.chronology import DAY
-from talemate.knowledge.schema import Fact, KnowledgeEdge
+
+DAY = 86400
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage
 
@@ -72,7 +69,6 @@ class TestSettings:
         assert memory.retrieval_recency_weight == pytest.approx(0.1)
         assert memory.retrieval_mmr_threshold == pytest.approx(0.92)
         assert memory.retrieval_entity_lookup is True
-        assert memory.retrieval_similarity_gate is True
         assert memory.retrieval_rerank is False
 
     def test_reranker_follows_the_device(self, memory):
@@ -86,27 +82,6 @@ class TestSettings:
 
 
 class TestRecency:
-    async def test_weight_zero_keeps_distance_order_for_facts(self, scene, memory):
-        config(memory, "recency_weight", 0)
-        scene.ts = 100 * DAY
-        memory.table = [
-            doc("F1", "relevant old fact", 0.1, ts=70 * DAY, typ="fact", importance=3),
-            doc(
-                "F2",
-                "less relevant fresh fact",
-                0.2,
-                ts=99 * DAY,
-                typ="fact",
-                importance=3,
-            ),
-        ]
-        with ActiveScene(scene):
-            result = await memory.multi_query(["q"], iterate=5)
-        assert [item.raw for item in result] == [
-            "relevant old fact",
-            "less relevant fresh fact",
-        ]
-
     async def test_newer_result_outranks_a_slightly_closer_old_one(self, scene, memory):
         # A: 0.30 + 0.1 * 1.0 = 0.40, B: 0.35 + 0.1 * 0.0 = 0.35
         memory.table = [doc("A", "old", 0.30, ts=100), doc("B", "new", 0.35, ts=1000)]
@@ -154,9 +129,9 @@ class TestDiversity:
             candidates = [
                 doc(
                     f"random-{number}",
-                    f"Random fact {number}",
+                    f"Random history {number}",
                     ts=int(timestamp),
-                    typ="fact",
+                    typ="history",
                     embedding=vector.tolist(),
                 )
                 for number, (vector, timestamp) in enumerate(zip(vectors, timestamps))
@@ -172,38 +147,6 @@ class TestDiversity:
                 for left, right in combinations(result, 2)
             ), (trial, dimensions, threshold, [item.id for item in result])
 
-    @pytest.mark.parametrize("budget", [1, 2, 5])
-    async def test_fresher_fact_removes_all_beaten_slots(
-        self, scene, memory, monkeypatch, budget
-    ):
-        config(memory, "recency_weight", 0)
-        config(memory, "mmr_threshold", 0.92)
-        scene.ts = 100 * DAY
-
-        def fact(identity, degrees, timestamp):
-            angle = radians(degrees)
-            return doc(
-                identity,
-                identity,
-                ts=timestamp * DAY,
-                typ="fact",
-                importance=3,
-                embedding=[cos(angle), sin(angle)],
-            )
-
-        first = fact("first", 0, 60)
-        second = fact("second", 40, 70)
-        fresh = fact("fresh", 20, 99)
-        other = doc("other", "Other history", embedding=[-1.0, 0.0])
-        later = doc("later", "Later history", embedding=[0.0, -1.0])
-        memory.get = AsyncMock(side_effect=[[first, second, later], [other, fresh]])
-        monkeypatch.setattr("talemate.agents.memory.util.count_tokens", len)
-        with ActiveScene(scene):
-            result = await memory.multi_query(
-                ["q1", "q2"], iterate=5, max_tokens=budget
-            )
-        assert [item.id for item in result] == ["fresh", "other", "later"][:budget]
-
     async def test_fresh_replacement_must_clear_every_duplicate(self, scene, memory):
         config(memory, "recency_weight", 0)
         config(memory, "mmr_threshold", 0.92)
@@ -218,7 +161,7 @@ class TestDiversity:
             "F_fresh",
             "fresh fact",
             ts=99 * DAY,
-            typ="fact",
+            typ="history",
             importance=3,
             embedding=vector(20),
         )
@@ -226,7 +169,7 @@ class TestDiversity:
             "F_old",
             "old fact",
             ts=70 * DAY,
-            typ="fact",
+            typ="history",
             importance=3,
             embedding=vector(40),
         )
@@ -239,74 +182,6 @@ class TestDiversity:
             sum(a * b for a, b in zip(left.embedding, right.embedding)) <= 0.92
             for left, right in combinations(result, 2)
         )
-
-    @pytest.mark.parametrize("budget", [1, 2, 5])
-    async def test_fresher_fact_keeps_selected_slot_across_queries(
-        self, scene, memory, monkeypatch, budget
-    ):
-        config(memory, "recency_weight", 0)
-        config(memory, "mmr_threshold", 0.92)
-        scene.ts = 100 * DAY
-        old = doc(
-            "F_old",
-            "old wording",
-            0.1,
-            ts=70 * DAY,
-            typ="fact",
-            importance=3,
-            embedding=[1.0, 0.0, 0.0],
-        )
-        fresh = doc(
-            "F_fresh",
-            "fresh wording",
-            0.3,
-            ts=99 * DAY,
-            typ="fact",
-            importance=3,
-            embedding=[0.995, (1 - 0.995**2) ** 0.5, 0.0],
-        )
-        h1 = doc("H1", "history one", embedding=[0.0, 0.0, 1.0])
-        h2 = doc("H2", "history two", embedding=[0.0, 1.0, 0.0])
-        h3 = doc("H3", "history three", embedding=[-1.0, 0.0, 0.0])
-        memory.get = AsyncMock(side_effect=[[old, h1], [h2, h3, fresh]])
-        monkeypatch.setattr("talemate.agents.memory.util.count_tokens", len)
-        with ActiveScene(scene):
-            result = await memory.multi_query(
-                ["q1", "q2"], iterate=5, max_tokens=budget
-            )
-        assert [item.id for item in result] == ["F_fresh", "H2", "H1", "H3"][:budget]
-
-    @pytest.mark.parametrize("reverse", [False, True])
-    async def test_fresher_fact_wins_near_duplicate_across_queries(
-        self, scene, memory, reverse
-    ):
-        config(memory, "recency_weight", 0)
-        scene.ts = 100 * DAY
-        old = doc(
-            "F1",
-            "month-old event",
-            0.1,
-            ts=70 * DAY,
-            typ="fact",
-            importance=3,
-            embedding=[1.0, 0.0],
-        )
-        fresh = doc(
-            "F2",
-            "yesterday event",
-            0.2,
-            ts=99 * DAY,
-            typ="fact",
-            importance=1,
-            embedding=[0.99, 0.1],
-        )
-        queries = [[old], [fresh]]
-        memory.get = AsyncMock(
-            side_effect=list(reversed(queries)) if reverse else queries
-        )
-        with ActiveScene(scene):
-            result = await memory.multi_query(["q1", "q2"], iterate=5)
-        assert [item.id for item in result] == ["F2"]
 
     async def test_near_identical_result_is_skipped(self, scene, memory):
         config(memory, "recency_weight", 0)
@@ -338,182 +213,6 @@ class TestDiversity:
             assert await memory.multi_query(["q"], iterate=5) == ["first", "blind"]
 
 
-class TestSimilarityGate:
-    """
-    A result rejected for presence alone passes when a fact in Edwin's
-    bucket is a near-duplicate of it; revoked and hidden items
-    never do. Both settings sit at their defaults (0.15 / 0.92).
-    """
-
-    @pytest.fixture
-    def filtered(self, scene, memory):
-        scene.world_state.facts = {
-            "F1": Fact(id="F1", text="known fact", ts=10, present=["Edwin", "Mara"]),
-            "F9": Fact(id="F9", text="twin fact", ts=20, present=["Mara"]),
-            "F8": Fact(id="F8", text="far fact", ts=30, present=["Mara"]),
-            "F7": Fact(id="F7", text="revoked twin", ts=40, present=["Mara"]),
-        }
-        scene.world_state.knowledge = [
-            KnowledgeEdge(character="Edwin", target="F7", kind="revoke")
-        ]
-        memory.vectors = {
-            "F1": [1.0, 0.0],
-            "F9": [1.0, 0.1],
-            "F8": [1.0, 0.5],
-            "F7": [1.0, 0.05],
-            "e1": [1.0, 0.05],
-            "Mara.detail.secret": [1.0, 0.03],
-        }
-        config(memory, "recency_weight", 0)
-        get_agent("summarizer").actions["archive"].config[
-            "fact_dedupe_distance"
-        ].value = 0.15
-        mara = Character(name="Mara")
-        from talemate.knowledge.schema import EntryVisibility
-
-        mara.visibility = {"detail.secret": EntryVisibility(mode="owner")}
-        scene.character_data = {"Mara": mara, "Edwin": Character(name="Edwin")}
-        return KnowledgeIndex.from_scene(scene).retrieval_filter(scene, "Edwin")
-
-    def presence(self, id, text, distance, embedding, typ="fact", present='["Mara"]'):
-        return MemoryDocument(
-            text,
-            {"typ": typ, "presence_known": True, "present": present},
-            id,
-            text,
-            distance=distance,
-            embedding=embedding,
-        )
-
-    async def test_near_duplicate_of_a_known_fact_passes_and_survives_the_merge(
-        self, scene, memory, filtered
-    ):
-        memory.table = [
-            self.presence(
-                "F1", "known fact", 0.2, [1.0, 0.0], present='["Edwin", "Mara"]'
-            ),
-            self.presence("F9", "twin fact", 0.25, [1.0, 0.1]),
-            self.presence("F8", "far fact", 0.3, [1.0, 0.5]),
-            self.presence("e1", "history", 0.35, [1.0, 0.05], typ="history"),
-        ]
-        with ActiveScene(scene), patch("talemate.agents.memory.log.debug") as debug:
-            result = await memory.multi_query(["q"], iterate=5, filter=filtered)
-        assert [doc.raw for doc in result] == ["twin fact"]
-        debug.assert_any_call("similarity gate passed", id="e1")
-        assert str(result[0]) == "(16 Minutes and 20 Seconds ago) twin fact"
-        assert filtered.rejection(memory.table[1]) == "presence"
-
-    @pytest.mark.parametrize("reverse", [False, True])
-    @pytest.mark.parametrize("admitted_is_fresher", [False, True])
-    async def test_admitted_and_selected_facts_keep_only_the_fresher_copy(
-        self, scene, memory, filtered, reverse, admitted_is_fresher
-    ):
-        scene.world_state.facts["F1"].ts = 10 if admitted_is_fresher else 30
-        known = self.presence(
-            "F1", "known fact", 0.2, [1.0, 0.0], present='["Edwin", "Mara"]'
-        )
-        admitted = self.presence("F9", "twin fact", 0.25, [1.0, 0.1])
-        memory.table = [admitted, known] if reverse else [known, admitted]
-        with ActiveScene(scene), patch("talemate.agents.memory.log.debug") as debug:
-            result = await memory.multi_query(["q"], iterate=5, filter=filtered)
-        kept, dropped = ("F9", "F1") if admitted_is_fresher else ("F1", "F9")
-        assert [item.id for item in result] == [kept]
-        debug.assert_any_call("similarity gate passed", id="F9")
-        assert any(
-            call.args == ("diversity skip",)
-            and call.kwargs.get("id") == dropped
-            and call.kwargs.get("reason") == "duplicate"
-            for call in debug.call_args_list
-        )
-        assert len(memory.calls) == 1
-
-    async def test_revoked_and_hidden_are_never_rescued(self, scene, memory, filtered):
-        memory.table = [
-            self.presence("F7", "revoked twin", 0.2, [1.0, 0.05]),
-            MemoryDocument(
-                "secret",
-                {"typ": "details", "character": "Mara", "detail": "secret"},
-                "Mara.detail.secret",
-                "secret",
-                distance=0.24,
-                embedding=[1.0, 0.03],
-            ),
-            self.presence("F9", "twin fact", 0.25, [1.0, 0.1]),
-        ]
-        with ActiveScene(scene):
-            result = await memory.multi_query(["q"], iterate=5, filter=filtered)
-        assert [doc.raw for doc in result] == ["twin fact"]
-        assert filtered.rejection(memory.table[0]) == "revoke"
-        assert filtered.rejection(memory.table[1]) == "visibility"
-        assert filtered.gateable(memory.table[1]) is False
-
-    async def test_an_admission_is_remembered_by_the_diversity_check(
-        self, scene, memory, filtered
-    ):
-        memory.table = [
-            self.presence("F9", "twin fact", 0.25, [1.0, 0.1]),
-            # an ordinary near-copy of the admitted document, known to Edwin
-            self.presence(
-                "e2",
-                "copy of the twin",
-                0.3,
-                [1.0, 0.11],
-                typ="history",
-                present='["Edwin", "Mara"]',
-            ),
-        ]
-        with ActiveScene(scene):
-            result = await memory.multi_query(["q"], iterate=5, filter=filtered)
-        assert [doc.raw for doc in result] == ["twin fact"]
-
-    async def test_anchors_are_fetched_once_per_call(self, scene, memory, filtered):
-        memory.table = [self.presence("F9", "twin fact", 0.25, [1.0, 0.1])]
-        with (
-            ActiveScene(scene),
-            patch.object(
-                memory, "get_embeddings", wraps=memory.get_embeddings
-            ) as fetch,
-        ):
-            await memory.multi_query(["q1", "q2", "q3"], iterate=5, filter=filtered)
-        anchor_fetches = [c for c in fetch.await_args_list if "F1" in c.args[0]]
-        assert len(anchor_fetches) == 1
-
-    async def test_gate_off_keeps_the_filter_strict(self, scene, memory, filtered):
-        config(memory, "similarity_gate", False)
-        memory.table = [
-            self.presence(
-                "F1", "known fact", 0.2, [1.0, 0.0], present='["Edwin", "Mara"]'
-            ),
-            self.presence("F9", "twin fact", 0.25, [1.0, 0.1]),
-        ]
-        with ActiveScene(scene):
-            result = await memory.multi_query(["q"], iterate=5, filter=filtered)
-        assert [doc.raw for doc in result] == ["known fact"]
-
-    async def test_anchors_are_the_whole_bucket_not_the_query(
-        self, scene, memory, filtered
-    ):
-        # F1 is known but not among this query's results: the gate still admits F9
-        memory.table = [self.presence("F9", "twin fact", 0.25, [1.0, 0.1])]
-        with ActiveScene(scene):
-            result = await memory.multi_query(["q"], iterate=5, filter=filtered)
-        assert [doc.raw for doc in result] == ["twin fact"]
-
-    async def test_plain_callable_filter_has_no_gate(self, scene, memory, filtered):
-        memory.table = [self.presence("F9", "twin fact", 0.25, [1.0, 0.1])]
-        with ActiveScene(scene):
-            result = await memory.multi_query(["q"], iterate=5, filter=lambda d: False)
-        assert result == []
-
-    async def test_without_a_filter_nothing_is_gated(self, scene, memory, filtered):
-        memory.table = [
-            self.presence("F1", "known fact", 0.2, [1.0, 0.0]),
-            self.presence("F8", "far fact", 0.3, [0.0, 1.0]),
-        ]
-        with ActiveScene(scene):
-            assert len(await memory.multi_query(["q"], iterate=5)) == 2
-
-
 class FakeReranker:
     def __init__(self, device, error=None):
         self.device = device
@@ -528,18 +227,18 @@ class FakeReranker:
 
 
 class TestRerank:
-    async def test_reranker_owns_fact_order_and_budget(self, scene, memory):
+    async def test_reranker_owns_order_and_budget(self, scene, memory):
         config(memory, "recency_weight", 0)
         config(memory, "rerank", True)
         scene.ts = 100 * DAY
         memory.table = [
-            doc("F2", "fresh candidate", 0.1, ts=99 * DAY, typ="fact", importance=3),
+            doc("F2", "fresh candidate", 0.1, ts=99 * DAY, typ="history", importance=3),
             doc(
                 "F1",
                 "most relevant old candidate",
                 0.2,
                 ts=70 * DAY,
-                typ="fact",
+                typ="history",
                 importance=3,
             ),
         ]
@@ -893,32 +592,12 @@ class TestParsers:
         assert blocks["items"] == []
         assert blocks["answer"].lower().startswith("none")
 
-    def test_ledger(self):
-        assert parse_ledger(None) is None
-        assert parse_ledger("") is None
-        assert parse_ledger('{"Mara": ["F1", "F2"]}') == {"Mara": ["F1", "F2"]}
-        assert parse_ledger('{"Mara": "F1"}') == {"Mara": ["F1"]}
-        assert parse_ledger('{"Mara": ["F1"], "Edwin": 3}') == {"Mara": ["F1"]}
-        assert parse_ledger("garbage") is None
-        assert parse_ledger("[1]") is None
-        assert parse_ledger('```json\n{"Mara": ["F1"]}\n```') == {"Mara": ["F1"]}
-        # prose around the JSON: the recovery path
-        assert parse_ledger('Here is the ledger: {"Mara": ["F12"]} as asked') == {
-            "Mara": ["F12"]
-        }
-        # ids are normalised
-        assert parse_ledger('{"Mara": [12, "f3", "[F4]", " F5 "]}') == {
-            "Mara": ["F12", "F3", "F4", "F5"]
-        }
-        assert normalize_fact_id("(f7)") == "F7"
-
 
 @pytest.fixture
 def opt_ins(scene):
     conversation = get_agent("conversation")
     conversation.actions["character_knowledge"].enabled = True
-    for key in ("memory_pass", "ledger"):
-        conversation.actions["character_knowledge"].config[key].value = False
+    conversation.actions["character_knowledge"].config["memory_pass"].value = False
     conversation.actions["character_knowledge"].config[
         "perspective_filter"
     ].value = True
@@ -949,7 +628,6 @@ class TestMemoryPass:
     def test_off_by_default(self, scene):
         conversation = get_agent("conversation")
         assert conversation.knowledge_memory_pass is False
-        assert conversation.knowledge_ledger is False
 
     async def test_no_request_when_off(self, scene, opt_ins):
         conversation, alice = opt_ins
@@ -1147,129 +825,3 @@ class TestMemoryPass:
             assert "Alice: Hello." in text
             assert '<ITEM n="3">' in text
             assert text.rstrip().endswith("<ITEMS>")
-
-
-class TestLedger:
-    @pytest.fixture
-    def facts(self, scene):
-        scene.world_state.facts = {
-            "F1": Fact(id="F1", text="Alice found the key.", ts=10, present=["Alice"]),
-            "F2": Fact(id="F2", text="The cellar floods.", ts=20, present=["Alice"]),
-            "F3": Fact(id="F3", text="Everyone saw this.", ts=30, present=None),
-        }
-        return scene.world_state.facts
-
-    async def test_learned_facts_become_inferred_grants(self, scene, opt_ins, facts):
-        conversation, alice = opt_ins
-        enable(conversation, "ledger")
-        with (
-            ActiveScene(scene),
-            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
-        ):
-            request.return_value = ("", {"ledger": '{"Edwin": ["F1", "F9"]}'})
-            learned = await conversation.record_learned_facts(
-                alice, "Alice: I found the key under the mat."
-            )
-        assert learned == {"Edwin": ["F1"]}
-        vars = request.call_args.kwargs["vars"]
-        assert vars["speaker"] == "Alice"
-        assert list(vars["absence"]) == ["Edwin"]
-        assert [f.id for f in vars["absence"]["Edwin"]] == ["F2", "F1"]
-        assert vars["recent_lines"] == []
-        assert request.call_args.args[0] == "conversation.knowledge-ledger"
-        edges = scene.world_state.knowledge
-        assert len(edges) == 1
-        assert (edges[0].character, edges[0].target, edges[0].kind) == (
-            "Edwin",
-            "F1",
-            "grant",
-        )
-        assert edges[0].source == "inferred" and edges[0].ts == 500
-        assert facts["F1"].known_by["Edwin"] == "inferred"
-
-    async def test_the_new_line_is_not_repeated_in_the_recent_lines(
-        self, scene, opt_ins, facts
-    ):
-        conversation, alice = opt_ins
-        enable(conversation, "ledger")
-        scene.history = [
-            CharacterMessage(message="Edwin: Evening."),
-            CharacterMessage(message="Alice: I found the key under the mat."),
-        ]
-        with (
-            ActiveScene(scene),
-            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
-        ):
-            request.return_value = ("", {"ledger": "{}"})
-            await conversation.record_learned_facts(
-                alice, "Alice: I found the key under the mat."
-            )
-        assert request.call_args.kwargs["vars"]["recent_lines"] == ["Edwin: Evening."]
-
-    async def test_off_makes_no_request(self, scene, opt_ins, facts):
-        conversation, alice = opt_ins
-        with (
-            ActiveScene(scene),
-            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
-        ):
-            assert await conversation.record_learned_facts(alice, "Alice: hi") == {}
-        request.assert_not_called()
-
-    async def test_uses_the_configured_near_duplicate_distance(
-        self, scene, opt_ins, facts
-    ):
-        conversation, alice = opt_ins
-        enable(conversation, "ledger")
-        get_agent("summarizer").actions["archive"].config[
-            "fact_dedupe_distance"
-        ].value = 0.3
-        try:
-            with (
-                ActiveScene(scene),
-                patch(
-                    "talemate.agents.conversation.knowledge.absence_facts",
-                    AsyncMock(return_value=[]),
-                ) as absence,
-            ):
-                await conversation.record_learned_facts(alice, "Alice: hi")
-            assert absence.call_args.kwargs["dedupe_distance"] == 0.3
-        finally:
-            get_agent("summarizer").actions["archive"].config[
-                "fact_dedupe_distance"
-            ].value = 0.15
-
-    async def test_skipped_when_the_listeners_know_everything(
-        self, scene, opt_ins, facts
-    ):
-        conversation, alice = opt_ins
-        enable(conversation, "ledger")
-        for fact in facts.values():
-            fact.present = None
-        with (
-            ActiveScene(scene),
-            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
-        ):
-            assert await conversation.record_learned_facts(alice, "Alice: hi") == {}
-        request.assert_not_called()
-
-    async def test_unreadable_answer_makes_no_grants(self, scene, opt_ins, facts):
-        conversation, alice = opt_ins
-        enable(conversation, "ledger")
-        with (
-            ActiveScene(scene),
-            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
-        ):
-            request.return_value = ("", {"ledger": "no"})
-            assert await conversation.record_learned_facts(alice, "Alice: hi") == {}
-        assert scene.world_state.knowledge == []
-
-    async def test_speaker_alone_makes_no_request(self, scene, opt_ins, facts):
-        conversation, alice = opt_ins
-        enable(conversation, "ledger")
-        scene.active_characters = ["Alice"]
-        with (
-            ActiveScene(scene),
-            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
-        ):
-            assert await conversation.record_learned_facts(alice, "Alice: hi") == {}
-        request.assert_not_called()

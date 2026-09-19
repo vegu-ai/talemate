@@ -93,7 +93,6 @@ class MessageVersion(pydantic.BaseModel):
 
 
 class RevisionIndexRepair(pydantic.BaseModel):
-    fact_ids: list[str] = pydantic.Field(default_factory=list)
     archive_ids: list[str] = pydantic.Field(default_factory=list)
 
 
@@ -106,6 +105,31 @@ class MessageRevisionState(pydantic.BaseModel):
     phase_receipts: dict[str, str] = pydantic.Field(default_factory=dict)
     refresh_journal: dict | None = None
     pending_index_repair: RevisionIndexRepair | None = None
+
+    @pydantic.model_validator(mode="before")
+    @classmethod
+    def discard_obsolete_fact_work(cls, data):
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        data["completed_features"] = tuple(
+            feature
+            for feature in data.get("completed_features", ())
+            if feature == "perceptions"
+        )
+        data["phase_receipts"] = {
+            key: value
+            for key, value in data.get("phase_receipts", {}).items()
+            if key in ("perceptions", "refresh:perceptions")
+        }
+        journal = data.get("refresh_journal") or {}
+        if any(
+            key in journal.get(group, {})
+            for group in ("baseline", "writes")
+            for key in ("facts", "edges")
+        ):
+            data["refresh_journal"] = None
+        return data
 
     @pydantic.model_validator(mode="after")
     def defer_interrupted_work(self):

@@ -21,11 +21,11 @@ function mount(entry = {}, props = {}) {
     const Empty = defineComponent({ setup: () => () => null });
     const Entry = { ...HistoryEntry, components: {
         ...HistoryEntry.components, ContextualGenerate: Empty, ConfirmActionInline: Empty,
-        WorldStateManagerFactRow: Empty, EntryVisibilitySelect: KnownBy,
+        EntryVisibilitySelect: KnownBy,
     } };
     // the History tab owns the entry and the refusal count
     const state = reactive({
-        entry: { id: 'S1', layer: 0, index: 0, text: 'The war ended.', ts: 0, start: null, end: null, facts: [], ...entry },
+        entry: { id: 'S1', layer: 0, index: 0, text: 'The war ended.', ts: 0, start: null, end: null, ...entry },
         knownByRefusals: 0,
     });
     let vm;

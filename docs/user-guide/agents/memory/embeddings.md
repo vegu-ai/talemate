@@ -99,10 +99,6 @@ A multiplier applied to **Distance** when deciding whether a result is a match. 
 !!! info "Also tunable from the Context Database"
     The [Context Database](/talemate/user-guide/world-editor/context-db/#search-strictness) page exposes this same value as the **Search Strictness** slider, making it easy to adjust on the fly while testing searches. Changes made in either place are saved to the same preset.
 
-##### Topic Threshold
-
-The cosine similarity at which two facts share a [topic](/talemate/user-guide/agents/memory/settings/#topics), and the least similarity a retrieval query needs to the nearest topic for that topic to contribute. The useful value depends on the model, and 0.50 was measured for `all-MiniLM-L6-v2` only (facts about the same thing score around 0.5 to 0.65 against each other); the other shipped presets inherit that number as a starting point, not a measurement. The threshold compares a fact with the topic's first fact, so it is the same pairwise quantity. When every fact lands in its own topic or all of them in one, the memory agent logs a warning naming the direction to move. The Memory agent's Topics group can override it for every preset at once.
-
 ##### Distance Function
 
 The function to use for calculating the distance. The default is `Cosine Similarity`, but you can also use `Inner Product` or `Squared L2`. The selected embedding may require a specific distance function, so if you find low accuracy, try changing this value.

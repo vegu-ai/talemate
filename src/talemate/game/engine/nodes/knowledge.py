@@ -8,7 +8,6 @@ from talemate.game.engine.nodes.data import ListCollector
 from talemate.game.engine.nodes.string import AdvancedFormat
 from talemate.instance import get_agent
 from talemate.knowledge.mode import character_knowledge_enabled
-from talemate.knowledge.perspectives import source_reference
 from talemate.knowledge.entry import (
     VISIBILITY_KINDS,
     character_knowledge_report,
@@ -18,149 +17,15 @@ from talemate.knowledge.entry import (
     sheet_visibility_key,
     resolve_character_names,
 )
-from talemate.knowledge.graph import (
-    current_state,
-    facts_about,
-    relationship_timeline,
-)
 from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge
-from talemate.knowledge.chronology import fact_chronology, ranked_facts, render_fact
 
-from .core import GraphState, InputValueError, Node, PropertyField, TYPE_CHOICES
+from .core import GraphState, InputValueError, Node, PropertyField
 from .registry import register
 
 if TYPE_CHECKING:
     from talemate.character import Character
 
 log = structlog.get_logger("talemate.game.engine.nodes.knowledge")
-
-TYPE_CHOICES.extend(["knowledge/fact"])
-
-
-def _fact_dicts(facts) -> list[dict]:
-    return [fact.model_dump() for fact in facts]
-
-
-@register("knowledge/FactsAbout")
-class FactsAbout(Node):
-    """
-    Facts selected about an entity, ranked by importance and recency.
-
-    Inputs:
-    - entity: name of the entity
-    - character: optional, only the facts this character knows
-
-    Outputs:
-    - facts: list of fact dicts
-    - text: selected facts with relative time markers, one line per fact
-    """
-
-    def __init__(self, title="Facts About", **kwargs):
-        super().__init__(title=title, **kwargs)
-
-    def setup(self):
-        self.add_input("entity", socket_type="str")
-        self.add_input("character", socket_type="str", optional=True)
-        self.add_output("facts", socket_type="list")
-        self.add_output("text", socket_type="str")
-
-    async def run(self, state: GraphState):
-        scene = active_scene.get()
-        entity = self.require_input("entity")
-        character = self.normalized_input_value("character")
-        facts = facts_about(scene, entity, character=character or None)
-        self.set_output_values(
-            {
-                "facts": _fact_dicts(facts),
-                "text": "\n".join(render_fact(scene, f) for f in facts),
-            }
-        )
-
-
-@register("knowledge/CurrentState")
-class CurrentState(Node):
-    """
-    The newest fact about an entity that no later accessible fact supersedes.
-
-    Inputs:
-    - entity: name of the entity
-    - character: perspective; omitted queries global author state
-
-    Outputs:
-    - fact: the fact dict, or None
-    - text: the fact with a relative time marker, empty when chronology excludes it
-    """
-
-    def __init__(self, title="Current State", **kwargs):
-        super().__init__(title=title, **kwargs)
-
-    def setup(self):
-        self.add_input("entity", socket_type="str")
-        self.add_input("character", socket_type="str", optional=True)
-        self.add_output("fact", socket_type="knowledge/fact")
-        self.add_output("text", socket_type="str")
-
-    async def run(self, state: GraphState):
-        scene = active_scene.get()
-        fact = current_state(
-            scene,
-            self.require_input("entity"),
-            character=self.normalized_input_value("character") or None,
-        )
-        self.set_output_values(
-            {
-                "fact": fact.model_dump() if fact else None,
-                "text": render_fact(scene, fact, include_id=False)
-                if fact and fact_chronology(scene, fact).eligible
-                else "",
-            }
-        )
-
-
-@register("knowledge/RelationshipTimeline")
-class RelationshipTimeline(Node):
-    """
-    Facts that mention both entities. Raw facts retain oldest-first order;
-    text applies the chronology score and cut.
-
-    Inputs:
-    - a: first entity
-    - b: second entity
-    - character: perspective; omitted queries global author state
-
-    Outputs:
-    - facts: list of fact dicts
-    - text: selected facts with relative time markers, ranked by importance and recency
-    """
-
-    def __init__(self, title="Relationship Timeline", **kwargs):
-        super().__init__(title=title, **kwargs)
-
-    def setup(self):
-        self.add_input("a", socket_type="str")
-        self.add_input("b", socket_type="str")
-        self.add_input("character", socket_type="str", optional=True)
-        self.add_output("facts", socket_type="list")
-        self.add_output("text", socket_type="str")
-
-    async def run(self, state: GraphState):
-        scene = active_scene.get()
-        character = self.normalized_input_value("character") or None
-        facts = relationship_timeline(
-            scene,
-            self.require_input("a"),
-            self.require_input("b"),
-            character=character,
-        )
-        self.set_output_values(
-            {
-                "facts": _fact_dicts(facts),
-                "text": "\n".join(
-                    render_fact(scene, f)
-                    for f in ranked_facts(scene, facts, character=character)
-                ),
-            }
-        )
 
 
 def _character_name(value: "str | Character") -> str:
@@ -309,20 +174,13 @@ class GrantKnowledge(_EdgeNode):
             )
         except ValueError as exc:
             raise InputValueError(self, "target", str(exc)) from exc
-        status = await get_agent("summarizer").rebuild_supported_facts(
-            scene, [source_reference(scene, "disclosure", disclosure.id)]
-        )
+        await get_agent("memory").ensure_audience_index(scene)
         self.set_output_values(
             {
                 "state": self.normalized_input_value("state"),
                 "edge": None,
                 "disclosure": disclosure.model_dump(),
-                "text": f"Established for {', '.join(disclosure.audience)}: {disclosure.text}"
-                + (
-                    " (Fact extraction failed; the disclosure is saved.)"
-                    if status == "failed"
-                    else ""
-                ),
+                "text": f"Established for {', '.join(disclosure.audience)}: {disclosure.text}",
             }
         )
 
@@ -504,9 +362,8 @@ class SetEntryVisibility(Node):
 class CharacterKnowledge(Node):
     """
     Report one character's knowledge without an LLM request: grants with entry
-    labels, accessible restricted entries and recorded-fact coverage. Legacy
-    reports also include revokes and the awareness line; perception reports
-    include disclosures and omit revokes and topic-awareness assertions.
+    labels and accessible restricted entries. Legacy
+    reports also include revokes; perception reports include disclosures.
 
     Inputs:
 

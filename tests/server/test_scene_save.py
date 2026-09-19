@@ -164,7 +164,9 @@ async def test_first_save_then_hub_override_survives_reload(
             "patch": {
                 "set": {
                     "actions": {
-                        "character_knowledge": {"config": {"ledger": {"value": True}}}
+                        "character_knowledge": {
+                            "config": {"memory_pass": {"value": True}}
+                        }
                     }
                 },
                 "clear": [],
@@ -179,7 +181,9 @@ async def test_first_save_then_hub_override_survives_reload(
     fresh = persistence_scene_factory()
     await load_scene_from_data(fresh, data, name=str(saved_path))
     assert (
-        fresh.agent_overrides.get_value("conversation", "character_knowledge", "ledger")
+        fresh.agent_overrides.get_value(
+            "conversation", "character_knowledge", "memory_pass"
+        )
         is True
     )
     assert instance.get_agent("conversation").scene is fresh
@@ -305,7 +309,7 @@ async def test_hub_changes_on_stock_scene_keep_its_save_identity(stock_scene):
             **request,
             "request_id": "link",
             "filename": "agent-settings.json",
-            "patch": _knowledge_patch("ledger"),
+            "patch": _knowledge_patch("memory_pass"),
         }
     )
     assert messages[-1] == {
@@ -329,7 +333,7 @@ async def test_hub_changes_on_stock_scene_keep_its_save_identity(stock_scene):
     knowledge = stored["agents"]["conversation"]["actions"]["character_knowledge"][
         "config"
     ]
-    assert knowledge["ledger"]["value"] is True
+    assert knowledge["memory_pass"]["value"] is True
     assert knowledge["memory_pass"]["value"] is True
 
     await plugin.handle(payload)
@@ -358,7 +362,9 @@ async def test_stock_scene_link_goes_into_a_save_as_copy(
         "agent_type": "conversation",
         "filename": "custom.json",
         "override": {
-            "actions": {"character_knowledge": {"config": {"ledger": {"value": True}}}}
+            "actions": {
+                "character_knowledge": {"config": {"memory_pass": {"value": True}}}
+            }
         },
     }
 
@@ -389,7 +395,9 @@ async def test_stock_scene_link_goes_into_a_save_as_copy(
     await load_scene_from_data(fresh, copy_data, name=str(copy_path))
     assert fresh.agent_settings_file == "custom.json"
     assert (
-        fresh.agent_overrides.get_value("conversation", "character_knowledge", "ledger")
+        fresh.agent_overrides.get_value(
+            "conversation", "character_knowledge", "memory_pass"
+        )
         is True
     )
 
@@ -412,7 +420,7 @@ async def test_hub_change_on_opted_out_stock_scene_is_refused(stock_scene):
         "agent_type": "conversation",
         "scene_identity": str(scene.id),
         "filename": "agent-settings.json",
-        "patch": _knowledge_patch("ledger"),
+        "patch": _knowledge_patch("memory_pass"),
     }
 
     await overrides.handle({**request, "request_id": "hub"})
@@ -621,7 +629,7 @@ async def test_first_link_batch_succeeds_and_lists_file_for_stock_project(
     overrides = AgentConfigPlugin(plugin.websocket_handler)
     edits = {
         "conversation": {
-            "character_knowledge": {"config": {"ledger": {"value": True}}}
+            "character_knowledge": {"config": {"memory_pass": {"value": True}}}
         },
         "memory": {"retrieval": {"config": {"recency_weight": {"value": 0.3}}}},
     }

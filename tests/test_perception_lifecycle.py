@@ -37,7 +37,6 @@ def answer(alice="Alice says hello.", bob="Bob hears Alice say hello."):
                     "audience": [name],
                     "knowledge_ids": [],
                     "passage_ids": [],
-                    "evidence_spans": [],
                     "status": "ready" if text else "omitted",
                     "text": text,
                 }
@@ -54,7 +53,6 @@ def result(text=None):
         for view in data.get("views", []):
             view.setdefault("knowledge_ids", [])
             view.setdefault("passage_ids", [])
-            view.setdefault("evidence_spans", [])
         text = json.dumps(data)
     except (ValueError, AttributeError):
         pass
@@ -392,18 +390,6 @@ def test_prompt_context_separates_reader_from_prior_knowledge(setup):
     context = perception_context(scene, message)
     assert "Secret thought" in context["prior_physical_context"][0]["text"]
     assert context["cast"][1]["established_knowledge"][0]["text"] == "Public hello."
-
-
-def test_new_mode_replaces_legacy_ledger(setup):
-    scene, summarizer, request = setup
-    conversation = get_agent("conversation")
-    scene.actors = [
-        Actor(character, conversation) for character in scene.character_data.values()
-    ]
-    conversation.actions["character_knowledge"].config["ledger"].value = True
-    assert conversation.knowledge_ledger is False
-    scene.knowledge_eligibility = "legacy"
-    assert conversation.knowledge_ledger is True
 
 
 @pytest.mark.asyncio
@@ -857,7 +843,6 @@ async def test_relevant_cast_and_scaled_answer_budget(setup):
                         "text": "The passage.",
                         "knowledge_ids": [],
                         "passage_ids": [],
-                        "evidence_spans": [],
                     }
                     for name in names
                 ]
@@ -978,7 +963,6 @@ async def test_cited_history_has_bounded_rebuild_and_one_index_per_scan(
                     "text": "An observation.",
                     "knowledge_ids": [known[-1]["id"]] if known else [],
                     "passage_ids": [],
-                    "evidence_spans": [],
                 }
             )
         return result(json.dumps({"views": views}))
@@ -1132,53 +1116,6 @@ def test_depth_limit_is_preserved_by_shared_freshness_cache(setup):
     assert new.knowledge is None
 
 
-async def test_public_mode_replaces_learning_even_with_legacy_ledger_enabled(
-    setup, monkeypatch
-):
-    scene, summarizer, request = setup
-    conversation = get_agent("conversation")
-    scene.actors = [
-        Actor(character, conversation) for character in scene.character_data.values()
-    ]
-    conversation.actions["character_knowledge"].config["ledger"].value = True
-    ledger = AsyncMock()
-    monkeypatch.setattr(conversation, "record_learned_facts", ledger)
-    message = CharacterMessage(message="Alice: Hello.", source="player")
-    await scene.push_history(message)
-    event = type("Event", (), {"scene": scene, "message": message})()
-    await conversation.on_new_message(event)
-    await summarizer.ensure_perceptions(scene)
-    assert request.await_count == 1
-    ledger.assert_not_awaited()
-    assert await conversation.absence_block(scene.character_data["Bob"]) == []
-    assert await conversation.awareness_line(scene.character_data["Bob"]) is None
-    public = conversation.config_options(agent=conversation)["actions"][
-        "character_knowledge"
-    ]
-    assert set(public["config"]) == {
-        "memory_pass",
-    }
-    assert (
-        "similarity_gate"
-        not in get_agent("memory").config_options(agent=get_agent("memory"))["actions"][
-            "retrieval"
-        ]["config"]
-    )
-    scene.knowledge_eligibility = "legacy"
-    legacy = conversation.config_options(agent=conversation)["actions"][
-        "character_knowledge"
-    ]
-    assert legacy["config"]["ledger"]["value"] is True
-    assert (
-        "similarity_gate"
-        in get_agent("memory").config_options(agent=get_agent("memory"))["actions"][
-            "retrieval"
-        ]["config"]
-    )
-    await conversation.on_new_message(event)
-    ledger.assert_awaited_once()
-
-
 @pytest.mark.parametrize(
     "agent_name,action,hidden",
     [
@@ -1187,14 +1124,8 @@ async def test_public_mode_replaces_learning_even_with_legacy_ledger_enabled(
             "character_knowledge",
             {
                 "perspective_filter",
-                "absence_block",
-                "absence_limit",
-                "absence_window",
-                "awareness_line",
-                "ledger",
             },
         ),
-        ("memory", "retrieval", {"similarity_gate"}),
     ],
 )
 async def test_status_payload_hides_retired_controls_and_restores_legacy(

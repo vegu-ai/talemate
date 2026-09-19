@@ -18,7 +18,6 @@ from chromadb.config import Settings
 import talemate.events as events
 from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.mode import character_knowledge_enabled
-from talemate.knowledge.topics import known_bucket
 from talemate.knowledge.memory import audience_where
 from talemate.agents.memory.audiences import AudienceMemoryMixin
 import talemate.util as util
@@ -28,7 +27,6 @@ from talemate.agents.base import (
     Agent,
     AgentAction,
     AgentActionConfig,
-    AgentActionNote,
     AgentDetail,
     set_processing,
 )
@@ -42,13 +40,6 @@ from talemate.agents.memory.exceptions import (
     SetDBError,
 )
 from talemate.agents.memory.schema import MemoryDocument
-from talemate.knowledge.chronology import (
-    fact_timestamp,
-    memory_fact,
-    ranked_facts,
-    ranked_fact_documents,
-    render_fact_document,
-)
 
 from talemate.agents.memory.rerank import (
     CrossEncoderReranker,
@@ -75,8 +66,6 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger("talemate.agents.memory")
 
-# how many of the nearest topic's facts join a query's results
-TOPIC_FACTS_PER_QUERY = 3
 OPENROUTER_EMBEDDINGS_BASE_URL = "https://openrouter.ai/api/v1"
 
 HostedEmbeddingsProvider = Literal["OpenAI", "OpenRouter"]
@@ -140,40 +129,6 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                     ),
                 },
             ),
-            "topics": AgentAction(
-                enabled=True,
-                container=True,
-                can_be_disabled=True,
-                icon="mdi-shape-outline",
-                label="Topics",
-                description="Group recorded facts by subject to show each character's knowledge and find related memories. Turn on for the Known facts by topic table and topic-based memory retrieval; no extra text-generation request. Standard mode can also use the Conversation agent's Topic knowledge overview.",
-                config={
-                    "recluster_step": AgentActionConfig(
-                        type="number",
-                        label="Facts between topic updates",
-                        description="Regroup topics when the fact count changes by this many. Lower for more frequent updates; raise to regroup less often. Editing, deleting or regenerating facts, or changing the embedding preset, updates topics immediately.",
-                        value=20,
-                        min=1,
-                        max=200,
-                        step=1,
-                    ),
-                    "similarity_threshold": AgentActionConfig(
-                        type="number",
-                        label="Topic similarity",
-                        description="Set how closely facts must match to share a topic, and how closely a topic must match a memory search. Raise for tighter, smaller groups; lower for broader groups. Set to 0 to use the embedding preset.",
-                        note_on_value={
-                            0: AgentActionNote(
-                                color="primary",
-                                text="Use embedding preset: 0 uses its Topic Threshold instead of a custom value.",
-                            ),
-                        },
-                        value=0,
-                        min=0,
-                        max=0.99,
-                        step=0.01,
-                    ),
-                },
-            ),
             "retrieval": AgentAction(
                 enabled=True,
                 container=True,
@@ -205,12 +160,6 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                         description="When the recent lines name a character who is not in the scene (a name with a capital must appear as written), fetch that character's description from the memory store and add it ahead of the similarity results.",
                         value=True,
                     ),
-                    "similarity_gate": AgentActionConfig(
-                        type="bool",
-                        label="Match known facts",
-                        description="Allow a memory of an event the character missed when it closely matches a fact they know. Turn on to recognize retold information; turn off for stricter access filtering. Uses the Summarizer's Fact matching tolerance and cannot override entry visibility, a Never Learn rule or an Unlearn.",
-                        value=True,
-                    ),
                     "rerank": AgentActionConfig(
                         type="bool",
                         label="Cross-encoder rerank",
@@ -231,8 +180,6 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         self._db_generation = 0
         self._db_lock = threading.Lock()
         self._reranker: CrossEncoderReranker | None = None
-        # topic centroids (unit vectors) by topic id; rebuilt on load
-        self.topic_centroids: dict[str, np.ndarray] = {}
 
         async_signals.get("config.changed").connect(self.on_config_changed)
 
@@ -358,240 +305,8 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         return bool(self.resolve_config("retrieval", "entity_lookup"))
 
     @property
-    def sanitized_action_config(self):
-        config = super().sanitized_action_config
-        if (
-            character_knowledge_enabled(getattr(self, "scene", None))
-            and "retrieval" in config
-        ):
-            config["retrieval"]["config"].pop("similarity_gate", None)
-        return config
-
-    @property
-    def retrieval_similarity_gate(self) -> bool:
-        return bool(self.resolve_config("retrieval", "similarity_gate"))
-
-    @property
     def retrieval_rerank(self) -> bool:
         return bool(self.resolve_config("retrieval", "rerank"))
-
-    # topics
-
-    @property
-    def topics_enabled(self) -> bool:
-        return self.resolve_enabled("topics")
-
-    @property
-    def topics_recluster_step(self) -> int:
-        return int(self.resolve_config("topics", "recluster_step"))
-
-    @property
-    def topics_similarity_threshold(self) -> float:
-        """The Topics setting when set (> 0), else the embedding preset's model-dependent value."""
-        value = float(self.resolve_config("topics", "similarity_threshold") or 0)
-        if value > 0:
-            return value
-        preset = self.embeddings_config
-        if preset is None:
-            return 0.5
-        return float(preset.topic_threshold)
-
-    async def rebuild_topic_centroids(self, scene):
-        """Centroids from the stored fact vectors of every topic's members."""
-        topics = scene.world_state.topics
-        ids = [i for topic in topics.values() for i in topic.fact_ids]
-        centroids: dict[str, np.ndarray] = {}
-        if ids and self.ready:
-            vectors = await self.get_embeddings(ids)
-            for topic in topics.values():
-                members = [vectors[i] for i in topic.fact_ids if i in vectors]
-                if not members:
-                    continue
-                units = []
-                for vector in members:
-                    vector = np.asarray(vector, dtype=float)
-                    norm = np.linalg.norm(vector)
-                    units.append(vector / norm if norm > 0 else vector)
-                centroid = np.mean(np.stack(units), axis=0)
-                norm = np.linalg.norm(centroid)
-                centroids[topic.id] = centroid / norm if norm > 0 else centroid
-        self.topic_centroids = centroids
-        return centroids
-
-    async def embed_text(self, text: str) -> np.ndarray | None:
-        """The query embedding, or None when no embedding function is set."""
-        try:
-            embed_fn = self.embedding_function
-        except RuntimeError:
-            return None
-        vectors = await asyncio.to_thread(embed_fn, [text])
-        if vectors is None or len(vectors) == 0:
-            return None
-        vector = np.asarray(vectors[0], dtype=float)
-        norm = np.linalg.norm(vector)
-        return vector / norm if norm > 0 else vector
-
-    def nearest_topic(self, vector: np.ndarray) -> str | None:
-        """The topic whose centroid is closest to the vector, at or above the threshold."""
-        if not self.topic_centroids or vector is None:
-            return None
-        best_id, best = None, self.topics_similarity_threshold
-        for topic_id, centroid in self.topic_centroids.items():
-            score = float(np.dot(vector, centroid))
-            if score >= best:
-                best_id, best = topic_id, score
-        return best_id
-
-    async def _topic_first(
-        self, query: str, accepted: list, filter, *, viewer=None, ranking_viewer=None
-    ) -> list:
-        """
-        The nearest topic's highest-scoring eligible facts that the similarity search
-        did not return, ahead of that query's results.
-        """
-        if viewer is not None:
-            return await self._audience_topic_first(query, accepted, filter, viewer)
-        if not self.topics_enabled or not self.topic_centroids or not self.scene:
-            return []
-        topic_id = self.nearest_topic(await self.embed_text(query))
-        if topic_id is None:
-            return []
-        topic = self.scene.world_state.topics.get(topic_id)
-        if topic is None:
-            return []
-        facts = self.scene.world_state.facts
-        seen = {getattr(doc, "id", None) for doc in accepted}
-        from talemate.knowledge.revision_browsing import fact_current
-
-        candidates = {
-            i: facts[i]
-            for i in topic.fact_ids
-            if i in facts and i not in seen and fact_current(self.scene, facts[i])
-        }
-        visible = (
-            {fact.id: fact for fact in known_bucket(self.scene, ranking_viewer)}
-            if ranking_viewer is not None
-            and any(fact.supersedes for fact in candidates.values())
-            else None
-        )
-        predecessors = {
-            identity: fact
-            for identity, fact in candidates.items()
-            if visible is None or identity in visible
-        }
-        members = ranked_facts(
-            self.scene,
-            candidates.values(),
-            character=ranking_viewer,
-            superseders=visible.values() if visible is not None else None,
-            predecessors=predecessors,
-        )
-        selected = {f.id: f for f in members[:TOPIC_FACTS_PER_QUERY]}
-        ids = list(selected)
-        log.debug("topic first matched", topic=topic_id, candidates=ids)
-        if not ids:
-            return []
-        documents = await self.get_document(ids)
-        found = [documents[i] for i in ids if i in documents]
-        if filter is not None:
-            found = [doc for doc in found if filter(doc)]
-        log.debug("topic first", topic=topic_id, added=[d.id for d in found])
-        return [
-            render_fact_document(
-                self.scene,
-                doc,
-                fact=selected[doc.id],
-                predecessor=predecessors.get(selected[doc.id].supersedes),
-            )
-            for doc in found
-        ]
-
-    @staticmethod
-    def _audience_topic_groups(topics, documents, vectors, filter=None):
-        by_source = {}
-        for doc in documents.values():
-            if doc.id in vectors and (filter is None or filter(doc)):
-                by_source.setdefault(doc.meta["knowledge_id"], []).append(doc)
-        groups = []
-        for topic in topics.values():
-            candidates = [
-                doc
-                for identity in topic.fact_ids
-                for doc in by_source.get(identity, ())
-            ]
-            units = []
-            for doc in candidates:
-                vector = np.asarray(vectors[doc.id], dtype=float)
-                norm = np.linalg.norm(vector)
-                if norm:
-                    units.append(vector / norm)
-            if not units:
-                continue
-            centroid = np.mean(units, axis=0)
-            norm = np.linalg.norm(centroid)
-            if not norm:
-                continue
-            candidates.sort(
-                key=lambda doc: (
-                    -doc.meta.get("restatements", 0),
-                    -doc.meta.get("ts", 0),
-                )
-            )
-            groups.append((centroid / norm, candidates))
-        return groups
-
-    async def _audience_topic_first(self, query, accepted, filter, viewer):
-        if not self.topics_enabled or not self.scene.world_state.topics:
-            return []
-        scene = self.scene
-        await self.ensure_audience_index(scene)
-        state = self._audience_state(scene)
-        topics = scene.world_state.topics
-        key = (
-            state.collection_revision,
-            state.revision,
-            tuple(
-                (identity, tuple(topic.fact_ids)) for identity, topic in topics.items()
-            ),
-        )
-        cached = state.topics.get(viewer)
-        if cached is None or cached[0] != key:
-            documents = await self.get_documents_by_meta({"typ": "fact"}, viewer=viewer)
-            # Cache source text; relative ages must be rendered against the current time.
-            documents = {
-                identity: MemoryDocument(doc.raw, doc.meta, doc.id, doc.raw)
-                for identity, doc in documents.items()
-            }
-            vectors = await self.get_embeddings(list(documents)) if documents else {}
-            groups = self._audience_topic_groups(topics, documents, vectors)
-            cached = (key, documents, vectors, groups)
-            # An outer audience_operation retries if this build raced an edit.
-            if (state.collection_revision, state.revision) == key[:2]:
-                state.topics[viewer] = cached
-        _, documents, vectors, groups = cached
-        if filter is not None:
-            # Arbitrary caller filters may change independently of index state.
-            # Reuse the fetched variants/vectors, but narrow before topic selection.
-            current_documents = {
-                identity: self._dated_document(doc.raw, doc.meta, doc.id)
-                for identity, doc in documents.items()
-            }
-            groups = self._audience_topic_groups(
-                topics, current_documents, vectors, filter
-            )
-        query_vector = await self.embed_text(query)
-        if query_vector is None:
-            return []
-        best, members = self.topics_similarity_threshold, []
-        for centroid, candidates in groups:
-            score = float(np.dot(query_vector, centroid))
-            if score >= best:
-                best, members = score, candidates
-        seen = {doc.id for doc in accepted}
-        selected = ranked_fact_documents(
-            scene, [doc for doc in members if doc.id not in seen], character=viewer
-        )[:TOPIC_FACTS_PER_QUERY]
-        return selected
 
     @property
     def reranker(self) -> CrossEncoderReranker:
@@ -644,10 +359,6 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
 
         self.close_db(scene)
         emit("status", "Re-importing context database", status="busy")
-        # topics were grouped in the old vector space: rebuilt on import
-        scene.world_state.topics = {}
-        scene.world_state.topics_fact_count = 0
-        self.topic_centroids = {}
         await scene.commit_to_memory()
         if not scene.immutable_save:
             await scene.save(auto=True)
@@ -1024,77 +735,6 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
     def _get_documents_by_meta(self, meta: dict) -> dict:
         raise NotImplementedError()
 
-    async def get_embeddings(self, ids: list[str]) -> dict[str, list[float]]:
-        """
-        Stored embedding vectors by document id (missing ids are absent).
-
-        A read path: like `get` and `get_document` it never waits for the
-        write gate, and an unset store answers with nothing.
-        """
-        if not ids or not self.db:
-            return {}
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, self._get_embeddings, ids)
-
-    def _get_embeddings(self, ids: list[str]) -> dict[str, list[float]]:
-        raise NotImplementedError()
-
-    async def near_duplicates(
-        self, ids: list[str], against: list[str], max_distance: float
-    ) -> set[str]:
-        """
-        The ids among `ids` whose stored embedding sits within `max_distance`
-        (euclidean) of any stored embedding among `against`. One fetch and one
-        distance matrix; an id without a stored vector is never a duplicate.
-        """
-        ids = [i for i in ids if i]
-        against = [i for i in against if i]
-        if not ids or not against:
-            return set()
-        vectors = await self.get_embeddings(list(dict.fromkeys(ids + against)))
-        return self._near_duplicates_in(
-            ids, {i: vectors[i] for i in against if i in vectors}, vectors, max_distance
-        )
-
-    async def near_duplicates_against(
-        self, ids: list[str], anchors: dict[str, list[float]], max_distance: float
-    ) -> set[str]:
-        """Like `near_duplicates`, with the anchor vectors already in hand."""
-        ids = [i for i in ids if i]
-        if not ids or not anchors:
-            return set()
-        vectors = await self.get_embeddings(ids)
-        return self._near_duplicates_in(ids, anchors, vectors, max_distance)
-
-    @staticmethod
-    def _near_duplicates_in(
-        ids: list[str],
-        anchors: dict[str, list[float]],
-        vectors: dict[str, list[float]],
-        max_distance: float,
-    ) -> set[str]:
-        rows = [i for i in ids if i in vectors]
-        cols = list(anchors)
-        if not rows or not cols:
-            return set()
-        vecs_a = np.asarray([vectors[i] for i in rows], dtype=float)
-        vecs_b = np.asarray([anchors[i] for i in cols], dtype=float)
-        norms_a = np.linalg.norm(vecs_a, axis=1, keepdims=True)
-        norms_b = np.linalg.norm(vecs_b, axis=1, keepdims=True)
-        vecs_a = np.divide(
-            vecs_a, norms_a, out=np.zeros_like(vecs_a), where=norms_a != 0
-        )
-        vecs_b = np.divide(
-            vecs_b, norms_b, out=np.zeros_like(vecs_b), where=norms_b != 0
-        )
-        a_squared = np.sum(vecs_a**2, axis=1).reshape(-1, 1)
-        b_squared = np.sum(vecs_b**2, axis=1).reshape(1, -1)
-        distances = np.sqrt(
-            np.maximum(a_squared + b_squared - 2 * np.dot(vecs_a, vecs_b.T), 0.0)
-        )
-        nearest = distances.min(axis=1)
-        return {rows[i] for i in range(len(rows)) if nearest[i] <= max_distance}
-
     async def on_archive_add(self, event: events.ArchiveEvent):
         await self.add(
             event.text,
@@ -1172,9 +812,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         limit: int = 10,
         return_docs: bool = False,
         over_fetch: int = 1,
-        topic_first: bool = False,
         viewer: str | None = None,
-        ranking_viewer: str | None = None,
         **where,
     ):
         async def retrieve(_collection=None):
@@ -1187,9 +825,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                 limit=limit,
                 return_docs=return_docs,
                 over_fetch=over_fetch,
-                topic_first=topic_first,
                 viewer=viewer,
-                ranking_viewer=ranking_viewer,
                 **where,
             )
 
@@ -1207,27 +843,22 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         limit: int = 10,
         return_docs: bool = False,
         over_fetch: int = 1,
-        topic_first: bool = False,
         viewer: str | None = None,
-        ranking_viewer: str | None = None,
         **where,
     ):
         """
         Get the character memory context for a given character
 
         `over_fetch` widens the vector search (limit × over_fetch) for callers
-        whose filter drops many candidates. `topic_first` lets the nearest
-        topic contribute its highest-scoring eligible facts (prompt retrieval only; a
-        metadata condition in `where` turns it off).
+        whose filter drops many candidates.
 
-        Per query the candidates pass the filter (and the similarity knowledge
-        gate), are re-ranked by distance plus the recency term, and are cut
+        Per query the candidates pass the filter, are re-ranked by distance
+        plus the recency term, and are cut
         to `iterate`. The per-query lists are merged round-robin, skipping
         near-identical results (diversity threshold), optionally reranked by
         the cross-encoder, and cut to the token budget.
         """
 
-        ranking_viewer = viewer if ranking_viewer is None else ranking_viewer
         limit = limit * max(1, over_fetch)
 
         # First, collect results for each individual query (respecting the
@@ -1236,17 +867,6 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         # monopolising the token budget.
 
         per_query_results: list[list[str]] = []
-        # D23: perception access is decided by the backend audience condition;
-        # even a caller-supplied bucket filter can only narrow that eligible set.
-        gate_distance = (
-            self._similarity_gate_distance()
-            if filter and not character_knowledge_enabled(self.scene)
-            else None
-        )
-        # the gate's anchors (the character's known facts and their vectors)
-        # do not change between the queries of one call: fetched once
-        anchors = await self._gate_anchors(filter) if gate_distance is not None else {}
-
         for query in queries:
             # Skip empty queries so that we keep indexing consistent for the
             # round-robin step that follows.
@@ -1262,28 +882,13 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                 **where,
             )
 
-            accepted = await self._apply_filter(
-                raw_results, filter, gate_distance, anchors
-            )
-            accepted = ranked_fact_documents(
-                self.scene, self._rank_by_recency(accepted), character=ranking_viewer
-            )
-            # only a caller without a metadata condition asks for topic-first
-            # facts: `where` is not applied to a fetch by id
-            topic_docs = (
-                await self._topic_first(
-                    formatter(query),
-                    accepted,
-                    filter,
-                    ranking_viewer=ranking_viewer,
-                    **({"viewer": viewer} if viewer is not None else {}),
-                )
-                if topic_first and not where
-                else []
-            )
-            per_query_results.append(
-                (topic_docs + accepted)[: iterate + len(topic_docs)]
-            )
+            accepted = [
+                document
+                for document in raw_results
+                if filter is None or filter(document)
+            ]
+            accepted = self._rank_by_recency(accepted)
+            per_query_results.append(accepted[:iterate])
 
         # a reranker that already failed to load is not asked again: the
         # plain, token-budgeted merge is the answer then
@@ -1293,7 +898,6 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             and not self.reranker.error
         )
         merged = self._merge_round_robin(per_query_results)
-        merged = ranked_fact_documents(self.scene, merged, character=ranking_viewer)
 
         if rerank:
             reranked = await self.rerank(
@@ -1302,76 +906,9 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             if self.reranker.error:
                 # A failed reranker keeps the filtered relevance order.
                 return self._cut_to_budget(merged, max_tokens)
-            merged = ranked_fact_documents(
-                self.scene, reranked, character=ranking_viewer
-            )
+            merged = reranked
 
         return self._cut_to_budget(merged, max_tokens)
-
-    def _similarity_gate_distance(self) -> float | None:
-        """The near-duplicate distance the gate uses, or None when it is off."""
-        if not self.retrieval_similarity_gate:
-            return None
-        return float(instance.get_agent("summarizer").archive_fact_dedupe_distance)
-
-    async def _gate_anchors(self, filter: Callable | None) -> dict[str, list[float]]:
-        """The stored vectors of the facts in the filter's bucket, by id."""
-        known_fact_ids = getattr(filter, "known_fact_ids", None)
-        if known_fact_ids is None:
-            return {}
-        ids = known_fact_ids()
-        return await self.get_embeddings(ids) if ids else {}
-
-    async def _apply_filter(
-        self,
-        raw_results: list,
-        filter: Callable | None,
-        gate_distance: float | None,
-        anchors: dict[str, list[float]] | None = None,
-    ) -> list:
-        """
-        The knowledge filter, then the similarity knowledge gate: a result
-        rejected for presence alone passes when a fact in the character's
-        bucket is a near-duplicate of it (its vector against the anchors).
-        Admission does not exempt a result from duplicates in the final merge.
-        """
-        if not filter:
-            return list(raw_results)
-
-        accepted = []
-        rejected = []
-        for memory in raw_results:
-            if filter(memory):
-                accepted.append(memory)
-            else:
-                rejected.append(memory)
-
-        if gate_distance is None or not rejected or not anchors:
-            return accepted
-
-        gateable = getattr(filter, "gateable", None)
-        if gateable is None:
-            return accepted
-
-        candidates = [doc for doc in rejected if gateable(doc)]
-        if not candidates:
-            return accepted
-
-        retold = await self.near_duplicates_against(
-            [doc.id for doc in candidates], anchors, gate_distance
-        )
-        passed = []
-        for doc in candidates:
-            if doc.id in retold:
-                passed.append(doc)
-                log.debug("similarity gate passed", id=doc.id)
-
-        if not passed:
-            return accepted
-
-        # keep the store's distance order across the two groups
-        order = {id(doc): i for i, doc in enumerate(raw_results)}
-        return sorted(accepted + passed, key=lambda doc: order.get(id(doc), 0))
 
     def _rank_by_recency(self, docs: list) -> list:
         """Stable re-rank by distance + recency_weight × normalised age."""
@@ -1401,19 +938,6 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             return (float(distance) + weight * age_norm, index)
 
         return [doc for _, doc in sorted(enumerate(docs), key=score)]
-
-    def _is_fresher_fact(self, candidate, selected) -> bool:
-        candidate_fact = memory_fact(self.scene, candidate)
-        selected_fact = memory_fact(self.scene, selected)
-        if candidate_fact is None or selected_fact is None:
-            return False
-        candidate_ts = fact_timestamp(candidate_fact)
-        selected_ts = fact_timestamp(selected_fact)
-        return (
-            candidate_ts is not None
-            and selected_ts is not None
-            and candidate_ts > selected_ts
-        )
 
     def _merge_round_robin(self, per_query_results: list[list]) -> list:
         threshold = self.retrieval_mmr_threshold
@@ -1449,30 +973,6 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                             for position, other in selected_vectors.items()
                             if float(np.dot(unit, other)) > threshold
                         ]
-                        replacement = (
-                            min(duplicates)
-                            if duplicates
-                            and all(
-                                self._is_fresher_fact(memory, memory_context[position])
-                                for position in duplicates
-                            )
-                            else None
-                        )
-                        if replacement is not None:
-                            # Preserve the selected fact's relevance slot before the budget cut.
-                            for position in duplicates:
-                                log.debug(
-                                    "diversity skip",
-                                    id=getattr(memory_context[position], "id", None),
-                                    reason="duplicate",
-                                    replacement_id=getattr(memory, "id", None),
-                                )
-                                if position != replacement:
-                                    memory_context[position] = None
-                                    del selected_vectors[position]
-                            memory_context[replacement] = memory
-                            selected_vectors[replacement] = unit
-                            continue
                         if duplicates:
                             log.debug(
                                 "diversity skip",
@@ -1490,7 +990,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
 
             idx += 1
 
-        return [memory for memory in memory_context if memory is not None]
+        return memory_context
 
     def _cut_to_budget(self, docs: list, max_tokens: int) -> list:
         kept: list = []
@@ -2271,7 +1771,6 @@ class ChromaDBMemoryAgent(MemoryAgent):
                     distance=distance,
                     embedding=embedding,
                 )
-                doc = render_fact_document(self.scene, doc)
 
                 results.append(doc)
                 active_memory_request.accept_result(str(doc), distance, meta)
@@ -2304,16 +1803,6 @@ class ChromaDBMemoryAgent(MemoryAgent):
             )
             return None
 
-    def _get_embeddings(self, ids: list[str]) -> dict[str, list[float]]:
-        result = self.db.get(ids=list(ids), include=["embeddings"])
-        embeddings = result.get("embeddings")
-        if embeddings is None:
-            return {}
-        return {
-            doc_id: np.asarray(vector, dtype=float).tolist()
-            for doc_id, vector in zip(result.get("ids", []), embeddings)
-        }
-
     def _get_document(self, id) -> dict:
         if not id:
             return {}
@@ -2344,9 +1833,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
     def _dated_document(self, raw, meta, identity):
         date_prefix = self.convert_ts_to_date_prefix(meta.get("ts"))
         text = f"{date_prefix}: {raw}" if date_prefix else raw
-        return render_fact_document(
-            self.scene, MemoryDocument(text, meta, identity, raw)
-        )
+        return MemoryDocument(text, meta, identity, raw)
 
     @set_processing
     async def remove_unsaved_memory(self):

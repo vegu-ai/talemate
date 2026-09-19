@@ -2,7 +2,7 @@
     <div v-if="character">
         <v-alert v-if="!perceptionMode" variant="text" density="compact" icon="mdi-head-lightbulb-outline" class="text-medium-emphasis mb-2">
             What {{ character.name }} knows follows from where they were present, what belongs to them, and what is shared with everyone.
-            Choose Learn to add an entry to their knowledge, or Never Learn to keep it out. On a fact below, Unlearn removes it from their knowledge until they learn it again.
+            Choose Learn to add an entry to their knowledge, or Never Learn to keep it out.
         </v-alert>
         <v-alert v-if="!perceptionMode && error" type="error" variant="tonal" density="compact" closable class="mb-3 knowledge-rule-error" @click:close="error = null">{{ error }}</v-alert>
 
@@ -61,7 +61,6 @@
             </v-card-actions>
         </v-card>
 
-        <v-alert v-if="factsWarning" type="warning" variant="tonal" class="mb-3">{{ factsWarning }}</v-alert>
         <p v-if="perceptionMode && edges.length" class="mb-2">Removing an access rule does not erase information already given to this character.</p>
         <v-list v-if="edges.length" density="compact">
             <v-list-item v-for="edge in edges" :key="edge.id">
@@ -74,7 +73,6 @@
                 <v-list-item-title>{{ targetLabel(edge.target) }}</v-list-item-title>
                 <v-list-item-subtitle>
                     <span class="text-body-small">{{ edge.source }}</span>
-                    <span v-if="lifted(edge)" class="text-body-small ml-2 rule-lifted">lifted by a later line</span>
                     <span v-if="edge.note" class="text-body-small ml-2">— {{ edge.note }}</span>
                 </v-list-item-subtitle>
                 <template v-slot:append>
@@ -86,65 +84,17 @@
             No entry access rules for {{ character.name }} yet. Their knowledge follows presence, ownership and sharing.
         </v-alert>
 
-        <v-card v-if="coverage.length" variant="tonal" class="mt-4">
-            <v-card-title class="text-body-large">Known facts by topic</v-card-title>
-            <v-card-subtitle v-if="!perceptionMode && awareness">{{ awareness }}.</v-card-subtitle>
-            <v-card-text>
-                <div class="d-flex align-center mb-2">
-                    <v-text-field v-model="factFilter" density="compact" variant="underlined" hide-details clearable prepend-inner-icon="mdi-magnify" label="Filter topics and loaded facts" class="mr-4"></v-text-field>
-                    <v-btn size="small" variant="text" color="primary" :prepend-icon="allOpen ? 'mdi-collapse-all-outline' : 'mdi-expand-all-outline'" @click="toggleAll">{{ allOpen ? 'Collapse all' : 'Expand all' }}</v-btn>
-                </div>
-                <v-expansion-panels v-model="openTopics" multiple variant="accordion" class="coverage-topics">
-                    <v-expansion-panel v-for="row in visibleCoverage" :key="row.id" :value="row.id">
-                        <v-expansion-panel-title class="py-1">
-                            <div class="d-flex align-center w-100">
-                                <span class="mr-3">{{ row.name }}</span>
-                                <span class="text-body-small text-medium-emphasis mr-3">{{ row.known }} of {{ row.total }} known</span>
-                                <v-progress-linear :model-value="row.total ? (row.known / row.total) * 100 : 0" color="primary" height="6" rounded class="flex-grow-1 mr-4" style="max-width: 200px">
-                                    <v-tooltip activator="parent" location="top">{{ row.known }} of {{ row.total }} recorded facts known; this does not measure understanding or all world knowledge</v-tooltip>
-                                </v-progress-linear>
-                            </div>
-                        </v-expansion-panel-title>
-                        <v-expansion-panel-text>
-                            <v-progress-linear v-if="!topicFacts[row.id]" indeterminate color="primary" height="2"></v-progress-linear>
-                            <v-list v-else density="compact" slim class="bg-transparent py-0">
-                                <div v-if="!locked && visibleFacts(row.id).length" class="text-body-small text-medium-emphasis mb-1">Double-click a fact to edit it</div>
-                                <WorldStateManagerFactRow v-for="fact in visibleFacts(row.id)" :key="fact.id" :fact="fact" :locked="locked" :removable="false"
-                                    :class="{ 'topic-fact-unknown': !fact.known }" @updated="patchFact">
-                                    <template #details>
-                                        <span>{{ fact.reason || (fact.known ? howLabel(fact.how) : `${character.name} does not know this`) }}</span>
-                                        <span class="ml-2 mr-2">via {{ fact.source_id ? `${fact.source} ${fact.source_id}` : fact.source }}</span>
-                                    </template>
-                                    <template v-if="!perceptionMode" #actions>
-                                        <v-btn v-if="fact.known" size="x-small" variant="text" :color="rules.unlearn.color" :prepend-icon="rules.unlearn.icon" :disabled="locked" class="fact-unlearn" @click="unlearnFact(fact)">
-                                            {{ rules.unlearn.label }}
-                                            <v-tooltip activator="parent" location="top">{{ character.name }} stops knowing this fact. The fact stays, and they can learn it again.</v-tooltip>
-                                        </v-btn>
-                                        <v-btn v-else size="x-small" variant="text" :color="rules.grant.color" :prepend-icon="rules.grant.icon" :disabled="locked" class="fact-learn" @click="learnFact(fact)">
-                                            {{ rules.grant.label }}
-                                            <v-tooltip activator="parent" location="top">{{ character.name }} knows this fact from now on. A Never Learn rule on it is lifted.</v-tooltip>
-                                        </v-btn>
-                                    </template>
-                                </WorldStateManagerFactRow>
-                                <v-list-item v-if="!visibleFacts(row.id).length" class="px-0 text-body-small text-medium-emphasis">No facts match the filter.</v-list-item>
-                            </v-list>
-                        </v-expansion-panel-text>
-                    </v-expansion-panel>
-                </v-expansion-panels>
-            </v-card-text>
-        </v-card>
     </div>
 </template>
 
 <script>
 import ConfirmActionInline from './ConfirmActionInline.vue';
-import WorldStateManagerFactRow from './WorldStateManagerFactRow.vue';
 import { KNOWLEDGE_RULES } from '@/constants/knowledgeRules';
 import { newUuid } from '@/utils/uuid';
 
 export default {
     name: 'WorldStateManagerCharacterKnowledge',
-    components: { ConfirmActionInline, WorldStateManagerFactRow },
+    components: { ConfirmActionInline },
     props: {
         scene: Object,
         immutableCharacter: Object,
@@ -162,53 +112,24 @@ export default {
             information: '',
             wholeEntry: false,
             error: null,
-            factsWarning: null,
+
             disclosureRequestId: null,
             edges: [],
-            // the Unlearn rules a later line lifts while that line exists
-            liftedEdgeIds: [],
-            coverage: [],
-            awareness: null,
-            // topic id -> that topic's facts for this character, fetched on
-            // expand and dropped on the next knowledge change
-            topicFacts: {},
-            openTopics: [],
-            factFilter: '',
+
             targets: [],
             newTarget: null,
             newKind: 'grant',
             newNote: '',
             busy: false,
-            sceneTs: null,
-            refetchTimer: null,
-            rules: KNOWLEDGE_RULES,
+
             kinds: ['grant', 'revoke'].map((value) => ({ label: KNOWLEDGE_RULES[value].label, value })),
         }
     },
-    computed: {
-        filterText() {
-            return (this.factFilter || '').trim().toLowerCase();
-        },
-        visibleCoverage() {
-            if (!this.filterText) return this.coverage;
-            return this.coverage.filter((row) =>
-                row.name.toLowerCase().includes(this.filterText)
-                || (this.topicFacts[row.id] || []).some((fact) => fact.text.toLowerCase().includes(this.filterText)));
-        },
-        allOpen() {
-            return this.coverage.length > 0 && this.coverage.every((row) => this.openTopics.includes(row.id));
-        },
-        locked() {
-            return this.appBusy || !this.appReady || this.busy;
-        },
-    },
     watch: {
-        openTopics(ids) {
-            this.requestTopicFacts(ids.filter((id) => !this.topicFacts[id]));
-        },
+
         // the pane stays mounted while hidden and skips its refetches then
         visible(value) {
-            if (value) this.refetchTopics();
+            if (value) this.request();
         },
         immutableCharacter: {
             immediate: true,
@@ -216,14 +137,12 @@ export default {
                 if (!value) {
                     this.character = null;
                     this.edges = [];
-                    this.liftedEdgeIds = [];
                     return;
                 }
                 const changed = !this.character || this.character.name !== value.name;
                 this.character = { ...value };
                 if (changed) {
                     this.error = null;
-                    this.factsWarning = null;
                     this.disclosureRequestId = null;
                     this.busy = false;
                     this.perceptionMode = false;
@@ -231,9 +150,6 @@ export default {
                     this.newTarget = null;
                     this.information = '';
                     this.wholeEntry = false;
-                    this.topicFacts = {};
-                    this.openTopics = [];
-                    this.factFilter = '';
                     this.request();
                 }
             },
@@ -248,60 +164,6 @@ export default {
                 name: this.character.name,
             }));
         },
-        // one request for several rows: the backend walks the bucket once
-        requestTopicFacts(topicIds) {
-            if (!this.character || !topicIds.length) return;
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'get_topic_facts',
-                name: this.character.name,
-                topic_ids: topicIds,
-            }));
-        },
-        toggleAll() {
-            this.openTopics = this.allOpen ? [] : this.coverage.map((row) => row.id);
-        },
-        visibleFacts(topicId) {
-            const facts = this.topicFacts[topicId] || [];
-            if (!this.filterText) return facts;
-            return facts.filter((fact) => fact.text.toLowerCase().includes(this.filterText));
-        },
-        patchFact(fact) {
-            const topics = {};
-            for (const [topicId, facts] of Object.entries(this.topicFacts)) {
-                topics[topicId] = facts.map((row) => row.id === fact.id
-                    ? { ...row, text: fact.text, importance: fact.importance, subjects: fact.subjects ?? row.subjects }
-                    : row);
-            }
-            this.topicFacts = topics;
-        },
-        removeRow(id) {
-            const topics = {};
-            for (const [topicId, facts] of Object.entries(this.topicFacts)) {
-                topics[topicId] = facts.filter((row) => row.id !== id);
-            }
-            this.topicFacts = topics;
-        },
-        // an edit or a delete reclusters the topics, which renumbers them, so
-        // the cached rows are dropped and the coverage and the open rows are
-        // fetched again behind the patch; a bulk action sends one frame per
-        // fact, hence the debounce
-        refetchTopics() {
-            if (!this.visible || !this.character) return;
-            clearTimeout(this.refetchTimer);
-            this.refetchTimer = setTimeout(() => {
-                const open = new Set(this.openTopics);
-                this.topicFacts = Object.fromEntries(Object.entries(this.topicFacts).filter(([id]) => open.has(id)));
-                this.request();
-                this.requestTopicFacts([...this.openTopics]);
-            }, 250);
-        },
-        howLabel(how) {
-            const labels = this.perceptionMode
-                ? { granted: 'Disclosed', inferred: 'Perceived' }
-                : { witnessed: 'Present', told: 'Told in dialogue', granted: 'Learn rule', inferred: 'Learned from dialogue' };
-            return labels[how] || 'Known';
-        },
         targetLabel(id) {
             const target = this.targets.find(t => t.id === id);
             return target ? target.label : id;
@@ -309,30 +171,13 @@ export default {
         rule(edge) {
             return KNOWLEDGE_RULES[edge.kind] || KNOWLEDGE_RULES.grant;
         },
-        lifted(edge) {
-            return this.liftedEdgeIds.includes(edge.id);
-        },
+
         edgeHint(edge) {
             const name = this.character.name;
             if (edge.kind === 'revoke') return `${name} does not know this even when they would otherwise, and cannot learn it until a Learn lifts this rule.`;
-            if (edge.kind === 'unlearn' && this.lifted(edge)) return `A later line taught ${name} this fact again, so ${name} knows it. If that line is removed, this rule applies again.`;
-            if (edge.kind === 'unlearn') return `${name} no longer knows this fact. A later line that teaches it again lifts this rule while that line exists; a Learn replaces it.`;
             return `${name} knows this even when they were not present for it.`;
         },
-        learnFact(fact) {
-            this.sendFactRule('grant_facts', fact);
-        },
-        unlearnFact(fact) {
-            this.sendFactRule('unlearn_facts', fact);
-        },
-        sendFactRule(action, fact) {
-            if (this.locked) return;
-            this.busy = true;
-            this.error = null;
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager', action, name: this.character.name, fact_ids: [fact.id],
-            }));
-        },
+
         addDisclosure() {
             if (!this.newTarget || (!this.wholeEntry && !this.information.trim()) || this.busy) return;
             this.busy = true;
@@ -373,21 +218,14 @@ export default {
             }));
         },
         handleMessage(message) {
-            if (message.type === 'scene_status') {
-                if (message.data?.scene_ts !== this.sceneTs && this.character) this.requestTopicFacts([...this.openTopics]);
-                this.sceneTs = message.data?.scene_ts;
-                return;
-            }
             if (message.type === 'knowledge_changed') {
                 if (this.character && message.data?.changes?.some(change => change.character === this.character.name)) {
-                    this.topicFacts = {};
                     this.request();
-                    this.requestTopicFacts([...this.openTopics]);
                 }
                 return;
             }
             if (message.type !== 'world_state_manager') return;
-            if (message.action === 'operation_done' && ['set_knowledge_edge', 'grant_facts', 'unlearn_facts'].includes(message.failed_action)) {
+            if (message.action === 'operation_done' && message.failed_action === 'set_knowledge_edge') {
                 this.busy = false;
                 this.error = message.error?.message || 'The change could not be applied.';
                 return;
@@ -401,35 +239,12 @@ export default {
                 this.disclosureRequestId = null;
                 this.error = message.error.message;
             }
-            if (['disclosure_indexed'].includes(message.action) && message.data.name === this.character?.name) {
-                this.factsWarning = message.data.facts_status === 'failed'
-                    ? 'The information is saved, but its searchable facts could not be recorded. Retry the failed request if it is still open; otherwise see Knowledge in the user guide for recovery steps.'
-                    : null;
-            }
-            if (message.action === 'fact_updated') {
-                this.patchFact(message.data);
-                this.refetchTopics();
-                return;
-            }
-            if (message.action === 'fact_deleted') {
-                this.removeRow(message.data.fact_id);
-                this.refetchTopics();
-                return;
-            }
-            if (message.action === 'topic_facts') {
-                if (!this.character || message.data.name !== this.character.name) return;
-                this.topicFacts = { ...this.topicFacts, ...message.data.topics };
-                return;
-            }
             if (message.action === 'character_knowledge') {
                 if (!this.character || message.data.name !== this.character.name) return;
                 this.perceptionMode = message.data.perception_mode === true;
                 this.disclosures = message.data.disclosures || [];
                 this.edges = message.data.edges;
-                this.liftedEdgeIds = message.data.lifted_edge_ids || [];
                 this.targets = message.data.targets;
-                this.coverage = message.data.coverage || [];
-                this.awareness = message.data.awareness || null;
                 // Indexing refreshes can arrive after another grant has started.
                 const activeRequestId = this.disclosureRequestId;
                 const completesRequest = activeRequestId
@@ -451,14 +266,7 @@ export default {
         this.registerMessageHandler(this.handleMessage);
     },
     unmounted() {
-        clearTimeout(this.refetchTimer);
         this.unregisterMessageHandler(this.handleMessage);
     },
 }
 </script>
-
-<style scoped>
-.topic-fact-unknown {
-    opacity: var(--v-medium-emphasis-opacity);
-}
-</style>

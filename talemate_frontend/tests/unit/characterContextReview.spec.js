@@ -225,8 +225,6 @@ describe('character context review', () => {
     const vm = review();
     expect(vm.exclusionReason('absent')).toBe('Absent');
     expect(vm.exclusionReason('not_in_audience')).toBe('Not in audience');
-    expect(vm.exclusionReason('chronology_floor')).toBe('Below chronology floor');
-    expect(vm.exclusionReason('superseded')).toBe('Superseded');
     expect(vm.exclusionReason('budget')).toBe('Over token budget');
   });
 });

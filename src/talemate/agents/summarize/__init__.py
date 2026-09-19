@@ -13,8 +13,6 @@ from talemate.events import HistoryEvent
 from talemate.prompts import Prompt
 from .response_specs import (
     SUMMARY_SPEC,
-    SUMMARY_WITH_FACTS_SPEC,
-    FACTS_SPEC,
     CHUNK_CLEAN_SPEC,
 )
 from talemate.scene_message import (
@@ -42,26 +40,11 @@ from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.history import (
     SPAN_LINE_EXCLUDED_TYPES,
     ArchiveEntry,
-    HistoryEntry,
     render_span,
-    resolve_history_entry,
-    span_bindings,
 )
 from talemate.knowledge.timeline import message_times
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.presence import presence_differs, span_presence
-from talemate.knowledge.cutoff import FactCutoff, span_cutoff
-from talemate.knowledge.evidence import budget_evidence
-from talemate.knowledge.facts import (
-    SpanLine,
-    drop_facts_for_entries,
-    parse_facts,
-    previous_facts,
-    store_facts,
-    verify_links,
-)
-from talemate.knowledge.topics import refresh_topics
-from talemate.knowledge.schema import FactsStatus, ParsedFact
 
 from .analyze_scene import SceneAnalyzationMixin
 from .context_history import ContextHistoryMixin
@@ -69,11 +52,6 @@ from .layered_history import LayeredHistoryMixin
 from .tts_utils import TTSUtilsMixin
 from .perceptions import PerceptionMixin
 from .audience_summaries import AudienceSummaryMixin
-from .source_facts import SourceFactMixin
-from .missing_facts import MissingFactsMixin
-from .fact_chronology import FactChronologyMixin
-from talemate.knowledge.supported_facts import previous_audience_facts
-from talemate.knowledge.perspectives import source_reference
 from talemate.exceptions import GenerationCancelled
 
 import talemate.agents.summarize.nodes  # noqa: F401
@@ -93,8 +71,6 @@ talemate.emit.async_signals.register(
     "agent.summarization.rag_build_sub_instruction",
     "agent.summarization.summarize.before",
     "agent.summarization.summarize.after",
-    "agent.summarization.extract_facts.before",
-    "agent.summarization.extract_facts.after",
 )
 
 
@@ -111,12 +87,6 @@ class SummarizeEmission(AgentTemplateEmission):
     summarization_type: Literal["dialogue", "events"] = "dialogue"
 
 
-class ExtractFactsEmission(AgentTemplateEmission):
-    text: str = ""
-    summary: str = ""
-    facts: list[ParsedFact] | None = None
-
-
 @dataclass
 class ArchiveSpan:
     start: int
@@ -131,9 +101,6 @@ class ArchiveSpan:
 
 @register()
 class SummarizeAgent(
-    FactChronologyMixin,
-    MissingFactsMixin,
-    SourceFactMixin,
     AudienceSummaryMixin,
     PerceptionMixin,
     MemoryRAGMixin,
@@ -206,21 +173,6 @@ class SummarizeAgent(
                         description="Optional instructions to guide the summarization process.",
                         value="",
                     ),
-                    "extract_facts": AgentActionConfig(
-                        type="bool",
-                        label="Extract facts",
-                        description="Save individual facts alongside summaries for character knowledge. Leave on to build the fact record; this summary step needs no extra request.",
-                        value=True,
-                    ),
-                    "fact_dedupe_distance": AgentActionConfig(
-                        type="number",
-                        label="Fact matching tolerance",
-                        description="Treat sufficiently similar facts as repeats instead of saving them again. Raise to merge more similar facts; lower to keep more distinctions.",
-                        value=0.15,
-                        min=0.0,
-                        max=1.0,
-                        step=0.01,
-                    ),
                 },
             ),
         }
@@ -229,15 +181,12 @@ class SummarizeAgent(
         MemoryRAGMixin.add_actions(actions)
         SceneAnalyzationMixin.add_actions(actions)
         PerceptionMixin.add_actions(actions)
-        FactChronologyMixin.add_actions(actions)
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):
         self.client = client
         self.init_perceptions()
         self.init_audience_summaries()
-        self.init_source_facts()
-        self.init_missing_facts()
 
         self.actions = SummarizeAgent.init_actions()
 
@@ -265,14 +214,6 @@ class SummarizeAgent(
     @property
     def archive_include_previous(self):
         return self.resolve_config("archive", "include_previous")
-
-    @property
-    def archive_extract_facts(self) -> bool:
-        return bool(self.resolve_config("archive", "extract_facts"))
-
-    @property
-    def archive_fact_dedupe_distance(self) -> float:
-        return float(self.resolve_config("archive", "fact_dedupe_distance"))
 
     @property
     def archive_instructions(self):
@@ -591,11 +532,8 @@ class SummarizeAgent(
                     )
 
         intro_included = None
-        lines: dict[int, SpanLine] = {}
-        intro_line: SpanLine | None = None
         if dialogue_entries:
             present = span_presence(dialogue_entries)
-            lines = span_bindings(scene, dialogue_entries, times=times)
             intro_text = None
 
             if not extra_context:
@@ -605,34 +543,26 @@ class SummarizeAgent(
                 )
                 if intro_included:
                     intro_text = scene.intro
-                    intro_line = self._intro_line(scene, dialogue_entries, lines)
 
             summarized = None
-            parsed_facts = None
             retries = 5
 
             while not summarized and retries > 0:
-                summarized, parsed_facts = await self.summarize(
+                summarized = await self.summarize(
                     render_span(dialogue_entries, intro=intro_text),
                     extra_context=extra_context,
                     generation_options=generation_options,
-                    return_facts=True,
-                    line_ids=True,
                 )
                 retries -= 1
 
             if not summarized:
                 raise IOError("Failed to summarize dialogue", dialogue=dialogue_entries)
 
-            facts_status = self._facts_status(parsed_facts)
-
         else:
             # AI has likely identified the first line as a scene change, so we can't summarize
             # just use the first line
             summarized = str(scene.history[start])
             present = scene.history[start].present
-            parsed_facts = None
-            facts_status = None
 
         # the time of the last line: a passage that ends the span is after it
         entry = ArchiveEntry(
@@ -642,21 +572,8 @@ class SummarizeAgent(
             ts=times[scene.history[end].id],
             present=present,
             intro_included=intro_included,
-            facts_status=facts_status,
         )
         await scene.push_archive(entry)
-
-        if parsed_facts and not character_knowledge_enabled(scene):
-            await store_facts(
-                scene,
-                entry.id,
-                parsed_facts,
-                self.archive_fact_dedupe_distance,
-                lines=lines,
-                intro=intro_line,
-                notify=notify,
-            )
-            await refresh_topics(scene)
 
         scene.emit_status()
 
@@ -670,24 +587,6 @@ class SummarizeAgent(
         return True
 
     @staticmethod
-    def _intro_line(scene, messages, lines: dict[int, SpanLine]) -> SpanLine | None:
-        """
-        The opening is not a message: a fact from it binds to the first line
-        of the span for time and edit tracking, with the opening's audience.
-        """
-        first = next(
-            (lines[message.id] for message in messages if message.id in lines), None
-        )
-        if first is None:
-            return None
-        return SpanLine(
-            message_id=first.message_id,
-            message_digest=first.message_digest,
-            present=getattr(scene, "intro_present", None),
-            ts=first.ts,
-        )
-
-    @staticmethod
     def _span_messages(scene, entry: ArchiveEntry) -> list:
         return [
             message
@@ -696,14 +595,11 @@ class SummarizeAgent(
         ]
 
     def _entry_span(self, scene, entry: ArchiveEntry):
-        """The span text and line bindings of a summarized base entry."""
-        messages = self._span_messages(scene, entry)
-        lines = span_bindings(scene, messages, times=message_times(scene))
-        intro_text = scene.intro if entry.intro_included else None
-        intro_line = (
-            self._intro_line(scene, messages, lines) if entry.intro_included else None
+        """The source text of a summarized base entry."""
+        return render_span(
+            self._span_messages(scene, entry),
+            intro=scene.intro if entry.intro_included else None,
         )
-        return render_span(messages, intro=intro_text), lines, intro_line
 
     @set_processing
     async def analyze_dialoge(self, dialogue):
@@ -790,15 +686,8 @@ class SummarizeAgent(
 
         return result
 
-    def _facts_status(self, parsed_facts, *, scene=None) -> FactsStatus | None:
-        if not self.archive_extract_facts:
-            return None
-        if character_knowledge_enabled(scene or self.scene):
-            return None
-        return "ok" if parsed_facts is not None else "failed"
-
     @evidence_writer
-    async def summarize_with_facts(
+    async def summarize_entry(
         self,
         entry: ArchiveEntry,
         extra_context: str = None,
@@ -806,144 +695,21 @@ class SummarizeAgent(
         *,
         scene=None,
         still_current=None,
-    ) -> tuple[str, FactsStatus | None]:
-        """
-        Re-summarize an existing base entry from its span and replace its facts.
-
-        With fact extraction off the facts of the entry are left alone.
-        """
+    ) -> str:
+        """Re-summarize an existing base entry from its source range."""
         target_scene = scene or self.scene
         if still_current is not None and not still_current():
             raise GenerationCancelled("The scene changed during history refresh")
-        text, lines, intro_line = self._entry_span(target_scene, entry)
-        if character_knowledge_enabled(target_scene) or not self.archive_extract_facts:
-            summarized = await self.summarize(
-                text,
-                extra_context=extra_context,
-                generation_options=generation_options,
-                line_ids=True,
-            )
-            if self.scene is not target_scene or (
-                still_current is not None and not still_current()
-            ):
-                raise GenerationCancelled("The scene changed during history refresh")
-            return summarized, (
-                None
-                if character_knowledge_enabled(target_scene)
-                else entry.facts_status
-            )
-
-        dedupe_distance = self.archive_fact_dedupe_distance
-        summarized, parsed_facts = await self.summarize(
-            text,
+        summarized = await self.summarize(
+            self._entry_span(target_scene, entry),
             extra_context=extra_context,
             generation_options=generation_options,
-            return_facts=True,
-            line_ids=True,
-            known_before=span_cutoff(target_scene, lines, start=entry.start),
         )
         if self.scene is not target_scene or (
             still_current is not None and not still_current()
         ):
             raise GenerationCancelled("The scene changed during history refresh")
-        await drop_facts_for_entries(target_scene, {entry.id})
-        if still_current is not None and not still_current():
-            raise GenerationCancelled("The scene changed during history refresh")
-        if parsed_facts:
-            await store_facts(
-                target_scene,
-                entry.id,
-                parsed_facts,
-                dedupe_distance,
-                lines=lines,
-                intro=intro_line,
-                still_current=still_current,
-            )
-        if still_current is not None and not still_current():
-            raise GenerationCancelled("The scene changed during history refresh")
-        await refresh_topics(target_scene, force=True, still_current=still_current)
-        if still_current is not None and not still_current():
-            raise GenerationCancelled("The scene changed during history refresh")
-        return summarized, self._facts_status(parsed_facts, scene=target_scene)
-
-    @evidence_writer
-    async def regenerate_facts(self, entry: "HistoryEntry") -> FactsStatus | None:
-        """
-        Extract the facts of one base entry again and replace only its facts.
-        The stored summary is context for the extraction and is never rewritten.
-        """
-        if entry.layer != 0:
-            return None
-
-        scene = self.scene
-        archive_entry = resolve_history_entry(scene, entry)
-        if not self.archive_extract_facts:
-            return archive_entry.facts_status
-
-        if character_knowledge_enabled(scene):
-            reference = source_reference(scene, "summary", archive_entry.id)
-            status = (
-                await self.rebuild_supported_facts(
-                    scene, [reference], raise_user_cancel=True
-                )
-                if not self.fact_source_unavailable_reason(scene, archive_entry)
-                else "failed"
-            )
-            self._set_facts_status(scene, archive_entry.id, status)
-            return status
-
-        static = archive_entry.start is None and archive_entry.end is None
-        lines: dict[int, SpanLine] | None = None
-        intro_line = None
-        if static:
-            text = archive_entry.text
-        else:
-            text, lines, intro_line = self._entry_span(scene, archive_entry)
-            if not lines:
-                return archive_entry.facts_status
-        if not text.strip():
-            return archive_entry.facts_status
-
-        parsed_facts = await self.extract_facts(
-            text,
-            summary=None if static else archive_entry.text,
-            extra_context=[]
-            if static
-            else await self.previous_summaries(archive_entry, scene=scene),
-            include_previous_facts=not static,
-            line_ids=not static,
-            known_before=None
-            if static
-            else span_cutoff(scene, lines, start=archive_entry.start),
-        )
-        if self.scene is not scene:
-            raise GenerationCancelled("The scene changed during fact extraction")
-        await drop_facts_for_entries(scene, {archive_entry.id})
-        if parsed_facts:
-            await store_facts(
-                scene,
-                archive_entry.id,
-                parsed_facts,
-                self.archive_fact_dedupe_distance,
-                lines=lines,
-                intro=intro_line,
-                present=archive_entry.present,
-                ts=archive_entry.ts,
-            )
-        await refresh_topics(scene, force=True)
-        status = self._facts_status(parsed_facts, scene=scene)
-        self._set_facts_status(scene, archive_entry.id, status)
-        return status
-
-    @staticmethod
-    def _set_facts_status(scene, identity: str, status: FactsStatus | None):
-        for stored in scene.archived_history:
-            if stored.get("id") == identity:
-                if status is None:
-                    stored.pop("facts_status", None)
-                else:
-                    stored["facts_status"] = status
-                return
+        return summarized
 
     @set_processing
     async def summarize(
@@ -953,36 +719,19 @@ class SummarizeAgent(
         method: str = None,
         extra_instructions: str = None,
         generation_options: GenerationOptions | None = None,
-        return_facts: bool = False,
         audience: tuple[str, ...] | None = None,
         skip_author_hooks: bool = False,
-        fact_evidence: list[dict] | None = None,
-        include_previous_facts: bool = True,
-        line_ids: bool = False,
-        known_before: FactCutoff | None = None,
     ):
         """
         Summarize the given text
-
-        With `return_facts` the same call also asks for the atomic facts and
-        returns `(summary, facts)`, where `facts` is None when the model's
-        FACTS output did not parse. With `line_ids` every line of the text
-        starts with its bracketed message id and each fact names its line.
         """
 
         if audience and not character_knowledge_enabled(self.scene):
             raise ValueError("Audience summaries require perception mode")
         response_length = 1024
-        facts_requested = (
-            return_facts
-            and self.archive_extract_facts
-            and (bool(audience) or not character_knowledge_enabled(self.scene))
-        )
-
         template_vars = {
             "dialogue": text,
             "audience_summary": audience,
-            "fact_evidence": fact_evidence or [],
             "scene": self.scene,
             "max_tokens": self.client.max_token_length,
             "summarization_method": (self.archive_method if method is None else method),
@@ -993,11 +742,6 @@ class SummarizeAgent(
             "generation_options": generation_options,
             "analyze_chunks": self.layered_history_analyze_chunks,
             "response_length": response_length,
-            "extract_facts": facts_requested,
-            "line_ids": line_ids,
-            "previous_facts": self._known_facts(audience, known_before)
-            if facts_requested and include_previous_facts
-            else [],
         }
 
         emission = SummarizeEmission(
@@ -1018,31 +762,13 @@ class SummarizeAgent(
 
         template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
-        template_vars["fact_evidence"] = (
-            self._budget_fact_evidence(
-                fact_evidence,
-                template_vars,
-                (
-                    "dialogue",
-                    "extra_context",
-                    "extra_instructions",
-                    "agent_instructions",
-                    "previous_facts",
-                    "dynamic_instructions",
-                ),
-                response_length,
-            )
-            if facts_requested
-            else ""
-        )
-
         response, extracted = await Prompt.request(
             "summarizer.summarize-dialogue",
             self.client,
             f"summarize_{response_length}",
             vars=template_vars,
             dedupe_enabled=False,
-            response_spec=SUMMARY_WITH_FACTS_SPEC if facts_requested else SUMMARY_SPEC,
+            response_spec=SUMMARY_SPEC,
         )
 
         log.debug(
@@ -1053,13 +779,7 @@ class SummarizeAgent(
         summary = extracted["summary"]
         if not summary:
             log.error("summarize failed", response=response)
-            return ("", None) if return_facts else ""
-
-        parsed_facts = (
-            self._checked_facts(extracted, response, template_vars["previous_facts"])
-            if facts_requested
-            else None
-        )
+            return ""
 
         summary = summary.strip()
 
@@ -1078,126 +798,7 @@ class SummarizeAgent(
 
         summary = emission.response
 
-        if return_facts:
-            return self.clean_result(summary), parsed_facts
-
         return self.clean_result(summary)
-
-    def _known_facts(
-        self, audience: tuple[str, ...] | None, before: FactCutoff | None
-    ) -> list:
-        if audience:
-            return previous_audience_facts(self.scene, audience, before=before)
-        return previous_facts(self.scene, before=before)
-
-    @staticmethod
-    def _checked_facts(
-        extracted: dict, response: str | None, offered: list
-    ) -> list[ParsedFact] | None:
-        parsed_facts = parse_facts(extracted.get("facts"))
-        if parsed_facts is None:
-            log.warning("facts output did not parse", tail=(response or "")[-300:])
-            return None
-        return verify_links(parsed_facts, {fact.id for fact in offered})
-
-    def _budget_fact_evidence(
-        self,
-        fact_evidence: list[dict] | None,
-        template_vars: dict,
-        prompt_keys: tuple[str, ...],
-        response_length: int,
-    ) -> str:
-        return budget_evidence(
-            fact_evidence or [],
-            self.client.max_token_length,
-            util.count_tokens(
-                "\n".join(str(template_vars[key]) for key in prompt_keys)
-            ),
-            response_length,
-        )
-
-    @set_processing
-    async def extract_facts(
-        self,
-        text: str,
-        *,
-        summary: str | None = None,
-        extra_context: list[str] | None = None,
-        audience: tuple[str, ...] | None = None,
-        fact_evidence: list[dict] | None = None,
-        include_previous_facts: bool = True,
-        line_ids: bool = False,
-        skip_author_hooks: bool = False,
-        known_before: FactCutoff | None = None,
-    ) -> list[ParsedFact] | None:
-        """
-        Ask only for the facts of content whose summary already exists.
-
-        The facts come from `text`, in the same shape as the summary call's
-        facts; `summary` is the stored summary, given as context unless it is
-        the text itself. `known_before` limits the known facts to those
-        recorded before the content. Returns None when the model's FACTS
-        output did not parse.
-        """
-        if audience and not character_knowledge_enabled(self.scene):
-            raise ValueError("Audience facts require perception mode")
-        # up to 12 facts with line ids and subjects can outgrow 1024 tokens
-        response_length = 2048
-        template_vars = {
-            "dialogue": text,
-            "summary": summary if summary and summary.strip() != text.strip() else "",
-            "audience_summary": audience,
-            "scene": self.scene,
-            "max_tokens": self.client.max_token_length,
-            "extra_context": extra_context or "",
-            "num_extra_context": len(extra_context) if extra_context else 0,
-            "line_ids": line_ids,
-            "previous_facts": self._known_facts(audience, known_before)
-            if include_previous_facts
-            else [],
-        }
-        emission = ExtractFactsEmission(
-            agent=self,
-            text=text,
-            summary=template_vars["summary"],
-            template_vars=template_vars,
-        )
-        if not skip_author_hooks:
-            await talemate.emit.async_signals.get(
-                "agent.summarization.extract_facts.before"
-            ).send(emission)
-        template_vars["dynamic_instructions"] = emission.dynamic_instructions
-        template_vars["fact_evidence"] = self._budget_fact_evidence(
-            fact_evidence,
-            template_vars,
-            (
-                "dialogue",
-                "summary",
-                "extra_context",
-                "previous_facts",
-                "dynamic_instructions",
-            ),
-            response_length,
-        )
-
-        response, extracted = await Prompt.request(
-            "summarizer.extract-facts",
-            self.client,
-            f"summarize_{response_length}",
-            vars=template_vars,
-            dedupe_enabled=False,
-            response_spec=FACTS_SPEC,
-        )
-
-        emission.response = response
-        emission.facts = self._checked_facts(
-            extracted, response, template_vars["previous_facts"]
-        )
-        if not skip_author_hooks:
-            await talemate.emit.async_signals.get(
-                "agent.summarization.extract_facts.after"
-            ).send(emission)
-        return emission.facts
 
     @set_processing
     async def summarize_events(

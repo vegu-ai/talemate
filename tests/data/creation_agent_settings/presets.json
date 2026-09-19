@@ -1,105 +1,34 @@
 {
   "legacy": {
     "off": {
-      "conversation.character_knowledge.enabled": false,
-      "memory.topics.enabled": false,
-      "memory.retrieval.similarity_gate": false,
-      "summarizer.archive.extract_facts": false
+      "conversation.character_knowledge.enabled": false
     },
     "minimal": {
       "conversation.character_knowledge.enabled": true,
       "conversation.character_knowledge.perspective_filter": true,
-      "conversation.character_knowledge.absence_block": false,
-      "conversation.character_knowledge.awareness_line": false,
-      "conversation.character_knowledge.ledger": false,
-      "conversation.character_knowledge.memory_pass": false,
-      "conversation.character_knowledge.absence_limit": 5,
-      "conversation.character_knowledge.absence_window": 30,
-      "memory.topics.enabled": false,
-      "memory.retrieval.similarity_gate": false,
-      "summarizer.archive.extract_facts": false
-    },
-    "light": {
-      "conversation.character_knowledge.enabled": true,
-      "conversation.character_knowledge.perspective_filter": true,
-      "conversation.character_knowledge.absence_block": true,
-      "conversation.character_knowledge.awareness_line": true,
-      "conversation.character_knowledge.ledger": false,
-      "conversation.character_knowledge.memory_pass": false,
-      "conversation.character_knowledge.absence_limit": 5,
-      "conversation.character_knowledge.absence_window": 30,
-      "memory.topics.enabled": true,
-      "memory.retrieval.similarity_gate": true,
-      "summarizer.archive.extract_facts": true
-    },
-    "balanced": {
-      "conversation.character_knowledge.enabled": true,
-      "conversation.character_knowledge.perspective_filter": true,
-      "conversation.character_knowledge.absence_block": true,
-      "conversation.character_knowledge.awareness_line": true,
-      "conversation.character_knowledge.ledger": true,
-      "conversation.character_knowledge.memory_pass": false,
-      "conversation.character_knowledge.absence_limit": 5,
-      "conversation.character_knowledge.absence_window": 30,
-      "memory.topics.enabled": true,
-      "memory.retrieval.similarity_gate": true,
-      "summarizer.archive.extract_facts": true
+      "conversation.character_knowledge.memory_pass": false
     },
     "thorough": {
       "conversation.character_knowledge.enabled": true,
       "conversation.character_knowledge.perspective_filter": true,
-      "conversation.character_knowledge.absence_block": true,
-      "conversation.character_knowledge.awareness_line": true,
-      "conversation.character_knowledge.ledger": true,
-      "conversation.character_knowledge.memory_pass": true,
-      "conversation.character_knowledge.absence_limit": 5,
-      "conversation.character_knowledge.absence_window": 30,
-      "memory.topics.enabled": true,
-      "memory.retrieval.similarity_gate": true,
-      "summarizer.archive.extract_facts": true
-    },
-    "ultra": {
-      "conversation.character_knowledge.enabled": true,
-      "conversation.character_knowledge.perspective_filter": true,
-      "conversation.character_knowledge.absence_block": true,
-      "conversation.character_knowledge.awareness_line": true,
-      "conversation.character_knowledge.ledger": true,
-      "conversation.character_knowledge.memory_pass": true,
-      "conversation.character_knowledge.absence_limit": 10,
-      "conversation.character_knowledge.absence_window": 100,
-      "memory.topics.enabled": true,
-      "memory.retrieval.similarity_gate": true,
-      "summarizer.archive.extract_facts": true
+      "conversation.character_knowledge.memory_pass": true
     }
   },
   "perception": {
     "minimal": {
       "conversation.character_knowledge.enabled": true,
       "conversation.character_knowledge.memory_pass": false,
-      "summarizer.perceptions.automatic_repair": false,
-      "summarizer.archive.extract_facts": false,
-      "memory.topics.enabled": false
-    },
-    "light": {
-      "conversation.character_knowledge.enabled": true,
-      "conversation.character_knowledge.memory_pass": false,
-      "summarizer.perceptions.automatic_repair": false,
-      "summarizer.archive.extract_facts": false,
-      "memory.topics.enabled": true
+      "summarizer.perceptions.automatic_repair": false
     },
     "balanced": {
       "conversation.character_knowledge.enabled": true,
       "conversation.character_knowledge.memory_pass": false,
-      "summarizer.perceptions.automatic_repair": true,
-      "summarizer.archive.extract_facts": true,
-      "memory.topics.enabled": true
+      "summarizer.perceptions.automatic_repair": true
     },
     "thorough": {
       "conversation.character_knowledge.enabled": true,
       "conversation.character_knowledge.memory_pass": true,
-      "summarizer.perceptions.automatic_repair": true,
-      "summarizer.archive.extract_facts": true,
-      "memory.topics.enabled": true
+      "summarizer.perceptions.automatic_repair": true
     }
   }
 }

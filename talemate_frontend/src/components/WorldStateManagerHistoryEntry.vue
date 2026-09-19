@@ -11,10 +11,6 @@
                     <v-tooltip activator="parent" location="top">Present while this happened</v-tooltip>
                 </v-chip>
             </span>
-            <v-chip v-if="entry.facts_status === 'failed'" size="x-small" color="warning" variant="tonal" class="ml-2" prepend-icon="mdi-alert-outline">
-                facts failed
-                <v-tooltip activator="parent" location="top">The summary was stored, but the facts list the model returned could not be read. Regenerate facts to try again.</v-tooltip>
-            </v-chip>
             <v-chip v-for="refresh in refreshes" :key="refresh.id" size="x-small" :color="refreshErrors[refresh.id] ? 'error' : 'warning'" variant="tonal" class="ml-2 entry-refresh"
                 prepend-icon="mdi-refresh" :disabled="locked || !!refreshRequests[refresh.id]" @click="$emit('refresh', refresh)">
                 {{ refreshRequests[refresh.id] ? refresh.revision_refresh.running_label : refresh.revision_refresh.label }}
@@ -30,28 +26,6 @@
                 <EntryVisibilitySelect :model-value="knownBy" owner-label="nobody" :character-names="characterNames" :disabled="locked" @update:model-value="setKnownBy" />
             </div>
 
-            <v-expansion-panels v-if="facts.length" :model-value="factsOpen ? 'facts' : null" class="mt-3" variant="accordion" flat
-                @update:model-value="(value) => $emit('update:factsOpen', value === 'facts')">
-                <v-expansion-panel value="facts" class="bg-transparent">
-                    <v-expansion-panel-title class="text-body-small text-medium-emphasis">
-                        <v-icon size="small" icon="mdi-format-list-checks" class="mr-1"></v-icon>Facts ({{ facts.length }})
-                    </v-expansion-panel-title>
-                    <v-expansion-panel-text eager>
-                        <div v-if="!locked" class="text-body-small text-medium-emphasis mb-1">Double-click a fact to edit it</div>
-                        <v-list density="compact" slim class="bg-transparent py-0">
-                            <WorldStateManagerFactRow v-for="fact in facts" :key="fact.id" :fact="fact" :locked="locked"
-                                @updated="updateFact" @deleted="removeFact" @source="$emit('source', $event)">
-                                <template #details>
-                                    <v-chip v-if="restatedHere(fact)" size="x-small" variant="tonal" class="mr-1 fact-restated" prepend-icon="mdi-repeat-once">
-                                        Restated
-                                        <v-tooltip activator="parent" location="top">{{ restatedTooltip(fact) }}</v-tooltip>
-                                    </v-chip>
-                                </template>
-                            </WorldStateManagerFactRow>
-                        </v-list>
-                    </v-expansion-panel-text>
-                </v-expansion-panel>
-            </v-expansion-panels>
         </v-card-text>
 
         <v-card-actions>
@@ -63,15 +37,6 @@
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(isPrimaryModifier(ev))">Regenerate</v-btn>
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" color="primary" prepend-icon="mdi-magnify-expand" @click="toggleSourceEntries">{{ entry.source_entries ? 'Collapse' : 'Inspect' }}</v-btn>
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" prepend-icon="mdi-clock-plus-outline" color="primary" @click="insertingTimePassage = true">Time Passage</v-btn>
-                <v-tooltip v-if="entry.layer === 0" location="top" :text="factsTooltip">
-                    <template #activator="{ props }">
-                        <span v-bind="props" class="d-inline-block">
-                            <v-btn :disabled="editing || locked || !!entry.facts_unavailable_reason || extractFactsEnabled === false" prepend-icon="mdi-format-list-checks" color="primary" @click="regenerateFacts">
-                                {{ hasFactRecord(entry) ? 'Regenerate facts' : 'Generate facts' }}
-                            </v-btn>
-                        </span>
-                    </template>
-                </v-tooltip>
                 <ConfirmActionInline
                     v-if="deletable"
                     :disabled="locked"
@@ -95,10 +60,6 @@
                 @generate="content => { entry.text = content; updateEntry(entry); }"
             />
         </v-card-actions>
-
-        <div v-if="entry.layer === 0 && entry.facts_unavailable_reason" class="px-4 pb-3 text-body-small text-medium-emphasis">
-            {{ entry.facts_unavailable_reason }}
-        </div>
 
         <div v-if="insertingTimePassage" class="d-flex align-center px-4 pb-2">
             <v-number-input v-model="insertAmount" :min="1" label="Amount"
@@ -127,33 +88,12 @@
 
 <script>
 
-/*
-class HistoryEntry(pydantic.BaseModel):
-    text: str
-    id: str | None = None
-    ts: int
-    index: int
-    layer: int
-    ts_start: int | None = None
-    ts_end: int | None = None
-    time: str | None = None
-    time_start: str | None = None
-    time_end: str | None = None
-    start: int | None = None
-    end: int | None = None
-    present: list[str] | None = None
-    facts_status: "ok" | "failed" | None = None
-    facts: list[Fact] = []
-*/
-
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
-import { EXTRACT_FACTS_OFF_HINT, hasFactRecord } from '@/utils/historyFacts';
 import ContextualGenerate from './ContextualGenerate.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
 import EntryVisibilitySelect from './EntryVisibilitySelect.vue';
-import WorldStateManagerFactRow from './WorldStateManagerFactRow.vue';
 
 // the stored form of a Known by: unset for everyone, empty for nobody
 function storedAudience(visibility) {
@@ -184,9 +124,7 @@ export default {
         busy: Boolean,
         appConfig: Object,
         generationOptions: Object,
-        // the Summarizer's Extract facts setting; null while unknown
-        extractFactsEnabled: { type: Boolean, default: null },
-        factsOpen: Boolean,
+
         // counts the refused Known by changes; a refusal drops a sent draft
         knownByRefusals: { type: Number, default: 0 },
     },
@@ -218,11 +156,9 @@ export default {
     inject:[
         'getWebsocket',
     ],
-    emits: ['busy', 'collapse', 'source', 'update:factsOpen', 'refresh'],
+    emits: ['busy', 'collapse', 'refresh'],
     computed: {
-        facts() {
-            return this.entry?.facts || [];
-        },
+
         knownByEditable() {
             return this.deletable && !this.perceptionMode;
         },
@@ -259,14 +195,11 @@ export default {
             // Manual base-layer entries have no start/end indices
             return this.entry.layer === 0 && this.entry.start === null && this.entry.end === null;
         },
-        factsTooltip() {
-            if (this.extractFactsEnabled === false) return EXTRACT_FACTS_OFF_HINT;
-            return 'Extract facts from this entry without changing its text or advancing the story.';
-        },
+
     },
     methods: {
         isPrimaryModifier,
-        hasFactRecord,
+
         handleEnter(ev) {
             if(!ev.shiftKey) {
                 ev.preventDefault();
@@ -348,34 +281,13 @@ export default {
                 this.collapseSourceEntries();
             }
         },
-        regenerateFacts() {
-            this.$emit('busy', this.entry.id);
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'regenerate_facts',
-                entry: this.entry,
-            }));
-        },
+
         refreshTooltip(refresh) {
             const error = this.refreshErrors[refresh.id];
             const outcome = error ? `The last run failed: ${error}` : 'Click to run it now.';
             return `Passage ${refresh.id}: ${refresh.revision_refresh.explanation} ${outcome}`;
         },
-        restatedHere(fact) {
-            return fact.archive_id !== this.entry.id
-                && (fact.restated_by || []).some((item) => item.archive_id === this.entry.id);
-        },
-        restatedTooltip(fact) {
-            const when = fact.origin_time ? fact.origin_time.toLowerCase() : 'at an unknown time';
-            const where = fact.archive_id ? 'in an earlier history entry' : 'outside the history';
-            return `Restated here. First recorded ${when} ${where}.`;
-        },
-        updateFact(fact) {
-            this.entry.facts = this.entry.facts.map((existing) => existing.id === fact.id ? fact : existing);
-        },
-        removeFact(id) {
-            this.entry.facts = this.entry.facts.filter((fact) => fact.id !== id);
-        },
+
         deleteEntry(){
             const entry = this.entry;
             this.pendingDelete = true;
@@ -401,7 +313,7 @@ export default {
         },
     },
     components: {
-        WorldStateManagerFactRow,
+
         ConfirmActionInline,
         EntryVisibilitySelect,
         ContextualGenerate,

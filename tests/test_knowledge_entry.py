@@ -16,9 +16,8 @@ from talemate.knowledge.entry import (
     set_edge,
     sheet_visibility_key,
 )
-from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge, Topic, Fact
+from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge
 from talemate.world_state import ManualContext
-from talemate.knowledge.schema import TopicCoverage
 
 
 @pytest.fixture
@@ -203,7 +202,7 @@ class TestSetEdge:
 
 
 class TestCharacterKnowledgeReport:
-    def test_perception_headers_edges_and_coverage(self, scene, monkeypatch):
+    def test_perception_headers_edges_and_disclosures(self, scene, monkeypatch):
         from talemate.knowledge.perspectives import add_disclosure
 
         scene.knowledge_eligibility = "perception"
@@ -211,14 +210,6 @@ class TestCharacterKnowledgeReport:
         scene.world_state.knowledge = [
             KnowledgeEdge(character="Alice", target="Hidden Door")
         ]
-        monkeypatch.setattr(
-            "talemate.knowledge.entry.coverage",
-            lambda *args: [TopicCoverage(id="T1", name="ledger", known=1, total=2)],
-        )
-        monkeypatch.setattr(
-            "talemate.knowledge.entry.awareness_line",
-            lambda *args: "Alice knows some of ledger",
-        )
         lines = character_knowledge_report(scene, "Alice").splitlines()
         assert lines[:3] == [
             "### What Alice knows",
@@ -227,8 +218,6 @@ class TestCharacterKnowledgeReport:
         ]
         assert "Grants:" in lines and "Revokes: none" not in lines
         assert "Restricted entries Alice can see:" in lines
-        assert "Topic coverage (accessible / total recorded facts):" in lines
-        assert "Awareness: Alice knows some of ledger" in lines
         report = character_knowledge_report(scene, "Nobody")
         assert "Explicit disclosures (oldest first): none" in report
         assert "Restricted entries Nobody can see: none" in report
@@ -243,7 +232,7 @@ class TestCharacterKnowledgeReport:
             "- Bob: the fall (Known by: Bob (owner), Alice)",
         ]
 
-    def test_edges_restricted_and_topics(self, scene):
+    def test_edges_and_restricted_entries(self, scene):
         scene.world_state.knowledge = [
             KnowledgeEdge(
                 character="Alice",
@@ -256,14 +245,6 @@ class TestCharacterKnowledgeReport:
             ),
             KnowledgeEdge(character="Carol", target="Bob.secret"),
         ]
-        scene.world_state.facts = {
-            "F1": Fact(id="F1", text="The door is hidden.", present=["Alice"]),
-            "F2": Fact(id="F2", text="The door creaks.", present=["Bob"]),
-            "F3": Fact(id="F3", text="The door is oak.", present=["Bob"]),
-        }
-        scene.world_state.topics = {
-            "T1": Topic(id="T1", name="the door", fact_ids=["F1", "F2", "F3"])
-        }
         report = character_knowledge_report(scene, "Alice")
         assert report.splitlines() == [
             "### What Alice knows",
@@ -273,9 +254,6 @@ class TestCharacterKnowledgeReport:
             "- Bob: the fall: manual",
             "Restricted entries Alice can see:",
             '- Hidden Door (Known by: nobody; grants: Alice (director, "saw it"))',
-            "Topic coverage (accessible / total recorded facts):",
-            "- the door: 1 / 3",
-            "Awareness: Alice knows some of the door",
         ]
 
 
@@ -343,14 +321,6 @@ class TestClassification:
         )
         assert entry_knowledge(scene, item).kind == "unknown"
 
-    def test_fact_by_id(self, scene):
-        scene.world_state.facts = {
-            "F1": Fact(id="F1", text="The door is hidden.", present=["Alice"])
-        }
-        entry = entry_knowledge(scene, "F1")
-        assert entry.kind == "fact"
-        assert entry.line == "Known by: Alice (present)"
-
     def test_longest_character_name_wins(self, scene):
         scene.character_data["Bob.Jr"] = Character(
             name="Bob.Jr",
@@ -365,10 +335,7 @@ class TestClassification:
 
 
 class TestReportLabels:
-    def test_fact_and_layered_edges_get_labels(self, scene):
-        scene.world_state.facts = {
-            "F7": Fact(id="F7", text="Bob buried the ledger under the gallery floor.")
-        }
+    def test_layered_edges_get_labels(self, scene):
         scene.layered_history = [
             [
                 {
@@ -381,14 +348,9 @@ class TestReportLabels:
             ]
         ]
         scene.world_state.knowledge = [
-            KnowledgeEdge(character="Alice", target="F7", source="told"),
             KnowledgeEdge(character="Alice", target="L1", source="director"),
         ]
         report = character_knowledge_report(scene, "Alice")
-        assert (
-            "- fact: (Time unknown) Bob buried the ledger under the gallery floor.: told"
-            in report
-        )
         assert "- history (layer 1): Mara and Edwin argued.: director" in report
 
 
@@ -412,7 +374,6 @@ async def test_stored_revoke_has_no_new_mode_effect_or_report(scene):
     assert known_by_line(scene, "The Lighthouse") == "Known by: everyone"
     report = await scene.world_state_manager.get_character_knowledge("Alice")
     assert report.edges == []
-    assert report.awareness is None
     assert "Revokes:" not in character_knowledge_report(scene, "Alice")
     scene.knowledge_eligibility = "legacy"
     assert (await scene.world_state_manager.get_character_knowledge("Alice")).edges == [

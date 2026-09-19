@@ -12,13 +12,11 @@ from talemate.history import ArchiveEntry, LayeredArchiveEntry
 from talemate.instance import get_agent
 from talemate.knowledge.context import project_character_history
 from talemate.knowledge.disclosures import grant_disclosure, disclosure_text
-from talemate.knowledge.graph import facts_about
 from talemate.knowledge.perspectives import (
     set_source_perspectives,
     select_character_view,
     source_reference,
 )
-from talemate.knowledge.schema import ParsedFact
 from talemate.knowledge.summaries import summary_inputs
 from talemate.load import load_scene_from_data
 from talemate.scene_message import NarratorMessage
@@ -62,7 +60,6 @@ def disclosure_scene(scene, monkeypatch):
     ]
     summarizer = get_agent("summarizer")
     summarizer.connect(scene)
-    summarizer.actions["archive"].config["extract_facts"].value = False
     monkeypatch.setattr(summarizer, "schedule_audience_summaries", AsyncMock())
     monkeypatch.setattr(
         summarizer.client, "_prompt_generation_error", AsyncMock(return_value="cancel")
@@ -71,6 +68,7 @@ def disclosure_scene(scene, monkeypatch):
         get_agent("conversation"), "rag_build", AsyncMock(return_value=[])
     )
     get_agent("conversation").actions["character_knowledge"].enabled = False
+    monkeypatch.setattr(get_agent("memory"), "ensure_audience_index", AsyncMock())
     for method in ("add_many", "delete"):
         monkeypatch.setattr(get_agent("memory"), method, AsyncMock())
     with ActiveScene(scene):
@@ -238,21 +236,12 @@ async def test_summary_order_and_actor_prefix_do_not_backdate_a_grant(
 
 
 @pytest.mark.asyncio
-async def test_saved_grant_survives_fact_regeneration_and_deleted_boundary(
+async def test_saved_grant_survives_deleted_source_and_boundary(
     disclosure_scene, monkeypatch
 ):
     scene, summarizer = disclosure_scene
     first = grant_disclosure(scene, "Bob", "mixed", text=LOCATION)
-    reference = source_reference(scene, "disclosure", first.id)
-    summarizer.actions["archive"].config["extract_facts"].value = True
-    monkeypatch.setattr(
-        summarizer,
-        "extract_facts",
-        AsyncMock(return_value=[ParsedFact(text=LOCATION, subjects=["ledger"])]),
-    )
-    assert await summarizer.rebuild_supported_facts(scene, [reference]) == "ok"
-    original = deepcopy(scene.world_state.facts)
-    # The original archive is disposable; learning is not tied to its fact IDs.
+    # Disclosures retain the granted text after their original source disappears.
     scene.archived_history.clear()
     scene.delete_message(scene.history[0].id)
     saved = deepcopy(scene.serialize)
@@ -267,7 +256,6 @@ async def test_saved_grant_survives_fact_regeneration_and_deleted_boundary(
     )
     await load_scene_from_data(restored, saved, name="disclosure-test.json")
     assert restored.knowledge.disclosures == (first,)
-    assert restored.world_state.facts == original
     new = NarratorMessage(message="A later scene begins.")
     assert new.id > first.message_id_boundary
     restored.history.append(new)
@@ -280,12 +268,6 @@ async def test_saved_grant_survives_fact_regeneration_and_deleted_boundary(
     assert LOCATION in " ".join(
         project_character_history(restored, "Bob", before_message_id=new.id)
     )
-    summarizer.connect(restored)
-    memory.connect(restored)
-    with ActiveScene(restored):
-        assert await summarizer.rebuild_supported_facts(restored, [reference]) == "ok"
-    assert facts_about(restored, "ledger", character="Bob")[0].text == LOCATION
-    assert facts_about(restored, "ledger", character="Cara") == []
 
 
 @pytest.mark.asyncio
@@ -299,9 +281,8 @@ async def test_real_author_handler_validates_then_indexes_only_disclosure(
     plugin = WorldStateManagerPlugin(websocket)
     monkeypatch.setattr(scene.config.game.general, "auto_save", True)
     monkeypatch.setattr(scene, "save", AsyncMock())
-    summarizer.actions["archive"].config["extract_facts"].value = True
-    extract = AsyncMock(return_value=[ParsedFact(text=LOCATION)])
-    monkeypatch.setattr(summarizer, "extract_facts", extract)
+    index = AsyncMock(return_value=True)
+    monkeypatch.setattr(get_agent("memory"), "ensure_audience_index", index)
     summary = AsyncMock()
     monkeypatch.setattr(summarizer, "summarize", summary)
     task = await plugin.handle_grant_disclosure(
@@ -314,14 +295,9 @@ async def test_real_author_handler_validates_then_indexes_only_disclosure(
     )
     await task
     disclosure = scene.knowledge.disclosures[0]
-    assert extract.call_args.args[0] == LOCATION
-    assert extract.call_args.kwargs["audience"] == ("Bob",)
-    assert extract.call_args.kwargs["summary"] is None
     summary.assert_not_awaited()
-    assert (
-        next(iter(scene.world_state.facts.values())).contributions[0].source.id
-        == disclosure.id
-    )
+    index.assert_awaited_once_with(scene)
+    assert disclosure.text == LOCATION
     assert scene.save.await_count == 1
     messages = [call.args[0] for call in websocket.queue_put.call_args_list]
     assert [m for m in messages if m["action"] == "disclosure_indexed"][0]["data"][
@@ -345,35 +321,16 @@ async def test_real_author_handler_validates_then_indexes_only_disclosure(
             websocket.queue_put.call_args.args[0]["failed_action"] == "grant_disclosure"
         )
         assert scene.knowledge == snapshot
-    assert extract.await_count == 1
+    assert index.await_count == 1
 
 
 @pytest.mark.asyncio
-async def test_extraction_failure_keeps_disclosure_and_reports_failed(
+async def test_grant_knowledge_node_indexes_disclosure_without_a_summary(
     disclosure_scene, monkeypatch
 ):
     scene, summarizer = disclosure_scene
-    summarizer.actions["archive"].config["extract_facts"].value = True
-    monkeypatch.setattr(summarizer, "extract_facts", AsyncMock(return_value=None))
-    result = await run_node(
-        GrantKnowledge(),
-        scene=scene,
-        inputs={"character": "Bob", "target": "mixed", "information": LOCATION},
-    )
-    assert "failed" in result["text"]
-    assert scene.knowledge.disclosures[0].text == LOCATION
-    assert scene.world_state.facts == {}
-    assert LOCATION in " ".join(project_character_history(scene, "Bob"))
-
-
-@pytest.mark.asyncio
-async def test_grant_knowledge_node_extracts_facts_without_a_summary(
-    disclosure_scene, monkeypatch
-):
-    scene, summarizer = disclosure_scene
-    summarizer.actions["archive"].config["extract_facts"].value = True
-    extract = AsyncMock(return_value=[ParsedFact(text=LOCATION)])
-    monkeypatch.setattr(summarizer, "extract_facts", extract)
+    index = AsyncMock(return_value=True)
+    monkeypatch.setattr(get_agent("memory"), "ensure_audience_index", index)
     summary = AsyncMock()
     monkeypatch.setattr(summarizer, "summarize", summary)
     result = await run_node(
@@ -382,11 +339,9 @@ async def test_grant_knowledge_node_extracts_facts_without_a_summary(
         inputs={"character": "Bob", "target": "mixed", "information": LOCATION},
     )
     assert "failed" not in result["text"]
-    extract.assert_awaited_once()
-    assert extract.call_args.args[0] == LOCATION
-    assert extract.call_args.kwargs["summary"] is None
+    index.assert_awaited_once_with(scene)
     summary.assert_not_awaited()
-    assert [fact.text for fact in scene.world_state.facts.values()] == [LOCATION]
+    assert scene.knowledge.disclosures[0].text == LOCATION
 
 
 def test_delayed_perception_does_not_use_a_later_disclosure(disclosure_scene):
@@ -404,8 +359,6 @@ def test_delayed_perception_does_not_use_a_later_disclosure(disclosure_scene):
 
 
 def test_disclosure_target_uses_canonical_precedence_and_offered_ids(disclosure_scene):
-    from talemate.knowledge.schema import Fact
-
     scene, _ = disclosure_scene
     alice = scene.character_data["Alice"]
     alice.description = "Sailor description."
@@ -416,7 +369,6 @@ def test_disclosure_target_uses_canonical_precedence_and_offered_ids(disclosure_
     scene.world_state.manual_context["mixed"] = ManualContext(
         id="mixed", text="world takes precedence"
     )
-    scene.world_state.facts["mixed"] = Fact(id="mixed", text="fact loses")
     offered = [
         t for t in scene.world_state_manager.knowledge_targets() if t.id == "mixed"
     ]
@@ -521,7 +473,7 @@ async def test_director_grant_wording_matches_mode(disclosure_scene, enabled):
 
 
 @pytest.mark.asyncio
-async def test_author_failure_correlates_missing_name_and_refreshes_failed_facts(
+async def test_author_failure_correlates_missing_name_and_success_indexes_disclosure(
     disclosure_scene, monkeypatch
 ):
     from talemate.server.world_state_manager import WorldStateManagerPlugin
@@ -539,8 +491,6 @@ async def test_author_failure_correlates_missing_name_and_refreshes_failed_facts
     assert error["action"] == "operation_done" and error["request_id"] == "missing-name"
     assert error["failed_action"] == "grant_disclosure" and error["error"]
     scene.save.assert_not_awaited()
-    summarizer.actions["archive"].config["extract_facts"].value = True
-    monkeypatch.setattr(summarizer, "extract_facts", AsyncMock(return_value=None))
     task = await plugin.handle_grant_disclosure(
         {"name": "Bob", "target": "mixed", "information": LOCATION}
     )
@@ -551,7 +501,7 @@ async def test_author_failure_correlates_missing_name_and_refreshes_failed_facts
         for c in websocket.queue_put.call_args_list
         if c.args[0]["action"] == "disclosure_indexed"
     ]
-    assert indexed[0]["data"]["facts_status"] == "failed"
+    assert "facts_status" not in indexed[0]["data"]
     assert indexed[0]["data"]["name"] == "Bob"
     assert scene.save.await_count == 1
 

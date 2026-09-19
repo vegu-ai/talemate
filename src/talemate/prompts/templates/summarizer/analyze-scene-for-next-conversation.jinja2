@@ -7,11 +7,10 @@ Override example:
   {{ set_anchor_extractor("analysis", "<MY_TAG>", "</MY_TAG>") }}
   {{ set_as_is_extractor("analysis") }}
 -#}
-{% if standard_knowledge %}{% with max_tokens=max_tokens-standard_knowledge.tokens %}{% include "scene-context.jinja2" %}{% endwith %}{% else %}{% include "scene-context.jinja2" %}{% endif %}
+{% include "scene-context.jinja2" %}
 {% include "world-state-snapshot.jinja2" %}
 {% include "scene-intent.jinja2" %}
-{% if standard_knowledge %}{{ standard_knowledge.text }}
-{% endif %}<|SECTION:TASK|>
+<|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) -%}
 {% set character_direction=scene.last_message_of_type("director", character_name=character.name, max_iterations=agent_config("director.direct.direction_stickiness"), stop_on_time_passage=True, count_only_types=["character", "narrator"]) -%}
 {% if agent_context_state["conversation__instruction"] -%}
@@ -22,9 +21,7 @@ Your task is to analyze the scene progression so far and how it informs what {{ 
 
 The information you write will be given to the other story editors to write {{ character.name }}'s next action in the scene.
 
-{% if standard_knowledge %}{{ li() }}. First, list what {{ character.name }} does not know: every item under Unknown recent facts, and anything said in the scene while {{ character.name }} was absent. Everything below must treat these as unknown to {{ character.name }}. Whenever a later point names one of them, such as something another character intends to tell {{ character.name }}, write it as "(unknown to {{ character.name }})" rather than as something {{ character.name }} needs to be told or can act on.
-
-{% endif %}{{ li() }}. Briefly make statements about context, meaning and facts established relevant to the current moment in the scene. Facts are sourced from the existing story, don't assume, only state things that are explicitly true.{% if standard_knowledge %} State facts from the Known facts block. Reader history is context, not proof of what {{ character.name }} knows. Facts listed only in Unknown recent facts cannot guide their actions. These bounded lists are not exhaustive; missing information does not establish awareness.{% endif %}
+{{ li() }}. Briefly make statements about context, meaning and facts established relevant to the current moment in the scene. Facts are sourced from the existing story, don't assume, only state things that are explicitly true.
 
 {{ li() }}. Brielfy list who the characters in the scene are to each other. (Active or referenced)
 
@@ -54,7 +51,7 @@ The information you write will be given to the other story editors to write {{ c
 {% endwith %}
 {% endif %}
 
-{{ li() }}. Is {{ character.name }} aware of the current moment? This is IMPORTANT - It cannot affect their next action if they are not aware. You must be very explicit about this and either say yes or no and explain the reasoning for your answer.{% if standard_knowledge %} Ground awareness in Known facts. Explicitly say what {{ character.name }} does not know from Unknown recent facts; do not suggest acting on those facts or invent a way they learned them.{% endif %}
+{{ li() }}. Is {{ character.name }} aware of the current moment? This is IMPORTANT - It cannot affect their next action if they are not aware. You must be very explicit about this and either say yes or no and explain the reasoning for your answer.
 {% endif %}
 
 {{ li() }}. What narrative perspective and tense is the story written in? (e.g., "third person past tense", "first person present tense from Character X's perspective", etc.)

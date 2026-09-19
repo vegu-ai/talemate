@@ -24,8 +24,7 @@ from talemate.prompts.response import CodeBlockExtractorMixin
 from talemate.status import background_task
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.readiness import emit_perception_status, perception_readiness
-from talemate.knowledge.evidence import passage_spans
-from talemate.knowledge.chronology import record_time
+from talemate.knowledge.timeline import record_time
 from talemate.knowledge.reinforcements import prepare_reinforcement_source
 from talemate.knowledge.perspective_models import (
     PerspectiveOutput,
@@ -145,7 +144,6 @@ def parse_perceptions(
                 text=item.get("text"),
                 knowledge_ids=perception_citations(item, "knowledge_ids", str, name),
                 passage_ids=perception_citations(item, "passage_ids", int, name),
-                evidence_spans=perception_citations(item, "evidence_spans", int, name),
             )
         except (ValueError, ValidationError) as exc:
             reason = (
@@ -336,10 +334,6 @@ def perception_context(scene: "Scene", message: SceneMessage) -> dict:
         "passage": {
             "provenance": passage_provenance(message).model_dump(),
             "text": message.perception_text,
-            "evidence_spans": [
-                {"id": index, "text": text}
-                for index, text in enumerate(passage_spans(message.perception_text))
-            ],
             "kind": message.typ,
             "sub_type": message.sub_type
             if isinstance(message, ContextInvestigationMessage)
@@ -395,7 +389,6 @@ def resolve_perception_inputs(
                 audience=output.audience,
                 status=output.status,
                 text=output.text,
-                evidence_spans=output.evidence_spans,
                 sources=tuple(
                     SourceReference.model_validate(offered[key])
                     for key in kept["knowledge_ids"]
@@ -470,7 +463,6 @@ class PerceptionMixin:
                     text=None,
                     sources=(),
                     passage_provenance=(),
-                    evidence_spans=(),
                 )
             outputs.append(PerspectiveOutput(**values))
         outputs.extend(

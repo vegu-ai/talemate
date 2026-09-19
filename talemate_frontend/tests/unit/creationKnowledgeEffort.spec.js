@@ -20,7 +20,7 @@ function model(component, overrides = {}) {
     return vm;
 }
 
-function landing(result = { confirmed: true, characterKnowledge: false, effort: 'balanced', options: { generate_story_intent: false } }) {
+function landing(result = { confirmed: true, characterKnowledge: false, effort: 'minimal', options: { generate_story_intent: false } }) {
     const sent = [];
     return model(Landing, {
         sent, confirmUnsaved: () => true,
@@ -47,9 +47,9 @@ describe('complete creation snapshots', () => {
         });
     }
     it('does not return aliases of the preset table', () => {
-        const one = creationEffortSettings('legacy', 'balanced');
-        one.conversation.actions.character_knowledge.config.ledger.value = false;
-        expect(creationEffortSettings('legacy', 'balanced').conversation.actions.character_knowledge.config.ledger.value).toBe(true);
+        const one = creationEffortSettings('legacy', 'thorough');
+        one.conversation.actions.character_knowledge.config.memory_pass.value = false;
+        expect(creationEffortSettings('legacy', 'thorough').conversation.actions.character_knowledge.config.memory_pass.value).toBe(true);
     });
 });
 
@@ -72,9 +72,9 @@ describe('both creation dialogs', () => {
 
     it('flushes the last slider choice before submitting New Story', () => {
         const vm = model(Setup);
-        vm.$refs.effortSlider = { send: () => { vm.effort = 'ultra'; } };
+        vm.$refs.effortSlider = { send: () => { vm.effort = 'thorough'; } };
         vm.create();
-        expect(vm.$emit).toHaveBeenCalledWith('create', expect.objectContaining({ effort: 'ultra' }));
+        expect(vm.$emit).toHaveBeenCalledWith('create', expect.objectContaining({ effort: 'thorough' }));
     });
     it.each([false, true])('card mode %s carries effort separately from unchanged import options', async perspectives => {
         const vm = model(Card);
@@ -85,10 +85,10 @@ describe('both creation dialogs', () => {
         vm.playerCharacterExisting = 'Hero';
         vm.options.generate_story_intent = false;
         vm.options.import_character_book = true;
-        vm.$refs.effortSlider = { send: () => { vm.effort = 'ultra'; } };
+        vm.$refs.effortSlider = { send: () => { vm.effort = 'thorough'; } };
         vm.confirm();
         expect(await pending).toMatchObject({
-            confirmed: true, characterKnowledge: perspectives, effort: perspectives ? 'thorough' : 'ultra',
+            confirmed: true, characterKnowledge: perspectives, effort: 'thorough',
             options: { generate_story_intent: false, import_character_book: true, player_character_existing: 'Hero' },
         });
     });
@@ -96,12 +96,13 @@ describe('both creation dialogs', () => {
         const vm = model(Card);
         const first = vm.open('data:image/png;base64,x', null, 'old.png');
         const oldId = vm.analysisRequestId;
-        vm.effort = 'ultra';
+        vm.effort = 'thorough';
         const firstKnowledgeUi = vm.knowledgeUiVersion;
         vm.cancel();
         expect(await first).toEqual({ confirmed: false });
         const second = vm.open('data:image/png;base64,y', null, 'new.png');
-        expect(vm.effort).toBe('balanced');
+        expect(vm.effort).toBeNull();
+        expect(vm.effortForMode).toBe('minimal');
         expect(vm.knowledgeUiVersion).toBe(firstKnowledgeUi + 1);
         vm.handleMessage({ type: 'character_card_analysis', request_id: oldId, data: { detected_character_names: ['Old'] } });
         expect(vm.analysis).toBeNull();

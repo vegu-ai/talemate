@@ -15,7 +15,6 @@ from talemate.knowledge.perspectives import (
 from talemate.regenerate import regenerate
 from talemate.scene_message import CharacterMessage
 from talemate.knowledge.perspectives import add_disclosure
-from talemate.knowledge.schema import Fact
 
 cast = test_actor_perspective_history.cast
 
@@ -289,7 +288,7 @@ async def test_reply_changes_reuse_analysis(analysis_turn, action):
 @pytest.mark.parametrize("analysis_turn", ["perception"], indirect=True)
 @pytest.mark.parametrize(
     "change",
-    ["earlier_edit", "new_player_line", "disclosure", "fact", "authored", "budget"],
+    ["earlier_edit", "new_player_line", "disclosure", "authored", "budget"],
 )
 async def test_changed_analysis_inputs_make_one_new_request(
     analysis_turn, change, monkeypatch
@@ -311,10 +310,6 @@ async def test_changed_analysis_inputs_make_one_new_request(
         )
     elif change == "disclosure":
         add_disclosure(t.scene, "The harbor is closed.", ["Bob"])
-    elif change == "fact":
-        t.scene.world_state.facts["F900"] = Fact(
-            id="F900", text="The harbor is closed."
-        )
     elif change == "authored":
         t.scene.get_character("Bob").description = "A harbor watchman."
     elif change == "budget":
@@ -561,7 +556,6 @@ async def test_analysis_waits_for_summarizer_passes_before_capturing_evidence(
     conversation = get_agent("conversation")
     bob = scene.get_character("Bob")
     summarizer.actions["analyze_scene"].enabled = True
-    summarizer.actions["archive"].config["extract_facts"].value = False
     scene.archived_history = [
         {"id": "archive", "text": "Reader summary", "start": 0, "end": 0, "ts": 0}
     ]

@@ -13,7 +13,6 @@ from talemate.prompts.response import (
 __all__ = [
     "ItemBlockExtractor",
     "MEMORY_PASS_SPEC",
-    "KNOWLEDGE_LEDGER_SPEC",
 ]
 
 ITEMS_CONTAINER = AnchorExtractor(left="<ITEMS>", right="</ITEMS>")
@@ -47,13 +46,6 @@ MEMORY_PASS_SPEC = ResponseSpec(
     extractors={
         "answer": ITEMS_CONTAINER,
         "items": ItemBlockExtractor(),
-    },
-    required=[],
-)
-
-KNOWLEDGE_LEDGER_SPEC = ResponseSpec(
-    extractors={
-        "ledger": AnchorExtractor(left="<LEDGER>", right="</LEDGER>"),
     },
     required=[],
 )

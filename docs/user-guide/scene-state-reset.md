@@ -29,7 +29,7 @@ Use this when context retrieval is returning stale or incorrect results, or afte
 
 ### History
 
-Wipes scene messages, archived summaries, and layered history. This removes the entire conversation and narrative progression. It also removes the facts that the wiped entries recorded, and the Learn, Never Learn and Unlearn rules set on those facts.
+Wipes scene messages, archived summaries, and layered history. This removes the entire conversation and narrative progression.
 
 The dialog shows counts of current history entries:
 
@@ -41,10 +41,8 @@ The dialog shows counts of current history entries:
 
 When wiping history, you can choose whether to include or preserve **static history entries**. Static entries are pre-established backstory that is not tied to scene progression. By default, static entries are preserved.
 
-Including static entries also removes the facts they recorded and the Learn, Never Learn and Unlearn rules set on those facts. A fact that only a hand grant kept is removed too, while a fact whose text or link you edited is kept as a manual entry.
-
 !!! warning "This action cannot be undone"
-    Wiping history permanently removes all conversation and narrative progression, the facts those entries recorded, and the Learn, Never Learn and Unlearn rules set on those facts. Including static entries removes their facts and rules too. Save your scene before performing this operation if you want to be able to revert.
+    Wiping history permanently removes all conversation and narrative progression. Including static entries removes the predefined backstory too. Save your scene before performing this operation if you want to be able to revert.
 
 ### Intent State
 

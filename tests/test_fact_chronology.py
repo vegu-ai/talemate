@@ -427,13 +427,6 @@ def test_fact_typed_binding_discovers_direct_interpolation(
 def test_discovered_fact_templates_render_markers(clock_scene, template, audience):
     fact = ago(clock_scene, "F1", 21, 3)
     variables = fact_prompt_variables(clock_scene, fact, audience)
-    if template == "narrator.offscreen-life":
-        from talemate.character import Character
-
-        variables.update(
-            character=Character(name="Edwin"),
-            known_facts=[render_fact(clock_scene, fact)],
-        )
     with ActiveScene(clock_scene):
         rendered = Prompt.get(template, vars=variables).render()
     assert_fact_markers(clock_scene, template, rendered, fact)

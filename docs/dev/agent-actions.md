@@ -12,15 +12,12 @@ Distinct request steps use these action keys:
 | conversation | `memory_pass` |
 | editor | `revision_rewrite`, `revision_unslop` |
 | director | `plan_expand_beats`, `plan_critique_expanded_blocks`, `chat_generate_title` |
-| narrator | `narrate_offscreen_life` |
 | help | `chat_generate_title` |
 | visual | `apply_ai_finalizer` |
 | world_state | `generate_reinforcement` |
 
 The shared title and director request utilities retain their calling agent's
-context. Perception analysis uses `summarizer.analyze_perceptions`. Offscreen
-narration establishes its narrator action at the agent wrapper, including when
-called by the Summarizer archive signal; it does not emit a scene narration.
+context. Perception analysis uses `summarizer.analyze_perceptions`.
 
 Foreground processing remains a count of active calls. Each invocation registers
 its action until it exits, including exceptional and cancelled exits. Status

@@ -523,35 +523,6 @@ async def test_omitted_stale_entity_does_not_recover_on_refresh(prepared, monkey
     assert SECRET in render(scene)
 
 
-async def test_offscreen_life_includes_only_the_character_snapshot(
-    prepared, monkeypatch
-):
-    scene, _, _, _ = prepared
-    await apply(prepared)
-    narrator = get_agent("narrator")
-    monkeypatch.setattr(narrator.actions["use_long_term_memory"], "enabled", False)
-    prompt = Prompt.get(
-        "narrator.offscreen-life",
-        vars={
-            "scene": scene,
-            "max_tokens": 4096,
-            "character": scene.character_data["Alice"],
-            "elapsed": "one hour",
-            "extra_instructions": "",
-            "response_length": 192,
-        },
-    )
-    with ActiveAgent(narrator, narrator.narrate_offscreen_life):
-        rendered = prompt.render()
-    assert "## Scene notes" in rendered
-    assert PUBLIC in rendered
-    assert "bottle of medicine" in rendered
-    assert "dim room" in rendered
-    assert SECRET not in rendered
-    assert "poison" not in rendered.lower()
-    assert "hidden refuge" not in rendered.lower()
-
-
 async def manual_add(prepared, entity):
     scene, world, request, message = prepared
     request.return_value = ("response", {"entity": entity})

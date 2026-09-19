@@ -13,7 +13,6 @@
         <div v-if="activated && expanded" class="transition-details">
             <p class="text-medium-emphasis">{{ status }}</p>
             <p v-if="participants" class="text-medium-emphasis">Present at entry: {{ participants }}</p>
-            <p v-if="message.offscreen_account">While away: {{ message.offscreen_account }}</p>
             <template v-if="message.transitions_enabled">
                 <v-textarea
                     v-model="note"
@@ -29,9 +28,6 @@
                     @update:model-value="dirty = true"
                     @focus="onFocus"
                     @blur="onBlur" />
-                <p v-if="message.offscreen_status === 'pending'" role="status">Writing offscreen account…</p>
-                <v-btn v-if="message.can_retry && message.offscreen_status === 'failed'" size="small" variant="text" :disabled="locked" @click="retry">Retry Offscreen Life</v-btn>
-                <p v-if="message.offscreen_fact_id" class="text-body-small text-medium-emphasis">Edit the offscreen account in World Editor → Facts ({{ message.offscreen_fact_id }}).</p>
             </template>
         </div>
     </div>
@@ -117,10 +113,6 @@ export default {
             }
             this.saveWaiting = false;
             this.getWebsocket().send(JSON.stringify({ type: 'scene_message', action: 'transition_note', id: this.message.id, text: this.note }));
-        },
-        retry() {
-            if (this.locked) return;
-            this.getWebsocket().send(JSON.stringify({ type: 'scene_message', action: 'retry_offscreen', id: this.message.id }));
         },
     },
     beforeUnmount() {

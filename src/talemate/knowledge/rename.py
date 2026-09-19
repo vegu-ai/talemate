@@ -50,9 +50,6 @@ def rename_knowledge_references(scene: "Scene", old: str, new: str):
                     },
                 }
             )
-    for fact in scene.world_state.facts.values():
-        if fact.source == "offscreen":
-            fact.present = _swap(fact.present, old, new)
     rename_perspective_audiences(scene, old, new)
     if old in scene.character_data:
         scene.character_data[new] = scene.character_data.pop(old)

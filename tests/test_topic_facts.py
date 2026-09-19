@@ -28,7 +28,7 @@ def scene():
         ),
         "F2": fact("F2", "Mara found a sextant.", 2, ["Mara"], source="manual"),
         "F3": fact("F3", "The boat leaks.", 3, ["Mara"], known_by={"Edwin": "told"}),
-        "F4": fact("F4", "Unknown presence.", 4, None, source="offscreen"),
+        "F4": fact("F4", "Unknown presence.", 4, None, source="summary"),
     }
     ws.topics = {
         "T1": Topic(id="T1", name="lighthouse", fact_ids=["F1", "F2", "F3", "F99"]),
@@ -50,11 +50,9 @@ class TestTopicFacts:
         assert rows[0].source == "history entry" and rows[0].source_id == "A1"
         assert rows[1].source == "manual entry"
 
-    def test_unknown_presence_counts_as_witnessed_and_offscreen_is_labelled(
-        self, scene
-    ):
+    def test_unknown_presence_counts_as_witnessed_and_summary_is_labelled(self, scene):
         (row,) = topic_facts(scene, "Edwin", "T2")
-        assert row.known and row.how == "witnessed" and row.source == "offscreen life"
+        assert row.known and row.how == "witnessed" and row.source == "history entry"
 
     def test_grant_and_revoke_change_how(self, scene):
         scene.world_state.knowledge = [

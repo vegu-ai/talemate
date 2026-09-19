@@ -1,6 +1,6 @@
 import asyncio
 from copy import deepcopy
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -12,7 +12,6 @@ from talemate.knowledge.timeline import message_times
 from talemate.knowledge.transitions import (
     absence_seconds,
     latest_transition,
-    offscreen_eligible,
     protected_transition,
     record_arrival,
     record_departure,
@@ -29,15 +28,224 @@ from talemate.scene_message import (
 from talemate.tale_mate import Actor
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("route", ["chat", "chat-narrated", "world-editor"])
+@pytest.mark.parametrize("best_fit", [False, True])
+@pytest.mark.parametrize("seconds", [0, 172800])
+@pytest.mark.parametrize("knowledge_source", ["history", "fact", "memory"])
+async def test_ui_absence_excludes_player_and_npc_lines_from_return_context(
+    scene, monkeypatch, route, best_fit, seconds, knowledge_source
+):
+    from collections import deque
+    from types import SimpleNamespace
+
+    from conftest import client_responses
+    from talemate.agents.context import ActiveAgent
+    from talemate.agents.director.websocket_handler import DirectorWebsocketHandler
+    from talemate.agents.memory.schema import MemoryDocument
+    from talemate.game.engine.nodes.core import GraphState
+    from talemate.game.engine.nodes.tools.analysis import ensure_registry_loaded
+    from talemate.game.engine.nodes.ux import EmitElement
+    from talemate.game.engine.ux.schema import UXSelection
+    from talemate.knowledge.facts import SpanLine, store_facts
+    from talemate.knowledge.perspective_models import content_digest
+    from talemate.knowledge.presence import presence_metadata
+    from talemate.knowledge.schema import ParsedFact
+    from talemate.server.world_state_manager import WorldStateManagerPlugin
+
+    scene.knowledge_eligibility = "legacy"
+    monkeypatch.setattr(type(scene), "auto_save", property(lambda _: False))
+    monkeypatch.setattr(get_agent("memory"), "add_many", AsyncMock(return_value=True))
+    monkeypatch.setattr(get_agent("memory"), "_get", lambda *args, **kwargs: [])
+    conversation = get_agent("conversation")
+    conversation.actions["character_knowledge"].enabled = True
+    conversation.actions["character_knowledge"].config[
+        "perspective_filter"
+    ].value = True
+    get_agent("summarizer").actions["manage_scene_history"].config[
+        "best_fit"
+    ].value = best_fit
+
+    async def submit_narration(node, state, ux_id, scene, timeout_seconds, start_time):
+        return UXSelection(ux_id=ux_id, kind="text_input", selected=""), False, False
+
+    monkeypatch.setattr(EmitElement, "wait_for_interaction", submit_narration)
+    frames = []
+    handler = SimpleNamespace(scene=scene, queue_put=frames.append)
+    ensure_registry_loaded()
+    scene.nodegraph_state = GraphState()
+    router = (
+        WorldStateManagerPlugin(handler)
+        if route == "world-editor"
+        else DirectorWebsocketHandler(handler)
+    )
+    monkeypatch.setattr(DirectorWebsocketHandler, "sub_handlers", {}, raising=False)
+    await type(get_agent("director")).init_nodes(scene, scene.nodegraph_state)
+    create_task = asyncio.create_task
+    tasks = []
+
+    def track(coro, **kwargs):
+        task = create_task(coro, **kwargs)
+        tasks.append(task)
+        return task
+
+    monkeypatch.setattr(asyncio, "create_task", track)
+
+    async def dispatch(action, responses):
+        tasks.clear()
+        queue = deque(responses)
+        token = client_responses.set(queue)
+        try:
+            await router.handle(
+                {
+                    "type": router.router,
+                    "action": action,
+                    "character_name": "Nora",
+                    "name": "Nora",
+                    "never_narrate": route != "chat-narrated",
+                }
+            )
+            if tasks:
+                await asyncio.wait_for(asyncio.gather(*tasks), timeout=10)
+            assert not queue
+        finally:
+            client_responses.reset(token)
+        assert not any(frame.get("error") for frame in frames)
+
+    with ActiveScene(scene):
+        for name in ["Nora", "Barry Largo", "Elmer"]:
+            character = Character(name=name, is_player=name == "Barry Largo")
+            actor = (
+                scene.Player(character, None)
+                if character.is_player
+                else Actor(character, conversation)
+            )
+            await scene.add_actor(actor, commit_to_memory=False)
+        await scene.push_history(NarratorMessage("Everyone gathers by the gate."))
+        await dispatch(
+            "deactivate_character",
+            ["Yes", "No", "Nora walks outside."] if route == "chat-narrated" else [],
+        )
+        assert "Nora" not in scene.active_characters
+        assert not scene.character_is_active(scene.get_character("Nora"))
+        player_line = CharacterMessage('Barry Largo: "Hello Elmer!"', source="player")
+        npc_line = CharacterMessage('Elmer: "Good day Barry."')
+        await scene.push_history(player_line)
+        await scene.push_history(npc_line)
+        assert set(player_line.present) == {"Barry Largo", "Elmer"}
+        assert set(npc_line.present) == {"Barry Largo", "Elmer"}
+        fact_text = "Barry Largo greeted Elmer at the gate."
+        if knowledge_source == "fact":
+            facts = await store_facts(
+                scene,
+                None,
+                [ParsedFact(text=fact_text, message_id=player_line.id)],
+                0.15,
+                lines={
+                    player_line.id: SpanLine(
+                        message_id=player_line.id,
+                        message_digest=content_digest(str(player_line)),
+                        present=player_line.present,
+                        ts=scene.ts,
+                    )
+                },
+            )
+            assert len(facts) == 1
+            assert facts[0].message_id == player_line.id
+            assert set(facts[0].present) == {"Barry Largo", "Elmer"}
+        if seconds:
+            await scene.push_history(
+                TimePassageMessage(ts=seconds, message="Two days pass.")
+            )
+        await dispatch(
+            "activate_character",
+            ["No", "Nora steps back through the gate."]
+            if route == "chat-narrated"
+            else [],
+        )
+        assert "Nora" in scene.active_characters
+        transition = latest_transition(scene, "Nora")
+        assert transition.returning
+        assert absence_seconds(scene, transition) == seconds
+        await scene.push_history(CharacterMessage('Elmer: "Welcome back, Nora."'))
+        conversation.actions["use_long_term_memory"].enabled = (
+            knowledge_source == "memory"
+        )
+        known_memory = "Everyone once painted the garden gate green."
+        if knowledge_source == "memory":
+            documents = [
+                MemoryDocument(
+                    str(message),
+                    id=str(message.id),
+                    raw=str(message),
+                    meta={"typ": "history", **presence_metadata(message.present)},
+                    distance=0.1,
+                )
+                for message in (player_line, npc_line)
+            ]
+            documents.append(
+                MemoryDocument(
+                    known_memory,
+                    id="known-gate-memory",
+                    raw=known_memory,
+                    meta={
+                        "typ": "history",
+                        **presence_metadata(["Nora", "Barry Largo", "Elmer"]),
+                    },
+                    distance=0.2,
+                )
+            )
+            retrieve = Mock(return_value=documents)
+            monkeypatch.setattr(get_agent("memory"), "_get", retrieve)
+            memories = await conversation.rag_build(scene.get_character("Nora"))
+            assert retrieve.called
+            assert list(map(str, memories)) == [known_memory]
+        else:
+            memories = []
+        request = AsyncMock(return_value=("", {"answer": "none", "items": []}))
+        monkeypatch.setattr(Prompt, "request", request)
+        await conversation.memory_pass(scene.get_character("Nora"), memories)
+        assert request.call_args.kwargs["vars"]["candidates"] == memories
+        get_agent("summarizer").actions["analyze_scene"].enabled = False
+        with ActiveAgent(conversation, conversation.build_prompt):
+            prompt = await conversation.build_prompt(scene.get_character("Nora"))
+            dialogue_prompt = prompt.render()
+        histories = [
+            scene.context_history(budget=8192, perspective="Nora"),
+            request.call_args.kwargs["vars"]["scene_history"],
+            [dialogue_prompt],
+        ]
+        for parts in histories:
+            text = "\n".join(parts)
+            assert "Hello Elmer!" not in text
+            assert "Good day Barry." not in text
+            assert "Everyone gathers by the gate." in text
+            assert "Welcome back, Nora." in text
+            assert text.count("Nora has returned") == 1
+        if knowledge_source == "fact":
+            absence_lines = await conversation.absence_block(
+                scene.get_character("Nora")
+            )
+            assert len(absence_lines) == 1
+            assert fact_text in absence_lines[0]
+            assert fact_text not in "\n".join(histories[0])
+            assert fact_text not in "\n".join(histories[1])
+            assert dialogue_prompt.count(fact_text) == 1
+            assert (
+                "Nora has not learned any of the following. Do not let Nora act on, "
+                "refer to, or react to these:\n- " + absence_lines[0]
+            ) in dialogue_prompt
+        elif knowledge_source == "memory":
+            assert known_memory in dialogue_prompt
+        assert "Hello Elmer!" in "\n".join(scene.context_history(budget=8192))
+
+
 @pytest.fixture(params=["legacy", "perception"])
-def returning_scene(scene, request, activation_signal, monkeypatch):
+def returning_scene(scene, request, monkeypatch):
     scene.knowledge_eligibility = request.param
     monkeypatch.setattr(get_agent("memory"), "add_many", AsyncMock(return_value=True))
     conversation = get_agent("conversation")
     conversation.actions["character_knowledge"].enabled = True
-    narrator = get_agent("narrator")
-    narrator.actions["offscreen_life"].enabled = False
-    activation_signal.connect(narrator.on_character_activated)
     for name in ["Nora", "Mara"]:
         character = Character(name=name)
         actor = Actor(character, conversation)
@@ -83,6 +291,51 @@ async def leave_and_return(scene, *, lines=101, seconds=172800):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "seconds,absence",
+    [(0, "being away"), (None, "being away"), (172800, "2 days away")],
+)
+async def test_return_prompt_marks_completed_arrival_without_inventing_time(
+    returning_scene, seconds, absence
+):
+    scene = returning_scene
+    transition = await leave_and_return(scene, lines=1, seconds=seconds or 0)
+    if seconds is None:
+        transition.departure_message_id = None
+    transition.participants = ["Mara", "Nora"]
+    core = f"Nora has returned to the scene after {absence}."
+    assert render_transition(scene, transition) == (
+        f"{core}\nAlready in the scene when Nora arrived: Mara."
+    )
+    arrival = add_line(scene, "Nora sets down her pack.", ["Nora", "Mara"])
+    add_line(scene, "Mara offers Nora a seat.", ["Nora", "Mara"])
+    add_line(scene, "Mara closes the window.", ["Nora", "Mara"])
+    transition.arrival_note = "Her coat is wet."
+    rendered = render_transition(scene, transition)
+    expected = (
+        f"{core}\nAlready in the scene when Nora arrived: Mara.\n"
+        "After Nora's arrival (already happened):\n"
+        "Nora sets down her pack.\nMara offers Nora a seat.\n"
+        "Author's arrival note: Her coat is wet."
+    )
+    assert [line for line in rendered.splitlines() if line] == expected.splitlines()
+    assert f"[{arrival.id}]" not in rendered
+    assert render_transition(scene, transition, budget=1) == core
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("participants", [[], ["Nora"]])
+async def test_return_prompt_omits_roster_when_nobody_else_was_present(
+    returning_scene, participants
+):
+    transition = await leave_and_return(returning_scene, lines=1)
+    transition.participants = participants
+    assert render_transition(returning_scene, transition) == (
+        "Nora has returned to the scene after 2 days away."
+    )
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("best_fit", [False, True])
 async def test_first_return_history_has_generic_transition_without_request(
     returning_scene, monkeypatch, best_fit
@@ -100,9 +353,7 @@ async def test_first_return_history_has_generic_transition_without_request(
             stored_views=scene.knowledge_eligibility == "perception",
         )
     )
-    assert "Nora left the scene." in text
-    assert "2 Days of scene time passed" in text
-    assert "Nora has now returned to the scene." in text
+    assert "Nora has returned to the scene after 2 days away." in text
     assert "private secret" not in text
     assert "east gate" not in render_transition(scene, transition)
     assert request.await_count == 0
@@ -141,14 +392,12 @@ async def test_return_survives_serialization_without_regenerating(returning_scen
     scene = returning_scene
     transition = await leave_and_return(scene, lines=1)
     transition.arrival_note = "She sets down her pack."
-    transition.offscreen_status = "pending"
     restored = _prepare_history(deepcopy(transition.to_dict()))
     assert isinstance(restored, CharacterTransitionMessage)
     assert restored.id == transition.id
     assert restored.kind == "activated"
     assert restored.departure_message_id == transition.departure_message_id
     assert restored.arrival_note == transition.arrival_note
-    assert restored.offscreen_status == "failed"
     departure = next(
         message
         for message in scene.history
@@ -202,7 +451,7 @@ async def test_activation_and_deactivation_record_entries_in_every_scene(
         stored_views=scene.knowledge_eligibility == "perception",
     )
     assert all(part.strip() for part in parts)
-    assert ("Nora has now returned" in "\n".join(parts)) == enabled
+    assert ("Nora has returned" in "\n".join(parts)) == enabled
     snapshot = scene.snapshot(lines=10, return_as_list=True)
     assert departure not in snapshot
     assert (arrival in snapshot) == enabled
@@ -245,15 +494,10 @@ async def test_deactivated_entry_is_display_only(returning_scene):
 
 @pytest.mark.asyncio
 async def test_activation_payload_is_a_summary_without_prompt_text(returning_scene):
-    from talemate.knowledge.schema import Fact
     from talemate.knowledge.transitions import transition_payload
 
     scene = returning_scene
     transition = await leave_and_return(scene, lines=1)
-    scene.world_state.facts["F1"] = Fact(
-        id="F1", text="Nora repaired her coat.", source="offscreen", present=["Nora"]
-    )
-    transition.offscreen_fact_id = "F1"
     transition.arrival_note = "Her boots are wet."
     payload = transition_payload(scene, transition)
     assert "text" not in payload
@@ -265,9 +509,7 @@ async def test_activation_payload_is_a_summary_without_prompt_text(returning_sce
     assert payload["absence"] == "2 days"
     assert payload["participants"] == transition.participants
     assert set(payload["participants"]) == {"Nora", "Mara"}
-    assert payload["offscreen_account"] == "Nora repaired her coat."
     assert payload["arrival_note"] == "Her boots are wet."
-    assert payload["offscreen_fact_id"] == "F1"
     assert payload["available"] is True
 
     immediate = transition_payload(
@@ -275,7 +517,6 @@ async def test_activation_payload_is_a_summary_without_prompt_text(returning_sce
     )
     assert immediate["absence_seconds"] == 0
     assert immediate["absence"] is None
-    assert immediate["offscreen_account"] is None
 
     scene.character_data["Ada"] = Character(name="Ada")
     await activate_character(scene, "Ada")
@@ -286,82 +527,68 @@ async def test_activation_payload_is_a_summary_without_prompt_text(returning_sce
 
 
 @pytest.mark.asyncio
-async def test_immediate_return_has_no_offscreen_request(returning_scene, monkeypatch):
+async def test_immediate_return_requires_no_generation(returning_scene, monkeypatch):
     scene = returning_scene
-    get_agent("narrator").actions["offscreen_life"].enabled = True
     request = AsyncMock()
     monkeypatch.setattr(Prompt, "request", request)
     await deactivate_character(scene, "Nora")
     await activate_character(scene, "Nora")
-    assert not offscreen_eligible(scene, latest_transition(scene, "Nora"))
     request.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("lines,seconds", [(1, 0), (0, 3600)])
-async def test_offscreen_account_is_one_request_without_archive_wait(
+@pytest.mark.parametrize("lines,seconds", [(1, 0), (0, 3600), (3, 172800)])
+async def test_return_records_absence_without_generating_or_storing_facts(
     returning_scene, monkeypatch, lines, seconds
 ):
+    from talemate.knowledge.transitions import transition_payload
+
     scene = returning_scene
-    narrator = get_agent("narrator")
-    narrator.actions["offscreen_life"].enabled = True
-    request = AsyncMock(
-        return_value=("", {"response": "Nora repaired her cloak while away."})
-    )
+    request = AsyncMock(side_effect=AssertionError("Return must not generate"))
     monkeypatch.setattr(Prompt, "request", request)
-    transition = await asyncio.wait_for(
-        leave_and_return(scene, lines=lines, seconds=seconds), timeout=10
-    )
-    assert request.await_count == 1
-    assert request.call_args.args[0] == "narrator.offscreen-life"
-    assert transition.offscreen_status == "ready"
-    assert len(scene.world_state.facts) == 1
-    fact = scene.world_state.facts[transition.offscreen_fact_id]
-    assert fact.source == "offscreen"
-    assert fact.message_id is None
-    assert fact.present == ["Nora"]
-    assert "repaired her cloak" in render_transition(scene, transition)
-    assert not scene.archived_history
-    other = "\n".join(
-        scene.context_history(
-            budget=8192,
-            perspective="Mara",
-            stored_views=scene.knowledge_eligibility == "perception",
-        )
-    )
-    assert "repaired her cloak" not in other
+    transition = await leave_and_return(scene, lines=lines, seconds=seconds)
+    assert transition.returning
+    assert absence_seconds(scene, transition) == seconds
+    assert not scene.world_state.facts
+    assert set(transition_payload(scene, transition)) == {
+        "type",
+        "id",
+        "kind",
+        "character",
+        "color",
+        "transitions_enabled",
+        "returning",
+        "absence_seconds",
+        "absence",
+        "participants",
+        "arrival_note",
+        "available",
+    }
+    request.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_unreadable_account_keeps_baseline_without_retry(
+async def test_world_editor_return_completes_without_generation(
     returning_scene, monkeypatch
 ):
+    from types import SimpleNamespace
+    from talemate.server.world_state_manager import WorldStateManagerPlugin
+
     scene = returning_scene
-    get_agent("narrator").actions["offscreen_life"].enabled = True
-    request = AsyncMock(return_value=("", {"response": ""}))
+    frames = []
+    plugin = WorldStateManagerPlugin(
+        SimpleNamespace(scene=scene, queue_put=frames.append)
+    )
+    request = AsyncMock(side_effect=AssertionError("Return must not generate"))
     monkeypatch.setattr(Prompt, "request", request)
-    transition = await leave_and_return(scene, lines=1)
-    assert transition.offscreen_status == "failed"
-    assert "Nora has now returned" in render_transition(scene, transition)
-    assert request.await_count == 1
+    await plugin.handle_deactivate_character({"name": "Nora"})
+    add_line(scene, "Mara closes the shutters.", ["Mara"])
+    task = await plugin.handle_activate_character({"name": "Nora"})
+    await asyncio.wait_for(task, timeout=10)
+    assert latest_transition(scene, "Nora").returning
+    assert any(frame.get("action") == "character_activated" for frame in frames)
     assert not scene.world_state.facts
-
-
-@pytest.mark.asyncio
-async def test_departure_during_generation_discards_account(
-    returning_scene, monkeypatch
-):
-    scene = returning_scene
-    get_agent("narrator").actions["offscreen_life"].enabled = True
-
-    async def generate(*args, **kwargs):
-        await deactivate_character(scene, "Nora")
-        return "", {"response": "This stale account must not be stored."}
-
-    monkeypatch.setattr(Prompt, "request", generate)
-    transition = await leave_and_return(scene, lines=1)
-    assert transition.offscreen_fact_id is None
-    assert not scene.world_state.facts
+    request.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -396,9 +623,10 @@ async def test_protected_bridge_precedes_later_context_under_tiny_budget(
             stored_views=scene.knowledge_eligibility == "perception",
         )
     )
-    assert "Nora has now returned to the scene." in text
+    assert "Nora has returned to the scene" in text
     assert (
-        text.index("Nora left the scene.") < text.index("Mara opens the gate.")
+        text.index("Nora has returned to the scene")
+        < text.index("Mara opens the gate.")
         if "Mara opens the gate." in text
         else True
     )
@@ -411,32 +639,21 @@ async def test_protected_bridge_precedes_later_context_under_tiny_budget(
 
 
 @pytest.mark.asyncio
-async def test_arrival_sources_and_account_follow_edits_and_deletion(returning_scene):
-    from talemate.knowledge.schema import Fact
-
+async def test_arrival_sources_follow_edits_and_deletion(returning_scene):
     scene = returning_scene
     transition = await leave_and_return(scene, lines=1)
     arrival = add_line(scene, "Mara opens the gate.", ["Nora", "Mara"])
     add_line(scene, "Hidden arrival detail.", ["Mara"])
     assert "Mara opens the gate." in render_transition(scene, transition)
     assert "Hidden arrival detail" not in render_transition(scene, transition)
-    scene.world_state.facts["F1"] = Fact(
-        id="F1", text="She repaired her coat.", source="offscreen", present=["Nora"]
-    )
-    transition.offscreen_fact_id = "F1"
-    assert "She repaired her coat." in render_transition(scene, transition)
-    scene.world_state.facts["F1"].text = "She repaired her pack."
-    assert "She repaired her pack." in render_transition(scene, transition)
-    del scene.world_state.facts["F1"]
     scene.delete_message(arrival.id)
-    assert "repaired" not in render_transition(scene, transition)
     assert "Mara opens" not in render_transition(scene, transition)
     passage = next(
         message for message in scene.history if isinstance(message, TimePassageMessage)
     )
     scene.delete_message(passage.id)
     assert absence_seconds(scene, transition) == 0
-    assert "Nora has now returned" in render_transition(scene, transition)
+    assert "Nora has returned" in render_transition(scene, transition)
 
 
 @pytest.mark.asyncio
@@ -485,9 +702,7 @@ async def test_first_actual_dialogue_prompt_contains_bridge_and_preview_agrees(
     with ActiveAgent(conversation, conversation.build_prompt):
         prompt = await conversation.build_prompt(scene.get_character("Nora"))
         text = prompt.render()
-    assert "Nora left the scene." in text
-    assert "2 Days of scene time passed" in text
-    assert "Nora has now returned to the scene." in text
+    assert "Nora has returned to the scene after 2 days away." in text
     assert "private secret" not in text
     assert "Character entry orientation" not in text
     request.assert_not_awaited()
@@ -545,16 +760,16 @@ async def test_standard_summary_layers_descend_across_return_in_chronological_or
         text = ContextHistoryMixin._transition_summary(scene, entry, layer, params)
         assert (
             text.index("Nora leaves to inspect")
-            < text.index("Nora left the scene.")
+            < text.index("Nora has returned to the scene")
             < text.index("Mara opens the gate.")
         )
         assert "private secret" not in text
-        assert text.count("Nora has now returned") == 1
+        assert text.count("Nora has returned") == 1
     params._transition_raw_start = scene.history.index(transition)
     text = ContextHistoryMixin._transition_summary(
         scene, scene.layered_history[0][0], 1, params
     )
-    assert "Nora has now returned" not in text
+    assert "Nora has returned" not in text
     assert str(arrival) not in text
 
 
@@ -576,66 +791,11 @@ async def test_scene_reload_preserves_episode_without_any_request(
     copy = latest_transition(restored, "Nora")
     assert copy.id == transition.id
     assert copy.arrival_note == "Her boots are wet."
-    assert "2 Days of scene time passed" in copy.as_format("chat")
+    assert "after 2 days away" in copy.as_format("chat")
     assert [
         item.kind for item in restored.history if item.typ == "character_transition"
     ] == ["deactivated", "activated"]
     request.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_failed_memory_write_does_not_publish_an_orphan_account(
-    returning_scene, monkeypatch
-):
-    scene = returning_scene
-    narrator = get_agent("narrator")
-    narrator.actions["offscreen_life"].enabled = True
-    monkeypatch.setattr(
-        Prompt,
-        "request",
-        AsyncMock(return_value=("", {"response": "Nora repaired her coat."})),
-    )
-    monkeypatch.setattr(
-        get_agent("memory"),
-        "add_many",
-        AsyncMock(side_effect=RuntimeError("Test storage failure")),
-    )
-    transition = await leave_and_return(scene, lines=1)
-    assert transition.offscreen_status == "failed"
-    assert transition.offscreen_fact_id is None
-    assert not scene.world_state.facts
-
-
-@pytest.mark.asyncio
-async def test_offscreen_template_uses_owned_views_without_requesting_retrieval(
-    returning_scene, monkeypatch
-):
-    scene = returning_scene
-    narrator = get_agent("narrator")
-    narrator.actions["offscreen_life"].enabled = True
-    monkeypatch.setattr(
-        narrator,
-        "rag_build",
-        AsyncMock(
-            side_effect=AssertionError(
-                "Offscreen Life must not launch AI-assisted retrieval"
-            )
-        ),
-    )
-    prompts = []
-
-    async def request(name, *args, **kwargs):
-        prompt = Prompt.get(name, vars=kwargs["vars"]).render()
-        prompts.append(prompt)
-        assert "private secret" not in prompt
-        assert "Nora has now returned" in prompt
-        return "", {"response": "Nora repaired her coat."}
-
-    monkeypatch.setattr(Prompt, "request", request)
-    transition = await leave_and_return(scene, lines=1)
-    assert transition.offscreen_status == "ready"
-    assert len(prompts) == 1
-    narrator.rag_build.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -657,26 +817,8 @@ async def test_arrival_note_endpoint_keeps_automatic_text_read_only(
         {"id": transition.id, "text": "No time passed and she never left."}
     )
     assert transition.message == ""
-    assert "2 Days" in render_transition(scene, transition)
+    assert "2 days" in render_transition(scene, transition)
     assert any(frame.get("error") for frame in frames)
-
-
-@pytest.mark.asyncio
-async def test_changed_arrival_constraints_discard_inflight_account(
-    returning_scene, monkeypatch
-):
-    scene = returning_scene
-    get_agent("narrator").actions["offscreen_life"].enabled = True
-
-    async def request(*args, **kwargs):
-        latest_transition(scene, "Nora").arrival_note = "She has a broken arm."
-        return "", {"response": "Nora arrives in perfect health."}
-
-    monkeypatch.setattr(Prompt, "request", request)
-    transition = await leave_and_return(scene, lines=1)
-    assert transition.offscreen_status == "failed"
-    assert transition.offscreen_fact_id is None
-    assert not scene.world_state.facts
 
 
 @pytest.mark.asyncio
@@ -745,10 +887,9 @@ async def test_created_inactive_character_first_arrival_is_not_a_return(
 
     scene = returning_scene
     request = AsyncMock(
-        side_effect=AssertionError("First arrival must not request Offscreen Life")
+        side_effect=AssertionError("First arrival must not request generation")
     )
     monkeypatch.setattr(Prompt, "request", request)
-    get_agent("narrator").actions["offscreen_life"].enabled = True
     if creation == "transfer":
         source = tmp_path / "source.json"
         source.write_text(json.dumps({"character_data": {"Ada": {"name": "Ada"}}}))
@@ -786,7 +927,6 @@ async def test_created_inactive_character_first_arrival_is_not_a_return(
     transition = latest_transition(scene, "Ada")
     assert not transition.returning
     assert "first time" in render_transition(scene, transition)
-    assert not offscreen_eligible(scene, transition)
     request.assert_not_awaited()
 
 
@@ -814,74 +954,6 @@ async def test_character_from_a_released_scene_returns_without_a_departure_recor
     payload = transition_payload(scene, transition)
     assert payload["returning"] is True
     assert payload["absence"] == "1 hour"
-
-
-@pytest.mark.asyncio
-async def test_return_account_uses_current_fact_projection(returning_scene):
-    from talemate.knowledge.schema import Fact
-    from talemate.knowledge.topics import known_bucket
-
-    scene = returning_scene
-    transition = await leave_and_return(scene, lines=1)
-    fact = Fact(
-        id="F1", text="Nora repaired her coat.", source="offscreen", present=["Nora"]
-    )
-    scene.world_state.facts[fact.id] = fact
-    transition.offscreen_fact_id = fact.id
-    assert fact.id in {item.id for item in known_bucket(scene, "Nora")}
-    assert fact.id not in {item.id for item in known_bucket(scene, "Mara")}
-    assert fact.text in render_transition(scene, transition)
-    scene.world_state.facts["F2"] = Fact(
-        id="F2",
-        text="The coat was beyond repair.",
-        source="offscreen",
-        present=["Nora"],
-        supersedes="F1",
-    )
-    assert fact.text not in render_transition(scene, transition)
-
-
-@pytest.mark.asyncio
-async def test_deleted_account_allows_explicit_background_retry(
-    returning_scene, monkeypatch
-):
-    from types import SimpleNamespace
-    from talemate.knowledge.schema import Fact
-    from talemate.knowledge.transitions import transition_payload
-    from talemate.server.scene_message import SceneMessagePlugin
-
-    scene = returning_scene
-    transition = await leave_and_return(scene, lines=1)
-    scene.world_state.facts["F1"] = Fact(
-        id="F1", text="Old account", source="offscreen", present=["Nora"]
-    )
-    transition.offscreen_fact_id = "F1"
-    transition.offscreen_status = "ready"
-    del scene.world_state.facts["F1"]
-    payload = transition_payload(scene, transition)
-    assert payload["offscreen_status"] == "failed"
-    assert payload["offscreen_fact_id"] is None
-    frames = []
-    plugin = SceneMessagePlugin(SimpleNamespace(scene=scene, queue_put=frames.append))
-    narrator = get_agent("narrator")
-    narrator.actions["offscreen_life"].enabled = True
-    started, release = asyncio.Event(), asyncio.Event()
-
-    async def request(*args, **kwargs):
-        started.set()
-        await release.wait()
-        return "", {"response": "Nora mended her pack."}
-
-    monkeypatch.setattr(Prompt, "request", request)
-    task = await asyncio.wait_for(
-        plugin.handle_retry_offscreen({"id": transition.id}), 1
-    )
-    await asyncio.wait_for(started.wait(), 1)
-    assert not task.done()  # The websocket receive loop is free during the request.
-    release.set()
-    await task
-    assert transition.offscreen_status == "ready"
-    assert any(frame.get("action") == "operation_done" for frame in frames)
 
 
 @pytest.mark.asyncio
@@ -979,12 +1051,10 @@ async def test_real_archive_cuts_keep_silent_return_chronological(
     parts = scene.context_history(budget=budget, perspective="Nora")
     assert all(part.strip() for part in parts)
     text = "\n".join(parts)
-    assert text.count("(Nora did not witness") <= 1
-    assert text.count("Nora has now returned") == 1
+    assert text.count("(Nora was away") <= 1
+    assert text.count("Nora has returned") == 1
     assert "After return, Mara reports" in text
-    assert text.index("Nora has now returned") < text.index(
-        "After return, Mara reports"
-    )
+    assert text.index("Nora has returned") < text.index("After return, Mara reports")
     assert "Latest visible moment" in text
     preview = summarizer.context_history_preview(
         scene, budget, params=ContextHistoryParams(perspective="Nora")
@@ -994,68 +1064,16 @@ async def test_real_archive_cuts_keep_silent_return_chronological(
     ]
     assert all(part.strip() for part in preview_parts)
     preview_text = "\n".join(preview_parts)
-    assert preview_text.count("(Nora did not witness") <= 1
-    assert preview_text.count("Nora has now returned") == 1
-    assert preview_text.index("Nora has now returned") < preview_text.index(
+    assert preview_text.count("(Nora was away") <= 1
+    assert preview_text.count("Nora has returned") == 1
+    assert preview_text.index("Nora has returned") < preview_text.index(
         "After return, Mara reports"
     )
 
 
 @pytest.mark.asyncio
-async def test_offscreen_prompt_measures_sheet_and_scopes_static_inputs(
-    returning_scene, monkeypatch
-):
-    from talemate.util import count_tokens
-
-    scene = returning_scene
-    await leave_and_return(scene, lines=1)
-    nora = scene.get_character("Nora")
-    nora.description = "Nora carries a map and studies every road. " * 200
-    scene.description = "A journey through the mountain passes."
-    viewers = []
-
-    def snapshot(viewer=None):
-        viewers.append(viewer)
-        return {
-            "location": "Nora's known camp"
-            if viewer == "Nora"
-            else "Mara's secret refuge",
-            "characters": [],
-            "items": [],
-            "places": [],
-        }
-
-    monkeypatch.setattr(
-        type(scene.world_state),
-        "snapshot_for",
-        lambda self, viewer=None: snapshot(viewer),
-    )
-    get_agent("world_state").actions["update_world_state"].config[
-        "inject_as_scene_memory"
-    ].value = True
-    prompt = Prompt.get(
-        "narrator.offscreen-life",
-        vars={
-            "scene": scene,
-            "character": nora,
-            "max_tokens": 4096,
-            "response_length": 192,
-            "known_facts": [],
-            "elapsed": "2 Days",
-            "extra_instructions": "",
-        },
-    ).render()
-    assert count_tokens(prompt) + 192 <= 4096
-    assert prompt.count("Nora has now returned") == 1
-    assert "mountain passes" in prompt
-    assert "Nora's known camp" in prompt
-    assert "secret refuge" not in prompt
-    assert viewers == ["Nora"]
-
-
-@pytest.mark.asyncio
 @pytest.mark.parametrize("filter_enabled", [False, True])
-async def test_custom_standard_filter_controls_bridge_and_offscreen(
+async def test_custom_standard_filter_controls_bridge(
     returning_scene, monkeypatch, filter_enabled
 ):
     from talemate.knowledge.transitions import transition_payload
@@ -1067,193 +1085,14 @@ async def test_custom_standard_filter_controls_bridge_and_offscreen(
     conversation.actions["character_knowledge"].config[
         "perspective_filter"
     ].value = filter_enabled
-    get_agent("narrator").actions["offscreen_life"].enabled = True
     request = AsyncMock(return_value=("", {"response": "Nora checked the road."}))
     monkeypatch.setattr(Prompt, "request", request)
     transition = await leave_and_return(scene, lines=1)
     assert transition.returning
-    assert request.await_count == int(filter_enabled)
+    request.assert_not_awaited()
     assert bool(render_transition(scene, transition)) == filter_enabled
     payload = transition_payload(scene, transition)
     assert payload["transitions_enabled"] == filter_enabled
-    assert payload["can_retry"] == filter_enabled
-
-
-@pytest.mark.asyncio
-async def test_offscreen_keeps_evidence_catchup_without_generation_hooks(
-    returning_scene, monkeypatch
-):
-    from talemate.agents.narrator import _narration
-    from talemate.agents.context import ActiveAgent
-    import talemate.emit.async_signals as signals
-    import talemate.knowledge.revision_refresh as revisions
-
-    scene = returning_scene
-    narrator = get_agent("narrator")
-    calls = []
-
-    async def catchup(current):
-        assert current is scene
-        calls.append("revisions")
-
-    async def perceptions(current):
-        assert current is scene
-        calls.append("perceptions")
-
-    async def generate(*args, **kwargs):
-        calls.append("generate")
-        return "result"
-
-    monkeypatch.setattr(revisions, "catch_up_revisions", catchup)
-    monkeypatch.setattr(get_agent("summarizer"), "ensure_perceptions", perceptions)
-    hooks = [AsyncMock() for _ in range(3)]
-    for name, hook in zip(
-        ["before_generate", "inject_instructions", "generated"], hooks
-    ):
-        monkeypatch.setattr(signals.get(f"agent.narrator.{name}"), "send", hook)
-    with ActiveAgent(narrator, generate):
-        assert (
-            await _narration(
-                narrator,
-                generate,
-                (),
-                {},
-                emit_generated=False,
-                run_generation_hooks=False,
-            )
-            == "result"
-        )
-    assert calls == (
-        ["revisions", "perceptions", "generate"]
-        if scene.knowledge_eligibility == "perception"
-        else ["revisions", "generate"]
-    )
-    for hook in hooks:
-        hook.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_world_editor_activation_keeps_websocket_free(
-    returning_scene, monkeypatch
-):
-    from types import SimpleNamespace
-    from talemate.server.world_state_manager import WorldStateManagerPlugin
-
-    scene = returning_scene
-    add_line(scene, "Nora leaves the gate.", ["Nora", "Mara"])
-    await deactivate_character(scene, "Nora")
-    add_line(scene, "Mara closes the shutters.", ["Mara"])
-    get_agent("narrator").actions["offscreen_life"].enabled = True
-    started, release = asyncio.Event(), asyncio.Event()
-
-    async def request(*args, **kwargs):
-        started.set()
-        await release.wait()
-        return "", {"response": "Nora checked the road."}
-
-    monkeypatch.setattr(Prompt, "request", request)
-    frames = []
-    plugin = WorldStateManagerPlugin(
-        SimpleNamespace(scene=scene, queue_put=frames.append)
-    )
-    task = await asyncio.wait_for(plugin.handle_activate_character({"name": "Nora"}), 1)
-    await asyncio.wait_for(started.wait(), 1)
-    assert not task.done()
-    release.set()
-    await task
-    assert latest_transition(scene, "Nora").offscreen_status == "ready"
-    assert any(frame.get("action") == "character_activated" for frame in frames)
-
-
-@pytest.mark.asyncio
-async def test_return_render_checks_only_account_and_possible_successors(
-    returning_scene, monkeypatch
-):
-    from time import perf_counter
-    from types import SimpleNamespace
-    from unittest.mock import Mock
-    from talemate.knowledge import revision_browsing
-    from talemate.knowledge.schema import Fact
-    from talemate.server.websocket_server import WebsocketHandler
-
-    scene = returning_scene
-    for i in range(10):
-        transition = await leave_and_return(scene, lines=39, seconds=0)
-        fact = Fact(
-            id=f"F{i}",
-            text=f"Nora mended item {i}.",
-            source="offscreen",
-            present=["Nora"],
-        )
-        scene.world_state.facts[fact.id] = fact
-        transition.offscreen_fact_id = fact.id
-    for i in range(10, 200):
-        scene.world_state.facts[f"F{i}"] = Fact(id=f"F{i}", text=f"Other fact {i}")
-    checked = Mock(wraps=revision_browsing.stale_archive_ids)
-    monkeypatch.setattr(revision_browsing, "stale_archive_ids", checked)
-    frames = []
-    handler = SimpleNamespace(scene=scene, queue_put=frames.append)
-    emission = SimpleNamespace(message="test", status="idle", data={})
-    started = perf_counter()
-    WebsocketHandler.handle_scene_status(handler, emission)
-    elapsed = perf_counter() - started
-    print(
-        f"status {scene.knowledge_eligibility}: {len(scene.history)} messages / 200 facts / 10 returns: {elapsed:.4f}s, {checked.call_count} source scans"
-    )
-    items = frames[0]["data"]["character_transitions"]
-    assert [item["kind"] for item in items] == ["deactivated", "activated"] * 10
-    assert checked.call_count == 10
-    assert [
-        item["offscreen_account"] for item in items if item["kind"] == "activated"
-    ] == [f"Nora mended item {i}." for i in range(10)]
-
-    for message in scene.history:
-        if isinstance(message, CharacterTransitionMessage):
-            message.offscreen_fact_id = None
-    checked.reset_mock()
-    frames.clear()
-    WebsocketHandler.handle_scene_status(handler, emission)
-    checked.assert_not_called()
-    assert all(
-        item["offscreen_account"] is None
-        for item in frames[0]["data"]["character_transitions"]
-        if item["kind"] == "activated"
-    )
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "query", ["facts_about", "current_state", "relationship_timeline"]
-)
-async def test_owner_fact_queries_accept_offscreen_accounts(returning_scene, query):
-    from talemate.knowledge import graph
-    from talemate.knowledge.schema import Fact
-
-    scene = returning_scene
-    transition = await leave_and_return(scene, lines=1)
-    for i in range(2):
-        fact = Fact(
-            id=f"F{i}",
-            text=f"Nora remembered Mara {i}.",
-            source="offscreen",
-            present=["Nora"],
-            ts=i,
-        )
-        scene.world_state.facts[fact.id] = fact
-    transition.offscreen_fact_id = "F1"
-    fn = getattr(graph, query)
-    args = (
-        (scene, "Nora", "Mara") if query == "relationship_timeline" else (scene, "Nora")
-    )
-    owned = fn(*args, character="Nora")
-    if query == "current_state":
-        assert owned.id == "F1"
-        assert fn(*args, character="Mara") is None
-    else:
-        assert {fact.id for fact in owned} == {"F0", "F1"}
-        assert fn(*args, character="Mara") == []
-        if query == "relationship_timeline":
-            assert [fact.id for fact in owned] == ["F0", "F1"]
 
 
 @pytest.mark.asyncio
@@ -1334,13 +1173,13 @@ async def test_layered_real_archive_cuts_render_return_once(
     for selected in (parts, preview_parts):
         assert all(part.strip() for part in selected)
         text = "\n".join(selected)
-        assert text.count("Nora has now returned") == 1
-        boundary = text.index("Nora has now returned")
+        assert text.count("Nora has returned") == 1
+        boundary = text.index("Nora has returned")
         assert "PRE-" not in text[boundary:]
         # The bridge's grounded arrival excerpt can itself contain POST-0.
         assert "POST-" not in text[:boundary]
         assert "LATEST" in text
-        assert text.count("(Nora did not witness") <= 1
+        assert text.count("(Nora was away") <= 1
 
 
 @pytest.mark.asyncio
@@ -1395,10 +1234,10 @@ async def test_real_absence_expansion_adds_no_empty_part_or_second_gap(
     ):
         assert all(part.strip() for part in selected)
         text = "\n".join(selected)
-        assert text.count("Nora has now returned") == 1
-        assert text.count("(Nora did not witness") <= 1
+        assert text.count("Nora has returned") == 1
+        assert text.count("(Nora was away") <= 1
         if not best_fit:
-            assert text.count("(Nora did not witness") == 1
+            assert text.count("(Nora was away") == 1
         assert "PRIVATE" not in text
 
     if split_absence:
@@ -1423,123 +1262,8 @@ async def test_real_absence_expansion_adds_no_empty_part_or_second_gap(
         )
         assert layers == []
         text = "\n".join([*layers, *dialogue])
-        assert text.count("Nora has now returned") == 1
-        assert text.count("(Nora did not witness") <= 1
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "state",
-    [
-        "private_successor",
-        "stale_successor",
-        "visible_successor",
-        "stale_account",
-        "wrong_owner",
-        "wrong_source",
-    ],
-)
-async def test_targeted_account_resolution_matches_current_projection(
-    returning_scene, state
-):
-    from talemate.knowledge.chronology import ranked_facts
-    from talemate.knowledge.schema import Fact
-    from talemate.knowledge.topics import known_bucket
-
-    scene = returning_scene
-    transition = await leave_and_return(scene, lines=1)
-    account = Fact(
-        id="F1", text="Nora repaired her coat.", source="offscreen", present=["Nora"]
-    )
-    successor = Fact(
-        id="F2",
-        text="Nora replaced her coat.",
-        source="offscreen",
-        present=["Nora"],
-        supersedes="F1",
-    )
-    scene.world_state.facts = {"F1": account, "F2": successor}
-    transition.offscreen_fact_id = "F1"
-    if state == "private_successor":
-        successor.present = ["Mara"]
-    elif state == "stale_successor":
-        successor.message_id = -999
-    elif state == "stale_account":
-        account.message_id = -999
-    elif state == "wrong_owner":
-        account.present = ["Mara"]
-    elif state == "wrong_source":
-        account.source = "manual"
-    visible = {
-        fact.id
-        for fact in ranked_facts(
-            scene, known_bucket(scene, "Nora"), character="Nora", tiers=False
-        )
-    }
-    expected = (
-        "F1" in visible
-        and account.source == "offscreen"
-        and account.present == ["Nora"]
-    )
-    assert (account.text in render_transition(scene, transition)) == expected
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("returning_scene", ["legacy"], indirect=True)
-@pytest.mark.parametrize(
-    "rule,expected",
-    [
-        ("block_account", False),
-        ("block_successor", True),
-        ("allow_private_successor", False),
-    ],
-)
-async def test_targeted_account_respects_standard_knowledge_edges(
-    returning_scene, rule, expected
-):
-    from talemate.knowledge.schema import Fact, KnowledgeEdge
-    from talemate.knowledge.transitions import offscreen_account
-
-    scene = returning_scene
-    transition = await leave_and_return(scene, lines=1)
-    account = Fact(
-        id="F1", text="Nora repaired her coat.", source="offscreen", present=["Nora"]
-    )
-    successor = Fact(
-        id="F2",
-        text="Nora replaced her coat.",
-        source="offscreen",
-        present=["Nora"],
-        supersedes="F1",
-    )
-    scene.world_state.facts = {"F1": account, "F2": successor}
-    transition.offscreen_fact_id = "F1"
-    if rule == "block_account":
-        successor.supersedes = None
-        edge = KnowledgeEdge(character="Nora", target="F1", kind="revoke")
-    elif rule == "block_successor":
-        edge = KnowledgeEdge(character="Nora", target="F2", kind="revoke")
-    else:
-        successor.present = ["Mara"]
-        edge = KnowledgeEdge(character="Nora", target="F2", kind="grant")
-    scene.world_state.knowledge.append(edge)
-    assert (offscreen_account(scene, transition) is account) == expected
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("returning_scene", ["perception"], indirect=True)
-async def test_offscreen_account_with_missing_owner_is_unavailable(returning_scene):
-    from talemate.knowledge.schema import Fact
-    from talemate.knowledge.transitions import offscreen_account
-
-    scene = returning_scene
-    transition = await leave_and_return(scene, lines=1)
-    scene.world_state.facts["F1"] = Fact(
-        id="F1", text="Nora mended her coat.", source="offscreen", present=["Nora"]
-    )
-    transition.offscreen_fact_id = "F1"
-    del scene.character_data["Nora"]
-    assert offscreen_account(scene, transition) is None
+        assert text.count("Nora has returned") == 1
+        assert text.count("(Nora was away") <= 1
 
 
 @pytest.mark.asyncio
@@ -1586,12 +1310,8 @@ async def test_each_return_measures_absence_from_its_own_departure(
             stored_views=scene.knowledge_eligibility == "perception",
         )
     )
-    assert text.count("Ada has now returned to the scene.") == 1
-    assert (
-        "2 Hours of scene time passed during the absence."
-        if ada_seconds
-        else "No scene-time passage was recorded during the absence."
-    ) in text
-    assert text.count("did not witness") == (
+    assert text.count("Ada has returned to the scene") == 1
+    assert ("after 2 hours away." if ada_seconds else "after being away.") in text
+    assert text.count("was away") == (
         1 if scene.knowledge_eligibility == "legacy" else 0
     )

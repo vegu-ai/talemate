@@ -17,12 +17,6 @@ export const KNOWLEDGE_TOGGLES = Object.freeze([
     { agent: 'conversation', action: 'character_knowledge', config: 'perspective_filter' },
     { agent: 'conversation', action: 'character_knowledge', config: 'absence_block' },
     { agent: 'conversation', action: 'character_knowledge', config: 'awareness_line' },
-    {
-        agent: 'narrator',
-        action: 'offscreen_life',
-        config: null,
-        costLabel: 'Offscreen Life (one request per eligible return)',
-    },
     { agent: 'conversation', action: 'character_knowledge', config: 'memory_pass' },
     { agent: 'conversation', action: 'character_knowledge', config: 'ledger' },
     { agent: 'summarizer', action: 'archive', config: 'extract_facts' },

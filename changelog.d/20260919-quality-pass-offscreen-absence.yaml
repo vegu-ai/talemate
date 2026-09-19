@@ -1,0 +1,2 @@
+fixed:
+- "Character context now states absence and return in story order, preserves recorded time away, and labels arrival excerpts as events that already happened. The arrival roster lists only the other characters present."

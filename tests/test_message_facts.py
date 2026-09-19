@@ -342,7 +342,6 @@ class TestLegacyRecords:
                 },
                 "F4": {"id": "F4", "text": "static", "archive_id": "s0"},
                 "F5": {"id": "F5", "text": "manual", "source": "manual"},
-                "F6": {"id": "F6", "text": "offscreen", "source": "offscreen"},
                 "F7": {
                     "id": "F7",
                     "text": "perception from a passage",
@@ -390,7 +389,7 @@ class TestLegacyRecords:
             {"id": "e1", "start": 0, "end": 1},
         ]
         assert prune_legacy_facts(world_state, archived) == {"F1", "F2", "F7"}
-        assert set(world_state["facts"]) == {"F3", "F4", "F5", "F6", "F8"}
+        assert set(world_state["facts"]) == {"F3", "F4", "F5", "F8"}
         assert world_state["facts"]["F3"]["supersedes"] is None
         assert "archive_sources" not in world_state["facts"]["F3"]
         assert [edge["id"] for edge in world_state["knowledge"]] == ["k2"]

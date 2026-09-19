@@ -280,7 +280,7 @@ def test_find_docs_scene_processing_api_routes(query):
             "user-guide/world-editor/knowledge-how-it-works.md",
         ),
         (
-            "Offscreen Life fact projection",
+            "character re-entry bridge",
             "user-guide/world-editor/knowledge-how-it-works.md",
         ),
         (
@@ -1494,7 +1494,7 @@ def test_read_clients_unified_api_key(settings_env):
         ("private competitor vetoes", "knowledge-how-it-works.md"),
         ("supersedes links", "history/index.md"),
         ("collapsed return entries automatic timing arrival notes", "knowledge.md"),
-        ("Offscreen Life Thorough", "knowledge.md"),
+        ("character activation arrival note", "knowledge.md"),
     ],
 )
 def test_find_docs_preserves_knowledge_routes_after_return_updates(query, page):

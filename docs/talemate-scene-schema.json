@@ -182,7 +182,7 @@
               "supersedes": {"type": ["string", "null"]},
               "restatements": {"type": "integer"},
               "last_seen_ts": {"type": ["integer", "null"]},
-              "source": {"type": "string", "enum": ["summary", "manual", "offscreen"]}
+              "source": {"type": "string", "enum": ["summary", "manual", "perspective", "disclosure"]}
             }
           }
         },

@@ -6,9 +6,6 @@ from talemate.context import scene_is_loading
 from talemate.instance import get_agent
 from talemate.knowledge.context import _project_character_message
 from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
-from talemate.knowledge.chronology import prompt_fact_text
-from talemate.knowledge.revision_browsing import fact_current
-from talemate.knowledge.supported_facts import character_fact
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspectives import (
     bind_message_source,
@@ -139,28 +136,6 @@ def absence_seconds(scene: Scene, transition: CharacterTransitionMessage) -> int
     return max(0, returned - departed)
 
 
-def offscreen_eligible(scene: Scene, transition: CharacterTransitionMessage) -> bool:
-    if not transition.returning or not transition_available(scene, transition):
-        return False
-    if (absence_seconds(scene, transition) or 0) > 0:
-        return True
-    start = next(
-        (
-            i
-            for i, item in enumerate(scene.history)
-            if item.id == transition.departure_message_id
-        ),
-        None,
-    )
-    if start is None:
-        return False
-    end = transition_index(scene, transition)
-    return any(
-        isinstance(item, (CharacterMessage, NarratorMessage))
-        for item in scene.history[start + 1 : end]
-    )
-
-
 def transition_current(scene: Scene, transition: CharacterTransitionMessage) -> bool:
     return (
         transition_available(scene, transition)
@@ -239,7 +214,7 @@ def arrival_lines(scene: Scene, transition: CharacterTransitionMessage) -> list[
                 else None
             )
         if text:
-            lines.append(f"[{message.id}] {text}")
+            lines.append(text)
         if len(lines) == 2:
             break
     return lines
@@ -258,95 +233,31 @@ def render_transition(
         return ""
     if transition.returning:
         seconds = absence_seconds(scene, transition)
-        elapsed = (
-            "The elapsed scene time is unknown."
-            if seconds is None
-            else f"{duration_to_human(seconds, suffix='')} of scene time passed during the absence."
+        absence = (
+            f"{duration_to_human(seconds, suffix='').lower()} away"
             if seconds
-            else "No scene-time passage was recorded during the absence."
+            else "being away"
         )
-        lines = [
-            f"{name} left the scene. {elapsed} {name} has now returned to the scene."
-        ]
+        lines = [f"{name} has returned to the scene after {absence}."]
     else:
-        lines = [f"{name} has now entered the scene for the first time."]
+        lines = [f"{name} has entered the scene for the first time."]
     core_count = len(lines)
-    fact = offscreen_account(scene, transition)
-    if fact is not None:
-        lines.append(f"During the absence: {prompt_fact_text(fact)}")
-    elif transition.returning:
-        lines.append("No offscreen events have been established for this return.")
-    if transition.participants:
+    participants = [person for person in transition.participants if person != name]
+    if participants:
         lines.append(
-            f"Scene participants at entry: {', '.join(transition.participants)}."
+            f"Already in the scene when {name} arrived: {', '.join(participants)}."
         )
     established = arrival_lines(scene, transition)
-    lines.append(
-        "Established arrival context:\n" + "\n".join(established)
-        if established
-        else "No arrival action has yet been established."
-    )
+    if established:
+        lines.append(
+            f"After {name}'s arrival (already happened):\n" + "\n".join(established)
+        )
     if transition.arrival_note:
         lines.append(f"Author's arrival note: {transition.arrival_note}")
     if budget is not None:
-        # Keep the departure/time/return scaffold. Optional
-        # arrival details are removed before the owned offscreen account.
         while len(lines) > core_count and count_tokens("\n".join(lines)) > budget:
             lines.pop()
     return "\n".join(lines)
-
-
-def offscreen_account(scene: Scene, transition: CharacterTransitionMessage):
-    """Resolve the owned account without projecting unrelated facts on every frame."""
-    name = transition.character_name
-    fact = scene.world_state.facts.get(transition.offscreen_fact_id)
-    if (
-        fact is None
-        or fact.source != "offscreen"
-        or fact.present != [name]
-        or not fact_current(scene, fact)
-    ):
-        return None
-    perspective_mode = character_knowledge_enabled(scene)
-    if perspective_mode and name not in scene.character_data:
-        return None
-    index = None if perspective_mode else KnowledgeIndex.from_scene(scene)
-
-    def project(candidate):
-        if perspective_mode:
-            return character_fact(scene, candidate, name)
-        return (
-            candidate
-            if index.in_bucket(
-                name,
-                KnowledgeItem(id=candidate.id, kind="fact", present=candidate.present),
-            )
-            else None
-        )
-
-    if project(fact) is None:
-        return None
-    for candidate in scene.world_state.facts.values():
-        # A character's contribution can carry a different link from the reader's.
-        if candidate.supersedes != fact.id and not any(
-            item.supersedes == fact.id for item in candidate.contributions
-        ):
-            continue
-        if not fact_current(scene, candidate):
-            continue
-        successor = project(candidate)
-        if successor is not None and successor.supersedes == fact.id:
-            return None
-    return fact
-
-
-def offscreen_status(scene: Scene, transition: CharacterTransitionMessage) -> str:
-    if (
-        transition.offscreen_status == "ready"
-        and transition.offscreen_fact_id not in scene.world_state.facts
-    ):
-        return "failed"
-    return transition.offscreen_status
 
 
 def transition_payload(scene: Scene, transition: CharacterTransitionMessage) -> dict:
@@ -363,23 +274,14 @@ def transition_payload(scene: Scene, transition: CharacterTransitionMessage) -> 
     if transition.kind != "activated":
         return payload
     seconds = absence_seconds(scene, transition) if transition.returning else None
-    account = offscreen_account(scene, transition)
     return {
         **payload,
         "returning": transition.returning,
         "absence_seconds": seconds,
         "absence": duration_to_human(seconds, suffix="").lower() if seconds else None,
         "participants": transition.participants,
-        "offscreen_account": account.text if account is not None else None,
         "arrival_note": transition.arrival_note,
-        "offscreen_fact_id": transition.offscreen_fact_id
-        if transition.offscreen_fact_id in scene.world_state.facts
-        else None,
-        "offscreen_status": offscreen_status(scene, transition),
         "available": transition_available(scene, transition),
-        "can_retry": enabled
-        and offscreen_eligible(scene, transition)
-        and transition_current(scene, transition),
     }
 
 

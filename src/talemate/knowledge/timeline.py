@@ -49,7 +49,6 @@ def shift_fact_times(scene: "Scene", shift: int) -> set[str]:
             fact.ts,
             fact.last_seen_ts,
             *(item.ts for item in fact.restated_by),
-            fact.acquired.ts if fact.acquired is not None else None,
             *(item.acquired.ts for item in fact.contributions),
         )
 
@@ -60,8 +59,6 @@ def shift_fact_times(scene: "Scene", shift: int) -> set[str]:
         fact.last_seen_ts = shift_optional_ts(fact.last_seen_ts, shift)
         for item in fact.restated_by:
             item.ts = shift_optional_ts(item.ts, shift)
-        if fact.acquired is not None:
-            fact.acquired = acquired(fact.acquired)
         fact.contributions = tuple(
             item.model_copy(update={"acquired": acquired(item.acquired)})
             for item in fact.contributions

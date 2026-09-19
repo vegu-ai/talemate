@@ -29,10 +29,7 @@ from talemate.knowledge.revision_refresh import (
 from talemate.server.websocket_plugin import Plugin
 from talemate.status import background_task
 from talemate.knowledge.transitions import (
-    offscreen_status,
     transition_available,
-    transition_current,
-    offscreen_eligible,
 )
 
 log = structlog.get_logger("talemate.server.scene_message")
@@ -85,35 +82,6 @@ class SceneMessagePlugin(Plugin):
         message.arrival_note = payload.text.strip()
         self.scene.saved = False
         self.scene.emit_history_message(message)
-        await self.signal_operation_done()
-
-    @background_task("Writing offscreen account")
-    async def handle_retry_offscreen(self, data: dict):
-        payload = MessageIdPayload(**data)
-        message = self.scene.get_message(payload.id)
-        if not isinstance(message, CharacterTransitionMessage):
-            await self.signal_operation_failed("Return entry not found")
-            return
-        if (
-            offscreen_status(self.scene, message) != "failed"
-            or not transition_current(self.scene, message)
-            or not offscreen_eligible(self.scene, message)
-        ):
-            await self.signal_operation_failed(
-                "This return is no longer eligible for retry"
-            )
-            return
-        narrator = instance.get_agent("narrator")
-        if not narrator.offscreen_life_enabled:
-            await self.signal_operation_failed(
-                "Enable Offscreen Life to generate an account"
-            )
-            return
-        character = self.scene.get_character(message.character_name)
-        if character is None:
-            await self.signal_operation_failed("Character not found")
-            return
-        await narrator.narrate_offscreen_life(character, message)
         await self.signal_operation_done()
 
     async def handle_delete(self, data: dict):

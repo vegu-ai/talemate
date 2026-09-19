@@ -927,8 +927,6 @@ class CharacterTransitionMessage(SceneMessage):
     returning: bool = False
     participants: list[str] = pydantic.Field(default_factory=list)
     arrival_note: str = ""
-    offscreen_fact_id: str | None = None
-    offscreen_status: Literal["none", "pending", "ready", "failed"] = "none"
 
     def to_dict(self) -> dict:
         return {
@@ -941,8 +939,6 @@ class CharacterTransitionMessage(SceneMessage):
                     "returning",
                     "participants",
                     "arrival_note",
-                    "offscreen_fact_id",
-                    "offscreen_status",
                 }
             ),
         }

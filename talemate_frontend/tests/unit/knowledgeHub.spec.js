@@ -78,7 +78,6 @@ describe('the hub toggle list', () => {
             'conversation.character_knowledge.perspective_filter',
             'conversation.character_knowledge.absence_block',
             'conversation.character_knowledge.awareness_line',
-            'narrator.offscreen_life.null',
             'conversation.character_knowledge.memory_pass',
             'conversation.character_knowledge.ledger',
             'summarizer.archive.extract_facts',

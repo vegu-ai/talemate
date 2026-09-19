@@ -203,7 +203,6 @@ export function effortExplanation(mode, stop, agents = [], preview = false) {
     const perspectives = mode === 'perception';
     const memory = enabled && value(`${ck}.memory_pass`) === true;
     const learning = enabled && !perspectives && value(`${ck}.ledger`) === true;
-    const entry = (perspectives || (enabled && value(`${ck}.perspective_filter`) === true)) && value('narrator.offscreen_life.enabled') === true;
     const repair = perspectives && value('summarizer.perceptions.automatic_repair') === true;
     const requests = [];
     const retries = [];
@@ -222,10 +221,6 @@ export function effortExplanation(mode, stop, agents = [], preview = false) {
         requests.push('1 before a generated reply with uncached retrieved memories');
         benefits.push('focus recalled memories');
     }
-    if (entry) {
-        requests.push('1 per eligible character return');
-        benefits.push('give returning characters an offscreen account');
-    }
 
     if (repair) retries.push('+1 for missing/invalid character views');
     if (!benefits.length && value('memory.topics.enabled')) benefits.push('organize recalled facts by topic');
@@ -234,6 +229,6 @@ export function effortExplanation(mode, stop, agents = [], preview = false) {
         cost: requests.length ? requests.join('; ') + '.' : 'No extra requests.',
         retries: retries.length ? retries.join('; ') + '.' : '',
         benefit: benefits.length ? 'May help ' + benefits.join(', ') + '.' : 'No character-knowledge assistance.',
-        caveat: perspectives || learning || memory || entry ? 'Reliable structured output recommended.' : '',
+        caveat: perspectives || learning || memory ? 'Reliable structured output recommended.' : '',
     };
 }

@@ -21,7 +21,7 @@ __all__ = [
 VisibilityMode = Literal["everyone", "owner", "list"]
 EdgeKind = Literal["grant", "revoke", "unlearn"]
 EdgeSource = Literal["told", "granted", "inferred", "manual", "director"]
-FactSource = Literal["summary", "manual", "offscreen", "perspective", "disclosure"]
+FactSource = Literal["summary", "manual", "perspective", "disclosure"]
 FactsStatus = Literal["ok", "failed"]
 KnownKind = Literal["witnessed", "told", "granted", "inferred"]
 FactImportance = Annotated[int, pydantic.Field(strict=True, ge=1, le=3)]
@@ -31,7 +31,6 @@ INTRO_LINE = "intro"
 FACT_SOURCE_LABELS: dict[FactSource, str] = {
     "summary": "history entry",
     "manual": "manual entry",
-    "offscreen": "offscreen life",
     "perspective": "perception",
     "disclosure": "disclosure",
 }
@@ -265,7 +264,7 @@ class Fact(pydantic.BaseModel):
     ts: int | None = None
     # the base entry whose extraction recorded the fact
     archive_id: str | None = None
-    # the message the fact came from; None for manual, offscreen, disclosure
+    # the message the fact came from; None for manual, disclosure
     # and static-entry facts, which have no message by design
     message_id: int | None = None
     message_digest: str | None = None
@@ -284,8 +283,6 @@ class Fact(pydantic.BaseModel):
     text_edited: bool = False
     link_edited: bool = False
 
-    # Independent offscreen knowledge has no source contribution to carry its order.
-    acquired: Acquisition | None = None
     contributions: tuple[FactContribution, ...] = ()
     restated_by: tuple[FactRestatement, ...] = ()
 
@@ -299,7 +296,7 @@ class Fact(pydantic.BaseModel):
         for key in ("text_edited", "link_edited"):
             if not getattr(self, key):
                 data.pop(key, None)
-        for key in ("message_id", "message_digest", "acquired"):
+        for key in ("message_id", "message_digest"):
             if data.get(key) is None:
                 data.pop(key, None)
         return data

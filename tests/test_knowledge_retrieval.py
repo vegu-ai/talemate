@@ -1,7 +1,7 @@
 """
 Retrieval (#394 part G): recency term, diversity threshold, similarity
 knowledge gate, entity lookup by id, cross-encoder rerank, the conversation
-opt-ins (the AI memory pass, the ledger), the narrator's offscreen life and the character.activated signal.
+opt-ins (the AI memory pass, the ledger) and the character.activated signal.
 """
 
 from itertools import combinations
@@ -341,7 +341,7 @@ class TestDiversity:
 class TestSimilarityGate:
     """
     A result rejected for presence alone passes when a fact in Edwin's
-    bucket is a near-duplicate of it; revoked, hidden and offscreen items
+    bucket is a near-duplicate of it; revoked and hidden items
     never do. Both settings sit at their defaults (0.15 / 0.92).
     """
 
@@ -352,13 +352,6 @@ class TestSimilarityGate:
             "F9": Fact(id="F9", text="twin fact", ts=20, present=["Mara"]),
             "F8": Fact(id="F8", text="far fact", ts=30, present=["Mara"]),
             "F7": Fact(id="F7", text="revoked twin", ts=40, present=["Mara"]),
-            "F6": Fact(
-                id="F6",
-                text="offscreen twin",
-                ts=50,
-                present=["Mara"],
-                source="offscreen",
-            ),
         }
         scene.world_state.knowledge = [
             KnowledgeEdge(character="Edwin", target="F7", kind="revoke")
@@ -368,7 +361,6 @@ class TestSimilarityGate:
             "F9": [1.0, 0.1],
             "F8": [1.0, 0.5],
             "F7": [1.0, 0.05],
-            "F6": [1.0, 0.02],
             "e1": [1.0, 0.05],
             "Mara.detail.secret": [1.0, 0.03],
         }
@@ -435,12 +427,9 @@ class TestSimilarityGate:
         )
         assert len(memory.calls) == 1
 
-    async def test_revoked_hidden_and_offscreen_are_never_rescued(
-        self, scene, memory, filtered
-    ):
+    async def test_revoked_and_hidden_are_never_rescued(self, scene, memory, filtered):
         memory.table = [
             self.presence("F7", "revoked twin", 0.2, [1.0, 0.05]),
-            self.presence("F6", "offscreen twin", 0.22, [1.0, 0.02]),
             MemoryDocument(
                 "secret",
                 {"typ": "details", "character": "Mara", "detail": "secret"},
@@ -455,7 +444,7 @@ class TestSimilarityGate:
             result = await memory.multi_query(["q"], iterate=5, filter=filtered)
         assert [doc.raw for doc in result] == ["twin fact"]
         assert filtered.rejection(memory.table[0]) == "revoke"
-        assert filtered.rejection(memory.table[2]) == "visibility"
+        assert filtered.rejection(memory.table[1]) == "visibility"
         assert filtered.gateable(memory.table[1]) is False
 
     async def test_an_admission_is_remembered_by_the_diversity_check(

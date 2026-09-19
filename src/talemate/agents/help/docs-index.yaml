@@ -3,7 +3,7 @@
 # Generated file - regenerate with the docs-index claude skill in the work repo.
 - path: dev/agent-actions.md
   title: Generation action identity
-  summary: Generation action keys in prompt logs and per-action overrides, including memory passes and offscreen narration.
+  summary: Generation action keys in prompt logs and per-action overrides, including memory passes.
     Covers nested context restoration, foreground/background status and concurrent actions.
 - path: dev/bulk-visibility-assessment.md
   title: Bulk visibility assessment
@@ -144,8 +144,7 @@
   summary: Conversation agent settings for client, prompt caching, dialogue format, generation length, jiggle, task and actor
     instructions, scene intent and writing style. Character Knowledge covers the effort slider, knowledge filtering, unknown-fact
     reminders, topic overview, Refine memories with AI and dialogue learning; activation chips show in every scene, the re-entry
-    bridge and Arrival Note need Limit to character knowledge in Standard mode and are always on in Character perspectives,
-    and Offscreen Life starts at Thorough.
+    bridge and Arrival Note need Limit to character knowledge in Standard mode and are always on in Character perspectives.
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
   summary: Autocomplete partial text with Ctrl/Cmd+Enter in dialogue, message editing, attributes, details, descriptions,
@@ -254,8 +253,7 @@
 - path: user-guide/agents/narrator/settings.md
   title: Settings
   summary: Narrator settings cover generation lengths, story intent, writing style, time passage and Auto Narration
-    chance, weights and Scene Direction suppression. Offscreen Life adds one private fact per eligible return
-    at Thorough and above, with an explicit retry; Balanced and below leave it off.
+    chance, weights and Scene Direction suppression.
 - path: user-guide/agents/scene-overrides.md
   title: Per-Scene Agent Overrides
   summary: 'Sparse agent overrides: Global/Scene editing, Save/Discard, quick toggles, links, hub reset icons, creation knowledge-effort
@@ -1268,15 +1266,14 @@
 - path: user-guide/world-editor/knowledge-how-it-works.md
   title: "Character knowledge: flow reference"
   summary: Experimental reference with six diagrams—re-entry bridges, arrival notes, automatic timing, activation and deactivation chips,
-    Offscreen Life fact projection, Thorough/Balanced, retry/regeneration. Shared facts, reply inputs, memory ranking,
+    regeneration, and Thorough/Balanced effort settings. Shared facts, reply inputs, memory ranking,
     Intro audiences, revision browsing, browse revisions before keeping a version, awareness overview names each
     character once, citation not supported, regenerate old views, private competitor vetoes, mode decision tree (model, cost).
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
   summary: Standard and Character perspectives knowledge, effort presets, request costs, scene overrides and first-save
     continuation, retry or discard. Covers Learn, Never Learn and Unlearn rules, Known by visibility, disclosures, topics, retrieval,
-    activation and deactivation chips with automatic timing and arrival notes, and optional Offscreen Life at Thorough and
-    above using current fact projection with explicit retry.
+    activation and deactivation chips with automatic timing and arrival notes.
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: Pins keep context entries or character details in AI prompts, with manual activation, AI yes/no conditions and

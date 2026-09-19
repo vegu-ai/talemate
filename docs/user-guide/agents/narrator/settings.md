@@ -94,20 +94,6 @@ Drag any slider to set its weight; the other two redistribute proportionally to 
 
 Default on. When the [director's Scene Direction](/talemate/user-guide/agents/director/scene-direction) is enabled — either via the agent toggle or a scene-level always-on override — Auto Narration is skipped. Turn this off if you want both systems running at once.
 
-## :material-account-clock-outline: Offscreen Life
-
-Requires **Limit to character knowledge** in Standard mode; Character perspectives always uses character context.
-
-When enabled, an actual return with intervening story or recorded scene time adds one Narrator request about what the character did while away. It does not wait for a summary. The request reads the character's permitted context and any established arrival constraints; it does not launch extra fact extraction or perspective repairs. A new character or an immediate leave and return with nothing in between gets no account.
-
-The result becomes one private offscreen fact, referenced by the character's **[Name] activated** chip in scene history. Edit the Arrival Note on that chip and the account in the Facts editor. A failed or cancelled account leaves the zero-request transition usable, with an explicit retry while that return is current. There is no automatic fallback request.
-
-Off by default. The character knowledge effort slider enables it at **Thorough** and Standard **Ultra**, and disables it at **Off**, **Minimal**, **Light**, and **Balanced**. Balanced stays the new-story default. Loading a scene neither enables it nor generates an account.
-
-##### Length
-
-Token length for the offscreen life narration (default 192).
-
 ## :material-brain: Long Term Memory
 
 --8<-- "docs/snippets/tips.md:agent_long_term_memory_settings"

@@ -37,7 +37,6 @@ describe('the hub ownership union', () => {
         expect(owned('summarizer', 'perceptions')).toEqual(['automatic_repair']);
         expect(owned('memory', 'retrieval')).toEqual(['similarity_gate']);
         expect(owned('memory', 'topics')).toEqual(['enabled']);
-        expect(owned('narrator', 'offscreen_life')).toEqual(['enabled']);
     });
 
     it('is exactly the union of both mode tables, so nothing extra is reset', () => {
@@ -102,7 +101,7 @@ describe('the effort origin state', () => {
         for (const [agent, actions] of Object.entries(byAgent)) {
             agents.find((candidate) => candidate.name === agent).data.scene_overrides = { actions };
         }
-        expect(effortOverrideState(agents, 'legacy')).toMatchObject({ any: true, complete: true, present: 12, overridden: 12 });
+        expect(effortOverrideState(agents, 'legacy')).toMatchObject({ any: true, complete: true, present: 11, overridden: 11 });
     });
 
     it('ignores keys the mode status does not carry', () => {

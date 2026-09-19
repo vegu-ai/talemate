@@ -40,7 +40,7 @@ def _ordered(facts: list[Fact], scene: "Scene") -> list[Fact]:
 def _acquisition_order(fact: Fact) -> int:
     return max(
         (item.acquired.order for item in fact.contributions),
-        default=fact.acquired.order if fact.acquired is not None else 0,
+        default=0,
     )
 
 
@@ -152,8 +152,6 @@ def _item(fact: Fact) -> KnowledgeItem:
 
 
 def perception_kind(view: Fact) -> KnownKind:
-    if view.source == "offscreen":
-        return "witnessed"
     return (
         "granted"
         if all(item.source.kind == "disclosure" for item in view.contributions)

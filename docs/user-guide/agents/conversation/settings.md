@@ -84,7 +84,7 @@ Disable this if you want the AI to generate dialogue without following the scene
 
 ## :material-head-lightbulb-outline: Character Knowledge
 
-The section opens with the **Character knowledge effort** slider. One stop sets this group and the Summarizer, Memory and Narrator knowledge settings together, as an unsaved edit of this page; see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets) for what each stop turns on and what it asks of your model.
+The section opens with the **Character knowledge effort** slider. One stop sets this group and the Summarizer and Memory knowledge settings together, as an unsaved edit of this page; see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets) for what each stop turns on and what it asks of your model.
 
 Help characters respond using what they know. In **Standard** mode, use this group to limit memories, remind the AI about unknown facts, and track learning from dialogue. The controls below apply to Standard mode unless stated otherwise. [Character knowledge: flow reference](/talemate/user-guide/world-editor/knowledge-how-it-works/) shows what each switch does, with diagrams.
 
@@ -94,7 +94,7 @@ The **Character Knowledge** master switch also supplies **Known facts** and **Un
 
 ![Conversation agent character knowledge settings](/talemate/img/0.40.0/conversation-character-knowledge-settings.png)
 
-Limiting knowledge, adding reminders and character return transitions need no extra request. **Refine memories with AI** and **Track learning from dialogue** normally add one request when they run and are off by default. Narrator **Offscreen Life** adds one request per eligible return when enabled at Thorough and above.
+Limiting knowledge, adding reminders and character return transitions need no extra request. **Refine memories with AI** and **Track learning from dialogue** normally add one request when they run and are off by default.
 
 ##### Limit to character knowledge
 
@@ -120,7 +120,7 @@ For example: `Edwin knows all of the Sorena, some of the sextant, nothing of the
 
 ##### Return transitions
 
-With **Limit to character knowledge** enabled in Standard mode, or in Character perspectives mode, an actual return gives the character a zero-request transition in their chronological context: departure, recorded scene time away, and return. Scene history shows it as an **[Name] activated** chip; click the chip to add an **Arrival Note**. The chips appear in every scene, but without this setting they add nothing to any prompt. Derived timing updates automatically. The transition stays protected until the first completed reply and does not replay the departure exchange. [Offscreen Life](/talemate/user-guide/agents/narrator/settings/#offscreen-life) optionally adds the character's account at Thorough and above; Balanced and lower keep it off.
+With **Limit to character knowledge** enabled in Standard mode, or in Character perspectives mode, an actual return adds a statement at that point in the character's context: they have returned after being away, with the duration when scene time records one. Building it adds no model request. In Standard mode the absence is marked where the character left. Scene history shows the return as an **[Name] activated** chip; click the chip to add an **Arrival Note**. The chips appear in every scene, but without this setting they add nothing to any prompt. Derived timing updates automatically. The transition stays protected until the first completed reply and does not replay the departure exchange.
 
 ##### Refine memories with AI
 

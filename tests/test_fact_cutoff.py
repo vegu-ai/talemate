@@ -9,14 +9,14 @@ from unittest.mock import AsyncMock
 import pytest
 
 import test_supported_facts
-from talemate.history import ArchiveEntry, HistoryEntry, insert_time_passage
+from talemate.history import ArchiveEntry, HistoryEntry
 from talemate.knowledge.cutoff import FactCutoff, disclosure_cutoff, span_cutoff
 from talemate.knowledge.facts import facts_for_entry, verify_links
 from talemate.knowledge.perspectives import add_disclosure, source_reference
 from talemate.knowledge.schema import Fact, ParsedFact
 from talemate.knowledge.timeline import message_times
 from talemate.prompts import Prompt
-from talemate.scene_message import CharacterMessage, CharacterTransitionMessage
+from talemate.scene_message import CharacterMessage
 
 supported_scene = test_supported_facts.supported_scene
 chapter = test_supported_facts.chapter
@@ -36,8 +36,8 @@ def test_cutoff_orders_facts_by_position_and_line_less_facts_by_earlier_time():
     assert cutoff.admits(Fact(id="d", text="d", archive_id="early", ts=999))
     assert not cutoff.admits(Fact(id="e", text="e", archive_id="late", ts=0))
     # no position: scene time moves only at a time passage, so equal is unknown
-    assert cutoff.admits(Fact(id="f", text="f", source="offscreen", ts=99))
-    assert not cutoff.admits(Fact(id="g", text="g", source="offscreen", ts=100))
+    assert cutoff.admits(Fact(id="f", text="f", source="manual", ts=99))
+    assert not cutoff.admits(Fact(id="g", text="g", source="manual", ts=100))
     assert not cutoff.admits(Fact(id="h", text="h", source="manual"))
 
 
@@ -191,37 +191,6 @@ def test_span_and_disclosure_cutoffs(supported_scene):
     assert cutoff.admits(Fact(id="x", text="x", message_id=second.id, ts=20))
 
 
-async def test_standard_offscreen_fact_after_an_older_entry_at_the_same_time(
-    standard_scene, monkeypatch
-):
-    scene, summarizer = standard_scene
-    scene.world_state.facts["F3"] = Fact(
-        id="F3",
-        text="Alice spent the night at the harbour.",
-        subjects=["Alice"],
-        source="offscreen",
-        present=["Alice"],
-        ts=0,
-    )
-    scene.world_state.fact_counter = 3
-    older_line = scene.history[1].id
-    request = answer(
-        [
-            {
-                "text": "Alice stays in the lighthouse.",
-                "subjects": ["Alice"],
-                "message_id": older_line,
-                "supersedes": "F3",
-            }
-        ]
-    )
-    monkeypatch.setattr(Prompt, "request", request)
-    assert (await summarizer.generate_missing_facts(scene))["ok"] == 1
-    offered = request.call_args.kwargs["vars"]["previous_facts"]
-    assert [fact.id for fact in offered] == ["F1"]
-    assert all(fact.supersedes != "F3" for fact in scene.world_state.facts.values())
-
-
 async def test_disclosure_given_after_an_older_chapter_at_the_same_time(
     supported_scene, monkeypatch
 ):
@@ -323,74 +292,3 @@ async def test_offered_earlier_link_is_kept_in_a_long_perspectives_scene(
         if fact.text == "Alice replaced lamp 4."
     ]
     assert replaced.contributions[0].supersedes == link
-
-
-@pytest.fixture
-def return_scene(supported_scene, monkeypatch):
-    scene, summarizer, memory = supported_scene
-    scene.knowledge_eligibility = "legacy"
-
-    def line(text):
-        return CharacterMessage(message=f"Alice: {text}", present=["Alice", "Bob"])
-
-    scene.history = [
-        line("the lamp is lit"),
-        line("Bob leaves for the mainland"),
-        line("the storm comes"),
-        line("the storm passes"),
-        CharacterTransitionMessage(
-            character_name="Bob", returning=True, offscreen_fact_id="F1"
-        ),
-        line("welcome back, Bob"),
-        line("tell me about the mainland"),
-    ]
-    scene.archived_history = [
-        ArchiveEntry(id=identity, text=text, start=start, end=end, ts=0).model_dump(
-            exclude_none=True
-        )
-        for identity, text, start, end in (
-            ("older", "Bob leaves for the mainland.", 0, 1),
-            ("newer", "A storm passes.", 2, 3),
-            ("after", "Bob is back.", 5, 6),
-        )
-    ]
-    scene.world_state.facts = {
-        "F1": Fact(
-            id="F1",
-            text="Bob sold his boat on the mainland.",
-            subjects=["Bob"],
-            source="offscreen",
-            present=["Bob"],
-            ts=0,
-        )
-    }
-    scene.world_state.fact_counter = 1
-    monkeypatch.setattr(memory, "get", AsyncMock(return_value=[]))
-    return scene, summarizer
-
-
-async def offered_for(scene, summarizer, identity, monkeypatch):
-    request = answer([])
-    monkeypatch.setattr(Prompt, "request", request)
-    index, stored = next(
-        (index, stored)
-        for index, stored in enumerate(scene.archived_history)
-        if stored["id"] == identity
-    )
-    assert (
-        await summarizer.regenerate_facts(HistoryEntry(**stored, index=index, layer=0))
-        == "ok"
-    )
-    return [fact.id for fact in request.call_args.kwargs["vars"]["previous_facts"]]
-
-
-async def test_offscreen_fact_is_placed_at_its_return_transition(
-    return_scene, monkeypatch
-):
-    scene, summarizer = return_scene
-    assert await offered_for(scene, summarizer, "after", monkeypatch) == ["F1"]
-    assert await offered_for(scene, summarizer, "older", monkeypatch) == []
-    insert_time_passage(scene, 0, 1, "hours")
-    assert message_times(scene)[scene.history[1].id] == 3600
-    assert scene.world_state.facts["F1"].ts == 0
-    assert await offered_for(scene, summarizer, "older", monkeypatch) == []

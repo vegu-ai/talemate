@@ -75,7 +75,7 @@ class TestDialogue:
         assert result == [
             "L0",
             "L1",
-            "(Bob did not witness this part of the scene)",
+            "(Bob was away for a while.)",
             "L4",
             "L5",
         ]
@@ -110,7 +110,7 @@ class TestDialogue:
             "L0",
             "L1",
             "L2",
-            "(Bob did not witness this part of the scene)",
+            "(Bob was away for a while.)",
             "L4",
             "L5",
         ]
@@ -126,7 +126,7 @@ class TestDialogue:
         assert result == [
             "L0",
             "L1",
-            "(Bob did not witness this part of the scene)",
+            "(Bob was away for a while.)",
             "L3",
             "L4",
             "L5",
@@ -136,7 +136,7 @@ class TestDialogue:
         scene = make_scene(summarizer)
         scene.history = scene.history[:4]
         result = scene.context_history(budget=5000, perspective="Bob")
-        assert result == ["L0", "L1", "(Bob did not witness this part of the scene)"]
+        assert result == ["L0", "L1", "(Bob was away for a while.)"]
 
     def test_best_fit_dialogue_gap(self, summarizer):
         summarizer.actions["manage_scene_history"].config["best_fit"].value = True
@@ -145,7 +145,7 @@ class TestDialogue:
         assert result == [
             "L0",
             "L1",
-            "(Bob did not witness this part of the scene)",
+            "(Bob was away for a while.)",
             "L4",
             "L5",
         ]
@@ -197,7 +197,7 @@ class TestAbsenceNotes:
             budget=5000, perspective="Bob", keep_director="Bob"
         )
         joined = "\n".join(result)
-        assert joined.count("(Bob did not witness this part of the scene)") == 1
+        assert joined.count("(Bob was away for a while.)") == 1
         assert "KEPT_GUIDANCE" in joined and "OWN_STATE" in joined
         assert "SECRET_BLOUSE" not in joined
         assert "OTHER_STATE" not in joined and "WORLD_STATE" not in joined
@@ -209,7 +209,7 @@ class TestAbsenceNotes:
         joined = "\n".join(
             absence_scene.context_history(budget=5000, perspective=perspective)
         )
-        assert "did not witness" not in joined
+        assert "was away" not in joined
         for content in ["SECRET_BLOUSE", "OWN_STATE", "OTHER_STATE", "WORLD_STATE"]:
             assert content in joined
 
@@ -223,7 +223,7 @@ class TestAbsenceNotes:
                 keep_context_investigation=False,
             )
         )
-        assert joined.count("did not witness") == 1
+        assert joined.count("was away") == 1
         assert "OWN_STATE" not in joined and "KEPT_GUIDANCE" not in joined
 
     @pytest.mark.parametrize("start,end", [(0, -1), (1, None), (1, -1)])
@@ -234,7 +234,7 @@ class TestAbsenceNotes:
                 budget=5000, perspective="Bob", keep_director="Bob"
             )
         )
-        assert joined.count("did not witness") == 1
+        assert joined.count("was away") == 1
         assert "KEPT_GUIDANCE" in joined and "OWN_STATE" in joined
 
     @pytest.mark.parametrize("best_fit", [False, True])
@@ -246,7 +246,7 @@ class TestAbsenceNotes:
         result = absence_scene.context_history(
             budget=5000, perspective="Bob", keep_director="Bob"
         )
-        gap = "(Bob did not witness this part of the scene)"
+        gap = "(Bob was away for a while.)"
         assert result.count(gap) == 2
         assert result.index(gap) < result.index("L10") < len(result) - 2
         assert result[-2] == gap
@@ -285,7 +285,7 @@ class TestAbsenceNotes:
         assert level.formatted[5:8] == [
             "",
             "",
-            "(Bob did not witness this part of the scene)",
+            "(Bob was away for a while.)",
         ]
         assert level.tokens == [_chars(text) for text in level.formatted]
 
@@ -372,13 +372,13 @@ class TestArchived:
         assert "A1" not in joined and "A2" not in joined
         assert "A0" in joined and "L8" in joined
         # gap = ts of the last missed entry (7300) - ts of the kept entry before it (100)
-        assert "(bob did not witness 2 hours of scene time)" in joined.lower()
-        assert joined.index("A0") < joined.index("did not witness") < joined.index("L8")
+        assert "(bob was away for 2 hours.)" in joined.lower()
+        assert joined.index("A0") < joined.index("was away") < joined.index("L8")
 
     def test_present_character_keeps_entries(self, summarizer):
         scene = self._scene(summarizer)
         joined = "\n".join(scene.context_history(budget=400, perspective="Alice"))
-        assert "A1" in joined and "A2" in joined and "did not witness" not in joined
+        assert "A1" in joined and "A2" in joined and "was away" not in joined
 
 
 class TestLayered:
@@ -440,7 +440,7 @@ class TestLayered:
         assert "LC" not in joined
         assert "LB" not in joined
         assert "LA" in joined
-        assert "(Bob did not witness" in joined
+        assert "(Bob was away" in joined
 
     def test_layer_entry_with_any_presence_is_kept(self, summarizer):
         scene = self._scene(summarizer)
@@ -449,16 +449,16 @@ class TestLayered:
         result = scene.context_history(budget=600, perspective="Bob")
         joined = "\n".join(result)
         assert "LB" in joined
-        assert "did not witness" not in [part for part in result if "LB" in part][0]
+        assert "was away" not in [part for part in result if "LB" in part][0]
 
     def test_gap_survives_a_budget_break_as_one_line(self, summarizer):
         scene = self._scene(summarizer)
         # the archived level breaks on the entry that would carry the gap
         result = scene.context_history(budget=600, perspective="Bob")
-        gaps = [part for part in result if part.startswith("(Bob did not witness")]
+        gaps = [part for part in result if part.startswith("(Bob was away")]
         assert len(gaps) == 1, result
-        assert "did not witness" not in "".join(
-            p for p in result if not p.startswith("(Bob did not witness")
+        assert "was away" not in "".join(
+            p for p in result if not p.startswith("(Bob was away")
         )
 
 
@@ -527,7 +527,7 @@ class TestBestFitSlots:
             if own_note
             else "GUIDANCE" in "\n".join(result)
         )
-        gap = "(Bob did not witness this part of the scene)"
+        gap = "(Bob was away for a while.)"
         kept_note = next(
             part for part in result if ("OWN_STATE" if own_note else "GUIDANCE") in part
         )
@@ -584,7 +584,7 @@ class TestBestFitSlots:
             "L0",
             "",
             "",
-            "(Bob did not witness this part of the scene)",
+            "(Bob was away for a while.)",
             "L4",
         ]
         assert level.tokens[1] == 0 and level.tokens[3] > 0
@@ -604,13 +604,13 @@ class TestBestFitSlots:
             line(4, ["Alice", "Bob"]),
         ]
         level = self._level(summarizer, scene)
-        gaps = [f for f in level.formatted if f.startswith("(Bob did not witness")]
+        gaps = [f for f in level.formatted if f.startswith("(Bob was away")]
         assert len(gaps) == 1
         assert level.formatted == [
             "L0",
             "",
             "",
-            "(Bob did not witness this part of the scene)",
+            "(Bob was away for a while.)",
             "L4",
         ]
 
@@ -634,6 +634,6 @@ class TestBestFitSlots:
         assert level.formatted == [
             "L0",
             "",
-            "(Bob did not witness this part of the scene)",
+            "(Bob was away for a while.)",
             "L3",
         ]

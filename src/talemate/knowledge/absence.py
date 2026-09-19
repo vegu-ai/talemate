@@ -89,7 +89,7 @@ async def absence_facts(
     bucket = set(bucket_ids)
 
     def candidate(fact: Fact) -> bool:
-        return fact.source != "offscreen" and fact.id not in bucket
+        return fact.id not in bucket
 
     # facts about the character, or recorded while they were away, are
     # always eligible, ahead of the creation-order window and the age cut
@@ -105,7 +105,7 @@ async def absence_facts(
         superseders=facts,
     )
     recent = sorted(
-        (f for f in facts if f.source != "offscreen"),
+        facts,
         key=fact_order,
         reverse=True,
     )[: max(0, window)]

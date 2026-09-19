@@ -5,7 +5,7 @@ They use the [public scene opt-in](scene-format.md#public-opt-in).
 The summarizer generates message perspectives through the lifecycle below.
 Perception-mode actor recent history and character-facing editor context use
 stored views and audience summaries. Source-supported fact extraction and graph
-queries extend those same records. Offscreen-life narration, RAG input and the
+queries extend those same records. RAG input and the
 optional memory pass also use viewer-specific evidence.
 
 ## Saved representation
@@ -343,7 +343,7 @@ character revision's scene-history block uses stored views when its bounded wind
 Character unslop omits shared cached scene analysis until its producer supports
 character audiences. Narrator/author revisions retain their broader context.
 
-Passing `perspective` alone retains the legacy bucket-filtered reader assembly where explicitly used by legacy callers. Perception-mode offscreen-life narration, RAG input and the optional memory pass use the integrated viewer-specific paths documented in [Character memory retrieval](character-memory-retrieval.md).
+Passing `perspective` alone retains the legacy bucket-filtered reader assembly where explicitly used by legacy callers. Perception-mode RAG input and the optional memory pass use the integrated viewer-specific paths documented in [Character memory retrieval](character-memory-retrieval.md).
 
 Debug event `character_history.skip` identifies the message ID, viewer and
 omitted/unavailable status when a passage contributes no text. It does not log

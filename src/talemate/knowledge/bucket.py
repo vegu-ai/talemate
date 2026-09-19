@@ -350,7 +350,7 @@ class RetrievalFilter:
         """
         Only a presence rejection may be rescued by the gate: a revoke beats
         a grant, an unlearned fact waits for an actual learning, and
-        visibility, ownership, offscreen scoping and the Known by of a static
+        visibility, ownership and the Known by of a static
         history entry (stored as its presence) are exact.
         """
         if self.rejection(doc) != "presence":
@@ -359,8 +359,6 @@ class RetrievalFilter:
         fact = self.scene.world_state.facts.get(identity)
         if fact is None:
             return identity not in self.static_audiences
-        if fact.source == "offscreen":
-            return False
         return (
             fact.message_id is not None or fact.archive_id not in self.static_audiences
         )

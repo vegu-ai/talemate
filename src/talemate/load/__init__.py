@@ -1140,8 +1140,6 @@ def _prepare_history(entry):
         entry["message"] = ""
 
     msg = cls(**entry)
-    if msg.typ == "character_transition" and msg.offscreen_status == "pending":
-        msg.offscreen_status = "failed"
 
     if isinstance(msg, (NarratorMessage, ReinforcementMessage)):
         msg = msg.migrate_source_to_meta()

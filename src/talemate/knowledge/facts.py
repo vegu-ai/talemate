@@ -23,8 +23,6 @@ from talemate.knowledge.changes import (
     unlearn_lifted_by,
 )
 from talemate.knowledge.presence import presence_metadata
-from talemate.knowledge.mode import character_knowledge_enabled
-from talemate.knowledge.perspectives import _acquire, _commit_order
 from talemate.knowledge.revision_browsing import current_facts
 from talemate.knowledge.schema import (
     INTRO_LINE,
@@ -57,7 +55,6 @@ __all__ = [
     "update_fact",
     "fact_memory_document",
     "previous_facts",
-    "store_offscreen_fact",
     "fact_is_independent",
     "follow_static_audiences",
     "follow_static_entry_audience",
@@ -1119,47 +1116,3 @@ def _move_waiting_rules(world_state, matches: dict[str, str]) -> None:
             world_state.knowledge.append,
             [],
         )
-
-
-async def store_offscreen_fact(
-    scene: "Scene",
-    character: str,
-    text: str,
-    *,
-    still_current: Callable[[], bool] = lambda: True,
-) -> Fact | None:
-    """
-    What a character did while away from the scene: a fact only they were
-    present for, so it retrieves for them alone and never lists in an absence
-    block.
-    """
-    world_state = scene.world_state
-    world_state.fact_counter += 1
-    fact = Fact(
-        id=f"F{world_state.fact_counter}",
-        text=" ".join(text.split()),
-        ts=scene.ts,
-        present=[character],
-        subjects=[character],
-        source="offscreen",
-        last_seen_ts=scene.ts,
-    )
-    from talemate.agents.memory import memory_write_scene
-
-    try:
-        with memory_write_scene(scene):
-            await get_agent("memory").add_many([fact_memory_document(fact)])
-        if not still_current():
-            get_agent("summarizer").queue_fact_memory(scene, {fact.id})
-            return None
-    except BaseException:
-        # The memory write can finish even after cancellation. The canonical
-        # fact is unpublished; reconcile any residual index document.
-        get_agent("summarizer").queue_fact_memory(scene, {fact.id})
-        raise
-    if character_knowledge_enabled(scene):
-        fact.acquired = _acquire(scene)
-        _commit_order(scene, fact.acquired)
-    world_state.facts[fact.id] = fact
-    log.debug("offscreen fact stored", id=fact.id, character=character)
-    return fact

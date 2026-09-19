@@ -1,6 +1,5 @@
 import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
 
 import pytest
 
@@ -176,58 +175,3 @@ async def test_title_generation_owns_action_without_changing_title(
     with ActiveScene(scene):
         assert await agent.chat_generate_title(chat.id) == "The bell"
     assert update == [(chat.id, "The bell")]
-
-
-async def test_offscreen_return_callback_owns_narrator_context(scene, monkeypatch):
-    narrator = get_agent("narrator")
-    summarizer = get_agent("summarizer")
-    alice = Character(name="Alice")
-    scene.character_data = {"Alice": alice}
-    scene.active_characters = ["Alice"]
-    narrator.actions["offscreen_life"].enabled = True
-    monkeypatch.setattr(scene, "get_character", lambda name: alice)
-    from talemate.knowledge.transitions import record_departure, record_arrival
-    from talemate.scene_message import TimePassageMessage
-
-    record_departure(scene, alice)
-    scene.history.append(TimePassageMessage(ts=3600, message="An hour later"))
-    with ActiveScene(scene):
-        record_arrival(scene, alice)
-    monkeypatch.setattr(narrator, "clean_result", lambda text, **kwargs: text)
-    stored = SimpleNamespace(id="offscreen-test")
-    save = AsyncMock(return_value=stored)
-    monkeypatch.setattr("talemate.agents.narrator.offscreen.store_offscreen_fact", save)
-    monkeypatch.setitem(
-        get_config().agent_actions.overrides,
-        "narrator.narrate_offscreen_life",
-        AgentActionOverride(disable_reasoning=True),
-    )
-
-    async def request(*args, **kwargs):
-        ctx = active_agent.get()
-        assert ctx.agent is narrator
-        assert ctx.action == "narrate_offscreen_life"
-        assert ctx.previous.agent is summarizer
-        assert ctx.previous.action == "build_archive"
-        assert client_context_attribute("disable_reasoning") is True
-        assert narrator.processing == 1
-        return "", {"response": "Alice watched the harbour."}
-
-    monkeypatch.setattr("talemate.agents.narrator.offscreen.Prompt.request", request)
-
-    @set_processing
-    async def build_archive(self):
-        await narrator.on_character_activated(
-            SimpleNamespace(scene=scene, character=alice)
-        )
-        assert active_agent.get().agent is summarizer
-        assert active_agent.get().action == "build_archive"
-        assert summarizer.status == "busy"
-        assert narrator.processing == 0
-        assert client_context_attribute("disable_reasoning") is False
-
-    with ActiveScene(scene), ClientContext(disable_reasoning=False):
-        await build_archive(summarizer)
-    assert save.await_count == 1
-    assert save.call_args.args == (scene, "Alice", "Alice watched the harbour.")
-    assert save.call_args.kwargs["still_current"]()

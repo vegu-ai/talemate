@@ -267,8 +267,7 @@ def perception_scene(scene_factory):
         "F1": Fact(id="F1", text="they met", ts=1800, last_seen_ts=1800),
         "F2": Fact(
             id="F2",
-            text="offscreen",
-            acquired=Acquisition(order=7, ts=2400),
+            text="independent",
             contributions=(contribution,),
         ),
     }
@@ -300,7 +299,6 @@ def _orders(scene):
     orders.append(scene.layered_history[0][0]["knowledge"]["acquired"]["order"])
     orders.append(scene.knowledge.disclosures[0].acquired.order)
     facts = scene.world_state.facts
-    orders.append(facts["F2"].acquired.order)
     orders.append(facts["F2"].contributions[0].acquired.order)
     return orders
 
@@ -319,7 +317,6 @@ def test_shift_scene_timeline_moves_every_acquisition_stamp(perception_scene):
         disclosure.away_scene_ts,
     ) == (7200, 6600, 6800)
     facts = scene.world_state.facts
-    assert facts["F2"].acquired.ts == 4200
     assert facts["F2"].contributions[0].acquired.ts == 3600
     assert [edge.ts for edge in scene.world_state.knowledge] == [3000, None]
     # only the times move
@@ -339,7 +336,6 @@ def test_shift_scene_timeline_clamps_every_acquisition_stamp(perception_scene):
         disclosure.away_scene_ts,
     ) == (0, 0, 0)
     facts = scene.world_state.facts
-    assert facts["F2"].acquired.ts == 0
     assert facts["F2"].contributions[0].acquired.ts == 0
     assert [edge.ts for edge in scene.world_state.knowledge] == [0, None]
 

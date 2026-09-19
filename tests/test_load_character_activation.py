@@ -178,7 +178,7 @@ async def test_a_scene_whose_player_is_inactive_adopts_it(
     the scene. That character is adopted, not shadowed by a blank default.
 
     The activation it sends carries the loading context, which is what keeps
-    subscribers that spend a request — the narrator's offscreen life — out of
+    subscribers that respond to gameplay activation out of
     the load path.
     """
     config = get_config()

@@ -4,8 +4,7 @@
       "conversation.character_knowledge.enabled": false,
       "memory.topics.enabled": false,
       "memory.retrieval.similarity_gate": false,
-      "summarizer.archive.extract_facts": false,
-      "narrator.offscreen_life.enabled": false
+      "summarizer.archive.extract_facts": false
     },
     "minimal": {
       "conversation.character_knowledge.enabled": true,
@@ -18,8 +17,7 @@
       "conversation.character_knowledge.absence_window": 30,
       "memory.topics.enabled": false,
       "memory.retrieval.similarity_gate": false,
-      "summarizer.archive.extract_facts": false,
-      "narrator.offscreen_life.enabled": false
+      "summarizer.archive.extract_facts": false
     },
     "light": {
       "conversation.character_knowledge.enabled": true,
@@ -32,8 +30,7 @@
       "conversation.character_knowledge.absence_window": 30,
       "memory.topics.enabled": true,
       "memory.retrieval.similarity_gate": true,
-      "summarizer.archive.extract_facts": true,
-      "narrator.offscreen_life.enabled": false
+      "summarizer.archive.extract_facts": true
     },
     "balanced": {
       "conversation.character_knowledge.enabled": true,
@@ -46,8 +43,7 @@
       "conversation.character_knowledge.absence_window": 30,
       "memory.topics.enabled": true,
       "memory.retrieval.similarity_gate": true,
-      "summarizer.archive.extract_facts": true,
-      "narrator.offscreen_life.enabled": false
+      "summarizer.archive.extract_facts": true
     },
     "thorough": {
       "conversation.character_knowledge.enabled": true,
@@ -60,8 +56,7 @@
       "conversation.character_knowledge.absence_window": 30,
       "memory.topics.enabled": true,
       "memory.retrieval.similarity_gate": true,
-      "summarizer.archive.extract_facts": true,
-      "narrator.offscreen_life.enabled": true
+      "summarizer.archive.extract_facts": true
     },
     "ultra": {
       "conversation.character_knowledge.enabled": true,
@@ -74,8 +69,7 @@
       "conversation.character_knowledge.absence_window": 100,
       "memory.topics.enabled": true,
       "memory.retrieval.similarity_gate": true,
-      "summarizer.archive.extract_facts": true,
-      "narrator.offscreen_life.enabled": true
+      "summarizer.archive.extract_facts": true
     }
   },
   "perception": {
@@ -84,32 +78,28 @@
       "conversation.character_knowledge.memory_pass": false,
       "summarizer.perceptions.automatic_repair": false,
       "summarizer.archive.extract_facts": false,
-      "memory.topics.enabled": false,
-      "narrator.offscreen_life.enabled": false
+      "memory.topics.enabled": false
     },
     "light": {
       "conversation.character_knowledge.enabled": true,
       "conversation.character_knowledge.memory_pass": false,
       "summarizer.perceptions.automatic_repair": false,
       "summarizer.archive.extract_facts": false,
-      "memory.topics.enabled": true,
-      "narrator.offscreen_life.enabled": false
+      "memory.topics.enabled": true
     },
     "balanced": {
       "conversation.character_knowledge.enabled": true,
       "conversation.character_knowledge.memory_pass": false,
       "summarizer.perceptions.automatic_repair": true,
       "summarizer.archive.extract_facts": true,
-      "memory.topics.enabled": true,
-      "narrator.offscreen_life.enabled": false
+      "memory.topics.enabled": true
     },
     "thorough": {
       "conversation.character_knowledge.enabled": true,
       "conversation.character_knowledge.memory_pass": true,
       "summarizer.perceptions.automatic_repair": true,
       "summarizer.archive.extract_facts": true,
-      "memory.topics.enabled": true,
-      "narrator.offscreen_life.enabled": true
+      "memory.topics.enabled": true
     }
   }
 }

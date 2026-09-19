@@ -498,9 +498,8 @@ def test_bind_keeps_legacy_bucket_rule_in_perception_mode(cast):
 
 
 @pytest.mark.asyncio
-async def test_retrieval_and_offscreen_life_project_owned_history(cast, monkeypatch):
+async def test_retrieval_projects_owned_history(cast, monkeypatch):
     from talemate.agents.memory.rag import MemoryRAGMixin
-    from talemate.knowledge.bucket import KnowledgeIndex
 
     scene, mixed = cast
     scene.ts = 10
@@ -531,7 +530,7 @@ async def test_retrieval_and_offscreen_life_project_owned_history(cast, monkeypa
     monkeypatch.setattr(memory, "audience_operation", operation)
     await conversation.memory_pass(scene.character_data["Bob"], [])
     history = "".join(request.call_args.kwargs["vars"]["scene_history"])
-    assert expected not in history and "Bob did not witness" not in history
+    assert expected not in history and "Bob was away" not in history
 
     monkeypatch.setattr(conversation, "semantic_context", AsyncMock(return_value=[]))
     extract = AsyncMock(return_value="")
@@ -544,35 +543,7 @@ async def test_retrieval_and_offscreen_life_project_owned_history(cast, monkeypa
         retrieval_method="questions",
     )
     assert expected not in extract.call_args.args[0]
-    assert "Bob did not witness" not in extract.call_args.args[0]
-
-    from talemate.knowledge.context import project_character_history
-
-    monkeypatch.setattr(
-        "talemate.agents.summarize.context_history.project_character_history",
-        project_character_history,
-    )
-    narrator = get_agent("narrator")
-    monkeypatch.setattr(
-        narrator,
-        "rag_build",
-        AsyncMock(side_effect=AssertionError("No extra retrieval")),
-    )
-    with ActiveAgent(narrator, narrator.narrate_scene):
-        rendered = Prompt.get(
-            "narrator.offscreen-life",
-            vars={
-                "scene": scene,
-                "character": scene.character_data["Bob"],
-                "knowledge_index": KnowledgeIndex.from_scene(scene),
-                "elapsed": "one hour",
-                "max_tokens": 10000,
-                "extra_instructions": "",
-                "response_length": 128,
-            },
-        ).render()
-    assert expected not in rendered
-    narrator.rag_build.assert_not_awaited()
+    assert "Bob was away" not in extract.call_args.args[0]
 
 
 @pytest.mark.asyncio

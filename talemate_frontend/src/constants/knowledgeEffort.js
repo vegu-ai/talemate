@@ -36,7 +36,6 @@ const standard = (overrides) => ({
     [`${CK}.awareness_line`]: false,
     [`${CK}.ledger`]: false,
     [`${CK}.memory_pass`]: false,
-    'narrator.offscreen_life.enabled': false,
     [`${CK}.absence_limit`]: 5,
     [`${CK}.absence_window`]: 30,
     'memory.topics.enabled': false,
@@ -49,7 +48,6 @@ const standard = (overrides) => ({
 const perspectives = (overrides) => ({
     [`${CK}.enabled`]: true,
     [`${CK}.memory_pass`]: false,
-    'narrator.offscreen_life.enabled': false,
     'summarizer.perceptions.automatic_repair': false,
     'summarizer.archive.extract_facts': true,
     'memory.topics.enabled': false,
@@ -71,7 +69,6 @@ const OFF = {
     [`${CK}.enabled`]: false,
     'memory.topics.enabled': false,
     'memory.retrieval.similarity_gate': false,
-    'narrator.offscreen_life.enabled': false,
 };
 
 export const EFFORT_PRESETS = Object.freeze({
@@ -84,13 +81,11 @@ export const EFFORT_PRESETS = Object.freeze({
             ...STANDARD_LIGHT,
             [`${CK}.ledger`]: true,
             [`${CK}.memory_pass`]: true,
-            'narrator.offscreen_life.enabled': true,
         }),
         ultra: standard({
             ...STANDARD_LIGHT,
             [`${CK}.ledger`]: true,
             [`${CK}.memory_pass`]: true,
-            'narrator.offscreen_life.enabled': true,
             [`${CK}.absence_limit`]: 10,
             [`${CK}.absence_window`]: 100,
         }),
@@ -106,7 +101,6 @@ export const EFFORT_PRESETS = Object.freeze({
             'memory.topics.enabled': true,
             'summarizer.perceptions.automatic_repair': true,
             [`${CK}.memory_pass`]: true,
-            'narrator.offscreen_life.enabled': true,
         }),
     },
 });
@@ -135,6 +129,5 @@ export const EFFORT_DESCRIPTIONS = Object.freeze({
 export const REQUEST_TOGGLES = Object.freeze({
     [`${CK}.memory_pass`]: 'Refine memories with AI',
     [`${CK}.ledger`]: 'Track learning from dialogue',
-    'narrator.offscreen_life.enabled': 'Offscreen Life (one request per eligible return)',
     'summarizer.perceptions.automatic_repair': 'Automatically repair analysis',
 });

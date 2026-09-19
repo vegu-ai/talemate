@@ -43,9 +43,6 @@ function agentsAt(mode, stop, overrides = {}) {
             retrieval: { enabled: true, label: 'Retrieval', config: mode === 'legacy'
                 ? { similarity_gate: bool('Match known facts', v('memory.retrieval.similarity_gate')) } : {} },
         } },
-        { name: 'narrator', label: 'Narrator', data: { scene_overrides: {} }, actions: {
-            offscreen_life: { enabled: v('narrator.offscreen_life.enabled'), can_be_disabled: true, label: 'Offscreen Life', config: {} },
-        } },
     ];
 }
 

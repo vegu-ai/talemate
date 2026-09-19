@@ -15,7 +15,7 @@ function context() {
     const agents = agentsAt('legacy', 'thorough');
     const ck = agents[0].actions.character_knowledge;
     ck.container = true;
-    agents.at(-1).actions.offscreen_life.enabled = false;
+    ck.config.memory_pass.value = false;
     const config = reactive({ agents: Object.fromEntries(agents.map(agent => [agent.name, {
         actions: Object.fromEntries(Object.entries(agent.actions).map(([key, action]) => [key, {
             enabled: action.enabled,
@@ -23,7 +23,7 @@ function context() {
         }])),
     }])) });
     for (const agent of agents) agent.data.actions = agent.actions;
-    agents.at(-1).data.scene_overrides = { actions: { offscreen_life: { enabled: true } } };
+    agents[0].data.scene_overrides = { actions: { character_knowledge: { config: { memory_pass: { value: true } } } } };
     return { config, agents: reactive(agents) };
 }
 
@@ -69,32 +69,32 @@ describe('effort explanation caller context', () => {
             const { vm, explanation } = await mount(component, ctx);
             vm.effort = 'thorough';
             await nextTick();
-            expect(explanation()).toContain('1 per eligible character return');
+            expect(explanation()).toContain('uncached retrieved memories');
             vm.effort = 'balanced';
             await nextTick();
-            expect(explanation()).not.toContain('1 per eligible character return');
+            expect(explanation()).not.toContain('uncached retrieved memories');
         });
     }
 
-    it('global settings reflects unsaved Narrator edits without applying scene overrides', async () => {
+    it('global settings reflects unsaved memory-refinement edits without applying scene overrides', async () => {
         const ctx = context();
         const { explanation } = await mount(Settings, ctx);
-        expect(explanation()).not.toContain('1 per eligible character return');
-        expect(explanation()).not.toContain('offscreen account');
-        ctx.config.agents.narrator.actions.offscreen_life.enabled = true;
+        expect(explanation()).not.toContain('uncached retrieved memories');
+        expect(explanation()).not.toContain('focus recalled memories');
+        ctx.config.agents.conversation.actions.character_knowledge.config.memory_pass.value = true;
         await nextTick();
-        expect(explanation()).toContain('1 per eligible character return');
-        ctx.config.agents.narrator.actions.offscreen_life.enabled = false;
+        expect(explanation()).toContain('uncached retrieved memories');
+        ctx.config.agents.conversation.actions.character_knowledge.config.memory_pass.value = false;
         await nextTick();
-        expect(explanation()).not.toContain('offscreen account');
+        expect(explanation()).not.toContain('focus recalled memories');
     });
 
-    it('the hub reads the scene-effective Offscreen Life switch', async () => {
+    it('the hub reads the scene-effective memory-refinement switch', async () => {
         const ctx = context();
         const { explanation } = await mount(Hub, ctx);
-        expect(explanation()).toContain('1 per eligible character return');
-        ctx.agents.at(-1).data.scene_overrides.actions.offscreen_life.enabled = false;
+        expect(explanation()).toContain('uncached retrieved memories');
+        ctx.agents[0].data.scene_overrides.actions.character_knowledge.config.memory_pass.value = false;
         await nextTick();
-        expect(explanation()).not.toContain('offscreen account');
+        expect(explanation()).not.toContain('focus recalled memories');
     });
 });

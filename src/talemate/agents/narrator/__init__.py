@@ -27,7 +27,6 @@ from talemate.agents.context import active_agent
 from talemate.agents.world_state import TimePassageEmission
 from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.agents.narrator.auto_narration import AutoNarrationMixin
-from talemate.agents.narrator.offscreen import OffscreenLifeMixin
 from talemate.prompts import Prompt
 from talemate.scene_message import NarratorMessage
 
@@ -66,8 +65,6 @@ async def _narration(
     fn,
     args,
     kwargs,
-    emit_generated: bool = True,
-    run_generation_hooks: bool = True,
 ):
     """
     The narrator's generation context: the narrator speaker role, the
@@ -91,18 +88,15 @@ async def _narration(
         if self.content_use_writing_style:
             self.set_context_states(writing_style=self.scene.writing_style)
 
-        if run_generation_hooks:
-            await talemate.emit.async_signals.get(
-                "agent.narrator.before_generate"
-            ).send(emission)
-            await talemate.emit.async_signals.get(
-                "agent.narrator.inject_instructions"
-            ).send(emission)
+        await talemate.emit.async_signals.get("agent.narrator.before_generate").send(
+            emission
+        )
+        await talemate.emit.async_signals.get(
+            "agent.narrator.inject_instructions"
+        ).send(emission)
         agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
 
         response = await fn(self, *args, **kwargs)
-        if not emit_generated:
-            return response
         emission.response = response
         await talemate.emit.async_signals.get("agent.narrator.generated").send(emission)
         return emission.response
@@ -127,23 +121,8 @@ def set_processing(fn):
     return narration_wrapper
 
 
-def narration_no_emit(fn):
-    """
-    The narrator's generation context without the generated signal: for a
-    narration that becomes a fact rather than a scene message.
-    """
-
-    @wraps(fn)
-    async def narration_wrapper(self, *args, **kwargs):
-        return await _narration(
-            self, fn, args, kwargs, emit_generated=False, run_generation_hooks=False
-        )
-
-    return narration_wrapper
-
-
 @register()
-class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, OffscreenLifeMixin, Agent):
+class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, Agent):
     """
     Handles narration of the story
     """
@@ -297,7 +276,6 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, OffscreenLifeMixin, Agen
 
         MemoryRAGMixin.add_actions(actions)
         AutoNarrationMixin.add_actions(actions)
-        OffscreenLifeMixin.add_actions(actions)
         return actions
 
     def __init__(
@@ -413,13 +391,6 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, OffscreenLifeMixin, Agen
         super().connect(scene)
         talemate.emit.async_signals.get("agent.world_state.time").connect(
             self.on_time_passage
-        )
-
-    @_set_processing
-    @narration_no_emit
-    async def narrate_offscreen_life(self, character: Character, transition):
-        return await OffscreenLifeMixin.narrate_offscreen_life(
-            self, character, transition
         )
 
     async def on_time_passage(self, event: TimePassageEmission):

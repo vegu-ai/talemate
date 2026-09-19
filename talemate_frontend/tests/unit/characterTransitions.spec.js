@@ -16,8 +16,7 @@ function mount(overrides = {}) {
     const message = reactive({
         id: 12, type: 'character_transition', kind: 'activated', character: 'Nora', color: 'cornflowerblue',
         transitions_enabled: true, returning: true, absence_seconds: 172800, absence: '2 days',
-        participants: ['Mara', 'Nora'], offscreen_account: null, arrival_note: '', offscreen_fact_id: null,
-        offscreen_status: 'none', available: true, can_retry: false, ...overrides,
+        participants: ['Mara', 'Nora'], arrival_note: '', available: true, ...overrides,
     });
     const props = reactive({ message, locked: false });
     const app = createApp({ render: () => h(Transition, props) });
@@ -81,13 +80,12 @@ describe('character transition chip', () => {
     });
 
     it('opens a plain summary on click and closes it on a second click', async () => {
-        const { host, message } = mount({ offscreen_account: 'Nora mended her coat.' });
+        const { host, message } = mount();
         expect(host.querySelector('.transition-details')).toBeNull();
         await openDetails(host);
         const details = host.querySelector('.transition-details');
         expect(details.textContent).toContain('Back after 2 days away.');
         expect(details.textContent).toContain('Present at entry: Mara, Nora');
-        expect(details.textContent).toContain('While away: Nora mended her coat.');
         expect(host.querySelector('textarea').dataset.label).toBe('Arrival Note (Optional)');
         expect(host.querySelector('.v-chip').getAttribute('aria-expanded')).toBe('true');
         message.absence_seconds = 0; message.absence = null; await nextTick();
@@ -101,7 +99,7 @@ describe('character transition chip', () => {
     });
 
     it('shows only the summary while transitions are disabled', async () => {
-        const { host } = mount({ transitions_enabled: false, offscreen_status: 'failed', can_retry: true, offscreen_fact_id: 'F1' });
+        const { host } = mount({ transitions_enabled: false });
         await openDetails(host);
         expect(host.querySelector('.transition-details').textContent).toContain('Back after 2 days away.');
         expect(host.querySelector('textarea')).toBeNull();
@@ -177,7 +175,7 @@ describe('character transition chip', () => {
     });
 
     it('renders author text safely and locks the field while locked or unavailable', async () => {
-        const { host, props } = mount({ offscreen_account: '<img src=x onerror=alert(1)>' });
+        const { host, props } = mount({ arrival_note: '<img src=x onerror=alert(1)>' });
         await openDetails(host);
         expect(host.querySelector('img')).toBeNull();
         props.locked = true; await nextTick();
@@ -186,17 +184,6 @@ describe('character transition chip', () => {
         expect(host.querySelector('textarea').disabled).toBe(true);
     });
 
-    it('retries only on an explicit click on a current failed account', async () => {
-        const { host, sent, message } = mount({ offscreen_status: 'pending', can_retry: true });
-        await openDetails(host);
-        expect(sent).toEqual([]);
-        expect(host.textContent).toContain('Writing offscreen account');
-        message.offscreen_status = 'failed'; await nextTick();
-        [...host.querySelectorAll('button')].find(button => button.textContent.includes('Retry')).click();
-        expect(sent).toEqual([{ type: 'scene_message', action: 'retry_offscreen', id: 12 }]);
-        message.can_retry = false; await nextTick();
-        expect(host.textContent).not.toContain('Retry Offscreen Life');
-    });
 
     it('updates an existing history entry without moving or duplicating it', () => {
         const state = { messages: [{ type: 'narrator', id: 1 }, { type: 'character_transition', id: 2, kind: 'activated', arrival_note: 'Before' }, { type: 'character', id: 3 }] };

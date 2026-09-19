@@ -209,7 +209,7 @@ def prune_legacy_facts(world_state: dict, archived_history: list[dict]) -> set[s
     Drop, from a serialized world state, the fact records written before
     facts were bound to messages: dialogue facts, contributions from message
     views, and extraction facts of a summarized span without a message id.
-    Facts that have no message by design (manual, offscreen, disclosure and
+    Facts that have no message by design (manual, disclosure and
     static-entry facts) stay. Returns the removed fact ids.
     """
     facts = world_state.get("facts") or {}

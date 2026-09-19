@@ -196,8 +196,8 @@ class ContextHistoryParams(pydantic.BaseModel):
 
     def gap_line(self, seconds: int | None) -> str:
         if seconds and seconds > 0:
-            return f"({self.perspective} did not witness {duration_to_human(seconds, suffix='')} of scene time)"
-        return f"({self.perspective} did not witness this part of the scene)"
+            return f"({self.perspective} was away for {duration_to_human(seconds, suffix='').lower()}.)"
+        return f"({self.perspective} was away for a while.)"
 
 
 class ContextHistoryMixin:

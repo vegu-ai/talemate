@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Iterable, Mapping
 
 from talemate.knowledge.timeline import message_times
-from talemate.scene_message import CharacterTransitionMessage
 
 if TYPE_CHECKING:
     from talemate.knowledge.perspective_models import Disclosure
@@ -27,12 +26,10 @@ class FactCutoff:
     - a line: its message id is lower;
     - a disclosure: it was given before `message_id` existed;
     - a summarized entry without a line: the entry starts earlier;
-    - static history: always;
-    - an Offscreen Life fact: its return transition is earlier.
-    A fact with none of these (a manual fact, an Offscreen Life fact whose
-    transition is gone) is ordered by time only, and scene time moves only at
-    a time passage, so it is known only when its time is strictly earlier
-    than `ts`.
+    - static history: always.
+    A fact with none of these (a manual fact) is ordered by time only. Scene
+    time moves only at a time passage, so it is known only when its time is
+    strictly earlier than `ts`.
     """
 
     message_id: int
@@ -43,7 +40,6 @@ class FactCutoff:
     )
     entry_starts: Mapping[str, int] = field(default_factory=dict, compare=False)
     static_entries: frozenset[str] = field(default_factory=frozenset, compare=False)
-    transitions: Mapping[str, int] = field(default_factory=dict, compare=False)
 
     def admits(self, fact: "Fact") -> bool:
         if fact.contributions:
@@ -55,9 +51,6 @@ class FactCutoff:
         entry = self._entry_before(fact.archive_id)
         if entry is not None:
             return entry
-        transition = self.transitions.get(fact.id)
-        if transition is not None:
-            return transition < self.message_id
         return self._earlier_time(fact.ts)
 
     def _admits_contribution(self, contribution) -> bool:
@@ -101,12 +94,6 @@ def _positions(scene: "Scene") -> dict:
             entry_starts[identity] = history[start].id
     knowledge = getattr(scene, "knowledge", None)
     return {
-        "transitions": {
-            message.offscreen_fact_id: message.id
-            for message in history
-            if isinstance(message, CharacterTransitionMessage)
-            and message.offscreen_fact_id
-        },
         "disclosure_boundaries": {
             disclosure.id: disclosure.message_id_boundary
             for disclosure in (knowledge.disclosures if knowledge else ())

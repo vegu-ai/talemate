@@ -21,8 +21,7 @@ describe('effective effort explanation', () => {
         const result = effortExplanation('legacy', 'thorough', [], true);
         expect(result.cost).toContain('when listeners have unknown recent facts');
         expect(result.cost).toContain('uncached retrieved memories');
-        expect(result.cost).toContain('1 per eligible character return');
-        expect(result.retries).not.toContain('offscreen');
+        expect(result.cost).not.toContain('character return');
     });
     it('uses scene overrides even when the stop is unchanged', () => {
         const agents = agentsAt('legacy', 'light');
@@ -34,14 +33,6 @@ describe('effective effort explanation', () => {
         const result = effortExplanation('legacy', 'thorough', agents);
         expect(result.cost).not.toContain('memories');
         expect(result.benefit).not.toContain('recalled memories');
-    });
-    it('reports offscreen cost in Character perspectives with the Standard master off', () => {
-        const agents = agentsAt('perception', 'thorough', { 'conversation.character_knowledge.enabled': false });
-        expect(effortExplanation('perception', 'custom', agents).cost).toContain('1 per eligible character return');
-    });
-    it('omits offscreen cost when Standard history filtering is off', () => {
-        const agents = agentsAt('legacy', 'thorough', { 'conversation.character_knowledge.perspective_filter': false });
-        expect(effortExplanation('legacy', 'custom', agents).cost).not.toContain('character return');
     });
     it('perspective analysis is mandatory but repair is conditional', () => {
         const result = effortExplanation('perception', 'balanced', [], true);

@@ -173,12 +173,6 @@ class TestAbsenceFacts:
         embeddings.update({"F1": [1.0, 0.0]})
         assert "F3" in [f.id for f in await absence_facts(scene, "Edwin")]
 
-    async def test_offscreen_facts_are_never_listed(self, scene, embeddings):
-        scene.world_state.facts["F7"] = fact(
-            "F7", "Edwin mended nets alone.", 70, ["Edwin"], source="offscreen"
-        )
-        assert "F7" not in [f.id for f in await absence_facts(scene, "Mara")]
-
     async def test_backend_not_ready_is_tolerated(self, scene):
         # a backend that is not ready skips the near-duplicate step
         with patch(

@@ -23,9 +23,9 @@ Every node available in the node editor, grouped by category. Each page lists th
 | [Creator Agent Nodes](agents-creator.md) | 9 | Contextual content generation: character attributes, dialogue instructions, content context and thematic lists. |
 | [Data Nodes](data.md) | 11 | General value handling: get/set, conditionals, sorting, selection, UUIDs, JSON, object updates and length/capping helpers. |
 | [Dict And List Nodes](data-collections.md) | 14 | Dictionaries and lists: make, get, set, update, pop, append, combine and collect. |
-| [Director Agent Nodes](agents-director.md) | 17 | Director operations: scene direction, character persistence, voice assignment, dice rolls, narrator/actor direction functions and websocket handlers. |
+| [Director Agent Nodes](agents-director.md) | 15 | Director operations: scene direction, character persistence, voice assignment, dice rolls, narrator/actor direction functions and websocket handlers. |
 | [Director Auto-Direction Nodes](agents-director-auto.md) | 6 | Automatic scene direction: candidates, scene intent, instruction cadence and auto-direction generation. |
-| [Director Chat Actions](agents-director-chat-actions.md) | 11 | The director chat's action modules: direct the scene, update context/gamestate/story arc, create images, query, prompt or yield to the user. |
+| [Director Chat Actions](agents-director-chat-actions.md) | 10 | The director chat's action modules: direct the scene, update context/gamestate/story arc, create images, query, prompt or yield to the user. |
 | [Director Chat Instructors](agents-director-chat-instructors.md) | 10 | The director chat's instructor modules: instruct characters, the narrator, world/history/story updates and character creation. |
 | [Director Chat Nodes](agents-director-chat.md) | 14 | Director chat plumbing: chat context, action arguments, confirmation and sub-actions, plus context/query modules. |
 | [Director Planning Nodes](agents-director-plan.md) | 13 | Director plans: create, update, advance and complete plans and their tasks. |

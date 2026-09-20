@@ -1,4 +1,3 @@
-import pydantic
 import structlog
 from typing import ClassVar
 from talemate.game.engine.nodes.core import (
@@ -9,13 +8,6 @@ from talemate.game.engine.nodes.core import (
 from talemate.game.engine.nodes.registry import register
 from talemate.game.engine.nodes.agent import AgentSettingsNode, AgentNode
 from talemate.character import Character
-from talemate.agents.director.visibility import (
-    VisibilitySelection,
-    VisibilityAssessmentError,
-    StaleVisibilityAssessment,
-)
-from talemate.agents.director.action_core.exceptions import ActionFailed
-from talemate.game.engine.nodes.run import FunctionArgument
 
 import talemate.agents.director.chat.nodes  # noqa: F401
 import talemate.agents.director.scene_direction.nodes  # noqa: F401
@@ -233,97 +225,3 @@ class LogAction(AgentNode):
         )
 
         self.set_output_values({"state": state})
-
-
-@register("agents/director/AssessEntryVisibility")
-class AssessEntryVisibility(AgentNode):
-    """Propose a bounded visibility batch without changing entries.
-
-    Inputs:
-
-    - state: activation state, normally from a chat-only sub-action gate
-    - scope: attributes, details or world_entries
-    - character: sheet owner for attributes/details
-    - world_entries: explicit world-entry names or Context IDs
-    - instructions: the user's assessment goal and relevant context
-    - reassess: include intentional restrictions only when explicitly requested
-
-    Outputs:
-
-    - plan: nonempty proposal batch for normal director confirmation
-    - description: batch preview, including unchanged and mixed entries
-    - unchanged: report when no changes are proposed
-    """
-
-    _agent_name: ClassVar[str] = "director"
-
-    def setup(self):
-        self.add_input("state")
-        self.add_input("scope", socket_type="str")
-        self.add_input("character", socket_type="str", optional=True)
-        self.add_input("world_entries", socket_type="list", optional=True)
-        self.add_input("instructions", socket_type="str")
-        self.add_input("reassess", socket_type="bool", optional=True)
-        self.add_output("plan")
-        self.add_output("description", socket_type="str")
-        self.add_output("unchanged", socket_type="str")
-
-    async def run(self, state: GraphState):
-        reassess = self.normalized_input_value("reassess")
-        source = self.get_input_socket("reassess").source
-        if source and isinstance(source.node, FunctionArgument):
-            reassess = state.data.get(f"{source.node.id}__fn_arg_value")
-        try:
-            selection = VisibilitySelection(
-                scope=self.normalized_input_value("scope"),
-                character=self.normalized_input_value("character"),
-                world_entries=self.normalized_input_value("world_entries") or [],
-                instructions=self.normalized_input_value("instructions"),
-                reassess=reassess,
-            )
-        except pydantic.ValidationError as exc:
-            detail = "; ".join(
-                f"{'.'.join(map(str, error['loc']))}: {error['msg']}"
-                for error in exc.errors(include_input=False)
-            )
-            raise ActionFailed(f"Visibility assessment: {detail}") from exc
-        try:
-            plan = await self.agent.assess_entry_visibility(selection)
-        except (VisibilityAssessmentError, StaleVisibilityAssessment) as exc:
-            raise ActionFailed(str(exc)) from exc
-        self.set_output_values({"description": plan.report()})
-        if plan.proposals:
-            self.set_output_values({"plan": plan})
-        else:
-            self.set_output_values({"unchanged": plan.report()})
-
-
-@register("agents/director/ApplyVisibilityAssessment")
-class ApplyVisibilityAssessment(AgentNode):
-    """Apply a confirmed batch through the normal authored visibility setters.
-
-    Inputs:
-
-    - plan: assessment passed through ActionConfirm.accepted
-
-    Outputs:
-
-    - result: applied changes and unchanged-entry feedback
-
-    Rejects a stale or already consumed batch; does not revoke existing learning.
-    """
-
-    _agent_name: ClassVar[str] = "director"
-
-    def setup(self):
-        self.add_input("plan")
-        self.add_output("result", socket_type="str")
-
-    async def run(self, state: GraphState):
-        try:
-            result = await self.agent.apply_visibility_assessment(
-                self.require_input("plan")
-            )
-        except StaleVisibilityAssessment as exc:
-            raise ActionFailed(str(exc)) from exc
-        self.set_output_values({"result": result})

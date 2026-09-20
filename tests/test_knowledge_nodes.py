@@ -558,7 +558,7 @@ async def test_director_callback_collection_omits_only_new_mode_revoke(scene, mo
     scene.knowledge_eligibility = mode
     module = json.loads(
         Path(
-            "src/talemate/agents/director/modules/director-action-update-context.json"
+            "src/talemate/agents/director/modules/instruct-character-changes.json"
         ).read_text()
     )
     node = module["nodes"]["1dc17802-3dd3-4a37-b4e8-6c123af30edc"]
@@ -576,16 +576,16 @@ async def test_director_callback_collection_omits_only_new_mode_revoke(scene, mo
 
 
 @pytest.mark.parametrize("mode", ["legacy", "perception"])
-async def test_update_context_routing_template_renders_with_shipped_scene_connection(
+async def test_instruct_character_changes_template_renders_with_shipped_scene_connection(
     scene, mode
 ):
     scene.knowledge_eligibility = mode
     module = json.loads(
         Path(
-            "src/talemate/agents/director/modules/director-action-update-context.json"
+            "src/talemate/agents/director/modules/instruct-character-changes.json"
         ).read_text()
     )
-    target_id = "b62ffa05-640b-4de1-a71f-fa8b265a80e3"
+    target_id = "ecaa252a-e8cf-40da-9c4f-7994c4c1795c"
     target = module["nodes"][target_id]
     producers = [
         (source, destination)

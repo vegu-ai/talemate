@@ -430,7 +430,7 @@ async def test_director_grant_wording_matches_mode(disclosure_scene, enabled):
     scene.knowledge_eligibility = "perception" if enabled else "legacy"
     module = json.loads(
         Path(
-            "src/talemate/agents/director/modules/director-action-update-context.json"
+            "src/talemate/agents/director/modules/instruct-character-changes.json"
         ).read_text()
     )
     nodes = module["nodes"]

@@ -1,0 +1,2 @@
+changed:
+  - "Moved Director Chat knowledge changes into Update Context → Existing Characters, using a single free-form instruction and preserving the previous response budget for larger disclosure batches."

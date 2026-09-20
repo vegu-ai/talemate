@@ -5,11 +5,6 @@
   title: Generation action identity
   summary: Generation action keys in prompt logs and per-action overrides, including memory passes. Covers nested context
     restoration, foreground/background status and concurrent actions.
-- path: dev/bulk-visibility-assessment.md
-  title: Bulk visibility assessment
-  summary: Director chat assess_visibility API for explicit batches of character attributes, details or world entries. Covers
-    readable Known by previews, strict proposals and raw reassess validation, 32 eligible-entry and adaptive token limits,
-    local JSON repair, ActionConfirm, stale-entry checks and World Editor sync; mixed entries require manual correction.
 - path: dev/character-evidence-guidance.md
   title: Character evidence in guidance and analysis
   summary: Actor guidance and conversation analysis in perception scenes use projected history, disclosures, visibility-scoped
@@ -160,11 +155,10 @@
     dialogue examples bypass the split-flow node events.
 - path: user-guide/agents/director/chat.md
   title: Director Chat
-  summary: Director Chat queries and changes scenes, characters, world entries, knowledge and images, with Normal/Decisive/No
-    Spoilers modes, write confirmations/timeouts, action toggles, personas, multiple chats and Assess Visibility bulk Known
-    by changes preserving restrictions unless reassessment is requested. Covers Reject and abort (stop; earlier changes remain),
-    Reject with instructions (skip and continue; explicit correction rounds), partial batches with applied/omitted calls and
-    reported problems via report_issue.
+  summary: 'Director Chat: Normal/Decisive/No Spoilers, write confirmations/timeouts, action toggles, personas and multiple
+    chats. Update Context → Existing Characters sets Known by and grants or revokes knowledge through one free-form instruction.
+    Covers Reject and abort (earlier changes remain), Reject with instructions and correction rounds, partial batches and
+    report_issue.'
 - path: user-guide/agents/director/index.md
   title: Overview
   summary: 'Director agent overview: game-master scene progression through autonomous Scene Direction, conversational Director
@@ -788,9 +782,9 @@
     nodes.'
 - path: user-guide/node-editor/reference/nodes/agents-director-chat-actions.md
   title: Director Chat Actions
-  summary: Director chat action modules expose assess_visibility, create_image, direct_scene, direct_story_arc, gameplay,
-    ooc, query, update_context, update_gamestate and yield_to_user callbacks. Covers Known by visibility assessment on explicit
-    request, action descriptions/instructions, concurrency flags, JSON examples and action-summary plumbing.
+  summary: 'Director chat top-level modules: create_image, direct_scene, direct_story_arc, gameplay, ooc, query, update_context,
+    update_gamestate and yield_to_user. Knowledge changes route through Existing Characters. Covers action descriptions/instructions,
+    concurrency flags, JSON examples and action-summary plumbing.'
 - path: user-guide/node-editor/reference/nodes/agents-director-chat-instructors.md
   title: Director Chat Instructors
   summary: Director chat instructor module reference for Instruct Character/Narrator, character creation and updates, and
@@ -798,9 +792,9 @@
     controls and summary/update outputs.
 - path: user-guide/node-editor/reference/nodes/agents-director-chat.md
   title: Director Chat Nodes
-  summary: 'Director chat plumbing reference: ActionArgument, ActionConfirm, DirectorChatSubAction gating, GetDirectorChatContext
-    and source-context retrieval. Covers query modules for world/game state/scene direction, character activation, issue reporting,
-    confirmation rejection and chat versus scene-direction availability.'
+  summary: 'Director chat nodes: ActionArgument, ActionConfirm, DirectorChatSubAction gating, GetDirectorChatContext and issue
+    reporting. Includes world/game-state/scene-direction query modules, registry paths, inputs and outputs, action-result
+    collection and summaries.'
 - path: user-guide/node-editor/reference/nodes/agents-director-plan.md
   title: Director Planning Nodes
   summary: Director planning node reference for plan/task CRUD, Create/Critique Outline, Estimate Words, Get Active Plan and
@@ -809,8 +803,8 @@
 - path: user-guide/node-editor/reference/nodes/agents-director.md
   title: Director Agent Nodes
   summary: Director nodes for Persist Character, Assign Voice, Scene Direction, dice rolls, chat insertion, avatar generation,
-    action logging, actor/narrator/yield functions and activation handlers. Assess Entry Visibility proposes bounded authored-visibility
-    batches; Apply Visibility Assessment consumes confirmed plans and rejects stale batches without revoking learned knowledge.
+    action logging, actor/narrator/yield functions and activation handlers. Lists settings, typed sockets and properties,
+    including pre-generated character data and determine_name for character persistence.
 - path: user-guide/node-editor/reference/nodes/agents-editor.md
   title: Editor Agent Nodes
   summary: Editor node reference for Clean Up User Input, Clean Up Narration and Clean Up Character Message plus settings

@@ -7,7 +7,6 @@ import Header from '@/components/SceneHeader.vue';
 import HeaderSlot from '@/components/SceneHeaderSlot.vue';
 import HeaderEffort from '@/components/SceneHeaderKnowledgeEffort.vue';
 import HeaderCharacters from '@/components/SceneHeaderCharacters.vue';
-import { effortPinPatch } from '@/utils/knowledgeEffort';
 import { CHARACTER_CAP, resolveSlotItems } from '@/utils/sceneHeaderItems.js';
 import { agentsAt } from './helpers/effortAgents.js';
 import { installFakeCanvas } from './helpers/fakeCanvas.js';
@@ -37,54 +36,22 @@ function headerEffort({ mode = 'legacy', agents = agentsAt(mode, 'minimal'), ove
 }
 
 describe('the header knowledge effort control', () => {
-    it('pins the stop as scene overrides through the writer the hub uses, in one call', () => {
-        const vm = headerEffort();
-        vm.applyEffort('thorough');
-        expect(vm.applySceneAgentValues).toHaveBeenCalledTimes(1);
-        expect(vm.applySceneAgentValues).toHaveBeenCalledWith(
-            effortPinPatch(vm.agents, 'legacy', 'thorough'),
-            'Character knowledge effort: Thorough',
-        );
+    it('says nothing while the settings are free to change', () => {
+        expect(headerEffort().notice).toBeNull();
+        expect(headerEffort({ agents: agentsAt('legacy', 'off') }).notice).toBeNull();
     });
 
-    it('sends exactly what the hub slider sends for the same stop and mode', () => {
-        for (const [mode, stop] of [['legacy', 'off'], ['legacy', 'thorough'], ['perception', 'minimal']]) {
-            const agents = agentsAt(mode, 'minimal');
-            const scene = { knowledge_eligibility: mode, filename: 'scene.json', project_name: 'proj' };
-            const hub = instance(Hub, {
-                name: 'Nora',
-                scene: () => ({ data: scene }),
-                getAgents: () => agents,
-                applySceneAgentValues: vi.fn(),
-                sceneOverridesState: () => ({ busy: false, error: null }),
-            });
-            const header = headerEffort({ mode, agents });
-            expect(header.mode).toBe(hub.effortMode);
-            hub.applyEffort(stop);
-            header.applyEffort(stop);
-            expect(header.applySceneAgentValues.mock.calls).toEqual(hub.applySceneAgentValues.mock.calls);
-        }
+    it('waits for the agents to report before it prices a stop', () => {
+        expect(headerEffort({ agents: [] }).notice).toBe('Waiting for the agents to report.');
     });
 
-    it('is usable at Off, where the header is the way back on', () => {
-        const vm = headerEffort({ agents: agentsAt('legacy', 'off') });
-        expect(vm.disabledReason).toBeNull();
-        expect(vm.notice).toBeNull();
-        vm.applyEffort('minimal');
-        expect(vm.applySceneAgentValues).toHaveBeenCalledTimes(1);
-    });
-
-    it('waits for the agents to report before it offers a stop', () => {
-        const vm = headerEffort({ agents: [] });
-        expect(vm.disabledReason).toBe('Waiting for the agents to report.');
-        expect(vm.notice).toBe('Waiting for the agents to report.');
-    });
-
-    it('locks while a knowledge settings write is in flight and refuses a stop', () => {
-        const vm = headerEffort({ overrides: { busy: true, error: null } });
-        expect(vm.disabledReason).toBe('A knowledge settings change is being applied.');
-        vm.applyEffort('thorough');
-        expect(vm.applySceneAgentValues).not.toHaveBeenCalled();
+    it('names the states that lock the popup, and a failed write', () => {
+        expect(headerEffort({ overrides: { busy: true, error: null } }).notice)
+            .toBe('A knowledge settings change is being applied.');
+        expect(headerEffort({ overrides: { busy: true, pendingSave: true, error: null } }).notice)
+            .toBe('A knowledge settings change waits for a scene save. Open this to save and apply it, or to discard it.');
+        expect(headerEffort({ overrides: { busy: false, error: 'The scene override could not be saved.' } }).notice)
+            .toBe('The scene override could not be saved.');
     });
 });
 
@@ -311,57 +278,43 @@ const tooltipText = () => host.querySelector('.tooltip-content').textContent;
 const buttonNamed = (name) => [...host.querySelectorAll('button')].find((button) => button.textContent === name);
 
 describe('the header knowledge effort control in the page', () => {
-    it('names a failed write in its tooltip and stays usable', () => {
+    it('names a failed write in the chip tooltip, and shows no slider of its own', () => {
         mountEffort({ busy: false, error: 'The scene override could not be saved.' });
         expect(tooltipText()).toContain('The scene override could not be saved.');
-        expect(host.querySelector('.slider-stub').dataset.disabled).toBe('false');
+        expect(host.querySelector('.knowledge-effort-stop').textContent.trim()).toBe('Minimal');
+        expect(host.querySelector('.knowledge-effort-slider--compact')).toBeNull();
         expect(host.querySelector('.scene-header-effort__pending')).toBeNull();
     });
 
-    it('offers save and discard for a change that waits for a scene save, with no character row needed', async () => {
-        const { state, provided } = mountEffort({
+    it('opens the knowledge popup from the chip, where a change waiting for a save is saved or discarded', async () => {
+        const { provided } = mountEffort({
             busy: true, pendingSave: true, savingScene: false, pendingLabel: 'Character knowledge effort: Balanced', error: null,
         });
-        expect(host.querySelector('.slider-stub').dataset.disabled).toBe('true');
-        expect(tooltipText()).toContain('Use the save button next to this control');
-        const pending = host.querySelector('.scene-header-effort__pending');
-        expect(pending.getAttribute('aria-label')).toBe('Save or discard the pending knowledge settings change');
-        const pendingTooltip = () => host.querySelector('.scene-header-effort__pending').parentElement;
-        expect(pendingTooltip().dataset.tooltip).toBe('Save or discard the pending knowledge settings change');
-        expect(pendingTooltip().dataset.disabled).toBe('false');
+        expect(tooltipText()).toContain('Open this to save and apply it');
+        expect(host.querySelector('.knowledge-hub')).toBeNull();
 
-        pending.click();
+        host.querySelector('.knowledge-effort-stop').click();
         await nextTick();
-        expect(pendingTooltip().dataset.disabled, 'the tooltip gives way to the open menu').toBe('true');
-        expect(host.querySelector('.menu-content').textContent).toContain('Pending: Character knowledge effort: Balanced. Save the scene to apply it.');
+        const card = host.querySelector('.knowledge-hub');
+        expect(card.textContent).toContain('Character knowledge');
+        expect(card.textContent).toContain('Pending: Character knowledge effort: Balanced. Save the scene to apply it.');
         buttonNamed('Save and apply').click();
         expect(provided.retrySceneOverrides).toHaveBeenCalledOnce();
-        state.savingScene = true;
-        await nextTick();
-        expect(buttonNamed('Save and apply').disabled).toBe(true);
-        state.savingScene = false;
-        await nextTick();
         buttonNamed('Discard change').click();
         expect(provided.discardSceneOverrides).toHaveBeenCalledOnce();
-
-        Object.assign(state, { busy: false, pendingSave: false });
-        await nextTick();
-        expect(host.querySelector('.scene-header-effort__pending')).toBeNull();
-        expect(host.querySelector('.slider-stub').dataset.disabled).toBe('false');
     });
 
-    it('does not open the pending menu by itself when a later change waits for a save', async () => {
-        const { state } = mountEffort({ busy: true, pendingSave: true, savingScene: false, pendingLabel: 'Topics: Off', error: null });
-        host.querySelector('.scene-header-effort__pending').click();
+    it('asks the backend for no character knowledge, having no character', async () => {
+        const sent = [];
+        const state = reactive({ busy: false, error: null });
+        mountApp(defineComponent({ setup: () => () => h(HeaderEffort, { mode: 'legacy' }) }), {
+            sceneOverridesState: () => state,
+            getWebsocket: () => ({ send: (frame) => sent.push(JSON.parse(frame)) }),
+        });
+        host.querySelector('.knowledge-effort-stop').click();
         await nextTick();
-        expect(host.querySelector('.menu-content')).not.toBeNull();
-
-        Object.assign(state, { busy: false, pendingSave: false });
-        await nextTick();
-        Object.assign(state, { busy: true, pendingSave: true });
-        await nextTick();
-        expect(host.querySelector('.scene-header-effort__pending')).not.toBeNull();
-        expect(host.querySelector('.menu-content')).toBeNull();
+        expect(sent).toEqual([]);
+        expect(host.querySelector('.knowledge-hub').textContent).not.toContain('knows');
     });
 });
 
@@ -452,7 +405,7 @@ describe('a slot with a text item and both widgets', () => {
         const root = host.firstElementChild;
         const kinds = [...root.children].map((child) => {
             if (child.querySelector('.scene-header-characters') || child.classList.contains('scene-header-characters')) return 'characters';
-            if (child.querySelector('.knowledge-effort--compact')) return 'effort';
+            if (child.querySelector('.knowledge-effort-stop')) return 'effort';
             return child.querySelector('.scene-header__item') ? 'text' : 'other';
         });
         expect(kinds).toEqual(['text', 'text', 'characters', 'effort']);

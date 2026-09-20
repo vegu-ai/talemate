@@ -7,9 +7,9 @@ export const CHARACTER_KNOWLEDGE_MODES = [
     {
         key: 'legacy',
         title: 'Standard',
-        summary: 'Characters know what they were present for and what you let them learn. No extra requests. You manage exceptions by hand with Learn / Never Learn rules and the knowledge switches in Conversation settings. Good for most stories, any model, a small cast, and stories without many secrets.',
+        summary: 'Characters know what they were present for and what you let them learn. No extra requests, unless you raise the effort to Thorough. You manage exceptions by hand with Learn / Never Learn rules and the knowledge switches in Conversation settings. Good for most stories, any model, a small cast, and stories without many secrets.',
         pros: [
-            'No extra requests',
+            'No extra requests, unless you raise the effort to Thorough',
             'Works with any model',
             'Nothing is locked in',
             'You control exceptions directly with Learn / Never Learn rules',

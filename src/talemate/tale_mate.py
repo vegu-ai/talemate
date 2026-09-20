@@ -1608,6 +1608,11 @@ class Scene(Emitter):
     def history_stats(self) -> dict:
         return {
             "message_count": len(self.history),
+            "character_narrator_messages": sum(
+                1
+                for message in self.history
+                if isinstance(message, (CharacterMessage, NarratorMessage))
+            ),
             "summary_layers": count_summary_layers(self),
             "summarization": get_agent("summarizer").archive_status(),
         }

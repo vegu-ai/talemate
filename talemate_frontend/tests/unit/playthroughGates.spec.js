@@ -14,6 +14,10 @@ const nodeEditor = readSource(
 const sharedWorld = readSource(
     fileURLToPath(new URL(
         "../../src/components/WorldStateManagerSceneSharedWorld.vue", import.meta.url)));
+const sceneHeader = readSource(
+    fileURLToPath(new URL("../../src/components/SceneHeader.vue", import.meta.url)));
+const sceneTools = readSource(
+    fileURLToPath(new URL("../../src/components/SceneTools.vue", import.meta.url)));
 
 // What a replay puts away. Some of these are template attributes, which this
 // environment cannot render (see helpers/liftMethod.js), so they are pinned as
@@ -85,12 +89,31 @@ describe("the surfaces a replay hides", () => {
             .not.toContain("isPlaythroughActive");
     });
 
+    it("keeps the scene header for its title and puts the rest of it away", () => {
+        expect(app).toContain(':title-only="playthroughActive"');
+        const template = sceneHeader.slice(0, sceneHeader.indexOf("<script>"));
+        const slots = template.match(/<SceneHeaderSlot[\s\S]*?\/>/g);
+        expect(slots).toHaveLength(2);
+        for (const slot of slots) expect(slot).toContain('v-if="!titleOnly"');
+        expect(element(template, 'class="scene-header__actions"', "<div")).toContain('v-if="!titleOnly"');
+        expect(element(template, 'class="scene-header__title"', "<h1")).not.toContain("titleOnly");
+    });
+
     it("hides the action that makes a world state character real", () => {
         expect(element(worldState, "Make this character real", "<v-tooltip"))
             .toContain('v-if="canMakeReal(row)"');
         const canMakeReal = lift(worldState, "canMakeReal", "WorldState.vue");
         const host = { mayBeExistingCharacter: () => false, isPlaythroughActive: () => true };
         expect(canMakeReal.call(host, { name: "stranger", active: false })).toBe(false);
+    });
+});
+
+describe("when the mode is offered", () => {
+    it("the quick setting takes its condition from the scene's history stats", () => {
+        const playthrough = sceneTools.slice(sceneTools.indexOf('"value": "togglePlaythrough"'));
+        const entry = playthrough.slice(0, playthrough.indexOf("\n"));
+        expect(entry).toContain('"condition": () => { return playthroughAvailable(this.scene?.data?.history_stats) }');
+        expect(sceneTools).toContain("import { playthroughAvailable } from '@/utils/playthrough';");
     });
 });
 

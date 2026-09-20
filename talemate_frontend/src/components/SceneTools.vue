@@ -301,6 +301,7 @@ import RequestInput from './RequestInput.vue';
 import { mergeProps } from 'vue';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
 import { applyShortcutTemplateMessage } from '@/utils/sceneToolShortcuts';
+import { playthroughAvailable } from '@/utils/playthrough';
 import { perspectivesEnabled } from '@/utils/sceneSettings';
 import { perspectiveChipLabel } from '@/utils/messagePerspective';
 
@@ -435,7 +436,7 @@ export default {
                 {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.canAutoSave ? this.autoSave : "Manually save scene for auto-save to be available"; }},
                 {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
                 {"value": "toggleImmersive", "title": "Immersive", "icon": "mdi-image-area", "description": "Render the scene backdrop image behind the scene", "condition": () => { return !!(this.sceneBackdropAssetId || this.sceneBackdropCandidate) }, "status": () => { return this.immersiveActive }},
-                {"value": "togglePlaythrough", "title": "Playthrough", "icon": "mdi-play-box-outline", "description": "Replay the scene from the beginning, one message at a time.", "status": () => { return this.isPlaythroughActive() }},
+                {"value": "togglePlaythrough", "title": "Playthrough", "icon": "mdi-play-box-outline", "description": "Replay the scene from the beginning, one message at a time.", "condition": () => { return playthroughAvailable(this.scene?.data?.history_stats) }, "status": () => { return this.isPlaythroughActive() }},
             ],
         }
     },

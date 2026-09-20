@@ -14,7 +14,7 @@ Each item reads as a value with a short label next to it, for example **105** me
 
 In a narrow scene column (the creative environment, or a phone) the title moves to its own line above the items.
 
-The header is hidden while [Playthrough Mode](playthrough.md) runs.
+While [Playthrough Mode](playthrough.md) runs, the header shows the title alone: the information items and the two buttons are put away. A playthrough shows no title bar at all when you have turned the header off.
 
 Because the header carries the title, the scene's tab in the main navigation reads **:material-script: Story** rather than the scene title, in both the gameplay and the creative environment.
 
@@ -48,11 +48,15 @@ When nobody is in the scene the item reads **No active characters**.
 
 ##### :material-head-lightbulb-outline: Knowledge effort
 
-A small version of the **Character knowledge effort** slider for the scene's story mode: the current stop, such as **Balanced**, and a short slider to move it. Hover over the stop, or move to it with the keyboard, to read what it costs and what it may help with, the same explanation the full slider shows. A stop you pick here does exactly what the slider in a character's [knowledge hub](/talemate/user-guide/world-editor/knowledge/#effort-presets) does: it is saved as a scene override, and your global agent settings stay as they are.
+A chip with the character knowledge effort of the scene's story mode, such as **Balanced**. Hover over it, or move to it with the keyboard, to read what it costs and what it may help with, the same explanation the full slider shows.
 
-For example, when a long conversation starts to feel slow, drag it from **Thorough** down to **Minimal** without opening the World State panel.
+![The knowledge popup the scene header chip opens](/talemate/img/0.40.0/scene-header-knowledge-popup.png)
 
-The control stays usable at **Off**, so you can turn character knowledge back on from the header. It is unavailable while the agents have not reported yet and while another knowledge settings change is being applied or waits for a scene save; hover over the stop, or move to it with the keyboard, to read which. When a change waits for a scene save, for example because you cancelled the **Save Scene** dialog of a story that has no save file yet, a :material-content-save-alert-outline: button appears next to the control: it offers **Save and apply** and **Discard change**, as the knowledge hub does. When a change could not be saved, the same explanation names the reason.
+Click the chip to open the [knowledge hub](/talemate/user-guide/world-state/#knowledge-hub) for the scene: the same popup a character's hub opens, without the part about one character. It holds **Story mode**, the **Character knowledge effort** slider under **Thoroughness**, and **Individual settings**. A stop you pick there is saved as a scene override, and your global agent settings stay as they are.
+
+For example, when a long conversation starts to feel slow, open the chip and drag the slider from **Thorough** down to **Minimal** without opening the World State panel.
+
+The chip's explanation also names the state the settings are in: while the agents have not reported yet, while another knowledge settings change is being applied, and while one waits for a scene save. A change that waits for a scene save, for example because you cancelled the **Save Scene** dialog of a story that has no save file yet, offers **Save and apply** and **Discard change** in the popup itself. When a change could not be saved, the explanation names the reason.
 
 ## Choosing the items
 
@@ -66,7 +70,7 @@ By default the header is on, with **History stats** on the left and **Summarizer
 
 ## Perspective label
 
-While you [view a character's perspective](/talemate/user-guide/perspective-view) in a Character perspectives story, the header shows a label such as **Edwin's Perspective** below the title, above the perspective column. Click the **x** on the label to close the perspective view; it does the same as **None** in the **View Perspective** chip. With the header off there is no label, and the chip is the only control.
+While you [view a character's perspective](/talemate/user-guide/perspective-view) in a Character perspectives story, the header shows a label such as **Edwin's Perspective** below the title, above the perspective column. Click the **x** on the label to close the perspective view; it does the same as **None** in the **View Perspective** chip. With the header off there is no label, and the chip is the only control. A playthrough shows neither the label nor the perspective column; both come back when you leave it.
 
 ## Turning the header off and on
 

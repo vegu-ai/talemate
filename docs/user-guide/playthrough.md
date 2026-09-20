@@ -18,6 +18,10 @@ The scene collapses to its first message and the scene tools and message input
 are replaced by the playthrough toolbar. The chip is unavailable while an agent
 is busy.
 
+The chip is only there when the scene holds more than 15 character and narrator
+messages. A shorter story has too little to walk through. Other message types —
+time passages, director messages and the rest — are not counted.
+
 The whole history is loaded when the mode starts, rather than the last hundred
 messages a scene normally opens with, so a long scene can be replayed from its
 beginning.
@@ -102,6 +106,9 @@ A playthrough is a walkthrough of a story that is already written, so the
 surfaces that would add to it are put away while it runs:
 
 - The message input and the scene tools are replaced by the playthrough toolbar.
+- The [scene header](scene-header.md) keeps the scene title and puts its
+  information items and its two buttons away. With the header turned off,
+  a playthrough shows no title bar.
 - Per-message actions — edit, delete, regenerate, revisions — are disabled, and
   the entity actions that ask the narrator for new text are hidden.
 - The **:material-bullhorn: Director console** and its chat are gone, along with

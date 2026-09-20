@@ -268,7 +268,8 @@
                     :agent-status="agentStatus"
                     :settings="appConfig.game.scene_header"
                     :over-backdrop="!!sceneBackdropSrc"
-                    :perspective-character="perspectiveCharacter"
+                    :title-only="playthroughActive"
+                    :perspective-character="playthroughActive ? null : perspectiveCharacter"
                     @close-perspective="perspectiveCharacter = null"
                   />
 
@@ -913,7 +914,7 @@ export default {
   },
   computed: {
     sceneHeaderVisible() {
-      return this.sceneActive && this.showSceneView && !this.playthroughActive
+      return this.sceneActive && this.showSceneView
         && this.appConfig?.game?.scene_header?.enabled === true;
     },
     inferenceParamsClient() {

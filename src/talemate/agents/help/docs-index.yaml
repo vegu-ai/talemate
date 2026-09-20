@@ -457,9 +457,9 @@
   title: Character Card Import
   summary: Import TavernAI Chara Card V0–V3 PNG/JPG/WebP or JSON through the home dropzone or Scene Library. Covers cast detection/manual
     selection, player templates/actors/scene transfers, case-insensitive name collisions, lore-book metadata, alternate greetings,
-    titled episodes, shared world.json, writing styles, cover assets and failed analysis; effort-first selectable mode cards
-    pin ongoing scene settings without changing globals, separately from per-step AI enrichment, Full/Minimal presets, director
-    attribute limits, card-data fallback and cancel/reopen resets.
+    titled episodes, shared world.json, writing styles, cover assets and failed analysis; selectable mode cards above the
+    knowledge effort slider pin ongoing scene settings without changing globals, separately from per-step AI enrichment,
+    Full/Minimal presets, director attribute limits, card-data fallback and cancel/reopen resets.
 - path: user-guide/clients/auto-retry.md
   title: Auto Retry
   summary: Per-client automatic retries for empty responses, HTTP 429 rate limits with exponential backoff, and missing reasoning
@@ -1017,8 +1017,9 @@
 - path: user-guide/playthrough.md
   title: Playthrough Mode
   summary: Playthrough replays existing scene messages with Space/click advance, scrubber, time-passage chapters, restart,
-    optional voice narration and auto-advance. Covers remembered progress, read-only scenes, hidden editing tools, and Fork
-    from here using revision state or trimmed legacy history.
+    optional voice narration and auto-advance. Covers when the Playthrough chip is offered (more than 15 character and narrator
+    messages), remembered progress, read-only scenes, hidden editing tools, the title-only scene header, and Fork from here
+    using revision state or trimmed legacy history.
 - path: user-guide/prompts/context-history-review.md
   title: Scene Context History Review
   summary: Preview reader or character context without generation. Shows selected history, existing analysis evidence, presence/audience/budget
@@ -1078,9 +1079,9 @@
 - path: user-guide/scene-header.md
   title: Scene Header
   summary: Sticky scene header shows the title plus configurable History stats, Summarizer tokens and due reasons, Active
-    character portraits with +N overflow, and a Knowledge effort slider that saves scene overrides. Covers per-side item ordering,
-    Settings > Game visibility, Save and apply / Discard change for pending settings, unavailable states and hiding during
-    Playthrough.
+    character portraits with +N overflow, and a Knowledge effort chip that opens the scene knowledge popup and saves scene
+    overrides. Covers per-side item ordering, Settings > Game visibility, Save and apply / Discard change for pending settings,
+    notice states and the title-only header during Playthrough.
 - path: user-guide/scene-state-reset.md
   title: Reset Scene State
   summary: 'Reset selected scene state: conversation and summaries, optionally static backstory, memory database, intent state,

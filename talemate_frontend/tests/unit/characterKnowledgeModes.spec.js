@@ -125,6 +125,14 @@ describe('every point of choice shows the comparison from the constant', () => {
         }
     });
 
+    it('puts the effort slider below the mode cards, so the mode is chosen first', () => {
+        for (const file of ['NewSceneSetupModal.vue', 'CharacterCardImport.vue']) {
+            const source = read(`../../src/components/${file}`);
+            expect(source.indexOf('<CharacterKnowledgeModeComparison'), file)
+                .toBeLessThan(source.indexOf('<KnowledgeEffortSlider'));
+        }
+    });
+
     it('maps shared card keys back to the existing boolean host state', () => {
         const vm = { selectable: true, $emit: vi.fn() };
         Comparison.methods.selectMode.call(vm, 'legacy');

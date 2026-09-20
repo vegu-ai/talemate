@@ -3,7 +3,12 @@ from unittest.mock import AsyncMock, PropertyMock, patch
 import pytest
 
 from talemate.history import ArchiveEntry, count_summary_layers
-from talemate.scene_message import CharacterMessage
+from talemate.scene_message import (
+    CharacterMessage,
+    DirectorMessage,
+    NarratorMessage,
+    TimePassageMessage,
+)
 from talemate.server.scene_message import SceneMessagePlugin
 
 from conftest import MockScene, bootstrap_scene
@@ -74,6 +79,20 @@ def test_scene_status_carries_history_stats(scene):
     assert summarization["threshold"] > 0
     assert summarization["pending_tokens"] == 0
     assert summarization["remaining_tokens"] == summarization["threshold"] + 1
+
+
+def test_history_stats_counts_only_character_and_narrator_messages(scene):
+    scene.history = [
+        CharacterMessage(message="Alice: one", source="ai"),
+        NarratorMessage(message="The room falls quiet."),
+        DirectorMessage(message="Alice hesitates."),
+        TimePassageMessage(message="an hour later", ts=3600),
+    ]
+
+    stats = scene.history_stats()
+
+    assert stats["message_count"] == 4
+    assert stats["character_narrator_messages"] == 2
 
 
 def test_scene_status_reports_summarization_without_a_ready_client(scene):

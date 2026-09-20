@@ -7,6 +7,8 @@ import {
     clampReveal,
     currentChapter,
     INTRO_ANCHOR,
+    playthroughAvailable,
+    PLAYTHROUGH_MIN_MESSAGES,
     revealForAnchor,
     speakRequest,
     visibleMessages,
@@ -42,6 +44,24 @@ describe("visibleMessages", () => {
 
     it("survives an empty list", () => {
         expect(visibleMessages([], 1)).toEqual([]);
+    });
+});
+
+describe("playthroughAvailable", () => {
+    const stats = (count) => ({ message_count: 400, character_narrator_messages: count });
+
+    it("offers the mode above the message floor", () => {
+        expect(playthroughAvailable(stats(PLAYTHROUGH_MIN_MESSAGES + 1))).toBe(true);
+    });
+
+    it("holds it back at the floor and below it", () => {
+        expect(playthroughAvailable(stats(PLAYTHROUGH_MIN_MESSAGES))).toBe(false);
+        expect(playthroughAvailable(stats(0))).toBe(false);
+    });
+
+    it("holds it back while the scene has reported no history stats", () => {
+        expect(playthroughAvailable(undefined)).toBe(false);
+        expect(playthroughAvailable({})).toBe(false);
     });
 });
 

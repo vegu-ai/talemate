@@ -25,6 +25,18 @@ export const SPOKEN_MESSAGE_TYPES = ['character', 'narrator', 'context_investiga
 export const FORKABLE_MESSAGE_TYPES = ['character', 'narrator'];
 
 /**
+ * A replay of a handful of messages has nothing to show, so the mode is not
+ * offered below this many character and narrator messages. Other message types
+ * are not part of the story a replay walks through.
+ */
+export const PLAYTHROUGH_MIN_MESSAGES = 15;
+
+/** Whether a scene holds enough of a story to be worth replaying. */
+export function playthroughAvailable(historyStats) {
+    return (historyStats?.character_narrator_messages || 0) > PLAYTHROUGH_MIN_MESSAGES;
+}
+
+/**
  * Drawers the mode puts away, by the name `toggleNavigation` knows them under.
  * The director console acts on the scene, which a replay does not.
  */

@@ -57,12 +57,12 @@ describe('both creation dialogs', () => {
     it.each([
         ['NewSceneSetupModal.vue', 'New Story'],
         ['CharacterCardImport.vue', 'card import'],
-    ])('%s puts effort before selectable cards and has no separate mode checkbox', (file) => {
+    ])('%s puts the selectable cards before the effort and has no separate mode checkbox', (file) => {
         const source = readSource(fileURLToPath(new URL(`../../src/components/${file}`, import.meta.url)));
         const effort = source.indexOf('<KnowledgeEffortSlider');
         const cards = source.indexOf('<CharacterKnowledgeModeComparison');
-        expect(effort).toBeGreaterThan(-1);
-        expect(cards).toBeGreaterThan(effort);
+        expect(cards).toBeGreaterThan(-1);
+        expect(effort).toBeGreaterThan(cards);
         const comparison = source.slice(cards, source.indexOf('/>', cards));
         expect(comparison).toContain('selectable');
         expect(comparison).toContain('collapse-details');

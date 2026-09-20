@@ -83,14 +83,13 @@
                   Story mode
                 </v-card-title>
                 <v-card-text>
-                  <KnowledgeEffortSlider ref="effortSlider" :mode="effortMode" :agents="effortAgents" :value="effortForMode" class="mt-2" @apply="effort = $event" />
                   <CharacterKnowledgeModeComparison
                     :key="knowledgeUiVersion"
                     :perspectives="characterKnowledge"
                     selectable
                     collapse-details
-                    class="mt-4"
                     @update:perspectives="characterKnowledge = $event" />
+                  <KnowledgeEffortSlider ref="effortSlider" :mode="effortMode" :agents="effortAgents" :value="effortForMode" class="mt-4" @apply="effort = $event" />
                   <p class="text-body-small mt-2">Controls ongoing knowledge work for this story. Import generation options below are independent.</p>
                 </v-card-text>
               </v-card>

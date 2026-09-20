@@ -8,10 +8,10 @@ Every story runs in one of two character knowledge modes. You choose when you cr
 
 ![Create New Story dialog with the two modes side by side](/talemate/img/0.40.0/create-new-story-modes.png)
 
-**Standard** — Characters know what they were present for and what you let them learn. No extra requests. You manage exceptions by hand with Learn / Never Learn rules and the knowledge switches in Conversation settings. Good for most stories, any model, a small cast, and stories without many secrets.
+**Standard** — Characters know what they were present for and what you let them learn. No extra requests, unless you raise the effort to Thorough. You manage exceptions by hand with Learn / Never Learn rules and the knowledge switches in Conversation settings. Good for most stories, any model, a small cast, and stories without many secrets.
 
 - Pros:
-    - No extra requests
+    - No extra requests, unless you raise the effort to Thorough
     - Works with any model
     - Nothing is locked in
     - You control exceptions directly with Learn / Never Learn rules
@@ -43,7 +43,7 @@ Every story runs in one of two character knowledge modes. You choose when you cr
 
 ### Effort presets
 
-The **Character knowledge effort** slider sets the knowledge options together. Find it in the knowledge hub’s **Thoroughness** section, the Create New Story and character-card import dialogs, Conversation’s **Character Knowledge** settings, or the optional [scene header](/talemate/user-guide/scene-header/#knowledge-effort) item. Its explanation separates normal requests, conditional retries and potential benefit. Changing individual settings can make the slider show **Custom**; selecting a stop applies that row.
+The **Character knowledge effort** slider sets the knowledge options together. Find it in the knowledge hub’s **Thoroughness** section — including the hub the optional [scene header](/talemate/user-guide/scene-header/#knowledge-effort) chip opens — the Create New Story and character-card import dialogs, or Conversation’s **Character Knowledge** settings. Its explanation separates normal requests, conditional retries and potential benefit. Changing individual settings can make the slider show **Custom**; selecting a stop applies that row.
 
 Create New Story and Character Card Import default to **Minimal** in Standard mode and **Balanced** in Character perspectives mode. These choices become [scene overrides](/talemate/user-guide/agents/scene-overrides/) before knowledge work starts, including values equal to global settings. Global settings stay unchanged. The import slider controls ongoing story knowledge separately from import generation options. **Use global settings** in the knowledge hub restores inheritance.
 

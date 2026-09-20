@@ -141,6 +141,10 @@ row, beside the call-into-scene button.
 you click inside it; press Escape or click elsewhere to close it. It adds no AI requests: it
 reads the current state and writes settings.
 
+The [scene header's **Knowledge effort** chip](/talemate/user-guide/scene-header/#knowledge-effort)
+opens the same hub for the scene rather than for one character. That version leaves out **What the
+character knows**; everything below it is the same.
+
 **What the character knows** shows the newest **Disclosures** in a Character perspectives story or **Entry access rules** (Learn and Never Learn) in a Standard story, with a count. The list shows at most five entries. **Open Knowledge tab** opens the full list in the World Editor, where you establish knowledge or adjust rules.
 
 ![world state knowledge hub](/talemate/img/0.40.0/world-state-knowledge-hub-1.png)

@@ -1,28 +1,30 @@
 <template>
     <v-menu v-model="open" :close-on-content-click="false" :persistent="pendingSave" location="bottom" max-width="400" min-width="340" @update:model-value="onToggle">
         <template v-slot:activator="{ props: menuProps }">
-            <v-tooltip :text="`Knowledge of ${name}`">
-                <template v-slot:activator="{ props: tooltipProps }">
-                    <v-btn
-                        v-bind="{ ...menuProps, ...tooltipProps }"
-                        :aria-label="`Knowledge of ${name}`"
-                        size="x-small"
-                        class="mr-1 knowledge-hub-activator"
-                        :variant="variant"
-                        :color="color"
-                        density="comfortable"
-                        rounded="sm"
-                        icon="mdi-head-lightbulb-outline"
-                        @click.stop></v-btn>
-                </template>
-            </v-tooltip>
+            <slot name="activator" :props="menuProps">
+                <v-tooltip :text="`Knowledge of ${name}`">
+                    <template v-slot:activator="{ props: tooltipProps }">
+                        <v-btn
+                            v-bind="{ ...menuProps, ...tooltipProps }"
+                            :aria-label="`Knowledge of ${name}`"
+                            size="x-small"
+                            class="mr-1 knowledge-hub-activator"
+                            :variant="variant"
+                            :color="color"
+                            density="comfortable"
+                            rounded="sm"
+                            icon="mdi-head-lightbulb-outline"
+                            @click.stop></v-btn>
+                    </template>
+                </v-tooltip>
+            </slot>
         </template>
 
         <v-card class="knowledge-hub" density="compact">
             <v-card-item class="pb-1">
                 <v-card-title class="text-title-small d-flex align-center pa-0">
                     <v-icon size="small" class="mr-1">mdi-head-lightbulb-outline</v-icon>
-                    {{ name }}
+                    {{ title }}
                     <v-spacer></v-spacer>
                     <v-chip v-if="canChange" size="x-small" label variant="tonal" :color="perspectives ? 'primary' : 'mutedheader'">{{ summary.mode }}</v-chip>
                 </v-card-title>
@@ -30,30 +32,32 @@
 
             <!-- WHAT THE CHARACTER KNOWS -->
 
-            <v-card-subtitle class="text-uppercase pt-2">What {{ name }} knows</v-card-subtitle>
-            <v-card-text class="pt-2 pb-2">
-                <v-progress-linear v-if="loading" indeterminate color="primary" height="2"></v-progress-linear>
-                <template v-else-if="knowledge">
-                    <div class="text-body-small text-mutedheader mt-2">
-                        {{ knowledge.perception_mode ? 'Disclosures' : 'Entry access rules' }} ({{ entriesTotal }})
-                    </div>
-                    <div v-if="entries.length">
-                        <div v-for="entry in entries" :key="entry.id" class="d-flex align-center text-body-small py-1">
-                            <v-chip v-if="entry.kind" size="x-small" label variant="tonal" class="mr-2 flex-shrink-0" :color="rules[entry.kind]?.color">
-                                {{ rules[entry.kind]?.label }}
-                            </v-chip>
-                            <span class="knowledge-hub-entry">{{ entry.text }}</span>
+            <template v-if="name">
+                <v-card-subtitle class="text-uppercase pt-2">What {{ name }} knows</v-card-subtitle>
+                <v-card-text class="pt-2 pb-2">
+                    <v-progress-linear v-if="loading" indeterminate color="primary" height="2"></v-progress-linear>
+                    <template v-else-if="knowledge">
+                        <div class="text-body-small text-mutedheader mt-2">
+                            {{ knowledge.perception_mode ? 'Disclosures' : 'Entry access rules' }} ({{ entriesTotal }})
                         </div>
-                        <div v-if="entriesTotal > entries.length" class="text-body-small text-muted">{{ entries.length }} most recent shown.</div>
-                    </div>
-                    <div v-else class="text-body-small text-muted">
-                        {{ knowledge.perception_mode ? 'Nothing has been disclosed by hand.' : 'No rules. Knowledge follows presence, ownership and sharing.' }}
-                    </div>
-                </template>
-                <v-btn size="x-small" variant="text" color="primary" class="mt-2" prepend-icon="mdi-book-open-page-variant" @click="openKnowledge">Open Knowledge tab</v-btn>
-            </v-card-text>
+                        <div v-if="entries.length">
+                            <div v-for="entry in entries" :key="entry.id" class="d-flex align-center text-body-small py-1">
+                                <v-chip v-if="entry.kind" size="x-small" label variant="tonal" class="mr-2 flex-shrink-0" :color="rules[entry.kind]?.color">
+                                    {{ rules[entry.kind]?.label }}
+                                </v-chip>
+                                <span class="knowledge-hub-entry">{{ entry.text }}</span>
+                            </div>
+                            <div v-if="entriesTotal > entries.length" class="text-body-small text-muted">{{ entries.length }} most recent shown.</div>
+                        </div>
+                        <div v-else class="text-body-small text-muted">
+                            {{ knowledge.perception_mode ? 'Nothing has been disclosed by hand.' : 'No rules. Knowledge follows presence, ownership and sharing.' }}
+                        </div>
+                    </template>
+                    <v-btn size="x-small" variant="text" color="primary" class="mt-2" prepend-icon="mdi-book-open-page-variant" @click="openKnowledge">Open Knowledge tab</v-btn>
+                </v-card-text>
 
-            <v-divider></v-divider>
+                <v-divider></v-divider>
+            </template>
 
             <!-- STORY MODE -->
 
@@ -214,7 +218,9 @@ export default {
     name: 'CharacterKnowledgeHub',
     components: { CharacterKnowledgeModeComparison, KnowledgeEffortSlider, KnowledgePendingSave, SceneOverrideResetControl },
     props: {
-        name: { type: String, required: true },
+        // absent where the hub is opened for the scene rather than for one
+        // character: the popup then carries the scene-wide settings alone
+        name: { type: String, default: null },
         variant: { type: String, default: 'tonal' },
         color: { type: String, default: undefined },
     },
@@ -245,6 +251,9 @@ export default {
         };
     },
     computed: {
+        title() {
+            return this.name || 'Character knowledge';
+        },
         sceneData() {
             return this.scene ? this.scene()?.data : null;
         },
@@ -354,6 +363,7 @@ export default {
             this.request();
         },
         request() {
+            if (!this.name) return;
             if (!this.knowledge) this.loading = true;
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',

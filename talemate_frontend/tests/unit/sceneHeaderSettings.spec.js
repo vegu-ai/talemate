@@ -84,7 +84,7 @@ describe("scene header settings", () => {
         expect(mainTab[0]).not.toContain("scene.title");
     });
 
-    it("the app shows the header only with a scene, outside playthrough, and while enabled", () => {
+    it("the app shows the header only with a scene and while enabled, playthrough included", () => {
         const visible = lift(app, "sceneHeaderVisible", "TalemateApp");
         const state = (overrides = {}) => ({
             sceneActive: true,
@@ -96,7 +96,8 @@ describe("scene header settings", () => {
         expect(visible.call(state())).toBe(true);
         expect(visible.call(state({ sceneActive: false }))).toBe(false);
         expect(visible.call(state({ showSceneView: false }))).toBe(false);
-        expect(visible.call(state({ playthroughActive: true }))).toBe(false);
+        expect(visible.call(state({ playthroughActive: true }))).toBe(true);
+        expect(visible.call(state({ playthroughActive: true, appConfig: { game: { scene_header: { enabled: false } } } }))).toBe(false);
         expect(visible.call(state({ appConfig: { game: { scene_header: { enabled: false } } } }))).toBe(false);
         expect(visible.call(state({ appConfig: {} }))).toBe(false);
         expect(app).toContain(':settings="appConfig.game.scene_header"');
@@ -113,7 +114,7 @@ describe("scene header document look", () => {
 
     it("is a region named Scene header, read in the order it is shown", () => {
         const template = header.slice(0, header.indexOf("</template>\n\n<script>"));
-        expect(template).toContain('<section class="scene-header" aria-label="Scene header">');
+        expect(template).toContain('<section class="scene-header" :class="{ \'scene-header--title-only\': titleOnly }" aria-label="Scene header">');
         const order = ["scene-header__slot--slot_a", "<h1", "scene-header__slot--slot_b", "scene-header__actions"]
             .map((marker) => template.indexOf(marker));
         expect(order.every((index) => index > -1)).toBe(true);
@@ -149,8 +150,8 @@ describe("scene header document look", () => {
         expect(item).toContain('<v-icon v-if="part.trailingIcon"');
         expect(item).toContain('<span v-if="part.srText" class="d-sr-only">{{ part.srText }}</span>');
         expect(header.match(/<SceneHeaderSlot [^>]*\/>/g)).toEqual([
-            '<SceneHeaderSlot class="scene-header__slot scene-header__slot--slot_a" :entries="slotEntries(\'slot_a\')" :scene="scene" />',
-            '<SceneHeaderSlot class="scene-header__slot scene-header__slot--slot_b" :entries="slotEntries(\'slot_b\')" :scene="scene" />',
+            '<SceneHeaderSlot v-if="!titleOnly" class="scene-header__slot scene-header__slot--slot_a" :entries="slotEntries(\'slot_a\')" :scene="scene" />',
+            '<SceneHeaderSlot v-if="!titleOnly" class="scene-header__slot scene-header__slot--slot_b" :entries="slotEntries(\'slot_b\')" :scene="scene" />',
         ]);
     });
 

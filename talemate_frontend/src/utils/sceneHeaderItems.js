@@ -104,7 +104,7 @@ const KNOWLEDGE_EFFORT = {
     id: 'knowledge_effort',
     label: 'Knowledge effort',
     icon: 'mdi-head-lightbulb-outline',
-    description: 'The character knowledge effort of the scene, with a small slider to change it.',
+    description: "The character knowledge effort of the scene. Click it for the scene's knowledge settings.",
     read({ scene }) {
         return { widget: 'knowledge_effort', mode: effortMode(perspectivesEnabled(scene?.data)) };
     },

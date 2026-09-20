@@ -1,0 +1,4 @@
+changed:
+  - "Agent action overrides: the dialog says that Disable reasoning needs a client that can turn reasoning off, and that a client which always reasons is not affected."
+  - "Standard story mode card: the request note now reads \"No extra requests, unless you raise the effort to Thorough\", which matches the one request the effort slider reports at that stop."
+  - "The Playthrough quick setting is offered only when the scene holds more than 15 character and narrator messages, so a story with nothing to walk through does not show it."

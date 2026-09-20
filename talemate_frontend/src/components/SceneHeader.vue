@@ -1,14 +1,14 @@
 <template>
     <div class="scene-header-anchor" :class="{ 'scene-header-anchor--backdrop': overBackdrop }">
-        <section class="scene-header" aria-label="Scene header">
-            <SceneHeaderSlot class="scene-header__slot scene-header__slot--slot_a" :entries="slotEntries('slot_a')" :scene="scene" />
+        <section class="scene-header" :class="{ 'scene-header--title-only': titleOnly }" aria-label="Scene header">
+            <SceneHeaderSlot v-if="!titleOnly" class="scene-header__slot scene-header__slot--slot_a" :entries="slotEntries('slot_a')" :scene="scene" />
             <v-tooltip :text="title" location="bottom" max-width="480">
                 <template v-slot:activator="{ props }">
                     <h1 v-bind="props" class="scene-header__title">{{ title }}</h1>
                 </template>
             </v-tooltip>
-            <SceneHeaderSlot class="scene-header__slot scene-header__slot--slot_b" :entries="slotEntries('slot_b')" :scene="scene" />
-            <div class="scene-header__actions">
+            <SceneHeaderSlot v-if="!titleOnly" class="scene-header__slot scene-header__slot--slot_b" :entries="slotEntries('slot_b')" :scene="scene" />
+            <div v-if="!titleOnly" class="scene-header__actions">
                 <v-menu v-model="pickerOpen" location="bottom end" :close-on-content-click="false">
                     <template v-slot:activator="{ props: menuProps }">
                         <v-tooltip text="Choose the information items" location="bottom" :disabled="pickerOpen">
@@ -106,6 +106,10 @@ export default {
             default: () => ({}),
         },
         overBackdrop: {
+            type: Boolean,
+            default: false,
+        },
+        titleOnly: {
             type: Boolean,
             default: false,
         },
@@ -241,6 +245,11 @@ export default {
        centred and the buttons clear of the last item */
     padding-inline: 76px;
     min-height: 44px;
+}
+
+/* nothing else is left to balance the title against */
+.scene-header--title-only {
+    justify-content: center;
 }
 
 .scene-header__slot {

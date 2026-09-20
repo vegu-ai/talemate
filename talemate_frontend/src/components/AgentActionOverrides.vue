@@ -11,6 +11,7 @@
       <v-card-subtitle class="text-wrap pb-3">
         Per-action settings applied whenever an agent runs that action, on whichever client it uses.
         Actions appear here once they have sent a request.
+        Disable reasoning needs a client that can turn reasoning off. A client that always reasons is not affected by it.
       </v-card-subtitle>
 
       <v-divider />

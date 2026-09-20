@@ -1,31 +1,5 @@
 <template>
-  <div v-if="compact" class="knowledge-effort knowledge-effort--compact">
-    <!-- the chip carries the tooltip: it keeps its tab stop while the slider is disabled -->
-    <v-tooltip location="bottom" max-width="360">
-      <template v-slot:activator="{ props: tooltipProps }">
-        <v-chip v-bind="tooltipProps" tabindex="0" size="x-small" label variant="tonal" :color="stopColor" class="knowledge-effort-stop">{{ stopLabel }}</v-chip>
-      </template>
-      <div class="text-body-small knowledge-effort-tooltip">
-        <div><strong>Character knowledge effort:</strong> {{ stopLabel }}</div>
-        <div><strong>Requests:</strong> {{ explanation.cost }}</div>
-        <div v-if="explanation.retries"><strong>Retries:</strong> {{ explanation.retries }}</div>
-        <div><strong>Benefit:</strong> {{ explanation.benefit }}</div>
-        <div v-if="explanation.caveat">{{ explanation.caveat }}</div>
-        <div v-if="notice" class="mt-1">{{ notice }}</div>
-      </div>
-    </v-tooltip>
-    <v-slider
-      v-bind="sliderProps"
-      show-ticks="always"
-      tick-size="2"
-      thumb-size="12"
-      track-size="2"
-      class="knowledge-effort-slider--compact"
-      @start="startDrag"
-      @end="finish"
-      @update:model-value="pick"></v-slider>
-  </div>
-  <div v-else class="knowledge-effort">
+  <div class="knowledge-effort">
     <div class="d-flex align-center mb-1">
       <span class="text-body-small text-mutedheader">Character knowledge effort</span>
       <v-spacer></v-spacer>
@@ -78,9 +52,6 @@ export default {
     // so the receipt has to be override presence, not a matching value
     pin: { type: Boolean, default: false },
     disabled: { type: Boolean, default: false },
-    compact: { type: Boolean, default: false },
-    // compact form only
-    notice: { type: String, default: null },
   },
   emits: ['apply'],
   inject: {
@@ -286,21 +257,5 @@ export default {
 }
 .knowledge-effort-lines {
   margin-top: 4px;
-}
-.knowledge-effort--compact {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.knowledge-effort-stop:focus-visible {
-  outline: 2px solid rgb(var(--v-theme-primary));
-  outline-offset: 2px;
-}
-.knowledge-effort-slider--compact {
-  flex: 0 0 96px;
-  width: 96px;
-}
-.knowledge-effort-tooltip > div + div {
-  margin-top: 2px;
 }
 </style>

@@ -9,6 +9,8 @@ const worldState = readSource(
     fileURLToPath(new URL('../../src/components/WorldState.vue', import.meta.url)));
 const talemateApp = readSource(
     fileURLToPath(new URL('../../src/components/TalemateApp.vue', import.meta.url)));
+const headerEffort = readSource(
+    fileURLToPath(new URL('../../src/components/SceneHeaderKnowledgeEffort.vue', import.meta.url)));
 
 const sceneData = {
     knowledge_eligibility: 'legacy',
@@ -315,8 +317,15 @@ describe('where the hub sits', () => {
         expect(title).not.toContain('CharacterKnowledgeHub');
     });
 
+    it('opens from the scene header chip with no character bound to it', () => {
+        const hub = headerEffort.match(/<CharacterKnowledgeHub[^>]*>/)[0];
+        expect(hub).not.toContain(':name');
+        expect(headerEffort).toContain('<KnowledgeEffortChip :mode="mode" :agents="agents" :activator-props="props" :notice="notice" />');
+        expect(headerEffort).not.toContain('KnowledgeEffortSlider');
+    });
+
     it('names the control for a screen reader', () => {
-        expect(Hub.props.name.required).toBe(true);
+        expect(Hub.props.name.default).toBeNull();
         expect(Hub.emits).toEqual(['open-knowledge']);
     });
 });

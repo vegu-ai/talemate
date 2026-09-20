@@ -103,6 +103,10 @@ Keep secrets out of **scene description**, **story intention** and **current sce
 
 In Character perspectives mode, separate character views replace **Limit to character knowledge**. **Never Learn** is not available for perceived knowledge, and there is no forget operation. Restricting an authored entry is not erasure of an already acquired disclosure.
 
+## See and edit what a character noticed
+
+In a Character perspectives story the **View Perspective** chip above the scene tools splits the scene in two and shows, beside each message, what one character noticed of it. You can change a perspective there with a double click. See [View a character's perspective](/talemate/user-guide/perspective-view).
+
 ## Scene introductions
 
 The introduction belongs to the characters active when it is established. A character activated later does not receive it in their filtered history, analysis or memories. The original audience stays attached to the introduction through saves and character renames; replacing the introduction records the currently active characters as its new audience.

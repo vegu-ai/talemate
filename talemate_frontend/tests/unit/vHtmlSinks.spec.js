@@ -23,6 +23,7 @@ const SANITIZED_SINKS = {
     ],
     "components/CharacterMessage.vue": ["renderedText"],
     "components/ContextInvestigationMessage.vue": ["renderedText"],
+    "components/MessagePerspective.vue": ["renderedText"],
     "components/NarratorMessage.vue": ["renderedText"],
     "components/SceneContextReviewInline.vue": ["renderEntry(entry)"],
     "components/TemplateThemePreview.vue": ["parserHtml.entities", "parserHtml[el(id).slot]"],

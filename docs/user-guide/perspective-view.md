@@ -1,0 +1,20 @@
+# View a character's perspective
+
+In a Character perspectives story you can read each character's view next to the story itself. Above the scene tools, beside **Auto Save** and **Auto Progress**, click **View Perspective** and pick one of the active characters. The scene splits in two: the story stays on the left, and to the right of each message you see what that character noticed of it. Pick **None** to go back to the normal view. When the scene header is on, it shows a label such as **Edwin's Perspective** above the right column; the **x** on the label also closes the view. The choice is a temporary mode and is not saved; a reload starts with **None**.
+
+A perspective uses the same colors as the story: spoken lines in double quotes stand out from the prose around them.
+
+![The scene split in two, with Edwin's perspective to the right of each message](/talemate/img/0.40.0/scene-perspective-split-view.png)
+
+Say Mara writes in her notebook alone in her room. With **View Perspective: Edwin** the cell beside that message is empty, because Edwin was not there. An empty cell shows a small icon; hover it to read why it is empty: the character noticed nothing, the analysis did not run yet or failed, or the message is of a type that has no perspectives (a time passage or a director note, for example).
+
+**Double-click a perspective to change it.** Press Enter to save, Shift+Enter for a new line, Escape to cancel. You can also double-click an empty cell to write a perspective yourself, as long as the message is one that characters can notice. Save an empty text to say that the character noticed nothing. Messages that have no perspectives cannot get one this way, and the introduction is read only here: every character who was present shares its text, and you change it in the **Scene Editor**.
+
+Your text replaces only that one character's view of that one message, and it does not start an AI request. The Summarizer keeps your text when it analyzes the scene later. If you change the message itself, its perspectives are analyzed again and your text is replaced.
+
+Later perspectives and summaries can be built on the one you changed. They stay as they are. When there are any, a note below the cell tells you how many, with an **Analyze them again** button. Click it only if your change should flow into them: they go back to the analysis, and your next turn makes one Summarizer request for each affected message.
+
+## Related pages
+
+- [Knowledge](/talemate/user-guide/world-editor/knowledge): the Character perspectives mode, its cost and how characters learn things.
+- [Scene Header](/talemate/user-guide/scene-header#perspective-label): the perspective label in the header.

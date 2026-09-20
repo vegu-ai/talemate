@@ -439,6 +439,33 @@ preserves unchanged siblings and references to them. Rebuilding uses the stable 
 ID and fresh revision references; historical dependency revisions are not rewritten.
 Message deletion and manual-summary deletion notify consumers.
 
+**A hand edit is the one view change that does not invalidate descendants by
+itself.** `edit_message_view(scene, message_id, character, text)` replaces one
+character's view of a message (`scene_message/edit_perspective`; empty text stores
+`omitted`). It makes no model request. A hand edit is a change of the text or of the
+status: with both as stored, the call writes nothing, keeps the view's sources and
+returns `None`, and the handler reports `changed: false` and leaves the scene saved. Citations of the edited view that were current
+move to its new revision, so descendant views keep their text, their revision and their
+`ready` status; a citation that was already stale stays stale. A view shared with other
+characters is split: the edited character gets a new view ID, the others keep the old
+one, and a shared descendant that cites it is split the same way (the character's copy
+of that descendant is a new view at revision 1 with the same text). The
+`perspectives_changed` event lists only the edited view, so the audience index rederives
+that source and no summary is marked dirty. Later analysis preserves the text like any
+`ready` or `omitted` view, and a reader-content edit discards it like any view.
+The cascade is the user's choice: `message_view_dependents` returns the views the
+ordinary walk would invalidate, and
+`scene_message/reanalyze_perspective_dependents` (`invalidate_message_view_dependents`)
+runs that walk. The count has one source: the client names the messages whose view the
+user edited by hand in `get_perspectives` (`edited`), and each reply counts their
+dependents again (`dependents`), so the note and its action cannot disagree. A hand
+edit carries no sources, so a hand-edited dependent leaves the chain. The edit is refused for a message type without perceptions, while the
+message's analysis runs, and while a browsed version is not kept.
+`knowledge.message_views` is the read model of the scene split view
+(`scene_message/get_perspectives`): one status, text and `editable` flag per history
+message, plus the read-only introduction. A state the server refuses to edit carries
+its `reason`, which is both the refusal text and the client's tooltip.
+
 **`PerspectiveInvalidation` on `perspectives_changed` is the notification
 contract.** Import the model from `perspective_models` and the Blinker signal
 from `perspectives`:

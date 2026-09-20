@@ -60,6 +60,20 @@
                 </v-tooltip>
             </div>
         </section>
+        <div v-if="perspectiveCharacter" class="scene-header__perspective">
+            <v-chip
+                size="small"
+                label
+                variant="tonal"
+                closable
+                close-label="Close the perspective view"
+                :style="{ color: perspectiveColor }"
+                @click:close="$emit('close-perspective')"
+            >
+                <v-icon class="mr-1">mdi-eye-outline</v-icon>
+                {{ perspectiveLabel }}
+            </v-chip>
+        </div>
     </div>
 </template>
 
@@ -67,6 +81,7 @@
 import { mergeProps } from 'vue';
 import SceneHeaderSlot from './SceneHeaderSlot.vue';
 import { SCENE_HEADER_ITEMS, SCENE_HEADER_SLOTS, applySlotEdit, resolveSlotItems } from '@/utils/sceneHeaderItems.js';
+import { perspectiveHeaderLabel } from '@/utils/messagePerspective';
 
 // the container query below that moves the title onto its own line
 const NARROW_HEADER_WIDTH = 640;
@@ -94,7 +109,12 @@ export default {
             type: Boolean,
             default: false,
         },
+        perspectiveCharacter: {
+            type: String,
+            default: null,
+        },
     },
+    emits: ['close-perspective'],
     data() {
         return {
             catalog: SCENE_HEADER_ITEMS,
@@ -113,6 +133,12 @@ export default {
         },
         context() {
             return { scene: this.scene, agentStatus: this.agentStatus, narrow: this.narrow };
+        },
+        perspectiveLabel() {
+            return perspectiveHeaderLabel(this.perspectiveCharacter);
+        },
+        perspectiveColor() {
+            return this.scene?.data?.character_colors?.[this.perspectiveCharacter];
         },
     },
     created() {
@@ -276,6 +302,15 @@ export default {
     .scene-header__action {
         opacity: 1;
     }
+}
+
+/* centered above the perspective column of the split view, which is the
+   right half of the message list below */
+.scene-header__perspective {
+    display: flex;
+    justify-content: center;
+    margin-left: 50%;
+    padding-bottom: 6px;
 }
 
 .scene-header-picker__slot {

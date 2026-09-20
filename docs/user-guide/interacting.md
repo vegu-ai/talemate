@@ -129,6 +129,10 @@ The most recent character or narrator message offers a **:material-fast-forward:
 
 Clicking **Continue** generates more text and appends it to the message, recording the result as a new **Continued** version in the revision history. Narrator messages support the Continue action as well as character messages.
 
+## View a character's perspective
+
+In a Character perspectives story, the **View Perspective** chip above the scene tools splits the scene in two and shows, beside each message, what one character noticed of it. Double-click a perspective to change it. See [View a character's perspective](perspective-view.md).
+
 ## Cancel Generation
 
 Sometimes Talemate will be generating a response (or go through a chain of generations) and you want to cancel it. You can do this by hitting the **:material-stop-circle-outline:** button that will appear in the scene tools bar.

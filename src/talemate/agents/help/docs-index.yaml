@@ -1008,6 +1008,12 @@
   summary: Jinja2 recipes for scene.context_history token budgets, character sheets, common template includes and bot_token/set_prepared_response/set_data_response
     scaffolding. Memory examples distinguish rag_build_for_author from character rag_build, with memory_prompt overrides,
     legacy bucket/viewer/memory-pass behavior and perception restrictions.
+- path: user-guide/perspective-view.md
+  title: View a character's perspective
+  summary: 'View Perspective chip above the scene tools in a Character perspectives story: splits the scene to show, beside
+    each message, what one character noticed of it. Double-click to edit a character''s perspective of a message or write
+    one in an empty cell. Covers empty-cell reasons, the read-only introduction, the scene header label, and Analyze them
+    again.'
 - path: user-guide/playthrough.md
   title: Playthrough Mode
   summary: Playthrough replays existing scene messages with Space/click advance, scrubber, time-passage chapters, restart,

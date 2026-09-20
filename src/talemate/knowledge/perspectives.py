@@ -10,6 +10,7 @@ from talemate.knowledge.perspective_models import (
     Acquisition,
     CharacterView,
     Disclosure,
+    PassageProvenance,
     PerspectiveInvalidation,
     PerspectiveOutput,
     PerspectiveView,
@@ -428,19 +429,17 @@ def select_character_view(
     )
 
 
-def _notify(scene, old, replacement, reason, *, changes=None):
-    changed = list(changes if changes is not None else [(old, None)])
-    if not changed:
-        return None
-    affected = [reference for reference, _ in changed]
-    invalidated = {(reference.key, reference.view_id) for reference in affected}
+def _descendants(scene, old, reason, changed):
+    """The views built on the changed references, transitively, with their audiences."""
+    changed = list(changed)
+    invalidated = {(reference.key, reference.view_id) for reference, _ in changed}
+    descendants = []
     while True:
         additions = []
         for source in _sources(scene):
             knowledge = source.knowledge
             if knowledge is None:
                 continue
-            views = []
             for view in knowledge.views:
                 identity = (source.key, view.id)
                 depends = any(
@@ -466,17 +465,33 @@ def _notify(scene, old, replacement, reason, *, changes=None):
                     and (source.key, None) not in invalidated
                     and depends
                 ):
-                    reference = source.reference(view.id)
-                    additions.append((reference, view.audience))
-                    affected.append(reference)
+                    additions.append((source.reference(view.id), view.audience))
                     invalidated.add(identity)
-                    view = view.invalidated()
-                views.append(view)
-            if tuple(views) != knowledge.views:
-                source.knowledge = knowledge.model_copy(update={"views": tuple(views)})
         if not additions:
-            break
+            return descendants
         changed.extend(additions)
+        descendants.extend(additions)
+
+
+def _notify(scene, old, replacement, reason, *, changes=None):
+    changed = list(changes if changes is not None else [(old, None)])
+    if not changed:
+        return None
+    descendants = [
+        reference for reference, _ in _descendants(scene, old, reason, changed)
+    ]
+    stale = {(reference.key, reference.view_id) for reference in descendants}
+    for source in _sources(scene):
+        knowledge = source.knowledge
+        if knowledge is None:
+            continue
+        views = tuple(
+            view.invalidated() if (source.key, view.id) in stale else view
+            for view in knowledge.views
+        )
+        if views != knowledge.views:
+            source.knowledge = knowledge.model_copy(update={"views": views})
+    affected = [*(reference for reference, _ in changed), *descendants]
     event = PerspectiveInvalidation(
         source=old, replacement=replacement, affected=tuple(affected), reason=reason
     )
@@ -625,6 +640,189 @@ def set_source_perspectives(
     target = scene.get_message(source_id) if kind == "message" else None
     with capture_revision_mutations(scene, message=target):
         return _set_source_perspectives(scene, kind, source_id, outputs, layer=layer)
+
+
+def _move_citations(scene, character, moves):
+    """
+    Point one character's citations of a hand-edited view at its replacement.
+    A view that the character shares and that cites a moved view is split the
+    same way, so the other characters keep their citation.
+    """
+    moves = dict(moves)
+
+    def current(dependency):
+        revision, replacement = moves.get(
+            (dependency.key, dependency.view_id), (None, dependency)
+        )
+        # a citation of an older revision is stale and must stay stale
+        return (
+            replacement if dependency.view_revision in (None, revision) else dependency
+        )
+
+    moved = True
+    while moved:
+        moved = False
+        for source in _sources(scene):
+            knowledge = source.knowledge
+            if knowledge is None:
+                continue
+            views, split = [], []
+            for view in knowledge.views:
+                sources = tuple(current(dependency) for dependency in view.sources)
+                if character not in view.audience or sources == view.sources:
+                    views.append(view)
+                elif view.audience == (character,):
+                    views.append(view.model_copy(update={"sources": sources}))
+                else:
+                    rest = tuple(name for name in view.audience if name != character)
+                    own = PerspectiveView(
+                        **view.model_dump(
+                            exclude={"id", "revision", "audience", "sources"}
+                        ),
+                        audience=(character,),
+                        sources=sources,
+                    )
+                    views.extend((view.model_copy(update={"audience": rest}), own))
+                    split.append((view, own))
+            if tuple(views) != knowledge.views:
+                source.knowledge = knowledge.model_copy(update={"views": tuple(views)})
+            for shared, own in split:
+                moves[(source.key, shared.id)] = (
+                    shared.revision,
+                    source.reference(own.id),
+                )
+                moved = True
+
+
+def _message_view(scene, message_id, character):
+    _require_enabled(scene)
+    source = _find(scene, ("message", message_id, 0))
+    if source is None:
+        raise ValueError("Perspective source does not exist")
+    _validate_audience(scene, (character,))
+    view = next(
+        (
+            view
+            for view in (source.knowledge.views if source.knowledge else ())
+            if character in view.audience
+        ),
+        None,
+    )
+    return source, view
+
+
+def edit_message_view(
+    scene: "Scene", message_id: int, character: str, text: str
+) -> SourceReference | None:
+    """
+    Replace one character's view of a message by hand; empty text omits it.
+    This is the one view change that does not invalidate the views built on
+    it: their citations move to the new revision and they stay valid.
+
+    A hand edit is a change of the text or of the status. With both as stored,
+    nothing is written and None is returned, so the view keeps its sources.
+    """
+    source, old = _message_view(scene, message_id, character)
+    message = source.owner
+    if not message.supports_perceptions:
+        raise ValueError("This type of message has no perspectives")
+    previous = source.knowledge
+    digest = content_digest(source.text)
+    if (
+        message.revision_state is not None and not message.revision_matches_baseline
+    ) or (previous is not None and previous.content_digest != digest):
+        raise ValueError("The perspectives of this message are not current")
+    text = text.strip()
+    status = "ready" if text else "omitted"
+    if old is not None and (old.status, old.text) == (status, text or None):
+        return None
+    values = {
+        "audience": (character,),
+        "status": status,
+        "text": text or None,
+        "passage_provenance": (
+            PassageProvenance(
+                message_id=message_id,
+                content_digest=digest,
+                revision=previous.revision if previous else 1,
+            ),
+        ),
+    }
+    kept = previous.views if previous else ()
+    if old is not None and old.audience == (character,):
+        new = PerspectiveView(id=old.id, revision=old.revision + 1, **values)
+        views = tuple(new if view is old else view for view in kept)
+    else:
+        new = PerspectiveView(**values)
+        views = (
+            *(
+                view.model_copy(
+                    update={
+                        "audience": tuple(
+                            name for name in view.audience if name != character
+                        )
+                    }
+                )
+                if view is old
+                else view
+                for view in kept
+            ),
+            new,
+        )
+    acquired = previous.acquired if previous else _acquire(scene)
+    source.knowledge = (
+        previous.model_copy(update={"views": views})
+        if previous
+        else SourcePerspectives(content_digest=digest, acquired=acquired, views=views)
+    )
+    if all(view.status in ("ready", "omitted") for view in views):
+        message.mark_revision_feature("perceptions")
+    _commit_order(scene, acquired)
+    bind_perspective_sources(scene)
+    reference = source.reference(new.id)
+    if old is not None:
+        _move_citations(
+            scene, character, {(source.key, old.id): (old.revision, reference)}
+        )
+    perspectives_changed.send(
+        scene,
+        event=PerspectiveInvalidation(
+            source=reference,
+            replacement=reference,
+            affected=(reference,),
+            reason="views",
+        ),
+    )
+    return reference
+
+
+def message_view_dependents(
+    scene: "Scene", message_id: int, character: str
+) -> list[SourceReference]:
+    """The views that `invalidate_message_view_dependents` would set to pending."""
+    source, view = _message_view(scene, message_id, character)
+    if view is None:
+        return []
+    reference = source.reference(view.id)
+    return [
+        dependent
+        for dependent, _ in _descendants(
+            scene, reference, "views", [(reference, view.audience)]
+        )
+    ]
+
+
+def invalidate_message_view_dependents(
+    scene: "Scene", message_id: int, character: str
+) -> int:
+    source, view = _message_view(scene, message_id, character)
+    if view is None:
+        return 0
+    reference = source.reference(view.id)
+    event = _notify(
+        scene, reference, reference, "views", changes=[(reference, view.audience)]
+    )
+    return len(event.affected) - 1
 
 
 def add_disclosure(

@@ -12,6 +12,12 @@ if TYPE_CHECKING:
 PerceptionReadiness = Literal["running", "deferred", "failed", "ready"]
 
 
+def perception_running(scene: "Scene", message: "SceneMessage") -> bool:
+    summarizer = get_agent("summarizer")
+    running = getattr(summarizer, "_perception_running", {}).get(scene, set())
+    return message.id in running
+
+
 def perception_readiness(
     scene: "Scene",
     message: "SceneMessage",
@@ -19,9 +25,7 @@ def perception_readiness(
     *,
     character: str | None = None,
 ) -> PerceptionReadiness:
-    summarizer = get_agent("summarizer")
-    running = getattr(summarizer, "_perception_running", {}).get(scene, set())
-    if message.id in running:
+    if perception_running(scene, message):
         return "running"
     state = getattr(message, "revision_state", None)
     if state is not None and not message.revision_matches_baseline:

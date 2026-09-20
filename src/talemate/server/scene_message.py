@@ -12,6 +12,10 @@ Routes frontend-initiated changes to a SceneMessage:
   index on the stack, deferring derived work until keep/catch-up.
 - ``commit_revision``: updates derived evidence for the kept canonical text.
 - ``delete``: removes the message from scene history.
+- ``get_perspectives``: one character's view of each message and of the intro.
+- ``edit_perspective``: replaces one character's view of a message by hand.
+- ``reanalyze_perspective_dependents``: sets the later views built on a
+  hand-edited view to pending, so the next turn analyzes them again.
 """
 
 import pydantic
@@ -19,7 +23,17 @@ import structlog
 
 import talemate.instance as instance
 from talemate.scene_message import VersionSource, CharacterTransitionMessage
+from talemate.knowledge.message_views import (
+    character_message_views,
+    edited_view_dependents,
+    intro_view,
+    message_view,
+)
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.perspectives import (
+    edit_message_view,
+    invalidate_message_view_dependents,
+)
 from talemate.knowledge.revision_browsing import defer_revision_work
 from talemate.knowledge.revision_refresh import (
     refresh_revision,
@@ -62,8 +76,126 @@ class MessageIdPayload(pydantic.BaseModel):
     id: int
 
 
+class PerspectivesPayload(pydantic.BaseModel):
+    character: str
+    # messages whose view the user edited by hand in this session
+    edited: list[int] = pydantic.Field(default_factory=list)
+
+
+class PerspectivePayload(pydantic.BaseModel):
+    id: int
+    character: str
+
+
+class EditPerspectivePayload(PerspectivePayload):
+    text: str
+
+
 class SceneMessagePlugin(Plugin):
     router = "scene_message"
+
+    async def handle_get_perspectives(self, data: dict):
+        payload = PerspectivesPayload(**data)
+        if not character_knowledge_enabled(self.scene):
+            await self.signal_operation_failed(
+                "Character perspectives are off in this scene",
+                failed_action="get_perspectives",
+            )
+            return
+        try:
+            views = character_message_views(self.scene, payload.character)
+            intro = intro_view(self.scene, payload.character)
+            dependents = edited_view_dependents(
+                self.scene, payload.character, payload.edited
+            )
+        except ValueError as exc:
+            await self.signal_operation_failed(
+                str(exc), failed_action="get_perspectives"
+            )
+            return
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "perspectives",
+                "character": payload.character,
+                "intro": intro.model_dump(),
+                "dependents": dependents,
+                "views": {
+                    message_id: view.model_dump() for message_id, view in views.items()
+                },
+            }
+        )
+
+    async def handle_edit_perspective(self, data: dict):
+        """
+        Replace one character's view of a message with hand-written text.
+        Starts no analysis: `get_perspectives` reports how many later views are
+        built on a hand-edited view, and the user decides whether to invalidate them.
+        """
+        payload = EditPerspectivePayload(**data)
+        message = self.scene.get_message(payload.id)
+        if message is None:
+            await self.signal_operation_failed(
+                f"Message {payload.id} not found", failed_action="edit_perspective"
+            )
+            return
+        try:
+            current = message_view(self.scene, message, payload.character)
+            if not current.editable:
+                raise ValueError(current.reason or "This perspective cannot be edited")
+            changed = (
+                edit_message_view(
+                    self.scene, payload.id, payload.character, payload.text
+                )
+                is not None
+            )
+        except ValueError as exc:
+            await self.signal_operation_failed(
+                str(exc), failed_action="edit_perspective"
+            )
+            return
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "perspective_edited",
+                "id": payload.id,
+                "character": payload.character,
+                "view": message_view(
+                    self.scene, message, payload.character
+                ).model_dump(),
+                "changed": changed,
+            }
+        )
+        if changed:
+            self.scene.saved = False
+            await self.scene.attempt_auto_save()
+            self.scene.emit_status()
+        await self.signal_operation_done(signal_only=True)
+
+    async def handle_reanalyze_perspective_dependents(self, data: dict):
+        payload = PerspectivePayload(**data)
+        try:
+            count = invalidate_message_view_dependents(
+                self.scene, payload.id, payload.character
+            )
+        except ValueError as exc:
+            await self.signal_operation_failed(
+                str(exc), failed_action="reanalyze_perspective_dependents"
+            )
+            return
+        self.scene.saved = False
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "perspective_dependents_invalidated",
+                "id": payload.id,
+                "character": payload.character,
+                "count": count,
+            }
+        )
+        await self.scene.attempt_auto_save()
+        self.scene.emit_status()
+        await self.signal_operation_done(signal_only=True)
 
     async def handle_transition_note(self, data: dict):
         payload = EditPayload(**data)

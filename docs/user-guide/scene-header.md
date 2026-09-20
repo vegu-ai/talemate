@@ -64,6 +64,10 @@ The same choice is available as **Left of the title** and **Right of the title**
 
 By default the header is on, with **History stats** on the left and **Summarizer** on the right. **Active characters** and **Knowledge effort** are off until you tick them for a side.
 
+## Perspective label
+
+While you [view a character's perspective](/talemate/user-guide/perspective-view) in a Character perspectives story, the header shows a label such as **Edwin's Perspective** below the title, above the perspective column. Click the **x** on the label to close the perspective view; it does the same as **None** in the **View Perspective** chip. With the header off there is no label, and the chip is the only control.
+
 ## Turning the header off and on
 
 Hover over the header and click the **:material-close:** button at its right edge to hide it. Hiding the header this way turns off the same setting as **Show scene header** in [Settings > Game > General](/talemate/user-guide/app-settings/game#scene-header), which is where you turn it back on. Your item choices are kept while the header is hidden.

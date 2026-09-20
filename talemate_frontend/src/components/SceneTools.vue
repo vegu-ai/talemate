@@ -21,6 +21,32 @@
             </template>
         </v-tooltip>
 
+        <v-menu v-if="perspectivesActive">
+            <template v-slot:activator="{ props: menuProps }">
+                <v-tooltip text="Show what one character noticed of each message, beside the message." location="top">
+                    <template v-slot:activator="{ props: tooltipProps }">
+                        <v-chip size="x-small" v-bind="mergeProps(menuProps, tooltipProps)"
+                            :color="perspectiveCharacter ? 'success' : 'muted'"
+                            :disabled="!appReady" class="ma-1">
+                            <v-icon class="mr-1">mdi-eye-outline</v-icon>
+                            {{ perspectiveChipLabel }}
+                            <v-icon class="ml-1">mdi-menu-down</v-icon>
+                        </v-chip>
+                    </template>
+                </v-tooltip>
+            </template>
+            <v-list density="compact">
+                <v-list-item :active="!perspectiveCharacter" @click="$emit('update:perspectiveCharacter', null)">
+                    <v-list-item-title>None</v-list-item-title>
+                </v-list-item>
+                <v-list-item v-for="name in activeCharacters" :key="name"
+                    :active="name === perspectiveCharacter"
+                    @click="$emit('update:perspectiveCharacter', name)">
+                    <v-list-item-title>{{ name }}</v-list-item-title>
+                </v-list-item>
+            </v-list>
+        </v-menu>
+
         <SceneToolsSettings :app-busy="appBusy" :app-ready="appReady" />
 
         <v-tooltip v-if="sceneHelp" :text="sceneHelp" class="pre-wrap">
@@ -272,8 +298,11 @@ import SceneToolsSave from './SceneToolsSave.vue';
 import SceneToolsTime from './SceneToolsTime.vue';
 import SceneToolShortcutModal from './SceneToolShortcutModal.vue';
 import RequestInput from './RequestInput.vue';
+import { mergeProps } from 'vue';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
 import { applyShortcutTemplateMessage } from '@/utils/sceneToolShortcuts';
+import { perspectivesEnabled } from '@/utils/sceneSettings';
+import { perspectiveChipLabel } from '@/utils/messagePerspective';
 
 export default {
 
@@ -311,8 +340,20 @@ export default {
         // chip promotes when the scene has no backdrop set yet
         sceneBackdropCandidate: String,
         audioPlayedForMessageId: [Number, String],
+        perspectiveCharacter: {
+            type: String,
+            default: null,
+        },
     },
     computed: {
+        perspectivesActive() {
+            return perspectivesEnabled(this.scene?.data);
+        },
+
+        perspectiveChipLabel() {
+            return perspectiveChipLabel(this.perspectiveCharacter);
+        },
+
         // Mirrors the button :disabled binding — the hotkey path bypasses the
         // DOM disabled state, so the regenerate handlers must gate on this too.
         canStartRegen() {
@@ -421,8 +462,10 @@ export default {
         'open-world-state-manager',
         'open-agent-messages',
         'cancel-audio-queue',
+        'update:perspectiveCharacter',
     ],
     methods: {
+        mergeProps,
 
         sendHotButtonMessage(message) {
             if (message == "!abort" || !this.appBusy) {

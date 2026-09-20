@@ -294,7 +294,8 @@
     <AssetView v-model="assetViewShow" :image-src="assetViewSrc" />
 
     <div class="message-container mb-8" ref="messageContainer" :class="{ 'no-text-shadow': !sceneBackdropTextShadow }" :style="{ '--scene-backdrop-panel-opacity': sceneBackdropPanelOpacity }" style="flex-grow: 1; overflow-y: auto;" @click="onSceneAreaClick" @mouseup="onMessageContainerMouseUp">
-        <div v-for="(message, index) in visibleMessages" :key="message.id != null ? `${message.type}-${message.id}` : `idx-${index}`" class="message-wrapper">
+        <div v-for="(message, index) in visibleMessages" :key="message.id != null ? `${message.type}-${message.id}` : `idx-${index}`" class="message-wrapper" :class="{ 'message-wrapper--split': perspectiveCharacter }">
+          <div class="message-cell">
             <!-- marks the message whose illustration is the active backdrop -->
             <v-tooltip v-if="sceneBackdrop && message.id != null && message.id === sceneBackdrop.messageId" text="This image is the current scene background" location="left">
                 <template v-slot:activator="{ props }">
@@ -383,6 +384,17 @@
             <div v-else-if="!getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 {{ message.text }}
             </div>
+          </div>
+          <MessagePerspective
+            v-if="perspectiveCharacter && messageRowRendered(message)"
+            class="perspective-cell"
+            :view="perspectiveForMessage(message, perspectives)"
+            :character="perspectiveCharacter"
+            :color="scene?.data?.character_colors?.[perspectiveCharacter]"
+            :message-id="message.id"
+            :dependents="perspectives?.dependents?.[message.id] || 0"
+            :appearance-config="appearanceConfig"
+            :locked="uxLocked || appBusy" />
         </div>
         <EntitySelectionAction
             :model-value="entitySelection.open"
@@ -415,6 +427,8 @@ import PlayerChoiceMessage from './PlayerChoiceMessage.vue';
 import UxElementMessage from './UxElementMessage.vue';
 import ContextInvestigationMessage from './ContextInvestigationMessage.vue';
 import SystemMessage from './SystemMessage.vue';
+import MessagePerspective from './MessagePerspective.vue';
+import { perspectiveForMessage } from '@/utils/messagePerspective';
 import VisualReferenceCarousel from './VisualReferenceCarousel.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import AssetView from './AssetView.vue';
@@ -522,6 +536,12 @@ const ASSET_SELECT_TYPES = {
 
 const ASSET_SELECT_DIALOG_KEYS = Object.values(ASSET_SELECT_TYPES).map(t => t.dialogKey)
 
+const ALWAYS_RENDERED_MESSAGE_TYPES = ['character', 'processing_input', 'request_input', 'system', 'status', 'narrator', 'character_transition', 'time', 'player_choice', 'ux']
+
+// frames after which a character's views may differ although the rows stay
+// the same; a changed set of rows refreshes through the perspectiveRowIds watcher
+const PERSPECTIVE_REFRESH_TYPES = ['perception_status', 'message_edited']
+
 export default {
     name: 'SceneMessages',
     mixins: [VisualAssetsMixin, RevisionStackMixin, EntityHighlightMixin],
@@ -556,8 +576,13 @@ export default {
             type: Number,
             default: null,
         },
+        perspectiveCharacter: {
+            type: String,
+            default: null,
+        },
     },
     components: {
+        MessagePerspective,
         CharacterMessage,
         NarratorMessage,
         DirectorMessage,
@@ -647,11 +672,22 @@ export default {
             assetViewShow: false,
             assetViewAssetId: null,
             sceneBackdropObjectUrl: null,
+            perspectives: null,
+            // character -> ids of the messages whose view the user edited by
+            // hand; the server counts the later views built on those with
+            // every refresh, so the note and its action cannot disagree
+            perspectiveEdited: {},
+            _perspectivesTimer: null,
         }
     },
     computed: {
         visibleMessages() {
             return visibleMessages(this.messages, this.revealCount);
+        },
+        // the rows by identity: a frame that pops one row and pushes another
+        // leaves the length as it was
+        perspectiveRowIds() {
+            return this.messages.map(message => `${message.type}-${message.id}`).join('|');
         },
         messageAssetsConfig() {
             return this.appearanceConfig?.scene?.message_assets || null;
@@ -782,6 +818,66 @@ export default {
             return resolveMessageColor(this.appearanceConfig, typ, this.themeColors);
         },
 
+        perspectiveForMessage,
+
+        // director, context investigation and generic rows render nothing
+        // when their message type is hidden in the appearance settings
+        messageRowRendered(message) {
+            return ALWAYS_RENDERED_MESSAGE_TYPES.includes(message.type) || !this.getMessageTypeHidden(message.type);
+        },
+
+        requestPerspectives() {
+            if (!this.perspectiveCharacter) return;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'scene_message',
+                action: 'get_perspectives',
+                character: this.perspectiveCharacter,
+                edited: this.perspectiveEdited[this.perspectiveCharacter] || [],
+            }));
+        },
+
+        schedulePerspectivesRefresh() {
+            if (!this.perspectiveCharacter) return;
+            clearTimeout(this._perspectivesTimer);
+            this._perspectivesTimer = setTimeout(() => this.requestPerspectives(), 250);
+        },
+
+        setPerspectiveEdited(character, messageId, edited) {
+            const ids = (this.perspectiveEdited[character] || []).filter(id => id !== messageId);
+            this.perspectiveEdited[character] = edited ? [...ids, messageId] : ids;
+        },
+
+        handlePerspectiveMessages(data) {
+            if (data.type === 'message_edited' || data.type === 'remove_message') {
+                // a new message text discards the hand edit with every other view
+                for (const character of Object.keys(this.perspectiveEdited)) {
+                    this.setPerspectiveEdited(character, data.id, false);
+                }
+            }
+            if (data.type === 'scene_message') {
+                // the server applied these whoever is selected now, so the
+                // record follows the reply and only the display follows the selection
+                if (data.action === 'perspective_edited' && data.changed) {
+                    this.setPerspectiveEdited(data.character, data.id, true);
+                } else if (data.action === 'perspective_dependents_invalidated') {
+                    this.setPerspectiveEdited(data.character, data.id, false);
+                }
+                if (!this.perspectiveCharacter || data.character !== this.perspectiveCharacter) return;
+                if (data.action === 'perspectives') {
+                    this.perspectives = { intro: data.intro, views: data.views, dependents: data.dependents };
+                } else if (data.action === 'perspective_edited') {
+                    if (this.perspectives) this.perspectives.views[data.id] = data.view;
+                    if (data.changed) this.requestPerspectives();
+                } else if (data.action === 'perspective_dependents_invalidated') {
+                    this.requestPerspectives();
+                }
+                return;
+            }
+            if (PERSPECTIVE_REFRESH_TYPES.includes(data.type)) {
+                this.schedulePerspectivesRefresh();
+            }
+        },
+
         getMessageTypeHidden(typ) {
             // messages are hidden if appearanceCOnfig.scene[`${typ}_messages`].show is false
             // true and undefined are the same
@@ -848,6 +944,7 @@ export default {
 
         clear() {
             this.messages = [];
+            this.perspectiveEdited = {};
             this.lastEffectiveAssetIdByScope = {};
             this.assetCache = {};
             this.processingAssetMessageIds.clear();
@@ -1959,6 +2056,7 @@ export default {
             this.handleRevisionCommit(data);
             // Handle asset-related messages centrally (scene_asset, message_asset_update)
             this.handleAssetMessages(data);
+            this.handlePerspectiveMessages(data);
 
             var i;
 
@@ -1994,6 +2092,9 @@ export default {
 
             if (data.type == "clear_screen") {
                 this.messages = [];
+                // message ids restart with each scene, so an id kept here
+                // would name another message of the next scene
+                this.perspectiveEdited = {};
                 this.lastEffectiveAssetIdByScope = {};
                 this.assetCache = {};
                 this.processingAssetMessageIds.clear();
@@ -2291,6 +2392,11 @@ export default {
         }
     },
     watch: {
+        perspectiveCharacter() {
+            this.perspectives = null;
+            this.requestPerspectives();
+        },
+        perspectiveRowIds: 'schedulePerspectivesRefresh',
         'scene.data.revision_refreshes': {
             immediate: true,
             deep: true,
@@ -2390,6 +2496,7 @@ export default {
             clearTimeout(this._reapplyDebounceTimer);
             this._reapplyDebounceTimer = null;
         }
+        clearTimeout(this._perspectivesTimer);
         this.setSceneBackdropObjectUrl(null);
     },
 }
@@ -2430,8 +2537,22 @@ export default {
     background-color: rgb(var(--v-theme-surface));
 }
 
-.message-wrapper {
+.message-wrapper,
+.message-cell {
     position: relative;
+}
+
+/* split view: the message and the selected character's perspective of it
+   share one row, so the two columns cannot drift apart */
+.message-wrapper--split {
+    display: flex;
+    align-items: stretch;
+}
+
+.message-wrapper--split > .message-cell,
+.message-wrapper--split > .perspective-cell {
+    flex: 0 0 50%;
+    min-width: 0;
 }
 
 /* small always-on marker for the message that set the active backdrop;

@@ -268,6 +268,8 @@
                     :agent-status="agentStatus"
                     :settings="appConfig.game.scene_header"
                     :over-backdrop="!!sceneBackdropSrc"
+                    :perspective-character="perspectiveCharacter"
+                    @close-perspective="perspectiveCharacter = null"
                   />
 
                   <div class="scene-container">
@@ -293,6 +295,7 @@
                         :audio-played-for-message-id="audioPlayedForMessageId"
                         :scene="scene"
                         :reveal-count="playthroughActive ? playthroughRevealCount : null"
+                        :perspective-character="playthroughActive ? null : perspectiveCharacter"
                         @messages-changed="onSceneMessagesChanged"
                         @playthrough-advance="advancePlaythrough"
                         @cancel-audio-queue="onCancelAudioQueue"
@@ -343,7 +346,8 @@
                         :activeCharacters="activeCharacters"
                         :visual-agent-ready="visualAgentReady"
                         :scene-backdrop-candidate="sceneBackdropCandidate"
-                        :audioPlayedForMessageId="audioPlayedForMessageId" />
+                        :audioPlayedForMessageId="audioPlayedForMessageId"
+                        v-model:perspective-character="perspectiveCharacter" />
                       <SceneMessageInput
                         ref="sceneMessageInput"
                         v-model="messageInput"
@@ -533,6 +537,7 @@ import TemplatesMenu from './TemplatesMenu.vue';
 import OnboardingWizard from './OnboardingWizard.vue';
 import PromptsView from './prompts/PromptsView.vue';
 import { capturePrompt, clearFinishedPrompts } from '@/utils/promptLog';
+import { perspectiveCharacterValid } from '@/utils/messagePerspective';
 import PromptsMenu from './prompts/PromptsMenu.vue';
 import ThemeSwitcher from './ThemeSwitcher.vue';
 // import debounce
@@ -714,6 +719,8 @@ export default {
       passiveCharacters: [],
       inactiveCharacters: [],
       activeCharacters: [],
+      // split view of the scene messages; a temporary mode, never persisted
+      perspectiveCharacter: null,
       messageHandlers: [],
       scene: {},
       actAs: null,
@@ -1419,6 +1426,7 @@ export default {
       }
 
       if (data.type == "scene_status") {
+        const sceneChanged = this.scene?.data?.id !== data.data.id;
         this.scene = {
           name: data.name,
           title: data.data.title,
@@ -1435,6 +1443,9 @@ export default {
         this.activeCharacters = data.data.characters.map((character) => character.name);
         this.agentState = data.data.agent_state;
         this.syncActAs();
+        if (sceneChanged || !perspectiveCharacterValid(this.perspectiveCharacter, this.activeCharacters, data.data)) {
+          this.perspectiveCharacter = null;
+        }
 
         if(this.scene.environment === 'scene') {
           // always show scene view in scene mode

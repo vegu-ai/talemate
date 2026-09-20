@@ -4,14 +4,8 @@ from typing import TYPE_CHECKING
 
 from talemate.context import scene_is_loading
 from talemate.instance import get_agent
-from talemate.knowledge.context import _project_character_message
-from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
 from talemate.knowledge.mode import character_knowledge_enabled
-from talemate.knowledge.perspectives import (
-    bind_message_source,
-    PerspectiveReadContext,
-    select_character_view,
-)
+from talemate.knowledge.perspectives import bind_message_source
 from talemate.knowledge.timeline import message_times
 from talemate.scene_message import (
     CharacterMessage,
@@ -167,59 +161,6 @@ def protected_transition(
     return transition
 
 
-def arrival_lines(scene: Scene, transition: CharacterTransitionMessage) -> list[str]:
-    """Read at most two post-entry lines, ending at the first own reply."""
-    index = transition_index(scene, transition)
-    perspective_mode = character_knowledge_enabled(scene)
-    read = PerspectiveReadContext(scene) if perspective_mode else None
-    knowledge = KnowledgeIndex.from_scene(scene) if not perspective_mode else None
-    lines = []
-    for message in scene.history[index + 1 :]:
-        if (
-            message.typ == "character_transition"
-            and message.character_name == transition.character_name
-        ):
-            break
-        if (
-            isinstance(message, CharacterMessage)
-            and message.character_name == transition.character_name
-        ):
-            break
-        if (
-            not isinstance(message, (CharacterMessage, NarratorMessage))
-            or message.hidden
-        ):
-            continue
-        if perspective_mode:
-            text = _project_character_message(
-                scene,
-                transition.character_name,
-                message,
-                read=read,
-                select=lambda reference: select_character_view(
-                    scene, reference, transition.character_name, read=read
-                ),
-                keep_director=False,
-                show_hidden=False,
-                direction_mode="direction",
-                diagnostics=None,
-            )
-        else:
-            text = (
-                str(message)
-                if knowledge.rejection(
-                    transition.character_name, KnowledgeItem.from_message(message)
-                )
-                is None
-                else None
-            )
-        if text:
-            lines.append(text)
-        if len(lines) == 2:
-            break
-    return lines
-
-
 def render_transition(
     scene: Scene,
     transition: CharacterTransitionMessage,
@@ -246,11 +187,6 @@ def render_transition(
     if participants:
         lines.append(
             f"Already in the scene when {name} arrived: {', '.join(participants)}."
-        )
-    established = arrival_lines(scene, transition)
-    if established:
-        lines.append(
-            f"After {name}'s arrival (already happened):\n" + "\n".join(established)
         )
     if transition.arrival_note:
         lines.append(f"Author's arrival note: {transition.arrival_note}")

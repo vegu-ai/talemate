@@ -279,11 +279,11 @@ async def test_return_prompt_marks_completed_arrival_without_inventing_time(
     rendered = render_transition(scene, transition)
     expected = (
         f"{core}\nAlready in the scene when Nora arrived: Mara.\n"
-        "After Nora's arrival (already happened):\n"
-        "Nora sets down her pack.\nMara offers Nora a seat.\n"
         "Author's arrival note: Her coat is wet."
     )
-    assert [line for line in rendered.splitlines() if line] == expected.splitlines()
+    assert rendered == expected
+    assert "Nora sets down her pack." not in rendered
+    assert "already happened" not in rendered
     assert f"[{arrival.id}]" not in rendered
     assert render_transition(scene, transition, budget=1) == core
 
@@ -440,7 +440,7 @@ async def test_deactivated_entry_is_display_only(returning_scene):
     assert protected_transition(scene, "Nora") is None
     assert render_transition(scene, departure) == ""
     text = render_transition(scene, transition)
-    assert "Mara opens the gate." in text
+    assert "Mara opens the gate." not in text
     assert "bolts the gate" not in text
     assert transition_payload(scene, departure) == {
         "type": "character_transition",
@@ -599,15 +599,31 @@ async def test_protected_bridge_precedes_later_context_under_tiny_budget(
 
 
 @pytest.mark.asyncio
-async def test_arrival_sources_follow_edits_and_deletion(returning_scene):
+async def test_post_return_line_reaches_context_once_without_arrival_block(
+    returning_scene,
+):
+    scene = returning_scene
+    await leave_and_return(scene, lines=1)
+    add_line(scene, "Mara opens the gate.", ["Nora", "Mara"])
+    parts = scene.context_history(
+        budget=8192,
+        perspective="Nora",
+        stored_views=scene.knowledge_eligibility == "perception",
+    )
+    text = "\n".join(parts)
+    assert text.count("Mara opens the gate.") == 1
+    assert "already happened" not in text
+    assert "Nora has returned" in text
+
+
+@pytest.mark.asyncio
+async def test_return_bridge_omits_post_return_story_lines(returning_scene):
     scene = returning_scene
     transition = await leave_and_return(scene, lines=1)
-    arrival = add_line(scene, "Mara opens the gate.", ["Nora", "Mara"])
+    add_line(scene, "Mara opens the gate.", ["Nora", "Mara"])
     add_line(scene, "Hidden arrival detail.", ["Mara"])
-    assert "Mara opens the gate." in render_transition(scene, transition)
+    assert "Mara opens the gate." not in render_transition(scene, transition)
     assert "Hidden arrival detail" not in render_transition(scene, transition)
-    scene.delete_message(arrival.id)
-    assert "Mara opens" not in render_transition(scene, transition)
     passage = next(
         message for message in scene.history if isinstance(message, TimePassageMessage)
     )
@@ -788,7 +804,6 @@ async def test_unavailable_arrival_view_does_not_break_display_or_reload(
 ):
     from types import SimpleNamespace
     from talemate.emit import Emission
-    from talemate.exceptions import GenerationCancelled
     from talemate.knowledge.transitions import transition_payload
     from talemate.load import load_scene_from_data
     from talemate.server.websocket_server import WebsocketHandler
@@ -822,8 +837,7 @@ async def test_unavailable_arrival_view_does_not_break_display_or_reload(
     await scene.emit_history()
     assert frames[-1]["type"] == "scene_status"
     assert frames[-1]["data"]["character_transitions"][-1] == payload
-    with pytest.raises(GenerationCancelled):
-        render_transition(scene, transition)
+    assert "Nora has returned" in render_transition(scene, transition)
     saved = deepcopy(scene.serialize)
     saved["history"] = [message.to_dict() for message in scene.history]
     restored = persistence_scene_factory()
@@ -1136,7 +1150,6 @@ async def test_layered_real_archive_cuts_render_return_once(
         assert text.count("Nora has returned") == 1
         boundary = text.index("Nora has returned")
         assert "PRE-" not in text[boundary:]
-        # The bridge's grounded arrival excerpt can itself contain POST-0.
         assert "POST-" not in text[:boundary]
         assert "LATEST" in text
         assert text.count("(Nora was away") <= 1

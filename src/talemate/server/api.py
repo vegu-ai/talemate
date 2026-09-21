@@ -2,7 +2,6 @@ import asyncio
 import json
 import traceback
 
-import starlette.websockets
 import structlog
 import websockets
 
@@ -28,6 +27,17 @@ log = structlog.get_logger("talemate")
 # connection attempts while it is still open.
 _active_frontend_websocket = None
 _active_frontend_websocket_handler = None
+WEBSOCKET_DISCONNECT_EXCEPTIONS = (
+    websockets.exceptions.ConnectionClosed,
+    RuntimeError,
+)
+CONNECTION_TASK_DRAIN_TIMEOUT = 1.0
+
+
+def _is_task_failure(result):
+    return isinstance(result, BaseException) and not isinstance(
+        result, asyncio.CancelledError
+    )
 
 
 def get_active_frontend_handler():
@@ -86,6 +96,7 @@ async def websocket_endpoint(websocket):
     handler = WebsocketHandler(websocket, message_queue)
     _active_frontend_websocket_handler = handler
     scene_task = None
+    disconnect_exc = None
 
     log.info("frontend connected")
 
@@ -97,10 +108,6 @@ async def websocket_endpoint(websocket):
         nonlocal scene_task
         log.warning(f"frontend disconnected: {exc}")
 
-        main_task.cancel()
-        send_messages_task.cancel()
-        send_status_task.cancel()
-        test_connection_task.cancel()
         # no user response can arrive anymore - terminate any coroutine still
         # waiting on a generation error dialog
         resolve_all_generation_errors("cancel")
@@ -117,6 +124,7 @@ async def websocket_endpoint(websocket):
 
     # Create a task to send messages from the queue
     async def send_messages():
+        nonlocal disconnect_exc
         while True:
             # check if there are messages in the queue
             if message_queue.empty():
@@ -124,15 +132,22 @@ async def websocket_endpoint(websocket):
                 continue
 
             message = await message_queue.get()
-            await websocket.send(json.dumps(message, cls=JSONEncoder))
+            payload = json.dumps(message, cls=JSONEncoder)
+            try:
+                await websocket.send(payload)
+            except WEBSOCKET_DISCONNECT_EXCEPTIONS as exc:
+                disconnect_exc = exc
+                return
 
     # task to test connection
     async def test_connection():
+        nonlocal disconnect_exc
         while True:
             try:
                 await websocket.send(json.dumps({"type": "ping"}))
-            except Exception as e:
-                await frontend_disconnect(e)
+            except WEBSOCKET_DISCONNECT_EXCEPTIONS as exc:
+                disconnect_exc = exc
+                return
             await asyncio.sleep(1)
 
     # process a message from the frontend
@@ -286,12 +301,8 @@ async def websocket_endpoint(websocket):
                     log.info("Routing to sub-handler", action_type=action_type)
                     await handler.route(data)
 
-        except (
-            websockets.exceptions.ConnectionClosed,
-            starlette.websockets.WebSocketDisconnect,
-            RuntimeError,
-        ) as exc:
-            raise exc
+        except WEBSOCKET_DISCONNECT_EXCEPTIONS:
+            raise
 
         except Exception as e:
             log.error("Unhandled error", error=e, traceback=traceback.format_exc())
@@ -305,6 +316,7 @@ async def websocket_endpoint(websocket):
 
     # main loop task
     async def handle_messages():
+        nonlocal disconnect_exc
         try:
             while True:
                 data = await websocket.recv()
@@ -312,21 +324,44 @@ async def websocket_endpoint(websocket):
                 await process_message(data)
 
         # handle disconnects
-        except (
-            websockets.exceptions.ConnectionClosed,
-            starlette.websockets.WebSocketDisconnect,
-            RuntimeError,
-        ) as exc:
-            await frontend_disconnect(exc)
+        except WEBSOCKET_DISCONNECT_EXCEPTIONS as exc:
+            disconnect_exc = exc
 
     main_task = asyncio.create_task(handle_messages())
     send_messages_task = asyncio.create_task(send_messages())
     send_status_task = asyncio.create_task(client_status_loop())
     test_connection_task = asyncio.create_task(test_connection())
 
-    await asyncio.gather(
+    connection_tasks = (
         main_task,
         send_messages_task,
         send_status_task,
         test_connection_task,
     )
+    try:
+        # Each task owns one connection-lifetime loop, so any return starts
+        # teardown for the complete set.
+        await asyncio.wait(connection_tasks, return_when=asyncio.FIRST_COMPLETED)
+    finally:
+        for task in connection_tasks:
+            if not task.done():
+                task.cancel()
+
+        # Cancellation handlers can wait for scene release, which happens in
+        # frontend_disconnect. Bound this first drain so they cannot keep the
+        # active connection slot forever.
+        done, _ = await asyncio.wait(
+            connection_tasks,
+            timeout=CONNECTION_TASK_DRAIN_TIMEOUT,
+        )
+        drained_results = await asyncio.gather(*done, return_exceptions=True)
+        cleanup_exc = disconnect_exc or next(
+            (result for result in drained_results if _is_task_failure(result)),
+            None,
+        )
+        await frontend_disconnect(cleanup_exc)
+        results = await asyncio.gather(*connection_tasks, return_exceptions=True)
+
+    for result in results:
+        if _is_task_failure(result):
+            raise result

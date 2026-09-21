@@ -1,7 +1,7 @@
 import asyncio
 import json
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -25,12 +25,17 @@ async def test_interact_hands_input_to_scene_without_waiting_for_refresh(
         scene=scene,
         waiting_for_input=True,
         send_input=send_input,
+        disconnect=Mock(),
     )
     socket = SimpleNamespace(recv=incoming.get, send=AsyncMock())
     refresh = AsyncMock(side_effect=AssertionError("interact must not refresh"))
     monkeypatch.setattr(api, "WebsocketHandler", lambda *args: handler)
     monkeypatch.setattr(api, "import_initial_node_definitions", lambda: None)
-    monkeypatch.setattr(api, "client_status_loop", AsyncMock())
+
+    async def client_status_loop():
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(api, "client_status_loop", client_status_loop)
     monkeypatch.setattr(api, "_active_frontend_websocket", None)
     monkeypatch.setattr(api, "_active_frontend_websocket_handler", None)
     monkeypatch.setattr(
@@ -48,3 +53,5 @@ async def test_interact_hands_input_to_scene_without_waiting_for_refresh(
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
+
+    handler.disconnect.assert_called_once_with()

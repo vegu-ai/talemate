@@ -9,10 +9,14 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 import structlog
+import websockets
 
 import talemate.emit.async_signals as async_signals
 import talemate.instance as instance
@@ -22,7 +26,7 @@ from talemate.agents.tts.websocket_handler import TTSWebsocketHandler
 from talemate.emit.base import Receiver
 from talemate.game.engine.nodes.core import Entry, Graph, GraphContext, GraphState, Node
 from talemate.game.engine.nodes.run import RunModule
-from talemate.server import websocket_server
+from talemate.server import api, websocket_server
 from talemate.server.websocket_server import WebsocketHandler
 from talemate.tale_mate import Scene
 
@@ -118,6 +122,107 @@ def _bare_handler(scene, routes, monkeypatch):
     handler._cleanup_scene_assets_batching = lambda: None
     monkeypatch.setattr(websocket_server, "abort_wait_for_input", lambda: None)
     return handler
+
+
+@pytest.mark.asyncio
+async def test_send_disconnect_stops_all_connection_loops(monkeypatch):
+    recv_started = asyncio.Event()
+    recv_cancelling = asyncio.Event()
+    recv_stopped = asyncio.Event()
+    release_recv = asyncio.Event()
+    status_started = asyncio.Event()
+    status_stopped = asyncio.Event()
+    ping_started = asyncio.Event()
+    ping_stopped = asyncio.Event()
+
+    class Socket:
+        async def recv(self):
+            recv_started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                recv_cancelling.set()
+                await release_recv.wait()
+                raise
+            finally:
+                recv_stopped.set()
+
+        async def send(self, payload):
+            if json.loads(payload)["type"] == "queued":
+                await recv_started.wait()
+                await status_started.wait()
+                await ping_started.wait()
+                raise websockets.exceptions.ConnectionClosedOK(None, None)
+
+            ping_started.set()
+            try:
+                await asyncio.Event().wait()
+            finally:
+                ping_stopped.set()
+
+    async def client_status_loop():
+        status_started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            status_stopped.set()
+
+    def disconnect():
+        assert recv_cancelling.is_set()
+        assert status_stopped.is_set()
+        assert ping_stopped.is_set()
+        release_recv.set()
+
+    handler = SimpleNamespace(scene=None, disconnect=Mock(side_effect=disconnect))
+
+    def websocket_handler(websocket, message_queue):
+        message_queue.put_nowait({"type": "queued"})
+        return handler
+
+    monkeypatch.setattr(api, "WebsocketHandler", websocket_handler)
+    monkeypatch.setattr(api, "client_status_loop", client_status_loop)
+    monkeypatch.setattr(api, "import_initial_node_definitions", lambda: None)
+    monkeypatch.setattr(api, "resolve_all_generation_errors", lambda action: None)
+    monkeypatch.setattr(api, "CONNECTION_TASK_DRAIN_TIMEOUT", 0.01)
+    monkeypatch.setattr(api, "_active_frontend_websocket", None)
+    monkeypatch.setattr(api, "_active_frontend_websocket_handler", None)
+
+    await asyncio.wait_for(api.websocket_endpoint(Socket()), timeout=5)
+
+    handler.disconnect.assert_called_once_with()
+    assert recv_stopped.is_set()
+    assert status_stopped.is_set()
+    assert ping_stopped.is_set()
+    assert api._active_frontend_websocket is None
+    assert api._active_frontend_websocket_handler is None
+
+
+@pytest.mark.asyncio
+async def test_unexpected_receive_error_propagates_after_cleanup(monkeypatch):
+    class Socket:
+        async def recv(self):
+            return "{"
+
+        async def send(self, payload):
+            await asyncio.Event().wait()
+
+    async def client_status_loop():
+        await asyncio.Event().wait()
+
+    handler = SimpleNamespace(scene=None, disconnect=Mock())
+    monkeypatch.setattr(api, "WebsocketHandler", lambda *args: handler)
+    monkeypatch.setattr(api, "client_status_loop", client_status_loop)
+    monkeypatch.setattr(api, "import_initial_node_definitions", lambda: None)
+    monkeypatch.setattr(api, "resolve_all_generation_errors", lambda action: None)
+    monkeypatch.setattr(api, "_active_frontend_websocket", None)
+    monkeypatch.setattr(api, "_active_frontend_websocket_handler", None)
+
+    with pytest.raises(json.JSONDecodeError):
+        await asyncio.wait_for(api.websocket_endpoint(Socket()), timeout=5)
+
+    handler.disconnect.assert_called_once_with()
+    assert api._active_frontend_websocket is None
+    assert api._active_frontend_websocket_handler is None
 
 
 def test_release_drops_the_closed_sessions_overrides(wired):

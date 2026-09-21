@@ -1318,7 +1318,7 @@
       "title": "Jinja2 Format",
       "id": "22d2147f-082b-408c-8e6c-dcbcdd2286a4",
       "properties": {
-        "template": "{% for reference in references %}\nIMAGE {{ loop.index }}: {{ reference.purpose }}\n{% endfor %}"
+        "template": "{% if references | length == 1 %}\n{{ references[0].purpose }}\n{% else %}\n{% for reference in references %}\nIMAGE {{ loop.index }}: {{ reference.purpose }}\n{% endfor %}\n{% endif %}"
       },
       "x": 1171,
       "y": 1130,

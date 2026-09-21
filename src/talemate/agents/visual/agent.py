@@ -560,6 +560,12 @@ class VisualAgent(
 
     async def emit_status(self, processing: bool = None):
         if self.enabled:
+            # the per backend emits below are gated on the saved selection,
+            # so fill the choices that need no backend here
+            for backend_name in BACKENDS:
+                update_choices = getattr(self, f"{backend_name}_update_choices", None)
+                if update_choices:
+                    update_choices()
             if self.backend_name:
                 fn = getattr(self, f"{self.backend_name}_emit_status", None)
                 if fn:

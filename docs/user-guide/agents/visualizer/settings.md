@@ -105,6 +105,8 @@ This revision step analyzes the reference images (using their analysis data or t
 
 For example, instead of generating a prompt like "Elena, a tall woman with red hair and green eyes wearing a blue dress, stands in a dimly lit tavern," the revised prompt might become "Elena (IMAGE 1) stands in a dimly lit tavern, looking worried" - letting the reference image provide the character's appearance while your prompt defines the scene.
 
+With exactly one reference image there is no image number. The revised prompt names the reference in plain words instead — "Elena, as in the reference image, stands in a dimly lit tavern, looking worried". Image editing models generally expect a numbered tag only when two or more images are attached, and a single one is referred to naturally.
+
 !!! warning "Additional AI Query"
     This adds an extra AI query to the prompt generation process when reference images are provided.
 
@@ -150,7 +152,10 @@ All settings in this section can be overridden per scene through the [Agents set
 
 The **Preset** picker below the actions table inserts the actions of a **Visual prompt finalizer** template into the table as editable copies. You can insert as many presets as you like; inserted rows behave like any other action — reorder, edit, or remove them freely. Because rows are copied, later changes to the template do not affect actions that were already inserted.
 
-Presets are reusable sets of post-processing actions managed in the Templates manager — Talemate ships an **Ideogram JSON** preset that converts the positive prompt into an Ideogram 4.0 structured JSON prompt.
+Presets are reusable sets of post-processing actions managed in the Templates manager. Talemate ships two:
+
+- **Ideogram JSON** converts the positive prompt into an Ideogram 4.0 structured JSON prompt.
+- **Qwen 2.1 Image references** rewrites the reference image labels of the positive prompt into the tag form that model expects, so `IMAGE 1` becomes `<image1>`. Qwen 2.1 Image requires those tags whenever two or more reference images are attached. The action matches capitals only, so ordinary prose such as `a mirror image 2 metres away` is left alone.
 
 ### Post-processing Actions
 
@@ -225,6 +230,21 @@ The preset picker includes resolution options optimized for different model type
 | **SDXL** | 1024 x 1024 | 832 x 1216 | 1216 x 832 |
 | **Qwen Image** | 1328 x 1328 | 928 x 1664 | 1664 x 928 |
 | **Z-Image Turbo** | 2048 x 2048 | 1088 x 1920 | 1920 x 1088 |
+
+Below them sits a second series, named after the pixel budget rather than a model. Pick from this series when you care about generation time and video memory more than about a model's native size — the pixel count roughly sets both.
+
+| Preset | Square | Portrait | Landscape |
+|--------|--------|----------|-----------|
+| **0.4 MP** | 640 x 640 | 512 x 768 | 768 x 512 |
+| **0.8 MP** | 896 x 896 | 736 x 1088 | 1088 x 736 |
+| **1 MP** | 1024 x 1024 | 832 x 1216 | 1216 x 832 |
+| **1.4 MP** | 1184 x 1184 | 960 x 1440 | 1440 x 960 |
+| **2 MP** | 1408 x 1408 | 1152 x 1728 | 1728 x 1152 |
+
+The square entries are 1:1 and the portrait and landscape entries are about 2:3. Every width and height is a multiple of 32, which the SD, Flux and Qwen model families all accept. The label names the class, so the exact pixel count is a few percent away from it.
+
+!!! tip "Which step to pick"
+    The shipped model presets tell you where your model sits: SD 1.5 portrait is near 0.4 MP and its square is smaller still at 0.26 MP, SDXL is 1 MP, Qwen Image is near 1.5 MP and Z-Image Turbo landscape is near 2 MP. Start at your model's class and step down when generation is too slow or runs out of video memory.
 
 ### Selecting a Preset
 

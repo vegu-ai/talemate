@@ -222,11 +222,8 @@ class TalemateClientMixin:
     ) -> Backend:
         return self.backend_image_analyzation
 
-    async def talemate_client_emit_status(self, processing: bool = None):
-        """Update client choices when status is emitted."""
-        action = self.actions.get("talemate_client_image_analyzation")
-        if not action or "client" not in action.config:
-            return
-
-        choices = TalemateClientMixin._get_vision_client_choices()
-        action.config["client"].choices = choices
+    def talemate_client_update_choices(self):
+        """Offer the vision capable clients as choices."""
+        self.actions["talemate_client_image_analyzation"].config[
+            "client"
+        ].choices = TalemateClientMixin._get_vision_client_choices()

@@ -1,13 +1,15 @@
 <|SECTION:SELECTED REFERENCES|>
+{% set single_reference = assets | length == 1 %}
 {% for asset in assets %}
+{% set label = "THE REFERENCE" if single_reference else "IMAGE " ~ loop.index %}
 {% if asset.meta.analysis %}
-IMAGE {{ loop.index }}: {{ asset.meta.analysis }}
+{{ label }}: {{ asset.meta.analysis }}
 ---
 {% elif asset.meta.tags %}
-IMAGE {{ loop.index }}: No analysis available - but we have tags: {{ join(asset.meta.tags, ", ") }}
+{{ label }}: No analysis available - but we have tags: {{ join(asset.meta.tags, ", ") }}
 ---
 {% else %}
-IMAGE {{ loop.index }}: No analysis available - no tags available
+{{ label }}: No analysis available - no tags available
 ---
 {% endif %}
 {% endfor %}
@@ -42,7 +44,11 @@ Do NOT automatically adopt backgrounds, settings, or scene compositions from ref
 
 1. **Always mention important subjects**: Characters, key objects, and scene elements should still be named in the prompt even if they appear in a reference. Only omit detailed appearance descriptions that match the reference.
 
-2. **Reference by image number**: When a subject's appearance matches a reference, use "The [subject] in IMAGE X" instead of describing their appearance.
+{% if single_reference %}
+2. **Reference it in natural words**: When a subject's appearance matches the reference, write "The [subject], as in the reference image" instead of describing their appearance. There is only one reference, so never give it a number.
+{% else %}
+2. **Reference by image number**: When a subject's appearance matches a reference, use "The [subject] in IMAGE X" instead of describing their appearance. Write the label verbatim in capitals, exactly as IMAGE 1, IMAGE 2 and so on.
+{% endif %}
 
 3. **Describe differences explicitly**: If something differs from how it appears in a reference (pose, expression, clothing, state), describe that difference.
 
@@ -52,13 +58,23 @@ Do NOT automatically adopt backgrounds, settings, or scene compositions from ref
 
 **Example Transformations:**
 
+{% if single_reference %}
+- Original: "Elena, a tall woman with red hair and green eyes wearing a blue dress, stands in a dimly lit tavern, looking worried"
+- With the reference as character reference for Elena: "Elena, as in the reference image, stands in a dimly lit tavern, looking worried"
+  (Note: The tavern setting comes from the prompt, not the reference's background)
+
+- Original: "Marcus sharpening a blade by the campfire"
+- With the reference as style reference: "Marcus sharpening a blade by the campfire"
+  (Note: Marcus is still mentioned by name; the reference influences style only, not content, so nothing about it belongs in the prompt)
+{% else %}
 - Original: "Elena, a tall woman with red hair and green eyes wearing a blue dress, stands in a dimly lit tavern, looking worried"
 - With IMAGE 1 as character reference for Elena: "Elena (IMAGE 1) stands in a dimly lit tavern, looking worried"
   (Note: The tavern setting comes from the prompt, not IMAGE 1's background)
 
-- Original: "Marcus and Elena talking in the garden, sunlight filtering through trees"  
+- Original: "Marcus and Elena talking in the garden, sunlight filtering through trees"
 - With IMAGE 1 for Marcus, IMAGE 2 as style reference: "Marcus (IMAGE 1) and Elena talking in the garden, sunlight filtering through trees"
   (Note: Elena still mentioned by name; IMAGE 2 influences style only, not content)
+{% endif %}
 
 Output the refined prompt between <REVISED_PROMPT></REVISED_PROMPT> tags.
 

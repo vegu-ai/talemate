@@ -53,6 +53,10 @@ PROMPT_RECEIVER_FALLBACKS = ("text", "prompt", "value")
 OBJECT_INFO_TIMEOUT = 5.0
 
 
+def comfyui_workflows() -> list[str]:
+    return sorted(file.name for file in WORKFLOW_DIR.glob("*.json"))
+
+
 class Model(pydantic.BaseModel):
     name: str
     label: str
@@ -873,12 +877,13 @@ class ComfyUIMixin:
 
     ## helpers
 
-    @property
-    async def comfyui_workflows(self) -> list[str]:
-        """
-        Returns list of workflow files in the workflows directory
-        """
-        return [file.name for file in WORKFLOW_DIR.glob("*.json")]
+    def comfyui_update_choices(self):
+        """Offer the workflow files as choices on both comfyui actions."""
+        workflows = comfyui_workflows()
+        for action_name in ("comfyui_image_create", "comfyui_image_edit"):
+            self.actions[action_name].config["workflow"].choices = [
+                {"label": name, "value": name} for name in workflows
+            ]
 
     async def comfyui_get_model_type(self, handler: ComfyUIHandler) -> str | None:
         workflow_filename = handler.action.config["workflow"].value
@@ -947,13 +952,9 @@ class ComfyUIMixin:
     ## status
 
     async def _comfyui_emit_status(self, processing: bool = None):
-        workflows = await self.comfyui_workflows
         for handler in self.comfyui_handlers:
             if not handler:
                 continue
-            handler.action.config["workflow"].choices = [
-                {"label": workflow, "value": workflow} for workflow in workflows
-            ]
             # Ensure backend status is up to date by calling ready()
             await handler.backend.ready()
             model_type = await self.comfyui_get_model_type(handler)

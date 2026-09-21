@@ -4,8 +4,11 @@ Visual prompt finalizer templates define a reusable set of post-processing actio
 
 They exist so you can maintain a set of actions once and insert it wherever it is needed, instead of recreating the same rows in the [visualizer agent's Prompt Finalization settings](/talemate/user-guide/agents/visualizer/settings/#prompt-finalization) for every configuration.
 
-!!! info "Shipped preset: Ideogram JSON"
-    Talemate ships an **Ideogram JSON** finalizer template that converts the positive prompt into an Ideogram 4.0 structured JSON prompt via an AI action. It appears in the preset picker out of the box.
+!!! info "Shipped presets"
+    Two finalizer templates ship with Talemate and appear in the preset picker out of the box.
+
+    - **Ideogram JSON** converts the positive prompt into an Ideogram 4.0 structured JSON prompt via an AI action.
+    - **Qwen 2.1 Image references** rewrites the reference image labels of the positive prompt into the tag form that model expects, so `IMAGE 1` becomes `<image1>`.
 
 ## Creating a visual prompt finalizer
 

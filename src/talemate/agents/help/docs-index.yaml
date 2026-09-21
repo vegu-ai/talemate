@@ -306,8 +306,9 @@
 - path: user-guide/agents/visualizer/settings.md
   title: Settings
   summary: Visualizer settings for separate image backends, timeout, automatic setup/generation, reference analysis, editing-prompt
-    revision and visual styles. Covers prompt-finalizer presets including Ideogram JSON, ordered exact/fuzzy/regex/AI actions
-    and group references, per-character/scene overrides and local resolution presets.
+    revision and visual styles. Covers prompt-finalizer presets including Ideogram JSON and Qwen 2.1 Image references, ordered
+    exact/fuzzy/regex/AI actions and group references, per-character/scene overrides and local model and megapixel resolution
+    presets.
 - path: user-guide/agents/visualizer/visual-library.md
   title: Visual Library
   summary: Visual Library workflow for Prompt/Instruct generation, visual types, reference images, regenerate/iterate, queue
@@ -1133,8 +1134,8 @@
 - path: user-guide/templates/visual-finalizer.md
   title: Visual Prompt Finalizer
   summary: Visual Prompt Finalizer templates package ordered exact, fuzzy, regex or AI post-processing actions for image prompts.
-    Includes the shipped Ideogram JSON preset and insertion as editable copies through Visualizer Prompt Finalization, plus
-    template creation, editing and removal.
+    Includes the shipped Ideogram JSON and Qwen 2.1 Image references presets and insertion as editable copies through Visualizer
+    Prompt Finalization, plus template creation, editing and removal.
 - path: user-guide/templates/writing-style.md
   title: Writing Styles
   summary: Writing Style templates steer generated tone and define unwanted phrases for Editor revision through regex or semantic-similarity

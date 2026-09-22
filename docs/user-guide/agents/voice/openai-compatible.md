@@ -55,6 +55,17 @@ API key for the server. Leave empty if the server does not require authenticatio
 
 Model identifier sent with each request. Some servers ignore this field and always use the model they have loaded; others route based on it. Check your server's documentation. Default: `tts-1`.
 
+##### Response format
+
+!!! info "New in 0.40.0"
+
+The audio format Talemate asks the server for, sent as `response_format` with every request. Default: `mp3`. Leave the field empty to send `mp3`.
+
+Talemate plays the audio in your browser, so the format must be one the browser can play. `mp3` plays in every browser and is the default of the OpenAI speech API, so most servers accept it. If your server needs something else, type the value its documentation names — the field takes any value, for example `wav` or `opus`. When the server refuses the value, Talemate shows the server's error message.
+
+!!! warning "Raw pcm does not play"
+    `pcm` is raw audio with no header, and the browser cannot play it: you hear nothing, and the browser console shows `Unable to decode audio data`. Some servers send `pcm` when no format is requested, which is why Talemate always requests one.
+
 ##### Voices endpoint (optional)
 
 Override the path Talemate uses to list voices. Leave empty to probe a small set of common defaults (see [Refresh voices](#refresh-voices)). Accepts:
@@ -83,7 +94,7 @@ The auto-fetcher tries the optional [Voices endpoint](#voices-endpoint-optional)
 | `audio/speech/voices` | Speaches |
 | `voices` | openedai-speech |
 
-The first path that returns a valid voice list wins. Talemate accepts both flat arrays (`["alloy", "echo"]`) and object payloads (`{"voices": [...]}` / `{"data": [...]}`), with each entry being either a plain string or an object carrying `id` / `voice_id` / `name` plus an optional `label` or `display_name`.
+The first path that returns a valid voice list wins. Talemate accepts flat arrays (`["alloy", "echo"]`) and objects that hold the list under `voices`, `data`, `results` or `items` (`{"voices": [...]}`). Each entry is either a plain string or an object that carries the voice id as `id`, `voice_id`, `_id`, `name` or `voice`, plus an optional display name in `label`, `display_name` or `title`.
 
 ### Servers without a listing endpoint
 
@@ -103,10 +114,34 @@ Voices that aren't auto-fetched can be added manually through the [Voice Library
 4. Fill in the voice:
 
     - **Label** — Display name shown in Talemate.
-    - **Provider ID** — The voice identifier your server expects (e.g. `alloy`, or a custom voice name defined by the server).
+    - **Voice ID** — The voice identifier your server expects (e.g. `alloy`, or a custom voice name defined by the server).
     - **Tags** — Optional descriptive tags for organization and filtering.
 
 Refer to your TTS server's documentation for supported voice identifiers. Once added, voices can be [assigned to characters](voice-library.md#character-voice-assignment) or used as the [narrator voice](settings.md#narrator-voice).
+
+## Fish Audio
+
+[Fish Audio](https://fish.audio) is a hosted TTS service with an OpenAI-compatible endpoint, so it runs as a backend here. You need a Fish Audio API key.
+
+1. Add a backend, for example "Fish Audio".
+2. Fill in its settings:
+
+    | Setting | Value |
+    |---|---|
+    | API Base URL | `https://api.fish.audio/compat/v1` |
+    | API Key | your Fish Audio API key |
+    | Model | `fish-audio/s2.1-pro` |
+    | Response format | `mp3` (the default) |
+    | Voices endpoint | `https://api.fish.audio/model?self=true&page_size=100` |
+
+3. Press **Save**, turn the backend on in [Enabled APIs](settings.md#enabled-apis), then press **Refresh voices**.
+
+The voices endpoint lists the voices that your Fish Audio workspace owns, such as the ones you cloned or designed, up to 100 of them. They arrive in the Voice Library under the names they have on Fish Audio.
+
+A voice from the Fish Voice Library that you do not own is not in that list. Copy its voice id from the Fish Voice Library and [add it manually](#adding-voices-manually), with the id as the **Voice ID**. OpenAI voice names do not work on Fish Audio: `nova`, `echo` and the other OpenAI preset names fail, and `alloy` plays an unrelated voice. Use a Fish voice id.
+
+!!! warning "Keep the response format"
+    When no format is requested, Fish Audio sends raw `pcm`, which the browser cannot play. Keep **Response format** at `mp3`.
 
 ## Auto-managed backends
 
@@ -121,6 +156,10 @@ The agent-level [Automatic Setup](settings.md#automatic-setup) toggle controls w
 **Connection errors**: Verify the base URL is correct (including the `/v1` path) and that the server is running and reachable from Talemate.
 
 **Empty or silent audio**: Confirm your server has a TTS model loaded and that the voice ID you sent is valid for that model. Some servers fall back silently when given an unknown voice.
+
+**No audio, and the browser console shows `Unable to decode audio data`**: The server sent audio in a format the browser cannot play, usually raw `pcm`. Set [Response format](#response-format) to `mp3`.
+
+**A server that worked before now shows an error**: Since 0.40.0 Talemate asks for `mp3` where it used to send no format. Some servers sent `wav` in that case and make `mp3` only through ffmpeg, for example LocalAI or Chatterbox-TTS-Server. Without ffmpeg they refuse the request. Install ffmpeg for the server, or set [Response format](#response-format) to `wav`.
 
 **Authentication errors**: If your server requires an API key, make sure it is set in the per-backend settings. Otherwise leave the field empty.
 

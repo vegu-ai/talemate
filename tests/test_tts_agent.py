@@ -18,11 +18,14 @@ import types
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
+import httpx
+import openai
 import pydantic
 import pytest
 import pytest_asyncio
 
 import talemate.agents.tts as tts_module
+import talemate.agents.tts.openai_compatible as openai_compatible_module
 import talemate.agents.tts.pocket_tts as pocket_tts_module
 import talemate.agents.tts.voice_library as voice_library
 import talemate.emit.async_signals as async_signals
@@ -67,6 +70,38 @@ def _make_voice(
     **kwargs,
 ) -> Voice:
     return Voice(label=label, provider=provider, provider_id=provider_id, **kwargs)
+
+
+# GET https://api.fish.audio/model?self=true, trimmed to a few of the fields
+# Fish Audio's list-models reference documents for each item.
+FISH_AUDIO_MODEL_LISTING = {
+    "total": 2,
+    "items": [
+        {
+            "_id": "9a9cf47702da476aa4629e2506d4a857",
+            "type": "tts",
+            "title": "Warm Narrator",
+            "description": "",
+            "state": "trained",
+            "tags": ["narration"],
+            "languages": ["en"],
+            "visibility": "private",
+            "author": {"_id": "65f0c1d2e3a4b5c6d7e8f901", "nickname": "me"},
+        },
+        {
+            "_id": "e58b0d7efca34eb38d5c4985e378abcb",
+            "type": "tts",
+            "title": "Gruff Innkeeper",
+            "description": "cloned from a sample",
+            "state": "trained",
+            "tags": [],
+            "languages": ["en", "de"],
+            "visibility": "unlist",
+            "author": {"_id": "65f0c1d2e3a4b5c6d7e8f901", "nickname": "me"},
+        },
+    ],
+    "has_more": False,
+}
 
 
 @pytest.fixture
@@ -764,6 +799,183 @@ class TestOpenAICompatibleMixin:
         assert "api_url" not in management.config
         assert "api_key" not in management.config
         assert "model" not in management.config
+
+    def test_response_format_is_a_free_text_field_defaulting_to_mp3(self, tts_agent):
+        self._register(tts_agent)
+        field = tts_agent.actions[self.SLUG].config["response_format"]
+        assert field.type == "text"
+        assert field.value == "mp3"
+        # a text field with choices renders as a closed select
+        assert field.choices is None
+        assert field.scene_overridable is False
+
+    @pytest.mark.asyncio
+    async def test_backend_saved_without_response_format_requests_mp3(self, tts_agent):
+        await tts_agent.apply_config(
+            actions={
+                "openai_compatible": {
+                    "config": {
+                        "dynamic_children": {
+                            "value": json.dumps(
+                                [{"slug": self.SLUG, "label": self.LABEL}]
+                            )
+                        },
+                    },
+                },
+                self.SLUG: {
+                    "config": {
+                        "api_url": {"value": "http://localhost:8000/v1"},
+                        "model": {"value": "tts-1"},
+                    },
+                },
+            },
+        )
+        assert tts_agent._openai_compatible_response_format(self.SLUG) == "mp3"
+
+
+class TestOpenAICompatibleSpeechRequest:
+    """The request ``_openai_compatible_generate`` puts on the wire.
+
+    The real AsyncOpenAI client builds the request; only its transport is
+    replaced, so the assertions see exactly what the server receives.
+    """
+
+    SLUG = "fish"
+    AUDIO = b"ID3\x04\x00fake-mp3-bytes"
+
+    @pytest.fixture
+    def server(self, monkeypatch):
+        control = types.SimpleNamespace(
+            requests=[],
+            reply=lambda request: httpx.Response(200, content=self.AUDIO),
+        )
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            control.requests.append(request)
+            return control.reply(request)
+
+        real_client = openai_compatible_module.AsyncOpenAI
+
+        def make_client(**kwargs):
+            transport = httpx.MockTransport(handler)
+            # no retries, so a failing request is sent once
+            return real_client(
+                http_client=httpx.AsyncClient(transport=transport),
+                max_retries=0,
+                **kwargs,
+            )
+
+        monkeypatch.setattr(openai_compatible_module, "AsyncOpenAI", make_client)
+        return control
+
+    @pytest.fixture
+    def statuses(self, monkeypatch) -> list[dict]:
+        emitted: list[dict] = []
+
+        def _emit(typ, message=None, **kwargs):
+            emitted.append({"typ": typ, "message": message, **kwargs})
+
+        monkeypatch.setattr(openai_compatible_module, "emit", _emit)
+        return emitted
+
+    async def _generate(self, tts_agent, response_format: str | None = None) -> bytes:
+        tts_agent.register_dynamic_child("openai_compatible", self.SLUG, "Fish Audio")
+        config = tts_agent.actions[self.SLUG].config
+        config["api_url"].value = "https://api.fish.audio/compat/v1"
+        config["api_key"].value = "fish-key"
+        config["model"].value = "fish-audio/s2.1-pro"
+        if response_format is not None:
+            config["response_format"].value = response_format
+        chunk = Chunk(
+            text=["Hello there"],
+            type="dialogue",
+            api=self.SLUG,
+            voice=Voice(label="Narrator", provider=self.SLUG, provider_id="9a9cf477"),
+        )
+        return await tts_agent._openai_compatible_generate(
+            self.SLUG, chunk, GenerationContext()
+        )
+
+    @pytest.mark.asyncio
+    async def test_requests_mp3_by_default(self, tts_agent, server):
+        audio = await self._generate(tts_agent)
+
+        assert audio == self.AUDIO
+        assert len(server.requests) == 1
+        request = server.requests[0]
+        assert str(request.url) == "https://api.fish.audio/compat/v1/audio/speech"
+        assert request.headers["Authorization"] == "Bearer fish-key"
+        assert json.loads(request.content) == {
+            "model": "fish-audio/s2.1-pro",
+            "voice": "9a9cf477",
+            "input": "Hello there.",
+            "response_format": "mp3",
+        }
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "configured",
+        # mp3_44100_128 is outside the SDK's response_format Literal; the
+        # setting is a free choice, so it must still reach the server as typed
+        ["wav", "opus", "pcm", "mp3_44100_128"],
+    )
+    async def test_sends_the_configured_format(self, tts_agent, server, configured):
+        await self._generate(tts_agent, response_format=configured)
+
+        assert json.loads(server.requests[0].content)["response_format"] == configured
+
+    @pytest.mark.asyncio
+    async def test_empty_format_requests_mp3(self, tts_agent, server):
+        await self._generate(tts_agent, response_format="")
+
+        assert json.loads(server.requests[0].content)["response_format"] == "mp3"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("configured", "requested"), [(" wav ", "wav"), ("   ", "mp3")]
+    )
+    async def test_strips_the_configured_format(
+        self, tts_agent, server, configured, requested
+    ):
+        await self._generate(tts_agent, response_format=configured)
+
+        assert json.loads(server.requests[0].content)["response_format"] == requested
+
+    @pytest.mark.asyncio
+    async def test_refused_format_shows_the_server_error(
+        self, tts_agent, server, statuses
+    ):
+        server.reply = lambda request: httpx.Response(
+            422, json={"detail": "unsupported response_format: flac"}
+        )
+
+        with pytest.raises(openai.UnprocessableEntityError):
+            await self._generate(tts_agent, response_format="flac")
+
+        assert len(server.requests) == 1
+        assert len(statuses) == 1
+        assert statuses[0]["typ"] == "status"
+        assert statuses[0]["status"] == "error"
+        assert statuses[0]["message"].startswith("Fish Audio: ")
+        assert "unsupported response_format: flac" in statuses[0]["message"]
+
+    @pytest.mark.asyncio
+    async def test_unreachable_server_shows_an_error(self, tts_agent, server, statuses):
+        def refuse(request):
+            raise httpx.ConnectError("connection refused", request=request)
+
+        server.reply = refuse
+
+        with pytest.raises(openai.APIConnectionError):
+            await self._generate(tts_agent)
+
+        assert statuses == [
+            {
+                "typ": "status",
+                "message": "Fish Audio: Connection error.",
+                "status": "error",
+            }
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -2444,6 +2656,86 @@ class TestParseVoicesPayload:
         # Numbers, lists, etc. don't match either branch — they're skipped.
         voices = _parse_voices_payload([42, ["nope"], "alpha"], "test-be")
         assert [v.provider_id for v in voices] == ["alpha"]
+
+    def test_items_container(self):
+        payload = {"items": [{"id": "alpha"}]}
+        voices = _parse_voices_payload(payload, "test-be")
+        assert [v.provider_id for v in voices] == ["alpha"]
+
+    def test_underscore_id_with_title(self):
+        voices = _parse_voices_payload([{"_id": "abc123", "title": "Alpha"}], "test-be")
+        assert [(v.provider_id, v.label) for v in voices] == [("abc123", "Alpha")]
+
+    def test_ids_rank_before_names_and_title_after_display_name(self):
+        voices = _parse_voices_payload(
+            [
+                {"id": "a", "_id": "mongo-a", "name": "A"},
+                {"_id": "mongo-b", "name": "B", "title": "Title B"},
+                {"_id": "mongo-c", "display_name": "Display C", "title": "Title C"},
+            ],
+            "test-be",
+        )
+        assert [(v.provider_id, v.label) for v in voices] == [
+            ("a", "A"),
+            ("mongo-b", "Title B"),
+            ("mongo-c", "Display C"),
+        ]
+
+    def test_fish_audio_model_listing(self):
+        voices = _parse_voices_payload(FISH_AUDIO_MODEL_LISTING, "fish")
+        assert [(v.provider_id, v.label, v.provider) for v in voices] == [
+            ("9a9cf47702da476aa4629e2506d4a857", "Warm Narrator", "fish"),
+            ("e58b0d7efca34eb38d5c4985e378abcb", "Gruff Innkeeper", "fish"),
+        ]
+
+
+class TestOpenAICompatibleVoicesEndpoint:
+    """Refresh voices through a backend's Voices endpoint override."""
+
+    SLUG = "fish"
+    FISH_LISTING_URL = "https://api.fish.audio/model?self=true&page_size=100"
+
+    @pytest.fixture
+    def listing_requests(self, monkeypatch) -> list[httpx.Request]:
+        requests: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return httpx.Response(200, json=FISH_AUDIO_MODEL_LISTING)
+
+        real_client = httpx.AsyncClient
+
+        def make_client(**kwargs):
+            return real_client(transport=httpx.MockTransport(handler), **kwargs)
+
+        monkeypatch.setattr(openai_compatible_module.httpx, "AsyncClient", make_client)
+        return requests
+
+    @pytest.mark.asyncio
+    async def test_refresh_reads_fish_audio_listing(
+        self, tts_agent, fresh_voice_library, listing_requests, monkeypatch
+    ):
+        async def _fake_save(library):
+            pass
+
+        monkeypatch.setattr(voice_library, "save_voice_library", _fake_save)
+
+        tts_agent.register_dynamic_child("openai_compatible", self.SLUG, "Fish Audio")
+        config = tts_agent.actions[self.SLUG].config
+        config["api_url"].value = "https://api.fish.audio/compat/v1"
+        config["api_key"].value = "fish-key"
+        config["voices_endpoint"].value = self.FISH_LISTING_URL
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count == 2
+        assert [str(r.url) for r in listing_requests] == [self.FISH_LISTING_URL]
+        assert listing_requests[0].headers["Authorization"] == "Bearer fish-key"
+        library = fresh_voice_library.voices
+        assert library["fish:9a9cf47702da476aa4629e2506d4a857"].label == "Warm Narrator"
+        assert (
+            library["fish:e58b0d7efca34eb38d5c4985e378abcb"].label == "Gruff Innkeeper"
+        )
 
 
 class TestResolveVoicesUrl:

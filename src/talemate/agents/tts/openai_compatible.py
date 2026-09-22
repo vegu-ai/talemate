@@ -15,8 +15,9 @@ from urllib.parse import urljoin, urlparse
 
 import httpx
 import structlog
-from openai import AsyncOpenAI
+from openai import APIError, AsyncOpenAI
 
+from talemate.emit import emit
 from talemate.ux.schema import Action
 from talemate.agents.base import (
     AgentAction,
@@ -29,6 +30,10 @@ from .schema import Voice, VoiceLibrary, Chunk, GenerationContext, INFO_CHUNK_SI
 log = structlog.get_logger("talemate.agents.tts.openai_compatible")
 
 REGISTRY_KEY = "openai_compatible"
+
+# Always sent: servers differ in their default, and Fish Audio's default is
+# headerless pcm, which the browser's decodeAudioData cannot play.
+DEFAULT_RESPONSE_FORMAT = "mp3"
 
 OPENAI_COMPATIBLE_INFO = """
 Connect to any TTS service that exposes an OpenAI-compatible `/v1/audio/speech` endpoint (e.g. vLLM, LocalAI, Speaches, etc.).
@@ -154,6 +159,17 @@ class OpenAICompatibleMixin:
                     description="Model identifier to send in requests",
                     scene_overridable=False,
                 ),
+                "response_format": AgentActionConfig(
+                    type="text",
+                    value=DEFAULT_RESPONSE_FORMAT,
+                    label="Response format",
+                    description=(
+                        "Audio format to request from the server (e.g. mp3, wav, "
+                        "opus). The browser must be able to play it, so raw pcm "
+                        "does not work. Leave empty for mp3."
+                    ),
+                    scene_overridable=False,
+                ),
                 "voices_endpoint": AgentActionConfig(
                     type="text",
                     value="",
@@ -195,6 +211,10 @@ class OpenAICompatibleMixin:
 
     def _openai_compatible_model(self, backend: str) -> str:
         return self._backend_config(backend).get("model", "") or "tts-1"
+
+    def _openai_compatible_response_format(self, backend: str) -> str:
+        value = self._backend_config(backend).get("response_format") or ""
+        return value.strip() or DEFAULT_RESPONSE_FORMAT
 
     def _openai_compatible_voices_endpoint(self, backend: str) -> str:
         return self._backend_config(backend).get("voices_endpoint", "") or ""
@@ -273,11 +293,21 @@ class OpenAICompatibleMixin:
             base_url=self._openai_compatible_api_url(backend),
         )
         model = chunk.model or self._openai_compatible_model(backend)
-        response = await client.audio.speech.create(
-            model=model,
-            voice=chunk.voice.provider_id,
-            input=chunk.cleaned_text,
-        )
+        try:
+            response = await client.audio.speech.create(
+                model=model,
+                voice=chunk.voice.provider_id,
+                input=chunk.cleaned_text,
+                # free text: the SDK types response_format as OpenAI's own formats
+                extra_body={
+                    "response_format": self._openai_compatible_response_format(backend)
+                },
+            )
+        except APIError as exc:
+            action = self.actions.get(backend)
+            label = action.label if action else backend
+            emit("status", message=f"{label}: {exc.message}", status="error")
+            raise
         return response.content
 
     # ------------------------------------------------------------------
@@ -353,14 +383,15 @@ def _parse_voices_payload(payload, backend: str) -> list[Voice]:
     """Extract Voice objects from a tolerant set of response shapes.
 
     Accepts:
-    - ``{"voices": [...], "data": [...]}`` containers
+    - ``{"voices": [...]}``, ``{"data": [...]}``, ``{"results": [...]}`` and
+      ``{"items": [...]}`` containers
     - flat ``[...]`` arrays
-    - elements that are strings, or dicts with ``id``/``name``/``voice_id``
-      and optional ``label``/``display_name``
+    - elements that are strings, or dicts with ``id``/``voice_id``/``_id``/
+      ``name``/``voice`` and optional ``label``/``display_name``/``title``
     """
     items = None
     if isinstance(payload, dict):
-        for key in ("voices", "data", "results"):
+        for key in ("voices", "data", "results", "items"):
             if isinstance(payload.get(key), list):
                 items = payload[key]
                 break
@@ -378,12 +409,14 @@ def _parse_voices_payload(payload, backend: str) -> list[Voice]:
             provider_id = (
                 entry.get("id")
                 or entry.get("voice_id")
+                or entry.get("_id")
                 or entry.get("name")
                 or entry.get("voice")
             )
             label = (
                 entry.get("label")
                 or entry.get("display_name")
+                or entry.get("title")
                 or entry.get("name")
                 or provider_id
             )

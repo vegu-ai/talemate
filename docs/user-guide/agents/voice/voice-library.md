@@ -53,7 +53,7 @@ To add a new voice:
 2. Select the TTS provider
 3. Configure the voice parameters:
    - **Label** - Display name for the voice
-   - **Provider ID** - Provider-specific identifier
+   - **Voice ID** - Provider-specific identifier
    - **Tags** - Free-form descriptive tags you define (gender, age, style, etc.)
    - **Parameters** - Provider-specific settings
 

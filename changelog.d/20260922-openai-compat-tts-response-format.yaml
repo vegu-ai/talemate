@@ -1,0 +1,8 @@
+fixed:
+  - "OpenAI Compatible TTS: Backends now request mp3 audio explicitly. A server that answers with raw PCM when no format is requested, such as Fish Audio, no longer produces audio the browser cannot play."
+  - "OpenAI Compatible TTS: The Voices endpoint override also reads listings that put voices under `items` with `_id` and `title` fields, so Fish Audio's voice listing fills the voice library."
+  - "OpenAI Compatible TTS: A request the server refuses, for example an unsupported Response format, shows the server's error message instead of failing silently."
+added:
+  - "OpenAI Compatible TTS: A Response format setting on each backend picks the audio format requested from the server (default mp3), for servers that need wav, opus or another format."
+changed:
+  - "OpenAI Compatible TTS: Existing backends now request mp3 where they previously sent no format. KoboldCpp 1.116.1 and later now returns mp3 instead of wav. A server that sent wav before and cannot make mp3, for example LocalAI or Chatterbox-TTS-Server without ffmpeg, now refuses the request: set Response format to wav."

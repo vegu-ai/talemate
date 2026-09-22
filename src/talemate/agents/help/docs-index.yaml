@@ -344,9 +344,9 @@
     weights totaling one and add tags. Mixed voices can be assigned to characters or used for narration.'
 - path: user-guide/agents/voice/openai-compatible.md
   title: OpenAI Compatible
-  summary: Register multiple OpenAI-compatible TTS backends with independent URL, key, model, voice endpoint and chunk size,
-    then enable them in Enabled APIs. Covers immediate add/rename/remove, Refresh voices endpoint discovery, manual voice
-    IDs, save requirements and KoboldCpp auto-managed backends.
+  summary: Register multiple OpenAI-compatible TTS backends with independent URL, key, model, response format (mp3 default),
+    voice endpoint and chunk size, then enable them in Enabled APIs. Covers immediate add/rename/remove, Refresh voices endpoint
+    discovery, manual voice IDs, save requirements, Fish Audio setup and KoboldCpp auto-managed backends.
 - path: user-guide/agents/voice/openai.md
   title: OpenAI
   summary: OpenAI TTS setup using a shared API key, model selection among GPT-4o Mini TTS, TTS-1 and TTS-1-HD, and chunk size

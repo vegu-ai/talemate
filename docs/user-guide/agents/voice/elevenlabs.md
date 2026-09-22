@@ -40,6 +40,6 @@ ElevenLabs requires an API key. See the [ElevenLabs API setup](/talemate/user-gu
 
 **Label:** Descriptive name for the voice
 
-**Provider ID:** Paste the ElevenLabs voice ID you copied
+**Voice ID:** Paste the ElevenLabs voice ID you copied
 
 **Tags:** Add descriptive tags for organization

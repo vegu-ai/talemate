@@ -286,8 +286,9 @@
 - path: user-guide/agents/visualizer/backends/openrouter.md
   title: OpenRouter
   summary: OpenRouter visual backend for image generation, editing and analysis through separately configured models and shared
-    API key. Covers unfiltered model capability checks, Max References, aspect ratios and Only use these providers/Ignore
-    these providers routing filters.
+    API key. Covers the image model list, image-only models such as Ming Image and Muse Image, typed model ids, the
+    unfiltered analysis list, Max References, aspect ratios and Only use these providers/Ignore these providers routing
+    filters.
 - path: user-guide/agents/visualizer/backends/sdnext.md
   title: SD.Next
   summary: SD.Next image generation and single-reference img2img editing setup with API URL, None/Basic/Bearer authentication,

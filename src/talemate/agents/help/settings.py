@@ -51,7 +51,15 @@ REDACTED = "(hidden)"
 
 # field types the update tool can write - everything else (tables, weights,
 # vectors, template pickers, ...) is UI-only
-WRITABLE_FIELD_TYPES = ("bool", "number", "text", "autocomplete", "blob", "flags")
+WRITABLE_FIELD_TYPES = (
+    "bool",
+    "number",
+    "text",
+    "autocomplete",
+    "combobox",
+    "blob",
+    "flags",
+)
 
 READABLE_CONFIG_SECTIONS = ("game", "appearance", "creator", "presets", "prompts")
 WRITABLE_CONFIG_SECTIONS = ("game", "appearance", "creator")
@@ -156,7 +164,8 @@ def _coerce_value(field: "AgentActionConfig", value: Any) -> Any:
     else:
         coerced = value if isinstance(value, str) else str(value)
 
-    if field.choices:
+    # a combobox offers its choices as suggestions and keeps any other value
+    if field.choices and field.type != "combobox":
         return _resolve_choice(field, coerced)
 
     return coerced
@@ -178,6 +187,8 @@ def _field_payload(
             {"label": choice["label"], "value": choice["value"]}
             for choice in field.choices
         ]
+        if field.type == "combobox":
+            payload["other_values"] = "accepted, the choices are suggestions"
     if field.min is not None:
         payload["min"] = field.min
     if field.max is not None:

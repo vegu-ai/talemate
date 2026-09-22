@@ -923,6 +923,27 @@ async def test_update_agent_setting_validation(settings_env):
 
 
 @pytest.mark.asyncio
+async def test_update_agent_setting_combobox_keeps_a_value_outside_the_choices(
+    settings_env,
+):
+    agent = instance.get_agent("conversation")
+    agent.actions["generation_override"].config["format"].type = "combobox"
+
+    payload = help_settings.read_agent_settings("conversation")
+    fmt = payload["actions"]["generation_override"]["settings"]["format"]
+    assert fmt["other_values"] == "accepted, the choices are suggestions"
+    assert "read_only" not in fmt
+
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "format", "my-own-format"
+    )
+    assert result["new_value"] == "my-own-format"
+    assert (
+        agent.actions["generation_override"].config["format"].value == "my-own-format"
+    )
+
+
+@pytest.mark.asyncio
 async def test_update_agent_setting_refuses_secret_fields(settings_env):
     agent = instance.get_agent("conversation")
     agent.actions["generation_override"].config["instructions"].type = "password"

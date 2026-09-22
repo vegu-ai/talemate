@@ -69,6 +69,25 @@
     <template v-if="$slots.prepend" v-slot:prepend><slot name="prepend" /></template>
   </v-autocomplete>
 
+  <!-- combobox (the choices are suggestions, any typed value is kept) -->
+  <v-combobox
+    v-else-if="field.type === 'combobox'"
+    :model-value="modelValue"
+    @update:modelValue="onValueAndChange"
+    :items="field.choices || []"
+    :return-object="false"
+    :readonly="readonly"
+    :label="field.label"
+    :hint="field.description"
+    :rules="requiredRules"
+    item-title="label"
+    item-value="value"
+    density="compact"
+    class="mt-3"
+  >
+    <template v-if="$slots.prepend" v-slot:prepend><slot name="prepend" /></template>
+  </v-combobox>
+
   <!-- wstemplate (world-state template selector) -->
   <v-autocomplete
     v-else-if="field.type === 'wstemplate'"

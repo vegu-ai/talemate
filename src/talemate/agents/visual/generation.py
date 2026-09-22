@@ -22,6 +22,7 @@ from .schema import (
     FORMAT_TYPE,
 )
 from .exceptions import ImageEditNotAvailableError, TextToImageNotAvailableError
+from .backends import describe_error
 
 log = structlog.get_logger("talemate.agents.visual.generation")
 
@@ -29,6 +30,16 @@ async_signals.register(
     "agent.visual.generation.before_generate",
     "agent.visual.generation.after_generate",
 )
+
+# an error body can be a whole HTML page; the notification gets one short line
+STATUS_REASON_LIMIT = 300
+
+
+def status_reason(reason: str) -> str:
+    line = next(iter(reason.strip().splitlines()), reason)
+    if len(line) > STATUS_REASON_LIMIT:
+        return line[: STATUS_REASON_LIMIT - 1].rstrip() + "…"
+    return line
 
 
 class GenerationEmission(AgentEmission):
@@ -99,12 +110,18 @@ class GenerationMixin:
     # errors
 
     async def on_image_generation_error(self, error: Exception):
+        reason = describe_error(error)
         emit(
             "image_generation_failed",
             websocket_passthrough=True,
-            data={"error": str(error)},
+            data={"error": reason},
         )
-        emit("status", "Image generation failed.", status="error")
+        # the status notification is where the user sees the reason
+        emit(
+            "status",
+            f"Image generation failed: {status_reason(reason)}",
+            status="error",
+        )
 
     def _track_generation_task(self, task: asyncio.Task, backend: object):
         """

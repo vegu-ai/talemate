@@ -20,6 +20,7 @@ __all__ = [
 # (talemate_frontend/src/components/UxField.vue).
 FieldType = Literal[
     "autocomplete",
+    "combobox",
     "blob",
     "bool",
     "flags",
@@ -38,6 +39,7 @@ FieldType = Literal[
 # explicitly so adding one forces a decision here; the test keeps it exhaustive.
 FIELD_TYPE_IS_SECRET: dict[FieldType, bool] = {
     "autocomplete": False,
+    "combobox": False,
     "blob": False,
     "bool": False,
     "flags": False,

@@ -340,7 +340,9 @@ async def test_unrevised_fallback_is_analyzed_once(flow, monkeypatch, outcome):
 @pytest.mark.asyncio
 async def test_empty_selected_source_is_registered_before_explicit_analysis(flow):
     t = flow
-    message = NarratorMessage(message="The brass key is here.")
+    message = NarratorMessage(
+        message="The brass key is here.", present=["Alice", "Bob"]
+    )
     t.scene.history.append(message)
     from talemate.knowledge.perspectives import bind_message_source
 

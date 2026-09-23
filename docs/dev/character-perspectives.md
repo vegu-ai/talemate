@@ -107,7 +107,7 @@ interface.** It returns `CharacterView`:
 | Status | Meaning |
 | --- | --- |
 | `ready` | Complete usable text, with source/view identity and acquisition point. |
-| `omitted` | Explicit saved decision that this entry is wholly unknown to the audience. |
+| `omitted` | A saved omission, or a missing message view for a character outside the passage's recorded presence. |
 | `pending` | Recorded work is pending, or revision/content/dependencies are stale. |
 | `failed` | The producer recorded failure; no text is available. |
 | `unavailable` | No record/view exists for this source/audience, or the scene uses legacy mode. |
@@ -172,17 +172,21 @@ Explicit analysis uses the background-task mechanism, so Retry/Cancel/Ignore fra
 generation still awaits required views. Untouched historical messages
 without records are not backfilled. An ordinary save/load retains incomplete
 records so the next dependent generation can retry them. A finalized passage with
-no relevant cast receives no empty record; the live lifecycle defers it until a cast
-is available. This runtime deferral does not backfill untracked history after reload.
+no recorded audience receives no empty record. Activating a character later does
+not backfill it.
 
 The shared scene-mode predicate from `talemate.knowledge.mode` governs all
 new requests.
 Activation uses the public new-story opt-in; perception does not manage character activation.
 
 The shared `summarizer.perceptions` prompt makes one analytical request per
-finalized source attempt for the relevant cast: the union of the passage's persisted
-presence list and currently active characters, resolved to canonical scene names.
-Other inactive character records are excluded. The answer budget is at least 2048
+finalized source attempt for the passage's persisted presence list, resolved to
+canonical scene names. Current activation does not expand that audience. A missing or stale
+view for an absent character selects as omitted without a request or a stored-view
+rewrite, including a passage with no knowledge record; explicit references to missing view IDs still select as unavailable.
+Current saved views remain selectable. Reading a stored view outside recorded presence that fails freshness checks selects as omitted without changing its data. When analysis runs for a present character, a stale absent view keeps its ID and audience as a pending record, with its old text and evidence cleared; that record remains in the final successful write and is never analyzed for the absent character. If analysis fails, the record remains stored as failed. The backlog estimate propagates invalidation through absent views but counts a dependent passage only when an affected audience was recorded as present there. Missing
+presence is an empty list: it adds no required audience and triggers no analysis.
+Neither a name in the prose nor the speaker implies presence. The answer budget is at least 2048
 tokens and scales as audience count times (source token count plus 256), using the
 client's dynamic analysis kind. The request uses
 up to 12 preceding eligible passages as physical author context,
@@ -550,10 +554,14 @@ its dependent summaries too. Ready and omitted summaries require terminal ready
 or omitted dependencies; pending/failed records can retain non-readable
 dependencies. An all-omitted input produces an omitted summary without a request.
 An analyzed source with no view for a character contributes no text; its source-only
-reference records that absence, so adding a view invalidates the partial summary.
+reference records that absence. Publishing changed analyzed views invalidates dependent
+summaries; a hand edit that adds an absent character's view leaves existing ready
+summaries unchanged, following the hand-edit contract above.
 Thus a character joining partway through a span can receive a summary of the portion
-they know. A source with no analysis record, or a pending/failed assigned view, stays
-pending and cannot produce a falsely ready summary.
+they know. A message with no analysis record contributes an omission with no source
+reference for a character outside its recorded presence; missing presence is empty.
+A recordless message for a present character, or their pending/failed assigned view,
+stays pending and cannot produce a falsely ready summary.
 Static or untracked historical entries are not reconstructed.
 
 Audience summary prompts receive selected source prose, with no reader previous

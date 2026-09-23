@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Literal
 
 import pydantic
 
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspectives import (
     PerspectiveReadContext,
     message_view_dependents,
@@ -55,15 +56,26 @@ def message_view(
 ) -> MessageView:
     if not message.supports_perceptions:
         return MessageView(status="unsupported")
-    if perception_running(scene, message):
-        return MessageView(status="running")
-    if message.revision_state is not None and not message.revision_matches_baseline:
-        return MessageView(status="deferred")
+    running = perception_running(scene, message)
+    deferred = (
+        message.revision_state is not None and not message.revision_matches_baseline
+    )
+    absent = character_knowledge_enabled(scene) and character not in (
+        message.present or ()
+    )
     reference = source_reference(scene, "message", message.id, read=read)
     if reference is None:
-        return MessageView(status="unavailable", editable=True)
-    view = select_character_view(scene, reference, character, read=read)
-    return MessageView(status=view.status, text=view.text, editable=True)
+        view = MessageView(status="omitted" if absent else "unavailable", editable=True)
+    else:
+        selected = select_character_view(scene, reference, character, read=read)
+        view = MessageView(status=selected.status, text=selected.text, editable=True)
+    if absent and view.status == "omitted":
+        return view.model_copy(update={"editable": not running and not deferred})
+    if running:
+        return MessageView(status="running")
+    if deferred:
+        return MessageView(status="deferred")
+    return view
 
 
 def intro_view(

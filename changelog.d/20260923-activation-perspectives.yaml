@@ -1,0 +1,2 @@
+fixed:
+  - "Activating or returning a character no longer re-analyzes passages where they were absent."

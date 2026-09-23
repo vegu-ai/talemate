@@ -351,7 +351,7 @@ async def test_failed_perceptions_block_actor_generation(
     setup, monkeypatch, agent_name
 ):
     scene, summarizer, request = setup
-    message = CharacterMessage(message="Alice: Hello.")
+    message = CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
     scene.history.append(message)
     set_source_perspectives(
         scene, "message", message.id, [{"audience": ["Alice"], "status": "failed"}]
@@ -373,7 +373,7 @@ async def test_failed_perceptions_block_actor_generation(
 def test_prompt_context_separates_reader_from_prior_knowledge(setup):
     scene, summarizer, request = setup
     previous = CharacterMessage(message="Alice: Secret thought. Public hello.")
-    message = NarratorMessage(message="A bell rings.")
+    message = NarratorMessage(message="A bell rings.", present=["Alice", "Bob"])
     scene.history.extend([previous, message])
     set_source_perspectives(
         scene,
@@ -421,7 +421,7 @@ async def test_cancelled_passage_is_emitted_without_releasing_dependents(
 async def test_saved_incomplete_source_resumes_without_backfill(setup, status):
     scene, summarizer, request = setup
     old = CharacterMessage(message="Alice: Old untracked prose.")
-    message = CharacterMessage(message="Alice: Hello.")
+    message = CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
     scene.history.extend([old, message])
     set_source_perspectives(
         scene,
@@ -835,8 +835,8 @@ async def test_relevant_cast_and_scaled_answer_budget(setup):
         {f"Person{i}": Character(name=f"Person{i}") for i in range(40)}
     )
     scene.active_characters = ["Alice", *(f"Person{i}" for i in range(10))]
-    message = NarratorMessage(message="A long passage. " * 200, present=["Bob"])
-    names = ["Alice", "Bob", *(f"Person{i}" for i in range(10))]
+    names = ["Bob", *(f"Person{i}" for i in range(10))]
+    message = NarratorMessage(message="A long passage. " * 200, present=names)
     request.return_value = result(
         json.dumps(
             {
@@ -857,11 +857,17 @@ async def test_relevant_cast_and_scaled_answer_budget(setup):
     context = request.await_args.kwargs["vars"]["context"]
     assert {character["name"] for character in context["cast"]} == set(names)
     assert max_tokens_for_kind(request.await_args.args[2], 32768) > 2048
-    assert len(message.knowledge.views) == 12
+    assert len(message.knowledge.views) == 11
+    assert (
+        select_character_view(
+            scene, source_reference(scene, "message", message.id), "Alice"
+        ).status
+        == "omitted"
+    )
 
 
 @pytest.mark.asyncio
-async def test_empty_cast_defers_without_permanent_empty_record(setup):
+async def test_empty_presence_is_not_backfilled_when_a_cast_activates(setup):
     scene, summarizer, request = setup
     scene.active_characters = []
     message = NarratorMessage(message="The room is quiet.")
@@ -870,8 +876,8 @@ async def test_empty_cast_defers_without_permanent_empty_record(setup):
     request.assert_not_awaited()
     scene.active_characters = ["Alice", "Bob"]
     await summarizer.ensure_perceptions(scene)
-    assert message.knowledge.views
-    request.assert_awaited_once()
+    assert message.knowledge is None
+    request.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -925,7 +931,7 @@ async def test_drop_unoffered_analytical_input_ids(setup):
     from talemate.agents.summarize.perceptions import resolve_perception_inputs
 
     scene, _, _ = setup
-    message = CharacterMessage(message="Alice: Hello.")
+    message = CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
     scene.history.append(message)
     payload = json.loads(answer())
     payload["views"][0]["knowledge_ids"] = ["K1-999"]

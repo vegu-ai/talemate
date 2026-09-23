@@ -32,7 +32,7 @@ def cast(scene, monkeypatch):
         scene.actors.append(actor)
         scene.character_data[name] = character
     scene.active_characters = ["Alice", "Bob", "Cara"]
-    mixed = CharacterMessage(message=READER)
+    mixed = CharacterMessage(message=READER, present=["Alice", "Bob", "Cara"])
     omitted = NarratorMessage(message="UNSEEN-VAULT-CODE")
     untracked = NarratorMessage(message="UNTRACKED-PRIVATE-HISTORY")
     scene.history = [mixed, omitted, untracked]
@@ -559,6 +559,7 @@ async def test_queued_revision_only_shares_cancellation_from_its_prefix(
     later = NarratorMessage(message="Later passage.")
     scene.history.extend([target, later])
     failed = mixed if failure_in_prefix else later
+    failed.present = ["Bob"]
     set_source_perspectives(
         scene, "message", failed.id, [{"audience": ["Bob"], "status": "failed"}]
     )

@@ -90,13 +90,19 @@ def _project_character_message(
         return message.as_format(scene.conversation_format)
     reference = source_reference(scene, "message", message.id, read=read)
     if reference is None:
+        absent = character not in (message.present or ())
         if diagnostics is not None:
-            diagnostics.exclude("message", message.id, str(message), "not_in_audience")
+            diagnostics.exclude(
+                "message",
+                message.id,
+                str(message),
+                "omitted" if absent else "not_in_audience",
+            )
         log.debug(
             "character_history.skip",
             message_id=message.id,
             viewer=character,
-            status="unavailable",
+            status="omitted" if absent else "unavailable",
         )
         return None
     view = select(reference)

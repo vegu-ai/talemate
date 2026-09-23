@@ -124,9 +124,7 @@ async def test_character_preview_matches_conversation_history_and_reports_absenc
         item["kind"] == "intro" and item["reason"] == "absent"
         for item in preview["exclusions"]
     )
-    expected = (
-        "not_in_audience" if scene.knowledge_eligibility == "perception" else "absent"
-    )
+    expected = "omitted" if scene.knowledge_eligibility == "perception" else "absent"
     assert any(
         item["id"] == scene.history[0].id and item["reason"] == expected
         for item in preview["exclusions"]
@@ -498,9 +496,7 @@ async def test_character_preview_uses_client_window_and_bounds_exclusion_samples
                 message.id,
                 [{"audience": ["Alice"], "status": "ready", "text": str(message)}],
             )
-    reason = (
-        "not_in_audience" if scene.knowledge_eligibility == "perception" else "absent"
-    )
+    reason = "omitted" if scene.knowledge_eligibility == "perception" else "absent"
     preview = await character_context_review(
         scene, scene.character_data["Bob"], ContextHistoryPreviewOverrides(max_budget=0)
     )

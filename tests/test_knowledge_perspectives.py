@@ -94,6 +94,7 @@ def test_distinct_shared_and_reader_content(scene, scene_data):
     ],
 )
 def test_explicit_omission_differs_from_unavailable(scene, name, status):
+    scene.history[0].present = [name]
     result = select_character_view(scene, message_ref(scene), name)
     assert result.status == status
     assert result.text is None
@@ -166,6 +167,8 @@ def test_text_changes_advance_revision_and_invalidate_descendants(
     scene, notifications, edit
 ):
     message = scene.history[0]
+    message.present = ["Alice"]
+    message.mark_revision_committed()
     original = message_ref(scene)
     disclosure = source_reference(scene, "disclosure", "disclosure-1")
     if edit == "direct":
@@ -282,9 +285,7 @@ def test_rename_retains_views_and_does_not_grant_old_name(scene, notifications):
     assert "Bob" not in scene.character_data
     scene.character_data["Bob"] = Character(name="Bob")
     assert select_character_view(scene, message_ref(scene), "Robert").status == "ready"
-    assert (
-        select_character_view(scene, message_ref(scene), "Bob").status == "unavailable"
-    )
+    assert select_character_view(scene, message_ref(scene), "Bob").status == "omitted"
     disclosure = source_reference(scene, "disclosure", "disclosure-1")
     assert select_character_view(scene, disclosure, "Robert").status == "ready"
     assert select_character_view(scene, disclosure, "Bob").status == "unavailable"
@@ -479,7 +480,7 @@ def test_replacing_audience_views_invalidates_dependents(scene, notifications):
     assert ref.revision == 1
     assert scene.history[0].knowledge.views[0].revision == 2
     assert scene.history[0].knowledge.acquired == previous_acquisition
-    assert select_character_view(scene, ref, "Bob").status == "unavailable"
+    assert select_character_view(scene, ref, "Bob").status == "omitted"
     assert scene.archived_history[0]["knowledge"]["views"][0]["status"] == "pending"
     assert notifications[-1].reason == "views"
 
@@ -587,7 +588,9 @@ async def test_character_deletion_save_reload_and_name_reuse(
         ("summary", "layer-1", 1),
     ]:
         ref = source_reference(load_env, kind, identity, layer=layer)
-        assert select_character_view(load_env, ref, name).status == "unavailable"
+        assert select_character_view(load_env, ref, name).status == (
+            "omitted" if kind == "message" else "unavailable"
+        )
     ref = source_reference(load_env, "disclosure", shared.id)
     assert select_character_view(load_env, ref, name).status == "unavailable"
     assert select_character_view(load_env, ref, "Dan").text == "Shared evidence"
@@ -640,6 +643,8 @@ def test_dependency_edit_preserves_sibling_views_and_reader_revision(
 
 @pytest.mark.parametrize("explicit_id", [False, True])
 def test_retry_preserves_sibling_identity_and_dependents(scene, explicit_id):
+    scene.history[0].present = ["Alice", "Bob"]
+    scene.history[0].mark_revision_committed()
     outputs = [
         {"audience": ["Alice"], "status": "ready", "text": "Ledger."},
         {"audience": ["Bob"], "status": "failed"},
@@ -679,6 +684,8 @@ def test_retry_preserves_sibling_identity_and_dependents(scene, explicit_id):
 @pytest.mark.parametrize("dep_status", ["ready", "omitted", "pending", "failed"])
 @pytest.mark.parametrize("out_status", ["ready", "omitted", "pending", "failed"])
 def test_dependency_currency_readability_matrix(scene, dep_status, out_status):
+    scene.history[0].present = ["Alice"]
+    scene.history[0].mark_revision_committed()
     dep = {"audience": ["Alice"], "status": dep_status}
     if dep_status == "ready":
         dep["text"] = "Evidence."

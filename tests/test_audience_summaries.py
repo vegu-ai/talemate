@@ -205,6 +205,8 @@ async def test_editing_one_audience_preserves_ready_sibling_summaries(summary_sc
 async def test_incomplete_input_never_produces_ready_summary(summary_scene, status):
     scene, summarizer, calls = summary_scene
     message = scene.history[1]
+    message.present = ["Alice", "Bob", "Cara"]
+    message.mark_revision_committed()
     outputs = [{"audience": ["Alice"], "status": "ready", "text": PRIVATE}]
     if status != "unavailable":
         outputs.append({"audience": ["Bob", "Cara"], "status": status})
@@ -213,6 +215,51 @@ async def test_incomplete_input_never_produces_ready_summary(summary_scene, stat
     assert selected(scene, "base-a").status == "pending"
     assert selected(scene, "layer-a", layer=1).status == "pending"
     assert all("Bob" not in options["audience"] for _, options in calls if CLAIM in _)
+
+
+@pytest.mark.parametrize("present", [None, [], ["Alice"]])
+async def test_recordless_message_only_blocks_present_summary_audiences(
+    summary_scene, present
+):
+    scene, summarizer, calls = summary_scene
+    message = NarratorMessage(message="No one hears the distant bell.", present=present)
+    scene.history[1] = message
+    entry = scene.archived_history[0]
+    inputs = summary_inputs(scene, entry, 0)
+    for name, summary_input in inputs.items():
+        assert summary_input.status == (
+            "pending" if name in (present or ()) else "ready"
+        )
+        assert message.id not in {source.id for source in summary_input.sources}
+    await asyncio.wait_for(summarizer.ensure_summary_views(scene, entry["id"]), 2)
+    assert selected(scene, entry["id"], "Bob").status == "ready"
+    assert selected(scene, entry["id"], "Alice").status == (
+        "pending" if present else "ready"
+    )
+    assert len(calls) == (1 if present else 2)
+    assert summarizer._summary_waiting.get(scene, set()) == {
+        (0, entry["id"], name) for name in (present or ())
+    }
+    assert message.knowledge is None
+
+
+async def test_recordless_omitted_summary_needs_no_request(summary_scene):
+    scene, summarizer, calls = summary_scene
+    message = NarratorMessage(message="No one hears the distant bell.")
+    scene.history[1] = message
+    entry = scene.archived_history[0]
+    entry.update(start=1, end=1)
+    set_source_perspectives(
+        scene, "summary", entry["id"], [{"audience": ["Alice"], "status": "pending"}]
+    )
+    inputs = summary_inputs(scene, entry, 0)
+    assert inputs["Alice"].status == "omitted"
+    assert inputs["Alice"].sources == ()
+    await asyncio.wait_for(summarizer.ensure_summary_views(scene, entry["id"]), 2)
+    assert selected(scene, entry["id"], "Alice").status == "omitted"
+    assert calls == []
+    assert summarizer._summary_waiting.get(scene, set()) == set()
+    assert message.knowledge is None
 
 
 @pytest.mark.asyncio
@@ -238,10 +285,26 @@ async def test_omitted_input_is_a_durable_dependency(summary_scene):
 
 
 @pytest.mark.asyncio
-async def test_all_omitted_summary_skips_request_and_is_invalidated(summary_scene):
+@pytest.mark.parametrize("stored_status", ["omitted", "pending", "failed"])
+async def test_all_omitted_summary_skips_request_and_is_invalidated(
+    summary_scene, stored_status
+):
     scene, summarizer, calls = summary_scene
     scene.archived_history[0].update(start=1, end=1)
-    await summarizer.ensure_summary_views(scene, "base-a")
+    set_source_perspectives(
+        scene,
+        "message",
+        scene.history[1].id,
+        [
+            {
+                "audience": ["Alice"],
+                "status": "ready",
+                "text": "Alice hears a whisper.",
+            },
+            {"audience": ["Bob", "Cara"], "status": stored_status},
+        ],
+    )
+    await asyncio.wait_for(summarizer.ensure_summary_views(scene, "base-a"), 2)
     assert selected(scene, "base-a").status == "omitted"
     assert len(calls) == 1
     publish(scene, scene.history[1], "Alice hears more.", "Bob hears it too.")

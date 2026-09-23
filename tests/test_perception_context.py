@@ -47,7 +47,9 @@ async def test_tracked_state_outlives_passage_window_and_is_removed(
     )
     scene.history.append(TimePassageMessage(message="Six hours later.", ts=21600))
     scene.ts += 21600
-    message = CharacterMessage(message="Alice: Look over here.")
+    message = CharacterMessage(
+        message="Alice: Look over here.", present=["Alice", "Bob"]
+    )
 
     context = perception_context(scene, message)
 
@@ -73,7 +75,9 @@ def test_undated_states_are_included_without_inventing_an_age(setup):
             Reinforcement(question="Weather", answer="Rain."),
         ]
     )
-    context = perception_context(scene, CharacterMessage(message="Alice: Hello."))
+    context = perception_context(
+        scene, CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
+    )
     assert context["cast"][1]["tracked_states"] == {
         "Condition": "(Time unknown) Asleep."
     }
@@ -87,7 +91,7 @@ async def test_current_state_value_and_future_record_age(tracked_scene):
         "Condition", "Bob", answer="Asleep.", insert="never"
     )
     scene.ts = 0
-    message = CharacterMessage(message="Alice: Hello.")
+    message = CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
     assert perception_context(scene, message)["cast"][1]["tracked_states"] == {
         "Condition": "(Recently) Asleep."
     }
@@ -107,7 +111,7 @@ def test_intention_precedes_task_and_scene_description_is_absent(setup):
     scene.description = "DESCRIPTION_SENTINEL"
     scene.intent_state.intent = "STORY_INTENTION_SENTINEL"
     scene.intent_state.phase.intent = "PHASE_INTENTION_SENTINEL"
-    message = CharacterMessage(message="Alice: Hello.")
+    message = CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
     context = perception_context(scene, message)
     assert "shared_scene_description" not in context
     assert "shared_story_intention" not in context
@@ -128,7 +132,7 @@ async def test_intention_changes_discard_inflight_response_and_change_receipt(
     setup, part
 ):
     scene, summarizer, request = setup
-    message = CharacterMessage(message="Alice: Hello.")
+    message = CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
     scene.history.append(message)
     summarizer._register_perception_sources(scene, [message])
     before = _phase_identity(scene, message)
@@ -161,7 +165,9 @@ async def test_scene_description_edit_does_not_repeat_analysis(setup):
         return result()
 
     request.side_effect = analyze
-    await scene.push_history(CharacterMessage(message="Alice: Hello."))
+    await scene.push_history(
+        CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
+    )
     assert request.await_count == 1
 
 
@@ -186,7 +192,7 @@ async def test_editing_tracked_state_uses_last_update_time(tracked_scene, insert
         "Condition", "Bob", answer="Awake and alert.", insert=insert
     )
 
-    message = CharacterMessage(message="Alice: Hello.")
+    message = CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
     assert perception_context(scene, message)["cast"][1]["tracked_states"] == {
         "Condition": "(Recently) Awake and alert."
     }
@@ -225,9 +231,9 @@ async def test_refreshing_same_tracked_state_refreshes_its_age(tracked_scene, in
         await world._apply_reinforcement(
             state, world._prepare_reinforcement(state, False), "Awake.", False
         )
-    assert perception_context(scene, CharacterMessage(message="Alice: Hello."))["cast"][
-        1
-    ]["tracked_states"] == {"Condition": "(Recently) Awake."}
+    assert perception_context(
+        scene, CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
+    )["cast"][1]["tracked_states"] == {"Condition": "(Recently) Awake."}
 
 
 @pytest.mark.parametrize(
@@ -248,9 +254,9 @@ def test_tracked_state_update_age_follows_scene_timeline_shift(setup, shift, exp
 
     shift_scene_timeline(scene, shift)
 
-    assert perception_context(scene, CharacterMessage(message="Alice: Hello."))["cast"][
-        1
-    ]["tracked_states"] == {
+    assert perception_context(
+        scene, CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
+    )["cast"][1]["tracked_states"] == {
         "Condition": f"({expected}) Awake.",
         "Location": "(Time unknown) At home.",
     }

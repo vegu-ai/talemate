@@ -99,6 +99,13 @@ def summary_inputs(scene, entry, layer, *, read=None):
             if isinstance(item, Disclosure) and name not in item.audience:
                 continue
             if reference is None:
+                if (
+                    layer == 0
+                    and not isinstance(item, Disclosure)
+                    and name not in (item.present or ())
+                ):
+                    # No analysis will create a record for an absent audience.
+                    continue
                 complete = False
                 continue
             view = select_character_view(scene, reference, name, read=read)

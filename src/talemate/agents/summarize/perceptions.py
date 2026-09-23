@@ -38,6 +38,7 @@ from talemate.knowledge.timeline import record_time
 from talemate.knowledge.reinforcements import prepare_reinforcement_source
 from talemate.knowledge.perspective_models import (
     PerspectiveOutput,
+    PerspectiveView,
     PassageProvenance,
     SourceReference,
     SourcePerspectives,
@@ -241,7 +242,7 @@ def perception_prefix(
 
 
 def relevant_audiences(scene: "Scene", message: SceneMessage) -> tuple[str, ...]:
-    names = set(scene.active_characters) | set(message.present or ())
+    names = set(message.present or ())
     return tuple(
         character.name
         for character in scene.character_data.values()
@@ -251,6 +252,9 @@ def relevant_audiences(scene: "Scene", message: SceneMessage) -> tuple[str, ...]
 
 def perception_staleness(scene, message, *, read=None) -> Staleness | None:
     """The first check that keeps the passage's stored results from being current."""
+    audiences = relevant_audiences(scene, message)
+    if not audiences:
+        return None
     if message.knowledge is None:
         return Staleness(check="no_record")
     if message.knowledge.content_digest != content_digest(message.perception_text):
@@ -259,7 +263,7 @@ def perception_staleness(scene, message, *, read=None) -> Staleness | None:
     reference = source_reference(scene, "message", message.id, read=read)
     if reference is None:
         return Staleness(check="no_record")
-    for name in relevant_audiences(scene, message):
+    for name in audiences:
         stale = view_staleness(scene, reference, name, read=read)
         if stale is not None:
             return stale
@@ -269,6 +273,22 @@ def perception_staleness(scene, message, *, read=None) -> Staleness | None:
 def perception_results_current(scene, message, *, read=None) -> bool:
     """Verify exact selected-source results for every currently required audience."""
     return perception_staleness(scene, message, read=read) is None
+
+
+def _stored_view_current(scene, reference, view: PerspectiveView, *, read) -> bool:
+    """Check the stored view before preserving it or counting its dependents."""
+    if reference is None:
+        return False
+    # An absent audience's implicit omission is only a reading rule. Pin the
+    # stored view so stale evidence cannot be copied into the next write.
+    reference = reference.model_copy(
+        update={"view_id": view.id, "view_revision": view.revision}
+    )
+    return all(
+        select_character_view(scene, reference, name, read=read).status
+        in ("ready", "omitted")
+        for name in view.audience
+    )
 
 
 class PerceptionBacklog(BaseModel):
@@ -346,7 +366,7 @@ def analysis_dependents(
     read: PerspectiveReadContext,
 ) -> tuple[SceneMessage, ...]:
     """
-    Passages whose stored views an analysis of `roots` can invalidate. The
+    Passages whose required views an analysis of `roots` can invalidate. The
     analysis rewrites the views of a root that are not current, and every
     view of a root whose text changed since its analysis. A rewritten view
     invalidates the views that cite it, transitively; a changed text also
@@ -360,11 +380,7 @@ def analysis_dependents(
             continue
         reference = source_reference(scene, "message", root.id, read=read)
         for view in root.knowledge.views:
-            if reference is None or any(
-                select_character_view(scene, reference, name, read=read).status
-                not in ("ready", "omitted")
-                for name in view.audience
-            ):
+            if not _stored_view_current(scene, reference, view, read=read):
                 affected.add((root.id, view.id))
     touched = {root.id for root in roots}
 
@@ -394,7 +410,11 @@ def analysis_dependents(
             views = [view for view in message.knowledge.views if invalidated(view)]
             if views:
                 skip.add(message.id)
-                dependents.append(message)
+                audiences = set(relevant_audiences(scene, message))
+                if any(audiences.intersection(view.audience) for view in views):
+                    dependents.append(message)
+                # An absent-only passage needs no request, but its changed views
+                # can still invalidate a later passage where that audience is present.
                 affected.update((message.id, view.id) for view in views)
                 touched.add(message.id)
                 grew = True
@@ -674,10 +694,8 @@ class PerceptionMixin:
         for view in previous.views if previous else ():
             covered.update(view.audience)
             values = view.model_dump(exclude={"revision"})
-            if invalidate or any(
-                select_character_view(scene, reference, name, read=read).status
-                not in ("ready", "omitted")
-                for name in view.audience
+            if invalidate or not _stored_view_current(
+                scene, reference, view, read=read
             ):
                 values.update(
                     status=status,
@@ -1231,6 +1249,7 @@ class PerceptionMixin:
             PerspectiveOutput(**view.model_dump(exclude={"revision"}))
             for view in knowledge.views
             if view.status in ("ready", "omitted")
+            or not set(audiences).intersection(view.audience)
         ]
         preserved_names = {name for view in preserved for name in view.audience}
 
@@ -1310,3 +1329,6 @@ class PerceptionMixin:
         set_source_perspectives(
             scene, "message", message.id, [*preserved, *outputs.values()]
         )
+        # Every required audience completed successfully. Retained pending views
+        # for absent audiences do not prevent this version's analysis receipt.
+        message.mark_revision_feature("perceptions")

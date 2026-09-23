@@ -315,6 +315,17 @@ def _fresh(
     )
 
 
+def _message_absent(source: _Source | None, character: str) -> bool:
+    if source is None or source.kind != "message":
+        return False
+    present = (
+        source.owner.get("present")
+        if isinstance(source.owner, dict)
+        else source.owner.present
+    )
+    return character not in (present or ())
+
+
 def _fresh_depth(scene, reference, character, visited, *, readable, read, remaining):
     if reference in visited or remaining < 0:
         return None
@@ -333,6 +344,16 @@ def _fresh_depth(scene, reference, character, visited, *, readable, read, remain
     if not source or not source.knowledge:
         return None
     knowledge = source.knowledge
+    if (
+        reference.view_id is None
+        and readable in (False, "summary")
+        and _message_absent(source, character)
+        and knowledge.revision == reference.revision
+    ):
+        # An implicit absence reference carries no view text, including when a
+        # stored view can no longer be used. Explicit citations still need it fresh.
+        read.depths[key] = 0
+        return 0
     if (
         source.kind == "message"
         and source.owner.revision_state is not None
@@ -447,6 +468,20 @@ def _select_character_view(
             check="missing_audience_view", character=character
         )
     owner = _find(scene, source.key, read)
+    view, stale = _select_stored_view(scene, source, character, owner, read=read)
+    if (
+        source.view_id is None
+        and _message_absent(owner, character)
+        and view.status not in ("ready", "omitted")
+    ):
+        # Absent characters have no required analysis that could repair this view.
+        return CharacterView(
+            status="omitted", source=source, acquired=view.acquired
+        ), None
+    return view, stale
+
+
+def _select_stored_view(scene, source, character, owner, *, read):
     if not owner or not owner.knowledge:
         return CharacterView(status="unavailable", source=source), Staleness(
             check="no_record", character=character

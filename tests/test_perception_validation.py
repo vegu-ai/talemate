@@ -341,7 +341,9 @@ async def test_repair_preserves_existing_shared_audience_view(analysis):
     scene, summarizer, request, dialog = analysis
     scene.character_data["Carol"] = Character(name="Carol")
     scene.active_characters.append("Carol")
-    message = NarratorMessage(message="A bell rings.")
+    message = NarratorMessage(
+        message="A bell rings.", present=["Alice", "Bob", "Carol"]
+    )
     scene.history.append(message)
     set_source_perspectives(
         scene,

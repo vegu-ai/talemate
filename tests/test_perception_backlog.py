@@ -8,6 +8,7 @@ from structlog.testing import capture_logs
 
 import talemate.agents.summarize.perceptions as perceptions
 from talemate.agents.summarize.perceptions import (
+    analysis_dependents,
     keep_stored_perceptions,
     perception_backlog,
     perception_passages,
@@ -16,7 +17,7 @@ from talemate.agents.summarize.perceptions import (
     resolve_perception_backlog,
 )
 from talemate.agents.summarize.websocket_handler import SummarizeWebsocketHandler
-from talemate.character import Character
+from talemate.character import Character, activate_character, deactivate_character
 from talemate.context import ActiveScene
 from talemate.emit.signals import handlers
 from talemate.exceptions import GenerationCancelled
@@ -26,8 +27,13 @@ from talemate.regenerate import regenerate
 from talemate.tale_mate import Actor
 from talemate.knowledge.perspective_models import content_digest
 from talemate.knowledge.perspectives import (
+    PerspectiveReadContext,
     Staleness,
     bind_perspective_sources,
+    edit_message_view,
+    select_character_view,
+    set_source_perspectives,
+    source_reference,
 )
 from talemate.scene_message import (
     CharacterMessage,
@@ -111,6 +117,19 @@ def replace_view(message, name, **update):
     )
 
 
+def remove_view(message, name):
+    knowledge = message.knowledge
+    object.__setattr__(
+        message,
+        "knowledge",
+        knowledge.model_copy(
+            update={
+                "views": tuple(v for v in knowledge.views if name not in v.audience)
+            }
+        ),
+    )
+
+
 def backlog(scene):
     return perception_backlog(scene, perception_passages(scene))
 
@@ -147,9 +166,9 @@ async def test_stale_check_names_the_content_digest(setup):
 async def test_stale_check_names_the_missing_audience_view(setup):
     scene, _, _ = setup
     messages = await story(scene)
-    scene.active_characters.append("Carol")
+    remove_view(messages[0], "Bob")
     assert perception_staleness(scene, messages[0]) == Staleness(
-        check="missing_audience_view", character="Carol"
+        check="missing_audience_view", character="Bob"
     )
 
 
@@ -211,13 +230,61 @@ async def test_backlog_of_an_older_build_is_keepable(setup):
 
 
 @pytest.mark.asyncio
-async def test_backlog_of_an_activation_is_empty_without_cascade(setup):
-    scene, _, _ = setup
+async def test_activation_omits_five_absent_passages_without_requests(setup):
+    scene, summarizer, request = setup
     messages = await story(scene)
-    scene.active_characters.append("Carol")
+    stored = [message.knowledge for message in messages]
+    assert all(message.present == ["Alice", "Bob"] for message in messages)
+    request.reset_mock()
+
+    await activate_character(scene, "Carol")
     counted = backlog(scene)
-    assert [m.id for m in counted.empty] == [m.id for m in messages]
-    assert (counted.keepable, counted.at_risk, counted.keep_total) == ((), (), 5)
+    assert (counted.needed, counted.total) == (0, 0)
+    frames = []
+    with answering("analyze", frames):
+        await summarizer.ensure_perceptions(scene)
+    request.assert_not_awaited()
+    assert frames == []
+    assert [message.knowledge for message in messages] == stored
+    for message in messages:
+        view = select_character_view(
+            scene, source_reference(scene, "message", message.id), "Carol"
+        )
+        assert (view.status, view.text) == ("omitted", None)
+
+    later = CharacterMessage(message="Carol: I am here now.")
+    await scene.push_history(later)
+    assert later.present == ["Alice", "Bob", "Carol"]
+    request.assert_awaited_once()
+    assert (
+        select_character_view(
+            scene, source_reference(scene, "message", later.id), "Carol"
+        ).status
+        == "ready"
+    )
+    assert [message.knowledge for message in messages] == stored
+
+    await deactivate_character(scene, "Carol")
+    absent = await story(scene)
+    request.reset_mock()
+    await activate_character(scene, "Carol")
+    with answering("analyze", frames):
+        await summarizer.ensure_perceptions(scene)
+    request.assert_not_awaited()
+    assert frames == []
+    assert (
+        select_character_view(
+            scene, source_reference(scene, "message", later.id), "Carol"
+        ).status
+        == "ready"
+    )
+    assert all(
+        select_character_view(
+            scene, source_reference(scene, "message", message.id), "Carol"
+        ).status
+        == "omitted"
+        for message in absent
+    )
 
 
 @pytest.mark.asyncio
@@ -250,6 +317,75 @@ async def test_upper_bound_skips_views_that_an_analysis_keeps(setup):
     replace_view(messages[4], "Bob", status="failed", text=None)
     counted = backlog(scene)
     assert ([m.id for m in counted.empty], counted.at_risk) == ([messages[4].id], ())
+
+
+@pytest.mark.parametrize("status", ["ready", "pending", "failed"])
+@pytest.mark.parametrize("later_present", [False, True])
+async def test_backlog_skips_absent_dependents_but_propagates_to_present(
+    setup, status, later_present
+):
+    scene, summarizer, request = setup
+    scene.active_characters = ["Alice"]
+    root = (await story(scene, count=1))[0]
+    edit_message_view(scene, root.id, "Carol", "I hear Alice.")
+    carol = select_character_view(
+        scene, source_reference(scene, "message", root.id), "Carol"
+    )
+    dependent = CharacterMessage(message="Alice: I remember.", present=["Alice"])
+    scene.history.append(dependent)
+    set_source_perspectives(
+        scene,
+        "message",
+        dependent.id,
+        [
+            {"audience": ["Alice"], "status": "ready", "text": "I remember."},
+            {
+                "audience": ["Carol"],
+                "status": "ready",
+                "text": "I remember Alice.",
+                "sources": [carol.source],
+            },
+        ],
+    )
+    if later_present:
+        later = CharacterMessage(message="Carol: I recall it too.", present=["Carol"])
+        scene.history.append(later)
+        inherited = select_character_view(
+            scene, source_reference(scene, "message", dependent.id), "Carol"
+        )
+        set_source_perspectives(
+            scene,
+            "message",
+            later.id,
+            [
+                {
+                    "audience": ["Carol"],
+                    "status": "ready",
+                    "text": "I recall it too.",
+                    "sources": [inherited.source],
+                }
+            ],
+        )
+    replace_view(root, "Alice", status="failed", text=None)
+    if status != "ready":
+        replace_view(root, "Carol", status=status, text=None)
+    counted = backlog(scene)
+    assert counted.at_risk == ()
+    expected_requests = 1 + (later_present and status != "ready")
+    assert counted.total == expected_requests
+    assert analysis_dependents(
+        scene, perception_passages(scene), [root], read=PerspectiveReadContext(scene)
+    ) == ((later,) if later_present and status != "ready" else ())
+    request.reset_mock()
+    frames = []
+    with answering("analyze", frames):
+        await summarizer.ensure_perceptions(scene)
+    assert frames == []
+    assert request.await_count == expected_requests
+    assert [
+        call.kwargs["vars"]["context"]["passage"]["provenance"]["message_id"]
+        for call in request.await_args_list
+    ] == ([root.id, later.id] if expected_requests == 2 else [root.id])
 
 
 @pytest.mark.asyncio
@@ -294,7 +430,8 @@ async def test_keep_fills_in_only_the_missing_views(setup):
     messages = await story(scene)
     stored = texts(messages)
     older_build(messages)
-    scene.active_characters.append("Carol")
+    for message in messages:
+        remove_view(message, "Bob")
     counted = backlog(scene)
     before = request.await_count
 
@@ -306,9 +443,12 @@ async def test_keep_fills_in_only_the_missing_views(setup):
     assert [(frame["empty"], frame["at_risk"]) for frame in frames] == [(5, 0)]
     assert request.await_count - before == 5
     assert [
-        {name: value for name, value in views.items() if name != "Carol"}
+        {name: value for name, value in views.items() if name != "Bob"}
         for views in texts(messages)
-    ] == stored
+    ] == [
+        {name: value for name, value in views.items() if name != "Bob"}
+        for views in stored
+    ]
     assert all(perception_results_current(scene, message) for message in messages)
 
 

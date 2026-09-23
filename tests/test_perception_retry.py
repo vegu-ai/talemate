@@ -40,7 +40,9 @@ async def test_own_analysis_progress_does_not_warn(retry_flow, backlog):
     revise_before_analysis(scene)
     if backlog == "passages":
         scene.history.extend(
-            CharacterMessage(message=f"Alice: Earlier line {index}.")
+            CharacterMessage(
+                message=f"Alice: Earlier line {index}.", present=["Alice", "Bob"]
+            )
             for index in range(2)
         )
         summarizer._register_perception_sources(scene, scene.history)

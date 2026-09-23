@@ -38,6 +38,8 @@ def summarizer(monkeypatch):
     ],
 )
 def test_supported_message_is_editable_in_every_view_state(scene, name, status, text):
+    scene.history[0].present = [name]
+    scene.history[0].mark_revision_committed()
     view = message_view(scene, scene.history[0], name)
     assert (view.status, view.text, view.editable) == (status, text, True)
 
@@ -45,10 +47,12 @@ def test_supported_message_is_editable_in_every_view_state(scene, name, status, 
 def test_message_without_knowledge_is_editable(scene):
     scene.history.append(NarratorMessage("A bell rings.", id=102))
     view = message_view(scene, scene.history[-1], "Alice")
-    assert (view.status, view.editable) == ("unavailable", True)
+    assert (view.status, view.editable) == ("omitted", True)
 
 
 def test_unsupported_running_and_deferred_are_not_editable(scene, summarizer):
+    scene.history[0].present = ["Alice"]
+    scene.history[0].mark_revision_committed()
     scene.history.append(DirectorMessage(message="Bob, hurry.", id=102))
     assert message_view(scene, scene.history[-1], "Bob").model_dump() == {
         "status": "unsupported",

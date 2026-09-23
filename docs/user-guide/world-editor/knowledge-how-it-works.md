@@ -83,7 +83,7 @@ flowchart TD
 
 **The passage joins the story** with who was in the scene. Character lines, player lines, narration and tracker answers are passages; director notes are not.
 
-**What did each character perceive?** One request covers every active character and everyone present. Each gets a standalone view of what they could perceive, or an omitted view if nothing. The reader keeps the complete prose.
+**What did each character perceive?** One request covers the characters recorded as present for that passage. Each gets a standalone view of what they could perceive, or an omitted view if nothing. Activating a character later does not analyze earlier passages for them: a missing view of a passage they missed is omitted without a request. Existing stored views stay intact. The reader keeps the complete prose.
 
 **Repair and Retry.** When a view is missing or unreadable, **Automatically repair analysis** (on by default) sends one more request for it. If it still fails, the generation error dialog offers **Retry**; Cancel or Ignore stops the dependent generation. A character never falls back to the reader's text.
 

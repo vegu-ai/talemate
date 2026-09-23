@@ -99,12 +99,12 @@ Perception uses the generating model's common-sense interpretation, not a proof 
 
 #### When many passages need a new analysis
 
-Sometimes many passages need a new analysis at once: after you load a story that an earlier Talemate version saved, after you edit an early message, or when a character joins who has no perspective of the earlier passages yet. When more than 3 passages would be analyzed, Talemate asks first. The count includes the passage that a character reply or a **Regenerate** is about to write. The question appears right after a scene loads, before a generation, or after a new message that would start the analyses. Up to 3 passages are analyzed without a question, as before. The question is for a backlog: a normal turn with no out-of-date passages never asks.
+Sometimes many passages need a new analysis at once: after you load a story that an earlier Talemate version saved, after you edit an early message, or when a character recorded as present lacks a perspective of those passages. When more than 3 passages would be analyzed, Talemate asks first. The count includes the passage that a character reply or a **Regenerate** is about to write. The question appears right after a scene loads, before a generation, or after a new message that would start the analyses. Up to 3 passages are analyzed without a question, as before. The question is for a backlog: a normal turn with no out-of-date passages never asks.
 
 The question shows how many passages need a new analysis, how many of them are new, how many still have stored perspectives, how many lack a perspective for a character, and how many more passages a new analysis can make out of date. Each analysis is one request. With **Automatically repair analysis** on, an analysis can make one more request to repair a view. The tooltips of the buttons show the most requests that can follow. Provider and network retries, and a **Retry** after a failed analysis, are not counted. You can choose:
 
 - **Analyze**: run the analyses now.
-- **Keep stored perspectives**: mark the stored perspectives as current as they are, with no request. A passage that lacks a perspective for a character is still analyzed, to fill in that perspective.
+- **Keep stored perspectives**: mark the stored perspectives as current as they are, with no request. A passage that lacks a perspective for a character recorded as present is still analyzed, to fill in that perspective.
 - **Cancel**: stop the generation. Talemate asks again the next time it needs these perspectives.
 
 Say you load a long story from an earlier version and regenerate the last reply. Instead of 101 analyses one after the other, you see that 101 passages need a new analysis, the new reply included, and you can keep the perspectives you already have. When Talemate asks, its log names each of these passages and the check that made its stored perspective out of date, whichever choice you make. It also names the check for each passage it analyzes.
@@ -130,6 +130,8 @@ For a scene saved before introduction audiences existed, loading derives the aud
 If the first summary's audience includes someone outside the opening audience, the introduction stays separate from that summary. Characters can still receive their own dialogue and summaries without acquiring the opening.
 
 ## Character activation and return
+
+In Character perspectives mode, activating or returning a character does not start analysis of the passages they missed. If Alice and Bob talked while Carol was away, Carol's missing views of those passages are omitted without a request. New passages record Carol as present and get her perspective normally. Current stored views are kept. If a stored view for an absent character is incomplete or out of date, it is omitted until a current view is available; it does not block generation. A passage with no presence record requires no new views and does not hold up character summaries; mentioning a character's name does not establish that they were there.
 
 Scene history marks each time an existing character is called into the scene or taken out of it, for example from the World panel or the World Editor. Calling them in adds a chip labelled **[Name] activated** in the character's color; taking them out adds a **[Name] deactivated** chip. A character that is created in the scene, or that is already present when a scene loads, gets no **[Name] activated** chip. One exception: when the Director creates a character who has not arrived yet, a **[Name] deactivated** chip appears at creation. The chips appear in every scene, with or without Character Knowledge. They have no delete button; removing the character from the scene removes their chips.
 

@@ -218,6 +218,8 @@ def test_edit_survives_a_later_analysis_publication(scene):
 
 
 def test_message_text_change_discards_the_edit(scene):
+    scene.history[0].present = ["Alice"]
+    scene.history[0].mark_revision_committed()
     edit_message_view(scene, 101, "Alice", "Alice burns the ledger.")
     scene.edit_message(101, "The ledger never arrived.")
     view = select_character_view(scene, message_ref(scene), "Alice")

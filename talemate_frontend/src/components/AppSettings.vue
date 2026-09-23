@@ -6,6 +6,9 @@
             <v-btn color="primary" variant="text" prepend-icon="mdi-check-circle-outline" :disabled="!canSave" @click="saveConfig">Save</v-btn>
             <v-btn v-if="dirty" color="muted" variant="text" prepend-icon="mdi-undo" @click="discard">Discard</v-btn>
             <span v-if="dirty" class="text-muted text-body-small mr-2">Unsaved changes.</span>
+            <v-chip v-if="agentApplyPending && !saveErrorIsApplyFailure" size="small" label color="warning" variant="text" prepend-icon="mdi-alert-circle-outline" class="mr-2">
+                Apply pending — press Save to retry.
+            </v-chip>
             <v-chip v-if="saveError" size="small" label color="error" variant="text" prepend-icon="mdi-alert-circle-outline" class="mr-2">
                 {{ saveErrorText }}
                 <v-tooltip v-if="saveErrorIsApplyFailure" activator="parent" location="bottom" max-width="400">The settings were stored, but the running clients and agents are still the old ones. Saving again re-applies the stored configuration — no further edits are needed.</v-tooltip>
@@ -178,6 +181,7 @@ export default {
             // armed to re-send the (unchanged) config as the retry. Only a save
             // that came back applied (or Discard) takes it down.
             applyFailed: false,
+            agentApplyPending: false,
             // `saveError` is the apply failure itself, and not some later error
             // that replaced it — the retry hint and its tooltip describe THAT
             // message, so they hang off this and not off the arming above
@@ -212,7 +216,7 @@ export default {
         canSave() {
             // an unapplied save leaves nothing dirty to press Save on, so it
             // arms the button by itself — that save IS the retry
-            return (this.dirty || this.applyFailed) && !this.embeddingsBusy;
+            return (this.dirty || this.applyFailed || this.agentApplyPending) && !this.embeddingsBusy;
         },
         saveErrorText() {
             // an apply failure already reads as a whole sentence from the
@@ -481,6 +485,7 @@ export default {
 
         handleMessage(message) {
             if (message.type == "app_config") {
+                this.agentApplyPending = message.agent_apply_pending === true;
                 // only unsaved CONFIG edits can be clobbered by an incoming
                 // config — a page's extra changes live elsewhere
                 if (this.configDirty) {
@@ -638,7 +643,7 @@ export default {
                 return;
             }
             this.setSaveError(null);
-            if (!this.configDirty && !this.applyFailed) {
+            if (!this.configDirty && !this.applyFailed && !this.agentApplyPending) {
                 // nothing to save in the config itself — the extra changes are
                 // the whole save. A failed apply is the exception: the config
                 // it stored is the one adopted here, so sending it back

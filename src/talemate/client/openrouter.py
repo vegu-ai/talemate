@@ -90,6 +90,7 @@ class ImageModel(pydantic.BaseModel):
     """What the image backend reads from an entry of the Image API model list."""
 
     id: str
+    input_modalities: list[str] | None = None
     output_modalities: list[str] = pydantic.Field(default_factory=list)
     # the listed values of these parameters, empty when the model lists none
     aspect_ratios: list[str] = pydantic.Field(default_factory=list)
@@ -106,6 +107,7 @@ class ImageModel(pydantic.BaseModel):
         )
         return cls(
             id=entry["id"],
+            input_modalities=(entry.get("architecture") or {}).get("input_modalities"),
             output_modalities=(entry.get("architecture") or {}).get("output_modalities")
             or [],
             aspect_ratios=_enum_values(parameters.get("aspect_ratio")),

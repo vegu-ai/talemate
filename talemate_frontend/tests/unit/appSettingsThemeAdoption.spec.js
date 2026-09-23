@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath, URL } from "node:url";
 
@@ -36,7 +36,8 @@ function methodSource(name) {
 
 function lift(name) {
     const { params, body } = methodSource(name);
-    return new Function(`return function (${params}) {${body}};`)();
+    const prefix = new RegExp(`async\\s+${name}\\(`).test(APP_SETTINGS) ? "async " : "";
+    return new Function(`return ${prefix}function (${params}) {${body}};`)();
 }
 
 function theme(primary) {
@@ -73,6 +74,7 @@ function settingsStub() {
         externalChange: false,
         saving: false,
         applyFailed: false,
+        agentApplyPending: false,
         pendingSaveId: null,
         saveError: null,
         setSaveError(error) {
@@ -86,6 +88,59 @@ function settingsStub() {
     Object.defineProperty(stub, "configDirty", { get: lift("configDirty") });
     return stub;
 }
+
+describe("retrying an agent apply that failed outside Settings", () => {
+    function retryStub() {
+        const stub = settingsStub();
+        Object.assign(stub, {
+            embeddingsBusy: false,
+            extraDirty: {},
+            $emit: vi.fn(),
+            mergeSubcomponentConfigs: vi.fn(),
+            validatePages: () => null,
+            eachExtraChangePage: vi.fn(),
+            commitExtraChanges: vi.fn(),
+            sendConfigSave: vi.fn(() => "retry-apply"),
+            saveConfig: lift("saveConfig"),
+            discard: lift("discard"),
+            adoptSavedConfig: lift("adoptSavedConfig"),
+        });
+        Object.defineProperty(stub, "dirty", { get: lift("dirty") });
+        Object.defineProperty(stub, "canSave", { get: lift("canSave") });
+        return stub;
+    }
+
+    it.each(["already open", "opened after failure"])("enables and sends unchanged Save when %s", async (when) => {
+        const stub = retryStub();
+        const config = payload(theme("#123456"));
+        if (when === "already open") {
+            stub.handleMessage({ type: "app_config", data: config, agent_apply_pending: false });
+            expect(stub.canSave).toBe(false);
+        }
+        stub.handleMessage({ type: "app_config", data: config, agent_apply_pending: true });
+        expect(stub.dirty).toBe(false);
+        expect(stub.applyFailed).toBe(false);
+        expect(stub.canSave).toBe(true);
+        await stub.saveConfig();
+        expect(stub.sendConfigSave).toHaveBeenCalledWith(stub.app_config, expect.any(Object));
+        expect(stub.pendingSaveId).toBe("retry-apply");
+        stub.handleMessage({ type: "app_config", data: config, agent_apply_pending: false });
+        stub.handleMessage({ type: "config", action: "save_complete", request_id: "retry-apply" });
+        expect(stub.canSave).toBe(false);
+    });
+
+    it("keeps the retry available after discarding edits; a successful Help retry clears it", () => {
+        const stub = retryStub();
+        const config = payload(theme("#123456"));
+        stub.handleMessage({ type: "app_config", data: config, agent_apply_pending: true });
+        stub.app_config.game.default_player_character.name = "Unsaved name";
+        stub.discard();
+        expect(stub.dirty).toBe(false);
+        expect(stub.canSave).toBe(true);
+        stub.handleMessage({ type: "app_config", data: config, agent_apply_pending: false });
+        expect(stub.canSave).toBe(false);
+    });
+});
 
 // the settings view sitting on an adopted config with an unsaved edit in it
 function dirtyStub(resolved = theme("#111111")) {

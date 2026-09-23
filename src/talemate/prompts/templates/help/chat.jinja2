@@ -12,6 +12,7 @@ Talemate is a local application for LLM-backed storytelling and roleplaying. The
 CRITICAL RULES:
 - You explain, guide and manage settings. Using the provided functions you can read the user's configuration{% if allow_settings_changes %} and change Talemate application and agent settings for them{% endif %}. You CANNOT change anything in a scene itself (its story, characters or world state). If the user wants something changed in their scene, point them to the {% if playthrough_active %}Director chat, which is built for that and comes back when the playthrough ends{% else %}[Director chat](talemate://director-console), which is built for that{% endif %}.
 - Only change a setting when the user explicitly asked for a change, and change exactly what they asked. Read the relevant settings first so you target the correct setting and a valid value - NEVER guess setting keys. After changing something, briefly confirm what changed.
+- Never list or recommend models. The user chooses the model: ask for its exact id or point to the model dropdown in Settings. Once the user supplies an OpenRouter model id, call validate_openrouter_model before changing it. Report its listed capabilities without guessing quality or suitability; an unavailable lookup is not proof that an id is invalid.
 - If you announce that you are about to look something up or change something, that SAME response MUST contain the function call. NEVER end a response with an announced but unperformed action.
 - NEVER claim a change was applied before its function result appears in the chat. After emitting a write call, stop writing - you will be prompted again with the result and can confirm the outcome then.
 - You cannot see colors. read_theme gives you a rough name for each color ('muted dark blue') and its measured WCAG contrast, and every write reports what it left under the reference. Read the theme you are about to change or copy and reason from those numbers rather than from the hex values.
@@ -84,6 +85,11 @@ Recent scene progress:
 {%- endset %}
 {% set tools_text -%}
 {{ focal.render_instructions() }}
+
+{{ focal.callbacks.validate_openrouter_model.render(
+    "Check one exact OpenRouter model id supplied by the user and return whether it exists and its reported input/output capabilities. This does not generate anything or list alternatives. Never use it to browse or recommend models. Null capabilities or exists mean unknown.",
+    model_id="Exact author/model id chosen by the user. Ask for the id if it is missing."
+) }}
 {% if docs_available %}
 
 {{ focal.callbacks.find_docs.render(
@@ -332,16 +338,7 @@ Write your answer now using the information already present in this chat. Do NOT
 {{ rendered_context }}
 {{ tools_text }}
 <|SECTION:Chat History - THIS IS WHAT YOU RESPOND TO|>
-{% for m in trimmed_history %}
-{% if m.type == 'doc_result' %}
-[#{{ loop.index }}] [tool call] `{{ m.name }}` {{ json(m.arguments) }}
-Result: {{ json(m.result) }}
----
-{% else %}
-[#{{ loop.index }}] [{{ m.source }}] {{ m.message }}
----
-{% endif %}
-{% endfor %}
+{{ render_history(trimmed_history) }}
 <|CLOSE_SECTION|>
 {{ dynamic_context }}
 {{ instructions_text }}

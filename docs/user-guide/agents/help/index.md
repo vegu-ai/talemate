@@ -38,7 +38,7 @@ With a permission off, the matching tools are not merely refused when called —
 
 The help agent can see what you currently have configured, so instead of answering from the documentation alone it can tell you what a setting is *set to* and what your options are. It can look at:
 
-- Any agent's settings - every action and setting with its current value, valid choices, and any per-scene overrides.
+- Any agent's settings - every action and setting with its current value, small choice lists, and any per-scene overrides. Model choices, provider lists and other long choice lists stay in the settings dropdowns.
 - Application settings - the game (general), appearance, creator, inference/embeddings presets, and prompt template group sections of your config.
 - Your configured clients - type, model, context length and status.
 
@@ -49,6 +49,21 @@ When the **Allow changes to settings** permission is on, it can also **change** 
 - Inference parameters for one action preset or every preset in an existing inference group, including advanced sampling and stopping strings.
 
 So things like "switch the conversation format to Narrative", "lower the editor revision to only run on dialogue", "turn off auto save" or "override the visualizer style for this scene only" can be done right from the chat. Changes are applied immediately, the tool result records the applied values, and an open settings view picks them up live.
+
+If an agent cannot apply a saved change, Help reports that it was saved but is
+not yet applied. Settings shows **Apply pending — press Save to retry** and
+keeps **Save** available without further edits. After correcting the cause,
+press **Save** or ask Help to set that setting again. The failed agent retries its rebuild even when
+the saved value is unchanged. Other agents are not forced to rebuild because
+one failed. The same retry behavior applies to failed saves from Settings.
+
+### Choosing a model
+
+Choose the model yourself in the settings dropdown, then give Help its exact id.
+Help does not list or recommend models. For an OpenRouter model, it checks that
+id and reports the model's listed input and output capabilities before changing
+your agent setting. This check does not send a generation request. If OpenRouter
+cannot be reached, Help reports that it could not verify the id.
 
 ### Inference presets
 

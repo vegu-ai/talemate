@@ -9,8 +9,7 @@ from talemate.knowledge.transitions import transition_payload
 import structlog
 
 import talemate.instance as instance
-from talemate import Scene, VERSION
-from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
+from talemate import Scene
 from talemate.config.schema import SceneAssetUpload
 from talemate.config import get_config, Config
 from talemate.context import ActiveScene
@@ -42,7 +41,6 @@ from talemate.server import (
     scene_commands,
 )
 from talemate.server.scene_assets_batching import SceneAssetsBatchingMixin
-from talemate.world_state.templates.theme import resolve_theme
 
 __all__ = [
     "WebsocketHandler",
@@ -580,19 +578,8 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             }
         )
 
-    async def on_config_changed(self, config: Config):
-        data = config.model_dump()
-
-        data.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
-        data.update(theme=resolve_theme(config))
-
-        self.queue_put(
-            {
-                "type": "app_config",
-                "data": data,
-                "version": VERSION,
-            }
-        )
+    async def on_config_changed(self, app_config: Config):
+        self.queue_put(config.app_config_message(app_config))
 
     def handle_archived_history(self, emission: Emission):
         self.queue_put(

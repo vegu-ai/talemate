@@ -4,6 +4,8 @@ call-block stripping and the focal-backed generation loop.
 """
 
 import json
+import re
+from collections import Counter
 from unittest.mock import AsyncMock
 
 import pytest
@@ -16,9 +18,14 @@ from talemate.agents.help import settings as help_settings
 from talemate.config import get_config
 from talemate.config.schema import Client, Config
 from talemate.agents.help import HelpAgent, docs
-from talemate.agents.help.chat import INITIAL_MESSAGE
-from talemate.agents.help.schema import HelpChatStore
+from talemate.agents.help.chat import INITIAL_MESSAGE, WRITE_TOOL_NAMES
+from talemate.agents.help.schema import (
+    HelpChatDocResultMessage,
+    HelpChatMessage,
+    HelpChatStore,
+)
 from talemate.game.focal.util import strip_call_blocks
+import talemate.util as util
 from talemate.scene_agent_settings import SceneAgentSettings
 
 from conftest import MockClient, MockClientContext, bootstrap_engine, client_responses
@@ -234,6 +241,29 @@ def test_find_docs_real_index_smoke():
         "node-editor" in entry["path"] and "collect" in entry["path"].lower()
         for entry in results
     )
+
+
+@pytest.mark.parametrize(
+    "query,expected",
+    [
+        (
+            "how do I change my OpenRouter image model?",
+            "user-guide/agents/help/index.md",
+        ),
+        (
+            "Help said my setting was saved but not applied",
+            "user-guide/agents/help/index.md",
+        ),
+        (
+            "validate_openrouter_model omitted choice lists",
+            "user-guide/agents/help/settings.md",
+        ),
+    ],
+)
+def test_find_docs_help_model_selection_and_apply_retries(query, expected):
+    results = docs.find_docs(query)
+    assert isinstance(results, list)
+    assert expected in [entry["path"] for entry in results]
 
 
 @pytest.mark.parametrize(
@@ -750,6 +780,192 @@ def test_agent_registered():
     instance.AGENTS.pop("help", None)
 
 
+@pytest.mark.parametrize("budget", [-800, 0, 300, 100000])
+def test_help_trimming_keeps_request_with_bounded_results(budget):
+    history = [
+        HelpChatMessage(source="user", message="old request"),
+        HelpChatMessage(source="help", message="old answer"),
+        HelpChatMessage(
+            source="user", message="Set the Visualizer model to user/model"
+        ),
+        HelpChatDocResultMessage(
+            name="validate_openrouter_model", result={"exists": True}
+        ),
+        HelpChatDocResultMessage(
+            name="read_agent_settings", result={"details": "setting " * 1000}
+        ),
+    ]
+    selected = HelpAgent._chat_trim_history(history, budget)
+    assert history[2] in selected
+    if budget <= 0:
+        assert selected[0] == history[2]
+        assert "2 tool results of this turn omitted" in selected[-1].message
+        assert "validate_openrouter_model, read_agent_settings" in selected[-1].message
+        assert (
+            "Do not repeat these calls or claim their outcomes" in selected[-1].message
+        )
+    else:
+        assert util.count_tokens(HelpAgent._chat_render_history(selected)) <= budget
+    if budget == 100000:
+        assert selected == history
+    if budget == 300:
+        previews = [message for message in selected if message.type == "doc_result"]
+        assert "Result truncated" in previews[-1].result
+        assert history[-1].result == {"details": "setting " * 1000}
+
+
+def test_help_trimming_discards_older_tool_results_of_an_oversized_turn():
+    request = HelpChatMessage(source="user", message="How do these settings work?")
+    results = [
+        HelpChatDocResultMessage(
+            name="read_doc",
+            arguments={"path": f"page-{index}.md"},
+            result="documentation " * 1500,
+        )
+        for index in range(15)
+    ]
+    budget = 4000
+    selected = HelpAgent._chat_trim_history([request, *results], budget)
+    assert selected[0] == request
+    assert results[-1] in selected
+    assert results[0] not in selected
+    assert "tool results of this turn omitted" in selected[-1].message
+    assert util.count_tokens(HelpAgent._chat_render_history(selected)) <= budget
+
+
+@pytest.mark.parametrize("result_count", [1, 16])
+def test_help_trimming_keeps_all_results_at_exact_current_turn_budget(result_count):
+    old_history = [
+        HelpChatMessage(source="user", message="Earlier question"),
+        HelpChatMessage(source="help", message="Earlier answer"),
+    ]
+    current_turn = [
+        HelpChatMessage(source="user", message="What do these settings mean?"),
+        *[
+            HelpChatDocResultMessage(
+                name="read_doc",
+                arguments={"path": f"page-{index}.md"},
+                result={"content": "A small result."},
+            )
+            for index in range(result_count)
+        ],
+    ]
+    budget = util.count_tokens(HelpAgent._chat_render_history(current_turn))
+    selected = HelpAgent._chat_trim_history([*old_history, *current_turn], budget)
+    assert selected == current_turn
+    rendered = HelpAgent._chat_render_history(selected)
+    assert "omitted to fit context" not in rendered
+    assert util.count_tokens(rendered) == budget
+
+
+@pytest.mark.parametrize("budget", [-800, 0, 20, 180])
+def test_help_trimming_prioritizes_latest_write_over_newer_reads(budget):
+    request = HelpChatMessage(
+        source="user", message="Change this setting, then look it up"
+    )
+    write = HelpChatDocResultMessage(
+        name="update_agent_setting", result={"applied": True}
+    )
+    read = HelpChatDocResultMessage(name="read_doc", result="documentation " * 1000)
+    selected = HelpAgent._chat_trim_history([request, write, read], budget)
+    assert request in selected
+    assert read not in selected
+    if budget == 180:
+        assert write in selected
+        assert (
+            "1 tool result of this turn omitted to fit context: read_doc"
+            in selected[-1].message
+        )
+        assert util.count_tokens(HelpAgent._chat_render_history(selected)) <= budget
+    else:
+        assert (
+            "2 tool results of this turn omitted to fit context: update_agent_setting, read_doc"
+            in selected[-1].message
+        )
+        assert (
+            "Do not repeat these calls or claim their outcomes" in selected[-1].message
+        )
+
+
+def test_help_write_priority_covers_all_mutating_callbacks(help_agent):
+    for setting in help_agent.actions["permissions"].config.values():
+        setting.value = True
+    callbacks = (
+        help_agent._chat_doc_callbacks()
+        + help_agent._chat_settings_callbacks()
+        + help_agent._chat_theme_callbacks()
+        + help_agent._chat_template_callbacks()
+    )
+    assert WRITE_TOOL_NAMES == {
+        callback.name for callback in callbacks if not callback.concurrent
+    }
+
+
+@pytest.mark.parametrize("with_docs,count", [(False, 1600), (True, 200)])
+def test_help_trimming_tokenizes_each_message_a_fixed_number_of_times(
+    monkeypatch, with_docs, count
+):
+    history = []
+    for index in range(count):
+        history.append(
+            HelpChatMessage(source="user", message=f"marker-{index * 2} question")
+        )
+        if with_docs:
+            history.append(
+                HelpChatDocResultMessage(
+                    name="read_doc",
+                    result=f"marker-{index * 2 + 1} " + "documentation " * 900,
+                )
+            )
+        else:
+            history.append(
+                HelpChatMessage(source="help", message=f"marker-{index * 2 + 1} answer")
+            )
+    original_count = util.count_tokens
+    seen = Counter()
+    calls = []
+
+    def counted(text):
+        calls.append(len(text))
+        seen.update(re.findall(r"marker-\d+", text))
+        return original_count(text)
+
+    monkeypatch.setattr(util, "count_tokens", counted)
+    selected = HelpAgent._chat_trim_history(history, 120000)
+    assert history[-2] in selected
+    assert history[-1] in selected
+    assert max(seen.values()) <= 2
+    assert len(calls) <= len(history) + 2
+    assert original_count(HelpAgent._chat_render_history(selected)) <= 120000
+
+
+@pytest.mark.asyncio
+async def test_help_continuation_prompt_keeps_request_after_large_read(
+    help_agent, monkeypatch
+):
+    bootstrap_engine()
+    request = "Please set the Visualizer model to user/chosen-model"
+    monkeypatch.setattr(help_agent, "_chat_has_enough_for_title", lambda chat: False)
+    monkeypatch.setattr(
+        help_settings,
+        "read_agent_settings",
+        lambda agent: {"settings": "large setting " * 12000},
+    )
+    chat = help_agent.chat_create()
+    async with MockClientContext():
+        client_responses.get().extend(
+            [
+                '```json\n{"function": "read_agent_settings", "arguments": {"agent": "visual"}}\n```',
+                "The requested settings are available.",
+            ]
+        )
+        await help_agent.chat_send(chat.id, request)
+    assert len(help_agent.client.prompt_history) == 2
+    prompt = str(help_agent.client.prompt_history[-1]["prompt"])
+    assert request in prompt
+    assert "large setting" in prompt
+
+
 @pytest.mark.asyncio
 async def test_chat_send_fires_signals(help_agent, isolate_signals):
     """agent.help.chat.before / .after fire around the generation loop."""
@@ -852,6 +1068,99 @@ def test_read_agent_settings_unknown_agent(settings_env):
     result = help_settings.read_agent_settings("nope")
     assert isinstance(result, str)
     assert "conversation" in result
+
+
+@pytest.mark.parametrize("choice_count", [0, 2, 1000])
+def test_model_and_provider_choices_never_reach_help(settings_env, choice_count):
+    agent = instance.get_agent("visual")
+    choices = [
+        {"label": f"Catalogue entry {i}", "value": f"catalogue/id-{i}"}
+        for i in range(choice_count)
+    ]
+    for action_key in (
+        "openrouter_image_create",
+        "openrouter_image_edit",
+        "openrouter_image_analyzation",
+    ):
+        for key in ("model", "provider_only", "provider_ignore"):
+            agent.actions[action_key].config[key].choices = choices
+
+    payload = help_settings.read_agent_settings("visual")
+
+    for action_key in (
+        "openrouter_image_create",
+        "openrouter_image_edit",
+        "openrouter_image_analyzation",
+    ):
+        for key in ("model", "provider_only", "provider_ignore"):
+            field = payload["actions"][action_key]["settings"][key]
+            assert "choices" not in field
+            assert field["choices_omitted"] is True
+            assert "chosen by the user" in field["value_guidance"]
+            assert field["value"] == agent.actions[action_key].config[key].value
+    assert "catalogue/id-" not in json.dumps(payload)
+
+
+@pytest.mark.parametrize("count,label_size", [(21, 5), (2, 1100)])
+@pytest.mark.asyncio
+async def test_large_choices_are_omitted_from_reads_and_errors(
+    settings_env, count, label_size
+):
+    field = (
+        instance.get_agent("conversation")
+        .actions["generation_override"]
+        .config["format"]
+    )
+    field.choices = [
+        {"label": "x" * label_size, "value": f"catalogue-choice-{i}"}
+        for i in range(count)
+    ]
+    payload = help_settings.read_agent_settings("conversation")
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "format", "invalid"
+    )
+
+    assert payload["actions"]["generation_override"]["settings"]["format"][
+        "choices_omitted"
+    ]
+    assert "catalogue-choice-" not in json.dumps(payload)
+    assert "catalogue-choice-" not in result
+    assert "settings dropdown" in result
+
+
+@pytest.mark.asyncio
+async def test_hidden_provider_choices_still_validate(settings_env):
+    field = (
+        instance.get_agent("visual")
+        .actions["openrouter_image_create"]
+        .config["provider_only"]
+    )
+    field.choices = [{"label": "Provider label", "value": "provider-id"}]
+    rejected = await help_settings.update_agent_setting(
+        "visual", "openrouter_image_create", "provider_only", ["invalid"]
+    )
+    assert "provider-id" not in rejected
+    assert "provider ids chosen by the user" in rejected
+
+    accepted = await help_settings.update_agent_setting(
+        "visual", "openrouter_image_create", "provider_only", ["provider-id"]
+    )
+    assert accepted["applied"] is True
+    assert field.value == ["provider-id"]
+
+
+@pytest.mark.asyncio
+async def test_hidden_model_choices_never_return_in_validation_errors(settings_env):
+    field = (
+        instance.get_agent("visual").actions["openrouter_image_create"].config["model"]
+    )
+    field.type = "autocomplete"
+    field.choices = [{"label": "Catalogue model", "value": "catalogue/model"}]
+    result = await help_settings.update_agent_setting(
+        "visual", "openrouter_image_create", "model", "unknown/model"
+    )
+    assert "catalogue/model" not in result
+    assert "model id chosen by the user" in result
 
 
 def test_read_agent_settings_redacts_secret_fields(settings_env):
@@ -1042,7 +1351,9 @@ async def test_update_agent_setting_keeps_a_change_whose_apply_fails(
 
     assert result == (
         "Saved generation_override.length = 256, but applying it to the running "
-        "agent failed: the backend is gone. Restart Talemate to apply it."
+        "agent failed: the backend is gone. Open Settings and press Save to retry "
+        "(Apply pending keeps Save available without edits), or ask me to set "
+        "this setting again. If the error persists, correct its cause before retrying."
     )
     saved = get_config().agents["conversation"]
     assert saved.actions["generation_override"].config["length"].value == 256

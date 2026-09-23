@@ -216,10 +216,10 @@ class TestHelpBaselines:
         self, help_agent, agent_registry, baseline_checker
     ):
         """
-        First round performs a doc lookup; with the lookup-round limit at 1
-        the follow-up renders the final-round instructions (no tools, answer
-        now) with the doc result in the chat history.
+        A 16k client has room for the final-round instructions and doc result
+        after one lookup. Exhausted budgets are covered separately below.
         """
+        help_agent.client.max_token_length = 16384
         help_agent.actions["chat"].config["doc_lookup_iterations"].value = 1
         chat = help_agent.chat_create()
         help_agent.client.send_prompt = AsyncMock(
@@ -234,6 +234,30 @@ class TestHelpBaselines:
         baseline_checker(
             capture_all_prompts(help_agent), AGENT, "chat_send__doc_lookup_final_round"
         )
+
+    @pytest.mark.asyncio
+    async def test_chat_send_exhausted_context_reports_omitted_results(
+        self, help_agent, agent_registry
+    ):
+        for setting in help_agent.actions["permissions"].config.values():
+            setting.value = True
+        help_agent.client.max_token_length = 8192
+        help_agent.actions["chat"].config["doc_lookup_iterations"].value = 1
+        chat = help_agent.chat_create()
+        help_agent.client.send_prompt = AsyncMock(
+            side_effect=[READ_DOC_CALL, "Please increase the context length."]
+        )
+        with patch.object(help_agent, "_chat_has_enough_for_title", return_value=False):
+            await help_agent.chat_send(
+                chat.id, "Explain this setting", ux_snapshot=UX_SNAPSHOT
+            )
+        final_prompt = capture_prompt(help_agent)
+        assert "Explain this setting" in final_prompt
+        assert (
+            "1 tool result of this turn omitted to fit context: read_doc"
+            in final_prompt
+        )
+        assert "Do not repeat these calls or claim their outcomes" in final_prompt
 
     @pytest.mark.asyncio
     async def test_chat_send__playthrough_active(

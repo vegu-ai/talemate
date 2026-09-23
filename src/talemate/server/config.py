@@ -2,6 +2,7 @@ import pydantic
 import structlog
 import os
 import shutil
+import talemate.instance as instance
 
 from typing import get_args
 
@@ -271,15 +272,21 @@ def app_config_message(config: Config) -> dict:
     The frontend repaints from the resolved theme this carries, so a payload
     without it reads as "no theme" and drops the app back to the defaults.
 
-    Both keys are attached in the same order as the other two emitters, so
-    every `app_config` payload has one shape.
+    Runtime apply state stays outside the saved configuration.
     """
 
     data = config.model_dump()
     data.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
     data.update(theme=resolve_theme(config))
 
-    return {"type": "app_config", "data": data, "version": VERSION}
+    return {
+        "type": "app_config",
+        "data": data,
+        "version": VERSION,
+        "agent_apply_pending": any(
+            agent.config_apply_failed for agent in instance.AGENTS.values()
+        ),
+    }
 
 
 def client_model_defaults(client_type: str) -> dict:

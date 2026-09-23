@@ -433,7 +433,11 @@ class VisualAgent(
         return False
 
     async def apply_config(
-        self, actions: dict | None = None, enabled: bool | None = None, **kwargs
+        self,
+        actions: dict | None = None,
+        enabled: bool | None = None,
+        force: bool = False,
+        **kwargs,
     ):
         # track relevant states before applying config
         _old_action_config = {
@@ -462,19 +466,19 @@ class VisualAgent(
         await self.evaluate_backend(
             backend_type="backend",
             backend_name=self.backend_name,
-            force=(_backend_changed or _handle_enable),
+            force=(force or _backend_changed or _handle_enable),
             old_config=_old_action_config,
         )
         await self.evaluate_backend(
             backend_type="backend_image_edit",
             backend_name=self.backend_image_edit_name,
-            force=(_backend_image_edit_changed or _handle_enable),
+            force=(force or _backend_image_edit_changed or _handle_enable),
             old_config=_old_action_config,
         )
         await self.evaluate_backend(
             backend_type="backend_image_analyzation",
             backend_name=self.backend_image_analyzation_name,
-            force=(_backend_image_analyzation_changed or _handle_enable),
+            force=(force or _backend_image_analyzation_changed or _handle_enable),
             old_config=_old_action_config,
         )
 

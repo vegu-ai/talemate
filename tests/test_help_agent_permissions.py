@@ -28,6 +28,7 @@ SETTINGS_WRITES = {
     "update_inference_presets",
 }
 SETTINGS_READS = {
+    "validate_openrouter_model",
     "read_agent_settings",
     "read_app_config",
     "read_clients",

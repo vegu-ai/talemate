@@ -650,6 +650,7 @@ class _FakeClient:
 
 
 class _FakeAgent:
+    config_apply_failed = False
     requires_llm_client = True
 
     def __init__(self, agent_type: str, client=None):

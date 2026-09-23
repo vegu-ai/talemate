@@ -6,15 +6,13 @@ import structlog
 import websockets
 
 import talemate.instance as instance
-from talemate import VERSION
 from talemate.client.base import (
     resolve_all_generation_errors,
     resolve_generation_error,
 )
-from talemate.config import get_config, Config, commit_config
-from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
+from talemate.config import get_config, commit_config
+from talemate.server.config import app_config_message
 from talemate.server.websocket_server import WebsocketHandler
-from talemate.world_state.templates.theme import resolve_theme
 from talemate.util.data import JSONEncoder
 from talemate.context import ActiveScene, Interaction
 from talemate.game.engine.nodes.registry import import_initial_node_definitions
@@ -285,18 +283,7 @@ async def websocket_endpoint(websocket):
                 elif action_type == "request_app_config":
                     log.info("request_app_config")
 
-                    app_config: Config = get_config()
-                    config: dict = app_config.model_dump()
-                    config.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
-                    config.update(theme=resolve_theme(app_config))
-
-                    await message_queue.put(
-                        {
-                            "type": "app_config",
-                            "data": config,
-                            "version": VERSION,
-                        }
-                    )
+                    await message_queue.put(app_config_message(get_config()))
                 else:
                     log.info("Routing to sub-handler", action_type=action_type)
                     await handler.route(data)

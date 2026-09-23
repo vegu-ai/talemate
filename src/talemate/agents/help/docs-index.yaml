@@ -193,16 +193,14 @@
     Remove versus Attempt rewrite, comma splitting and writing-style unwanted prose.
 - path: user-guide/agents/help/index.md
   title: Overview
-  summary: Help chat searches bundled docs and reads configuration, clients and scene/UI context; optional permissions allow
-    settings, inference preset parameters, themes and world-state template changes. Covers partial updates versus per-preset
-    default resets, focused and paged configuration reads, per-scene overrides, unsaved-edit protection, theme color/contrast
-    diagnostics, template restrictions, persistent multiple chats and background responses.
+  summary: Help chat reads docs/configuration and changes settings, inference presets, themes and templates with permission.
+    Change an OpenRouter image model by your chosen id without recommendations, or retry saved-but-not-applied settings with
+    Save; covers unsaved edits, scene overrides and persistent chats.
 - path: user-guide/agents/help/settings.md
   title: Settings
-  summary: Help agent response and tool-round budgets, concurrent reads, custom instructions and default-off Allow changes
-    to settings/templates permissions. Configuration tool paths, fields, bounded indexes, complete JSON chunk retrieval, inference
-    preset writes and prompt-cache conditions. Applying themes requires both permissions; manual appearance color overrides
-    survive until Restore from theme.
+  summary: Help response/tool budgets, write permissions, bounded config reads and inference preset writes; read_agent_settings
+    omits model/provider/long choice lists and validate_openrouter_model checks model ids and image input/output. History retains
+    the request, prioritizes newest writes and names omitted results; includes previews and prompt caching.
 - path: user-guide/agents/index.md
   title: Overview
   summary: 'Overview of Talemate agents and responsibilities: Conversation, Creator, Director, Editor, Help, Memory, Narrator,

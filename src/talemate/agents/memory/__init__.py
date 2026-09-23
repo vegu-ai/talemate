@@ -329,18 +329,19 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
 
         return f"{self.embeddings}-{model_name}-{self.distance_function}-{self.device}-{self.trust_remote_code}".lower()
 
-    async def apply_config(self, *args, **kwargs):
+    async def apply_config(self, *args, force: bool = False, **kwargs):
         _fingerprint = self.fingerprint
 
         await super().apply_config(*args, **kwargs)
 
         fingerprint_changed = _fingerprint != self.fingerprint
 
-        # have embeddings or device changed?
-        if fingerprint_changed:
+        if fingerprint_changed or force:
             log.warning(
                 "memory agent",
-                status="embedding function changed",
+                status="retrying embedding rebuild"
+                if force
+                else "embedding function changed",
                 old=_fingerprint,
                 new=self.fingerprint,
             )

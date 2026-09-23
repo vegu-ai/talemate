@@ -10,6 +10,14 @@ Maximum response length for help responses.
 
 How many rounds of tool calls (documentation lookups, settings, theme and template reads and updates) the help agent may perform before it must answer. Each round lets the agent use its tools and then continue with the results in context.
 
+Help keeps your current request and prioritizes the newest write result before
+fitting recent reads into the remaining history budget. A notice names any tool
+results omitted from the current turn and tells Help not to repeat those calls or
+claim their outcomes. If no result has been kept yet, an oversized result may get
+a labelled preview when space permits. The saved chat retains the full results.
+Even with no history budget, the request and omission notice remain; increase
+the client's context length if Help needs the missing results.
+
 ##### Tool calls per round
 
 Maximum tool calls per round. When the connected client supports concurrent inference, the read-only calls in a round execute concurrently; settings, theme and template changes always run one at a time.
@@ -36,6 +44,14 @@ Applying a theme is the one action that answers to both permissions: it replaces
     Both permissions let an LLM write real changes on its own. A strong agentic reasoning model is highly recommended before turning one on — weaker models make destructive or unwanted changes.
 
 ## Configuration lookup tools
+
+`read_agent_settings` retains current values and scene overrides, but omits model
+choices, provider filters and choice lists longer than 20 entries or 2,048 UTF-8
+bytes. It directs the user to choose an id or value in the settings dropdown.
+`validate_openrouter_model` checks one user-supplied `model_id` and returns
+existence and reported input/output modalities, with image reference limits and
+formats when available. It never returns a model list or recommendations. An
+unavailable lookup returns unknown, not a missing-model verdict.
 
 `read_app_config` reads `game`, `appearance`, `creator`, `presets` and `prompts`.
 Omitting `section` lists those sections. Results are limited to **8,192 UTF-8 bytes**

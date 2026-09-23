@@ -4,6 +4,7 @@ Keep track of clients and agents
 
 import asyncio
 import traceback
+from typing import TYPE_CHECKING
 
 import structlog
 
@@ -13,7 +14,10 @@ from talemate.client.base import ClientStatus
 from talemate.emit import emit
 from talemate.emit.signals import handlers
 import talemate.emit.async_signals as async_signals
-from talemate.config import get_config, Config
+from talemate.config import get_config, Config, mark_apply_pending
+
+if TYPE_CHECKING:
+    from talemate.agents.base import Agent
 
 log = structlog.get_logger("talemate")
 
@@ -285,6 +289,17 @@ async def instantiate_clients():
         await emit_clients_status()
 
 
+async def apply_agent_config(agent: "Agent", **config) -> None:
+    try:
+        await agent.apply_config(**config, force=agent.config_apply_failed)
+    except (Exception, asyncio.CancelledError):
+        agent.config_apply_failed = True
+        mark_apply_pending("agents")
+        raise
+    else:
+        agent.config_apply_failed = False
+
+
 async def configure_agents():
     config: Config = get_config()
     for name, agent_config in config.agents.items():
@@ -293,7 +308,7 @@ async def configure_agents():
             log.warn("agent not found", name=name)
             continue
 
-        await agent.apply_config(**agent_config.model_dump())
+        await apply_agent_config(agent, **agent_config.model_dump())
         await agent.emit_status()
 
     await ensure_agent_llm_client()

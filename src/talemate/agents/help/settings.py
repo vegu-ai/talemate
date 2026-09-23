@@ -8,13 +8,14 @@ clients. Secret values (API keys) are never exposed and cannot be written.
 
 Write operations mirror the frontend save paths: global agent settings reach
 the running agent through ``Agent.apply_config`` as a settings page save does
-(a failed apply keeps the change stored, and a restart applies it), persist
+(a failed apply keeps the change stored for retry on the next save), persist
 via ``Agent.save_config`` + ``commit_config`` and re-emit the agent status,
 app config writes re-validate the whole section through its pydantic model,
 and both fire ``config.changed`` so every frontend receives a fresh
 ``app_config`` payload instead of keeping a snapshot that predates the write.
 """
 
+import json
 from typing import TYPE_CHECKING, Any, Literal
 
 import pydantic
@@ -24,7 +25,7 @@ import talemate.config.schema as config_schema
 import talemate.instance as instance
 from talemate.agents.base import DYNAMIC_CHILDREN_FIELD
 from talemate.client.registry import get_client_class
-from talemate.config import commit_config, get_config, mark_apply_pending
+from talemate.config import commit_config, get_config
 from talemate.scene_agent_settings import (
     DEFAULT_SETTINGS_FILENAME,
     SceneAgentSettings,
@@ -51,6 +52,8 @@ __all__ = [
 log = structlog.get_logger("talemate.agents.help.settings")
 
 REDACTED = "(hidden)"
+MAX_INLINE_CHOICES = 20
+MAX_INLINE_CHOICES_BYTES = 2048
 
 # field types the update tool can write - everything else (tables, weights,
 # vectors, template pickers, ...) is UI-only
@@ -126,7 +129,23 @@ def _coerce_bool(value: Any) -> bool:
     raise ValueError(f"Expected a boolean (true/false), got {value!r}.")
 
 
-def _resolve_choice(field: "AgentActionConfig", value: Any) -> Any:
+def _choice_guidance(config_key: str, field: "AgentActionConfig") -> str | None:
+    if config_key in ("model", "model_name"):
+        return "Use a model id chosen by the user; ask for the id or point to the settings dropdown. Never list or recommend models."
+    if config_key in ("provider_only", "provider_ignore"):
+        return "Use provider ids chosen by the user in the settings dropdown; pass the full list of selected ids."
+    if (
+        len(field.choices or []) > MAX_INLINE_CHOICES
+        or len(json.dumps(field.choices or [], ensure_ascii=False).encode("utf-8"))
+        > MAX_INLINE_CHOICES_BYTES
+    ):
+        return "Use a value chosen by the user from the settings dropdown."
+    return None
+
+
+def _resolve_choice(
+    field: "AgentActionConfig", value: Any, guidance: str | None = None
+) -> Any:
     """Validate ``value`` against the field's choices, returning the canonical
     choice value. Raises ValueError when it matches neither a value nor a label."""
     valid_values = [choice["value"] for choice in field.choices]
@@ -136,10 +155,14 @@ def _resolve_choice(field: "AgentActionConfig", value: Any) -> Any:
     for choice in field.choices:
         if str(choice["label"]).strip().lower() == str(value).strip().lower():
             return choice["value"]
+    if guidance:
+        raise ValueError(f"Invalid choice {value!r}. {guidance}")
     raise ValueError(f"Invalid choice {value!r}. Valid values: {valid_values}")
 
 
-def _coerce_value(field: "AgentActionConfig", value: Any) -> Any:
+def _coerce_value(
+    field: "AgentActionConfig", value: Any, guidance: str | None = None
+) -> Any:
     """Coerce a raw LLM-supplied value to the field's type.
 
     Raises ValueError with an LLM-readable message when the value cannot be
@@ -163,13 +186,13 @@ def _coerce_value(field: "AgentActionConfig", value: Any) -> Any:
             raise ValueError(
                 f"This setting holds a list of values - pass the FULL new list, got {value!r}."
             )
-        return [_resolve_choice(field, item) for item in value]
+        return [_resolve_choice(field, item, guidance) for item in value]
     else:
         coerced = value if isinstance(value, str) else str(value)
 
     # a combobox offers its choices as suggestions and keeps any other value
     if field.choices and field.type != "combobox":
-        return _resolve_choice(field, coerced)
+        return _resolve_choice(field, coerced, guidance)
 
     return coerced
 
@@ -185,13 +208,21 @@ def _field_payload(
     }
     if field.description:
         payload["description"] = field.description
-    if field.choices:
+    guidance = _choice_guidance(config_key, field)
+    if guidance:
+        payload["choices_omitted"] = True
+        payload["value_guidance"] = guidance
+    elif field.choices:
         payload["choices"] = [
             {"label": choice["label"], "value": choice["value"]}
             for choice in field.choices
         ]
-        if field.type == "combobox":
-            payload["other_values"] = "accepted, the choices are suggestions"
+    if field.type == "combobox":
+        payload["other_values"] = (
+            "accepted; suggestions do not restrict the value"
+            if guidance
+            else "accepted, the choices are suggestions"
+        )
     if field.min is not None:
         payload["min"] = field.min
     if field.max is not None:
@@ -387,7 +418,7 @@ async def _apply_global_setting(
     """Change one global setting (``"enabled"`` for the action's flag) the way
     a settings page save does: store it, apply it to the running agent and
     persist it. Returns the error when the apply failed; the change then stays
-    stored, and a restart applies it."""
+    stored for retry on the next save."""
     # the stored config gets the new value while the agent still holds the old
     # one: agents compare the two to rebuild what the change affects (the
     # Visualizer's backends, the memory agent's embeddings)
@@ -399,7 +430,7 @@ async def _apply_global_setting(
     else:
         stored_action.config[setting_key] = config_schema.AgentActionConfig(value=value)
     try:
-        await agent.apply_config(**stored.model_dump())
+        await instance.apply_agent_config(agent, **stored.model_dump())
     except Exception as exc:
         log.error(
             "applying a help chat setting change failed",
@@ -408,9 +439,6 @@ async def _apply_global_setting(
             setting=setting_key,
             error=str(exc),
         )
-        # the next config save applies the agents again, but a rebuild that
-        # compares the agent with itself does not rerun - only a restart does
-        mark_apply_pending("agents")
         error = str(exc) or type(exc).__name__
     else:
         # apply_config can change values too: a new ComfyUI workflow clears
@@ -426,7 +454,9 @@ def _saved_not_applied(
 ) -> str:
     return (
         f"Saved {action_key}.{setting_key} = {value!r}, but applying it to the "
-        f"running agent failed: {error}. Restart Talemate to apply it."
+        f"running agent failed: {error}. Open Settings and press Save to retry "
+        "(Apply pending keeps Save available without edits), or ask me to set "
+        "this setting again. If the error persists, correct its cause before retrying."
     )
 
 
@@ -520,7 +550,7 @@ async def update_agent_setting(
         )
 
     try:
-        coerced = _coerce_value(field, value)
+        coerced = _coerce_value(field, value, _choice_guidance(setting_key, field))
     except ValueError as exc:
         return str(exc)
 

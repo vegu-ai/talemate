@@ -1,3 +1,4 @@
+import json
 from typing import Awaitable, Callable, Literal
 
 import structlog
@@ -21,6 +22,7 @@ from . import settings
 from . import inference_presets
 from . import templates
 from . import themes
+from .model_validation import validate_openrouter_model
 from .schema import (
     HelpChat,
     HelpChatDocResultMessage,
@@ -72,6 +74,20 @@ PERMISSION_REVOKED = (
 
 SETTINGS_PERMISSION = "Allow changes to settings"
 TEMPLATE_PERMISSION = "Allow changes to templates"
+
+WRITE_TOOL_NAMES = frozenset(
+    {
+        "update_inference_presets",
+        "update_agent_setting",
+        "clear_agent_setting_scene_override",
+        "update_app_config",
+        "create_theme",
+        "update_theme",
+        "apply_theme",
+        "create_template",
+        "update_template",
+    }
+)
 
 
 def revoked(allowed: bool, label: str) -> str | None:
@@ -459,6 +475,12 @@ class HelpChatMixin:
         # mutations never race each other
         callbacks = [
             focal.Callback(
+                name="validate_openrouter_model",
+                arguments=[focal.Argument(name="model_id", type="str")],
+                fn=validate_openrouter_model,
+                concurrent=True,
+            ),
+            focal.Callback(
                 name="read_agent_settings",
                 arguments=[focal.Argument(name="agent", type="str")],
                 fn=read_agent_settings,
@@ -789,6 +811,156 @@ class HelpChatMixin:
 
     # === Generation ===
 
+    @staticmethod
+    def _chat_render_message(message, index: int = 1) -> str:
+        if message.type == "doc_result":
+            data = message.model_dump(mode="json")
+            return (
+                f"[#{index}] [tool call] `{message.name}` "
+                f"{json.dumps(data['arguments'], indent=2)}\n"
+                f"Result: {json.dumps(data['result'], indent=2)}\n---"
+            )
+        return f"[#{index}] [{message.source}] {message.message}\n---"
+
+    @classmethod
+    def _chat_render_history(cls, history: list) -> str:
+        return "\n\n".join(
+            cls._chat_render_message(message, index)
+            for index, message in enumerate(history, 1)
+        )
+
+    @classmethod
+    def _chat_trim_history(cls, history: list, budget_tokens: int) -> list:
+        request_index = next(
+            (
+                index
+                for index in range(len(history) - 1, -1, -1)
+                if history[index].type == "text" and history[index].source == "user"
+            ),
+            None,
+        )
+        turn_start = request_index + 1 if request_index is not None else 0
+        tool_indices = [
+            index
+            for index in range(turn_start, len(history))
+            if history[index].type == "doc_result"
+        ]
+        selected = (
+            {request_index: history[request_index]} if request_index is not None else {}
+        )
+        costs = {}
+
+        def cost(index):
+            if index not in costs:
+                # Allow for separators and the final message-number prefix.
+                costs[index] = (
+                    util.count_tokens(cls._chat_render_message(history[index])) + 8
+                )
+            return costs[index]
+
+        def omission_notice(indices):
+            names = ", ".join(dict.fromkeys(history[index].name for index in indices))
+            return HelpChatMessage(
+                source="help",
+                message=(
+                    f"[{len(indices)} tool result{'s' if len(indices) != 1 else ''} "
+                    f"of this turn omitted to fit context: {names}. "
+                    "Do not repeat these calls or claim their outcomes. "
+                    "Ask the user to increase the client's context length if the missing results are needed.]"
+                ),
+            )
+
+        used = cost(request_index) if request_index is not None else 0
+        turn_cost = sum(cost(index) for index in range(turn_start, len(history)))
+        current_turn_cost = used + turn_cost
+        if current_turn_cost > budget_tokens:
+            current_turn = (
+                history[request_index:] if request_index is not None else history
+            )
+            current_turn_cost = util.count_tokens(
+                cls._chat_render_history(current_turn)
+            )
+        if current_turn_cost <= budget_tokens:
+            selected.update(
+                (index, history[index]) for index in range(turn_start, len(history))
+            )
+            used = current_turn_cost
+            for index in range(turn_start - 2, -1, -1):
+                if used + cost(index) > budget_tokens:
+                    break
+                selected[index] = history[index]
+                used += cost(index)
+        else:
+            if tool_indices:
+                used += (
+                    util.count_tokens(
+                        cls._chat_render_message(omission_notice(tool_indices))
+                    )
+                    + 8
+                )
+            newest_write = next(
+                (
+                    index
+                    for index in reversed(tool_indices)
+                    if history[index].name in WRITE_TOOL_NAMES
+                ),
+                None,
+            )
+            order = ([newest_write] if newest_write is not None else []) + [
+                index
+                for index in range(len(history) - 1, turn_start - 1, -1)
+                if index != newest_write
+            ]
+            kept_tool = False
+            for index in order:
+                message = history[index]
+                if used + cost(index) <= budget_tokens:
+                    selected[index] = message
+                    used += cost(index)
+                    kept_tool |= message.type == "doc_result"
+                elif (
+                    not kept_tool
+                    and message.type == "doc_result"
+                    and used < budget_tokens
+                ):
+                    # Only the prompt gets a preview; persisted results remain intact.
+                    content = json.dumps(
+                        message.model_dump(mode="json")["result"], indent=2
+                    )
+                    marker = "[Result truncated to fit context; omitted content has not been read.]\n"
+                    low, high = 0, len(content)
+                    preview_cost = 0
+                    while low <= high:
+                        length = (low + high) // 2
+                        preview = message.model_copy(
+                            update={"result": marker + content[:length]}
+                        )
+                        tokens = (
+                            util.count_tokens(cls._chat_render_message(preview)) + 8
+                        )
+                        if used + tokens <= budget_tokens:
+                            selected[index] = preview
+                            preview_cost = tokens
+                            low = length + 1
+                        else:
+                            high = length - 1
+                    if index in selected:
+                        used += preview_cost
+                        kept_tool = True
+
+        trimmed = [
+            selected[index] for index in range(len(history)) if index in selected
+        ]
+        omitted = [index for index in tool_indices if index not in selected]
+        if omitted:
+            trimmed.append(omission_notice(omitted))
+        # The request and an explicit omission notice survive an exhausted budget.
+        if util.count_tokens(cls._chat_render_history(trimmed)) > budget_tokens:
+            trimmed = [history[request_index]] if request_index is not None else []
+            if tool_indices:
+                trimmed.append(omission_notice(tool_indices))
+        return trimmed
+
     async def chat_generate_next(
         self,
         chat_id: str,
@@ -831,7 +1003,8 @@ class HelpChatMixin:
                     response_length=self.chat_response_length,
                     scene=self.scene,
                     history=chat.messages,
-                    history_trim=util.reverse_trim_history,
+                    history_trim=self._chat_trim_history,
+                    render_history=self._chat_render_history,
                     docs_sections=docs.docs_section_overview(),
                     docs_available=docs.docs_available(),
                     docs_site_url=docs.DOCS_SITE_URL,

@@ -450,6 +450,7 @@ class Agent(ABC):
     websocket_handler = None
     essential = True
     ready_check_error = None
+    config_apply_failed: bool = False
 
     # Debounce tracking for emit_status
     _emit_status_debounce_task: asyncio.Task | None = None

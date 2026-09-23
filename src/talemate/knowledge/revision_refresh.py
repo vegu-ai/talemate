@@ -10,10 +10,12 @@ from weakref import WeakKeyDictionary
 import structlog
 from pydantic import BaseModel, ConfigDict
 
+from talemate.agents.summarize.perceptions import eligible_passage
 from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspective_models import content_digest
+from talemate.knowledge.presence import relevant_audiences
 from talemate.knowledge.revision_browsing import (
     affected_archive_ids,
 )
@@ -54,11 +56,6 @@ def revision_operations(scene, message) -> RevisionOperations:
     ):
         return RevisionOperations()
     if character_knowledge_enabled(scene):
-        from talemate.agents.summarize.perceptions import (
-            eligible_passage,
-            relevant_audiences,
-        )
-
         return RevisionOperations(
             perceptions=eligible_passage(message)
             and bool(relevant_audiences(scene, message))

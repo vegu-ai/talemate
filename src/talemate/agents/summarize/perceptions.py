@@ -34,6 +34,7 @@ from talemate.knowledge.backlog import (
 )
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.readiness import emit_perception_status, perception_readiness
+from talemate.knowledge.presence import relevant_audiences
 from talemate.knowledge.timeline import record_time
 from talemate.knowledge.reinforcements import prepare_reinforcement_source
 from talemate.knowledge.perspective_models import (
@@ -239,15 +240,6 @@ def perception_prefix(
         if passage.id == before_message_id:
             return passages[:index]
     raise GenerationCancelled(f"History boundary {before_message_id} was removed")
-
-
-def relevant_audiences(scene: "Scene", message: SceneMessage) -> tuple[str, ...]:
-    names = set(message.present or ())
-    return tuple(
-        character.name
-        for character in scene.character_data.values()
-        if character.name in names
-    )
 
 
 def perception_staleness(scene, message, *, read=None) -> Staleness | None:

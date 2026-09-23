@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Literal
 from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.knowledge.perspective_models import content_digest
+from talemate.knowledge.presence import relevant_views
 
 if TYPE_CHECKING:
     from talemate.scene_message import SceneMessage
@@ -36,9 +37,8 @@ def perception_readiness(
         return "failed"
     if view_status == "pending":
         return "deferred"
-    if message.knowledge is not None and any(
-        view.status == "failed" for view in message.knowledge.views
-    ):
+    views = relevant_views(scene, message) if message.knowledge is not None else ()
+    if any(view.status == "failed" for view in views):
         return "failed"
     if character is not None:
         from talemate.knowledge.perspectives import (
@@ -59,8 +59,8 @@ def perception_readiness(
     if (
         message.knowledge is not None
         and message.knowledge.content_digest == content_digest(message.perception_text)
-        and message.knowledge.views
-        and all(view.status in ("ready", "omitted") for view in message.knowledge.views)
+        and views
+        and all(view.status in ("ready", "omitted") for view in views)
     ):
         return "ready"
     return "deferred"

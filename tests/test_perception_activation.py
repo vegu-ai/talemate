@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from _perception_backlog_helpers import answering
-from test_perception_backlog import analysis, story
+from test_perception_backlog import analysis, replace_view, story
 from talemate.character import Character, activate_character
 from talemate.context import ActiveScene
 from talemate.instance import get_agent
@@ -23,6 +23,7 @@ from talemate.knowledge.perspectives import (
     source_reference,
     view_staleness,
 )
+from talemate.knowledge.readiness import perception_readiness
 from talemate.load import load_scene_from_data
 from talemate.scene_message import CharacterMessage, NarratorMessage
 
@@ -354,3 +355,49 @@ async def test_editing_passage_with_absent_view_repairs_present_character(
         assert project_character_history(scene, "Carol") == []
         await summarizer.ensure_perceptions(scene)
         request.assert_awaited_once()
+
+
+async def test_absent_pending_record_does_not_hold_back_readiness(scene, monkeypatch):
+    scene.knowledge_eligibility = "perception"
+    scene.character_data = {name: Character(name=name) for name in ("Alice", "Carol")}
+    scene.active_characters = ["Alice"]
+    message = CharacterMessage(message="Alice: A bell rings.")
+    request = AsyncMock(side_effect=analysis())
+    monkeypatch.setattr("talemate.agents.summarize.perceptions.Prompt.request", request)
+    statuses = []
+
+    def record(_, entry, state):
+        statuses.append((entry.id, state))
+
+    monkeypatch.setattr("talemate.knowledge.readiness.emit_perception_status", record)
+    monkeypatch.setattr(
+        "talemate.agents.summarize.perceptions.emit_perception_status", record
+    )
+    expected_views = [(("Carol",), "pending"), (("Alice",), "ready")]
+    with ActiveScene(scene):
+        await scene.push_history(message)
+        scene.active_characters.append("Carol")
+        edit_message_view(scene, message.id, "Carol", "I hear the bell.")
+        scene.edit_message(message.id, "Alice: The room is silent.")
+        statuses.clear()
+        await asyncio.wait_for(
+            scene.push_history(CharacterMessage(message="Alice: The bell stops.")), 2
+        )
+        assert [s for s in statuses if s[0] == message.id][-1] == (message.id, "ready")
+        assert [(v.audience, v.status) for v in message.knowledge.views] == (
+            expected_views
+        )
+        assert perception_readiness(scene, message) == "ready"
+        assert message.id not in scene.pending_perception_messages
+
+        replace_view(message, "Alice", status="failed", text=None)
+        statuses.clear()
+        await asyncio.wait_for(get_agent("summarizer").ensure_perceptions(scene), 2)
+        assert [s for s in statuses if s[0] == message.id] == [
+            (message.id, "running"),
+            (message.id, "ready"),
+        ]
+        assert [(v.audience, v.status) for v in message.knowledge.views] == (
+            expected_views
+        )
+        assert scene.pending_perception_messages == []

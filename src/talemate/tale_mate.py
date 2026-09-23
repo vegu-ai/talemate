@@ -62,7 +62,7 @@ from talemate.history import (
     count_summary_layers,
     message_removed,
 )
-from talemate.knowledge.presence import presence_metadata
+from talemate.knowledge.presence import presence_metadata, relevant_views
 from talemate.knowledge.memory import invalidate_memory_audiences
 from talemate.knowledge.perspective_models import SceneKnowledge
 from talemate.knowledge.perspectives import (
@@ -1285,7 +1285,7 @@ class Scene(Emitter):
                 message.knowledge is not None
                 and any(
                     view.status not in ("ready", "omitted")
-                    for view in message.knowledge.views
+                    for view in relevant_views(self, message)
                 )
             )
         ]

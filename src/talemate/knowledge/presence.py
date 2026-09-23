@@ -1,6 +1,7 @@
 import json
 from typing import TYPE_CHECKING
 
+from talemate.knowledge.perspective_models import PerspectiveView
 from talemate.scene_message import SceneMessage
 
 if TYPE_CHECKING:
@@ -11,6 +12,8 @@ __all__ = [
     "presence_differs",
     "layer_entry_presence",
     "presence_metadata",
+    "relevant_audiences",
+    "relevant_views",
 ]
 
 
@@ -79,3 +82,23 @@ def presence_metadata(present: list[str] | None) -> dict:
     if present is None:
         return {"presence_known": False}
     return {"presence_known": True, "present": json.dumps(list(present))}
+
+
+def relevant_audiences(scene: "Scene", message: SceneMessage) -> tuple[str, ...]:
+    names = set(message.present or ())
+    return tuple(
+        character.name
+        for character in scene.character_data.values()
+        if character.name in names
+    )
+
+
+def relevant_views(
+    scene: "Scene", message: SceneMessage
+) -> tuple[PerspectiveView, ...]:
+    audiences = set(relevant_audiences(scene, message))
+    return tuple(
+        view
+        for view in message.knowledge.views
+        if audiences.intersection(view.audience)
+    )

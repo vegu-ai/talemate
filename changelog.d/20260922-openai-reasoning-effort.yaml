@@ -9,5 +9,5 @@ changed:
   - "OpenAI sampler toggles now default off, including for saved clients without toggle values. Enable Send temperature, Send top_p or Send presence_penalty to use preset values on models that support them."
   - "After upgrading from 0.39, saved gpt-5/gpt-6 OpenAI clients have Reasoning locked on. For o-series clients, enable Reasoning if it is off to leave room for thinking; Adaptive then omits the token cap. For o1-mini/o1-preview, turn Send System Message off. Turn Stream off if your organization cannot stream, and choose max_tokens for override servers that require it. Save these settings."
 fixed:
-  - "Allowed manually entered OpenAI model names to use a fallback token estimate and clarified when action overrides omit reasoning effort."
+  - "Allowed manually entered OpenAI model names to use a fallback token estimate."
   - "OpenAI requests default to max_completion_tokens and honor explicit sampler, system-message, streaming and token-parameter settings (#740)."

@@ -56,6 +56,20 @@ This is **on by default**. See the [Concurrent Requests](/talemate/user-guide/cl
 !!! note "Available models are fetched automatically"
     Talemate fetches the list of available OpenRouter models when you save the configuration (if a valid API key is present). If you add or remove models to your account later, simply click **Save** in the application settings again to refresh the list. 
 
+### Reasoning
+
+New OpenRouter clients start with reasoning on and 2048 **Reasoning Tokens**. A client you saved before keeps its own setting. Turn **Reasoning** on or off in the **Reasoning** section of the client editor, or with the :material-brain: button on the client card.
+
+With reasoning on, Talemate asks OpenRouter to let the model think first, with a budget set by **Reasoning Tokens** (at least 256). With reasoning off, Talemate sends no reasoning request at all, and the card shows a **Reasoning Disabled** chip. A model that thinks only when asked, such as Claude Haiku 4.5, then answers straight away. A model that always thinks, such as Gemini 3.8 Flash, still thinks by its own default.
+
+You can keep reasoning on when you pick a model that cannot think. OpenRouter ignores the reasoning request for such a model, and the model answers as usual.
+
+!!! warning "Keep reasoning on for Google models"
+    With reasoning off, Talemate may pre-fill the start of the answer to steer the model. Google models on OpenRouter refuse such requests with an error, so keep reasoning on for them.
+
+!!! note "Changed in 0.40.0"
+    Before 0.40.0, Talemate sent the reasoning budget even with reasoning off, so a model such as Claude still thought. If you liked those answers, turn reasoning on.
+
 ### Parameters
 
 The **Parameters** section of the client editor lets you control which sampler parameters are sent with each request. Some model providers on OpenRouter reject requests that include parameters they don't support for the selected model, returning an error instead of a generation. If you run into this, you can turn the offending parameter off so it is left out of the request entirely.

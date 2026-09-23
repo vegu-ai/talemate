@@ -310,9 +310,7 @@ async def test_openai_sends_effort_and_preserves_completion_cap(
     "model", ["gpt-4o", "o4-mini", "custom-gpt-6-astra", "custom-model"]
 )
 @pytest.mark.parametrize("effort", ["default", "none", "low"])
-async def test_openai_sends_effort_with_reasoning_allowance_off(
-    clients, wire, model, effort
-):
+async def test_openai_omits_effort_with_reasoning_off(clients, wire, model, effort):
     client = clients(
         "openai",
         model=model,
@@ -331,29 +329,15 @@ async def test_openai_sends_effort_with_reasoning_allowance_off(
     assert body["max_completion_tokens"] == 256
     assert body["temperature"] == 0.8
     assert "max_tokens" not in body
-    if effort == "default":
-        assert "reasoning_effort" not in body
-    else:
-        assert body["reasoning_effort"] == effort
+    assert "reasoning_effort" not in body
     assert client.reasoning_display is None
     assert [message["role"] for message in body["messages"]] == ["system", "user"]
 
     with ClientContext(requires_active_scene=False):
         assert await client.send_prompt("hello") == "answer"
-    assert wire[-1][1].get("reasoning_effort") == (
-        None if effort == "default" else effort
-    )
-    assert client._common_status_data()["reasoning_override_applies"] == (
-        effort != "default"
-    )
-
-    with ClientContext(disable_reasoning=True, requires_active_scene=False):
-        assert client.reasoning_display is None
-        assert client._common_status_data()["reasoning_override_applies"] == (
-            effort != "default"
-        )
-        assert await client.send_prompt("hello") == "answer"
     assert "reasoning_effort" not in wire[-1][1]
+    assert client._common_status_data()["reasoning_override_applies"] is False
+    assert client.effort_level == effort
 
 
 def test_openai_token_counter_falls_back_for_unknown_model():
@@ -386,7 +370,7 @@ def test_openai_reasoning_lock_controls_effective_status(clients, model, locked)
     assert status["reason_locked"] == locked
     assert status["reason_enabled"] == locked
     assert bool(status["reasoning_display"]) == locked
-    assert status["reasoning_override_applies"] == (not locked)
+    assert status["reasoning_override_applies"] is False
     assert client.client_config.reason_enabled is False
 
 
@@ -512,7 +496,7 @@ async def test_openai_status_preserves_reasoning_setting_and_padding(
     body = wire[-1][1]
     assert body["max_completion_tokens"] == 96 + (2048 if effective_reasoning else 0)
     assert "max_tokens" not in body
-    assert body["reasoning_effort"] == "high"
+    assert body.get("reasoning_effort") == ("high" if effective_reasoning else None)
     assert [message["role"] for message in body["messages"]] == ["system", "user"]
     assert body["stream"] is True
 

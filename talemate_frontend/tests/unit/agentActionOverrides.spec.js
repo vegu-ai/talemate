@@ -80,13 +80,13 @@ describe("clientReasoningHint", () => {
         const context = { state: { clients: [] } };
         const frame = {
             type: "client_status", name: "openai", message: "openai", model_name: "gpt-4o",
-            data: { reason_enabled: false, reason_locked: false, reasoning_override_applies: true,
+            data: { reason_enabled: true, reason_locked: false, reasoning_override_applies: true,
                 meta: { extra_fields: {}, defaults: {} } },
         };
         const log = vi.spyOn(console, "log").mockImplementation(() => {});
         try {
             handleMessage.call(context, frame);
-            expect(clientReasoningHint(context.state.clients[0]).text).toBe(REASONING_HINTS.effort);
+            expect(clientReasoningHint(context.state.clients[0]).text).toBe(REASONING_HINTS.on);
             frame.data.reasoning_override_applies = false;
             handleMessage.call(context, frame);
             expect(clientReasoningHint(context.state.clients[0]).text).toBe(REASONING_HINTS.off);
@@ -114,15 +114,6 @@ describe("clientReasoningHint", () => {
         ).toBe("locked");
     });
 
-    it("shows that an override removes explicit effort even with reasoning off", () => {
-        const client = {
-            name: "openai", reason_enabled: false, reason_locked: false,
-            reasoning_override_applies: true,
-        };
-        expect(clientReasoningHint(client)).toEqual({ state: "on", text: REASONING_HINTS.effort });
-        expect(clientReasoningHint({ ...client, reasoning_override_applies: false }))
-            .toEqual({ state: "off", text: REASONING_HINTS.off });
-    });
 });
 
 describe("buildOverrideRows", () => {

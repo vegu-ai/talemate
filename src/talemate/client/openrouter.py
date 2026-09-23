@@ -564,12 +564,11 @@ class OpenRouterClient(ConcurrentInferenceMixin, ToggleableParametersMixin, Clie
         payload = {
             "model": self.model_name,
             "messages": messages,
-            "reasoning": {
-                "max_tokens": self.validated_reason_tokens,
-            },
             "stream": True,
             **parameters,
         }
+        if self.reason_enabled:
+            payload["reasoning"] = {"max_tokens": self.validated_reason_tokens}
 
         self.log.debug(
             "generate",

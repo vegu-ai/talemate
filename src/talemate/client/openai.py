@@ -222,10 +222,6 @@ class OpenAIClient(
         return False
 
     @property
-    def reasoning_effort_enabled_configured(self) -> bool:
-        return True
-
-    @property
     def reason_locked(self) -> bool:
         return (self.model_name or "").startswith(("gpt-5", "gpt-6"))
 

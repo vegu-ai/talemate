@@ -23,7 +23,7 @@ def reasoning_effort_extra_fields() -> dict[str, ExtraField]:
             type="text",
             label="Reasoning Effort",
             choices=EFFORT_LEVELS,
-            description="Controls reasoning depth. Supported levels depend on the model. 'default' sends no effort setting; 'none' requests no reasoning where supported. Unsupported levels may be rejected by the server.",
+            description="Controls reasoning depth. Supported levels depend on the model. 'default' sends no effort setting; 'none' requests no reasoning where supported. Unsupported levels may be rejected by the server. Sent only while Reasoning is on.",
             group=FieldGroup(name="reasoning", label="Reasoning", icon="mdi-brain"),
             required=False,
         ),
@@ -40,13 +40,9 @@ class ReasoningEffortMixin:
         return "reasoning_effort"
 
     @property
-    def reasoning_effort_enabled_configured(self) -> bool:
-        return self.reason_enabled_configured
-
-    @property
     def reasoning_effort_configured(self) -> EffortLevel | None:
         if (
-            not self.reasoning_effort_enabled_configured
+            not self.reason_enabled_configured
             or self.reasoning_effort_format == "none"
             or self.effort_level == "default"
         ):
@@ -58,13 +54,6 @@ class ReasoningEffortMixin:
         if self.reasoning_disabled_for_action:
             return None
         return self.reasoning_effort_configured
-
-    @property
-    def reasoning_override_applies(self) -> bool:
-        return not self.reason_locked and (
-            self.reason_enabled_configured
-            or self.reasoning_effort_configured is not None
-        )
 
     @property
     def reasoning_display(self) -> ReasoningDisplay | None:

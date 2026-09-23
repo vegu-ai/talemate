@@ -53,7 +53,7 @@ This is **on by default**. See the [Concurrent Requests](/talemate/user-guide/cl
 
 Open the client's **Reasoning** section to adjust these settings:
 
-- **Reasoning Effort** controls how much effort the model spends thinking. Choose `low`, `medium`, or `high`, or another level your model supports (`none`, `minimal`, `xhigh`, or `max`). Talemate sends your choice as `reasoning_effort` for any model name, including a name entered manually. The initial `default` choice leaves this field out so the provider chooses its default. If the model does not accept the selected setting, its server error is shown; choose `default` to omit it.
+- **Reasoning Effort** controls how much effort the model spends thinking. Choose `low`, `medium`, or `high`, or another level your model supports (`none`, `minimal`, `xhigh`, or `max`). With **Reasoning** on, Talemate sends your choice as `reasoning_effort` for any model name, including a name entered manually. The initial `default` choice leaves this field out so the provider chooses its default. If the model does not accept the selected setting, its server error is shown; choose `default` to omit it.
 - **Extra Completion Tokens** adds room to the total completion limit for thinking and the answer when you enable **Reasoning**. It is not a separate reasoning budget. For example, a response limit of 512 with 2048 extra tokens allows at most 2560 tokens in total when the response token cap is enabled.
 - **Completion Token Parameter** selects the field used for that total limit. Keep the default `max_completion_tokens` for OpenAI. If you use **Override Base URL**, select `max_tokens` when your server requires it.
 
@@ -66,11 +66,11 @@ For model names starting with `gpt-5` or `gpt-6`, Talemate keeps **Reasoning** e
 !!! note "Upgrading from 0.39"
     For a saved gpt-5 or gpt-6 client, **Reasoning** is now locked on. For an o-series client, enable **Reasoning** if it is off. With Reasoning on, **Adaptive** leaves the token cap out; an explicitly enabled cap includes **Extra Completion Tokens** to leave room for thinking. The three sampler toggles now default **off**, including for saved clients that have no toggle values; leave them off for models that reject these parameters. To use preset temperature, top_p or presence_penalty values on a model that accepts them, turn the corresponding toggle on. For **o1-mini** or **o1-preview**, turn **Send System Message** off. If your organization cannot stream the selected model, turn **Stream** off. For an override server that requires the older token-limit field, choose **Completion Token Parameter → max_tokens**. Save your changes.
 
-When **Reasoning** is enabled, the client card displays the selected effort and offers a quick effort slider. Turning **Reasoning** off hides the indicator and slider while retaining the selected effort, which you can still change in the client's **Reasoning** settings section.
+When **Reasoning** is enabled, the client card displays the selected effort and offers a quick effort slider. Turning **Reasoning** off replaces the indicator and slider with a **Reasoning Disabled** chip. Your selected effort is kept, and you can still change it in the client's **Reasoning** settings section.
 
-**Reasoning** controls the extra completion allowance; the separate **Reasoning Effort** choice is sent even if that allowance is disabled. Status updates retain your token and effort values; locked clients report Reasoning on as described above.
+**Reasoning** controls both the effort and the extra completion allowance. With Reasoning off, Talemate sends neither: a client set to `high` effort with Reasoning off sends no `reasoning_effort` at all. The server then uses its own default, so a model that always thinks can still think. Status updates retain your token and effort values; locked clients report Reasoning on as described above.
 
-For an unlocked client, when an agent action turns Talemate reasoning off, both effort and padding are omitted; the card keeps showing the client's configured state. This leaves the model's own default behavior in effect and does not guarantee that the model stops thinking.
+For an unlocked client, when an agent action turns Talemate reasoning off, both effort and padding are omitted in the same way; the card keeps showing the client's configured state.
 
 ##### Parameters
 

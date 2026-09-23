@@ -514,7 +514,7 @@
   summary: Enable reasoning, set token budgets or effort and Extra Completion Tokens for OpenAI clients, and choose request
     effort formats and completion token parameters. Covers the OpenAI gpt-5/gpt-6 reasoning lock, strip/validation patterns,
     gpt-oss/gemma-4/think presets, missing-pattern Fail/Ignore/retries, Reason Prefill and coercion; per-action overrides in
-    Prompt Manager or Debug Tools, effort omission hints, observed actions, client support states, entry points, model limitations
+    Prompt Manager or Debug Tools, Reasoning Disabled card chip, observed actions, client support states, entry points, model limitations
     and Test Changes exceptions.
 - path: user-guide/clients/recommended-models.md
   title: Recommended Local Models
@@ -589,11 +589,12 @@
     Effort, Extra Completion Tokens (saved Reasoning Tokens), Completion Token Parameter for endpoint overrides, sampler toggles
     (default off), Send System Message and Stream settings. 0.39 upgrade, Reasoning defaults, empty answers and per-action
     overrides; saved settings persist independently of model names except the Reasoning lock; Reasoning toggles card effort
-    slider.
+    slider; off omits effort.
 - path: user-guide/clients/types/openrouter.md
   title: OpenRouter Client
   summary: Configure OpenRouter with its shared API key, dynamically fetched model catalog, context length and default concurrent
-    requests. Covers refreshing models on Save and omitting unsupported temperature, top-p/top-k/min-p and penalty parameters
+    requests. Covers Reasoning (on by default, ignored by non-reasoning models) and the reasoning token budget, the Google
+    pre-fill warning, refreshing models on Save and omitting unsupported temperature, top-p/top-k/min-p and penalty parameters
     through individual toggles.
 - path: user-guide/clients/types/pi-bridge.md
   title: Pi Bridge Client

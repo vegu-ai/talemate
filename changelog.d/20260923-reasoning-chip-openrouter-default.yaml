@@ -1,0 +1,7 @@
+added:
+  - "Client list: with Reasoning off, a client's card now shows a Reasoning Disabled chip where the reasoning slider sits. This includes local clients such as KoboldCpp, llama.cpp and TabbyAPI, which start with Reasoning off."
+changed:
+  - "OpenRouter: With Reasoning off, the client no longer sends a reasoning budget. Before, every request carried it, so a model that thinks only when asked, such as Claude, still thought with Reasoning off. Turn Reasoning on to get those answers back."
+  - "OpenRouter: With Reasoning off, a model that always thinks, such as Gemini, now thinks with the provider's default budget instead of your Reasoning Tokens, so its cost and response time follow the provider's default."
+fixed:
+  - "OpenRouter: Turning reasoning off for a single agent action (Agent action overrides, Prompt Manager) now takes effect. Before, the reasoning budget was still sent."

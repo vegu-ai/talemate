@@ -195,6 +195,15 @@
                 </template>
               </v-tooltip>
 
+              <!-- reasoning off - holds the reasoning slider's row -->
+              <v-tooltip text="Reasoning is off. Use the brain button to turn it on." v-if="reasoningDisabled(client)" max-width="300">
+                <template v-slot:activator="{ props }">
+                  <div class="reasoning-off-row d-flex align-center justify-center">
+                    <v-chip v-bind="props" label size="small" color="muted" variant="text" prepend-icon="mdi-brain">Reasoning Disabled</v-chip>
+                  </div>
+                </template>
+              </v-tooltip>
+
             </div>
             <v-list-item-subtitle class="text-center mt-2">
   
@@ -480,6 +489,11 @@ export default {
     toggleReasoning(index) {
       let client = this.state.clients[index];
       client.reason_enabled = !client.reason_enabled;
+      // the backend decides which reasoning slider to show, so only turning
+      // reasoning off can update the row before the saved status returns
+      if (!client.reason_enabled) {
+        client.reasoning_display = null;
+      }
       this.saveClientDelayed(client);
     },
 
@@ -496,6 +510,12 @@ export default {
         return client.reason_tokens;
       }
       return client.reasoning_display?.indicator_value;
+    },
+
+    // follows reasoning_display, not the toggle, so the chip and the slider
+    // swap on the same status and the row never empties in between
+    reasoningDisabled(client) {
+      return !client.reasoning_display;
     },
 
     effortLevelToIndex(effortLevel, choices) {
@@ -673,5 +693,9 @@ export default {
 
 .pre-wrap {
   white-space: pre-wrap;
+}
+
+.reasoning-off-row {
+  min-height: 32px;
 }
 </style>

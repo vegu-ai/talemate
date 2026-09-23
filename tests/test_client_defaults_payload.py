@@ -135,3 +135,9 @@ def test_openrouter_concurrent_inference_is_the_known_case():
 
     config = Config(clients={"test-client": add_client_payload("openrouter")})
     assert config.clients["test-client"].concurrent_inference_enabled is True
+
+
+def test_new_openrouter_client_starts_with_reasoning_on():
+    config = Config(clients={"test-client": add_client_payload("openrouter")})
+    assert config.clients["test-client"].reason_enabled is True
+    assert config.clients["test-client"].reason_tokens == 2048

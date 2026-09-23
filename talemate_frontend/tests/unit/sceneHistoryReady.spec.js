@@ -15,7 +15,7 @@ const app = () => ({
     tab: 'home',
     showSceneView: false,
     waitingForInput: true,
-    $refs: { sceneMessages: { clear: vi.fn() }, generationErrorDialog: { closeAll: vi.fn() } },
+    $refs: { sceneMessages: { clear: vi.fn() }, generationErrorDialog: { closeAll: vi.fn() }, perceptionBacklogDialog: { closeAll: vi.fn() } },
     clearUxInteractions: vi.fn(),
     scrollInputIntoView: vi.fn(),
 });

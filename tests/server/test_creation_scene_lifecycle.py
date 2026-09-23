@@ -2,10 +2,12 @@
 
 import asyncio
 import contextlib
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 
+import talemate.instance as instance
 from talemate.server import websocket_server
 from talemate.server.websocket_server import WebsocketHandler
 from talemate.scene_agent_settings import SceneAgentSettings
@@ -25,6 +27,11 @@ def handler(monkeypatch):
         return handler.scene
 
     handler.release_scene = release
+    monkeypatch.setitem(
+        instance.AGENTS,
+        "summarizer",
+        SimpleNamespace(check_perception_backlog=lambda scene: None),
+    )
     return handler
 
 

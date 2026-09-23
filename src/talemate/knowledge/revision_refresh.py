@@ -662,7 +662,10 @@ async def _refresh_perceptions(scene, message, identity, operations):
     with revision_phase(scene, message, "perceptions"):
         summarizer._register_perception_sources(scene, [message])
         await summarizer.ensure_perceptions(
-            scene, before_message_id=message.id, still_current=operation_current
+            scene,
+            before_message_id=message.id,
+            still_current=operation_current,
+            counting=[message],
         )
     while True:
         perception_identity = _phase_identity(scene, message)
@@ -688,7 +691,9 @@ async def _refresh_perceptions(scene, message, identity, operations):
         message.set_revision_status("running", phase_receipts=receipts)
         try:
             with revision_phase(scene, message, "perceptions"):
-                await summarizer.ensure_perceptions(scene, still_current=still_current)
+                await summarizer.ensure_perceptions(
+                    scene, still_current=still_current, counting=[message]
+                )
             if not still_current():
                 raise GenerationCancelled(
                     "The selected version changed during analysis"

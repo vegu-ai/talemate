@@ -3,6 +3,10 @@ import structlog
 
 from talemate.exceptions import GenerationCancelled
 from talemate.agents.summarize.context_history import ContextHistoryPreviewOverrides
+from talemate.agents.summarize.perceptions import (
+    PerceptionBacklogDecision,
+    resolve_perception_backlog,
+)
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
 from talemate.knowledge.review import character_context_review
@@ -25,6 +29,11 @@ class ApplyContextHistoryConfigPayload(pydantic.BaseModel):
     best_fit_max_dialogue: int
 
 
+class PerceptionBacklogResponsePayload(pydantic.BaseModel):
+    request_id: str
+    decision: PerceptionBacklogDecision
+
+
 class SummarizeWebsocketHandler(Plugin):
     """
     Handles summarize actions
@@ -35,6 +44,10 @@ class SummarizeWebsocketHandler(Plugin):
     @property
     def summarizer(self):
         return get_agent("summarizer")
+
+    async def handle_perception_backlog_response(self, data: dict):
+        payload = PerceptionBacklogResponsePayload(**data)
+        resolve_perception_backlog(payload.request_id, payload.decision)
 
     async def handle_context_review(self, data: dict):
         scene = self.scene

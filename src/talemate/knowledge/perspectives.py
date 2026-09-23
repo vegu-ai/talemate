@@ -29,6 +29,29 @@ if TYPE_CHECKING:
 perspectives_changed = signal("perspectives_changed")
 MAX_DEPENDENCY_DEPTH = 32
 
+StaleCheck = Literal[
+    "no_record",
+    "content_digest",
+    "knowledge_revision",
+    "missing_audience_view",
+    "view_status",
+    "view_revision",
+    "provenance_missing",
+    "provenance_content_digest",
+    "provenance_revision_receipt",
+    "provenance_knowledge_revision",
+    "dependency",
+]
+
+
+@dataclass(frozen=True)
+class Staleness:
+    """The first freshness check a stored view fails, and what it names."""
+
+    check: StaleCheck
+    character: str | None = None
+    cited: int | str | None = None
+
 
 @dataclass
 class _Source:
@@ -234,11 +257,15 @@ def source_reference(
     return source.reference() if source and source.knowledge else None
 
 
-def _passages_fresh(scene, provenance, read=None, *, allow_message_id=None):
+def _passage_staleness(
+    scene, provenance, read=None, *, allow_message_id=None
+) -> Staleness | None:
     for item in provenance:
         source = _find(scene, ("message", item.message_id, 0), read)
-        if source is None or content_digest(source.text) != item.content_digest:
-            return False
+        if source is None:
+            return Staleness("provenance_missing", cited=item.message_id)
+        if content_digest(source.text) != item.content_digest:
+            return Staleness("provenance_content_digest", cited=item.message_id)
         if (
             item.message_id != allow_message_id
             and source.kind == "message"
@@ -246,12 +273,19 @@ def _passages_fresh(scene, provenance, read=None, *, allow_message_id=None):
             and not source.owner.revision_matches_baseline
             and not source.owner.revision_feature_current("perceptions")
         ):
-            return False
+            return Staleness("provenance_revision_receipt", cited=item.message_id)
         if item.revision is not None and (
             source.knowledge is None or source.knowledge.revision != item.revision
         ):
-            return False
-    return True
+            return Staleness("provenance_knowledge_revision", cited=item.message_id)
+    return None
+
+
+def _passages_fresh(scene, provenance, read=None, *, allow_message_id=None):
+    return (
+        _passage_staleness(scene, provenance, read, allow_message_id=allow_message_id)
+        is None
+    )
 
 
 def _fresh(
@@ -367,65 +401,105 @@ def select_character_view(
     *,
     read: PerspectiveReadContext | None = None,
 ) -> CharacterView:
+    return _select_character_view(scene, source, character, read=read)[0]
+
+
+def view_staleness(
+    scene: "Scene",
+    source: SourceReference,
+    character: str,
+    *,
+    read: PerspectiveReadContext | None = None,
+) -> Staleness | None:
+    """Why the character's view of `source` is neither ready nor omitted."""
+    return _select_character_view(scene, source, character, read=read)[1]
+
+
+def _select_character_view(
+    scene, source, character, *, read=None
+) -> tuple[CharacterView, Staleness | None]:
     source = SourceReference.model_validate(source)
     if not character_knowledge_enabled(scene):
-        return CharacterView(status="unavailable")
+        return CharacterView(status="unavailable"), Staleness("no_record", character)
     _validate_audience(scene, (character,))
     read = _read_context(scene, read)
     if source.kind == "disclosure":
         item = read.disclosures.get(source.id)
         if item is not None and character in item.audience:
             if item.revision != source.revision:
-                return CharacterView(status="pending", source=source)
-            return CharacterView(
-                status="ready",
-                text=item.text,
-                source=source,
-                acquired=item.acquired,
+                return CharacterView(status="pending", source=source), Staleness(
+                    "knowledge_revision", character, source.id
+                )
+            return (
+                CharacterView(
+                    status="ready",
+                    text=item.text,
+                    source=source,
+                    acquired=item.acquired,
+                ),
+                None,
             )
-        return CharacterView(status="unavailable", source=source)
+        return CharacterView(status="unavailable", source=source), Staleness(
+            "missing_audience_view", character
+        )
     owner = _find(scene, source.key, read)
     if not owner or not owner.knowledge:
-        return CharacterView(status="unavailable", source=source)
+        return CharacterView(status="unavailable", source=source), Staleness(
+            "no_record", character
+        )
     knowledge = owner.knowledge
-    if (
-        knowledge.revision != source.revision
-        or knowledge.content_digest != content_digest(owner.text)
-    ):
-        return CharacterView(
-            status="pending", source=source, acquired=knowledge.acquired
+    if knowledge.content_digest != content_digest(owner.text):
+        stale = Staleness("content_digest", character)
+    elif knowledge.revision != source.revision:
+        stale = Staleness("knowledge_revision", character)
+    else:
+        stale = None
+    if stale:
+        return (
+            CharacterView(status="pending", source=source, acquired=knowledge.acquired),
+            stale,
         )
     views = [view for view in knowledge.views if character in view.audience]
     if source.view_id is not None:
         views = [view for view in views if view.id == source.view_id]
     if not views:
-        return CharacterView(
-            status="unavailable", source=source, acquired=knowledge.acquired
+        return (
+            CharacterView(
+                status="unavailable", source=source, acquired=knowledge.acquired
+            ),
+            Staleness("missing_audience_view", character),
         )
     view = views[0]
     status = view.status
     if source.view_revision is not None and source.view_revision != view.revision:
         status = "pending"
-    if status in ("ready", "omitted") and not (
-        _passages_fresh(scene, view.passage_provenance, read)
-        and all(
-            _fresh(
+        stale = Staleness("view_revision", character)
+    if status in ("ready", "omitted"):
+        stale = _passage_staleness(scene, view.passage_provenance, read)
+        for dependency in view.sources if stale is None else ():
+            if not _fresh(
                 scene,
                 dependency,
                 character,
                 {source},
                 readable="summary" if source.kind == "summary" else status == "ready",
                 read=read,
-            )
-            for dependency in view.sources
-        )
-    ):
-        status = "pending"
-    return CharacterView(
-        status=status,
-        text=view.text if status == "ready" else None,
-        source=owner.reference(view.id),
-        acquired=knowledge.acquired,
+            ):
+                stale = Staleness("dependency", cited=dependency.id)
+                break
+        if stale is not None:
+            status = "pending"
+            stale = Staleness(stale.check, character, stale.cited)
+    elif stale is None:
+        stale = Staleness("view_status", character)
+    return (
+        CharacterView(
+            status=status,
+            text=view.text if status == "ready" else None,
+            source=owner.reference(view.id),
+            acquired=knowledge.acquired,
+        ),
+        stale,
     )
 
 
@@ -823,6 +897,97 @@ def invalidate_message_view_dependents(
         scene, reference, reference, "views", changes=[(reference, view.audience)]
     )
     return len(event.affected) - 1
+
+
+def has_stored_views(
+    knowledge: SourcePerspectives | None, audience: Iterable[str]
+) -> bool:
+    if knowledge is None:
+        return False
+    stored = {name: view for view in knowledge.views for name in view.audience}
+    return all(
+        name in stored and stored[name].status in ("ready", "omitted")
+        for name in audience
+    )
+
+
+def keep_stored_views(scene: "Scene", message_id: int) -> bool:
+    """
+    Accept the stored ready and omitted views as current. Revisions stay, so no
+    dependent becomes stale; a citation that cannot be made current is dropped.
+    """
+    from talemate.knowledge.revision_refresh import capture_revision_mutations
+
+    _require_enabled(scene)
+    source = _find(scene, ("message", message_id, 0))
+    if (
+        source is None
+        or source.knowledge is None
+        or not any(
+            view.status in ("ready", "omitted") for view in source.knowledge.views
+        )
+    ):
+        return False
+    message = source.owner
+    with capture_revision_mutations(scene, message=message):
+        message.mark_revision_feature("perceptions")
+        source.knowledge = source.knowledge.model_copy(
+            update={"content_digest": content_digest(source.text)}
+        )
+        read = PerspectiveReadContext(scene)
+        own = source.reference()
+        source.knowledge = source.knowledge.model_copy(
+            update={
+                "views": tuple(
+                    _kept_view(scene, view, own, read)
+                    if view.status in ("ready", "omitted")
+                    else view
+                    for view in source.knowledge.views
+                )
+            }
+        )
+    return True
+
+
+def _kept_view(scene, view, own, read):
+    provenance = []
+    for item in view.passage_provenance:
+        cited = _find(scene, ("message", item.message_id, 0), read)
+        if cited is None:
+            continue
+        current = PassageProvenance(
+            message_id=item.message_id,
+            content_digest=content_digest(cited.text),
+            revision=cited.knowledge.revision if cited.knowledge else None,
+        )
+        if _passage_staleness(scene, (current,), read) is None:
+            provenance.append(current)
+    sources = []
+    for dependency in view.sources:
+        current = _current_citation(scene, dependency, read)
+        if current is not None and all(
+            _fresh(
+                scene, current, name, {own}, readable=view.status == "ready", read=read
+            )
+            for name in view.audience
+        ):
+            sources.append(current)
+    return view.model_copy(
+        update={"passage_provenance": tuple(provenance), "sources": tuple(sources)}
+    )
+
+
+def _current_citation(scene, dependency, read):
+    if dependency.kind == "disclosure":
+        return source_reference(scene, "disclosure", dependency.id, read=read)
+    cited = _find(scene, dependency.key, read)
+    if cited is None or cited.knowledge is None:
+        return None
+    if dependency.view_id is not None and not any(
+        view.id == dependency.view_id for view in cited.knowledge.views
+    ):
+        return None
+    return cited.reference(dependency.view_id)
 
 
 def add_disclosure(

@@ -1,0 +1,3 @@
+fixed:
+  - "Model Testing Harness: The bundled scene now runs with the Character knowledge effort set to Off, as a scene override that ships with the scene and survives a restore. The global effort no longer changes the Conversation test."
+  - "Character perspectives: Talemate now asks before it analyzes more than 3 passages at once, after a scene load and before a generation. The question shows the count and lets you keep the stored perspectives without a new analysis. The log names the check that made a stored perspective out of date."

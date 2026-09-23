@@ -18,6 +18,7 @@ from talemate.client.context import (
 from talemate.exceptions import ControlFlowException
 from talemate.prompts import Prompt
 from talemate.instance import get_agent
+from talemate.knowledge.backlog import cancel_stops_other_questions
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.scene_message import CharacterMessage
 from talemate.agents.utils import handle_empty_response_limit
@@ -421,10 +422,14 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
 
         from talemate.knowledge.revision_refresh import catch_up_revisions
 
-        await catch_up_revisions(self.scene)
-
-        if character_knowledge_enabled(self.scene):
-            await get_agent("summarizer").ensure_perceptions(self.scene)
+        with cancel_stops_other_questions(self.scene):
+            if character_knowledge_enabled(self.scene):
+                await get_agent("summarizer").confirm_perception_backlog(
+                    self.scene, upcoming=1
+                )
+            await catch_up_revisions(self.scene)
+            if character_knowledge_enabled(self.scene):
+                await get_agent("summarizer").ensure_perceptions(self.scene)
 
         emission = ConversationAgentEmission(
             agent=self, response="", actor=actor, character=character

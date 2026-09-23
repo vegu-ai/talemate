@@ -97,6 +97,18 @@ While analysis runs, dependent character generation waits. Self-citations are ig
 
 Perception uses the generating model's common-sense interpretation, not a proof of what a character understands. It must not invent an observation or event to justify knowledge. Clean inputs do not guarantee that a model will never invent an action, explanation or lucky guess.
 
+#### When many passages need a new analysis
+
+Sometimes many passages need a new analysis at once: after you load a story that an earlier Talemate version saved, after you edit an early message, or when a character joins who has no perspective of the earlier passages yet. When more than 3 passages would be analyzed, Talemate asks first. The count includes the passage that a character reply or a **Regenerate** is about to write. The question appears right after a scene loads, before a generation, or after a new message that would start the analyses. Up to 3 passages are analyzed without a question, as before. The question is for a backlog: a normal turn with no out-of-date passages never asks.
+
+The question shows how many passages need a new analysis, how many of them are new, how many still have stored perspectives, how many lack a perspective for a character, and how many more passages a new analysis can make out of date. Each analysis is one request. With **Automatically repair analysis** on, an analysis can make one more request to repair a view. The tooltips of the buttons show the most requests that can follow. Provider and network retries, and a **Retry** after a failed analysis, are not counted. You can choose:
+
+- **Analyze**: run the analyses now.
+- **Keep stored perspectives**: mark the stored perspectives as current as they are, with no request. A passage that lacks a perspective for a character is still analyzed, to fill in that perspective.
+- **Cancel**: stop the generation. Talemate asks again the next time it needs these perspectives.
+
+Say you load a long story from an earlier version and regenerate the last reply. Instead of 101 analyses one after the other, you see that 101 passages need a new analysis, the new reply included, and you can keep the perspectives you already have. When Talemate asks, its log names each of these passages and the check that made its stored perspective out of date, whichever choice you make. It also names the check for each passage it analyzes.
+
 ### Author responsibilities
 
 Keep secrets out of **scene description**, **story intention** and **current scene intention**. The scene description remains a shared authoring input in dialogue and guidance; story and current scene intention reach perception analysis as well. Set visibility on character sheets, details and world entries yourself or through the director. Do not put private instructions into a character's shared description and expect perception to remove them.

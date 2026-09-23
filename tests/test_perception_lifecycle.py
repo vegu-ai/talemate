@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from _perception_backlog_helpers import answering
 from talemate.agents.summarize.perceptions import parse_perceptions, perception_context
 from talemate.character import Character
 from talemate.client.base import _generation_error_futures, resolve_generation_error
@@ -646,7 +647,10 @@ async def test_long_history_edit_reanalyzes_only_its_own_passage(setup):
         CharacterMessage(message=f"Alice: Independent weather report {i}.")
         for i in range(200)
     ]
-    await scene.push_history(messages)
+    frames = []
+    with answering("analyze", frames):
+        await scene.push_history(messages)
+    assert [(frame["needed"], frame["new"]) for frame in frames] == [(200, 200)]
     assert request.await_count == 200
     assert all(
         not view.sources for message in messages for view in message.knowledge.views
@@ -969,7 +973,8 @@ async def test_cited_history_has_bounded_rebuild_and_one_index_per_scan(
 
     request.side_effect = cite_previous
     messages = [CharacterMessage(message=f"Alice: Report {i}.") for i in range(200)]
-    await scene.push_history(messages)
+    with answering("analyze", []):
+        await scene.push_history(messages)
     assert request.await_count == 200
     assert sum(bool(message.knowledge.views[0].sources) for message in messages) > 150
     original_sources = perspectives._sources
@@ -991,7 +996,10 @@ async def test_cited_history_has_bounded_rebuild_and_one_index_per_scan(
         summarizer._perception_needed(scene, message, read=read) for message in messages
     )
     assert 1 < pending <= perspectives.MAX_DEPENDENCY_DEPTH + CONTEXT_PASSAGES + 1
-    await summarizer.ensure_perceptions(scene)
+    frames = []
+    with answering("analyze", frames):
+        await summarizer.ensure_perceptions(scene)
+    assert [frame["needed"] for frame in frames] == [pending]
     assert request.await_count == 200 + pending
     assert messages[-1].knowledge == untouched
 

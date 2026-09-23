@@ -1,0 +1,835 @@
+import asyncio
+import json
+from unittest.mock import AsyncMock
+
+import pytest
+from _perception_backlog_helpers import answering
+from structlog.testing import capture_logs
+
+import talemate.agents.summarize.perceptions as perceptions
+from talemate.agents.summarize.perceptions import (
+    keep_stored_perceptions,
+    perception_backlog,
+    perception_passages,
+    perception_results_current,
+    perception_staleness,
+    resolve_perception_backlog,
+)
+from talemate.agents.summarize.websocket_handler import SummarizeWebsocketHandler
+from talemate.character import Character
+from talemate.context import ActiveScene
+from talemate.emit.signals import handlers
+from talemate.exceptions import GenerationCancelled
+from talemate.instance import get_agent
+from talemate.knowledge.revision_refresh import catch_up_revisions
+from talemate.regenerate import regenerate
+from talemate.tale_mate import Actor
+from talemate.knowledge.perspective_models import content_digest
+from talemate.knowledge.perspectives import (
+    Staleness,
+    bind_perspective_sources,
+)
+from talemate.scene_message import (
+    CharacterMessage,
+    NarratorMessage,
+    ReinforcementMessage,
+)
+
+NAMES = ("Alice", "Bob", "Carol")
+
+
+def analysis(cite_knowledge=True, cite_passages=True):
+    """A perception answer in which each view cites what it is offered."""
+
+    async def answer(*args, **kwargs):
+        context = kwargs["vars"]["context"]
+        passage = context["passage"]["provenance"]["message_id"]
+        views = [
+            {
+                "audience": [entry["name"]],
+                "status": "ready",
+                "text": f"{entry['name']} notices passage {passage}.",
+                "knowledge_ids": [item["id"] for item in entry["established_knowledge"]]
+                if cite_knowledge
+                else [],
+                "passage_ids": [
+                    item["id"] for item in context["prior_physical_context"]
+                ]
+                if cite_passages
+                else [],
+            }
+            for entry in context["cast"]
+        ]
+        text = json.dumps({"views": views})
+        return text, {"response": text}
+
+    return answer
+
+
+@pytest.fixture
+def setup(scene, monkeypatch):
+    scene.knowledge_eligibility = "perception"
+    scene.character_data = {name: Character(name=name) for name in NAMES}
+    scene.active_characters = ["Alice", "Bob"]
+    summarizer = get_agent("summarizer")
+    summarizer.actions["perceptions"].config["automatic_repair"].value = False
+    request = AsyncMock(side_effect=analysis())
+    monkeypatch.setattr("talemate.agents.summarize.perceptions.Prompt.request", request)
+    with ActiveScene(scene):
+        yield scene, summarizer, request
+
+
+async def story(scene, count=5):
+    messages = [
+        CharacterMessage(message=f"Alice: Line {index}.") for index in range(count)
+    ]
+    for message in messages:
+        await scene.push_history(message)
+    return messages
+
+
+def older_build(messages):
+    """Stored baselines and receipts that the current revision digest no longer matches."""
+    for message in messages:
+        object.__setattr__(
+            message,
+            "revision_state",
+            message.revision_state.model_copy(
+                update={"baseline_digest": "older-build", "phase_receipts": {}}
+            ),
+        )
+
+
+def replace_view(message, name, **update):
+    knowledge = message.knowledge
+    views = tuple(
+        view.model_copy(update=update) if name in view.audience else view
+        for view in knowledge.views
+    )
+    object.__setattr__(
+        message, "knowledge", knowledge.model_copy(update={"views": views})
+    )
+
+
+def backlog(scene):
+    return perception_backlog(scene, perception_passages(scene))
+
+
+def texts(messages):
+    return [
+        {
+            view.audience[0]: (view.id, view.revision, view.text)
+            for view in m.knowledge.views
+        }
+        for m in messages
+    ]
+
+
+@pytest.mark.asyncio
+async def test_current_history_has_no_backlog(setup):
+    scene, _, request = setup
+    messages = await story(scene)
+    assert request.await_count == 5
+    assert [perception_staleness(scene, message) for message in messages] == [None] * 5
+    counted = backlog(scene)
+    assert (counted.needed, counted.total) == (0, 0)
+
+
+@pytest.mark.asyncio
+async def test_stale_check_names_the_content_digest(setup):
+    scene, _, _ = setup
+    messages = await story(scene)
+    object.__setattr__(messages[2], "message", "Alice: Changed.")
+    assert perception_staleness(scene, messages[2]) == Staleness("content_digest")
+
+
+@pytest.mark.asyncio
+async def test_stale_check_names_the_missing_audience_view(setup):
+    scene, _, _ = setup
+    messages = await story(scene)
+    scene.active_characters.append("Carol")
+    assert perception_staleness(scene, messages[0]) == Staleness(
+        "missing_audience_view", "Carol"
+    )
+
+
+@pytest.mark.asyncio
+async def test_stale_check_names_the_revision_receipt(setup):
+    scene, _, _ = setup
+    messages = await story(scene)
+    older_build(messages)
+    assert perception_staleness(scene, messages[0]) == Staleness(
+        "provenance_revision_receipt", "Alice", messages[0].id
+    )
+
+
+@pytest.mark.asyncio
+async def test_stale_check_names_the_knowledge_revision_of_a_cited_passage(setup):
+    scene, _, _ = setup
+    messages = await story(scene)
+    knowledge = messages[1].knowledge
+    object.__setattr__(
+        messages[1], "knowledge", knowledge.model_copy(update={"revision": 2})
+    )
+    assert perception_staleness(scene, messages[2]) == Staleness(
+        "provenance_knowledge_revision", "Alice", messages[1].id
+    )
+
+
+@pytest.mark.asyncio
+async def test_stale_check_names_the_content_digest_of_a_cited_passage(setup):
+    scene, _, _ = setup
+    messages = await story(scene)
+    object.__setattr__(messages[1], "message", "Alice: Changed.")
+    assert perception_staleness(scene, messages[2]) == Staleness(
+        "provenance_content_digest", "Alice", messages[1].id
+    )
+
+
+@pytest.mark.asyncio
+async def test_stale_check_names_the_stored_status_and_the_dependency(setup):
+    scene, _, _ = setup
+    messages = await story(scene)
+    replace_view(messages[2], "Alice", status="failed", text=None)
+    assert perception_staleness(scene, messages[2]) == Staleness("view_status", "Alice")
+    assert perception_staleness(scene, messages[3]) == Staleness(
+        "dependency", "Alice", messages[2].id
+    )
+
+
+@pytest.mark.asyncio
+async def test_backlog_of_an_older_build_is_keepable(setup):
+    scene, _, _ = setup
+    messages = await story(scene)
+    older_build(messages)
+    counted = backlog(scene)
+    assert [m.id for m in counted.keepable] == [m.id for m in messages]
+    assert (counted.empty, counted.at_risk, counted.total) == ((), (), 5)
+    assert counted.checks() == {"provenance_revision_receipt": 5}
+
+
+@pytest.mark.asyncio
+async def test_backlog_of_an_activation_is_empty_without_cascade(setup):
+    scene, _, _ = setup
+    messages = await story(scene)
+    scene.active_characters.append("Carol")
+    counted = backlog(scene)
+    assert [m.id for m in counted.empty] == [m.id for m in messages]
+    assert (counted.keepable, counted.at_risk, counted.keep_total) == ((), (), 5)
+
+
+@pytest.mark.asyncio
+async def test_upper_bound_counts_the_cascade_of_a_rewritten_passage(setup):
+    scene, summarizer, request = setup
+    request.side_effect = analysis(cite_knowledge=False)
+    messages = await story(scene)
+    knowledge = messages[0].knowledge
+    object.__setattr__(
+        messages[0],
+        "knowledge",
+        knowledge.model_copy(update={"content_digest": content_digest("Alice: Old.")}),
+    )
+    counted = backlog(scene)
+    assert [m.id for m in counted.keepable] == [messages[0].id]
+    assert [m.id for m in counted.at_risk] == [m.id for m in messages[1:]]
+    assert counted.total == 5
+    before = request.await_count
+    frames = []
+    with answering("analyze", frames):
+        await summarizer.ensure_perceptions(scene)
+    assert [frame["total"] for frame in frames] == [5]
+    assert request.await_count - before == 5
+
+
+@pytest.mark.asyncio
+async def test_upper_bound_skips_views_that_an_analysis_keeps(setup):
+    scene, summarizer, request = setup
+    messages = await story(scene)
+    replace_view(messages[4], "Bob", status="failed", text=None)
+    counted = backlog(scene)
+    assert ([m.id for m in counted.empty], counted.at_risk) == ([messages[4].id], ())
+
+
+@pytest.mark.asyncio
+async def test_keep_makes_stored_views_current_without_a_request(setup):
+    scene, summarizer, request = setup
+    messages = await story(scene)
+    stored = texts(messages)
+    cited = [len(view.sources) for view in messages[4].knowledge.views]
+    older_build(messages)
+    counted = backlog(scene)
+    before = request.await_count
+
+    keep_stored_perceptions(scene, [*counted.keepable, *counted.empty])
+
+    assert all(perception_results_current(scene, message) for message in messages)
+    assert texts(messages) == stored
+    assert [len(view.sources) for view in messages[4].knowledge.views] == cited
+    await summarizer.ensure_perceptions(scene)
+    assert request.await_count == before
+
+    saved = [message.model_dump() for message in scene.history]
+    scene.history = [CharacterMessage.model_validate(entry) for entry in saved]
+    bind_perspective_sources(scene)
+    assert all(perception_results_current(scene, message) for message in scene.history)
+
+
+@pytest.mark.asyncio
+async def test_keep_accepts_a_changed_text_without_a_revision_change(setup):
+    scene, _, request = setup
+    messages = await story(scene)
+    revision = messages[0].knowledge.revision
+    object.__setattr__(messages[0], "message", "Alice: Changed.")
+    keep_stored_perceptions(scene, list(backlog(scene).keepable))
+    assert messages[0].knowledge.content_digest == content_digest("Alice: Changed.")
+    assert messages[0].knowledge.revision == revision
+    assert all(perception_results_current(scene, message) for message in messages)
+
+
+@pytest.mark.asyncio
+async def test_keep_fills_in_only_the_missing_views(setup):
+    scene, summarizer, request = setup
+    messages = await story(scene)
+    stored = texts(messages)
+    older_build(messages)
+    scene.active_characters.append("Carol")
+    counted = backlog(scene)
+    before = request.await_count
+
+    keep_stored_perceptions(scene, [*counted.keepable, *counted.empty])
+    frames = []
+    with answering("analyze", frames):
+        await summarizer.ensure_perceptions(scene)
+
+    assert [(frame["empty"], frame["at_risk"]) for frame in frames] == [(5, 0)]
+    assert request.await_count - before == 5
+    assert [
+        {name: value for name, value in views.items() if name != "Carol"}
+        for views in texts(messages)
+    ] == stored
+    assert all(perception_results_current(scene, message) for message in messages)
+
+
+@pytest.mark.asyncio
+async def test_keep_removes_a_citation_it_cannot_make_current(setup):
+    scene, _, _ = setup
+    messages = await story(scene)
+    replace_view(messages[2], "Alice", status="failed", text=None)
+    counted = backlog(scene)
+    assert [m.id for m in counted.empty] == [messages[2].id]
+
+    keep_stored_perceptions(scene, [*counted.keepable, *counted.empty])
+
+    alice = next(v for v in messages[3].knowledge.views if "Alice" in v.audience)
+    assert messages[2].id not in {dependency.id for dependency in alice.sources}
+    assert perception_results_current(scene, messages[3])
+    assert perception_staleness(scene, messages[2]) == Staleness("view_status", "Alice")
+
+
+FRAME_KEYS = {
+    "request_id",
+    "needed",
+    "keepable",
+    "empty",
+    "new",
+    "at_risk",
+    "total",
+    "requests",
+    "keep_total",
+    "keep_requests",
+}
+
+
+@pytest.mark.asyncio
+async def test_gate_asks_before_a_large_backlog_and_analyze_runs_it(setup):
+    scene, summarizer, request = setup
+    messages = await story(scene)
+    older_build(messages)
+    before = request.await_count
+    frames = []
+    with capture_logs() as logs, answering("analyze", frames):
+        await summarizer.ensure_perceptions(scene)
+    assert [set(frame) for frame in frames] == [FRAME_KEYS]
+    assert {key: frames[0][key] for key in FRAME_KEYS - {"request_id"}} == {
+        "needed": 5,
+        "keepable": 5,
+        "empty": 0,
+        "new": 0,
+        "at_risk": 0,
+        "total": 5,
+        "requests": 5,
+        "keep_total": 0,
+        "keep_requests": 0,
+    }
+    assert request.await_count - before == 5
+    summary = next(entry for entry in logs if entry["event"] == "perception backlog")
+    assert summary["checks"] == {"provenance_revision_receipt": 5}
+    passages = [e for e in logs if e["event"] == "perception backlog passage"]
+    assert [(e["message_id"], e["check"]) for e in passages] == [
+        (message.id, "provenance_revision_receipt") for message in messages
+    ]
+    needed = [e for e in logs if e["event"] == "perception analysis needed"]
+    assert (needed[0]["message_id"], needed[0]["check"], needed[0]["cited"]) == (
+        messages[0].id,
+        "provenance_revision_receipt",
+        messages[0].id,
+    )
+    assert all(perception_results_current(scene, message) for message in messages)
+
+
+@pytest.mark.asyncio
+async def test_gate_keep_accepts_the_stored_views_with_zero_requests(setup):
+    scene, summarizer, request = setup
+    messages = await story(scene)
+    stored = texts(messages)
+    older_build(messages)
+    before = request.await_count
+    frames = []
+    with capture_logs() as logs, answering("keep", frames):
+        await summarizer.ensure_perceptions(scene)
+    assert len(frames) == 1
+    assert request.await_count == before
+    assert texts(messages) == stored
+    assert all(perception_results_current(scene, message) for message in messages)
+    assert [
+        e["message_id"] for e in logs if e["event"] == "perception backlog passage"
+    ] == [message.id for message in messages]
+
+
+@pytest.mark.asyncio
+async def test_gate_cancel_stops_without_a_request_or_a_write(setup):
+    scene, summarizer, request = setup
+    messages = await story(scene)
+    older_build(messages)
+    knowledge = [message.knowledge for message in messages]
+    states = [message.revision_state for message in messages]
+    before = request.await_count
+    frames = []
+    with answering("cancel", frames), pytest.raises(GenerationCancelled) as caught:
+        await summarizer.ensure_perceptions(scene)
+    assert caught.value.by_user
+    assert len(frames) == 1
+    assert request.await_count == before
+    assert [message.knowledge for message in messages] == knowledge
+    assert [message.revision_state for message in messages] == states
+    assert perceptions._perception_backlog_futures == {}
+
+
+@pytest.mark.asyncio
+async def test_backlog_of_three_runs_without_a_question(setup):
+    scene, summarizer, request = setup
+    messages = await story(scene, count=3)
+    older_build(messages)
+    before = request.await_count
+    frames = []
+    with answering(None, frames):
+        await summarizer.ensure_perceptions(scene)
+    assert frames == []
+    assert request.await_count - before == 3
+
+
+@pytest.mark.asyncio
+async def test_new_passages_of_a_generation_count_toward_the_question(setup):
+    scene, _, request = setup
+    frames = []
+    with answering("analyze", frames):
+        await scene.push_history(
+            [CharacterMessage(message=f"Alice: Line {index}.") for index in range(6)]
+        )
+    assert [(frame["needed"], frame["new"]) for frame in frames] == [(6, 6)]
+    assert request.await_count == 6
+
+
+@pytest.mark.asyncio
+async def test_a_generation_counts_its_own_passage_with_the_backlog(setup):
+    scene, _, request = setup
+    messages = await story(scene, count=3)
+    older_build(messages)
+    before = request.await_count
+    frames = []
+    with answering("analyze", frames):
+        await scene.push_history(CharacterMessage(message="Alice: A new line."))
+    assert [(f["needed"], f["new"], f["total"]) for f in frames] == [(4, 1, 4)]
+    assert request.await_count - before == 4
+
+
+@pytest.mark.asyncio
+async def test_request_bound_counts_the_repair_attempt(setup):
+    scene, summarizer, request = setup
+    messages = await story(scene)
+    older_build(messages)
+    summarizer.actions["perceptions"].config["automatic_repair"].value = True
+    frames = []
+    with answering("cancel", frames), pytest.raises(GenerationCancelled):
+        await summarizer.ensure_perceptions(scene)
+    assert [(frame["total"], frame["requests"]) for frame in frames] == [(5, 10)]
+
+
+@pytest.mark.asyncio
+async def test_keep_bound_counts_the_cascade_of_the_empty_passages(setup):
+    scene, summarizer, request = setup
+    messages = await story(scene)
+    older_build(messages)
+    replace_view(messages[1], "Alice", status="failed", text=None)
+    counted = backlog(scene)
+    assert [m.id for m in counted.empty] == [messages[1].id]
+    assert [m.id for m in counted.empty_at_risk] == [m.id for m in messages[2:]]
+    assert counted.keep_total == 4
+    before = request.await_count
+    frames = []
+    with answering("keep", frames):
+        await summarizer.ensure_perceptions(scene)
+    assert [frame["keep_total"] for frame in frames] == [4]
+    assert request.await_count - before <= 4
+    assert all(perception_results_current(scene, message) for message in messages)
+
+
+@pytest.mark.asyncio
+async def test_nothing_to_analyze_still_honours_a_cancel(setup):
+    scene, summarizer, request = setup
+    await story(scene)
+    scene.cancel_requested = True
+    with pytest.raises(GenerationCancelled) as caught:
+        await summarizer.ensure_perceptions(scene)
+    assert caught.value.by_user
+    scene.cancel_requested = False
+    with pytest.raises(GenerationCancelled):
+        await summarizer.ensure_perceptions(scene, still_current=lambda: False)
+
+
+@pytest.mark.asyncio
+async def test_revision_catch_up_asks_once_and_keep_commits(setup):
+    scene, _, request = setup
+    messages = await story(scene)
+    older_build(messages)
+    before = request.await_count
+    frames = []
+    with answering("keep", frames):
+        await catch_up_revisions(scene)
+    assert len(frames) == 1
+    assert request.await_count == before
+    assert all(message.revision_matches_baseline for message in messages)
+
+
+@pytest.mark.asyncio
+async def test_gate_asks_again_when_a_run_grows_past_the_confirmed_count(
+    setup, monkeypatch
+):
+    scene, summarizer, request = setup
+    messages = await story(scene, count=8)
+    older_build(messages)
+    counted = perceptions.perception_backlog
+    calls = []
+
+    def under_counted(scene, passages, **kwargs):
+        calls.append(passages)
+        backlog = counted(scene, passages, **kwargs)
+        if len(calls) > 1:
+            return backlog
+        return perceptions.PerceptionBacklog(
+            keepable=backlog.keepable[:4],
+            empty=(),
+            at_risk=(),
+            empty_at_risk=(),
+            staleness=backlog.staleness,
+        )
+
+    monkeypatch.setattr(perceptions, "perception_backlog", under_counted)
+    before = request.await_count
+    frames = []
+    with answering("analyze", frames):
+        await summarizer.ensure_perceptions(scene)
+    assert [frame["needed"] for frame in frames] == [4, 4]
+    assert request.await_count - before == 8
+
+
+@pytest.mark.asyncio
+async def test_interrupt_ends_the_question_and_closes_the_dialog(setup):
+    scene, summarizer, request = setup
+    messages = await story(scene)
+    older_build(messages)
+    frames, closed = [], []
+
+    def close(emission):
+        closed.append(emission.data)
+
+    handlers["perception_backlog_closed"].connect(close)
+    try:
+        with answering(None, frames):
+            task = asyncio.create_task(summarizer.ensure_perceptions(scene))
+            while not frames:
+                await asyncio.sleep(0.01)
+            scene.interrupt()
+            with pytest.raises(GenerationCancelled) as caught:
+                await task
+    finally:
+        handlers["perception_backlog_closed"].disconnect(close)
+    assert caught.value.by_user
+    assert closed == [{"request_id": frames[0]["request_id"]}]
+    assert perceptions._perception_backlog_futures == {}
+
+
+@pytest.mark.asyncio
+async def test_scene_load_check_asks_and_keeps(setup):
+    scene, summarizer, request = setup
+    messages = await story(scene)
+    older_build(messages)
+    before = request.await_count
+    frames = []
+    with answering("keep", frames):
+        task = summarizer.check_perception_backlog(scene)
+        await task
+    assert len(frames) == 1
+    assert request.await_count == before
+    assert all(perception_results_current(scene, message) for message in messages)
+
+
+@pytest.mark.asyncio
+async def test_scene_load_check_runs_nothing_without_a_question(setup):
+    scene, summarizer, request = setup
+    messages = await story(scene)
+    assert summarizer.check_perception_backlog(scene) is None
+    older_build(messages)
+    task = summarizer.check_perception_backlog(scene)
+    keep_stored_perceptions(scene, messages[:3])
+    before = request.await_count
+    frames = []
+    with answering(None, frames):
+        await task
+    assert frames == []
+    assert request.await_count == before
+    scene.knowledge_eligibility = "legacy"
+    assert summarizer.check_perception_backlog(scene) is None
+
+
+@pytest.mark.asyncio
+async def test_websocket_answer_resolves_the_question(setup):
+    scene, summarizer, _ = setup
+    messages = await story(scene)
+    older_build(messages)
+    frames = []
+    with answering(None, frames):
+        task = asyncio.create_task(summarizer.ensure_perceptions(scene))
+        while not frames:
+            await asyncio.sleep(0.01)
+        await SummarizeWebsocketHandler.handle_perception_backlog_response(
+            None, {"request_id": frames[0]["request_id"], "decision": "keep"}
+        )
+        await task
+    assert all(perception_results_current(scene, message) for message in messages)
+
+
+class GenerationStarted(Exception):
+    pass
+
+
+def stop_at_the_reply_request(request, monkeypatch, reached):
+    """Perception requests answer as usual; the first other request stops the test."""
+    analyze = request.side_effect
+
+    async def routed(template, *args, **kwargs):
+        if template == "summarizer.perceptions":
+            return await analyze(template, *args, **kwargs)
+        reached.append(template)
+        raise GenerationStarted()
+
+    request.side_effect = routed
+
+    async def build_prompt(*args, **kwargs):
+        reached.append("conversation")
+        raise GenerationStarted()
+
+    monkeypatch.setattr(get_agent("conversation"), "build_prompt", build_prompt)
+
+
+def with_actor(scene):
+    actor = Actor(scene.character_data["Alice"], get_agent("conversation"))
+    actor.scene = scene
+    scene.actors.append(actor)
+    return actor
+
+
+@pytest.mark.asyncio
+async def test_converse_asks_before_the_reply_request_with_the_reply_counted(
+    setup, monkeypatch
+):
+    scene, _, request = setup
+    actor = with_actor(scene)
+    messages = await story(scene, count=3)
+    older_build(messages)
+    reached = []
+    stop_at_the_reply_request(request, monkeypatch, reached)
+    before = request.await_count
+    frames = []
+    with answering("cancel", frames), pytest.raises(GenerationCancelled):
+        await get_agent("conversation").converse(actor)
+    assert [(f["needed"], f["new"], f["total"]) for f in frames] == [(4, 1, 4)]
+    assert reached == []
+    assert request.await_count == before
+
+    frames = []
+    with answering("keep", frames), pytest.raises(GenerationStarted):
+        await get_agent("conversation").converse(actor)
+    assert len(frames) == 1
+    assert reached == ["conversation"]
+    assert request.await_count == before
+
+
+@pytest.mark.asyncio
+async def test_narrate_query_counts_no_passage(setup, monkeypatch):
+    scene, _, request = setup
+    messages = await story(scene, count=3)
+    older_build(messages)
+    reached = []
+    stop_at_the_reply_request(request, monkeypatch, reached)
+    frames = []
+    with answering(None, frames), pytest.raises(GenerationStarted):
+        await get_agent("narrator").narrate_query("What is the weather?")
+    assert frames == []
+    assert reached == ["narrator.narrate-query"]
+
+
+@pytest.mark.asyncio
+async def test_parallel_narrator_calls_ask_once_and_a_cancel_stops_them_all(
+    setup, monkeypatch
+):
+    scene, _, request = setup
+    messages = await story(scene)
+    older_build(messages)
+    reached = []
+    stop_at_the_reply_request(request, monkeypatch, reached)
+    before = request.await_count
+    frames = []
+    narrator = get_agent("narrator")
+    with answering("cancel", frames):
+        results = await asyncio.gather(
+            *(narrator.narrate_query(f"Query {index}") for index in range(3)),
+            return_exceptions=True,
+        )
+    assert len(frames) == 1
+    assert [type(result) for result in results] == [GenerationCancelled] * 3
+    assert reached == []
+    assert request.await_count == before
+
+
+@pytest.mark.asyncio
+async def test_a_stop_ends_the_approval(setup):
+    scene, summarizer, request = setup
+    messages = await story(scene)
+    older_build(messages)
+    frames = []
+    with answering("analyze", frames):
+        await summarizer.confirm_perception_backlog(scene, upcoming=0)
+    assert summarizer._approved(scene) == {message.id for message in messages}
+    scene.interrupt()
+    scene.cancel_requested = False
+    assert summarizer._approved(scene) == set()
+    with answering("analyze", frames):
+        await summarizer.ensure_perceptions(scene)
+    assert len(frames) == 2
+
+
+@pytest.mark.asyncio
+async def test_one_answer_covers_the_backlog_across_calls(setup):
+    scene, summarizer, request = setup
+    messages = await story(scene)
+    older_build(messages)
+    before = request.await_count
+    frames = []
+    with answering("analyze", frames):
+        await summarizer.confirm_perception_backlog(scene, upcoming=1)
+        await summarizer.ensure_perceptions(scene)
+    assert len(frames) == 1
+    assert request.await_count - before == 5
+    assert summarizer._approved(scene) == set()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("answer", ["cancel", "stop"])
+async def test_regenerate_cancel_asks_once_and_restores_the_tracker_message(
+    setup, answer
+):
+    scene, summarizer, request = setup
+    with_actor(scene)
+    messages = await story(scene)
+    older_build(messages)
+    tracker = ReinforcementMessage(message="Alice is tired.", source="tracker")
+    scene.history.append(tracker)
+    history = list(scene.history)
+    before = request.await_count
+    frames = []
+
+    def respond(emission):
+        frames.append(emission.data)
+        if answer == "cancel":
+            resolve_perception_backlog(emission.data["request_id"], "cancel")
+        else:
+            asyncio.get_running_loop().call_soon(scene.interrupt)
+
+    handlers["perception_backlog"].connect(respond)
+    try:
+        with pytest.raises(GenerationCancelled):
+            await regenerate(scene)
+    finally:
+        handlers["perception_backlog"].disconnect(respond)
+        scene.cancel_requested = False
+    assert len(frames) == 1
+    assert (frames[0]["needed"], frames[0]["new"]) == (5, 1)
+    assert scene.history == history
+    assert request.await_count == before
+
+
+def record_dispatch(scene):
+    dispatched = []
+
+    async def listen(event):
+        dispatched.extend(message.id for message in event.messages)
+
+    scene.signals["push_history"].connect(listen)
+    return dispatched
+
+
+@pytest.mark.asyncio
+async def test_a_cancelled_catch_up_keeps_the_push_for_the_next_catch_up(setup):
+    scene, _, request = setup
+    messages = await story(scene)
+    older_build(messages)
+    player = CharacterMessage(message="Alice: A line.", source="player")
+    player.history_dispatch_pending = True
+    scene.history.append(player)
+    narration = NarratorMessage(message="Rain starts to fall.", source="director")
+    dispatched = record_dispatch(scene)
+    frames = []
+    with answering("cancel", frames), pytest.raises(GenerationCancelled):
+        await scene.push_history(narration)
+    assert len(frames) == 1
+    assert scene.history[-2:] == [player, narration]
+    assert player.history_dispatch_pending and narration.history_dispatch_pending
+    assert dispatched == []
+
+    with answering("keep", frames):
+        await catch_up_revisions(scene)
+    assert len(frames) == 2
+    assert dispatched == [player.id, narration.id]
+    assert not player.history_dispatch_pending
+    assert not narration.history_dispatch_pending
+    await catch_up_revisions(scene)
+    assert dispatched == [player.id, narration.id]
+
+
+@pytest.mark.asyncio
+async def test_keep_during_a_push_leaves_nothing_for_the_next_catch_up(setup):
+    scene, _, request = setup
+    messages = await story(scene)
+    older_build(messages)
+    narration = NarratorMessage(message="Rain starts to fall.", source="director")
+    frames = []
+    with answering("keep", frames):
+        await scene.push_history(narration)
+    assert len(frames) == 1
+    assert scene.history[-1] is narration
+    assert all(message.revision_matches_baseline for message in messages)
+    before = request.await_count
+    await catch_up_revisions(scene)
+    assert request.await_count == before
+    assert all(perception_results_current(scene, message) for message in scene.history)

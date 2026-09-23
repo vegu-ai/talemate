@@ -41,6 +41,9 @@ async def automatic_revision(cast, monkeypatch, request, isolate_signals):
         ),
     )
     monkeypatch.setattr(get_agent("summarizer"), "finalize_perceptions", AsyncMock())
+    monkeypatch.setattr(
+        get_agent("summarizer"), "confirm_perception_backlog", AsyncMock()
+    )
     conversation = get_agent("conversation")
     monkeypatch.setattr(conversation, "finalize_message_avatar", AsyncMock())
     monkeypatch.setattr(

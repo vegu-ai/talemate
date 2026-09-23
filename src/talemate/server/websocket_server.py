@@ -292,6 +292,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 return
 
             with ActiveScene(scene):
+                instance.get_agent("summarizer").check_perception_backlog(scene)
                 await scene.start(history_visible=True)
         except Exception:
             log.error("load_scene", error=traceback.format_exc())

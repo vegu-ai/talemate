@@ -31,6 +31,7 @@ from talemate.prompts import Prompt
 from talemate.scene_message import NarratorMessage
 
 from talemate.instance import get_agent
+from talemate.knowledge.backlog import cancel_stops_other_questions
 from talemate.knowledge.mode import character_knowledge_enabled
 
 from talemate.agents.registry import register
@@ -73,9 +74,10 @@ async def _narration(
     """
     from talemate.knowledge.revision_refresh import catch_up_revisions
 
-    await catch_up_revisions(self.scene)
-    if character_knowledge_enabled(self.scene):
-        await get_agent("summarizer").ensure_perceptions(self.scene)
+    with cancel_stops_other_questions(self.scene):
+        await catch_up_revisions(self.scene)
+        if character_knowledge_enabled(self.scene):
+            await get_agent("summarizer").ensure_perceptions(self.scene)
     agent_context = active_agent.get()
     # ActiveAgent.__enter__ shares state by reference with the parent context,
     # so we save/restore the prior value rather than mutating in place.

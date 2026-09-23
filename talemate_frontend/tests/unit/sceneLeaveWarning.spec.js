@@ -97,7 +97,7 @@ describe('scene save receipt in the app', () => {
             sceneActive: true, loading: false, scene: { saved: false },
             messageHandlers: [], handlePlaythroughMessage: () => false,
             handleAutocompleteMessage: () => false, scrollInputIntoView: vi.fn(),
-            clearUxInteractions: vi.fn(), $refs: { generationErrorDialog: { closeAll: vi.fn() } },
+            clearUxInteractions: vi.fn(), $refs: { generationErrorDialog: { closeAll: vi.fn() }, perceptionBacklogDialog: { closeAll: vi.fn() } },
         };
         handleMessage.call(vm, { data: JSON.stringify({ type: 'system', id }) });
         expect(vm.sceneActive).toBe(false);

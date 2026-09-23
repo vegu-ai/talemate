@@ -18,6 +18,7 @@ import talemate.events as events
 import talemate.save as save
 import talemate.util as util
 import talemate.world_state.templates as world_state_templates
+from talemate.knowledge.backlog import counting_pushed
 from talemate.knowledge.intro import initialize_intro_audience, sync_intro_knowledge
 from talemate.config import Config, get_config
 from talemate.context import interaction, handle_generation_cancelled
@@ -712,8 +713,29 @@ class Scene(Emitter):
             for message in messages
         )
         if not player_submission:
-            await catch_up_revisions(self)
+            try:
+                with counting_pushed(
+                    self, sum(message.supports_perceptions for message in messages)
+                ):
+                    await catch_up_revisions(self)
+            except GenerationCancelled:
+                # The messages are accepted: a cancelled catch-up (a backlog
+                # question, a Stop) keeps them for the next catch-up to dispatch.
+                await self._append_for_dispatch(
+                    self._append_history(messages), emit_message=emit_message
+                )
+                raise
 
+        valid_messages = self._append_history(messages)
+
+        if player_submission:
+            await self._append_for_dispatch(valid_messages, emit_message=emit_message)
+            await catch_up_revisions(self)
+            return
+
+        await self.dispatch_history(valid_messages, emit_message=emit_message)
+
+    def _append_history(self, messages: list[SceneMessage]) -> list[SceneMessage]:
         if self.intro and self.intro_present is None:
             initialize_intro_audience(self)
 
@@ -755,18 +777,18 @@ class Scene(Emitter):
         self.history.extend(valid_messages)
         for message in valid_messages:
             bind_message_source(self, message)
+        return valid_messages
 
-        if player_submission:
-            self.saved = False
-            for message in valid_messages:
-                message.history_dispatch_pending = True
-                if emit_message:
-                    self.emit_history_message(message)
-            await self.attempt_auto_save()
-            await catch_up_revisions(self)
-            return
-
-        await self.dispatch_history(valid_messages, emit_message=emit_message)
+    async def _append_for_dispatch(
+        self, messages: list[SceneMessage], *, emit_message: bool
+    ) -> None:
+        """Mark appended messages for dispatch by the next catch-up, and save."""
+        self.saved = False
+        for message in messages:
+            message.history_dispatch_pending = True
+            if emit_message:
+                self.emit_history_message(message)
+        await self.attempt_auto_save()
 
     def emit_history_message(self, message: SceneMessage):
         character_name = getattr(message, "character_name", None)

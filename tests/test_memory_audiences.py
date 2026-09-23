@@ -927,3 +927,25 @@ async def test_scheduled_audience_index_is_an_evidence_writer(
     finally:
         release.set()
         await asyncio.gather(waiter, state.task, return_exceptions=True)
+
+
+async def test_keep_returns_the_kept_views_to_the_audience_index(indexed_scene):
+    from talemate.agents.summarize.perceptions import keep_stored_perceptions
+    from talemate.knowledge.perspective_models import content_digest
+
+    scene, memory, message = indexed_scene
+    kept = "Marie carries a lantern."
+    assert any(kept in text for text in await contents(memory))
+    object.__setattr__(
+        message,
+        "knowledge",
+        message.knowledge.model_copy(
+            update={"content_digest": content_digest("An older text.")}
+        ),
+    )
+    await memory.rebuild_audience_index()
+    assert not any(kept in text for text in await contents(memory))
+
+    keep_stored_perceptions(scene, [message])
+
+    assert any(kept in text for text in await contents(memory))

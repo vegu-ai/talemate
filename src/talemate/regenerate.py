@@ -390,8 +390,9 @@ async def _restore_history_after_failed_regenerate(
         websocket_passthrough=True,
         kwargs={"id": message.id},
     )
-    for reinforcement_message in reversed(popped_reinforcement_messages):
-        await scene.push_history(reinforcement_message)
+    # The messages were in history a moment ago: put them back as they were,
+    # without the push work that could ask about the backlog or be cancelled.
+    scene.history.extend(reversed(popped_reinforcement_messages))
 
 
 async def regenerate(scene: "Scene") -> list[SceneMessage]:
@@ -465,6 +466,8 @@ async def _regenerate(scene: "Scene") -> list[SceneMessage]:
     scene.history.pop()
 
     try:
+        if character_knowledge_enabled(scene):
+            await get_agent("summarizer").confirm_perception_backlog(scene, upcoming=1)
         outcome = await _regenerate_inplace(message, scene)
     except (GenerationCancelled, asyncio.CancelledError):
         # User-initiated interrupt — not a failure. Restore history, report

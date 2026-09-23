@@ -41,7 +41,7 @@ async def test_own_analysis_progress_does_not_warn(retry_flow, backlog):
     if backlog == "passages":
         scene.history.extend(
             CharacterMessage(message=f"Alice: Earlier line {index}.")
-            for index in range(3)
+            for index in range(2)
         )
         summarizer._register_perception_sources(scene, scene.history)
     else:
@@ -54,7 +54,7 @@ async def test_own_analysis_progress_does_not_warn(retry_flow, backlog):
 
     await asyncio.wait_for(scene.push_history(message), 5)
 
-    assert request.await_count == (4 if backlog == "passages" else 2)
+    assert request.await_count == (3 if backlog == "passages" else 2)
     assert warnings == []
     assert message.revision_state.status == "clean"
 

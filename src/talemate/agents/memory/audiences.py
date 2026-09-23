@@ -47,10 +47,14 @@ class AudienceMemoryMixin:
         return self._audience_states.setdefault(scene, AudienceIndexState())
 
     def _audiences_changed(self, scene, *, event):
-        groups = {reference.key for reference in event.affected}
+        self.invalidate_audience_sources(
+            scene, {reference.key for reference in event.affected}
+        )
+
+    def invalidate_audience_sources(self, scene, groups: set):
         if groups.intersection(reinforcement_source_keys(scene)):
             # Generated details/world entries select the reinforcement's view too.
-            groups.add(("authored",))
+            groups = {*groups, ("authored",)}
         self.invalidate_audience_index(scene, groups=groups)
 
     def invalidate_audience_writes(self, documents, *, scene=None):

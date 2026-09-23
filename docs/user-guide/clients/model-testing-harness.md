@@ -39,6 +39,12 @@ The harness runs a sequence of six tests. Each test calls into one of the regula
 
 Because each test targets a specific agent, the harness effectively covers every client in your current setup — if two agents share a client, that client is tested through both of them.
 
+## Character knowledge effort
+
+The harness always runs with the **Character knowledge effort** set to **Off**, whatever your own setting is. The scene ships with this choice as a [scene override](/talemate/user-guide/agents/scene-overrides/) in its settings file `model-testing-harness.json`, and restoring the scene keeps it. With Off, the Conversation test does not limit the history to what the character knows and makes no extra request to refine memories.
+
+So if you use **Thorough** for your stories and a friend uses **Minimal**, you both get the same harness run, and a failure points at the model, not at your knowledge settings. To see how a model copes with character knowledge work, use one of your own stories with a higher effort; see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets).
+
 ## Watching the tests run
 
 While the suite is running, a **Tests Running** status banner is shown above the chat. Each test emits its own system message in the scene log as it finishes:

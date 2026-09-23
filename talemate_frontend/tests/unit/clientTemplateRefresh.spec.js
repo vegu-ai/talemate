@@ -83,6 +83,26 @@ async function mount(type = 'llamacpp', fields = {}) {
 }
 
 describe('selected client template status', () => {
+    it.each(['openai', 'google'])('%s shows effective reasoning without overwriting the saved toggle', async type => {
+        const ctx = await mount(type, { reason_enabled: false, reason_tokens: 8192, effort_level: 'low' });
+        expect(ctx.editor.reasonEnabled).toBe(false);
+        const saved = JSON.stringify(ctx.config.clients.Local);
+        await ctx.receive(status('Local', 'locked-model', { reason_enabled: true, reason_locked: true }));
+        expect(ctx.editor.reasonLocked).toBe(true);
+        expect(ctx.editor.reasonEnabled).toBe(true);
+        ctx.editor.reasonEnabled = false;
+        expect(ctx.editor.reasonEnabled).toBe(true);
+        expect(JSON.stringify(ctx.config.clients.Local)).toBe(saved);
+
+        await ctx.receive(status('Local', 'unlocked-model', { reason_enabled: false, reason_locked: false }));
+        expect(ctx.editor.reasonLocked).toBe(false);
+        expect(ctx.editor.reasonEnabled).toBe(false);
+        ctx.editor.reasonEnabled = true;
+        expect(ctx.config.clients.Local.reason_enabled).toBe(true);
+        expect(ctx.config.clients.Local.reason_tokens).toBe(8192);
+        expect(ctx.config.clients.Local.effort_level).toBe('low');
+    });
+
     it.each(['llamacpp', 'tabbyapi', 'textgenwebui', 'openai_compat', 'lmstudio', 'koboldcpp', 'ollama'])(
         '%s follows fallback and recovery after a manual template reply without resetting drafts', async type => {
             const ctx = await mount(type);

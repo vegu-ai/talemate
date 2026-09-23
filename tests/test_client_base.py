@@ -454,6 +454,26 @@ class TestCanBeCoerced:
         assert client.can_be_coerced is False
 
 
+@pytest.mark.parametrize("enabled", [False, True])
+@pytest.mark.parametrize("locked", [False, True])
+def test_reasoning_override_state_is_stable_and_honors_lock(
+    cfg_isolation, monkeypatch, enabled, locked
+):
+    _register_client_config("reasoning_override", reason_enabled=enabled)
+    client = _StubClient(name="reasoning_override")
+    monkeypatch.setattr(_StubClient, "reason_locked", property(lambda self: locked))
+    assert not client.reasoning_disabled_for_action
+    assert client.reason_enabled == enabled
+    assert client.reasoning_override_applies == (enabled and not locked)
+    with ClientContext(disable_reasoning=True):
+        assert client.reasoning_disabled_for_action == (not locked)
+        assert client.reason_enabled == (enabled and locked)
+        assert client._common_status_data()["reasoning_override_applies"] == (
+            enabled and not locked
+        )
+    assert client.reason_enabled == enabled
+
+
 class TestReasoningDisplay:
     def test_returns_none_when_disabled(self, stub_client):
         assert stub_client.reasoning_display is None

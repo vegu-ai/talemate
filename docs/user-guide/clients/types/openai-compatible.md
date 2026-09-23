@@ -70,6 +70,33 @@ Each parameter has its own toggle:
 
 All three are enabled by default. Turning a toggle off omits that parameter from the request completely (it is not sent as a zero value). Leave them enabled unless the service you are connecting to errors when it receives one of them.
 
+### Reasoning
+
+Enable **Reasoning** in the client editor for a reasoning model. Choose **Reasoning Effort** and the **Reasoning Effort Format** your server accepts:
+
+| Format | What Talemate sends |
+| --- | --- |
+| `none` (initial setting) | No effort field; the server uses its own defaults. |
+| `reasoning_effort` | A field such as `"reasoning_effort": "high"`. |
+| `reasoning` | An object such as `"reasoning": {"effort": "high"}`. |
+
+The effort choices are `default`, `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, and `max`. Pick a level supported by your server and model. Effort `default` omits the setting in every format. Effort `none` is different from format `none`: it sends a request for no reasoning when a sending format is selected, and only works on models that accept that level.
+
+These settings apply to both chat completions (**API handles prompt template** enabled) and text completions (disabled). Support can differ between those endpoints, even on the same server. Check the server's documentation; Talemate does not infer support from its URL or model name, probe it, or retry a rejected request with a different format.
+
+**Completion Token Parameter**, next to **Reasoning Effort Format**, chooses the field used for the total completion limit:
+
+| Parameter | When to use it |
+| --- | --- |
+| `max_tokens` (initial setting) | Servers using the traditional completion limit, including most text-completion endpoints. Existing saved clients keep this choice. |
+| `max_completion_tokens` | OpenAI chat completions and compatible servers that require this parameter. |
+
+The choice applies whenever the response token cap is enabled, even with reasoning disabled. It changes only the field name, not the limit. For direct OpenAI at `https://api.openai.com/v1`, enable **API handles prompt template**, choose `reasoning_effort` and `max_completion_tokens`, and disable any sampler parameters the selected model rejects. OpenAI chat completions reject the `reasoning` object with HTTP 400; that format is for other servers that accept it.
+
+**Extra Completion Tokens** retains your saved **Reasoning Tokens** value. It adds headroom to the selected total completion limit when reasoning and the response token cap are enabled, and remains available to prompt templates as `reasoning_tokens`. It does not send a separate thinking budget. Use **Reasoning Effort** to control depth instead. Choosing an effort or a completion token parameter does not change this allowance.
+
+When a sending format is selected, the client card shows the chosen effort and a quick effort slider. With format `none`, it shows the extra completion allowance instead. Turning Talemate reasoning off, globally or for an agent action, omits the effort setting and padding; the server may still reason according to its own defaults. Keep your existing [reasoning patterns](/talemate/user-guide/clients/reasoning/#response-pattern-configuration) if your model includes thinking in its response text.
+
 ### Ready to use
 
 Click `Save` in the toolbar to add the client.

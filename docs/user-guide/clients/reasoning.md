@@ -16,6 +16,8 @@ To enable reasoning support for a client:
 
 ## Configuring Reasoning Tokens
 
+The [OpenAI](types/openai.md#reasoning-effort) and [OpenAI Compatible](types/openai-compatible.md#reasoning) clients offer **Reasoning Effort** to control thinking depth. Their token slider is called **Extra Completion Tokens**: it adds headroom to the total completion limit, rather than setting a separate thinking budget. Existing saved token values are preserved. Compatible servers also need a **Reasoning Effort Format** selection before an effort is sent. Both clients offer a **Completion Token Parameter** choice: native OpenAI defaults to `max_completion_tokens`, while OpenAI Compatible defaults to `max_tokens`. The native OpenAI client locks Reasoning on for model names starting with `gpt-5` or `gpt-6`, including during per-action overrides. For other models and OpenAI Compatible clients, the allowance follows your Reasoning setting. Saved token and effort values are preserved.
+
 Once reasoning is enabled, you can configure the **Reasoning Tokens** setting using the slider:
 
 ![Reasoning tokens configuration](/talemate/img/0.40.0/client-reasoning.png)
@@ -98,7 +100,7 @@ The **Enable Reasoning** checkbox is a global setting for a client — when it's
 The dialog lists every agent action Talemate has seen send a request since the backend started, together with every override you have already saved. You do not need to know an action's name in advance: run the scene for a bit and the actions that actually talk to the LLM show up here on their own. Each row shows:
 
 - **Agent / action** — the agent and the action, plus a one-line description where the action has one.
-- **Client** — the client the agent currently runs on, and whether that client would honour the override: **reasoning on**, **reasoning off — override has no effect**, or **always reasons — override ignored** (some Gemini and OpenAI reasoning models cannot be told to stop). An action that hands its request to another agent — the Director asking the Creator to write a character, say — also names the agent that last sent the request and shows its client, with its own hint, because that is the client the override reaches.
+- **Client** — the client the agent currently runs on, and whether that client would honour the override: **reasoning on**, **override omits reasoning effort**, **reasoning off — override has no effect**, or **always reasons — override ignored**. The effort hint means an override removes an explicit effort setting even when Talemate's other reasoning support is off; the provider may still reason using its defaults. An action that hands its request to another agent — the Director asking the Creator to write a character, say — also names the agent that last sent the request and shows its client, with its own hint, because that is the client the override reaches.
 - **Disable reasoning** — the switch that creates or clears the override for that action. Once an action is overridden, a :material-close: button removes the override entirely. An override that has not been seen sending a request since the backend started carries a **not seen this session** chip — it is kept, but the action may have been renamed or removed.
 
 Use the search field to find an action, and **Only overridden** to hide everything else. When nothing has been captured yet, the dialog says so and offers to open the prompt log.

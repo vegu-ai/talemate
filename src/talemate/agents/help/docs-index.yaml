@@ -511,10 +511,11 @@
     reset countdown and generation cancellation, and distinguishes this client-side cap from HTTP 429 Auto Retry handling.
 - path: user-guide/clients/reasoning.md
   title: Reasoning Model Support
-  summary: Covers enabling reasoning, token budgets, strip and validation patterns, gpt-oss/gemma-4/think presets, missing-pattern
-    behavior, Fail/Ignore and retries, Reason Prefill, coercion and model compatibility. Also explains per-action overrides
-    from Prompt Manager or Debug Tools, the management dialog's observed actions, client support states and four entry points,
-    model limitations and Test Changes exceptions.
+  summary: Enable reasoning, set token budgets or effort and Extra Completion Tokens for OpenAI clients, and choose request
+    effort formats and completion token parameters. Covers the OpenAI gpt-5/gpt-6 reasoning lock, strip/validation patterns,
+    gpt-oss/gemma-4/think presets, missing-pattern Fail/Ignore/retries, Reason Prefill and coercion; per-action overrides in
+    Prompt Manager or Debug Tools, effort omission hints, observed actions, client support states, entry points, model limitations
+    and Test Changes exceptions.
 - path: user-guide/clients/recommended-models.md
   title: Recommended Local Models
   summary: Guidance for choosing local models, with an external benchmark in place of a maintained recommendation list. Advises
@@ -578,14 +579,17 @@
     Covers API handles prompt template, Allow thinking, missing-model/offline indicators and template troubleshooting.
 - path: user-guide/clients/types/openai-compatible.md
   title: OpenAI Compatible Client
-  summary: 'Use an OpenAI Compatible API client for services such as DeepInfra: API URL/key, manual model name, context length
-    and server-side chat templates. Parameters toggles omit temperature, top_p or presence_penalty, and troubleshooting distinguishes
-    an empty URL from later generation failures.'
+  summary: 'Configure OpenAI Compatible APIs such as DeepInfra: API URL/key, manual model, context length and chat versus
+    text prompt templates. Covers temperature, top_p and presence_penalty toggles, Reasoning Effort Format (none, reasoning_effort
+    or reasoning object), Completion Token Parameter (max_tokens or max_completion_tokens), direct OpenAI setup, Extra Completion
+    Tokens, reasoning patterns and per-action overrides; distinguishes empty URL from generation failures.'
 - path: user-guide/clients/types/openai.md
   title: OpenAI Client
-  summary: Configure an OpenAI client with a shared API key, model and context length, with Concurrent Inference enabled by
-    default. Explains enabling Reasoning and increasing Reasoning Tokens for o1/o3/gpt-5 models that return empty or short
-    answers.
+  summary: Configure OpenAI API key, manual models, fallback token estimates, context length, Concurrent Inference; Reasoning
+    Effort, Extra Completion Tokens (saved Reasoning Tokens), Completion Token Parameter for endpoint overrides, sampler toggles
+    (default off), Send System Message and Stream settings. 0.39 upgrade, Reasoning defaults, empty answers and per-action
+    overrides; saved settings persist independently of model names except the Reasoning lock; Reasoning toggles card effort
+    slider.
 - path: user-guide/clients/types/openrouter.md
   title: OpenRouter Client
   summary: Configure OpenRouter with its shared API key, dynamically fetched model catalog, context length and default concurrent

@@ -380,6 +380,7 @@ class ClientBase:
         name_prefix: str = "Client"
         enable_api_auth: bool = False
         requires_prompt_template: bool = True
+        reason_tokens_as_allowance: bool = False
         unified_api_key_config_path: str | None = None
         # Whether this client is typically self-hosted (you run/control the service)
         # versus a hosted API (3rd-party provider).
@@ -501,14 +502,24 @@ class ClientBase:
 
     @property
     def reason_enabled_configured(self) -> bool:
-        """Stable configured value. Subclasses override for client-specific
-        forcing (Gemini 2.5+, OpenAI o-series). `reason_enabled` is the
-        runtime value after per-action context overrides."""
+        """Stable configured value, including a client-specific reasoning lock.
+        `reason_enabled` is the runtime value after per-action context overrides."""
         return self.client_config.reason_enabled
 
     @property
+    def reasoning_disabled_for_action(self) -> bool:
+        return (
+            bool(client_context_attribute("disable_reasoning"))
+            and not self.reason_locked
+        )
+
+    @property
+    def reasoning_override_applies(self) -> bool:
+        return self.reason_enabled_configured and not self.reason_locked
+
+    @property
     def reason_enabled(self) -> bool:
-        if client_context_attribute("disable_reasoning") and not self.reason_locked:
+        if self.reasoning_disabled_for_action:
             return False
         return self.reason_enabled_configured
 
@@ -1197,6 +1208,7 @@ class ClientBase:
             "reason_failure_behavior": self.reason_failure_behavior,
             "requires_reasoning_pattern": self.requires_reasoning_pattern,
             "reason_locked": self.reason_locked,
+            "reasoning_override_applies": self.reasoning_override_applies,
             "reasoning_display": self.reasoning_display.model_dump()
             if self.reasoning_display
             else None,

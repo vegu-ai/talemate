@@ -49,14 +49,16 @@ def toggleable_parameters_extra_fields(
     return {f"send_{p}": _send_parameter_field(p) for p in params}
 
 
-def toggleable_parameters_config(params: tuple[str, ...]) -> type[pydantic.BaseModel]:
+def toggleable_parameters_config(
+    params: tuple[str, ...], *, default: bool = True
+) -> type[pydantic.BaseModel]:
     """
-    Build a pydantic model with a `send_<param>: bool = True` field per
-    parameter, for use as a base of a client's Defaults / ClientConfig.
+    Build a pydantic model with a `send_<param>` flag per parameter,
+    for use as a base of a client's Defaults / ClientConfig.
     """
     return pydantic.create_model(
         "ToggleableParametersConfig",
-        **{f"send_{p}": (bool, True) for p in params},
+        **{f"send_{p}": (bool, default) for p in params},
     )
 
 

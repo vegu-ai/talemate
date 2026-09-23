@@ -158,7 +158,7 @@
               </v-tooltip>
 
               <!-- reason tokens slider - shown when backend says to -->
-              <v-tooltip text="Adjust reasoning token budget" v-if="client.reasoning_display?.show_token_slider">
+              <v-tooltip :text="client.data?.meta?.reason_tokens_as_allowance ? 'Adjust extra completion tokens' : 'Adjust reasoning token budget'" v-if="client.reasoning_display?.show_token_slider">
                 <template v-slot:activator="{ props }">
                   <GraduatedSlider
                     hide-details
@@ -563,6 +563,7 @@ export default {
           client.reason_failure_behavior = data.data.reason_failure_behavior;
           client.reason_enabled = data.data.reason_enabled;
           client.reason_locked = data.data.reason_locked;
+          client.reasoning_override_applies = data.data.reasoning_override_applies;
           client.requires_reasoning_pattern = data.data.requires_reasoning_pattern;
           client.reasoning_display = data.data.reasoning_display;
           client.lock_template = data.data.lock_template;
@@ -631,6 +632,7 @@ export default {
             reason_failure_behavior: data.data.reason_failure_behavior,
             reason_enabled: data.data.reason_enabled,
             reason_locked: data.data.reason_locked,
+            reasoning_override_applies: data.data.reasoning_override_applies,
             requires_reasoning_pattern: data.data.requires_reasoning_pattern,
             reasoning_display: data.data.reasoning_display,
             dedicated_default_template: data.data.dedicated_default_template,

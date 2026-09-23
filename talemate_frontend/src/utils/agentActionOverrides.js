@@ -4,6 +4,7 @@ export const REASONING_HINTS = {
     locked: 'always reasons — override ignored',
     off: 'reasoning off — override has no effect',
     on: 'reasoning on',
+    effort: 'override omits reasoning effort',
     unknown: 'reasoning state unknown',
 };
 
@@ -34,8 +35,11 @@ export function clientReasoningHint(client) {
     if (client.reason_locked) {
         return { state: 'locked', text: REASONING_HINTS.locked };
     }
-    if (!client.reason_enabled) {
+    if (!client.reasoning_override_applies) {
         return { state: 'off', text: REASONING_HINTS.off };
+    }
+    if (!client.reason_enabled) {
+        return { state: 'on', text: REASONING_HINTS.effort };
     }
     return { state: 'on', text: REASONING_HINTS.on };
 }

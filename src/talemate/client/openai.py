@@ -1,12 +1,30 @@
 import json
+from typing import Literal
 
 import pydantic
 import structlog
 import tiktoken
 from openai import AsyncOpenAI
 
-from talemate.client.base import ClientBase, ErrorAction, CommonDefaults, ExtraField
+from talemate.client.base import (
+    ClientBase,
+    ErrorAction,
+    CommonDefaults,
+    ExtraField,
+    FieldGroup,
+)
 from talemate.client.registry import register
+from talemate.client.reasoning_effort import (
+    ReasoningEffortConfig,
+    ReasoningEffortMixin,
+    reasoning_effort_extra_fields,
+)
+from talemate.client.toggleable_parameters import (
+    PARAMETERS_FIELD_GROUP,
+    ToggleableParametersMixin,
+    toggleable_parameters_config,
+    toggleable_parameters_extra_fields,
+)
 from talemate.client.remote import (
     EndpointOverride,
     EndpointOverrideMixin,
@@ -25,65 +43,46 @@ log = structlog.get_logger("talemate")
 
 # Edit this to add new models / remove old models
 SUPPORTED_MODELS = [
-    "gpt-3.5-turbo-0613",
-    "gpt-3.5-turbo-0125",
     "gpt-3.5-turbo-16k",
     "gpt-3.5-turbo",
     "gpt-4",
-    "gpt-4-1106-preview",
-    "gpt-4-0125-preview",
-    "gpt-4-turbo-preview",
-    "gpt-4-turbo-2024-04-09",
     "gpt-4-turbo",
-    "gpt-4o-2024-05-13",
-    "gpt-4o-2024-08-06",
-    "gpt-4o-2024-11-20",
-    "gpt-4o-realtime-preview",
-    "gpt-4o-mini-realtime-preview",
     "gpt-4o",
     "gpt-4o-mini",
+    "gpt-4.1",
+    "gpt-4.1-mini",
+    "gpt-4.1-nano",
     "o1",
-    "o1-preview",
-    "o1-mini",
+    "o3",
     "o3-mini",
+    "o4-mini",
     "gpt-5",
     "gpt-5-mini",
     "gpt-5-nano",
+    "gpt-5.1",
+    "gpt-5.2",
+    "gpt-5.4",
+    "gpt-5.4-mini",
+    "gpt-5.4-nano",
+    "gpt-5.5",
+    "gpt-5.6-luna",
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "gpt-6-astra",
+    "gpt-6-luna",
+    "gpt-6-sol",
+    "chat-latest",
 ]
 
 
 def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0613"):
-    # TODO this whole function probably needs to be rewritten at this point
-
-    """Return the number of tokens used by a list of messages."""
+    """Estimate message tokens using the model encoding or a cl100k_base fallback."""
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
         encoding = tiktoken.get_encoding("cl100k_base")
-    if model in {
-        "gpt-3.5-turbo-0613",
-        "gpt-3.5-turbo-16k-0613",
-        "gpt-4-0314",
-        "gpt-4-32k-0314",
-        "gpt-4-0613",
-        "gpt-4-32k-0613",
-        "gpt-4-1106-preview",
-    }:
-        tokens_per_message = 3
-        tokens_per_name = 1
-    elif model == "gpt-3.5-turbo-0301":
-        tokens_per_message = (
-            4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
-        )
-        tokens_per_name = -1  # if there's a name, the role is omitted
-    elif "gpt-3.5-turbo" in model:
-        return num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613")
-    elif "gpt-4" in model or "o1" in model or "o3" in model or "gpt-5" in model:
-        return num_tokens_from_messages(messages, model="gpt-4-0613")
-    else:
-        raise NotImplementedError(
-            f"""num_tokens_from_messages() is not implemented for model {model}. See https://github.com/openai/openai-python/blob/main/chatml.md for information on how messages are converted to tokens."""
-        )
+    tokens_per_message = 3
+    tokens_per_name = 1
     num_tokens = 0
     for message in messages:
         num_tokens += tokens_per_message
@@ -100,20 +99,54 @@ def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0
 
 
 DEFAULT_MODEL = "gpt-4o"
+TOGGLEABLE_PARAMETERS = ("temperature", "top_p", "presence_penalty")
+ToggleableParametersConfig = toggleable_parameters_config(
+    TOGGLEABLE_PARAMETERS, default=False
+)
 
 
-class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
+class OpenAIRequestConfig(pydantic.BaseModel):
+    stream: bool = True
+    send_system_message: bool = True
+    completion_token_parameter: Literal["max_tokens", "max_completion_tokens"] = (
+        "max_completion_tokens"
+    )
+
+
+class Defaults(
+    OpenAIRequestConfig,
+    ReasoningEffortConfig,
+    ToggleableParametersConfig,
+    EndpointOverride,
+    CommonDefaults,
+    pydantic.BaseModel,
+):
     max_token_length: int = 16384
     model: str = DEFAULT_MODEL
+    # Seed new clients with room for reasoning; saved clients retain their setting.
+    reason_enabled: bool = True
     reason_tokens: int = 1024
 
 
-class ClientConfig(ConcurrentInference, EndpointOverride, BaseClientConfig):
+class ClientConfig(
+    OpenAIRequestConfig,
+    ReasoningEffortConfig,
+    ToggleableParametersConfig,
+    ConcurrentInference,
+    EndpointOverride,
+    BaseClientConfig,
+):
     concurrent_inference_enabled: bool = True
 
 
 @register()
-class OpenAIClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBase):
+class OpenAIClient(
+    ReasoningEffortMixin,
+    ToggleableParametersMixin,
+    ConcurrentInferenceMixin,
+    EndpointOverrideMixin,
+    ClientBase,
+):
     """
     OpenAI client for generating text.
     """
@@ -123,6 +156,7 @@ class OpenAIClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBase):
     # TODO: make this configurable?
     decensor_enabled = False
     config_cls = ClientConfig
+    toggleable_parameters = TOGGLEABLE_PARAMETERS
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "OpenAI"
@@ -130,8 +164,37 @@ class OpenAIClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBase):
         manual_model: bool = True
         manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
+        reason_tokens_as_allowance: bool = True
         defaults: Defaults = Defaults()
-        extra_fields: dict[str, ExtraField] = {}
+        extra_fields: dict[str, ExtraField] = reasoning_effort_extra_fields()
+        extra_fields.update(toggleable_parameters_extra_fields(TOGGLEABLE_PARAMETERS))
+        extra_fields.update(
+            send_system_message=ExtraField(
+                name="send_system_message",
+                type="bool",
+                label="Send System Message",
+                description="Include the system message. Disable for a server that rejects the system role; Talemate will send only the user message.",
+                group=PARAMETERS_FIELD_GROUP,
+                required=False,
+            ),
+            stream=ExtraField(
+                name="stream",
+                type="bool",
+                label="Stream",
+                description="Stream responses as they arrive. Disable if your organization or server does not support streaming for the selected model.",
+                group=PARAMETERS_FIELD_GROUP,
+                required=False,
+            ),
+            completion_token_parameter=ExtraField(
+                name="completion_token_parameter",
+                type="text",
+                label="Completion Token Parameter",
+                choices=["max_tokens", "max_completion_tokens"],
+                description="Choose the parameter your server accepts for the total completion limit. Keep 'max_completion_tokens' for OpenAI; an Override Base URL server may need 'max_tokens'. Includes extra completion tokens when reasoning is enabled.",
+                group=FieldGroup(name="reasoning", label="Reasoning", icon="mdi-brain"),
+                required=False,
+            ),
+        )
         extra_fields.update(endpoint_override_extra_fields())
         extra_fields.update(concurrent_inference_extra_fields())
         unified_api_key_config_path: str = "openai.api_key"
@@ -141,37 +204,40 @@ class OpenAIClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBase):
         return self.config.openai.api_key
 
     @property
-    def supported_parameters(self):
-        return [
-            "temperature",
-            "top_p",
-            "presence_penalty",
-            "max_tokens",
-        ]
+    def stream(self) -> bool:
+        return self.client_config.stream
+
+    @property
+    def send_system_message(self) -> bool:
+        return self.client_config.send_system_message
+
+    @property
+    def completion_token_parameter(
+        self,
+    ) -> Literal["max_tokens", "max_completion_tokens"]:
+        return self.client_config.completion_token_parameter
 
     @property
     def requires_reasoning_pattern(self) -> bool:
         return False
+
+    @property
+    def reasoning_effort_enabled_configured(self) -> bool:
+        return True
+
+    @property
+    def reason_locked(self) -> bool:
+        return (self.model_name or "").startswith(("gpt-5", "gpt-6"))
+
+    @property
+    def reason_enabled_configured(self) -> bool:
+        return self.reason_locked or super().reason_enabled_configured
 
     def emit_status(self, processing: bool = None):
         error_action = None
         error_message = None
         if processing is not None:
             self.processing = processing
-
-        # Auto-toggle reasoning based on selected model (OpenAI-specific)
-        # o1/o3/gpt-5 families are reasoning models
-        try:
-            if self.model_name:
-                is_reasoning_model = (
-                    "o1" in self.model_name
-                    or "o3" in self.model_name
-                    or "gpt-5" in self.model_name
-                )
-                if self.client_config.reason_enabled != is_reasoning_model:
-                    self.client_config.reason_enabled = is_reasoning_model
-        except Exception:
-            pass
 
         if self.openai_api_key:
             status = "busy" if self.processing else "idle"
@@ -232,37 +298,19 @@ class OpenAIClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBase):
         human_message = {"role": "user", "content": prompt.strip()}
         system_message = {"role": "system", "content": self.get_system_message(kind)}
 
-        # o1 and o3 models don't support system_message
+        messages = (
+            [system_message, human_message]
+            if self.send_system_message
+            else [human_message]
+        )
         if (
-            "o1" in self.model_name
-            or "o3" in self.model_name
-            or "gpt-5" in self.model_name
+            self.completion_token_parameter == "max_completion_tokens"
+            and "max_tokens" in parameters
         ):
-            messages = [human_message]
-            # paramters need to be munged
-            # `max_tokens` becomes `max_completion_tokens`
-            if "max_tokens" in parameters:
-                parameters["max_completion_tokens"] = parameters.pop("max_tokens")
+            parameters["max_completion_tokens"] = parameters.pop("max_tokens")
 
-            # temperature forced to 1
-            if "temperature" in parameters:
-                log.debug(
-                    f"{self.model_name} does not support temperature, forcing to 1"
-                )
-                parameters["temperature"] = 1
-
-            unsupported_params = [
-                "presence_penalty",
-                "top_p",
-            ]
-
-            for param in unsupported_params:
-                if param in parameters:
-                    log.debug(f"{self.model_name} does not support {param}, removing")
-                    parameters.pop(param)
-
-        else:
-            messages = [system_message, human_message]
+        if self.reasoning_effort is not None:
+            parameters["reasoning_effort"] = self.reasoning_effort
 
         self.log.debug(
             "generate",
@@ -272,56 +320,27 @@ class OpenAIClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBase):
             system_message=system_message,
         )
 
-        # GPT-5 models do not allow streaming for non-verified orgs; use non-streaming path
-        if "gpt-5" in self.model_name:
-            return await self._generate_non_streaming_completion(
-                client, messages, parameters
-            )
-
-        stream = await client.chat.completions.create(
+        stream_enabled = self.stream
+        completion = await client.chat.completions.create(
             model=self.model_name,
             messages=messages,
-            stream=True,
+            stream=stream_enabled,
             **parameters,
         )
+        if not stream_enabled:
+            if not completion.choices:
+                return ""
+            content = completion.choices[0].message.content or ""
+            if content:
+                self.update_request_tokens(self.count_tokens(content))
+            return content
 
         response = ""
-
-        # Iterate over streamed chunks
-        async for chunk in stream:
+        async for chunk in completion:
             if not chunk.choices:
                 continue
             delta = chunk.choices[0].delta
             if delta and getattr(delta, "content", None):
-                content_piece = delta.content
-                response += content_piece
-                # Incrementally track token usage
-                self.update_request_tokens(self.count_tokens(content_piece))
-
+                response += delta.content
+                self.update_request_tokens(self.count_tokens(delta.content))
         return response
-
-    async def _generate_non_streaming_completion(
-        self, client: AsyncOpenAI, messages: list[dict], parameters: dict
-    ) -> str:
-        """Perform a non-streaming chat completion request and return the content.
-
-        This is used for GPT-5 models which disallow streaming for non-verified orgs.
-        """
-        response = await client.chat.completions.create(
-            model=self.model_name,
-            messages=messages,
-            # No stream flag -> non-streaming
-            **parameters,
-        )
-
-        if not response.choices:
-            return ""
-
-        message = response.choices[0].message
-        content = getattr(message, "content", "") or ""
-
-        if content:
-            # Update token usage based on the full content
-            self.update_request_tokens(self.count_tokens(content))
-
-        return content

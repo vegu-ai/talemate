@@ -224,7 +224,7 @@
           </v-alert>
           <v-row>
             <v-col cols="12">
-              <v-checkbox v-model="values.reason_enabled" label="Enable Reasoning" hide-details :disabled="reasonLocked"></v-checkbox>
+              <v-checkbox v-model="reasonEnabled" label="Enable Reasoning" hide-details :disabled="reasonLocked"></v-checkbox>
               <v-card v-if="reasonLocked" variant="outlined" color="primary" class="mt-2">
                 <v-card-text class="text-body-small text-muted pa-2">
                   <div v-if="values.model && values.model !== modelName">
@@ -236,9 +236,9 @@
                 </v-card-text>
               </v-card>
             </v-col>
-            <v-col cols="12" v-if="values.reason_enabled">
-              <GraduatedSlider v-model="values.reason_tokens" label="Reasoning Tokens" :min="minReasonTokens" :max="128000" :graduations="tokenGraduations" :persistent-hint="true" thumb-label="always" hint="Tokens to spend on reasoning." />
-              <v-alert color="muted" variant="text" class="text-body-small">
+            <v-col cols="12" v-if="reasonEnabled">
+              <GraduatedSlider v-model="values.reason_tokens" :label="meta.reason_tokens_as_allowance ? 'Extra Completion Tokens' : 'Reasoning Tokens'" :min="minReasonTokens" :max="128000" :graduations="tokenGraduations" :persistent-hint="true" thumb-label="always" :hint="meta.reason_tokens_as_allowance ? 'Extra room in the total completion limit for reasoning and the answer. This does not set a reasoning budget; choose Reasoning Effort below.' : 'Tokens to spend on reasoning.'" />
+              <v-alert v-if="!meta.reason_tokens_as_allowance" color="muted" variant="text" class="text-body-small">
                 <p>The behavior of this depends on the provider and model.</p>
                 <p class="mt-2">For APIs that provide a way to specify the reasoning tokens, this will be the amount of tokens to spend on reasoning.</p>
                 <p class="mt-2">For APIs that do <span class="text-warning">NOT</span> provide a way to specify the reasoning tokens, this will simply add extra allowance for response tokens to ALL requests.</p>
@@ -247,7 +247,7 @@
                 </p>
               </v-alert>
             </v-col>
-            <v-col cols="12" v-if="values.reason_enabled && requiresReasoningPattern">
+            <v-col cols="12" v-if="reasonEnabled && requiresReasoningPattern">
               <v-sheet color="transparent" class="text-body-small text-right">
                 <!-- each preset sets BOTH the strip and validation patterns for that model -->
                 <v-btn @click.stop="applyReasoningPreset('', '')" size="small" color="primary" variant="text">{{ 'Default' }}</v-btn>
@@ -282,7 +282,7 @@
               </div>
             </v-col>
           </v-row>
-          <v-row v-if="values.reason_enabled && requiresReasoningPattern">
+          <v-row v-if="reasonEnabled && requiresReasoningPattern">
             <v-col :cols="values.reason_failure_behavior === 'fail' ? 6 : 12">
               <v-select v-model="values.reason_failure_behavior" label="Pattern Not Found Behavior"
                 :items="[
@@ -295,7 +295,7 @@
               <v-slider v-model="values.retry_missing_reasoning" label="Auto Retry" :min="0" :max="5" :step="1" :persistent-hint="true" hint="Automatic retries when the reasoning pattern is missing, before you are notified. (0 = notify immediately)" thumb-label="always"></v-slider>
             </v-col>
           </v-row>
-          <v-row v-if="values.reason_enabled && requiresReasoningPattern">
+          <v-row v-if="reasonEnabled && requiresReasoningPattern">
             <v-col cols="12">
               <v-text-field v-model="values.reason_prefill" label="Reason Prefill"></v-text-field>
               <v-alert color="muted" variant="text" class="text-body-small">
@@ -500,6 +500,14 @@ export default {
     },
     reasonLocked() {
       return this.status ? !!this.status.data?.reason_locked : false;
+    },
+    reasonEnabled: {
+      get() {
+        return this.reasonLocked || this.values.reason_enabled;
+      },
+      set(value) {
+        if (!this.reasonLocked) this.values.reason_enabled = value;
+      },
     },
     overrideCount() {
       return countOverrides(this.config?.agent_actions?.overrides);

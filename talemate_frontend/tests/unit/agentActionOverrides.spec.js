@@ -1,4 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import { fileURLToPath } from "node:url";
+import { lift, readSource } from "./helpers/liftMethod.js";
 import {
     agentClientName,
     buildOverrideRows,
@@ -10,9 +12,9 @@ import {
 } from "@/utils/agentActionOverrides";
 
 const CLIENTS = [
-    { name: "openrouter", reason_enabled: true, reason_locked: false },
-    { name: "gemini", reason_enabled: true, reason_locked: true },
-    { name: "koboldcpp", reason_enabled: false, reason_locked: false },
+    { name: "openrouter", reason_enabled: true, reason_locked: false, reasoning_override_applies: true },
+    { name: "gemini", reason_enabled: true, reason_locked: true, reasoning_override_applies: false },
+    { name: "koboldcpp", reason_enabled: false, reason_locked: false, reasoning_override_applies: false },
 ];
 
 const AGENT_STATUS = {
@@ -72,6 +74,27 @@ describe("agentClientName", () => {
 });
 
 describe("clientReasoningHint", () => {
+    it("uses the override capability from initial and updated client status", () => {
+        const source = readSource(fileURLToPath(new URL("../../src/components/AIClient.vue", import.meta.url)));
+        const handleMessage = lift(source, "handleMessage", "AIClient.vue");
+        const context = { state: { clients: [] } };
+        const frame = {
+            type: "client_status", name: "openai", message: "openai", model_name: "gpt-4o",
+            data: { reason_enabled: false, reason_locked: false, reasoning_override_applies: true,
+                meta: { extra_fields: {}, defaults: {} } },
+        };
+        const log = vi.spyOn(console, "log").mockImplementation(() => {});
+        try {
+            handleMessage.call(context, frame);
+            expect(clientReasoningHint(context.state.clients[0]).text).toBe(REASONING_HINTS.effort);
+            frame.data.reasoning_override_applies = false;
+            handleMessage.call(context, frame);
+            expect(clientReasoningHint(context.state.clients[0]).text).toBe(REASONING_HINTS.off);
+        } finally {
+            log.mockRestore();
+        }
+    });
+
     it("reports the three client states and the unknown one", () => {
         expect(clientReasoningHint(CLIENTS[0])).toEqual({ state: "on", text: REASONING_HINTS.on });
         expect(clientReasoningHint(CLIENTS[1])).toEqual({
@@ -89,6 +112,16 @@ describe("clientReasoningHint", () => {
         expect(
             clientReasoningHint({ name: "x", reason_enabled: false, reason_locked: true }).state
         ).toBe("locked");
+    });
+
+    it("shows that an override removes explicit effort even with reasoning off", () => {
+        const client = {
+            name: "openai", reason_enabled: false, reason_locked: false,
+            reasoning_override_applies: true,
+        };
+        expect(clientReasoningHint(client)).toEqual({ state: "on", text: REASONING_HINTS.effort });
+        expect(clientReasoningHint({ ...client, reasoning_override_applies: false }))
+            .toEqual({ state: "off", text: REASONING_HINTS.off });
     });
 });
 

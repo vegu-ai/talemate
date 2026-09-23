@@ -1308,5 +1308,6 @@
 - path: user-guide/world-state.md
   title: World State
   summary: World State shows characters, tracked states and snapshots, presence controls, portraits and knowledge-change notifications.
-    The knowledge hub shows disclosures or access rules, mode comparison, effort presets, request costs and scene override
-    controls.
+    Inline entity highlights mark the current moment, the scene intro included early in a scene; a selection adds an entry
+    with Add to world state. The knowledge hub shows disclosures or access rules, mode comparison, effort presets, request
+    costs and scene override controls.

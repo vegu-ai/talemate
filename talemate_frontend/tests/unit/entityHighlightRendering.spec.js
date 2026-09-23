@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from 'vitest';
-import EntityHighlightMixin from '../../src/components/EntityHighlightMixin.js';
+import EntityHighlightMixin, { INTRO_ANCHOR_ID } from '../../src/components/EntityHighlightMixin.js';
 import { SceneTextParser } from '../../src/utils/sceneMessageRenderer.js';
 
 const mentions = [{ name: 'Dented Locker', kind: 'item', phrases: ['the dented locker'] }];
@@ -77,9 +77,9 @@ describe('from the world_state payload to the parser', () => {
         anchor_message_ids: [42],
     };
 
-    function host() {
+    function host(anchorIds = payload.anchor_message_ids) {
         const context = { ...EntityHighlightMixin.methods, ...EntityHighlightMixin.data() };
-        context.rebuildWorldStateEntities(payload);
+        context.rebuildWorldStateEntities({ ...payload, anchor_message_ids: anchorIds });
         return context;
     }
 
@@ -91,6 +91,17 @@ describe('from the world_state payload to the parser', () => {
 
     it('feeds nothing to a message outside the moment', () => {
         expect(host().getEntityMentionsForMessage(41)).toEqual([]);
+    });
+
+    // The intro arrives as a narrator frame with a null id.
+    it('feeds the intro when the snapshot anchored it', () => {
+        const context = host([INTRO_ANCHOR_ID, 42]);
+        expect(context.getEntityMentionsForMessage(null)).toHaveLength(1);
+        expect(context.getEntityMentionsForMessage(undefined)).toHaveLength(1);
+    });
+
+    it('feeds nothing to the intro outside the moment', () => {
+        expect(host().getEntityMentionsForMessage(null)).toEqual([]);
     });
 
     it('renders the highlight the payload describes', () => {

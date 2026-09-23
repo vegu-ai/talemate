@@ -18,7 +18,7 @@ How many character turns to wait before the snapshot is refreshed. Each player o
 
 ###### Lines in the moment
 
-How many of the most recent messages count as the "current moment". These are the lines the snapshot anchors to, and they are the messages that can show inline entity highlights. Keeping this small keeps the highlights tied to the active beat while the rest of the scene is still used as background context.
+How many of the most recent messages count as the "current moment". These are the lines the snapshot anchors to, and they are the messages that can show inline entity highlights. While the scene has fewer messages than this, the scene intro takes a spare line, unless a time passage lies between the intro and the newest messages. Keeping this small keeps the highlights tied to the active beat while the rest of the scene is still used as background context.
 
 ###### Include Look at / Add Detail
 

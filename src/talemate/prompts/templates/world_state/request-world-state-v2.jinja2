@@ -31,22 +31,22 @@ Other major characters:
 {% endset %}
 {# END VOLATILE CONTEXT #}
 
-{# FOCUSED SNAPSHOT — pre-computed by the agent. Every message in `scene_focus`
-   is a valid highlight anchor (the agent stamps their ids into
-   `anchor_message_ids`). On a fresh scene the agent falls back to the intro
-   text as the sole focus line and no anchors are produced. #}
-{% set final_line_number = len(scene_focus) if scene_focus else 1 %}
+{# FOCUSED SNAPSHOT — pre-computed by the agent. Every line is a valid
+   highlight anchor (the agent stamps the message ids, and INTRO_ANCHOR_ID for
+   `intro_text`, into `anchor_message_ids`). The intro, when it is inside the
+   current moment, is the first line. #}
+{% set intro_lines = 1 if intro_text else 0 %}
+{% set final_line_number = [(scene_focus or [])|length + intro_lines, 1]|max %}
 {% set focus_text %}
 <|SECTION:CURRENT FOCUS|>
-{% if scene_focus -%}
-{% for scene_context in scene_focus -%}
-Line {{ loop.index }}: {{ to_str(scene_context)|condensed }}
----
-{% endfor -%}
-{%- else -%}
+{% if intro_text -%}
 Line 1: {{ intro_text|condensed }}
 ---
-{%- endif %}
+{% endif -%}
+{% for scene_context in scene_focus -%}
+Line {{ loop.index + intro_lines }}: {{ to_str(scene_context)|condensed }}
+---
+{% endfor -%}
 <|CLOSE_SECTION|>
 {% endset %}
 {# END FOCUSED SNAPSHOT #}

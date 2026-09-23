@@ -11,7 +11,12 @@ from talemate.scene_message import (
     NarratorMessage,
     TimePassageMessage,
 )
-from talemate.world_state import CharacterState, ObjectState, PlaceState
+from talemate.world_state import (
+    INTRO_ANCHOR_ID,
+    CharacterState,
+    ObjectState,
+    PlaceState,
+)
 from talemate.world_state.merge import (
     apply_bucket_patch,
     cap_bucket,
@@ -348,6 +353,10 @@ class TestHasTimePassageBoundary:
         cut = TimePassageMessage(ts=3600, message="hour earlier")
         anchored = NarratorMessage(message="anchor")
         assert not has_time_passage_boundary([cut, anchored], [anchored.id])
+
+    def test_time_passage_after_intro_anchor_returns_true(self):
+        cut = TimePassageMessage(ts=3600, message="hour later")
+        assert has_time_passage_boundary([cut], [INTRO_ANCHOR_ID])
 
 
 # ---------------------------------------------------------------------------

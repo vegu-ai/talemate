@@ -15,10 +15,11 @@ from talemate.scene_message import (
     CharacterMessage,
     CharacterTransitionMessage,
     ContextInvestigationMessage,
+    DirectorMessage,
     NarratorMessage,
     TimePassageMessage,
 )
-from talemate.world_state import ContextPin, Reinforcement
+from talemate.world_state import INTRO_ANCHOR_ID, ContextPin, Reinforcement
 from .helpers import create_scene_with_characters
 
 
@@ -528,6 +529,7 @@ class TestWorldStateAgentRequestMethods:
         # without it the agent short-circuits and returns an empty response.
         anchor = CharacterMessage(message="Hero: I stand ready.", source="Hero")
         mock_scene.history = [anchor]
+        mock_scene.intro = ""
 
         # Mock completes the response seeded by set_data_response
         # (`\`\`\`json\n{ "characters": {`) so the strict parser succeeds on
@@ -581,17 +583,15 @@ class TestWorldStateAgentRequestMethods:
     ):
         """TimePassageMessage at the tail is a hard scene-cut → silent short-circuit.
 
-        Intro must NOT be used as a fallback here — the scene has progressed
-        past it, so injecting the intro as the 'current moment' would describe
-        the wrong point in the story.
+        A time passage between the intro and the newest messages keeps the
+        intro out of the current moment, even when the moment has no lines.
         """
         agent = active_context
         agent.client.send_prompt = AsyncMock()
 
-        # Narrative followed by a time passage means the 'current moment' is on
-        # the far side of the cut, so the focus collector finds nothing. Intro
-        # is set explicitly here to verify the fallback does NOT fire when
-        # history exists — independent of whatever the fixture happens to default.
+        # The current moment is on the far side of the cut and holds nothing
+        # yet. The intro is set explicitly so the test does not depend on the
+        # fixture default.
         mock_scene.history = [
             NarratorMessage(message="The hero rested by the fire."),
             TimePassageMessage(message="Three days later", ts=259200),
@@ -603,10 +603,10 @@ class TestWorldStateAgentRequestMethods:
         agent.client.send_prompt.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_request_world_state_falls_back_to_intro(
+    async def test_request_world_state_anchors_intro_on_fresh_scene(
         self, active_context, mock_scene
     ):
-        """Empty history but scene has an intro → use intro as the focus line."""
+        """Empty history but scene has an intro → the intro is the focus line."""
         agent = active_context
         # Mock returns a valid completion so the parser succeeds.
         agent.client.send_prompt = AsyncMock(
@@ -625,12 +625,110 @@ class TestWorldStateAgentRequestMethods:
         response = await agent.request_world_state()
 
         assert response.world_state is not None
-        # Intro has no message id, so no anchors for inline highlights.
-        assert response.anchor_message_ids == []
-        # LLM was called and saw the intro text.
+        assert response.anchor_message_ids == [INTRO_ANCHOR_ID]
         agent.client.send_prompt.assert_called_once()
         prompt_text = str(agent.client.send_prompt.call_args[0][0])
-        assert "quiet forest clearing" in prompt_text
+        assert "Line 1: You find yourself in a quiet forest clearing." in prompt_text
+        assert "Line 2:" not in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_request_world_state_intro_leads_a_short_history(
+        self, active_context, mock_scene
+    ):
+        """Fewer messages than focus lines → the intro is the first line."""
+        agent = active_context
+        agent.actions["update_world_state"].config["focus_lines"].value = 3
+        agent.client.send_prompt = AsyncMock(
+            return_value=(
+                '"Hero": {"emotion": "calm", "snapshot": "x", "mentions": []}},'
+                ' "items": {}, "places": {}, "location": "x"}'
+            )
+        )
+        a = NarratorMessage(message="The wind picks up.")
+        b = CharacterMessage(message="Hero: I stand ready.", source="Hero")
+        mock_scene.history = [a, b]
+        mock_scene.intro = "You find yourself in a quiet forest clearing."
+
+        response = await agent.request_world_state()
+
+        assert response.anchor_message_ids == [INTRO_ANCHOR_ID, a.id, b.id]
+        prompt_text = str(agent.client.send_prompt.call_args[0][0])
+        assert "Line 1: You find yourself in a quiet forest clearing." in prompt_text
+        assert "Line 2: The wind picks up." in prompt_text
+        assert "Line 3: Hero: I stand ready." in prompt_text
+        assert "line 3 is the most recent beat" in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_request_world_state_full_history_leaves_intro_out(
+        self, active_context, mock_scene
+    ):
+        agent = active_context
+        agent.actions["update_world_state"].config["focus_lines"].value = 2
+        agent.client.send_prompt = AsyncMock(
+            return_value=(
+                '"Hero": {"emotion": "calm", "snapshot": "x", "mentions": []}},'
+                ' "items": {}, "places": {}, "location": "x"}'
+            )
+        )
+        a = NarratorMessage(message="The wind picks up.")
+        b = CharacterMessage(message="Hero: I stand ready.", source="Hero")
+        mock_scene.history = [a, b]
+        mock_scene.intro = "You find yourself in a quiet forest clearing."
+
+        response = await agent.request_world_state()
+
+        assert response.anchor_message_ids == [a.id, b.id]
+        prompt_text = str(agent.client.send_prompt.call_args[0][0])
+        assert "Line 1: The wind picks up." in prompt_text
+        assert "Line 3:" not in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_request_world_state_time_passage_keeps_intro_out(
+        self, active_context, mock_scene
+    ):
+        """A time passage between the intro and the newest messages ends the
+        moment before the intro, however few lines it collected."""
+        agent = active_context
+        agent.actions["update_world_state"].config["focus_lines"].value = 3
+        agent.client.send_prompt = AsyncMock(
+            return_value=(
+                '"Hero": {"emotion": "calm", "snapshot": "x", "mentions": []}},'
+                ' "items": {}, "places": {}, "location": "x"}'
+            )
+        )
+        before = NarratorMessage(message="The hero rested by the fire.")
+        after = CharacterMessage(message="Hero: Morning already.", source="Hero")
+        mock_scene.history = [
+            before,
+            TimePassageMessage(message="Three days later", ts=259200),
+            after,
+        ]
+        mock_scene.intro = "You find yourself in a quiet forest clearing."
+
+        response = await agent.request_world_state()
+
+        assert response.anchor_message_ids == [after.id]
+        prompt_text = str(agent.client.send_prompt.call_args[0][0])
+        assert "Line 1: Hero: Morning already." in prompt_text
+        assert "Line 2:" not in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_request_world_state_ignored_types_do_not_push_intro_out(
+        self, active_context, mock_scene
+    ):
+        agent = active_context
+        agent.client.send_prompt = AsyncMock(
+            return_value=(
+                '"Hero": {"emotion": "calm", "snapshot": "x", "mentions": []}},'
+                ' "items": {}, "places": {}, "location": "x"}'
+            )
+        )
+        mock_scene.history = [DirectorMessage(message="Keep the pace slow.")]
+        mock_scene.intro = "You find yourself in a quiet forest clearing."
+
+        response = await agent.request_world_state()
+
+        assert response.anchor_message_ids == [INTRO_ANCHOR_ID]
 
 
 class TestWorldStateSnapshotMemoryRecall:
@@ -733,6 +831,11 @@ class TestWorldStateSnapshotInstructions:
 class TestWorldStateAgentFocusKnobs:
     """Tests for the update_world_state focus_lines and
     include_context_investigation knobs."""
+
+    @pytest.fixture(autouse=True)
+    def no_intro(self, mock_scene):
+        # The intro takes a spare focus line; these tests count messages only.
+        mock_scene.intro = ""
 
     @pytest.mark.asyncio
     async def test_focus_lines_caps_walk_depth(self, active_context, mock_scene):

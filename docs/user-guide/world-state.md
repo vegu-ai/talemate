@@ -21,6 +21,8 @@ Alongside the snapshot panel, Talemate also highlights notable characters, items
 
 These highlights are produced by the same world state snapshot, so they refresh whenever the snapshot updates. Only the most recent part of the scene — the "current moment" — receives highlights; older messages are left as plain text.
 
+Early in a scene the intro text can be part of the current moment too. When the scene has fewer messages than the moment holds, the intro fills a spare line: it is read for the snapshot and shows highlights like a message. For example, with the moment set to three lines, an intro that describes a lighthouse keeper and a reply that mentions the keeper both show the keeper highlighted. A time passage ends the moment, so after "Three days later" the intro no longer counts. The intro shows highlights, but it does not offer **Add to world state**; select the text in a message instead.
+
 ### Examining an entity
 
 Click a highlighted entity to open a small popover. The popover shows:

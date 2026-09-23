@@ -26,7 +26,7 @@ from talemate.prompts import Prompt
 from talemate.prompts.response import AnchorExtractor, ResponseSpec
 from talemate.scene_message import SceneMessage, TimePassageMessage
 from talemate.knowledge.processing import evidence_writer, track_evidence_task
-from talemate.world_state import WorldStateResponse
+from talemate.world_state import INTRO_ANCHOR_ID, WorldStateResponse
 from talemate.world_state.merge import (
     apply_bucket_patch,
     cap_bucket,
@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger("talemate.agents.world_state")
 
-# Message types skipped while `request_world_state` walks scene.history
+# Message types skipped while `current_moment` walks scene.history
 # collecting focus lines. Every focus message ends up in `anchor_message_ids`
 # and can render inline highlights — so anything kept in this list is excluded
 # from the focus span and gets no highlights. `context_investigation` is the
@@ -97,6 +97,19 @@ class SnapshotEntityAddition(pydantic.BaseModel):
     @property
     def highlighted(self) -> bool:
         return self.in_moment and bool(self.mentions)
+
+
+class CurrentMoment(pydantic.BaseModel):
+    """The focus span of a snapshot: the newest messages, oldest first, and
+    the scene intro when it falls inside the span."""
+
+    messages: list[SceneMessage] = pydantic.Field(default_factory=list)
+    intro: str = ""
+
+    @property
+    def anchor_ids(self) -> list[int]:
+        intro = [INTRO_ANCHOR_ID] if self.intro else []
+        return [*intro, *(message.id for message in self.messages)]
 
 
 def occurs_as_words(haystack: str, needle: str) -> bool:
@@ -234,7 +247,7 @@ class WorldStateSnapshotMixin:
                 "focus_lines": AgentActionConfig(
                     type="number",
                     label="Lines in the moment",
-                    description="How many of the most recent messages count as the current moment. These messages can show inline entity highlights.",
+                    description="How many of the most recent messages count as the current moment. These messages can show inline entity highlights. While the scene has fewer messages than this, the scene intro takes a spare line, unless a time passage lies between the intro and the newest messages.",
                     value=3,
                     min=1,
                     max=10,
@@ -487,9 +500,7 @@ class WorldStateSnapshotMixin:
         world_state.places = {}
         world_state.location = None
         world_state.location_perspectives = None
-        world_state.anchor_message_ids = [
-            message.id for message in self.current_moment_messages()
-        ]
+        world_state.anchor_message_ids = self.current_moment().anchor_ids
         world_state.snapshot_provenance = None
         world_state.previous_snapshot = None
         world_state._snapshot_epoch += 1
@@ -624,7 +635,7 @@ class WorldStateSnapshotMixin:
         # Membership of the current moment is the live walk, not the anchors the
         # last refresh left behind — every message pushed since then would read
         # as outside the moment, including the one the user just read.
-        in_moment = message.id in {m.id for m in self.current_moment_messages()}
+        in_moment = message.id in {m.id for m in self.current_moment().messages}
 
         # Only an entry that belongs to the current moment carries the scene cut
         # with it. An entry added from a message before the cut belongs to the
@@ -787,17 +798,19 @@ class WorldStateSnapshotMixin:
             mentions=mentions,
         )
 
-    def current_moment_messages(self) -> list:
+    def current_moment(self) -> CurrentMoment:
         """
-        The messages that count as the current moment: walk ``scene.history``
-        backward collecting up to ``focus_lines`` narrative messages.
+        The current moment: walk ``scene.history`` backward collecting up to
+        ``focus_lines`` narrative messages. When the walk reaches the start of
+        the history with lines to spare, the scene intro takes one of them.
 
         TimePassageMessage is a hard boundary — the moment on the other side is
-        a different scene, not what we're highlighting. Other ignored types
-        (reinforcement, director, ...) are skipped without ending the walk.
-        ``context_investigation`` is conditionally ignored per the agent
-        config: when off it stays in the ignore set; when on it becomes a valid
-        focus candidate that can also receive highlights.
+        a different scene, not what we're highlighting, and the intro lies
+        beyond it. Other ignored types (reinforcement, director, ...) are
+        skipped without ending the walk. ``context_investigation`` is
+        conditionally ignored per the agent config: when off it stays in the
+        ignore set; when on it becomes a valid focus candidate that can also
+        receive highlights.
         """
         ignore_types = set(WORLD_STATE_SNAPSHOT_IGNORE)
         if self.update_world_state_include_context_investigation:
@@ -807,13 +820,13 @@ class WorldStateSnapshotMixin:
         focus_messages: list = []
         for message in reversed(self.scene.history):
             if isinstance(message, TimePassageMessage):
-                break
+                return CurrentMoment(messages=focus_messages)
             if message.typ in ignore_types:
                 continue
             focus_messages.insert(0, message)
             if len(focus_messages) >= focus_lines:
-                break
-        return focus_messages
+                return CurrentMoment(messages=focus_messages)
+        return CurrentMoment(messages=focus_messages, intro=self.scene.get_intro())
 
     @set_processing
     async def request_world_state(self, instructions: str = "") -> WorldStateResponse:
@@ -823,28 +836,12 @@ class WorldStateSnapshotMixin:
             template="world_state/request-world-state-v2.jinja2",
             includes_director=self.long_term_memory_enabled,
         )
-        focus_messages = self.current_moment_messages()
+        moment = self.current_moment()
 
-        # Fall back to the scene intro only on a fresh scene (no live history).
-        # If the walk turned up empty because of a TimePassageMessage boundary
-        # or director-only noise, the scene has already moved past the intro —
-        # using it as the "current moment" would be wrong.
-        intro_text = (
-            self.scene.get_intro()
-            if not focus_messages and not self.scene.history
-            else ""
-        )
-
-        # Nothing to anchor highlights to AND no intro to fall back on. Silently
-        # return an empty response so the world_state holder re-emits current
-        # state and no LLM call is made.
-        if not focus_messages and not intro_text:
+        # Nothing to anchor highlights to. Silently return an empty response so
+        # the world_state holder re-emits current state and no LLM call is made.
+        if not moment.messages and not moment.intro:
             return WorldStateResponse()
-
-        # Every focus message is a valid highlight anchor — the frontend
-        # applies the parser's mention pass to all of them, so phrases that
-        # only appear in an earlier focus line still get highlighted there.
-        anchor_message_ids = [m.id for m in focus_messages]
 
         t1 = time.time()
 
@@ -853,7 +850,12 @@ class WorldStateSnapshotMixin:
             snapshot_audience_context(
                 scene,
                 max(1, self.client.max_token_length // 4),
-                "\n".join(str(message) for message in focus_messages) or intro_text,
+                "\n".join(
+                    [
+                        *([moment.intro] if moment.intro else []),
+                        *(str(message) for message in moment.messages),
+                    ]
+                ),
             )
             if character_knowledge_enabled(scene)
             else None
@@ -900,8 +902,8 @@ class WorldStateSnapshotMixin:
                 "max_tokens": self.client.max_token_length,
                 "object_type": "character",
                 "object_type_plural": "characters",
-                "scene_focus": focus_messages,
-                "intro_text": intro_text,
+                "scene_focus": moment.messages,
+                "intro_text": moment.intro,
                 "include_scene_intent": True,
                 "include_scenario_premise": True,
                 "durable_snapshot": durable_snapshot,
@@ -923,13 +925,13 @@ class WorldStateSnapshotMixin:
         self.scene.log.debug(
             "request_world_state",
             response=world_state,
-            anchor_message_ids=anchor_message_ids,
+            anchor_message_ids=moment.anchor_ids,
             time=time.time() - t1,
         )
 
         return WorldStateResponse(
             world_state=world_state,
-            anchor_message_ids=anchor_message_ids,
+            anchor_message_ids=moment.anchor_ids,
             audience_context=audience_context,
             provenance=snapshot_request.verified_provenance(),
         )

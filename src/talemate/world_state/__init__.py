@@ -47,9 +47,16 @@ __all__ = [
     "Suggestion",
     "InsertionMode",
     "ANY_CHARACTER",
+    "INTRO_ANCHOR_ID",
 ]
 
 ANY_CHARACTER = "__any_character__"
+
+# The anchor id of the scene intro, which is not a scene message. Message ids
+# start at 1, so 0 is never taken and orders before every message — a later
+# TimePassage cuts a snapshot anchored on the intro. The frontend mirrors it in
+# talemate_frontend/src/components/EntityHighlightMixin.js.
+INTRO_ANCHOR_ID = 0
 
 log = structlog.get_logger("talemate")
 
@@ -62,9 +69,8 @@ class WorldStateResponse(BaseModel):
     the agent short-circuited because nothing in the scene could be
     snapshotted). `anchor_message_ids` is the list of scene history message
     ids the snapshot was generated against — every one of them is a valid
-    inline-highlight target. The list is empty when the snapshot was
-    generated against the scene intro (intro is not a real message and has
-    no id, so highlights don't render inline in that case).
+    inline-highlight target. It holds `INTRO_ANCHOR_ID` when the scene intro
+    was part of the current moment.
 
     `provenance` verifies the history supplied by the rendered template,
     which can extend beyond the focus after an asynchronous memory lookup.
@@ -247,8 +253,8 @@ class WorldState(BaseModel):
             ):
                 raise ValueError("Unresolved snapshot audience")
 
-    # ids of the scene history messages the snapshot was generated against;
-    # every one of these can render inline entity highlights in the UI.
+    # ids of the scene history messages the snapshot was generated against,
+    # plus INTRO_ANCHOR_ID for the intro; each can render inline highlights.
     anchor_message_ids: list[int] = Field(default_factory=list)
 
     snapshot_provenance: SnapshotProvenance | None = None

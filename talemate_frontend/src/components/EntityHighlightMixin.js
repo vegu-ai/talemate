@@ -19,6 +19,10 @@ import {
 const SELECTABLE_MESSAGE_TYPES = new Set(['character', 'narrator']);
 const CONTEXT_INVESTIGATION = 'context_investigation';
 
+// The anchor id the World State agent gives the scene intro, which is not a
+// scene message. Mirrors INTRO_ANCHOR_ID in src/talemate/world_state/__init__.py.
+export const INTRO_ANCHOR_ID = 0;
+
 // Shared empty array for messages with no entity highlights — using the same
 // reference avoids invalidating the entityMentions prop on every parent render.
 const NO_ENTITY_MENTIONS = Object.freeze([]);
@@ -116,9 +120,9 @@ export default {
         // this message — only messages that were part of the latest
         // world-state snapshot's focus span get highlights; everything else
         // gets the shared empty sentinel so the prop reference stays stable
-        // across re-renders.
+        // across re-renders. The intro is the one slot rendered without an id.
         getEntityMentionsForMessage(messageId) {
-            if (!this.worldStateAnchorIds.has(messageId)) return NO_ENTITY_MENTIONS;
+            if (!this.worldStateAnchorIds.has(messageId ?? INTRO_ANCHOR_ID)) return NO_ENTITY_MENTIONS;
             return this.worldStateMentions;
         },
 

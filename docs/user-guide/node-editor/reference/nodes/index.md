@@ -14,7 +14,7 @@ Every node available in the node editor, grouped by category. Each page lists th
 | Page | Nodes | Description |
 | --- | --- | --- |
 | [Agent Nodes](agents.md) | 9 | Generic agent interaction: get an agent, call agent functions, read and count agent state variables. |
-| [AI Function Nodes (Focal)](focal.md) | 7 | AI function calling: define callable functions and arguments, unpack calls and collect results. |
+| [AI Function Nodes (Focal)](focal.md) | 8 | AI function calling: define callable functions and arguments, unpack calls and collect results. |
 | [Asset Meta And Selection Nodes](assets-meta.md) | 6 | Asset metadata, search, selection and attachment context for passing assets to generation. |
 | [Asset Nodes](assets.md) | 9 | Scene asset CRUD: add, get, list, remove and update assets, cover and avatar images. |
 | [Context ID Nodes](context-id.md) | 11 | Context IDs: build, convert, compress, read and write context-addressable values and pins. |

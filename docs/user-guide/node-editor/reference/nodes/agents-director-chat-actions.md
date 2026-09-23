@@ -181,6 +181,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/director/mo
 | Input | Type | Description |
 | --- | --- | --- |
 | `calls` | `list` |  |
+| `batch` | `list` | (optional) |
 
 **Outputs**
 

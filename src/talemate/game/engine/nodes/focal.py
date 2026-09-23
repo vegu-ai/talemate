@@ -103,6 +103,7 @@ class Focal(Node):
     - calls: The list of calls made (focal.Call instances)
     - call_payloads: The payload dictionaries of the calls made
     - response: The raw response from the processed prompt
+    - batch: The most recently extracted calls, including rejected and skipped calls
     """
 
     class Fields:
@@ -183,6 +184,7 @@ class Focal(Node):
         self.add_output("calls", socket_type="list")
         self.add_output("call_payloads", socket_type="list")
         self.add_output("response", socket_type="str")
+        self.add_output("batch", socket_type="list")
 
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
@@ -267,6 +269,7 @@ class Focal(Node):
                 "calls": focal_handler.state.calls,
                 "call_payloads": [call.payload for call in focal_handler.state.calls],
                 "response": response,
+                "batch": focal_handler.state.batch,
             }
         )
 
@@ -434,6 +437,36 @@ class Callback(Node):
         self.set_output_values(
             {
                 "callback": callback,
+            }
+        )
+
+
+@register("focal/KnownCalls")
+class KnownCalls(Node):
+    """
+    Excludes calls skipped because no matching callback exists; rejected calls remain.
+
+    Inputs:
+    - calls: A list of focal.Call instances (optional)
+
+    Outputs:
+    - calls: Calls whose skipped_reason is not unknown_callback
+    """
+
+    def __init__(self, title="Known Calls", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("calls", socket_type="list", optional=True)
+        self.add_output("calls", socket_type="list")
+
+    async def run(self, state: GraphState):
+        calls = self.normalized_input_value("calls") or []
+        self.set_output_values(
+            {
+                "calls": [
+                    call for call in calls if call.skipped_reason != "unknown_callback"
+                ]
             }
         )
 

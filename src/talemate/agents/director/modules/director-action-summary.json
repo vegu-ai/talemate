@@ -274,20 +274,24 @@
       "base_type": "core/Node"
     },
     "f4052651-2d29-4e43-8303-0d8387cdfe7a": {
-      "title": "Advanced Format",
+      "title": "PROP no_calls_result",
       "id": "f4052651-2d29-4e43-8303-0d8387cdfe7a",
       "properties": {
-        "template": "No action's were taken."
+        "property_name": "no_calls_result",
+        "property_type": "text",
+        "default": "",
+        "choices": [],
+        "description": "Result when the model returned no callable function.",
+        "num": 0
       },
       "x": 37,
       "y": 389,
       "width": 210,
-      "height": 113,
-      "collapsed": false,
+      "height": 78,
+      "collapsed": true,
       "inherited": false,
-      "registry": "data/string/AdvancedFormat",
-      "dynamic_inputs": [],
-      "base_type": "core/DynamicSocketNodeBase"
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
     },
     "9a20c20e-4eb6-4c9d-9a3d-8ef2d69385f3": {
       "title": "Coallesce",
@@ -318,6 +322,66 @@
       "collapsed": false,
       "inherited": false,
       "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    },
+    "67f72c9b-b174-4054-88f0-90a147e9d70a": {
+      "title": "Has known calls",
+      "id": "67f72c9b-b174-4054-88f0-90a147e9d70a",
+      "properties": {
+        "default": false
+      },
+      "x": 27,
+      "y": 290,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "c7a883a6-15af-48db-9b62-b816a0c8b315": {
+      "title": "IN batch",
+      "id": "c7a883a6-15af-48db-9b62-b816a0c8b315",
+      "properties": {
+        "input_type": "list",
+        "input_name": "batch",
+        "input_optional": true,
+        "input_group": "",
+        "num": 1
+      },
+      "x": 27,
+      "y": 489,
+      "width": 210,
+      "height": 30,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "3846c5d3-426e-44ec-b197-9b891256a896": {
+      "title": "Batch or calls",
+      "id": "3846c5d3-426e-44ec-b197-9b891256a896",
+      "properties": {},
+      "x": 287,
+      "y": 429,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "ddefa018-f878-4f6d-af36-ceb18b1339cc": {
+      "title": "Known Calls",
+      "id": "ddefa018-f878-4f6d-af36-ceb18b1339cc",
+      "properties": {},
+      "x": 497,
+      "y": 429,
+      "width": 210,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/KnownCalls",
       "base_type": "core/Node"
     }
   },
@@ -378,14 +442,26 @@
       "9a20c20e-4eb6-4c9d-9a3d-8ef2d69385f3.b"
     ],
     "997db282-2906-4796-bd98-56380a87e160.value": [
-      "6ed10692-eacf-49a9-8dc5-bef6cb54502f.check",
-      "6ed10692-eacf-49a9-8dc5-bef6cb54502f.yes"
-    ],
-    "f4052651-2d29-4e43-8303-0d8387cdfe7a.result": [
-      "6ed10692-eacf-49a9-8dc5-bef6cb54502f.no"
+      "6ed10692-eacf-49a9-8dc5-bef6cb54502f.yes",
+      "3846c5d3-426e-44ec-b197-9b891256a896.b"
     ],
     "9a20c20e-4eb6-4c9d-9a3d-8ef2d69385f3.value": [
       "10696192-ac8d-4c41-aa5e-8ddb4a343b88.value"
+    ],
+    "67f72c9b-b174-4054-88f0-90a147e9d70a.value": [
+      "6ed10692-eacf-49a9-8dc5-bef6cb54502f.check"
+    ],
+    "f4052651-2d29-4e43-8303-0d8387cdfe7a.value": [
+      "6ed10692-eacf-49a9-8dc5-bef6cb54502f.no"
+    ],
+    "c7a883a6-15af-48db-9b62-b816a0c8b315.value": [
+      "3846c5d3-426e-44ec-b197-9b891256a896.a"
+    ],
+    "3846c5d3-426e-44ec-b197-9b891256a896.value": [
+      "ddefa018-f878-4f6d-af36-ceb18b1339cc.calls"
+    ],
+    "ddefa018-f878-4f6d-af36-ceb18b1339cc.calls": [
+      "67f72c9b-b174-4054-88f0-90a147e9d70a.value"
     ]
   },
   "groups": [
@@ -415,7 +491,15 @@
   "base_type": "core/Graph",
   "inputs": [],
   "outputs": [],
-  "module_properties": {},
+  "module_properties": {
+    "no_calls_result": {
+      "name": "no_calls_result",
+      "type": "text",
+      "default": "",
+      "description": "Result when the model returned no callable function.",
+      "choices": []
+    }
+  },
   "style": {
     "title_color": "#3d315b",
     "node_color": "#27233a",

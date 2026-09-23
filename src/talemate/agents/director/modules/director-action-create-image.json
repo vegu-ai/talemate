@@ -409,11 +409,13 @@
     "a6fe2eb2-f5f3-4d7c-88be-24762fe5e26f": {
       "title": "Director Action Summary",
       "id": "a6fe2eb2-f5f3-4d7c-88be-24762fe5e26f",
-      "properties": {},
+      "properties": {
+        "no_calls_result": "Action `create_image` FAILED: No image was started because the model returned no callable function."
+      },
       "x": 1388,
       "y": 94,
       "width": 193,
-      "height": 26,
+      "height": 46,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/directorActionSummary",
@@ -1379,6 +1381,38 @@
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
       "base_type": "core/Node"
+    },
+    "1c0616dc-4fcb-41a9-a02c-0441bc1bff13": {
+      "title": "SET local.focal_batch",
+      "id": "1c0616dc-4fcb-41a9-a02c-0441bc1bff13",
+      "properties": {
+        "name": "focal_batch",
+        "scope": "local"
+      },
+      "x": 1573,
+      "y": 1170,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "76b66be1-f11c-4369-9baf-c4d3ec8340a0": {
+      "title": "GET local.focal_batch",
+      "id": "76b66be1-f11c-4369-9baf-c4d3ec8340a0",
+      "properties": {
+        "name": "focal_batch",
+        "scope": "local"
+      },
+      "x": 1148,
+      "y": 28,
+      "width": 210,
+      "height": 30,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1654,6 +1688,15 @@
     ],
     "641520c8-0a7e-4ed4-8f05-8f9715994dac.state": [
       "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item1"
+    ],
+    "d3006fc9-f667-4504-bc37-4277d1cee819.batch": [
+      "1c0616dc-4fcb-41a9-a02c-0441bc1bff13.value"
+    ],
+    "1c0616dc-4fcb-41a9-a02c-0441bc1bff13.value": [
+      "9289a364-5506-4c24-b87a-fa885f0e3d72.state_b"
+    ],
+    "76b66be1-f11c-4369-9baf-c4d3ec8340a0.value": [
+      "a6fe2eb2-f5f3-4d7c-88be-24762fe5e26f.batch"
     ]
   },
   "groups": [

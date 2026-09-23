@@ -65,6 +65,11 @@ When the director performs an action, you can expand it to see exactly what was 
 
 This gives you full transparency into the changes being made to your scene.
 
+If Create Image, Direct Scene or Prompt User cannot start because the model's
+response contains no supported function call, the action summary tells the
+director that nothing happened. For example, an image request reports "No image was started"
+so the director can explain the failure on its next turn.
+
 ## Chat modes
 
 The director chat supports three different modes that control how the director behaves:

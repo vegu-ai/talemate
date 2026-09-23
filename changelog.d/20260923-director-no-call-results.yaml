@@ -1,0 +1,2 @@
+fixed:
+  - "Fixed empty Director Chat action results when the model returned no callable function for image creation, scene direction or user interaction."

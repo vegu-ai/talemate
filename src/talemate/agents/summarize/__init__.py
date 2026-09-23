@@ -3,9 +3,9 @@ from __future__ import annotations
 from talemate.knowledge.processing import evidence_writer
 
 import re
-from dataclasses import dataclass
 
 import structlog
+from pydantic import BaseModel
 from typing import TYPE_CHECKING, Literal
 import talemate.emit.async_signals
 import talemate.util as util
@@ -87,8 +87,7 @@ class SummarizeEmission(AgentTemplateEmission):
     summarization_type: Literal["dialogue", "events"] = "dialogue"
 
 
-@dataclass
-class ArchiveSpan:
+class ArchiveSpan(BaseModel):
     start: int
     end: int | None
     tokens: int
@@ -195,8 +194,8 @@ class SummarizeAgent(
         return self.resolve_enabled("archive")
 
     @property
-    def threshold(self):
-        return self.resolve_config("archive", "threshold")
+    def threshold(self) -> int:
+        return self.archive_threshold
 
     @property
     def estimated_entry_count(self):
@@ -204,8 +203,8 @@ class SummarizeAgent(
         return all_tokens // self.threshold
 
     @property
-    def archive_threshold(self):
-        return self.resolve_config("archive", "threshold")
+    def archive_threshold(self) -> int:
+        return int(self.resolve_config("archive", "threshold"))
 
     @property
     def archive_method(self):

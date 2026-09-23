@@ -387,15 +387,15 @@ class ContextHistoryMixin:
 
     @property
     def scene_history_dialogue_ratio(self) -> int:
-        return self.resolve_config("manage_scene_history", "dialogue_ratio")
+        return int(self.resolve_config("manage_scene_history", "dialogue_ratio"))
 
     @property
     def scene_history_summary_detail_ratio(self) -> int:
-        return self.resolve_config("manage_scene_history", "summary_detail_ratio")
+        return int(self.resolve_config("manage_scene_history", "summary_detail_ratio"))
 
     @property
     def scene_history_max_budget(self) -> int:
-        return self.resolve_config("manage_scene_history", "max_budget")
+        return int(self.resolve_config("manage_scene_history", "max_budget"))
 
     @property
     def scene_history_best_fit(self) -> bool:
@@ -403,11 +403,11 @@ class ContextHistoryMixin:
 
     @property
     def scene_history_best_fit_min_dialogue(self) -> int:
-        return self.resolve_config("manage_scene_history", "best_fit_min_dialogue")
+        return int(self.resolve_config("manage_scene_history", "best_fit_min_dialogue"))
 
     @property
     def scene_history_best_fit_max_dialogue(self) -> int:
-        return self.resolve_config("manage_scene_history", "best_fit_max_dialogue")
+        return int(self.resolve_config("manage_scene_history", "best_fit_max_dialogue"))
 
     def _has_layered_history(self, scene: Scene) -> bool:
         """Check if layered history is available for the given scene."""
@@ -1237,7 +1237,7 @@ class ContextHistoryMixin:
         Shared collection phase used by both ``_context_history_build`` and
         ``context_history_preview``.  Computes budgets, collects dialogue,
         archived history, and layered history, returning everything in a
-        ``_CollectedHistory`` dataclass.
+        ``_CollectedHistory`` model.
         """
         params._intro_carried = False
         # --- Dialogue ---

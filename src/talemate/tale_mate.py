@@ -4,7 +4,6 @@ import os
 import re
 import traceback
 import uuid
-from dataclasses import asdict
 from typing import Generator, Callable
 
 import structlog
@@ -2425,7 +2424,7 @@ class Scene(Emitter):
     def serialize(self) -> dict:
         scene = self
         return {
-            **asdict(self.saved_format),
+            **self.saved_format.model_dump(),
             **(
                 {"knowledge": self.knowledge.model_dump(mode="json")}
                 if self.knowledge is not None

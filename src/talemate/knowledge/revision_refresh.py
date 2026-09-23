@@ -5,10 +5,10 @@ import hashlib
 import json
 from contextlib import contextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass
 from weakref import WeakKeyDictionary
 
 import structlog
+from pydantic import BaseModel, ConfigDict
 
 from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
@@ -26,8 +26,9 @@ _catch_up_owners = WeakKeyDictionary()
 log = structlog.get_logger(__name__)
 
 
-@dataclass(frozen=True)
-class RevisionOperations:
+class RevisionOperations(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     perceptions: bool = False
 
     @property

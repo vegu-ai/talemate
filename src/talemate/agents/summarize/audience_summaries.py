@@ -120,9 +120,9 @@ class AudienceSummaryMixin:
                     scene, reference, name, read=read
                 ).status in ("ready", "omitted"):
                     continue
-                groups.setdefault(inputs.get(name, SummaryInput("pending")), []).append(
-                    name
-                )
+                groups.setdefault(
+                    inputs.get(name, SummaryInput(status="pending")), []
+                ).append(name)
             for summary_input, names in groups.items():
                 await self._generate_summary_group(
                     scene,

@@ -1,10 +1,10 @@
 import asyncio
 import hashlib
 import json
-from dataclasses import dataclass, field
 from weakref import WeakKeyDictionary
 
 import structlog
+from pydantic import BaseModel, ConfigDict, Field
 from chromadb.utils.batch_utils import create_batches
 
 from talemate.context import scene_is_loading
@@ -19,15 +19,16 @@ from talemate.knowledge.perspectives import PerspectiveReadContext, perspectives
 log = structlog.get_logger(__name__)
 
 
-@dataclass
-class AudienceIndexState:
+class AudienceIndexState(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     revision: int = 0
     applied: int = -1
     db: object = None
     fingerprints: dict | None = None
-    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    lock: asyncio.Lock = Field(default_factory=asyncio.Lock)
     task: asyncio.Task | None = None
-    documents: dict = field(default_factory=dict)
+    documents: dict = Field(default_factory=dict)
     documents_revision: int = -1
     dirty: set | None = None
     collection_revision: int = 0

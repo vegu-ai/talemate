@@ -6,10 +6,9 @@ import traceback
 import uuid
 from collections import Counter
 from copy import deepcopy
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
-from pydantic import StrictInt, StrictStr, ValidationError
+from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr, ValidationError
 from weakref import WeakKeyDictionary
 
 import structlog
@@ -253,13 +252,13 @@ def relevant_audiences(scene: "Scene", message: SceneMessage) -> tuple[str, ...]
 def perception_staleness(scene, message, *, read=None) -> Staleness | None:
     """The first check that keeps the passage's stored results from being current."""
     if message.knowledge is None:
-        return Staleness("no_record")
+        return Staleness(check="no_record")
     if message.knowledge.content_digest != content_digest(message.perception_text):
-        return Staleness("content_digest")
+        return Staleness(check="content_digest")
     read = read or PerspectiveReadContext(scene)
     reference = source_reference(scene, "message", message.id, read=read)
     if reference is None:
-        return Staleness("no_record")
+        return Staleness(check="no_record")
     for name in relevant_audiences(scene, message):
         stale = view_staleness(scene, reference, name, read=read)
         if stale is not None:
@@ -272,9 +271,10 @@ def perception_results_current(scene, message, *, read=None) -> bool:
     return perception_staleness(scene, message, read=read) is None
 
 
-@dataclass(frozen=True)
-class PerceptionBacklog:
+class PerceptionBacklog(BaseModel):
     """The passages a perception run analyzes, counted without a request."""
+
+    model_config = ConfigDict(frozen=True)
 
     # every required character has a stored ready or omitted view
     keepable: tuple[SceneMessage, ...]

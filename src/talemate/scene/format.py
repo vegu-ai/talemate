@@ -1,5 +1,6 @@
-from dataclasses import asdict, dataclass
 from typing import get_args
+
+from pydantic import BaseModel, ConfigDict
 
 from talemate.exceptions import TalemateError
 from talemate.knowledge.mode import KnowledgeEligibility
@@ -12,8 +13,9 @@ class SceneFormatError(TalemateError):
     pass
 
 
-@dataclass(frozen=True)
-class SavedSceneFormat:
+class SavedSceneFormat(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     format_version: int
     knowledge_eligibility: KnowledgeEligibility = "legacy"
 
@@ -52,4 +54,8 @@ def read_scene_format(data: dict) -> SavedSceneFormat:
 
 def normalize_scene_format(data: dict) -> dict:
     metadata = read_scene_format(data)
-    return {**data, **asdict(metadata), "format_version": CURRENT_SCENE_FORMAT_VERSION}
+    return {
+        **data,
+        **metadata.model_dump(),
+        "format_version": CURRENT_SCENE_FORMAT_VERSION,
+    }

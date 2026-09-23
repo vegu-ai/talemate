@@ -1,9 +1,9 @@
-from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Literal, Iterable
 import weakref
 
 from blinker import signal
+from pydantic import BaseModel, ConfigDict
 
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspective_models import (
@@ -44,17 +44,17 @@ StaleCheck = Literal[
 ]
 
 
-@dataclass(frozen=True)
-class Staleness:
+class Staleness(BaseModel):
     """The first freshness check a stored view fails, and what it names."""
+
+    model_config = ConfigDict(frozen=True)
 
     check: StaleCheck
     character: str | None = None
     cited: int | str | None = None
 
 
-@dataclass
-class _Source:
+class _Source(BaseModel):
     kind: Literal["message", "summary", "intro"]
     id: str | int
     layer: int
@@ -144,7 +144,7 @@ def _sources(scene):
         getattr(scene, "intro_present", None) is not None
         or getattr(scene, "intro_knowledge", None) is not None
     ):
-        yield _Source("intro", "intro", 0, scene)
+        yield _Source(kind="intro", id="intro", layer=0, owner=scene)
     for message in message_sources(scene):
         identity = (
             message.get("id")
@@ -152,11 +152,11 @@ def _sources(scene):
             else getattr(message, "id", None)
         )
         if identity is not None:
-            yield _Source("message", identity, 0, message)
+            yield _Source(kind="message", id=identity, layer=0, owner=message)
     for layer, entries in enumerate([scene.archived_history, *scene.layered_history]):
         for entry in entries:
             if entry.get("id") is not None:
-                yield _Source("summary", entry["id"], layer, entry)
+                yield _Source(kind="summary", id=entry["id"], layer=layer, owner=entry)
 
 
 def _validate_key(key):
@@ -263,9 +263,9 @@ def _passage_staleness(
     for item in provenance:
         source = _find(scene, ("message", item.message_id, 0), read)
         if source is None:
-            return Staleness("provenance_missing", cited=item.message_id)
+            return Staleness(check="provenance_missing", cited=item.message_id)
         if content_digest(source.text) != item.content_digest:
-            return Staleness("provenance_content_digest", cited=item.message_id)
+            return Staleness(check="provenance_content_digest", cited=item.message_id)
         if (
             item.message_id != allow_message_id
             and source.kind == "message"
@@ -273,11 +273,13 @@ def _passage_staleness(
             and not source.owner.revision_matches_baseline
             and not source.owner.revision_feature_current("perceptions")
         ):
-            return Staleness("provenance_revision_receipt", cited=item.message_id)
+            return Staleness(check="provenance_revision_receipt", cited=item.message_id)
         if item.revision is not None and (
             source.knowledge is None or source.knowledge.revision != item.revision
         ):
-            return Staleness("provenance_knowledge_revision", cited=item.message_id)
+            return Staleness(
+                check="provenance_knowledge_revision", cited=item.message_id
+            )
     return None
 
 
@@ -420,7 +422,9 @@ def _select_character_view(
 ) -> tuple[CharacterView, Staleness | None]:
     source = SourceReference.model_validate(source)
     if not character_knowledge_enabled(scene):
-        return CharacterView(status="unavailable"), Staleness("no_record", character)
+        return CharacterView(status="unavailable"), Staleness(
+            check="no_record", character=character
+        )
     _validate_audience(scene, (character,))
     read = _read_context(scene, read)
     if source.kind == "disclosure":
@@ -428,7 +432,7 @@ def _select_character_view(
         if item is not None and character in item.audience:
             if item.revision != source.revision:
                 return CharacterView(status="pending", source=source), Staleness(
-                    "knowledge_revision", character, source.id
+                    check="knowledge_revision", character=character, cited=source.id
                 )
             return (
                 CharacterView(
@@ -440,18 +444,18 @@ def _select_character_view(
                 None,
             )
         return CharacterView(status="unavailable", source=source), Staleness(
-            "missing_audience_view", character
+            check="missing_audience_view", character=character
         )
     owner = _find(scene, source.key, read)
     if not owner or not owner.knowledge:
         return CharacterView(status="unavailable", source=source), Staleness(
-            "no_record", character
+            check="no_record", character=character
         )
     knowledge = owner.knowledge
     if knowledge.content_digest != content_digest(owner.text):
-        stale = Staleness("content_digest", character)
+        stale = Staleness(check="content_digest", character=character)
     elif knowledge.revision != source.revision:
-        stale = Staleness("knowledge_revision", character)
+        stale = Staleness(check="knowledge_revision", character=character)
     else:
         stale = None
     if stale:
@@ -467,13 +471,13 @@ def _select_character_view(
             CharacterView(
                 status="unavailable", source=source, acquired=knowledge.acquired
             ),
-            Staleness("missing_audience_view", character),
+            Staleness(check="missing_audience_view", character=character),
         )
     view = views[0]
     status = view.status
     if source.view_revision is not None and source.view_revision != view.revision:
         status = "pending"
-        stale = Staleness("view_revision", character)
+        stale = Staleness(check="view_revision", character=character)
     if status in ("ready", "omitted"):
         stale = _passage_staleness(scene, view.passage_provenance, read)
         for dependency in view.sources if stale is None else ():
@@ -485,13 +489,13 @@ def _select_character_view(
                 readable="summary" if source.kind == "summary" else status == "ready",
                 read=read,
             ):
-                stale = Staleness("dependency", cited=dependency.id)
+                stale = Staleness(check="dependency", cited=dependency.id)
                 break
         if stale is not None:
             status = "pending"
-            stale = Staleness(stale.check, character, stale.cited)
+            stale = Staleness(check=stale.check, character=character, cited=stale.cited)
     elif stale is None:
-        stale = Staleness("view_status", character)
+        stale = Staleness(check="view_status", character=character)
     return (
         CharacterView(
             status=status,

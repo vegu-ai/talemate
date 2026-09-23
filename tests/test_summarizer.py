@@ -130,6 +130,20 @@ class TestActionRegistration:
         assert summarizer.threshold == 256
         assert summarizer.archive_threshold == 256
 
+    def test_scene_history_numbers_are_whole(self, summarizer_scene):
+        _, summarizer = summarizer_scene
+        config = summarizer.actions["manage_scene_history"].config
+        config["dialogue_ratio"].value = 50.5
+        config["summary_detail_ratio"].value = 60.5
+        config["best_fit_min_dialogue"].value = 10.5
+        config["best_fit_max_dialogue"].value = 100.5
+        config["max_budget"].value = 8192.5
+        assert summarizer.scene_history_dialogue_ratio == 50
+        assert summarizer.scene_history_summary_detail_ratio == 60
+        assert summarizer.scene_history_best_fit_min_dialogue == 10
+        assert summarizer.scene_history_best_fit_max_dialogue == 100
+        assert summarizer.scene_history_max_budget == 8192
+
     def test_archive_method_property(self, summarizer_scene):
         _, summarizer = summarizer_scene
         assert summarizer.archive_method == "balanced"
@@ -219,6 +233,21 @@ class TestArchiveStatus:
         assert status["due"] is False
         assert status["pending_tokens"] == 34
         # the cutoff is strictly greater than the threshold
+        assert status["remaining_tokens"] == 67
+
+    def test_fractional_threshold_counts_as_whole_tokens(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100.5)
+        scene.history = [
+            make_character_message("x" * 10),
+            make_character_message("y" * 10),
+            make_character_message("z" * 10),
+        ]
+
+        status = summarizer.archive_status()
+        assert summarizer.threshold == 100
+        assert status["threshold"] == 100
+        assert status["pending_tokens"] == 34
         assert status["remaining_tokens"] == 67
 
     @pytest.mark.parametrize(

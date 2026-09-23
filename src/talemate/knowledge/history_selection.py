@@ -6,8 +6,9 @@ from talemate.knowledge.transitions import (
     transition_index,
 )
 
-from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from talemate.knowledge.context import (
     ContextHistoryMessage,
@@ -30,8 +31,9 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
 
-@dataclass(frozen=True)
-class HistorySelectionPolicy:
+class HistorySelectionPolicy(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     best_fit: bool
     min_dialogue: int
     max_dialogue: int
@@ -47,8 +49,9 @@ class HistorySelectionPolicy:
         return max(0, self.min_dialogue, self.max_dialogue)
 
 
-@dataclass(frozen=True)
-class HistorySelectionEntry:
+class HistorySelectionEntry(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     text: str
     type: Literal["intro", "dialogue", "archived", "layer", "disclosure"]
     id: str | int
@@ -67,8 +70,9 @@ class HistorySelectionEntry:
         return self.text
 
 
-@dataclass(frozen=True)
-class HistorySelectionResult:
+class HistorySelectionResult(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     entries: tuple[HistorySelectionEntry, ...]
     policy: HistorySelectionPolicy
     budget: int
@@ -81,19 +85,17 @@ class HistorySelectionResult:
         return [entry.rendered() for entry in self.entries if entry.text]
 
 
-@dataclass
-class _Node:
+class _Node(BaseModel):
     entry: HistorySelectionEntry
     summary_entry: dict | None = None
     children: list[_Node] | None = None
 
 
-@dataclass
-class _RawSelection:
-    nodes: list[_Node] = field(default_factory=list)
+class _RawSelection(BaseModel):
+    nodes: list[_Node] = Field(default_factory=list)
     scanned_to: int = -1
     exhausted: bool = False
-    raw_ids: set[int] = field(default_factory=set)
+    raw_ids: set[int] = Field(default_factory=set)
     character_messages: int = 0
 
     @property
@@ -206,7 +208,7 @@ class _PerspectiveHistorySelector:
         reference = source_reference(self.scene, "disclosure", item.id, read=self.read)
         references = (reference,) if reference is not None else ()
         return _Node(
-            HistorySelectionEntry(
+            entry=HistorySelectionEntry(
                 text=text,
                 type="disclosure",
                 id=item.id,
@@ -242,7 +244,7 @@ class _PerspectiveHistorySelector:
         selected = self._select(reference) if reference is not None else None
         selected_reference = selected.source if selected is not None else None
         return _Node(
-            HistorySelectionEntry(
+            entry=HistorySelectionEntry(
                 text=text,
                 type="dialogue",
                 id=message.id,
@@ -441,7 +443,7 @@ class _PerspectiveHistorySelector:
                 break
             nodes.append(
                 _Node(
-                    HistorySelectionEntry(
+                    entry=HistorySelectionEntry(
                         text=text,
                         type="archived",
                         id=identity,
@@ -524,7 +526,7 @@ class _PerspectiveHistorySelector:
         summary_entry = owners[0].owner if len(owners) == 1 else None
         text = view.text or ""
         return _Node(
-            HistorySelectionEntry(
+            entry=HistorySelectionEntry(
                 text=text,
                 type="layer" if reference.layer else "archived",
                 id=reference.id,
@@ -679,7 +681,7 @@ class _PerspectiveHistorySelector:
         if not text:
             return None
         return _Node(
-            HistorySelectionEntry(
+            entry=HistorySelectionEntry(
                 text=text,
                 type="intro",
                 id="intro",
@@ -976,8 +978,8 @@ class _PerspectiveHistorySelector:
                         ),
                     )
                     text = render_transition(self.scene, protected, budget=available)
-                    node.entry = replace(
-                        node.entry, text=text, token_count=count_tokens(text)
+                    node.entry = node.entry.model_copy(
+                        update={"text": text, "token_count": count_tokens(text)}
                     )
         entries = tuple(node.entry for node in nodes if node.entry.text)
         total = sum(entry.token_count for entry in entries)

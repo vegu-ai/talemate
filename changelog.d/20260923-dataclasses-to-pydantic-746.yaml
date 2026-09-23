@@ -1,0 +1,2 @@
+changed:
+- "Developer tool only: the node glossary records `SocketDoc`, `PropertyDoc` and `NodeDoc` (`python -m talemate.game.engine.nodes.tools glossary`) are now pydantic models. Construct them with keyword arguments. The generated glossary pages do not change."

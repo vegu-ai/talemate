@@ -19,11 +19,11 @@ never invoked.
 
 from __future__ import annotations
 
-import dataclasses
 import re
 from pathlib import Path
 
 import structlog
+from pydantic import BaseModel, Field
 
 from talemate.path import TALEMATE_ROOT, relative_to_root
 
@@ -342,16 +342,14 @@ PAGE_TITLES: dict[str, tuple[str, str]] = {
 }
 
 
-@dataclasses.dataclass
-class SocketDoc:
+class SocketDoc(BaseModel):
     name: str
     type: str
     optional: bool = False
     description: str = ""
 
 
-@dataclasses.dataclass
-class PropertyDoc:
+class PropertyDoc(BaseModel):
     name: str
     type: str
     default: str
@@ -364,16 +362,15 @@ class PropertyDoc:
     readonly: bool = False
 
 
-@dataclasses.dataclass
-class NodeDoc:
+class NodeDoc(BaseModel):
     registry: str
     title: str
     base_type: str
     module: str
     prose: str = ""
-    inputs: list[SocketDoc] = dataclasses.field(default_factory=list)
-    outputs: list[SocketDoc] = dataclasses.field(default_factory=list)
-    properties: list[PropertyDoc] = dataclasses.field(default_factory=list)
+    inputs: list[SocketDoc] = Field(default_factory=list)
+    outputs: list[SocketDoc] = Field(default_factory=list)
+    properties: list[PropertyDoc] = Field(default_factory=list)
     module_path: str = ""
     dynamic_imported: bool = False
     supports_dynamic_inputs: bool = False

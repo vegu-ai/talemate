@@ -3,7 +3,6 @@ import tempfile
 import asyncio
 import structlog
 import pydantic
-from dataclasses import dataclass
 from typing import Any, Literal
 import gc
 import threading
@@ -258,8 +257,7 @@ def validate_turbo_reference(path: str):
         )
 
 
-@dataclass
-class ChatterboxInstance:
+class ChatterboxInstance(pydantic.BaseModel):
     model: Any
     device: str
     variant: ChatterboxVariant = "chatterbox"

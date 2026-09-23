@@ -1,17 +1,17 @@
 """Bounded author-facing samples from context selectors."""
 
 from collections import Counter
-from dataclasses import dataclass, field
 from textwrap import shorten
 
+from pydantic import BaseModel, Field, PrivateAttr
 
-@dataclass
-class ContextDiagnostics:
+
+class ContextDiagnostics(BaseModel):
     sample_limit: int = 20
     text_limit: int = 500
-    counts: Counter = field(default_factory=Counter)
-    samples: list[dict] = field(default_factory=list)
-    _seen: set = field(default_factory=set)
+    counts: Counter = Field(default_factory=Counter)
+    samples: list[dict] = Field(default_factory=list)
+    _seen: set = PrivateAttr(default_factory=set)
 
     def exclude(self, kind, identity, text, reason, section="History", layer=None):
         key = kind, str(identity), layer, reason

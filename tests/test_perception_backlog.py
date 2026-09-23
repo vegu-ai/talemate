@@ -140,7 +140,7 @@ async def test_stale_check_names_the_content_digest(setup):
     scene, _, _ = setup
     messages = await story(scene)
     object.__setattr__(messages[2], "message", "Alice: Changed.")
-    assert perception_staleness(scene, messages[2]) == Staleness("content_digest")
+    assert perception_staleness(scene, messages[2]) == Staleness(check="content_digest")
 
 
 @pytest.mark.asyncio
@@ -149,7 +149,7 @@ async def test_stale_check_names_the_missing_audience_view(setup):
     messages = await story(scene)
     scene.active_characters.append("Carol")
     assert perception_staleness(scene, messages[0]) == Staleness(
-        "missing_audience_view", "Carol"
+        check="missing_audience_view", character="Carol"
     )
 
 
@@ -159,7 +159,7 @@ async def test_stale_check_names_the_revision_receipt(setup):
     messages = await story(scene)
     older_build(messages)
     assert perception_staleness(scene, messages[0]) == Staleness(
-        "provenance_revision_receipt", "Alice", messages[0].id
+        check="provenance_revision_receipt", character="Alice", cited=messages[0].id
     )
 
 
@@ -172,7 +172,7 @@ async def test_stale_check_names_the_knowledge_revision_of_a_cited_passage(setup
         messages[1], "knowledge", knowledge.model_copy(update={"revision": 2})
     )
     assert perception_staleness(scene, messages[2]) == Staleness(
-        "provenance_knowledge_revision", "Alice", messages[1].id
+        check="provenance_knowledge_revision", character="Alice", cited=messages[1].id
     )
 
 
@@ -182,7 +182,7 @@ async def test_stale_check_names_the_content_digest_of_a_cited_passage(setup):
     messages = await story(scene)
     object.__setattr__(messages[1], "message", "Alice: Changed.")
     assert perception_staleness(scene, messages[2]) == Staleness(
-        "provenance_content_digest", "Alice", messages[1].id
+        check="provenance_content_digest", character="Alice", cited=messages[1].id
     )
 
 
@@ -191,9 +191,11 @@ async def test_stale_check_names_the_stored_status_and_the_dependency(setup):
     scene, _, _ = setup
     messages = await story(scene)
     replace_view(messages[2], "Alice", status="failed", text=None)
-    assert perception_staleness(scene, messages[2]) == Staleness("view_status", "Alice")
+    assert perception_staleness(scene, messages[2]) == Staleness(
+        check="view_status", character="Alice"
+    )
     assert perception_staleness(scene, messages[3]) == Staleness(
-        "dependency", "Alice", messages[2].id
+        check="dependency", character="Alice", cited=messages[2].id
     )
 
 
@@ -323,7 +325,9 @@ async def test_keep_removes_a_citation_it_cannot_make_current(setup):
     alice = next(v for v in messages[3].knowledge.views if "Alice" in v.audience)
     assert messages[2].id not in {dependency.id for dependency in alice.sources}
     assert perception_results_current(scene, messages[3])
-    assert perception_staleness(scene, messages[2]) == Staleness("view_status", "Alice")
+    assert perception_staleness(scene, messages[2]) == Staleness(
+        check="view_status", character="Alice"
+    )
 
 
 FRAME_KEYS = {

@@ -13,7 +13,6 @@ import asyncio
 import uuid
 from contextvars import ContextVar
 from copy import deepcopy
-from dataclasses import dataclass, field
 from typing import Callable, Union, Literal, TYPE_CHECKING
 
 import pydantic
@@ -104,12 +103,11 @@ class PromptData(pydantic.BaseModel):
     template_uid: str | None = None
 
 
-@dataclass
-class PromptRequest:
+class PromptRequest(pydantic.BaseModel):
     data: PromptData | None = None
     parameters: dict | None = None
-    values: dict = field(default_factory=dict)
-    started: float = field(default_factory=time.monotonic)
+    values: dict = pydantic.Field(default_factory=dict)
+    started: float = pydantic.Field(default_factory=time.monotonic)
     failed: bool = False
     reasoning_patterns: tuple[str, str | None] | None = None
 

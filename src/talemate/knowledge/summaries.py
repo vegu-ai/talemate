@@ -1,5 +1,6 @@
-from dataclasses import dataclass
 from typing import Literal
+
+from pydantic import BaseModel, ConfigDict
 
 from talemate.knowledge.disclosures import disclosure_positions, disclosure_text
 from talemate.knowledge.perspective_models import Disclosure
@@ -13,8 +14,9 @@ from talemate.knowledge.perspectives import (
 from talemate.knowledge.perspective_models import SourceReference
 
 
-@dataclass(frozen=True)
-class SummaryInput:
+class SummaryInput(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     status: Literal["ready", "omitted", "pending"]
     texts: tuple[str, ...] = ()
     sources: tuple[SourceReference, ...] = ()
@@ -116,9 +118,11 @@ def summary_inputs(scene, entry, layer, *, read=None):
                     else view.text
                 )
         results[name] = SummaryInput(
-            "ready" if complete and texts else "omitted" if complete else "pending",
-            tuple(texts),
-            tuple(sources),
+            status=(
+                "ready" if complete and texts else "omitted" if complete else "pending"
+            ),
+            texts=tuple(texts),
+            sources=tuple(sources),
         )
     return results
 

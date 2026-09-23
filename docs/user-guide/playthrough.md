@@ -76,11 +76,8 @@ in the normal scene view, ready to be played on from there.
 
 The scene you were replaying is left as it was, apart from remembering where you
 had got to, and the fork is a save of its own — an existing save is never
-written over, so pick a name that is not taken. A name that is already in use is
-refused, and by then the playthrough has ended: the refusal arrives as an error
-in the normal view, and forking again means starting the playthrough over, which
-resumes at the message you forked from — unless the scene is read-only, which
-records no position at all (see [below](#leaving-and-picking-up-where-you-left-off)).
+written over. If a name is already in use, the dialog stays open so you can pick
+a different one.
 
 What the fork contains is restored from the scene's
 [revision history](restoring-scenes.md): the story, the world state and the

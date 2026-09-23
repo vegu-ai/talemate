@@ -1,0 +1,2 @@
+fixed:
+  - "Kept the scene-fork save-name dialog open so a name that is already in use can be corrected without starting over"

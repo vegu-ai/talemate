@@ -50,6 +50,13 @@ const progressSaves = (sent) =>
 const speakRequests = (sent) =>
     sent.filter((frame) => frame.type === "tts");
 
+const finishFork = (host, frame, error = null) => host.handlePlaythroughMessage({
+    type: "assistant",
+    action: "operation_done",
+    request_id: frame.request_id,
+    ...(error ? { error: { message: error } } : { data: {} }),
+});
+
 describe("forking from a playthrough", () => {
     it("forks at the message the toolbar asked for the name at", () => {
         const { host, sent } = makeHost();
@@ -62,6 +69,7 @@ describe("forking from a playthrough", () => {
             action: "fork_new_scene",
             message_id: 3,
             save_name: "a new save",
+            request_id: expect.any(String),
         }]);
     });
 
@@ -74,6 +82,7 @@ describe("forking from a playthrough", () => {
         host.setPlaythroughReveal(6);
 
         host.forkPlaythrough("a new save", picked);
+        finishFork(host, forks(sent)[0]);
 
         expect(forks(sent)[0].message_id).toBe(3);
         expect(progressSaves(sent)[0].message_id).toBe(3);
@@ -84,6 +93,7 @@ describe("forking from a playthrough", () => {
         host.setPlaythroughReveal(4);
 
         host.forkPlaythrough("a new save", 3);
+        finishFork(host, forks(sent)[0]);
 
         expect(progressSaves(sent)).toEqual([{
             type: "playthrough",
@@ -102,13 +112,53 @@ describe("forking from a playthrough", () => {
         expect(forks(sent).length).toBe(1);
     });
 
-    it("leaves the mode, so the forked scene loads into the normal view", () => {
-        const { host } = makeHost();
+    it("leaves the mode only after the accepted fork completes", () => {
+        const { host, sent } = makeHost();
         host.setPlaythroughReveal(4);
 
         host.forkPlaythrough("a new save", 3);
+        expect(host.playthroughActive).toBe(true);
+        finishFork(host, forks(sent)[0]);
 
         expect(host.playthroughActive).toBe(false);
+    });
+
+    it("keeps the mode and dialog state alive for a refused name, then retries", () => {
+        const { host, sent } = makeHost();
+        host.setPlaythroughReveal(4);
+        host.promptPlaythroughFork();
+        host.forkPlaythrough("taken", 3);
+        const firstFork = forks(sent)[0];
+
+        expect(host.playthroughPaused).toBe(true);
+        expect(finishFork(host, firstFork, "A save named 'taken' already exists")).toBe(true);
+        expect(host.playthroughActive).toBe(true);
+        expect(host.playthroughPaused).toBe(true);
+        expect(host.playthroughForkRequestId).toBeNull();
+        expect(host.playthroughForkError).toContain("already exists");
+
+        host.forkPlaythrough("available", 3);
+        const secondFork = forks(sent)[1];
+        expect(secondFork.request_id).not.toBe(firstFork.request_id);
+        expect(host.playthroughForkError).toBe("");
+        expect(finishFork(host, secondFork)).toBe(true);
+        expect(host.playthroughActive).toBe(false);
+        expect(progressSaves(sent).at(-1).message_id).toBe(3);
+    });
+
+    it("ignores another caller's completion", () => {
+        const { host, sent } = makeHost();
+        host.forkPlaythrough("a new save", 3);
+        const pending = forks(sent)[0];
+
+        expect(host.handlePlaythroughMessage({
+            type: "assistant",
+            action: "operation_done",
+            request_id: "another-request",
+            error: { message: "ignore me" },
+        })).toBe(false);
+        expect(host.playthroughForkRequestId).toBe(pending.request_id);
+        expect(host.playthroughActive).toBe(true);
     });
 
     it("has nothing to fork from while the cursor is on the scene intro", () => {

@@ -186,7 +186,11 @@ describe('character transition chip', () => {
 
 
     it('updates an existing history entry without moving or duplicating it', () => {
-        const state = { messages: [{ type: 'narrator', id: 1 }, { type: 'character_transition', id: 2, kind: 'activated', arrival_note: 'Before' }, { type: 'character', id: 3 }] };
+        const state = {
+            messages: [{ type: 'narrator', id: 1 }, { type: 'character_transition', id: 2, kind: 'activated', arrival_note: 'Before' }, { type: 'character', id: 3 }],
+            pendingForkRequestId: null,
+        };
+        state.handleForkSceneMessage = SceneMessages.methods.handleForkSceneMessage.bind(state);
         SceneMessages.methods.handleMessage.call(state, { type: 'character_transition', id: 2, kind: 'activated', arrival_note: 'After' });
         expect(state.messages.map(message => message.id)).toEqual([1, 2, 3]);
         expect(state.messages[1].arrival_note).toBe('After');

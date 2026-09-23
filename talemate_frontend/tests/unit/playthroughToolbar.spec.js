@@ -100,8 +100,12 @@ describe("the fork action", () => {
 
     it("tells the host to stop pacing while the name is asked for", () => {
         expect(toolbar).toContain("$emit('fork-prompt')");
-        expect(app).toContain('@fork-prompt="pausePlaythroughPacing"');
-        expect(app).toContain('@fork-cancelled="resumePlaythroughPacing"');
+        expect(app).toContain('@fork-prompt="promptPlaythroughFork"');
+        expect(app).toContain('@fork-cancelled="cancelPlaythroughFork"');
+    });
+
+    it("resets a pending message fork when the websocket closes", () => {
+        expect(app).toContain('this.$refs.sceneMessages?.resetForkScene()');
     });
 
     it("is handed the cursor's message and the scene's revision", () => {

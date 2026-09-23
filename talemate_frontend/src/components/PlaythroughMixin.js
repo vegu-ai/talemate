@@ -36,6 +36,7 @@ import {
     revealForAnchor,
     speakRequest,
 } from '@/utils/playthrough.js';
+import { newUuid } from '@/utils/uuid';
 
 export default {
     data() {
@@ -67,6 +68,9 @@ export default {
             playthroughAdvanceTimer: null,
             // the cursor is held still while a dialog of the mode's own is open
             playthroughPaused: false,
+            playthroughForkRequestId: null,
+            playthroughForkMessageId: null,
+            playthroughForkError: '',
         };
     },
 
@@ -95,6 +99,9 @@ export default {
             this.playthroughResumeAnchor = null;
             this.playthroughAutoAdvance = false;
             this.playthroughPaused = false;
+            this.playthroughForkRequestId = null;
+            this.playthroughForkMessageId = null;
+            this.playthroughForkError = '';
             this.playthroughRevealCount = 1;
             this.$nextTick(() => this.scrollInputIntoView());
           }
@@ -179,24 +186,55 @@ export default {
           }
         },
 
-        // `messageId` is the message the toolbar asked for the name at, rather
-        // than whatever the cursor holds now - see PlaythroughTools.promptFork.
-        //
-        // Leaving the mode before the fork is answered is deliberate: success
-        // arrives as a scene load, and a refused save name as an error status
-        // and nothing else, which there would be no way to stop waiting for.
-        forkPlaythrough(saveName, messageId) {
-          if (messageId == null) {
+        promptPlaythroughFork() {
+          this.playthroughForkError = '';
+          this.pausePlaythroughPacing();
+        },
+
+        cancelPlaythroughFork() {
+          if (this.playthroughForkRequestId) {
             return;
           }
-          this.rememberPlaythroughPosition(messageId);
-          this.setPlaythroughActive(false);
+          this.playthroughForkMessageId = null;
+          this.playthroughForkError = '';
+          this.resumePlaythroughPacing();
+        },
+
+        // `messageId` is the message the toolbar asked for the name at, rather
+        // than whatever the cursor holds now - see PlaythroughTools.promptFork.
+        forkPlaythrough(saveName, messageId) {
+          if (messageId == null || this.playthroughForkRequestId) {
+            return;
+          }
+          this.playthroughForkError = '';
+          this.playthroughForkMessageId = messageId;
+          this.playthroughForkRequestId = newUuid();
           this.websocket.send(JSON.stringify({
             type: 'assistant',
             action: 'fork_new_scene',
             message_id: messageId,
             save_name: saveName,
+            request_id: this.playthroughForkRequestId,
           }));
+        },
+
+        handlePlaythroughForkMessage(data) {
+          if (data.type !== 'assistant' || data.action !== 'operation_done'
+              || !this.playthroughForkRequestId
+              || data.request_id !== this.playthroughForkRequestId) {
+            return false;
+          }
+          this.playthroughForkRequestId = null;
+          if (data.error) {
+            this.playthroughForkError = data.error.message;
+            return true;
+          }
+          const messageId = this.playthroughForkMessageId;
+          this.playthroughForkMessageId = null;
+          this.playthroughForkError = '';
+          this.rememberPlaythroughPosition(messageId);
+          this.setPlaythroughActive(false);
+          return true;
         },
 
         savedPlaythroughAnchor() {
@@ -368,6 +406,9 @@ export default {
         // hook has to read the message list before SceneMessages empties it.
         // Returns true when the frame was ours and nothing else should see it.
         handlePlaythroughMessage(data) {
+          if (this.handlePlaythroughForkMessage(data)) {
+            return true;
+          }
           if (data.type === 'clear_screen' && this.playthroughActive) {
             this.onPlaythroughHistoryReplaced();
             return false;

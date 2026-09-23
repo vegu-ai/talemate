@@ -320,12 +320,14 @@
                         :fork-target="playthroughForkTarget()"
                         :scene-rev="scene.data?.rev || 0"
                         :shared-context="!!scene.data?.shared_context"
+                        :fork-pending="!!playthroughForkRequestId"
+                        :fork-error="playthroughForkError"
                         @advance="advancePlaythrough"
                         @toggle-narration="togglePlaythroughNarration"
                         @jump="jumpPlaythrough"
                         @fork="forkPlaythrough"
-                        @fork-prompt="pausePlaythroughPacing"
-                        @fork-cancelled="resumePlaythroughPacing"
+                        @fork-prompt="promptPlaythroughFork"
+                        @fork-cancelled="cancelPlaythroughFork"
                         @restart="restartPlaythrough"
                         @toggle-auto-advance="togglePlaythroughAutoAdvance"
                         @exit="stopPlaythrough" />
@@ -1271,6 +1273,7 @@ export default {
         // answered on a dead socket either.
         this.$refs.aiAgent?.resetSceneAgentOverrides?.();
         this.$refs.sceneSaveDialog?.reset();
+        this.$refs.sceneMessages?.resetForkScene();
         this.connected = false;
         this.configReceivedThisConnection = false;
         this.connecting = false;

@@ -78,6 +78,9 @@
         ref="requestForkName"
         title="Save Forked Scene As"
         :instructions="forkInstructions"
+        :close-on-continue="false"
+        :loading="forkPending"
+        :error="forkError"
         icon="mdi-source-fork"
         @continue="(saveName, params) => $emit('fork', saveName, params.message_id)"
         @cancel="$emit('fork-cancelled')"
@@ -135,6 +138,14 @@ export default {
         sharedContext: {
             type: Boolean,
             default: false,
+        },
+        forkPending: {
+            type: Boolean,
+            default: false,
+        },
+        forkError: {
+            type: String,
+            default: '',
         },
     },
     inject: ['getWebsocket'],

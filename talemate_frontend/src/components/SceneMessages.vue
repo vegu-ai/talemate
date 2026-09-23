@@ -3,6 +3,10 @@
     ref="requestForkName"
     title="Save Forked Scene As"
     :instructions="forkInstructions"
+    :close-on-continue="false"
+    :loading="!!pendingForkRequestId"
+    :error="forkError"
+    @cancel="cancelForkScene"
     @continue="(name, params) => { forkScene(params.message_id, name) }" /> 
 
     <RequestInput
@@ -442,6 +446,7 @@ import { parseCharacterMessage } from '@/utils/characterMessage.js';
 import { primaryModifierLabel } from '@/utils/keyboardModifiers';
 import { base64ToObjectUrl } from '@/utils/objectUrl.js';
 import { chapterBoundaries, visibleMessages } from '@/utils/playthrough.js';
+import { newUuid } from '@/utils/uuid';
 import {
     getMessageColor as resolveMessageColor,
     getMessageStyle as resolveMessageStyle,
@@ -604,6 +609,8 @@ export default {
             primaryModifierLabel,
             messages: [],
             selectedForkMessageId: null,
+            pendingForkRequestId: null,
+            forkError: '',
             // Track last effective asset ID per scope for "on_change" cadence
             lastEffectiveAssetIdByScope: {},
             // Debounce timer for reapplyMessageAssetCadence
@@ -782,7 +789,7 @@ export default {
             return instructions;
         },
     },
-    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets', 'openVisualLibraryWithAsset', 'openSceneTimeline'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets', 'openVisualLibraryWithAsset', 'openSceneTimeline', 'isConnected'],
     provide() {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
@@ -1378,18 +1385,65 @@ export default {
             }
 
             this.selectedForkMessageId = message_id;
+            this.forkError = '';
             this.$refs.requestForkName.openDialog(
                 { message_id: message_id }
             );
         },
 
         forkScene(message_id, save_name) {
-            this.getWebsocket().send(JSON.stringify({ 
-                type: 'assistant',
-                action: 'fork_new_scene',
-                message_id: message_id,
-                save_name: save_name,
-            }));
+            if (this.pendingForkRequestId) {
+                return;
+            }
+            this.forkError = '';
+            if (!this.isConnected()) {
+                this.forkError = 'Not connected';
+                return;
+            }
+            this.pendingForkRequestId = newUuid();
+            try {
+                this.getWebsocket().send(JSON.stringify({
+                    type: 'assistant',
+                    action: 'fork_new_scene',
+                    message_id: message_id,
+                    save_name: save_name,
+                    request_id: this.pendingForkRequestId,
+                }));
+            } catch {
+                this.pendingForkRequestId = null;
+                this.forkError = 'Not connected';
+            }
+        },
+
+        cancelForkScene() {
+            if (this.pendingForkRequestId) {
+                return;
+            }
+            this.selectedForkMessageId = null;
+            this.forkError = '';
+        },
+
+        resetForkScene() {
+            this.pendingForkRequestId = null;
+            this.selectedForkMessageId = null;
+            this.forkError = '';
+            this.$refs.requestForkName.answered = true;
+            this.$refs.requestForkName.open = false;
+        },
+
+        handleForkSceneMessage(data) {
+            if (data.type !== 'assistant' || data.action !== 'operation_done'
+                || !this.pendingForkRequestId
+                || data.request_id !== this.pendingForkRequestId) {
+                return false;
+            }
+            this.pendingForkRequestId = null;
+            if (data.error) {
+                this.forkError = data.error.message;
+                return true;
+            }
+            this.resetForkScene();
+            return true;
         },
 
         reviseMessage(message_id) {
@@ -2041,6 +2095,13 @@ export default {
         },
 
         handleMessage(data) {
+            if (data.type === 'system'
+                && ['scene.loading', 'scene.closed', 'scene.load_failure'].includes(data.id)) {
+                this.resetForkScene();
+            }
+            if (this.handleForkSceneMessage(data)) {
+                return;
+            }
             if (data.type === 'scene_status' && data.data?.character_transitions) {
                 for (const transition of data.data.character_transitions) {
                     const existing = this.messages.findIndex(message => message.type === 'character_transition' && message.id === transition.id);

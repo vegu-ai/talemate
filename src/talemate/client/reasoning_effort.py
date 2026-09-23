@@ -60,16 +60,9 @@ class ReasoningEffortMixin:
         if not self.reason_enabled_configured:
             return None
         if self.reasoning_effort_format == "none":
-            return ReasoningDisplay(
-                indicator_value=str(self.validated_reason_tokens),
-                indicator_tooltip="Extra completion tokens; no reasoning effort sent",
-                show_token_slider=True,
-            )
+            return ReasoningDisplay(show_token_slider=True)
         return ReasoningDisplay(
-            indicator_value=self.effort_level,
-            indicator_tooltip="Reasoning effort (default leaves it to the provider)",
             show_token_slider=False,
             show_effort_selector=True,
-            effort_level=self.effort_level,
             effort_choices=EFFORT_LEVELS,
         )

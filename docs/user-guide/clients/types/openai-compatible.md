@@ -95,7 +95,7 @@ The choice applies whenever the response token cap is enabled, even with reasoni
 
 **Extra Completion Tokens** retains your saved **Reasoning Tokens** value. It adds headroom to the selected total completion limit when reasoning and the response token cap are enabled, and remains available to prompt templates as `reasoning_tokens`. It does not send a separate thinking budget. Use **Reasoning Effort** to control depth instead. Choosing an effort or a completion token parameter does not change this allowance.
 
-When a sending format is selected, the client card shows the chosen effort and a quick effort slider. With format `none`, it shows the extra completion allowance instead. With Reasoning off, a **Reasoning Disabled** chip takes the slider's place. Turning Talemate reasoning off, globally or for an agent action, omits the effort setting and padding; the server may still reason according to its own defaults. Keep your existing [reasoning patterns](/talemate/user-guide/clients/reasoning/#response-pattern-configuration) if your model includes thinking in its response text.
+When a sending format is selected, the client card shows the chosen effort in a dropdown, where you can change it quickly. With format `none`, it shows a field for the extra completion allowance instead. With Reasoning off, a **Reasoning Disabled** chip takes the place of the dropdown or the field. Turning Talemate reasoning off, globally or for an agent action, omits the effort setting and padding; the server may still reason according to its own defaults. Keep your existing [reasoning patterns](/talemate/user-guide/clients/reasoning/#response-pattern-configuration) if your model includes thinking in its response text.
 
 ### Ready to use
 

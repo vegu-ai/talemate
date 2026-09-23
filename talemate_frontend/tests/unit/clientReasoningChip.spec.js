@@ -7,14 +7,11 @@ import { SAVE_DELAY_MS } from '@/utils/clientSaveState';
 
 const VUETIFY_TAGS = [
     'VAlert', 'VChip', 'VDivider', 'VFadeTransition', 'VIcon', 'VList', 'VListItem',
-    'VListItemSubtitle', 'VListItemTitle', 'VListSubheader', 'VMenu', 'VProgressCircular',
-    'VSlider', 'VTextField', 'VTooltip',
+    'VListItemSubtitle', 'VListItemTitle', 'VListSubheader', 'VMenu', 'VNumberInput', 'VProgressCircular',
+    'VSelect', 'VTextField', 'VTooltip',
 ];
-const EFFORT_DISPLAY = {
-    indicator_value: 'high', indicator_tooltip: 'Reasoning effort', show_token_slider: false,
-    show_effort_selector: true, effort_level: 'high', effort_choices: ['default', 'low', 'high'],
-};
-const TOKEN_DISPLAY = { indicator_value: '2048', indicator_tooltip: 'Reasoning token budget', show_token_slider: true };
+const EFFORT_DISPLAY = { show_token_slider: false, show_effort_selector: true, effort_choices: ['default', 'low', 'high'] };
+const TOKEN_DISPLAY = { show_token_slider: true };
 const REASONING_ON = { reason_enabled: true, reason_locked: false, reasoning_display: EFFORT_DISPLAY };
 const REASONING_OFF = { reason_enabled: false, reason_locked: false, reasoning_display: null };
 
@@ -78,58 +75,58 @@ async function clickBrain() {
 }
 
 const chips = () => [...host.querySelectorAll('.reasoning-off-row .v-chip')].map((chip) => chip.textContent.trim());
-// the context length slider is always there; a reasoning slider adds a second one
-const sliders = () => host.querySelectorAll('.v-slider').length;
+// the context input is always there; a reasoning token input or effort select adds a second control
+const controls = () => host.querySelectorAll('.client-budget-row .v-number-input, .client-budget-row .v-select').length;
 
 describe('the client card reasoning row', () => {
-    it('shows the effort slider and no chip while reasoning is on', async () => {
+    it('shows the effort select and no chip while reasoning is on', async () => {
         await show('effort', REASONING_ON);
-        expect(sliders()).toBe(2);
+        expect(controls()).toBe(2);
         expect(chips()).toEqual([]);
     });
 
-    it('shows the token slider and no chip while reasoning is on', async () => {
+    it('shows the token input and no chip while reasoning is on', async () => {
         await show('tokens', { ...REASONING_ON, reasoning_display: TOKEN_DISPLAY });
-        expect(sliders()).toBe(2);
+        expect(controls()).toBe(2);
         expect(chips()).toEqual([]);
     });
 
-    it('shows Reasoning Disabled in the slider row while reasoning is off', async () => {
+    it('shows Reasoning Disabled in the budget row while reasoning is off', async () => {
         await show('off', REASONING_OFF);
-        expect(sliders()).toBe(1);
+        expect(controls()).toBe(1);
         expect(chips()).toEqual(['Reasoning Disabled']);
     });
 
     it('never shows the chip for a client that locks reasoning on', async () => {
         await show('locked', { ...REASONING_ON, reason_locked: true });
-        expect(sliders()).toBe(2);
+        expect(controls()).toBe(2);
         expect(chips()).toEqual([]);
         expect(host.querySelector('button[data-icon="mdi-brain"]').disabled).toBe(true);
     });
 
-    it('swaps the slider for the chip as soon as the brain button turns reasoning off', async () => {
+    it('swaps the reasoning control for the chip as soon as the brain button turns reasoning off', async () => {
         vi.useFakeTimers();
         await show('toggle', REASONING_ON);
         await clickBrain();
         expect(chips()).toEqual(['Reasoning Disabled']);
-        expect(sliders()).toBe(1);
+        expect(controls()).toBe(1);
 
         vi.advanceTimersByTime(SAVE_DELAY_MS);
         await show('toggle', REASONING_OFF);
         expect(chips()).toEqual(['Reasoning Disabled']);
-        expect(sliders()).toBe(1);
+        expect(controls()).toBe(1);
     });
 
-    it('keeps the chip in the row until the status brings the slider', async () => {
+    it('keeps the chip in the row until the status brings the reasoning control', async () => {
         vi.useFakeTimers();
         await show('toggle', REASONING_OFF);
         await clickBrain();
         expect(chips()).toEqual(['Reasoning Disabled']);
-        expect(sliders()).toBe(1);
+        expect(controls()).toBe(1);
 
         vi.advanceTimersByTime(SAVE_DELAY_MS);
         await show('toggle', REASONING_ON);
         expect(chips()).toEqual([]);
-        expect(sliders()).toBe(2);
+        expect(controls()).toBe(2);
     });
 });

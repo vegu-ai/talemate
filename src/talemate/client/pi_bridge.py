@@ -476,11 +476,8 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
         if not self.reason_enabled_configured:
             return None
         return ReasoningDisplay(
-            indicator_value=self.effort_level,
-            indicator_tooltip="Thinking level",
             show_token_slider=False,
             show_effort_selector=True,
-            effort_level=self.effort_level,
             effort_choices=THINKING_LEVELS,
         )
 

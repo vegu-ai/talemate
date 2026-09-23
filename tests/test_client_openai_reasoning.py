@@ -726,7 +726,7 @@ async def test_action_override_omits_effort_and_padding(
     )
     with ClientContext(disable_reasoning=True):
         display = client.reasoning_display
-        assert display.indicator_value == "high"
+        assert display.show_effort_selector
         parameters = {"max_tokens": 256}
         client.tune_prompt_parameters(parameters, "test")
         client.clean_prompt_parameters(parameters)
@@ -768,7 +768,7 @@ def test_effort_card_follows_configured_reasoning_toggle(
     client.client_config.reason_enabled = True
     enabled = client._common_status_data()["reasoning_display"]
     assert enabled["show_effort_selector"]
-    assert enabled["indicator_value"] == effort
+    assert client._common_status_data()["effort_level"] == effort
 
     with ClientContext(disable_reasoning=True):
         assert not client.reason_enabled
@@ -838,7 +838,11 @@ def test_status_describes_effort_and_completion_allowance(clients, client_type, 
     display = data["reasoning_display"]
     assert display["show_effort_selector"] == (mode != "none")
     assert display["show_token_slider"] == (mode == "none")
-    assert display["indicator_value"] == ("2048" if mode == "none" else "high")
+    assert set(display) == {
+        "show_token_slider",
+        "show_effort_selector",
+        "effort_choices",
+    }
     if client_type == "openai_compat":
         assert data["reasoning_effort_format"] == mode
 

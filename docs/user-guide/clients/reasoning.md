@@ -9,24 +9,23 @@ To enable reasoning support for a client:
 1. Open the **:material-cog: Settings** tab in the top navigation — it opens on **Connections → Clients**
 2. Select the client you want to configure
 3. Open the **Reasoning** section of the [client editor](client-configuration.md)
-
-![Client reasoning configuration](/talemate/img/0.32.0/client-reasoning-2.png)
-
 4. Check the **Enable Reasoning** checkbox
 
 ## Configuring Reasoning Tokens
 
-The [OpenAI](types/openai.md#reasoning-effort) and [OpenAI Compatible](types/openai-compatible.md#reasoning) clients offer **Reasoning Effort** to control thinking depth. Their token slider is called **Extra Completion Tokens**: it adds headroom to the total completion limit, rather than setting a separate thinking budget. Existing saved token values are preserved. Compatible servers also need a **Reasoning Effort Format** selection before an effort is sent. Both clients offer a **Completion Token Parameter** choice: native OpenAI defaults to `max_completion_tokens`, while OpenAI Compatible defaults to `max_tokens`. The native OpenAI client locks Reasoning on for model names starting with `gpt-5` or `gpt-6`, including during per-action overrides. For other models and OpenAI Compatible clients, the effort and the allowance follow your Reasoning setting: with Reasoning off, neither is sent. Saved token and effort values are preserved.
+The [OpenAI](types/openai.md#reasoning-effort) and [OpenAI Compatible](types/openai-compatible.md#reasoning) clients offer **Reasoning Effort** to control thinking depth. Their token field is called **Extra Completion Tokens**: it adds headroom to the total completion limit, rather than setting a separate thinking budget. Existing saved token values are preserved. Compatible servers also need a **Reasoning Effort Format** selection before an effort is sent. Both clients offer a **Completion Token Parameter** choice: native OpenAI defaults to `max_completion_tokens`, while OpenAI Compatible defaults to `max_tokens`. The native OpenAI client locks Reasoning on for model names starting with `gpt-5` or `gpt-6`, including during per-action overrides. For other models and OpenAI Compatible clients, the effort and the allowance follow your Reasoning setting: with Reasoning off, neither is sent. Saved token and effort values are preserved.
 
-Once reasoning is enabled, you can configure the **Reasoning Tokens** setting using the slider:
+Once reasoning is enabled, you can set **Reasoning Tokens** in its number field:
 
 ![Reasoning tokens configuration](/talemate/img/0.40.0/client-reasoning.png)
 
 ### Reasoning on the client card
 
-While reasoning is on, the client's card in the client list shows a quick slider for it: a token slider, or an effort slider for clients that use an effort level. The :material-brain: button on the card turns reasoning on and off.
+The client's card in the client list has one row for its budgets. The first field is the context token budget. While reasoning is on, the second field is the reasoning token budget, or a dropdown of effort levels for clients that use an effort level. Type an exact value, such as 32768, or use the arrows beside the field; the card saves the change after a short pause. If you leave a field empty, below its minimum (1024 for the context budget) or above 10,000,000, it goes back to the saved value. The arrows stop at the minimum. The :material-brain: button on the card turns reasoning on and off.
 
-When you turn reasoning off, the slider is replaced by a **Reasoning Disabled** chip in the same row, so you can see the state at a glance. When you turn reasoning back on, the slider returns in that row. A client that always reasons, such as an OpenAI gpt-5 model, never shows the chip: its brain button is locked on.
+![Client card with the context and reasoning token budgets](/talemate/img/0.40.0/client-reasoning-2.png)
+
+When you turn reasoning off, the reasoning field is replaced by a **Reasoning Disabled** chip in the same row, so you can see the state at a glance. When you turn reasoning back on, the field returns in that row. A client that always reasons, such as an OpenAI gpt-5 model, never shows the chip: its brain button is locked on.
 
 ### Recommended Token Amounts
 

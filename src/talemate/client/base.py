@@ -246,11 +246,8 @@ class ReasoningDisplay(pydantic.BaseModel):
     what's actually being used at runtime (e.g., budget vs adaptive thinking).
     """
 
-    indicator_value: str  # What to show in the chip (e.g., "8192", "high")
-    indicator_tooltip: str  # Tooltip text for the chip
-    show_token_slider: bool  # Whether to show the token budget slider
+    show_token_slider: bool  # Whether to show the token budget input
     show_effort_selector: bool = False  # Whether to show effort level selector
-    effort_level: str | None = None  # Current effort level if applicable
     effort_choices: list[str] | None = None  # Available effort choices
 
 
@@ -756,11 +753,7 @@ class ClientBase:
         """
         if not self.reason_enabled_configured:
             return None
-        return ReasoningDisplay(
-            indicator_value=str(self.validated_reason_tokens),
-            indicator_tooltip="Reasoning token budget",
-            show_token_slider=True,
-        )
+        return ReasoningDisplay(show_token_slider=True)
 
     @property
     def default_prompt_template(self) -> str:

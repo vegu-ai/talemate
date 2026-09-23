@@ -237,7 +237,7 @@
               </v-card>
             </v-col>
             <v-col cols="12" v-if="reasonEnabled">
-              <GraduatedSlider v-model="values.reason_tokens" :label="meta.reason_tokens_as_allowance ? 'Extra Completion Tokens' : 'Reasoning Tokens'" :min="minReasonTokens" :max="128000" :graduations="tokenGraduations" :persistent-hint="true" thumb-label="always" :hint="meta.reason_tokens_as_allowance ? 'Extra room in the total completion limit for reasoning and the answer. This does not set a reasoning budget; choose Reasoning Effort below.' : 'Tokens to spend on reasoning.'" />
+              <TokenBudgetInput v-model="values.reason_tokens" :label="meta.reason_tokens_as_allowance ? 'Extra Completion Tokens' : 'Reasoning Tokens'" :min="minReasonTokens" :persistent-hint="true" :hint="meta.reason_tokens_as_allowance ? 'Extra room in the total completion limit for reasoning and the answer. This does not set a reasoning budget; choose Reasoning Effort below.' : 'Tokens to spend on reasoning.'" />
               <v-alert v-if="!meta.reason_tokens_as_allowance" color="muted" variant="text" class="text-body-small">
                 <p>The behavior of this depends on the provider and model.</p>
                 <p class="mt-2">For APIs that provide a way to specify the reasoning tokens, this will be the amount of tokens to spend on reasoning.</p>
@@ -347,11 +347,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { markRaw } from 'vue';
 import { conditionMet } from '@/utils/uxConditions';
 import { countOverrides } from '@/utils/agentActionOverrides';
-import { TOKEN_GRADUATIONS } from '@/utils/clientPresets';
 import { contextLengthWarning } from '@/constants/modelExpectations';
 import AppConfigPresetsSystemPrompts from './AppConfigPresetsSystemPrompts.vue';
 import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
-import GraduatedSlider from './GraduatedSlider.vue';
+import TokenBudgetInput from './TokenBudgetInput.vue';
 import ModelExpectationsPanel from './ModelExpectationsPanel.vue';
 import UxField from './UxField.vue';
 
@@ -377,7 +376,7 @@ export default {
   components: {
     AppConfigPresetsSystemPrompts,
     ConfigWidgetUnifiedApiKey,
-    GraduatedSlider,
+    TokenBudgetInput,
     ModelExpectationsPanel,
     UxField,
   },
@@ -421,7 +420,6 @@ export default {
       templateState: {},
       pendingTemplateRequest: null,
       waitingForTemplateSelection: false,
-      tokenGraduations: TOKEN_GRADUATIONS,
       rules: {
         required: value => !!value || 'Field is required.',
       },

@@ -45,14 +45,7 @@
               <div class="d-flex flex-wrap align-center">
                 <!-- client type -->
                 <v-chip label size="x-small" color="muted" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-server-outline">{{ client.type }}</v-chip>
-                
-                <!-- max token length -->
-                <v-tooltip text="Max. context tokens">
-                  <template v-slot:activator="{ props }">
-                    <v-chip v-bind="props" label size="x-small" color="muted" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
-                  </template>
-                </v-tooltip>
-                
+
                 <!-- embeddings -->
                 <v-tooltip text="Embeddings model">
                   <template v-slot:activator="{ props }">
@@ -70,13 +63,6 @@
                   </template>
                 </v-tooltip>
                 
-                <!-- reasoning indicator - driven by backend -->
-                <v-tooltip :text="client.reasoning_display?.indicator_tooltip || 'Reasoning'">
-                  <template v-slot:activator="{ props }">
-                    <v-chip v-bind="props" v-if="client.reasoning_display" label size="x-small" color="highlight2" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-brain">{{ reasoningIndicatorValue(client) }}</v-chip>
-                  </template>
-                </v-tooltip>
-
                 <!-- preset group -->
                 <v-menu density="compact" :close-on-content-click="false" v-model="presetMenus[client.name]">
                   <template v-slot:activator="{ props }">
@@ -136,69 +122,67 @@
               </div>
             </v-list-item-title>
 
-            <!-- sliders -->
-            <div density="compact">
+            <!-- token budgets and reasoning -->
+            <div class="client-budget-row d-flex align-center mt-1">
 
-              <!-- max token length slider -->
               <v-tooltip text="Adjust context token budget">
                 <template v-slot:activator="{ props }">
-                  <GraduatedSlider
+                  <TokenBudgetInput
                     v-bind="props"
-                    hide-details
+                    class="client-budget-field"
                     v-model="client.max_token_length"
                     :min="1024"
-                    :max="128000"
-                    :graduations="tokenGraduations"
+                    :step="1024"
+                    control-variant="stacked"
+                    density="compact"
+                    hide-details
                     @update:modelValue="saveClientDelayed(client)"
                     @click.stop
-                    density="compact"
-                    prepend-icon="mdi-text-box"
+                    prepend-inner-icon="mdi-text-box"
                   />
                 </template>
               </v-tooltip>
 
-              <!-- reason tokens slider - shown when backend says to -->
               <v-tooltip :text="client.data?.meta?.reason_tokens_as_allowance ? 'Adjust extra completion tokens' : 'Adjust reasoning token budget'" v-if="client.reasoning_display?.show_token_slider">
                 <template v-slot:activator="{ props }">
-                  <GraduatedSlider
-                    hide-details
+                  <TokenBudgetInput
                     v-bind="props"
+                    class="client-budget-field"
                     v-model="client.reason_tokens"
                     color="highlight2"
+                    icon-color="highlight2"
                     :min="client.min_reason_tokens || 0"
-                    :max="128000"
-                    :graduations="tokenGraduations"
+                    control-variant="stacked"
+                    density="compact"
+                    hide-details
                     @update:modelValue="saveClientDelayed(client)"
                     @click.stop
-                    density="compact"
-                    prepend-icon="mdi-brain"
+                    prepend-inner-icon="mdi-brain"
                   />
                 </template>
               </v-tooltip>
 
-              <!-- effort level slider - shown when backend says to (adaptive thinking) -->
-              <v-tooltip text="Adjust effort level" v-if="client.reasoning_display?.show_effort_selector">
+              <v-tooltip text="Adjust effort level" v-else-if="client.reasoning_display?.show_effort_selector">
                 <template v-slot:activator="{ props }">
-                  <v-slider
-                    hide-details
+                  <v-select
                     v-bind="props"
-                    :model-value="effortLevelToIndex(client.effort_level, client.reasoning_display.effort_choices)"
-                    @update:modelValue="(v) => { client.effort_level = indexToEffortLevel(v, client.reasoning_display.effort_choices); saveClientDelayed(client); }"
-                    color="highlight2"
-                    :min="0"
-                    :max="(client.reasoning_display.effort_choices?.length || 1) - 1"
-                    :step="1"
+                    class="client-budget-field"
+                    v-model="client.effort_level"
+                    :items="client.reasoning_display.effort_choices || []"
+                    @update:modelValue="saveClientDelayed(client)"
                     @click.stop
+                    color="highlight2"
+                    icon-color="highlight2"
                     density="compact"
-                    prepend-icon="mdi-brain"
-                  ></v-slider>
+                    hide-details
+                    prepend-inner-icon="mdi-brain"
+                  ></v-select>
                 </template>
               </v-tooltip>
 
-              <!-- reasoning off - holds the reasoning slider's row -->
-              <v-tooltip text="Reasoning is off. Use the brain button to turn it on." v-if="reasoningDisabled(client)" max-width="300">
+              <v-tooltip text="Reasoning is off. Use the brain button to turn it on." v-else-if="reasoningDisabled(client)" max-width="300">
                 <template v-slot:activator="{ props }">
-                  <div class="reasoning-off-row d-flex align-center justify-center">
+                  <div class="client-budget-field reasoning-off-row d-flex align-center justify-center">
                     <v-chip v-bind="props" label size="small" color="muted" variant="text" prepend-icon="mdi-brain">Reasoning Disabled</v-chip>
                   </div>
                 </template>
@@ -292,8 +276,7 @@
 
 <script>
 import AIClientRequestInformation from './AIClientRequestInformation.vue';
-import GraduatedSlider from './GraduatedSlider.vue';
-import { TOKEN_GRADUATIONS } from '@/utils/clientPresets';
+import TokenBudgetInput from './TokenBudgetInput.vue';
 import { createPresetGroupForClient, groupNameError, pinnedPanelClient, presetGroupItems } from '@/utils/inferencePresets';
 import { agentsRequiringClient } from '@/utils/agentAssignments';
 import { createClientSaveState } from '@/utils/clientSaveState';
@@ -305,13 +288,12 @@ export default {
   },
   components: {
     AIClientRequestInformation,
-    GraduatedSlider,
+    TokenBudgetInput,
   },
   data() {
     return {
       clientStatusCheck: null,
       hideDisabled: true,
-      tokenGraduations: TOKEN_GRADUATIONS,
       // keyed by client name, which may be any string (`toString` included),
       // so an inherited member is never read as an entry
       newGroupNames: Object.create(null),
@@ -489,7 +471,7 @@ export default {
     toggleReasoning(index) {
       let client = this.state.clients[index];
       client.reason_enabled = !client.reason_enabled;
-      // the backend decides which reasoning slider to show, so only turning
+      // the backend decides which reasoning control to show, so only turning
       // reasoning off can update the row before the saved status returns
       if (!client.reason_enabled) {
         client.reasoning_display = null;
@@ -505,28 +487,10 @@ export default {
       this.saveClientDelayed(client);
     },
 
-    reasoningIndicatorValue(client) {
-      if (client.reasoning_display?.show_token_slider) {
-        return client.reason_tokens;
-      }
-      return client.reasoning_display?.indicator_value;
-    },
-
-    // follows reasoning_display, not the toggle, so the chip and the slider
+    // follows reasoning_display, not the toggle, so the chip and the control
     // swap on the same status and the row never empties in between
     reasoningDisabled(client) {
       return !client.reasoning_display;
-    },
-
-    effortLevelToIndex(effortLevel, choices) {
-      if (!choices) return 0;
-      const index = choices.indexOf(effortLevel);
-      return index >= 0 ? index : 0;
-    },
-
-    indexToEffortLevel(index, choices) {
-      if (!choices) return null;
-      return choices[index] || choices[0];
     },
 
     toggleConcurrentInference(index) {
@@ -693,6 +657,38 @@ export default {
 
 .pre-wrap {
   white-space: pre-wrap;
+}
+
+.client-budget-row {
+  gap: 8px;
+}
+
+.client-budget-field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* compact density is still 40px tall; the card row wants a shorter field */
+.client-budget-row :deep(.v-field) {
+  --v-input-control-height: 32px;
+  --v-input-padding-top: 4px;
+  --v-field-padding-bottom: 4px;
+  font-size: 0.8125rem;
+}
+
+/* the stacked stepper buttons get an inline height: auto and would otherwise
+   hold the field at 37px */
+.client-budget-row :deep(.v-number-input__control .v-btn) {
+  max-height: calc((var(--v-input-control-height) - 1px) / 2);
+}
+
+.client-budget-row :deep(.v-number-input__control .v-icon) {
+  font-size: 16px;
+}
+
+.client-budget-row :deep(.v-field__prepend-inner .v-icon),
+.client-budget-row :deep(.v-select__menu-icon) {
+  font-size: 18px;
 }
 
 .reasoning-off-row {

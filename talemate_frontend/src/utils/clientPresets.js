@@ -36,12 +36,3 @@ export function buildClientFromDefaults(meta, type, takenNames) {
     };
 }
 
-// Step sizes for the context-length slider. Shared by the client editor and
-// the drawer's inline slider so the two surfaces snap to the same values.
-export const TOKEN_GRADUATIONS = [
-    { from: 0, step: 64 },
-    { from: 1024, step: 256 },
-    { from: 4096, step: 512 },
-    { from: 8192, step: 1024 },
-    { from: 65536, step: 2048 },
-];

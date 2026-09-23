@@ -10,7 +10,7 @@ Click `Save` in the toolbar to add the client.
 
 The client should appear in the clients list. Talemate will ping the Ollama server to verify that it is running. If the server is not reachable you will see a warning.
 
-![Client ollama offline](/talemate/img/0.31.0/client-ollama-offline.png)
+![Client ollama offline](/talemate/img/0.40.0/client-ollama-offline.png)
 
 Make sure that the Ollama server is running (by default at `http://localhost:11434`) and that the model you want to use has been pulled.
 

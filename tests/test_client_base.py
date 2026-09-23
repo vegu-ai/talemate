@@ -483,8 +483,11 @@ class TestReasoningDisplay:
         client = _StubClient(name="rd")
         rd = client.reasoning_display
         assert isinstance(rd, ReasoningDisplay)
-        assert rd.indicator_value == "2048"
-        assert rd.show_token_slider is True
+        assert rd.model_dump() == {
+            "show_token_slider": True,
+            "show_effort_selector": False,
+            "effort_choices": None,
+        }
 
 
 # ---------------------------------------------------------------------------

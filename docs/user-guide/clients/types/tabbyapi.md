@@ -51,7 +51,7 @@ Make sure the [correct prompt template is assigned](/talemate/user-guide/clients
 
 #### Could not connect
 
-![Client tabbyapi could not connect](/talemate/img/0.26.0/client-tabbyapi-could-not-connect.png)
+![Client tabbyapi could not connect](/talemate/img/0.40.0/client-tabbyapi-could-not-connect.png)
 
 Possible reasons:
 

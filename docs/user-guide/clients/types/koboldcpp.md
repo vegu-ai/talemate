@@ -108,7 +108,7 @@ Make sure the [correct prompt template is assigned](/talemate/user-guide/clients
 
 #### Could not connect
 
-![Client koboldcpp could not connect](/talemate/img/0.26.0/client-koboldcpp-could-not-connect.png)
+![Client koboldcpp could not connect](/talemate/img/0.40.0/client-koboldcpp-could-not-connect.png)
 
 This means that either your KoboldCpp instance is not running, the url is incorrect, or the connection is somehow blocked. (For example, by a firewall)
 --8<-- "docs/snippets/common.md:client-response-length"

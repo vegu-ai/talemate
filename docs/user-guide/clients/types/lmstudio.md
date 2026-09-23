@@ -46,7 +46,7 @@ Make sure the [correct prompt template is assigned](/talemate/user-guide/clients
 
 #### Could not connect
 
-![Client lmstudio could not connect](/talemate/img/0.26.0/client-lmstudio-could-not-connect.png)
+![Client lmstudio could not connect](/talemate/img/0.40.0/client-lmstudio-could-not-connect.png)
 
 This means that either your LMStudio instance or server is not running, the url is incorrect, or the connection is somehow blocked. (For example, by a firewall)
 

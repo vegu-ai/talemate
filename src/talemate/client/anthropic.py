@@ -213,11 +213,8 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
         )
         if adaptive_active:
             return ReasoningDisplay(
-                indicator_value=self.effort_level,
-                indicator_tooltip="Effort level",
                 show_token_slider=False,
                 show_effort_selector=True,
-                effort_level=self.effort_level,
                 effort_choices=["low", "medium", "high", "xhigh", "max"],
             )
 

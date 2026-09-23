@@ -10,7 +10,7 @@ Click `Save` in the toolbar to add the client.
 
 The client should appear in the clients list. If you haven't setup Cohere before, you will see a warning that the API key is missing.
 
-![Client cohere no api key](/talemate/img/0.26.0/client-cohere-no-api-key.png)
+![Client cohere no api key](/talemate/img/0.40.0/client-cohere-no-api-key.png)
 
 Click the `SET API KEY` button. This will open the application settings on the API Keys page where you can add your Cohere API key.
 

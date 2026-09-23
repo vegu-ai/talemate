@@ -10,7 +10,7 @@ Click `Save` in the toolbar to add the client.
 
 The client should appear in the clients list. If you haven't setup OpenAI before, you will see a warning that the API key is missing.
 
-![Client openai no api key](/talemate/img/0.26.0/client-openai-no-api-key.png)
+![Client openai no api key](/talemate/img/0.40.0/client-openai-no-api-key.png)
 
 Click the `SET API KEY` button. This will open the application settings on the API Keys page where you can add your OpenAI API key.
 
@@ -66,7 +66,7 @@ For model names starting with `gpt-5` or `gpt-6`, Talemate keeps **Reasoning** e
 !!! note "Upgrading from 0.39"
     For a saved gpt-5 or gpt-6 client, **Reasoning** is now locked on. For an o-series client, enable **Reasoning** if it is off. With Reasoning on, **Adaptive** leaves the token cap out; an explicitly enabled cap includes **Extra Completion Tokens** to leave room for thinking. The three sampler toggles now default **off**, including for saved clients that have no toggle values; leave them off for models that reject these parameters. To use preset temperature, top_p or presence_penalty values on a model that accepts them, turn the corresponding toggle on. For **o1-mini** or **o1-preview**, turn **Send System Message** off. If your organization cannot stream the selected model, turn **Stream** off. For an override server that requires the older token-limit field, choose **Completion Token Parameter → max_tokens**. Save your changes.
 
-When **Reasoning** is enabled, the client card displays the selected effort and offers a quick effort slider. Turning **Reasoning** off replaces the indicator and slider with a **Reasoning Disabled** chip. Your selected effort is kept, and you can still change it in the client's **Reasoning** settings section.
+When **Reasoning** is enabled, the client card shows the selected effort in a dropdown next to the context token budget, where you can change it quickly. Turning **Reasoning** off replaces the dropdown with a **Reasoning Disabled** chip. Your selected effort is kept, and you can still change it in the client's **Reasoning** settings section.
 
 **Reasoning** controls both the effort and the extra completion allowance. With Reasoning off, Talemate sends neither: a client set to `high` effort with Reasoning off sends no `reasoning_effort` at all. The server then uses its own default, so a model that always thinks can still think. Status updates retain your token and effort values; locked clients report Reasoning on as described above.
 

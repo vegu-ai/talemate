@@ -65,7 +65,7 @@ Select the API you want to use and click through to follow the instructions to c
 
 Whenever you add your first client, Talemate will automatically assign it to all agents. Once the client is configured and assigned, all agents should have a green dot next to them. (Or grey if the agent is currently disabled)
 
-![Connect a client assigned](/talemate/img/0.30.0/connect-a-client-ready.png)
+![Connect a client assigned](/talemate/img/0.40.0/connect-a-client-ready.png)
 
 You can tell the client is assigned to the agent by checking the tag beneath the agent name, which will contain the client name if it is assigned.
 
@@ -75,6 +75,6 @@ You can tell the client is assigned to the agent by checking the tag beneath the
 
 If for some reason the client is not assigned to the agent, you can manually assign it to all agents by clicking the **:material-transit-connection-variant: Assign to all agents** button.
 
-![Connect a client assign to all agents](/talemate/img/0.26.0/connect-a-client-assign-to-all-agents.png)
+![Connect a client assign to all agents](/talemate/img/0.40.0/connect-a-client-assign-to-all-agents.png)
 
 The same action is available on the [Clients settings page](/talemate/user-guide/clients/client-configuration/), above the client editor. There it is applied when you save, and it is disabled while the client itself is disabled — enable the client first.

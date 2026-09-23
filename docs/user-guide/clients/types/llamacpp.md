@@ -63,7 +63,7 @@ Make sure the [correct prompt template is assigned](/talemate/user-guide/clients
 
 #### Could not connect
 
-![Client llama.cpp could not connect](/talemate/img/0.35.0/client-llamacpp-could-not-connect.png)
+![Client llama.cpp could not connect](/talemate/img/0.40.0/client-llamacpp-could-not-connect.png)
 
 This means that either:
 

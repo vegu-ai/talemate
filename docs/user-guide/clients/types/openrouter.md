@@ -10,7 +10,7 @@ Click `Save` in the toolbar to add the client.
 
 The client should appear in the clients list. If you haven't set up OpenRouter before, you will see a warning that the API key is missing.
 
-![Client openrouter no api key](/talemate/img/0.31.0/client-openrouter-no-api-key.png)
+![Client openrouter no api key](/talemate/img/0.40.0/client-openrouter-no-api-key.png)
 
 Click the `SET API KEY` button. This will open the application settings on the API Keys page where you can add your OpenRouter API key.
 
@@ -31,7 +31,7 @@ Click save and the client should have a green dot next to it, indicating that it
 
 ### Ready to use
 
-![Client OpenRouter Ready](/talemate/img/0.31.0/client-openrouter-ready.png)
+![Client OpenRouter Ready](/talemate/img/0.40.0/client-openrouter-ready.png)
 
 ### Settings
 

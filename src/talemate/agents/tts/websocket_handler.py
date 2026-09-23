@@ -233,6 +233,7 @@ class TTSWebsocketHandler(Plugin):
 
         scoped: ScopedVoiceLibrary = scoped_voice_library(voice.scope, self.scene)
         voice.is_scene_asset = voice.scope == "scene"
+        voice.managed_by = "user"
 
         if self._voice_exists(scoped.voice_library, voice.id):
             await self.signal_operation_failed("Voice already exists")
@@ -295,6 +296,8 @@ class TTSWebsocketHandler(Plugin):
         voice.tags = payload.tags
         voice.parameters = payload.parameters
         voice.is_scene_asset = voice_is_scene_asset(voice, provider(voice.provider))
+        # the form sends every field, so any save counts as an edit
+        voice.managed_by = "user"
 
         # If provider or provider_id changed, id changes -> reinsert
         new_id = voice.id
@@ -626,18 +629,19 @@ class TTSWebsocketHandler(Plugin):
             }
         )
 
-        if count > 0:
+        if count is None:
             status_msg = {
-                "message": f"{slug}: fetched {count} voice{'s' if count != 1 else ''}",
-                "status": "success",
+                "message": (
+                    f"{slug}: no complete voice listing was received; the Voice "
+                    "Library is unchanged. Add voices manually if the server "
+                    "has no voice listing."
+                ),
+                "status": "warning",
             }
         else:
             status_msg = {
-                "message": (
-                    f"{slug}: no voice-listing endpoint responded. Add voices "
-                    "manually in the Voice Library."
-                ),
-                "status": "warning",
+                "message": f"{slug}: fetched {count} voice{'s' if count != 1 else ''}",
+                "status": "success",
             }
         await self.signal_operation_done(
             signal_only=True, emit_status_message=status_msg

@@ -3,7 +3,7 @@ import structlog
 import os
 import shutil
 
-from typing import Literal, get_args
+from typing import get_args
 
 from talemate import VERSION
 from talemate.agents import observed_actions
@@ -22,7 +22,8 @@ from talemate.config.schema import (
     GamePlayerCharacter,
     resolve_config_cls,
 )
-from talemate.config import get_config, Config, update_config
+from talemate.config import get_config, Config, mark_apply_pending, update_config
+from talemate.config.state import ApplySectionKey, PENDING_APPLY
 from talemate.emit import emit
 from talemate.files import scenes_directory, RESERVED_SCENES_DIRS
 from talemate.instance import (
@@ -39,9 +40,6 @@ from talemate.world_state.templates.theme import resolve_theme
 from .websocket_plugin import Plugin
 
 log = structlog.get_logger("talemate.server.config")
-
-
-ApplySectionKey = Literal["clients", "agents"]
 
 
 class ApplySection:
@@ -138,12 +136,9 @@ class ConfigApplyPipeline:
                     )
             ran.add(section.key)
 
-        # config sections whose apply pipeline failed and that the next save
-        # has to apply again even when it diffs as unchanged - the config is
-        # stored before it is applied, so a failed apply leaves the stored
-        # config ahead of the running instance and every later diff against it
-        # reads "nothing changed".
-        self.pending: set[ApplySectionKey] = set()
+    @property
+    def pending(self) -> set[ApplySectionKey]:
+        return PENDING_APPLY
 
     async def run(self, config_before: dict, config_after: dict) -> ApplyOutcome:
         applying = [
@@ -178,10 +173,11 @@ class ConfigApplyPipeline:
                     await section.finalize()
                 applied.add(section.key)
         except Exception as exc:
-            self.pending = (self.pending - applied) | (applying_keys - applied)
+            self.pending.difference_update(applied)
+            mark_apply_pending(*(applying_keys - applied))
             return ApplyOutcome(applying=applying_keys, applied=applied, error=exc)
 
-        self.pending -= applied
+        self.pending.difference_update(applied)
         return ApplyOutcome(applying=applying_keys, applied=applied)
 
 

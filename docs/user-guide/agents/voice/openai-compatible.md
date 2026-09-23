@@ -96,9 +96,26 @@ The auto-fetcher tries the optional [Voices endpoint](#voices-endpoint-optional)
 
 The first path that returns a valid voice list wins. Talemate accepts flat arrays (`["alloy", "echo"]`) and objects that hold the list under `voices`, `data`, `results` or `items` (`{"voices": [...]}`). Each entry is either a plain string or an object that carries the voice id as `id`, `voice_id`, `_id`, `name` or `voice`, plus an optional display name in `label`, `display_name` or `title`.
 
+A listing that comes in pages, such as Fish Audio's, is read page by page: Talemate asks for the next `page_number` while the listing reports `has_more`, or a `total` above the voices read so far. Talemate reads at most 50 pages; a listing with more pages is not read, and the refresh changes nothing.
+
+### What a refresh changes
+
+A refresh keeps the voices it added in step with the server:
+
+- A voice that the server lists and the Voice Library does not have yet is added, under the name the server gives it.
+- A voice that a refresh added takes the new name when the server renames it.
+- A voice that a refresh added is removed when the server no longer lists it.
+
+A refresh never changes or removes a voice that you added by hand or edited. Once you save a voice in the [Voice Library](voice-library.md), it is yours. For example, you rename "Warm Narrator" to "Old Tom", and later you delete that voice on Fish Audio: Old Tom stays in the Voice Library until you remove it.
+
+When the server answers with an empty list, a refresh removes the voices it added. A refresh changes nothing when it gets no complete listing: no listing endpoint responds, for example during an outage, or a page of the listing cannot be read. The status toast then says that no complete voice listing was received.
+
+!!! note "Voices from earlier versions"
+    Voices that a refresh added before Talemate 0.40.0 carry no record of where they came from. A refresh never renames them. It removes one that the server no longer lists only when the voice has no tags and its label is still its voice ID.
+
 ### Servers without a listing endpoint
 
-Not every OpenAI-compatible server exposes a voice listing — OpenAI proper, for instance, does not. In that case **Refresh voices** comes back with zero entries and a status toast surfaces saying so. Add the voices you want manually in the [Voice Library](voice-library.md) (see below).
+Not every OpenAI-compatible server exposes a voice listing — OpenAI proper, for instance, does not. In that case **Refresh voices** changes nothing, and a status toast says that no complete voice listing was received. Add the voices you want manually in the [Voice Library](voice-library.md) (see below).
 
 If your server uses a non-standard path, set [Voices endpoint](#voices-endpoint-optional) instead of relying on the probes.
 
@@ -136,7 +153,7 @@ Refer to your TTS server's documentation for supported voice identifiers. Once a
 
 3. Press **Save**, turn the backend on in [Enabled APIs](settings.md#enabled-apis), then press **Refresh voices**.
 
-The voices endpoint lists the voices that your Fish Audio workspace owns, such as the ones you cloned or designed, up to 100 of them. They arrive in the Voice Library under the names they have on Fish Audio.
+The voices endpoint lists the voices that your Fish Audio workspace owns, such as the ones you cloned or designed, 100 per page, and Talemate reads up to 50 pages (5,000 voices). They arrive in the Voice Library under the names they have on Fish Audio.
 
 A voice from the Fish Voice Library that you do not own is not in that list. Copy its voice id from the Fish Voice Library and [add it manually](#adding-voices-manually), with the id as the **Voice ID**. OpenAI voice names do not work on Fish Audio: `nova`, `echo` and the other OpenAI preset names fail, and `alloy` plays an unrelated voice. Use a Fish voice id.
 
@@ -163,6 +180,6 @@ The agent-level [Automatic Setup](settings.md#automatic-setup) toggle controls w
 
 **Authentication errors**: If your server requires an API key, make sure it is set in the per-backend settings. Otherwise leave the field empty.
 
-**Refresh voices returns nothing**: Either the server has no listing endpoint (add voices manually) or the listing path is non-standard (set [Voices endpoint](#voices-endpoint-optional) explicitly).
+**Refresh voices says that no complete voice listing was received**: The server has no listing endpoint (add voices manually), the listing path is non-standard (set [Voices endpoint](#voices-endpoint-optional) explicitly), the server did not answer, or a paged listing could not be read in full (a page failed, or the listing has more than 50 pages). The Voice Library is unchanged in each case.
 
 See also the general [TTS Troubleshooting Guide](troubleshooting.md).

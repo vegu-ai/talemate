@@ -4,6 +4,7 @@ call-block stripping and the focal-backed generation loop.
 """
 
 import json
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -967,6 +968,113 @@ async def test_update_agent_setting_enabled_toggle(settings_env):
     # help.chat cannot
     result = await help_settings.update_agent_setting("help", "chat", "enabled", False)
     assert "always enabled" in result
+
+
+async def _visualizer_with_backend(backend_name: str):
+    """The Visualizer with its text-to-image backend built, as a load builds it."""
+    agent = instance.get_agent("visual")
+    await agent.apply_config(
+        actions={"_config": {"config": {"backend": {"value": backend_name}}}},
+        enabled=True,
+    )
+    return agent
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_reaches_the_visualizer_backend(settings_env):
+    agent = await _visualizer_with_backend("openrouter")
+    assert agent.backend.model != "meta/muse-image"
+
+    result = await help_settings.update_agent_setting(
+        "visual", "openrouter_image_create", "model", "meta/muse-image"
+    )
+
+    assert result["applied"] is True
+    assert agent.backend.model == "meta/muse-image"
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_rebuilds_the_comfyui_backend_on_a_new_url(
+    settings_env,
+):
+    agent = await _visualizer_with_backend("comfyui")
+    old_backend = agent.backend
+
+    await help_settings.update_agent_setting(
+        "visual", "comfyui_image_create", "api_url", "http://comfy.local:8188"
+    )
+
+    # the backend is rebuilt only when it sees the old and the new URL differ
+    assert agent.backend is not old_backend
+    assert agent.backend.api_url == "http://comfy.local:8188"
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_reloads_the_embeddings_on_a_device_change(
+    settings_env, monkeypatch
+):
+    agent = instance.get_agent("memory")
+    embeddings_change = AsyncMock()
+    monkeypatch.setattr(agent, "handle_embeddings_change", embeddings_change)
+
+    result = await help_settings.update_agent_setting(
+        "memory", "_config", "device", "cuda"
+    )
+
+    assert result["new_value"] == "cuda"
+    embeddings_change.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_keeps_a_change_whose_apply_fails(
+    settings_env, monkeypatch
+):
+    agent = instance.get_agent("conversation")
+
+    async def failing_apply(*args, **kwargs):
+        raise RuntimeError("the backend is gone")
+
+    monkeypatch.setattr(agent, "apply_config", failing_apply)
+
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "length", 256
+    )
+
+    assert result == (
+        "Saved generation_override.length = 256, but applying it to the running "
+        "agent failed: the backend is gone. Restart Talemate to apply it."
+    )
+    saved = get_config().agents["conversation"]
+    assert saved.actions["generation_override"].config["length"].value == 256
+    assert config_state.PENDING_APPLY == {"agents"}
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_enabled_toggle_reaches_apply_config(
+    settings_env, monkeypatch
+):
+    agent = instance.get_agent("editor")
+    real_apply = agent.apply_config
+    seen = []
+
+    async def recording_apply(*args, **kwargs):
+        # the flag the agent holds, and the flag the config hands it
+        seen.append(
+            (
+                agent.actions["fix_exposition"].enabled,
+                kwargs["actions"]["fix_exposition"]["enabled"],
+            )
+        )
+        await real_apply(*args, **kwargs)
+
+    monkeypatch.setattr(agent, "apply_config", recording_apply)
+
+    await help_settings.update_agent_setting(
+        "editor", "fix_exposition", "enabled", False
+    )
+
+    assert seen == [(True, False)]
+    assert agent.actions["fix_exposition"].enabled is False
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,6 @@
 import os
+from typing import Literal
+
 import structlog
 import yaml
 from talemate.path import CONFIG_FILE
@@ -19,6 +21,18 @@ async_signals.register(
     "config.saved.after",
     "config.loaded",
 )
+
+ApplySectionKey = Literal["clients", "agents"]
+
+# config sections whose apply failed and that the next config save has to
+# apply again even when they diff as unchanged - the config is stored before it
+# is applied, so a failed apply leaves the stored config ahead of the running
+# instance and every later diff against it reads "nothing changed"
+PENDING_APPLY: set[ApplySectionKey] = set()
+
+
+def mark_apply_pending(*sections: ApplySectionKey) -> None:
+    PENDING_APPLY.update(sections)
 
 
 def _load_config() -> Config:

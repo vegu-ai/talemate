@@ -50,18 +50,6 @@ def isolated_config_signals():
         signal.receivers = receivers
 
 
-@pytest.fixture(autouse=True)
-def fresh_apply_pipeline(monkeypatch):
-    """
-    The pipeline carries the set of sections awaiting a re-apply as process
-    state (see ConfigApplyPipeline.pending) - hand every test its own instance
-    so a failed apply in one stays out of the next.
-    """
-    monkeypatch.setattr(
-        server_config, "APPLY_PIPELINE", server_config.ConfigApplyPipeline()
-    )
-
-
 class _MockWebsocketHandler:
     def __init__(self, events):
         self.events = events
@@ -521,6 +509,23 @@ async def test_retry_of_a_failed_agent_apply_runs_the_agent_pipeline_only(
     assert _called(apply_calls) == ["configure_agents", "emit", "emit"]
     assert not server_config.APPLY_PIPELINE.pending
     assert plugin.websocket_handler.messages[-1]["action"] == "save_complete"
+
+
+@pytest.mark.asyncio
+async def test_a_section_marked_pending_elsewhere_is_applied_by_the_next_save(
+    app_config, plugin, apply_calls
+):
+    """
+    The help chat stores an agent setting whose apply failed and marks the
+    agents through the config layer - the next save applies them although the
+    agents section diffs as unchanged.
+    """
+    config_state.mark_apply_pending("agents")
+
+    await plugin.handle_save(_payload(app_config))
+
+    assert _called(apply_calls) == ["configure_agents", "emit", "emit"]
+    assert not server_config.APPLY_PIPELINE.pending
 
 
 @pytest.mark.asyncio

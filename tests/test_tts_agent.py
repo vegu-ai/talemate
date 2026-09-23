@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import copy
 import json
 import os
 import types
@@ -2430,10 +2431,10 @@ class TestRefreshBackendVoices:
     """
 
     @pytest.mark.asyncio
-    async def test_returns_zero_for_unknown_slug(self, tts_agent, fresh_voice_library):
+    async def test_returns_none_for_unknown_slug(self, tts_agent, fresh_voice_library):
         # No registered backend with that slug.
         count = await tts_agent.refresh_backend_voices("nope")
-        assert count == 0
+        assert count is None
 
     @pytest.mark.asyncio
     async def test_unions_fetched_voices_into_library(
@@ -2594,6 +2595,259 @@ class TestRefreshBackendVoices:
         assert fresh_voice_library.voices == {}
 
 
+NARRATOR_ID = "fish:9a9cf47702da476aa4629e2506d4a857"
+INNKEEPER_ID = "fish:e58b0d7efca34eb38d5c4985e378abcb"
+
+
+@pytest.fixture
+def fish_listing(tts_agent, fresh_voice_library, monkeypatch):
+    """A registered "fish" backend whose Refresh voices reads the Fish Audio
+    listing through the real parser, or gets no listing while ``responds`` is
+    False; library saves are recorded, not written."""
+    listing = copy.deepcopy(FISH_AUDIO_MODEL_LISTING)
+    saves: list[VoiceLibrary] = []
+    state = types.SimpleNamespace(items=listing["items"], saves=saves, responds=True)
+
+    async def _fake_save(library):
+        saves.append(library)
+
+    async def _fake_fetch():
+        return _parse_voices_payload(listing, "fish") if state.responds else None
+
+    monkeypatch.setattr(voice_library, "save_voice_library", _fake_save)
+    tts_agent.register_dynamic_child("openai_compatible", "fish", "Fish Audio")
+    original_api_method = tts_agent.api_method
+    monkeypatch.setattr(
+        tts_agent,
+        "api_method",
+        lambda api, name, default=None: _fake_fetch
+        if (api == "fish" and name == "fetch_voices")
+        else original_api_method(api, name, default),
+    )
+    return state
+
+
+def _voice_library_handler():
+    from talemate.agents.tts.websocket_handler import TTSWebsocketHandler
+
+    handler = object.__new__(TTSWebsocketHandler)
+    handler.websocket_handler = MagicMock(scene=None)
+    handler._broadcast_update = MagicMock()
+    handler.signal_operation_done = AsyncMock()
+    return handler
+
+
+class TestRefreshVoicesProvenance:
+    """A refresh keeps the voices it added in step with the server listing,
+    also when the listing carries display names, and never changes or removes
+    a voice the user added or edited."""
+
+    @pytest.mark.asyncio
+    async def test_the_listed_voices_are_added_as_refresh_voices(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        count = await tts_agent.refresh_backend_voices("fish")
+
+        assert count == 2
+        narrator = fresh_voice_library.voices[NARRATOR_ID]
+        assert narrator.label == "Warm Narrator"
+        assert narrator.managed_by == "refresh"
+        assert fresh_voice_library.voices[INNKEEPER_ID].managed_by == "refresh"
+
+    @pytest.mark.asyncio
+    async def test_a_rename_on_the_server_updates_the_label(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        await tts_agent.refresh_backend_voices("fish")
+        fish_listing.items[0]["title"] = "Calm Narrator"
+
+        await tts_agent.refresh_backend_voices("fish")
+
+        assert fresh_voice_library.voices[NARRATOR_ID].label == "Calm Narrator"
+
+    @pytest.mark.asyncio
+    async def test_a_voice_deleted_on_the_server_is_removed(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        await tts_agent.refresh_backend_voices("fish")
+        del fish_listing.items[1]
+
+        await tts_agent.refresh_backend_voices("fish")
+
+        assert INNKEEPER_ID not in fresh_voice_library.voices
+        assert NARRATOR_ID in fresh_voice_library.voices
+
+    @pytest.mark.asyncio
+    async def test_voices_the_user_edited_survive_a_rename_and_a_delete(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        await tts_agent.refresh_backend_voices("fish")
+        handler = _voice_library_handler()
+        await handler.handle_edit(
+            {
+                "voice_id": NARRATOR_ID,
+                "scope": "global",
+                "label": "Old Tom",
+                "provider": "fish",
+                "provider_id": NARRATOR_ID.split(":", 1)[1],
+            }
+        )
+        await handler.handle_edit(
+            {
+                "voice_id": INNKEEPER_ID,
+                "scope": "global",
+                "label": "Gruff Innkeeper",
+                "provider": "fish",
+                "provider_id": INNKEEPER_ID.split(":", 1)[1],
+                "tags": ["male"],
+            }
+        )
+        fish_listing.items[0]["title"] = "Calm Narrator"
+        del fish_listing.items[1]
+
+        await tts_agent.refresh_backend_voices("fish")
+
+        narrator = fresh_voice_library.voices[NARRATOR_ID]
+        assert narrator.label == "Old Tom"
+        assert narrator.managed_by == "user"
+        innkeeper = fresh_voice_library.voices[INNKEEPER_ID]
+        assert innkeeper.tags == ["male"]
+        assert innkeeper.managed_by == "user"
+
+    @pytest.mark.asyncio
+    async def test_a_voice_added_by_hand_survives_with_its_id_as_label(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        # a Fish Voice Library voice the workspace does not own is not listed
+        await _voice_library_handler().handle_add(
+            {
+                "label": "f00dface",
+                "provider": "fish",
+                "provider_id": "f00dface",
+                "scope": "global",
+            }
+        )
+
+        await tts_agent.refresh_backend_voices("fish")
+
+        assert fresh_voice_library.voices["fish:f00dface"].managed_by == "user"
+
+    @pytest.mark.asyncio
+    async def test_a_saved_library_without_the_marker_keeps_the_old_rule(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        def saved_voice(label: str, provider_id: str) -> dict:
+            return {
+                "label": label,
+                "provider": "fish",
+                "provider_id": provider_id,
+                "provider_model": None,
+                "tags": [],
+                "parameters": {},
+                "is_scene_asset": False,
+                "id": f"fish:{provider_id}",
+            }
+
+        narrator_pid = NARRATOR_ID.split(":", 1)[1]
+        saved_file = json.dumps(
+            {
+                "version": 1,
+                "voices": {
+                    "fish:gone": saved_voice("gone", "gone"),
+                    "fish:renamed": saved_voice("Renamed", "renamed"),
+                    NARRATOR_ID: saved_voice(narrator_pid, narrator_pid),
+                },
+            }
+        )
+        fresh_voice_library.voices.update(
+            VoiceLibrary.model_validate_json(saved_file).voices
+        )
+
+        await tts_agent.refresh_backend_voices("fish")
+
+        voices = fresh_voice_library.voices
+        # unlisted, untagged and labelled with its id: removed, as before
+        assert "fish:gone" not in voices
+        # unlisted with a label of its own: kept, as before
+        assert voices["fish:renamed"].managed_by is None
+        # listed: left as it is, as before
+        assert voices[NARRATOR_ID].label == narrator_pid
+        assert voices[NARRATOR_ID].managed_by is None
+
+    @pytest.mark.asyncio
+    async def test_a_refresh_without_a_listing_changes_nothing(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        await tts_agent.refresh_backend_voices("fish")
+        # the old rule would remove this one on any refresh that misses it
+        fresh_voice_library.voices["fish:gone"] = Voice(
+            label="gone", provider="fish", provider_id="gone"
+        )
+        before = dict(fresh_voice_library.voices)
+        saves_before = len(fish_listing.saves)
+        fish_listing.responds = False
+
+        count = await tts_agent.refresh_backend_voices("fish")
+
+        assert count is None
+        assert fresh_voice_library.voices == before
+        assert len(fish_listing.saves) == saves_before
+
+    @pytest.mark.asyncio
+    async def test_an_empty_listing_removes_the_refresh_voices_only(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        await tts_agent.refresh_backend_voices("fish")
+        await _voice_library_handler().handle_add(
+            {
+                "label": "f00dface",
+                "provider": "fish",
+                "provider_id": "f00dface",
+                "scope": "global",
+            }
+        )
+        saved_before_the_marker = {
+            "fish:gone": Voice(label="gone", provider="fish", provider_id="gone"),
+            "fish:named": Voice(label="Named", provider="fish", provider_id="named"),
+        }
+        fresh_voice_library.voices.update(saved_before_the_marker)
+        fish_listing.items.clear()
+
+        count = await tts_agent.refresh_backend_voices("fish")
+
+        assert count == 0
+        assert sorted(fresh_voice_library.voices) == [
+            "fish:f00dface",
+            "fish:named",
+        ]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "count, status, message",
+        [
+            (None, "warning", "no complete voice listing was received"),
+            (0, "success", "fetched 0 voices"),
+            (2, "success", "fetched 2 voices"),
+        ],
+    )
+    async def test_the_status_message_tells_no_listing_from_an_empty_one(
+        self, monkeypatch, count, status, message
+    ):
+        from talemate.agents.tts import websocket_handler as handler_module
+
+        agent = types.SimpleNamespace(
+            refresh_backend_voices=AsyncMock(return_value=count)
+        )
+        monkeypatch.setattr(handler_module, "get_agent", lambda name: agent)
+        plugin = _voice_library_handler()
+
+        await plugin.handle_refresh_backend_voices({"slug": "fish"})
+
+        emitted = plugin.signal_operation_done.await_args.kwargs["emit_status_message"]
+        assert emitted["status"] == status
+        assert message in emitted["message"]
+
+
 class TestParseVoicesPayload:
     """Direct exercise of the tolerant payload parser."""
 
@@ -2633,11 +2887,17 @@ class TestParseVoicesPayload:
         voices = _parse_voices_payload(payload, "test-be")
         assert [v.provider_id for v in voices] == ["alpha"]
 
-    def test_none_payload_returns_empty(self):
-        assert _parse_voices_payload(None, "test-be") == []
+    def test_none_payload_is_no_listing(self):
+        assert _parse_voices_payload(None, "test-be") is None
 
-    def test_dict_without_recognized_keys_returns_empty(self):
-        assert _parse_voices_payload({"unknown": [1, 2, 3]}, "test-be") == []
+    def test_dict_without_recognized_keys_is_no_listing(self):
+        assert _parse_voices_payload({"unknown": [1, 2, 3]}, "test-be") is None
+
+    def test_a_listing_without_entries_is_an_empty_listing(self):
+        assert _parse_voices_payload({"total": 0, "items": []}, "fish") == []
+
+    def test_entries_of_which_none_is_a_voice_are_no_listing(self):
+        assert _parse_voices_payload([{"description": "x"}, 42], "test-be") is None
 
     def test_entries_missing_id_skipped(self):
         # An entry that has neither id, voice_id, name, nor voice should
@@ -2736,6 +2996,210 @@ class TestOpenAICompatibleVoicesEndpoint:
         assert (
             library["fish:e58b0d7efca34eb38d5c4985e378abcb"].label == "Gruff Innkeeper"
         )
+
+    @pytest.fixture
+    def listing_server(self, tts_agent, monkeypatch):
+        """The registered "fish" backend's Voices endpoint, answering from
+        ``pages`` by the requested ``page_number`` (1 when absent); library
+        saves are not written."""
+        server = types.SimpleNamespace(requests=[], pages={})
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            server.requests.append(request)
+            page = server.pages.get(int(request.url.params.get("page_number", 1)))
+            if isinstance(page, httpx.Response):
+                return page
+            return httpx.Response(200, json=page) if page else httpx.Response(404)
+
+        real_client = httpx.AsyncClient
+
+        def make_client(**kwargs):
+            return real_client(transport=httpx.MockTransport(handler), **kwargs)
+
+        async def _fake_save(library):
+            pass
+
+        monkeypatch.setattr(openai_compatible_module.httpx, "AsyncClient", make_client)
+        monkeypatch.setattr(voice_library, "save_voice_library", _fake_save)
+        tts_agent.register_dynamic_child("openai_compatible", self.SLUG, "Fish Audio")
+        config = tts_agent.actions[self.SLUG].config
+        config["api_url"].value = "https://api.fish.audio/compat/v1"
+        config["voices_endpoint"].value = self.FISH_LISTING_URL
+        return server
+
+    @staticmethod
+    def fish_page(voice_ids: list[str], total: int, **extra) -> dict:
+        return {
+            "total": total,
+            "items": [{"_id": vid, "title": vid.title()} for vid in voice_ids],
+            **extra,
+        }
+
+    @staticmethod
+    def fish_voice_ids(library: VoiceLibrary) -> list[str]:
+        return sorted(v.provider_id for v in library.voices.values())
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "more",
+        [{"has_more": True}, {}],
+        ids=["has_more", "total_only"],
+    )
+    async def test_refresh_reads_every_page(
+        self, tts_agent, fresh_voice_library, listing_server, more
+    ):
+        listing_server.pages = {
+            1: self.fish_page(["alpha", "beta"], total=3, **more),
+            2: self.fish_page(["gamma"], total=3, has_more=False),
+        }
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count == 3
+        assert self.fish_voice_ids(fresh_voice_library) == ["alpha", "beta", "gamma"]
+        assert [str(r.url) for r in listing_server.requests] == [
+            self.FISH_LISTING_URL,
+            f"{self.FISH_LISTING_URL}&page_number=2",
+        ]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "second_page",
+        [
+            httpx.Response(500),
+            {"total": 3, "items": [{"_id": "alpha"}, {"_id": "beta"}]},
+        ],
+        ids=["page_fails", "page_number_ignored"],
+    )
+    async def test_a_listing_not_read_in_full_changes_nothing(
+        self, tts_agent, fresh_voice_library, listing_server, second_page
+    ):
+        # gamma is on the page that cannot be read
+        fresh_voice_library.voices["fish:gamma"] = Voice(
+            label="Gamma", provider="fish", provider_id="gamma", managed_by="refresh"
+        )
+        listing_server.pages = {
+            1: self.fish_page(["alpha", "beta"], total=3, has_more=True),
+            2: second_page,
+        }
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count is None
+        assert self.fish_voice_ids(fresh_voice_library) == ["gamma"]
+
+    @pytest.mark.asyncio
+    async def test_a_listing_past_the_page_limit_changes_nothing(
+        self, tts_agent, fresh_voice_library, listing_server, monkeypatch
+    ):
+        monkeypatch.setattr(openai_compatible_module, "MAX_VOICE_LISTING_PAGES", 2)
+        fresh_voice_library.voices["fish:gamma"] = Voice(
+            label="Gamma", provider="fish", provider_id="gamma", managed_by="refresh"
+        )
+        listing_server.pages = {
+            1: self.fish_page(["alpha"], total=3, has_more=True),
+            2: self.fish_page(["beta"], total=3, has_more=True),
+        }
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count is None
+        assert len(listing_server.requests) == 2
+        assert self.fish_voice_ids(fresh_voice_library) == ["gamma"]
+
+    @pytest.mark.asyncio
+    async def test_an_empty_listing_removes_the_refresh_voices(
+        self, tts_agent, fresh_voice_library, listing_server
+    ):
+        fresh_voice_library.voices["fish:alpha"] = Voice(
+            label="Alpha", provider="fish", provider_id="alpha", managed_by="refresh"
+        )
+        listing_server.pages = {1: self.fish_page([], total=0, has_more=False)}
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count == 0
+        assert fresh_voice_library.voices == {}
+
+    @pytest.mark.asyncio
+    async def test_an_endpoint_that_fails_changes_nothing(
+        self, tts_agent, fresh_voice_library, listing_server
+    ):
+        fresh_voice_library.voices["fish:alpha"] = Voice(
+            label="Alpha", provider="fish", provider_id="alpha", managed_by="refresh"
+        )
+        listing_server.pages = {1: httpx.Response(503)}
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count is None
+        assert self.fish_voice_ids(fresh_voice_library) == ["alpha"]
+
+
+class TestVoiceListingProbes:
+    """A backend without a Voices endpoint, so Refresh voices tries the default
+    probe paths in turn."""
+
+    SLUG = "probe"
+
+    @pytest.fixture
+    def probe_server(self, tts_agent, fresh_voice_library, monkeypatch):
+        """Answers from ``answers``, keyed by (path, page_number); 404 for the
+        rest. Starts with one refresh voice in the library; saves are not
+        written."""
+        server = types.SimpleNamespace(answers={})
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            key = (request.url.path, int(request.url.params.get("page_number", 1)))
+            answer = server.answers.get(key)
+            if isinstance(answer, httpx.Response):
+                return answer
+            if answer is None:
+                return httpx.Response(404)
+            return httpx.Response(200, json=answer)
+
+        real_client = httpx.AsyncClient
+
+        def make_client(**kwargs):
+            return real_client(transport=httpx.MockTransport(handler), **kwargs)
+
+        async def _fake_save(library):
+            pass
+
+        monkeypatch.setattr(openai_compatible_module.httpx, "AsyncClient", make_client)
+        monkeypatch.setattr(voice_library, "save_voice_library", _fake_save)
+        tts_agent.register_dynamic_child("openai_compatible", self.SLUG, "Probe")
+        tts_agent.actions[self.SLUG].config["api_url"].value = "http://tts.local/v1"
+        fresh_voice_library.voices["probe:alpha"] = Voice(
+            label="Alpha", provider="probe", provider_id="alpha", managed_by="refresh"
+        )
+        return server
+
+    @pytest.mark.asyncio
+    async def test_a_partial_read_on_one_path_outweighs_an_empty_path(
+        self, tts_agent, fresh_voice_library, probe_server
+    ):
+        probe_server.answers = {
+            ("/v1/audio/voices", 1): {"voices": [{"id": "alpha"}], "has_more": True},
+            ("/v1/audio/voices", 2): httpx.Response(500),
+            ("/v1/audio/speech/voices", 1): {"voices": []},
+        }
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count is None
+        assert list(fresh_voice_library.voices) == ["probe:alpha"]
+
+    @pytest.mark.asyncio
+    async def test_one_complete_empty_path_removes_the_refresh_voices(
+        self, tts_agent, fresh_voice_library, probe_server
+    ):
+        probe_server.answers = {("/v1/audio/speech/voices", 1): {"voices": []}}
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count == 0
+        assert fresh_voice_library.voices == {}
 
 
 class TestResolveVoicesUrl:

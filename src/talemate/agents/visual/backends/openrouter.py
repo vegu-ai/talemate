@@ -80,8 +80,8 @@ def nearest_aspect_ratio(target: str, listed: list[str]) -> str | None:
     return min(values, key=lambda ratio: abs(values[ratio] - wanted))
 
 
-def as_png(image_bytes: bytes, media_type: str | None) -> bytes:
-    """Talemate stores generated images as PNG; the Image API also returns
+def as_png(image_bytes: bytes, media_type: str | None = None) -> bytes:
+    """Talemate stores generated images as PNG; OpenRouter models also return
     JPEG and WebP."""
     try:
         with Image.open(io.BytesIO(image_bytes)) as image:
@@ -339,7 +339,7 @@ class Backend(backends.Backend):
         message = result.choices[0].message
 
         try:
-            response.generated = await self._extract_image_from_message(message)
+            image_bytes = await self._extract_image_from_message(message)
         except ValueError as e:
             log.error(
                 "openrouter._generate_text.no_image",
@@ -350,6 +350,8 @@ class Backend(backends.Backend):
                 else str(message),
             )
             raise ValueError("OpenRouter generation response missing image data") from e
+
+        response.generated = as_png(image_bytes)
 
         # Post-process: record actual image resolution
         self._set_request_resolution_from_image(request, response)
@@ -419,9 +421,11 @@ class Backend(backends.Backend):
         message = result.choices[0].message
 
         try:
-            response.generated = await self._extract_image_from_message(message)
+            image_bytes = await self._extract_image_from_message(message)
         except ValueError as e:
             raise ValueError("OpenRouter edit response missing image data") from e
+
+        response.generated = as_png(image_bytes)
 
         # Post-process: record actual image resolution
         self._set_request_resolution_from_image(request, response)

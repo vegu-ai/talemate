@@ -391,6 +391,17 @@ async def test_png_is_requested_when_the_model_lists_it(images_api):
     assert response.generated == image_bytes("PNG")
 
 
+async def test_a_jpeg_image_api_answer_is_stored_as_png(images_api):
+    images_api.response = FakeImagesResponse(
+        200, image_api_payload(image_bytes("JPEG"), "image/jpeg")
+    )
+
+    _, response = await generate(OpenRouterBackend(model="meta/muse-image"), prompt="x")
+
+    with Image.open(io.BytesIO(response.generated)) as image:
+        assert image.format == "PNG"
+
+
 async def test_an_edit_sends_the_references_and_the_provider_routing(
     images_api, monkeypatch
 ):
@@ -571,28 +582,31 @@ async def test_a_transport_error_names_its_type(images_api):
 
 
 class FakeChatCompletions:
-    def __init__(self, calls):
-        self._calls = calls
+    def __init__(self):
+        self.calls = []
+        self.answer_url = data_url(image_bytes("PNG"))
 
     async def create(self, **kwargs):
-        self._calls.append(kwargs)
-        url = "data:image/png;base64," + base64.b64encode(image_bytes("PNG")).decode()
-        message = SimpleNamespace(images=[{"image_url": {"url": url}}])
+        self.calls.append(kwargs)
+        message = SimpleNamespace(images=[{"image_url": {"url": self.answer_url}}])
         return SimpleNamespace(choices=[SimpleNamespace(message=message)])
 
 
 @pytest.fixture
-def chat_api(monkeypatch, images_api):
-    calls = []
-    client = SimpleNamespace(
-        chat=SimpleNamespace(completions=FakeChatCompletions(calls))
-    )
+def chat_completions(monkeypatch, images_api):
+    completions = FakeChatCompletions()
+    client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
     monkeypatch.setattr(OpenRouterBackend, "_make_client", lambda self: client)
-    return calls
+    return completions
 
 
-def data_url(image_bytes: bytes) -> str:
-    return f"data:image/png;base64,{base64.b64encode(image_bytes).decode()}"
+@pytest.fixture
+def chat_api(chat_completions):
+    return chat_completions.calls
+
+
+def data_url(image_bytes: bytes, media_type: str = "image/png") -> str:
+    return f"data:{media_type};base64,{base64.b64encode(image_bytes).decode()}"
 
 
 async def test_the_gemini_chat_request_for_text_to_image(chat_api, images_api):
@@ -653,6 +667,56 @@ async def test_the_gemini_chat_request_for_an_edit(chat_api, images_api, monkeyp
         }
     ]
     assert images_api.requests == []
+
+
+CHAT_GEN_TYPES = [GEN_TYPE.TEXT_TO_IMAGE, GEN_TYPE.IMAGE_EDIT]
+
+
+@pytest.mark.parametrize("gen_type", CHAT_GEN_TYPES)
+async def test_a_jpeg_chat_answer_is_stored_as_png(
+    chat_completions, monkeypatch, gen_type
+):
+    # google/gemini-3.1-flash-lite-image answers with JPEG on the chat path
+    monkeypatch.setattr(GenerationRequest, "reference_bytes", references(b"ref-1"))
+    chat_completions.answer_url = data_url(
+        image_bytes("JPEG", size=(80, 48)), "image/jpeg"
+    )
+
+    request, response = await generate(
+        OpenRouterBackend(model="google/gemini-3-pro-image-preview"),
+        prompt="x",
+        gen_type=gen_type,
+    )
+
+    with Image.open(io.BytesIO(response.generated)) as image:
+        assert image.format == "PNG"
+        assert image.size == (80, 48)
+    assert (request.resolution.width, request.resolution.height) == (80, 48)
+
+
+@pytest.mark.parametrize("gen_type", CHAT_GEN_TYPES)
+async def test_a_png_chat_answer_is_kept_byte_for_byte(
+    chat_completions, monkeypatch, gen_type
+):
+    monkeypatch.setattr(GenerationRequest, "reference_bytes", references(b"ref-1"))
+    chat_completions.answer_url = data_url(image_bytes("PNG"))
+
+    _, response = await generate(
+        OpenRouterBackend(model="google/gemini-3-pro-image-preview"),
+        prompt="x",
+        gen_type=gen_type,
+    )
+
+    assert response.generated == image_bytes("PNG")
+
+
+async def test_a_chat_answer_talemate_cannot_read_is_an_error(chat_completions):
+    chat_completions.answer_url = data_url(b"not an image")
+
+    with pytest.raises(ValueError, match=r"cannot read \(unknown format\)"):
+        await generate(
+            OpenRouterBackend(model="google/gemini-3-pro-image-preview"), prompt="x"
+        )
 
 
 @pytest.mark.parametrize(

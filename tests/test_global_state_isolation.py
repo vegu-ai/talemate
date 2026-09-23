@@ -116,6 +116,17 @@ class TestRestoreGlobalRegistries:
 
         assert voice_library.VOICE_LIBRARY is before
 
+    def test_pending_apply_marks_are_rolled_back_in_place(self):
+        before = config_state.PENDING_APPLY
+        marked_before = set(before)
+
+        with run_fixture(conftest.restore_global_registries):
+            config_state.mark_apply_pending("clients", "agents")
+            assert config_state.PENDING_APPLY == {"clients", "agents"}
+
+        assert config_state.PENDING_APPLY is before
+        assert config_state.PENDING_APPLY == marked_before
+
 
 class TestSignalSnapshotInvariant:
     """``restore_signal_receivers`` restores to a snapshot taken at test setup,

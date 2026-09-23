@@ -1,0 +1,4 @@
+fixed:
+  - "OpenAI Compatible TTS: Refresh voices now renames the voices it added when the server renames them, and removes them when the server no longer lists them, also when the listing gives display names such as Fish Audio titles. A voice you added by hand or edited in the Voice Library is never changed or removed by a refresh."
+  - "OpenAI Compatible TTS: A refresh changes nothing when it gets no complete voice listing, for example during an outage, and the status message says so. When the server answers with an empty list, a refresh removes the voices that earlier refreshes added."
+  - "OpenAI Compatible TTS: Refresh voices reads the pages of a paged voice listing, such as Fish Audio's, so an account with more than 100 own voices gets all of them. A listing of more than 50 pages is not read, and the refresh changes nothing."

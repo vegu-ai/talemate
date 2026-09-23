@@ -461,32 +461,45 @@ class TTSAgent(
             await self.emit_status()
         return any_changed
 
-    async def refresh_backend_voices(self, slug: str) -> int:
-        """Fetch voices for *slug* and union them into the global library.
+    async def refresh_backend_voices(self, slug: str) -> int | None:
+        """Fetch the voice listing of *slug* and merge it into the global library.
 
-        Returns the number of fetched voices. A return of 0 means the backend
-        has no listing endpoint *or* the response was empty. Hard failures
-        (HTTP errors, JSON shape mismatches, etc.) propagate to the caller
-        so the UI can surface the real error rather than a generic "no
-        endpoint" message.
+        A voice the refresh adds is marked ``managed_by="refresh"``: later
+        refreshes update its label and remove it once the listing no longer
+        holds it. A voice the user added or edited is never changed or removed.
+        A voice saved before the marker existed is never changed, and is
+        removed only when it has no tags and its label is its ``provider_id``.
+
+        Returns the number of listed voices (0 for an empty listing), or None
+        when the backend gave no complete listing: no listing endpoint, a
+        failed request or a page that could not be read. The library then stays
+        as it is. An exception from the fetcher reaches the caller.
         """
         if slug not in self.dynamic_child_slugs(OPENAI_COMPAT_REGISTRY_KEY):
-            return 0
+            return None
         fetcher = self.api_method(slug, "fetch_voices")
         if fetcher is None:
-            return 0
-        fetched: list[Voice] = await fetcher()
+            return None
+        fetched: list[Voice] | None = await fetcher()
+        if fetched is None:
+            return None
 
         library = self.voice_library
         fetched_ids = {v.id for v in fetched}
         for v in fetched:
-            library.voices.setdefault(v.id, v)
-        # Drop auto-fetched voices the server no longer reports.
+            existing = library.voices.get(v.id)
+            if existing is None:
+                v.managed_by = "refresh"
+                library.voices[v.id] = v
+            elif existing.managed_by == "refresh":
+                existing.label = v.label
         for vid in list(library.voices.keys()):
             v = library.voices[vid]
             if v.provider != slug or vid in fetched_ids:
                 continue
-            if not v.tags and v.label == v.provider_id:
+            if v.managed_by == "refresh" or (
+                v.managed_by is None and not v.tags and v.label == v.provider_id
+            ):
                 del library.voices[vid]
         await voice_library.save_voice_library(library)
         return len(fetched)

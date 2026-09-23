@@ -259,13 +259,18 @@ def restore_global_registries():
     ``AGENTS`` is restored in place: ``talemate/server/agent_config.py`` and
     friends do ``from talemate.instance import AGENTS``, so rebinding it hands
     them a stale dict — the exact defect this suite already tripped over.
+    ``config_state.PENDING_APPLY`` (the config sections a failed apply leaves
+    to the next save) is restored in place for the same reason.
     """
     agents_snapshot = dict(instance.AGENTS)
     voice_library_snapshot = voice_library.VOICE_LIBRARY
+    pending_apply_snapshot = set(config_state.PENDING_APPLY)
     yield
     instance.AGENTS.clear()
     instance.AGENTS.update(agents_snapshot)
     voice_library.VOICE_LIBRARY = voice_library_snapshot
+    config_state.PENDING_APPLY.clear()
+    config_state.PENDING_APPLY.update(pending_apply_snapshot)
 
 
 @pytest.fixture

@@ -6,11 +6,13 @@ and updating agent settings (globally or as per-scene overrides), reading and
 updating application config sections, and a read-only view of the configured
 clients. Secret values (API keys) are never exposed and cannot be written.
 
-Write operations mirror the frontend save paths: agent settings persist via
-``Agent.save_config`` + ``commit_config`` and re-emit the agent status, app
-config writes re-validate the whole section through its pydantic model, and
-both fire ``config.changed`` so every frontend receives a fresh ``app_config``
-payload instead of keeping a snapshot that predates the write.
+Write operations mirror the frontend save paths: global agent settings reach
+the running agent through ``Agent.apply_config`` as a settings page save does
+(a failed apply keeps the change stored, and a restart applies it), persist
+via ``Agent.save_config`` + ``commit_config`` and re-emit the agent status,
+app config writes re-validate the whole section through its pydantic model,
+and both fire ``config.changed`` so every frontend receives a fresh
+``app_config`` payload instead of keeping a snapshot that predates the write.
 """
 
 from typing import TYPE_CHECKING, Any, Literal
@@ -18,10 +20,11 @@ from typing import TYPE_CHECKING, Any, Literal
 import pydantic
 import structlog
 
+import talemate.config.schema as config_schema
 import talemate.instance as instance
 from talemate.agents.base import DYNAMIC_CHILDREN_FIELD
 from talemate.client.registry import get_client_class
-from talemate.config import commit_config, get_config
+from talemate.config import commit_config, get_config, mark_apply_pending
 from talemate.scene_agent_settings import (
     DEFAULT_SETTINGS_FILENAME,
     SceneAgentSettings,
@@ -368,15 +371,63 @@ def _ensure_scene_overlay(scene) -> SceneAgentSettings:
     return scene.agent_overrides
 
 
-async def _persist_agent_config(agent: "Agent") -> None:
+async def _broadcast_agent_config(agent: "Agent") -> None:
     # same sequence as the frontend-driven save paths
     # (server.agent_config._persist_and_broadcast) — including the app_config
     # broadcast, without which every frontend keeps a config snapshot that
     # predates this write and reverts it on its next full-config save
-    await agent.save_config()
     await get_config().set_dirty()
     await commit_config()
     await agent.emit_status()
+
+
+async def _apply_global_setting(
+    agent: "Agent", action_key: str, setting_key: str, value: Any
+) -> str | None:
+    """Change one global setting (``"enabled"`` for the action's flag) the way
+    a settings page save does: store it, apply it to the running agent and
+    persist it. Returns the error when the apply failed; the change then stays
+    stored, and a restart applies it."""
+    # the stored config gets the new value while the agent still holds the old
+    # one: agents compare the two to rebuild what the change affects (the
+    # Visualizer's backends, the memory agent's embeddings)
+    await agent.save_config()
+    stored = get_config().agents[agent.agent_type]
+    stored_action = stored.actions[action_key]
+    if setting_key == "enabled":
+        stored_action.enabled = value
+    else:
+        stored_action.config[setting_key] = config_schema.AgentActionConfig(value=value)
+    try:
+        await agent.apply_config(**stored.model_dump())
+    except Exception as exc:
+        log.error(
+            "applying a help chat setting change failed",
+            agent=agent.agent_type,
+            action=action_key,
+            setting=setting_key,
+            error=str(exc),
+        )
+        # the next config save applies the agents again, but a rebuild that
+        # compares the agent with itself does not rerun - only a restart does
+        mark_apply_pending("agents")
+        error = str(exc) or type(exc).__name__
+    else:
+        # apply_config can change values too: a new ComfyUI workflow clears
+        # the model
+        await agent.save_config()
+        error = None
+    await _broadcast_agent_config(agent)
+    return error
+
+
+def _saved_not_applied(
+    action_key: str, setting_key: str, value: Any, error: str
+) -> str:
+    return (
+        f"Saved {action_key}.{setting_key} = {value!r}, but applying it to the "
+        f"running agent failed: {error}. Restart Talemate to apply it."
+    )
 
 
 def _own_permission_conflict(agent_type: str, action_key: str) -> str | None:
@@ -437,8 +488,9 @@ async def update_agent_setting(
             if not action.can_be_disabled:
                 return f"Action '{action_key}' of agent '{agent_type}' is always enabled and cannot be toggled."
             result["previous_value"] = action.enabled
-            action.enabled = coerced
-            await _persist_agent_config(agent)
+            error = await _apply_global_setting(agent, action_key, "enabled", coerced)
+            if error:
+                return _saved_not_applied(action_key, "enabled", coerced, error)
         else:
             if not action.enabled_scene_overridable:
                 return f"The enabled flag of action '{action_key}' cannot be overridden per scene."
@@ -474,8 +526,9 @@ async def update_agent_setting(
 
     if scope == "global":
         result["previous_value"] = field.value
-        field.value = coerced
-        await _persist_agent_config(agent)
+        error = await _apply_global_setting(agent, action_key, setting_key, coerced)
+        if error:
+            return _saved_not_applied(action_key, setting_key, coerced, error)
 
         # a stored value for a non-overridable field masks nothing — the
         # resolver ignores it, so the global write is already effective

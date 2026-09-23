@@ -58,6 +58,8 @@ DEFAULT_VOICE_LISTING_PATHS = (
     "voices",
 )
 
+MAX_VOICE_LISTING_PAGES = 50
+
 
 def _resolve_voices_url(api_url: str, candidate: str) -> str:
     """Resolve a voice-listing path against the user's API base URL.
@@ -314,16 +316,21 @@ class OpenAICompatibleMixin:
     # Voice auto-fetch
     # ------------------------------------------------------------------
 
-    async def _openai_compatible_fetch_voices(self, backend: str) -> list[Voice]:
+    async def _openai_compatible_fetch_voices(self, backend: str) -> list[Voice] | None:
         """Fetch the list of voices the configured backend exposes.
 
         Tries the user-supplied ``voices_endpoint`` first; falls back to a
         small set of well-known paths. Tolerates the most common response
-        shapes. Returns an empty list on any failure.
+        shapes and reads every page of a paged listing. Returns the voices of
+        the first listing that has any, an empty list when a listing answered
+        with no voices, and None when no endpoint gave a complete listing: a
+        failure must not read as a server without voices. A listing that
+        cannot be read in full also gives None, whatever the other paths
+        answered.
         """
         api_url = self._openai_compatible_api_url(backend)
         if not api_url:
-            return []
+            return None
 
         api_key = self._openai_compatible_api_key(backend)
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
@@ -332,31 +339,21 @@ class OpenAICompatibleMixin:
         candidates = [custom] if custom else list(DEFAULT_VOICE_LISTING_PATHS)
 
         attempted: list[str] = []
+        empty_listing = False
         async with httpx.AsyncClient(timeout=10.0) as http:
             for candidate in candidates:
                 url = _resolve_voices_url(api_url, candidate)
                 attempted.append(url)
                 try:
-                    response = await http.get(url, headers=headers)
-                except httpx.HTTPError as exc:
-                    log.debug(
-                        "voice fetch failed", backend=backend, url=url, error=str(exc)
-                    )
-                    continue
-                if response.status_code != 200:
-                    log.debug(
-                        "voice fetch non-200",
+                    voices = await _read_voice_listing(http, url, headers, backend)
+                except IncompleteVoiceListing as exc:
+                    log.warning(
+                        "voice listing could not be read in full",
                         backend=backend,
                         url=url,
-                        status=response.status_code,
+                        reason=str(exc),
                     )
-                    continue
-                try:
-                    payload = response.json()
-                except ValueError:
-                    log.debug("voice fetch: not json", backend=backend, url=url)
-                    continue
-                voices = _parse_voices_payload(payload, backend)
+                    return None
                 if voices:
                     log.info(
                         "voice fetch succeeded",
@@ -365,6 +362,10 @@ class OpenAICompatibleMixin:
                         count=len(voices),
                     )
                     return voices
+                empty_listing = empty_listing or voices is not None
+        if empty_listing:
+            log.info("voice listing is empty", backend=backend, attempted=attempted)
+            return []
         log.info(
             "voice fetch found no listing endpoint",
             backend=backend,
@@ -376,10 +377,92 @@ class OpenAICompatibleMixin:
                 "backend if your server uses a non-standard path."
             ),
         )
-        return []
+        return None
 
 
-def _parse_voices_payload(payload, backend: str) -> list[Voice]:
+async def _get_listing_page(
+    http: httpx.AsyncClient, url: httpx.URL, headers: dict, backend: str
+):
+    """The JSON payload at *url*; None when the request fails."""
+    try:
+        response = await http.get(url, headers=headers)
+    except httpx.HTTPError as exc:
+        log.debug("voice fetch failed", backend=backend, url=str(url), error=str(exc))
+        return None
+    if response.status_code != 200:
+        log.debug(
+            "voice fetch non-200",
+            backend=backend,
+            url=str(url),
+            status=response.status_code,
+        )
+        return None
+    try:
+        return response.json()
+    except ValueError:
+        log.debug("voice fetch: not json", backend=backend, url=str(url))
+        return None
+
+
+class IncompleteVoiceListing(Exception):
+    """A voice listing answered, but not every page of it could be read."""
+
+
+async def _read_voice_listing(
+    http: httpx.AsyncClient, url: str, headers: dict, backend: str
+) -> list[Voice] | None:
+    """Every voice of the listing at *url*, following the pages of a paged
+    listing with ``page_number`` (Fish Audio's). None when *url* gives no voice
+    listing; IncompleteVoiceListing when a later page cannot be read."""
+    voices: dict[str, Voice] = {}
+    entries_read = 0
+    page_url = httpx.URL(url)
+    for page_number in range(1, MAX_VOICE_LISTING_PAGES + 1):
+        payload = await _get_listing_page(http, page_url, headers, backend)
+        page_voices = _parse_voices_payload(payload, backend)
+        if page_voices is None:
+            if page_number == 1:
+                return None
+            raise IncompleteVoiceListing(f"page {page_number} could not be read")
+        new_voices = [voice for voice in page_voices if voice.id not in voices]
+        if page_number > 1 and not new_voices:
+            # a server that ignores page_number sends the first page again
+            raise IncompleteVoiceListing(f"page {page_number} brought no new voices")
+        voices.update((voice.id, voice) for voice in new_voices)
+        entries_read += len(_voice_entries(payload))
+        if not _has_more_pages(payload, entries_read):
+            return list(voices.values())
+        page_url = page_url.copy_set_param("page_number", page_number + 1)
+    raise IncompleteVoiceListing(
+        f"the listing has more than {MAX_VOICE_LISTING_PAGES} pages"
+    )
+
+
+def _has_more_pages(payload, entries_read: int) -> bool:
+    """Whether a paged listing holds entries beyond the *entries_read* so far:
+    its ``has_more`` when it gives one, else a ``total`` above the count."""
+    if not isinstance(payload, dict):
+        return False
+    has_more = payload.get("has_more")
+    if isinstance(has_more, bool):
+        return has_more
+    total = payload.get("total")
+    return isinstance(total, int) and total > entries_read
+
+
+def _voice_entries(payload) -> list | None:
+    """The entries of a voice listing: a flat list, or the list under
+    ``voices``, ``data``, ``results`` or ``items``. None for other payloads."""
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict):
+        for key in ("voices", "data", "results", "items"):
+            if isinstance(payload.get(key), list):
+                return payload[key]
+    return None
+
+
+def _parse_voices_payload(payload, backend: str) -> list[Voice] | None:
     """Extract Voice objects from a tolerant set of response shapes.
 
     Accepts:
@@ -388,20 +471,17 @@ def _parse_voices_payload(payload, backend: str) -> list[Voice]:
     - flat ``[...]`` arrays
     - elements that are strings, or dicts with ``id``/``voice_id``/``_id``/
       ``name``/``voice`` and optional ``label``/``display_name``/``title``
+
+    Returns an empty list for a listing without entries, and None when
+    *payload* is no voice listing or none of its entries is a voice: entries
+    of an unknown shape do not show that the server has no voices.
     """
-    items = None
-    if isinstance(payload, dict):
-        for key in ("voices", "data", "results", "items"):
-            if isinstance(payload.get(key), list):
-                items = payload[key]
-                break
-    elif isinstance(payload, list):
-        items = payload
-    if items is None:
-        return []
+    entries = _voice_entries(payload)
+    if entries is None:
+        return None
 
     voices: list[Voice] = []
-    for entry in items:
+    for entry in entries:
         if isinstance(entry, str):
             provider_id = entry.strip()
             label = provider_id
@@ -439,4 +519,6 @@ def _parse_voices_payload(payload, backend: str) -> list[Voice]:
                 entry=entry,
                 error=str(exc),
             )
+    if entries and not voices:
+        return None
     return voices

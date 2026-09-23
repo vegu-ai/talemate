@@ -1,0 +1,2 @@
+fixed:
+  - "Help chat: An agent setting that the help chat changes now takes effect in the running agent at once, the same as a change saved from the settings page. For example, a new OpenRouter model for the Visualizer showed in the settings, but the Visualizer kept the old model until the next settings save or a restart. When applying a change fails, the help chat says that the change is saved but not applied, and that a restart applies it."

@@ -1,0 +1,3 @@
+fixed:
+  - "OpenAI Compatible Client: Empty choices and null response content now follow Retry Empty Response and Ignore without crashing, and non-streamed responses show a correct tokens-per-second rate on the client card."
+  - "OpenAI Client: Non-streamed responses (Stream off, and every gpt-5 request in 0.39) show a correct tokens-per-second rate on the client card instead of a very high value."

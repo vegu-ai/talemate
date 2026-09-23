@@ -330,10 +330,7 @@ class OpenAIClient(
         if not stream_enabled:
             if not completion.choices:
                 return ""
-            content = completion.choices[0].message.content or ""
-            if content:
-                self.update_request_tokens(self.count_tokens(content))
-            return content
+            return self.record_whole_response(completion.choices[0].message.content)
 
         response = ""
         async for chunk in completion:

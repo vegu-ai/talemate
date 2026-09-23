@@ -185,8 +185,9 @@ class OpenAICompatibleClient(
                 stream=False,
                 **parameters,
             )
-            response = response.choices[0].message.content
-            return response
+            if not response.choices:
+                return ""
+            return self.record_whole_response(response.choices[0].message.content)
         else:
             # Talemate handles prompt template
             # Use the completions endpoint
@@ -199,7 +200,9 @@ class OpenAICompatibleClient(
             response = await client.completions.create(
                 model=self.model_name, stream=False, **parameters
             )
-            return response.choices[0].text
+            if not response.choices:
+                return ""
+            return self.record_whole_response(response.choices[0].text)
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """

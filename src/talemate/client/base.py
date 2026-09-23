@@ -1854,6 +1854,12 @@ class ClientBase:
             ):
                 self.request_information.first_token_time = time.time()
 
+    def record_whole_response(self, response: str | None) -> str:
+        response = response or ""
+        if response and self.request_information:
+            self.request_information.tokens += self.count_tokens(response)
+        return response
+
     def strip_coercion_prompt(self, response: str, coercion_prompt: str = None) -> str:
         """
         Strips the coercion prompt from the response if it is present.

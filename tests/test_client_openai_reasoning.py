@@ -56,6 +56,18 @@ def wire_choice_overrides():
     return []
 
 
+def compatible_choices(chat: bool, content: str | None) -> list[dict]:
+    if chat:
+        return [
+            {
+                "index": 0,
+                "finish_reason": "stop",
+                "message": {"role": "assistant", "content": content},
+            }
+        ]
+    return [{"index": 0, "finish_reason": "stop", "text": content}]
+
+
 @pytest.fixture
 async def wire(monkeypatch, wire_choice_overrides):
     requests = []
@@ -155,13 +167,88 @@ async def test_openai_non_streaming_empty_choices_use_empty_response_retry(
     prompt_error.assert_not_awaited()
 
 
-async def test_openai_non_streaming_response_updates_card_token_count(clients, wire):
+async def test_openai_non_streaming_response_records_whole_response_tokens(
+    clients, wire
+):
     client = clients("openai", stream=False)
     with ClientContext(requires_active_scene=False):
         assert await client.send_prompt("hello") == "answer"
     info = client._common_status_data()["request_information"]
     assert info["tokens"] == client.count_tokens("answer") > 0
-    assert info["first_token_time"] is not None
+    assert info["first_token_time"] is None
+
+
+@pytest.mark.parametrize("chat", [False, True], ids=["text", "chat"])
+async def test_openai_compatible_empty_choices_use_empty_response_retry(
+    clients, wire, wire_choice_overrides, chat, monkeypatch
+):
+    client = clients(
+        api_handles_prompt_template=chat,
+        reason_enabled=False,
+        retry_empty_response=1,
+    )
+    wire_choice_overrides.extend([[], compatible_choices(chat, "answer")])
+    prompt_error = AsyncMock(return_value="ignore")
+    monkeypatch.setattr(client, "_prompt_generation_error", prompt_error)
+    with ClientContext(requires_active_scene=False):
+        assert await client.send_prompt("hello") == "answer"
+    expected_path = "/v1/chat/completions" if chat else "/v1/completions"
+    assert [path for path, _ in wire] == [expected_path, expected_path]
+    prompt_error.assert_not_awaited()
+
+
+@pytest.mark.parametrize("chat", [False, True], ids=["text", "chat"])
+async def test_openai_compatible_null_response_ignore(
+    clients, wire, wire_choice_overrides, chat, monkeypatch
+):
+    client = clients(api_handles_prompt_template=chat, reason_enabled=False)
+    wire_choice_overrides.append(compatible_choices(chat, None))
+    ignore = AsyncMock(return_value="ignore")
+    monkeypatch.setattr(client, "_prompt_generation_error", ignore)
+    with ClientContext(requires_active_scene=False):
+        assert await client.send_prompt("hello") == ""
+    ignore.assert_awaited_once()
+    assert ignore.call_args.args[0] == EMPTY_RESPONSE_MESSAGE
+    assert len(wire) == 1
+    assert client.request_information.tokens == 0
+
+
+@pytest.mark.parametrize("chat", [False, True], ids=["text", "chat"])
+async def test_openai_compatible_response_records_whole_response_tokens(
+    clients, wire, wire_choice_overrides, chat
+):
+    client = clients(api_handles_prompt_template=chat, reason_enabled=False)
+    wire_choice_overrides.append(compatible_choices(chat, "answer"))
+    with ClientContext(requires_active_scene=False):
+        assert await client.send_prompt("hello") == "answer"
+    info = client._common_status_data()["request_information"]
+    assert info["tokens"] == client.count_tokens("answer") > 0
+    assert info["first_token_time"] is None
+
+
+@pytest.mark.parametrize(
+    "client_type,chat",
+    [("openai", True), ("openai_compat", True), ("openai_compat", False)],
+    ids=["openai", "compatible-chat", "compatible-text"],
+)
+async def test_whole_response_rate_uses_full_request_duration(
+    clients, wire, wire_choice_overrides, client_type, chat, monkeypatch
+):
+    kwargs = {"reason_enabled": False}
+    if client_type == "openai":
+        kwargs["stream"] = False
+    else:
+        kwargs["api_handles_prompt_template"] = chat
+    client = clients(client_type, **kwargs)
+    monkeypatch.setattr(client, "count_tokens", lambda content: 200)
+    wire_choice_overrides.append(compatible_choices(chat, "answer"))
+    with ClientContext(requires_active_scene=False):
+        assert await client.send_prompt("hello") == "answer"
+    client.request_information.start_time = 100.0
+    client.request_information.end_time = 102.0
+    assert client.request_information.tokens == 200
+    assert client.request_information.first_token_time is None
+    assert client.request_information.rate == 100.0
 
 
 def test_openai_parameters_share_group_metadata():

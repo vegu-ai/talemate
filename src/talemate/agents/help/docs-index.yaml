@@ -563,9 +563,9 @@
     disable/re-enable lifecycle, preserved settings and Automatic Setup opt-out.
 - path: user-guide/clients/types/llamacpp.md
   title: llama.cpp Client
-  summary: Connect to llama-server at port 8080 with optional API authentication, context length and local prompt templates.
-    API handles prompt template uses /apply-template while retaining coercion and thinking controls; Concurrent Inference
-    requires server parallel slots and is off by default.
+  summary: Connect to llama-server at port 8080 with API authentication, context length and local prompt templates.
+    Router mode checkbox, detected-router hint, exact per-client model selection and routing icon, autoload and cold loading.
+    API handles prompt template uses /apply-template with coercion and thinking controls; Concurrent Inference requires parallel slots and is off by default.
 - path: user-guide/clients/types/lmstudio.md
   title: LMStudio Client
   summary: Connect Talemate to LMStudio's local server at port 1234, with optional API key and context length. Troubleshoots

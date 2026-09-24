@@ -29,18 +29,27 @@
             <!-- request information -->
             <AIClientRequestInformation :requestInformation="client.request_information" />
           </v-list-item-title>
-          <div v-if="client.enabled">
-  
-            <v-list-item-subtitle class="text-body-small" v-if="client.data.error_action != null">
-              <v-btn class="mt-1 mb-1" variant="tonal" :prepend-icon="client.data.error_action.icon" size="x-small" color="warning" @click.stop="callErrorAction(client, client.data.error_action)">
-                {{ client.data.error_action.title }}
-              </v-btn>
-            </v-list-item-subtitle> 
+          <v-list-item-subtitle class="text-body-small" v-if="client.enabled && client.data.error_action != null">
+            <v-btn class="mt-1 mb-1" variant="tonal" :prepend-icon="client.data.error_action.icon" size="x-small" color="warning" @click.stop="callErrorAction(client, client.data.error_action)">
+              {{ client.data.error_action.title }}
+            </v-btn>
+          </v-list-item-subtitle>
 
-            <v-list-item-subtitle class="text-body-small mb-2 mt-2">
-              <v-chip v-if="client.error_message" label size="small" color="error" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-alert">{{ client.error_message }}</v-chip>
-              <span v-else>{{ client.model_name }}</span>
-            </v-list-item-subtitle>
+          <v-list-item-subtitle v-if="client.enabled || client.router_mode" class="d-flex align-center text-body-small mb-2 mt-2">
+            <template v-if="client.enabled">
+              <v-chip v-if="client.error_message" label size="small" color="error" variant="tonal" class="mb-1 mr-1 flex-shrink-1" prepend-icon="mdi-alert">{{ client.error_message }}</v-chip>
+              <span v-else class="text-truncate">{{ client.model_name }}</span>
+            </template>
+            <span v-if="client.router_mode" class="d-inline-flex align-center flex-shrink-0">
+              <v-tooltip text="Router mode">
+                <template v-slot:activator="{ props }">
+                  <v-icon v-bind="props" size="14" color="muted" class="ml-1" aria-hidden="true">mdi-call-split</v-icon>
+                </template>
+              </v-tooltip>
+              <span class="d-sr-only">Router mode</span>
+            </span>
+          </v-list-item-subtitle>
+          <div v-if="client.enabled">
             <v-list-item-title class="text-body-small">
               <div class="d-flex flex-wrap align-center">
                 <!-- client type -->
@@ -535,7 +544,8 @@ export default {
           // Update the model name of the client
           client.model_name = data.model_name;
           client.error_message = data.data.error_message;
-          client.model = client.model_name;
+          client.model = Object.hasOwn(data.data, 'configured_model') ? data.data.configured_model : data.model_name;
+          if (Object.hasOwn(data.data, 'router_mode')) client.router_mode = data.data.router_mode;
           client.type = data.message;
           client.status = data.status;
           client.can_be_coerced = data.data.can_be_coerced;
@@ -585,7 +595,8 @@ export default {
           this.state.clients.push({ 
             name: data.name, 
             model_name: data.model_name, 
-            model: data.model_name,
+            model: Object.hasOwn(data.data, 'configured_model') ? data.data.configured_model : data.model_name,
+            ...(Object.hasOwn(data.data, 'router_mode') ? { router_mode: data.data.router_mode } : {}),
             type: data.message, 
             status: data.status,
             error_message: data.data.error_message,

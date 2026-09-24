@@ -19,6 +19,8 @@ Click `Save` in the toolbar to add the client.
 
 Once added, the client should appear in the clients list and display the currently loaded model.
 
+For a server that serves several models, turn on **Router mode**, choose a **Model**, and click **Save**. Each client keeps its own selection, so you can add two clients with the same API URL and use a different model for each.
+
 ![Client llama.cpp Ready](/talemate/img/0.35.0/client-llamacpp-ready.png)
 
 ### Settings
@@ -36,6 +38,20 @@ The llama.cpp server (`llama-server`) defaults to port 8080, so unless you chang
 ##### API Key
 
 If your llama.cpp server is configured to require authentication, you can set the API key here. Most local setups do not require this.
+
+##### Router mode and Model
+
+Turn on **Router mode** if the server serves several models (llama.cpp router). The **Model** field appears only while this checkbox is on. Pick the model this client uses, or type its exact server ID if it is not listed. Keep paths and tags intact: `team/model:Q4` and `model:Q4` may refer to different models. Talemate never chooses a router selection for you.
+
+**Router mode** defaults to off. With it off, the client uses single-model behavior. If Talemate detects a router, the editor and client status show: "Router detected. Turn on Router mode to pick a model." Turn on the checkbox to use that router; detection does not turn it on for you.
+
+When Router mode is on, a small routing icon appears beside the model name in the AI clients list. It stays visible for warnings, errors and disabled clients. Its tooltip and screen-reader label read **Router mode**.
+
+The selection is saved per client and survives status refreshes and reconnects. It applies to native generation, **API handles prompt template**, and vision requests. Status checks only read server properties and the model list; they do not load or swap models.
+
+If you used a router before 0.40.0, turn on **Router mode** and check **Model** after you upgrade.
+
+With autoload enabled, models load on demand. The first request can take longer, especially when switching models. A server with room for only one model may swap models between clients. Remote template application waits for this loading too. You can cancel the Talemate request while waiting.
 
 ##### API handles prompt template
 
@@ -56,6 +72,22 @@ Found in the **Concurrency** section of the client editor. When enabled, batch o
 This is **off by default**. Your `llama-server` must be started with enough parallel slots to actually serve requests at the same time; otherwise the requests are queued and you will not see a speed-up. See the [Concurrent Requests](/talemate/user-guide/clients/concurrent-requests/) page for more detail.
 
 ### Common issues
+
+#### Router detected. Turn on Router mode to pick a model.
+
+Turn on **Router mode** in the client settings, choose a **Model**, and click **Save**.
+
+#### Select a router model / Selected model is not available
+
+Open the client settings, choose a model from the list or enter its exact server ID, then click **Save**. An unavailable selection is kept so you can correct it; Talemate does not replace it with another model.
+
+#### Model is loading / Model is unloaded and server autoload is disabled
+
+Loading can take time, especially when switching models. If the server disables autoload, its operator must load the selected model before you use it. Talemate does not manage model loading or downloads.
+
+#### Invalid API key
+
+Check the client's API key against the server's authentication settings. A failed authentication check is reported separately from a missing model selection.
 
 #### Generations are weird / bad
 

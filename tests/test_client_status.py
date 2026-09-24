@@ -7,10 +7,13 @@ The sweep that schedules the probe and the bound it runs under live in
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock
+
 import pytest
 
 import talemate.config.state as config_state
 from talemate.client.llamacpp import LlamaCppClient
+from talemate.client.llamacpp import ClientConfig as LlamaCppClientConfig
 from talemate.client.lmstudio import LMStudioClient
 from talemate.config.schema import Client as ClientConfig
 
@@ -61,10 +64,12 @@ class _FakeOpenAIClient:
 
 
 def _llamacpp(name: str) -> LlamaCppClient:
-    config_state.CONFIG.clients[name] = ClientConfig(
+    config_state.CONFIG.clients[name] = LlamaCppClientConfig(
         type="llamacpp", name=name, api_url="http://localhost:8080"
     )
-    return LlamaCppClient(name=name)
+    client = LlamaCppClient(name=name)
+    client.detect_server_mode = AsyncMock()
+    return client
 
 
 def _lmstudio(name: str) -> LMStudioClient:

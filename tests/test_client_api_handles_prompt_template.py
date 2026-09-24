@@ -259,7 +259,7 @@ class TestLlamaCppApplyRemoteTemplate:
         client = LlamaCppClient(name="lcpp_tpl")
 
         result = await client.apply_remote_template(
-            "Describe the room.<|BOT|>The room is", "narrate"
+            "Describe the room.<|BOT|>The room is", "narrate", None
         )
 
         assert result == "TEMPLATED"
@@ -276,7 +276,7 @@ class TestLlamaCppApplyRemoteTemplate:
         _register_llamacpp("lcpp_tpl2", api_handles_prompt_template=True)
         client = LlamaCppClient(name="lcpp_tpl2")
 
-        await client.apply_remote_template("Describe the room.", "narrate")
+        await client.apply_remote_template("Describe the room.", "narrate", None)
 
         messages = fake_httpx.calls[0]["json"]["messages"]
         assert [m["role"] for m in messages] == ["system", "user"]
@@ -288,7 +288,7 @@ class TestLlamaCppApplyRemoteTemplate:
         _register_llamacpp("lcpp_nothink", api_handles_prompt_template=True)
         client = LlamaCppClient(name="lcpp_nothink")
 
-        await client.apply_remote_template("Describe the room.", "narrate")
+        await client.apply_remote_template("Describe the room.", "narrate", None)
 
         payload = fake_httpx.calls[0]["json"]
         assert payload["chat_template_kwargs"] == {"enable_thinking": False}
@@ -302,7 +302,7 @@ class TestLlamaCppApplyRemoteTemplate:
         )
         client = LlamaCppClient(name="lcpp_think")
 
-        await client.apply_remote_template("Describe the room.", "narrate")
+        await client.apply_remote_template("Describe the room.", "narrate", None)
 
         payload = fake_httpx.calls[0]["json"]
         assert "chat_template_kwargs" not in payload
@@ -314,7 +314,7 @@ class TestLlamaCppApplyRemoteTemplate:
         fake_httpx.response = _FakeResponse(500)
 
         with pytest.raises(GenerationProcessingError):
-            await client.apply_remote_template("Describe the room.", "narrate")
+            await client.apply_remote_template("Describe the room.", "narrate", None)
 
 
 # ---------------------------------------------------------------------------

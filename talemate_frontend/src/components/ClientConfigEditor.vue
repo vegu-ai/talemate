@@ -22,7 +22,8 @@
       </v-row>
       <ConfigWidgetUnifiedApiKey v-if="unifiedApiKeyPath" :config-path="unifiedApiKeyPath"
         :title="meta.title + ' API Key'" :description="unifiedApiKeyDescription" :app-config="config" />
-      <v-combobox v-if="meta.manual_model && modelChoices" v-model="values.model" :items="modelChoices" label="Model" density="compact"></v-combobox>
+      <LlamaCppModelSettings v-if="client.type === 'llamacpp'" :client="client" :status="status" />
+      <v-combobox v-else-if="meta.manual_model && modelChoices" v-model="values.model" :items="modelChoices" label="Model" density="compact"></v-combobox>
       <v-text-field v-else-if="meta.manual_model" v-model="values.model" label="Manually specify model name" density="compact"></v-text-field>
     </template>
 
@@ -60,7 +61,8 @@
             :title="meta.title + ' API Key'" :description="unifiedApiKeyDescription" :app-config="config" />
 
           <!-- MODEL -->
-          <v-combobox v-if="meta.manual_model && modelChoices" v-model="values.model" :items="modelChoices" label="Model" density="compact"></v-combobox>
+          <LlamaCppModelSettings v-if="client.type === 'llamacpp'" :client="client" :status="status" />
+          <v-combobox v-else-if="meta.manual_model && modelChoices" v-model="values.model" :items="modelChoices" label="Model" density="compact"></v-combobox>
           <v-text-field v-else-if="meta.manual_model" v-model="values.model" label="Manually specify model name" density="compact"
             hint="It looks like we're unable to retrieve the model name automatically. The model name is used to match the appropriate prompt template. This is likely only important if you're locally serving a model."></v-text-field>
           <ModelExpectationsPanel compact class="mb-2" />
@@ -352,6 +354,7 @@ import AppConfigPresetsSystemPrompts from './AppConfigPresetsSystemPrompts.vue';
 import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
 import TokenBudgetInput from './TokenBudgetInput.vue';
 import ModelExpectationsPanel from './ModelExpectationsPanel.vue';
+import LlamaCppModelSettings from './LlamaCppModelSettings.vue';
 import UxField from './UxField.vue';
 
 // Sections that exist as hardcoded panels — extra fields whose group name
@@ -378,6 +381,7 @@ export default {
     ConfigWidgetUnifiedApiKey,
     TokenBudgetInput,
     ModelExpectationsPanel,
+    LlamaCppModelSettings,
     UxField,
   },
   props: {

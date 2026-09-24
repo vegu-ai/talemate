@@ -58,6 +58,8 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 log = structlog.get_logger("client.base")
 
+ClientStatusValue = Literal["disabled", "error", "idle", "busy", "warning"]
+
 STOPPING_STRINGS = ["<|im_end|>", "</s>"]
 
 # disable smart quotes until text rendering is refactored
@@ -1066,26 +1068,23 @@ class ClientBase:
         )
         ClientBase._prompt_log_file.flush()
 
+    def status_details(self) -> tuple[ClientStatusValue, str | None]:
+        if not self.enabled:
+            return "disabled", "Disabled"
+        if not self.connected:
+            return "error", "Could not connect"
+        if self.model_name:
+            return ("busy" if self.processing else "idle"), None
+        return "warning", "No model loaded"
+
     def emit_status(self, processing: bool = None):
         """
         Sets and emits the client status.
         """
-        error_message: str | None = None
-
         if processing is not None:
             self.processing = processing
 
-        if not self.enabled:
-            status = "disabled"
-            error_message = "Disabled"
-        elif not self.connected:
-            status = "error"
-            error_message = "Could not connect"
-        elif self.model_name:
-            status = "busy" if self.processing else "idle"
-        else:
-            error_message = "No model loaded"
-            status = "warning"
+        status, error_message = self.status_details()
 
         status_change = status != self.current_status
         self.current_status = status

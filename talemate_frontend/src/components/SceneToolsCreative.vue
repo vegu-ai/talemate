@@ -81,7 +81,7 @@
                             source="scene_tools_creative"
                             :select-only="true"
                             :template-types="['character_attribute', 'character_detail', 'state_reinforcement']"
-                            @selected="(templates) => { newIntroduction.templates = templates; console.log('TEMPLATES', templates) }"/>
+                            @selected="(templates) => { newIntroduction.templates = templates }"/>
 
                     </v-col>
                     <v-col cols="7">
@@ -315,7 +315,6 @@ export default {
                 return;
             }
 
-            console.log('PAYLOAD', payload);
 
             this.dialogIntroduceCharacter = false;
 

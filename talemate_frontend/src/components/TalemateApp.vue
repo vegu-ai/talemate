@@ -1240,7 +1240,6 @@ export default {
         }
       }
 
-      console.log("urls", { websocketUrl, currentUrl }, {env : import.meta.env});
 
       this.websocket = new WebSocket(websocketUrl);
       console.log("Websocket connecting ...")
@@ -1539,7 +1538,6 @@ export default {
       } else if(data.type == 'world_state_manager') {
         if(data.action == 'templates') {
           this.worldStateTemplates = data.data;
-          console.debug("WorldStateTemplates", this.worldStateTemplates);
         }
       }
     },

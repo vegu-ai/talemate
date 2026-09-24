@@ -406,7 +406,6 @@ export default {
     },
     handleMessage(message) {
       if (message.type === 'image_generated') {
-        console.log('image_generated', message.data);
         const req = message.data?.request || null;
         const base64 = message.data?.base64 || null;
         const saved = !!message.data?.saved;
@@ -605,5 +604,4 @@ export default {
 
 <style scoped>
 </style>
-
 

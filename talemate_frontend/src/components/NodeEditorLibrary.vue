@@ -732,7 +732,6 @@ export default {
         },
 
         createModule() {
-            console.log("Creating node", this.newModule);
             this.creatingNode = true;
             this.getWebsocket().send(JSON.stringify({
                 type: 'node_editor',

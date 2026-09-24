@@ -1717,10 +1717,6 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 raise
             return []
 
-        # import json
-        # print(json.dumps(_results["ids"], indent=2))
-        # print(json.dumps(_results["distances"], indent=2))
-
         results = []
 
         max_distance = self.max_distance

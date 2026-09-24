@@ -690,7 +690,6 @@ export default {
 
         // requests 
         applyAndSaveTemplate(template, saveNew = false) {
-            console.log('applyAndSaveTemplate', template, saveNew);
             this.template = template;
             this.saveTemplate(saveNew);
         },

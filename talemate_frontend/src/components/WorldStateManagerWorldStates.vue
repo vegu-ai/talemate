@@ -226,7 +226,6 @@ export default {
         },
 
         select(id) {
-            console.log({id, states: this.states})
             if (!this.states[id]) {
                 console.warn(`State "${id}" not found`);
                 return;

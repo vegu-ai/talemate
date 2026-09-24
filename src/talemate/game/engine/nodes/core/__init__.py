@@ -960,9 +960,6 @@ class Router(Node):
             if idx != route_to:
                 socket.deactivated = True
             else:
-                print(
-                    f"Setting output {socket.name} to {self.get_input_value('input')}"
-                )
                 self.set_output_values({socket.name: self.get_input_value("input")})
 
 
@@ -1392,7 +1389,6 @@ def validate_node(
     # If it's a dict, check registry and instantiate appropriate class
     if isinstance(v, dict):
         registry_name = v.get("registry")
-        # print(f"Validating node with registry: {registry_name}")
         if registry_name:
             node_cls = get_node(registry_name)
             if node_cls:

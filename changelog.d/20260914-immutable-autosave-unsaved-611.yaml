@@ -1,2 +1,0 @@
-fixed:
-- "On a read-only scene (such as a shipped story) with autosave on, changes that the autosave cannot write now mark the scene unsaved, so the leave warning appears instead of the change being lost silently."

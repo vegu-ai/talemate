@@ -1,2 +1,0 @@
-fixed:
-- "Creating a new scene in a Shared World no longer takes the shared static history from the other scenes of that world. The new scene starts with the world's shared entries and with its clock at the time they imply."

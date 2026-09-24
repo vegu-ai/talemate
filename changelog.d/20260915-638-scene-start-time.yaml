@@ -1,4 +1,0 @@
-fixed:
-- "A static history entry keeps its time after a reload or Regenerate All History. Before, the first static entry of a scene could lose its distance from the scene and read \"Recently\". Scenes saved by an older version load as before. An entry that already lost its time keeps the time it has."
-- "A shared static history entry keeps its distance from the start of every scene that uses it."
-- "Deleting the last time passage now updates the times of the history entries."

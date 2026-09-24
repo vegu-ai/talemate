@@ -447,7 +447,6 @@ export default {
                 return;
             }
             if(message.action === 'chat_history') {
-                console.debug('chat_history', message);
                 // If no active chat yet (race where history arrives first), adopt this chat
                 if(!this.activeChatId) {
                     this.activeChatId = message.chat_id;

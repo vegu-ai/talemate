@@ -1,8 +1,0 @@
-added:
-  - "Visualizer resolution presets: a megapixel series (0.4 MP, 0.8 MP, 1 MP, 1.4 MP and 2 MP) sits beside the model named presets on the ComfyUI, SD.Next and AUTOMATIC1111 backends. Pick from it when generation time and video memory matter more than a model's native size."
-  - "Visualizer prompt finalization ships a `Qwen 2.1 Image references` preset. It rewrites the reference image labels of the positive prompt into the tag form that model expects, so `IMAGE 1` becomes `<image1>`."
-fixed:
-  - "The ComfyUI workflow list fills as soon as ComfyUI is selected as a backend. It no longer stays empty until the settings are saved. The list is also sorted by file name."
-  - "The Talemate Client pane fills its client list as soon as Talemate Client is selected as the image analysis backend. It no longer stays empty until the settings are saved."
-changed:
-  - "Image generation with exactly one reference image no longer labels it `IMAGE 1`. The prompt names the reference in plain words instead, which is what image editing models expect from a single attached image. Two or more references keep their numbers."

@@ -95,8 +95,175 @@ export default {
     data() {
         return {
             dialog: false,
-            selected: "0.39.0",
+            selected: "0.40.0",
             whatsNew: [
+                {
+                    "version": "0.40.0",
+                    "items": [
+                        {
+                            "title": "Character Knowledge",
+                            "description": "Characters can remember only the passages they witnessed and the information shared with them. Known by, Learn and Never Learn controls let you shape their knowledge, including through the Director. Standard mode adds no requests at its default effort; older scenes keep their existing history behavior."
+                        },
+                        {
+                            "title": "Character Perspectives",
+                            "description": "New stories can give each character their own account of events, carried into their memories and summaries. Read and edit those accounts beside the full story, and share selected information as disclosures. This optional mode needs a strong model and adds analysis requests; choose it before the story has history."
+                        },
+                        {
+                            "title": "Themes",
+                            "description": "Choose a light or dark theme, or create and share your own colors, message styling and editor appearance. A live preview lets you edit colors where they appear, while personal color overrides survive theme changes."
+                        },
+                        {
+                            "title": "Playthrough",
+                            "description": "Replay a story one passage at a time with optional narration, automatic advance and chapter navigation. Resume where you left off, or fork at the current passage to take the story in a new direction."
+                        },
+                        {
+                            "title": "Scene Controls",
+                            "description": "Customize the scene header with story statistics, character portraits and knowledge effort. Add reusable shortcuts to scene tools and pin game variables as labelled sliders, choices or toggles for use during play."
+                        },
+                        {
+                            "title": "Help Chat",
+                            "description": "Ask the Help agent to create or change themes and templates, adjust settings and edit inference presets. Settings and template changes each require your permission, with both permissions off by default."
+                        },
+                        {
+                            "title": "Chatterbox Turbo",
+                            "description": "Chatterbox Turbo adds an optional voice backend with voice cloning and expressive sound tags."
+                        },
+                        {
+                            "title": "Notable Improvements",
+                            "groups": [
+                                {
+                                    "title": "Story and World",
+                                    "items": [
+                                        "Add a selected person, object or place from the story to the world snapshot and keep it tracked.",
+                                        "Character arrivals and departures appear in history, with arrival notes and optional narration when moving characters into or out of the scene.",
+                                        "Prose perspective presets include examples, and the Director can help choose perspectives or reassess the scene's intent.",
+                                        "Finished passages appear while follow-up analysis, summaries and voice preparation continue.",
+                                        "Editing or deleting earlier passages warns when later story details may become inconsistent."
+                                    ]
+                                },
+                                {
+                                    "title": "Memory",
+                                    "items": [
+                                        "Tune retrieval for recency, variety and relevance, with optional local reranking or AI refinement; OpenRouter embeddings are also available."
+                                    ]
+                                },
+                                {
+                                    "title": "Director",
+                                    "items": [
+                                        "Reject a proposed action with instructions for a correction, and see which actions in a batch were applied."
+                                    ]
+                                },
+                                {
+                                    "title": "Settings and Clients",
+                                    "items": [
+                                        "Client and agent settings share the Settings tab's Save and Discard controls, including scene overrides and assigning one client to all agents.",
+                                        "Pin inference parameters beside the client list and enter exact sampling, context and reasoning values.",
+                                        "OpenAI and compatible clients offer reasoning effort and completion-token options; OpenAI also offers sampling, system-message and streaming controls.",
+                                        "llama.cpp Router mode lets each client choose its model, including for vision and server prompt templates.",
+                                        "New clients default to at least 16k context; supported hosted clients enable concurrent requests by default, while saved configurations retain their values.",
+                                        "Muse Glimmer prompt formatting and newer Hugging Face template files are supported."
+                                    ]
+                                },
+                                {
+                                    "title": "Images",
+                                    "items": [
+                                        "OpenRouter supports image-only generation and editing models, with model and provider suggestions and clearer errors for unsupported requests.",
+                                        "Paste images from the clipboard, choose megapixel resolution presets, and use the Qwen image-reference prompt preset."
+                                    ]
+                                },
+                                {
+                                    "title": "Voice",
+                                    "items": [
+                                        "Volume and mute survive reloads; OpenAI-compatible voice backends offer audio-format selection and refresh complete voice lists without overwriting personal edits."
+                                    ]
+                                },
+                                {
+                                    "title": "Prompt Tools",
+                                    "items": [
+                                        "Follow active, completed, failed and cancelled requests in the prompt viewers, with clearer action names."
+                                    ]
+                                },
+                                {
+                                    "title": "Node Editor",
+                                    "items": [
+                                        "Rewrite spoken text without changing the story, and use newline and tab escapes in String Join and Split delimiters.",
+                                        "Added or edited command and agent modules become available automatically without a manual sync."
+                                    ]
+                                },
+                                {
+                                    "title": "Interface",
+                                    "items": [
+                                        "Updated typography, controls and layouts follow Material Design 3."
+                                    ]
+                                },
+                                {
+                                    "title": "Bundled Stories",
+                                    "items": [
+                                        "The original Simulation Suite is now hidden from new scene creation to steer new stories to Simulation Suite V2; existing saves stay available. Infinity Quest has a more concrete backstory."
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "title": "Bug Fixes",
+                            "groups": [
+                                {
+                                    "title": "Saves and History",
+                                    "items": [
+                                        "Save As protects read-only destinations, keeps errors open for correction, and preserves pending scene-settings edits when saving is cancelled.",
+                                        "Unsaved changes trigger a warning before leaving; read-only stories keep their save identity and correctly mark changes autosave cannot write.",
+                                        "Timeline forks preserve recorded scene state and warn about damaged history; repair starts fresh history while retaining the old files.",
+                                        "Failed revision-history writes stop the save with an error instead of leaving a save with incomplete history.",
+                                        "Static history and shared entries keep their timing across reloads and time changes; deleting messages preserves summary positions.",
+                                        "Shared world entries survive linked-scene loads and new episodes; sequential tracked-state answers accumulate over the story."
+                                    ]
+                                },
+                                {
+                                    "title": "Characters and World",
+                                    "items": [
+                                        "Duplicate character names are refused, failed creation leaves no partial character, and valid character proposals apply without discarding other pending changes.",
+                                        "Regenerating a snapshot's source restores an earlier snapshot or clears it with a notice; introductions and emphasized text show world highlights.",
+                                        "Editing memories refreshes remembered context, and character replies avoid repeating passages already in their story context."
+                                    ]
+                                },
+                                {
+                                    "title": "Director and Help",
+                                    "items": [
+                                        "Director requests can update several fields, empty action results explain the outcome, and result summaries display proper line breaks.",
+                                        "Cancelled actions stop the remaining calls, and failed settings application can be retried with Save."
+                                    ]
+                                },
+                                {
+                                    "title": "Clients and Images",
+                                    "items": [
+                                        "OpenRouter respects disabled reasoning and per-action overrides; OpenAI-compatible clients handle empty replies and report non-streamed generation speed correctly.",
+                                        "Local clients refuse blank server URLs, unavailable clients remain visible, and Ollama honors stopping strings.",
+                                        "Image uploads work over plain HTTP, OpenRouter images are stored as PNG, and ComfyUI prompt inputs and workflow lists resolve correctly."
+                                    ]
+                                },
+                                {
+                                    "title": "Voice and Startup",
+                                    "items": [
+                                        "Failed voice chunks no longer stop the playback queue, and compatible servers can return playable audio and complete voice listings.",
+                                        "Windows installation and frontend startup are repaired; fresh source installs start without configuration, and installed tokenizers need no startup download."
+                                    ]
+                                },
+                                {
+                                    "title": "Node Editor",
+                                    "items": [
+                                        "Time nodes have valid defaults, inactive characters have no actor output, and test runs stop when switching scenes."
+                                    ]
+                                },
+                                {
+                                    "title": "Security",
+                                    "items": [
+                                        "Generated HTML is displayed safely across story messages, chats and previews."
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
                 {
                     "version": "0.39.0",
                     "items": [

@@ -1,2 +1,0 @@
-fixed:
-  - "Visualizer: Images from OpenRouter models that also write text, such as the Gemini image models, are now stored as PNG. A JPEG answer, for example from Gemini 3.1 Flash Lite Image, was saved as a `.png` file with JPEG content."

@@ -213,7 +213,6 @@ export default {
                     }
                 });
             }
-            console.log("agentStateNotifications", notifications);
             return notifications;
         }
     },
@@ -292,7 +291,6 @@ export default {
                     continue
 
                 if(agent.status === 'warning' || agent.status === 'error' || agent.status === 'uninitialized') {
-                    console.log("agents: configuration required (1)", agent.status)
                     return true;
                 }
 
@@ -302,7 +300,6 @@ export default {
                     let client = clients[j];
                     if(client.name === agent.client) {
                         if(client.status === 'warning' || client.status === 'error' || client.status === 'disabled') {
-                            console.log("agents: configuration required (2)", client.status)
                             return true;
                         }
                     }
@@ -526,7 +523,6 @@ export default {
             this.$emit('agents-updated', this.state.agents);
         },
         openMessages(agentName) {
-            console.log("openMessages", agentName, this.agentMessagesRefs);
             if(!this.agentMessagesRefs[agentName]) {
                 return;
             }
@@ -606,7 +602,6 @@ export default {
                         enabled: data.data.enabled,
                         meta: data.meta,
                     });
-                    console.log("agents: added new agent", this.state.agents[this.state.agents.length - 1], data)
                 }
                 if (this.pendingEffort?.armed) {
                     this.pendingEffort.seen.add(data.name);

@@ -189,7 +189,6 @@ export default {
             
             const templates = this.scene?.templates?.by_type?.agent_persona || {};
             const tpl = templates[uid];
-            console.debug('[DirectorConsole] persona template resolve', { found: !!tpl, tpl });
             return tpl?.name || null;
         },
         directorPersonaTemplates() {

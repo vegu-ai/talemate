@@ -1,2 +1,0 @@
-fixed:
-- "Autosave no longer detaches a read-only scene, such as a shipped story, from its save file. After a scene turn or a Knowledge hub change the scene keeps its save file, so later Knowledge hub changes apply instead of asking to save the scene or reporting that it has no save file."

@@ -1,2 +1,0 @@
-added:
-- "Character perspectives stories have a View Perspective chip above the scene tools. Pick an active character to split the scene in two and see, beside each message, what that character noticed of it. The scene header, when it is on, names the perspective and its x closes the view. Double-click a perspective to change it, or an empty cell to write one; empty text means the character noticed nothing. A change starts no AI request, and a note below the cell offers Analyze them again when later perspectives were built on the one you changed."

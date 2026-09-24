@@ -262,7 +262,6 @@ export default {
         },
 
         select(id) {
-            console.log({id, entries: this.entries})
             if (!this.entries[id]) {
                 console.warn(`Entry "${id}" not found`);
                 return;

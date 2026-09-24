@@ -1,8 +1,0 @@
-fixed:
-  - "Visualizer: The OpenRouter model list for image generation now holds OpenRouter's image models, Ming Image 0.1 Design and Muse Image included, except the models that need a reference image. The list for image editing holds the models that accept reference images. Both leave out the vector models that make SVG only. The lists used to hold only models that also write text."
-  - "Visualizer: OpenRouter models that make images only, such as FLUX.2, Seedream, GPT Image and Muse Image, now generate, and edit when they accept reference images. Talemate sends them to OpenRouter's image endpoint with the parameters each model accepts, stores the result as PNG, and refuses, with the reason, a request that the model cannot do."
-  - "Visualizer: The OpenRouter provider filters now list OpenRouter's providers. The lists were empty."
-changed:
-  - "Visualizer: The OpenRouter model fields accept a typed model id and suggest the models from the list."
-  - "Visualizer: A failed image generation names its reason in the error notification."
-  - "OpenRouter: Saving a different API key loads the model and provider lists again, without a restart."

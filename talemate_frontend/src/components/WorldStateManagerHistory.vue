@@ -336,7 +336,6 @@ export default {
         },
 
         collapseSourceEntries(layer, entry_id) {
-            console.log("collapseSourceEntries", layer, entry_id);
             if(layer == 0) {
                 const entry = this.history.find(e => e.id === entry_id);
                 if(entry) {
@@ -351,7 +350,6 @@ export default {
         },
 
         setBusyEntry(entry_id) {
-            console.log("setBusyEntry", entry_id);
             this.busyEntry = entry_id;
         },
 
@@ -473,7 +471,6 @@ export default {
                 const entries = message.data.entries;
                 const entry = message.data.entry;
 
-                console.log("history_entry_source_entries", entries, entry);
 
                 if(entry.layer == 0) {
                     const existingEntry = this.history.find(e => e.id === message.data.entry.id);
@@ -489,7 +486,6 @@ export default {
             } else if (message.action == 'history_entry_regenerated') {
                 const entry = message.data;
 
-                console.log("history_entry_updated", entry);
 
                 if(entry.layer == 0) {
                     this.history = this.history.map(e => e.id === entry.id ? entry : e);

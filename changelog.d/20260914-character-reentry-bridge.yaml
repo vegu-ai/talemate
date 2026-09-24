@@ -1,6 +1,0 @@
-added:
-- "Character return transitions: a returning character gets a re-entry bridge in their context, with the time away since they were taken out of the scene and an optional Arrival Note. It stays in their chronological context through their first reply and needs no model request. In Standard mode it needs Limit to character knowledge."
-changed:
-- "Standard filtered-history gap lines state that the character was away, including the recorded duration when available. This wording also applies to gaps outside return entries."
-fixed:
-- "Knowledge hub: Agent section headings now share a clear left edge, with master switches on the right."

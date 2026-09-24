@@ -1,4 +1,0 @@
-added:
-  - "llama.cpp clients offer Router mode with a separate model selection for each client, including for server prompt templates and vision."
-changed:
-  - "llama.cpp clients show an invalid API key in the client status instead of appearing ready."

@@ -1,2 +1,0 @@
-fixed:
-- "Stopped normal frontend disconnects from logging a websocket traceback or leaving connection loops running"

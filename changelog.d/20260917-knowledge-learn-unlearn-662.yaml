@@ -1,6 +1,0 @@
-added:
-- "World Editor > History: a static history entry in a Standard story has a Known by setting that decides who knows the entry."
-changed:
-- "Character Knowledge: Allow and Block are now named Learn and Never Learn."
-removed:
-- "World Editor > History: the Known by filter."

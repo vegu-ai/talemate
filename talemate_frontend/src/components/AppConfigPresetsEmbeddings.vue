@@ -138,7 +138,6 @@ export default {
     watch: {
         immutableConfig: {
             handler: function(newVal) {
-                console.log('immutableConfig changed', newVal);
                 if(!newVal) {
                     this.config = {};
                     return;
@@ -182,7 +181,6 @@ export default {
             return this.config.embeddings[this.selected[0]].embeddings === 'sentence-transformer';
         },
         isCurrentyLoaded() {
-            console.log('isCurrentyLoaded', this.memoryAgentStatus, this.selected, this.sceneActive);
             if(!this.memoryAgentStatus || !this.selected.length || !this.sceneActive) {
                 return false;
             }

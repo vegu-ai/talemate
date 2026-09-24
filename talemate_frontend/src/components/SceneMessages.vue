@@ -2484,10 +2484,8 @@ export default {
                     this.revisionApplyServerState(narratorMsg, data.versions, data.active_version, data.revision_refresh, data.revision_uncommitted);
                     this.messages.push(narratorMsg);
                 } else if (data.type === 'player_choice') {
-                    console.log('player_choice', data);
                     this.messages.push({ id: data.id, type: data.type, data: data.data });
                 } else if (this.messageTypeIsSceneMessage(data.type)) {
-                    console.log('scene message', data);
                     const genericMsg = {
                         id: data.id,
                         type: data.type,

@@ -1,7 +1,0 @@
-fixed:
-- "Deleting a chat message before a summarized part of the story no longer shifts that summary onto the wrong messages. Every way a message leaves the history now updates the summary positions, including a world entry reinforcement that is removed when its insert mode changes, an earlier direction that a new direction from the same source replaces, and a message removed by a node graph or scene script."
-- "The scene script and node API `pop_history` now removes messages again. It passed its arguments in the wrong order and removed nothing since 0.26.0, and it can now remove a time passage with the type `time_passage`. In the retired Simulation Suite scene, the first narration becomes the scene introduction, and every narrator and director message leaves the history, the new narration included; the chat shows them until the scene is reloaded."
-- "A pin made from a chat message keeps its correct age after a static history entry moves the whole timeline, when the entry is added, deleted, or comes from a linked shared world."
-- "Regenerating a summary now gives the model the summaries directly before that entry as the previous chapters. Before, without layered history, the first entry got later chapters, the next entries got none, and every other entry skipped the one directly before it."
-removed:
-- "The unused Python helper `talemate.history.pop_history`. Use `Scene.pop_history`, which also updates the summary positions."

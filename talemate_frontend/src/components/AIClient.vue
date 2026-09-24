@@ -514,7 +514,6 @@ export default {
     },
 
     toggleClient(client) {
-      console.log("Toggling client", client.enabled, "to", !client.enabled)
       this.getWebsocket().send(
         JSON.stringify(
           { 
@@ -590,7 +589,6 @@ export default {
           }
 
         } else if(!client) {
-          console.log("Adding new client", data);
 
           this.state.clients.push({ 
             name: data.name, 

@@ -222,16 +222,9 @@ export default {
         generationOptions: Object,
     },
     watch: {
-        generationOptions: {
-            immediate: true,
-            handler(value) {
-                console.log("generationOptions", value)
-            }
-        },
         immutableScene: {
             immediate: true,
             handler(value) {
-                console.log("immutableScene", value)
                 if(value && this.scene && value.name !== this.scene.name) {
                     this.scene = null;
                     this.selected = null;

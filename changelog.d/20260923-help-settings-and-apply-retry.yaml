@@ -1,3 +1,0 @@
-fixed:
-  - "Help chat can change a user-selected OpenRouter model without loading long model and provider lists into the conversation."
-  - "Settings keeps Save available after a failed agent apply, including changes made through Help chat. Saving again retries the failed rebuild without forcing unrelated agents to rebuild."

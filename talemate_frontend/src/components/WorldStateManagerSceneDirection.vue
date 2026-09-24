@@ -480,12 +480,6 @@ export default {
                 this.requestSceneTemplateFiles();
             }
         },
-        templates: {
-            immediate: true,
-            handler(value) {
-                console.log("Templates", JSON.stringify(value, null, 2));
-            }
-        }
     },
     data() {
         return {
@@ -584,7 +578,6 @@ export default {
                 return;
             }
 
-            console.log('Updating scene intent', this.sceneIntent);
 
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
@@ -647,7 +640,6 @@ export default {
             }
 
             if (message.action === 'get_scene_intent') {
-                console.log(message);
                 this.sceneIntent = message.data;
                 this.clearDirty();
             } else if (message.action === 'set_scene_intent') {

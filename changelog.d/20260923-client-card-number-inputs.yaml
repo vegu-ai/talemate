@@ -1,5 +1,0 @@
-changed:
-  - "Client list: the context and reasoning token budgets on a client's card are now number fields on one row, so you can type an exact value such as 32768, with no 128000 cap. The reasoning effort is now a dropdown. The chips that repeated these values on the card are gone (#764)."
-  - "Client editor: Reasoning Tokens (Extra Completion Tokens for OpenAI and OpenAI Compatible clients) is now a number field too, with no 128000 cap, so it shows the exact value you set on the card (#764)."
-removed:
-  - "Client status messages no longer carry `indicator_value`, `indicator_tooltip` and `effort_level` in `reasoning_display`; nothing reads them since the card chips are gone. The effort level is still sent as the client's own `effort_level` (#767)."

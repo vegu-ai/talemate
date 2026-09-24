@@ -98,7 +98,6 @@ export default {
         selected: {
             immediate: true,
             handler(selected) {
-                console.log('selected', selected);
                 if (selected) {
                     this.load(selected[0]);
                 }
@@ -167,8 +166,6 @@ export default {
             if (message.action == 'world') {
                 this.entries = message.data.entries;
                 this.reinforcements = message.data.reinforcements;
-                console.log('entries', this.entries);
-                console.log('reinforcements', this.reinforcements);
             }
         },
         load(id) {

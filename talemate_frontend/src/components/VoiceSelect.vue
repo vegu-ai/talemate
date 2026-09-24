@@ -88,7 +88,6 @@ export default {
       this.internalValue = val;
     },
     internalValue(val) {
-      console.log('internalValue', val);
       this.$emit('update:modelValue', val);
     },
   },

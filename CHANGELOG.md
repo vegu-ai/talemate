@@ -2,6 +2,152 @@
 
 _Auto-generated. Do not edit by hand._
 
+## 0.40.0
+
+### Upgrade Notes
+
+#### OpenAI Clients
+
+Review saved OpenAI settings after upgrading. GPT-5 and GPT-6 models keep Reasoning on; enable it for o-series models if needed. Sampling controls start off. For o1-mini or o1-preview, turn Send System Message off; turn Stream off if unavailable, and choose max_tokens for servers requiring it. Save your settings.
+
+#### OpenRouter Reasoning
+
+Reasoning off now omits the reasoning budget. Enable Reasoning to request thinking on models that make it optional; models that always think use their provider's default budget while it is off.
+
+#### Compatible Voice Servers
+
+OpenAI-compatible voice backends now request MP3 by default. Select WAV under Response format if your server cannot produce MP3.
+
+#### Shared Worlds
+
+Back up older shared worlds before upgrading. Missing shared entries can be recovered from a linked scene only until 0.40 first writes that world, so load the scene holding them first. Entries intentionally removed in an older version may also return; overwritten text must be recovered from older scene revisions.
+
+#### Visual Styles
+
+Shipped visual styles moved into Talemate's template group. Back up edits to templates/world-state/visual-styles.yaml before updating; if they block the update, stash them or restore the tracked file.
+
+### Character Knowledge
+
+Characters can remember only the passages they witnessed and the information shared with them. Known by, Learn and Never Learn controls let you shape their knowledge, including through the Director. Standard mode adds no requests at its default effort; older scenes keep their existing history behavior.
+
+### Character Perspectives
+
+New stories can give each character their own account of events, carried into their memories and summaries. Read and edit those accounts beside the full story, and share selected information as disclosures. This optional mode needs a strong model and adds analysis requests; choose it before the story has history.
+
+### Themes
+
+Choose a light or dark theme, or create and share your own colors, message styling and editor appearance. A live preview lets you edit colors where they appear, while personal color overrides survive theme changes.
+
+### Playthrough
+
+Replay a story one passage at a time with optional narration, automatic advance and chapter navigation. Resume where you left off, or fork at the current passage to take the story in a new direction.
+
+### Scene Controls
+
+Customize the scene header with story statistics, character portraits and knowledge effort. Add reusable shortcuts to scene tools and pin game variables as labelled sliders, choices or toggles for use during play.
+
+### Help Chat
+
+Ask the Help agent to create or change themes and templates, adjust settings and edit inference presets. Settings and template changes each require your permission, with both permissions off by default.
+
+### Chatterbox Turbo
+
+Chatterbox Turbo adds an optional voice backend with voice cloning and expressive sound tags.
+
+### Improvements
+
+**Story and World**
+
+- Add a selected person, object or place from the story to the world snapshot and keep it tracked.
+- Character arrivals and departures appear in history, with arrival notes and optional narration when moving characters into or out of the scene.
+- Prose perspective presets include examples, and the Director can help choose perspectives or reassess the scene's intent.
+- Finished passages appear while follow-up analysis, summaries and voice preparation continue.
+- Editing or deleting earlier passages warns when later story details may become inconsistent.
+
+**Memory**
+
+- Tune retrieval for recency, variety and relevance, with optional local reranking or AI refinement; OpenRouter embeddings are also available.
+
+**Director**
+
+- Reject a proposed action with instructions for a correction, and see which actions in a batch were applied.
+
+**Settings and Clients**
+
+- Client and agent settings share the Settings tab's Save and Discard controls, including scene overrides and assigning one client to all agents.
+- Pin inference parameters beside the client list and enter exact sampling, context and reasoning values.
+- OpenAI and compatible clients offer reasoning effort and completion-token options; OpenAI also offers sampling, system-message and streaming controls.
+- llama.cpp Router mode lets each client choose its model, including for vision and server prompt templates.
+- New clients default to at least 16k context; supported hosted clients enable concurrent requests by default, while saved configurations retain their values.
+- Muse Glimmer prompt formatting and newer Hugging Face template files are supported.
+
+**Images**
+
+- OpenRouter supports image-only generation and editing models, with model and provider suggestions and clearer errors for unsupported requests.
+- Paste images from the clipboard, choose megapixel resolution presets, and use the Qwen image-reference prompt preset.
+
+**Voice**
+
+- Volume and mute survive reloads; OpenAI-compatible voice backends offer audio-format selection and refresh complete voice lists without overwriting personal edits.
+
+**Prompt Tools**
+
+- Follow active, completed, failed and cancelled requests in the prompt viewers, with clearer action names.
+
+**Node Editor**
+
+- Rewrite spoken text without changing the story, and use newline and tab escapes in String Join and Split delimiters.
+- Added or edited command and agent modules become available automatically without a manual sync.
+
+**Interface**
+
+- Updated typography, controls and layouts follow Material Design 3.
+
+**Bundled Stories**
+
+- The original Simulation Suite is now hidden from new scene creation to steer new stories to Simulation Suite V2; existing saves stay available. Infinity Quest has a more concrete backstory.
+
+### Bug Fixes
+
+**Saves and History**
+
+- Save As protects read-only destinations, keeps errors open for correction, and preserves pending scene-settings edits when saving is cancelled.
+- Unsaved changes trigger a warning before leaving; read-only stories keep their save identity and correctly mark changes autosave cannot write.
+- Timeline forks preserve recorded scene state and warn about damaged history; repair starts fresh history while retaining the old files.
+- Failed revision-history writes stop the save with an error instead of leaving a save with incomplete history.
+- Static history and shared entries keep their timing across reloads and time changes; deleting messages preserves summary positions.
+- Shared world entries survive linked-scene loads and new episodes; sequential tracked-state answers accumulate over the story.
+
+**Characters and World**
+
+- Duplicate character names are refused, failed creation leaves no partial character, and valid character proposals apply without discarding other pending changes.
+- Regenerating a snapshot's source restores an earlier snapshot or clears it with a notice; introductions and emphasized text show world highlights.
+- Editing memories refreshes remembered context, and character replies avoid repeating passages already in their story context.
+
+**Director and Help**
+
+- Director requests can update several fields, empty action results explain the outcome, and result summaries display proper line breaks.
+- Cancelled actions stop the remaining calls, and failed settings application can be retried with Save.
+
+**Clients and Images**
+
+- OpenRouter respects disabled reasoning and per-action overrides; OpenAI-compatible clients handle empty replies and report non-streamed generation speed correctly.
+- Local clients refuse blank server URLs, unavailable clients remain visible, and Ollama honors stopping strings.
+- Image uploads work over plain HTTP, OpenRouter images are stored as PNG, and ComfyUI prompt inputs and workflow lists resolve correctly.
+
+**Voice and Startup**
+
+- Failed voice chunks no longer stop the playback queue, and compatible servers can return playable audio and complete voice listings.
+- Windows installation and frontend startup are repaired; fresh source installs start without configuration, and installed tokenizers need no startup download.
+
+**Node Editor**
+
+- Time nodes have valid defaults, inactive characters have no actor output, and test runs stop when switching scenes.
+
+**Security**
+
+- Generated HTML is displayed safely across story messages, chats and previews.
+
 ## 0.39.0
 
 ### Help Agent

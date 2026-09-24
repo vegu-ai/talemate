@@ -1,2 +1,0 @@
-fixed:
-  - "The scene intro now shows world state highlights. Early in a scene, when there are fewer messages than the lines in the moment and no time passage since the intro, the intro counts as part of the current moment and the snapshot reads it."

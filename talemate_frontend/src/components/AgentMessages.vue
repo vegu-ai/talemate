@@ -90,8 +90,7 @@ export default {
     },
     watch: {
         messageReceiveTime: {
-            handler(val) {
-                console.log("messageReceiveTime", val)
+            handler() {
                 this.pulseButton();
             },
             immediate: true

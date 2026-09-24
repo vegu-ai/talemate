@@ -731,7 +731,6 @@ export default {
     saveVoice() {
       if (!this.selectedVoice || !this.canSubmitVoice) return;
       const payload = { voice_id: this.selectedVoice.id, ...this.editVoice };
-      console.log("Saving voice", payload);
       payload.scope = this.scope;
       this.getWebsocket().send(
         JSON.stringify({ type: 'tts', action: 'edit', ...payload })
@@ -825,7 +824,6 @@ export default {
       }
       if (message.action === 'api_status' && message.api_status) {
         this.apiStatus = message.api_status;
-        console.log({ apiStatus: this.apiStatus });
       }
       if (message.action === 'voice_file_uploaded' && message.provider_id) {
         // Set the provider_id to the returned path and switch to ID tab

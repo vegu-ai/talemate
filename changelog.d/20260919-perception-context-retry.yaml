@@ -1,5 +1,0 @@
-fixed:
-  - "Perception analysis now regenerates when its inputs change, continuing the turn once they stabilize unless cancelled."
-  - "Perception analysis now includes tracked character states beyond the recent conversation, with the time since they were last set or confirmed."
-changed:
-  - "Perception analysis omits the scene description and places story intention before the task."

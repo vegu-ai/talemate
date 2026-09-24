@@ -521,7 +521,6 @@ export default {
                 if (newVal) {
                     // reload only if nothing is currently loaded
                     if(!this.graph) {
-                        console.log("Loading node module");
                         this.requestSceneNodes();
                     } else {
                         // Just resize and refresh the canvas when becoming visible again
@@ -712,7 +711,6 @@ export default {
             // Initialize new graph from scene nodes
             this.graph = initializeGraphFromJSON(this.sceneNodes, this.centerOnNode);
             this.centerOnNode = null;
-            console.log("Loaded graph", this.graph, this.sceneNodes);
 
             // If canvas exists, update it with new graph
             if (this.canvas) {
@@ -770,7 +768,6 @@ export default {
         },
 
         requestSceneNodes() {
-            console.log("Requesting node module", this.editingNodePath);
             this.getWebsocket().send(JSON.stringify({
                 type: 'node_editor',
                 action: 'request_node_module',
@@ -781,7 +778,6 @@ export default {
         updateSceneNodes() {
             const graph_data = convertGraphToJSON(this.graph);
 
-            console.log({graph_data});
 
             this.getWebsocket().send(JSON.stringify({
                 type: 'node_editor',
@@ -961,7 +957,6 @@ export default {
 
             this.nodeState[nodeState.node_id] = nodeState;
 
-            //console.log("Applying node state", nodeState);
 
             const ltNode = this.graph._nodes.find(node => node.talemateId === nodeState.node_id);
             let error = (nodeState && nodeState.error);
@@ -977,7 +972,6 @@ export default {
                 return;
             }
 
-            //console.log({ltNode, title:ltNode.title, nodeState: nodeState});
 
             ltNode.talemateState = nodeState;
 
@@ -1000,7 +994,6 @@ export default {
                     this.indicatedDeactivatedSocket(deactivated, ltInput, nodeState.input_values[ltInput.name]);
                     const ltLink = this.graph.links[ltInput.link];
                     if(!ltLink) {
-                        //console.log("No link for "+(ltNode.title+"."+ltInput.name), ltInput);
                         continue;
                     }
 
@@ -1016,7 +1009,6 @@ export default {
                         ltLink.color = "#9575cd";
                     }
 
-                    //console.log({ltInput, ltLink});
                 }
             }
 
@@ -1165,7 +1157,6 @@ export default {
         }
 
         LGraphCanvas.prototype.showSearchBox = function(event, options) {
-            console.log("Showing search box", event, options);
             nodeEditor.$refs.nodeSearch.open(event);
             return {
                 focus: () => {}

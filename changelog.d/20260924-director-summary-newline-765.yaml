@@ -1,0 +1,4 @@
+fixed:
+  - "Director Chat: Each call result now starts on its own line instead of displaying a literal backslash-n. The same fix applies to command narration in Simulation Suite V2."
+changed:
+  - "Node editor: String Join and Split delimiters now decode the typed escapes for newline (`\\n`), tab (`\\t`) and backslash (`\\\\`)."

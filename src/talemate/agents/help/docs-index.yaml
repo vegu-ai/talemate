@@ -790,7 +790,7 @@
   title: Director Chat Actions
   summary: 'Director chat top-level modules: create_image, direct_scene, direct_story_arc, gameplay, ooc, query, update_context,
     update_gamestate and yield_to_user. Knowledge changes route through Existing Characters. Covers action descriptions/instructions,
-    concurrency flags, JSON examples and action-summary plumbing.'
+    concurrency flags, JSON examples and action summaries that format multiple call results on separate lines.'
 - path: user-guide/node-editor/reference/nodes/agents-director-chat-instructors.md
   title: Director Chat Instructors
   summary: Director chat instructor module reference for Instruct Character/Narrator, character creation and updates, and
@@ -902,7 +902,7 @@
 - path: user-guide/node-editor/reference/nodes/data-string.md
   title: String Nodes
   summary: String nodes format dynamic inputs with Python-style Advanced Format or Jinja2 Format, create text, change case,
-    join/split, trim, replace and test substrings. Includes anchor-based Extract, indexed Substring, Excerpt and Condensed
+    join/split with visible delimiter escapes such as newline and tab, trim, replace and test substrings. Includes anchor-based Extract, indexed Substring, Excerpt and Condensed
     whitespace cleanup.
 - path: user-guide/node-editor/reference/nodes/data.md
   title: Data Nodes

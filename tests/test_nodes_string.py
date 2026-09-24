@@ -28,9 +28,10 @@ from talemate.game.engine.nodes.string import (
     StringCheck,
     Substring,
     Trim,
+    unescape_delimiter,
 )
 
-from _node_test_helpers import run_node
+from _node_test_helpers import build_graph, make_constant, run_node
 
 
 # ---------------------------------------------------------------------------
@@ -83,6 +84,24 @@ async def test_make_text_inherits_make_string_behavior():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.parametrize(
+    ("delimiter", "expected"),
+    [
+        ("\\n", "\n"),
+        ("\\t", "\t"),
+        ("\\\\", "\\"),
+        ("abc\\", "abc\\"),
+        ("\\", "\\"),
+        ("\\d", "\\d"),
+        ("\\x41", "\\x41"),
+        ("\\\\n", "\\n"),
+        (", ", ", "),
+    ],
+)
+def test_unescape_delimiter(delimiter, expected):
+    assert unescape_delimiter(delimiter) == expected
+
+
 @pytest.mark.asyncio
 async def test_split_basic_with_default_delimiter():
     out = await run_node(Split(), inputs={"string": "a b c", "delimiter": " "})
@@ -105,6 +124,31 @@ async def test_split_treats_backslash_n_as_real_newline():
     node.set_property("max_splits", -1)
     out = await run_node(node, inputs={"string": "a\nb\nc", "delimiter": "\\n"})
     assert out["parts"] == ["a", "b", "c"]
+
+
+@pytest.mark.asyncio
+async def test_split_treats_backslash_t_as_real_tab():
+    out = await run_node(Split(), inputs={"string": "a\tb\tc", "delimiter": "\\t"})
+    assert out["parts"] == ["a", "b", "c"]
+
+
+@pytest.mark.asyncio
+async def test_split_connected_none_delimiter_splits_on_whitespace():
+    producer = make_constant(string="a  b\nc", delimiter=None)
+    split = Split()
+    graph = build_graph(producer, split)
+    graph.connect(
+        producer.get_output_socket("string"), split.get_input_socket("string")
+    )
+    graph.connect(
+        producer.get_output_socket("delimiter"), split.get_input_socket("delimiter")
+    )
+
+    async def assert_parts(state):
+        assert split.get_output_socket("parts").value == ["a", "b", "c"]
+
+    graph.callbacks.append(assert_parts)
+    await graph.execute()
 
 
 # ---------------------------------------------------------------------------

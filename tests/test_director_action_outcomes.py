@@ -234,6 +234,22 @@ async def test_action_summary_preserves_call_results(
     assert "No work was started" not in result["summary"]
 
 
+async def test_action_summary_separates_multiple_call_results_with_newline(
+    action_scene,
+):
+    calls = [
+        Call(name="first", result="First finished", called=True),
+        Call(name="second", result="Second finished", called=True),
+    ]
+
+    result = await run_summary(action_scene, calls)
+
+    assert result["summary"] == (
+        "Action `first` SUCCESS: First finished \n"
+        "Action `second` SUCCESS: Second finished"
+    )
+
+
 @pytest.mark.parametrize(
     "inner_response",
     [

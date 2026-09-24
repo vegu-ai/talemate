@@ -1,7 +1,7 @@
 <template>
   <v-alert variant="text" color="narrator" elevation="0" density="compact" :style="{ opacity: revisionBusy ? 0.65 : 1, transition: 'opacity 0.2s ease' }" @mouseover="hovered=true" @mouseleave="hovered=false">
     <template v-slot:close>
-      <v-btn size="small" icon variant="text" class="close-button" @click="deleteMessage" :disabled="uxLocked">
+      <v-btn size="small" icon variant="text" class="close-button" :class="{ 'close-button--none': message_id == null }" @click="deleteMessage" :disabled="uxLocked">
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </template>
@@ -49,6 +49,7 @@
           :disabled="autocompleting"
           @redo="autocompleteField.redo()"
           @undo="autocompleteField.undo()" />
+        <HistoryEditNotice :message-id="message_id" />
       </div>
       <div v-if="!editing" class="narrator-text" @dblclick="startEdit()" v-html="renderedText">
       </div>
@@ -110,12 +111,14 @@ import MessageAssetMixin from './MessageAssetMixin.js';
 import RevisionNav from './RevisionNav.vue';
 import MessageToolbar from './MessageToolbar.vue';
 import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
+import HistoryEditNotice from './HistoryEditNotice.vue';
 export default {
   components: {
     MessageAssetImage,
     RevisionNav,
     MessageToolbar,
     AutocompleteRedoChip,
+    HistoryEditNotice,
   },
   mixins: [MessageAssetMixin],
 
@@ -425,4 +428,9 @@ export default {
 .close-button:hover {
   opacity: 1;
   color: rgba(var(--v-theme-on-surface), 0.9) !important;
+}
+
+/* the intro has no id to delete; the button keeps its space so the text width matches other rows */
+.close-button--none {
+  visibility: hidden;
 }</style>

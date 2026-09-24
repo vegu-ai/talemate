@@ -1,0 +1,4 @@
+added:
+  - "Scene view: while you edit an earlier message or time passage, a notice under the editor says that later messages, summaries and world state can become inconsistent with your change. The most recent entry in the scene history gets no notice."
+changed:
+  - "Scene view: deleting a message or a time passage now asks for confirmation. An earlier message gets a warning that later messages, summaries and world state can become inconsistent with the scene history; the most recent message gets a short \"Delete this message?\"."

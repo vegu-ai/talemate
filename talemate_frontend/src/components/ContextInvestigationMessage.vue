@@ -49,6 +49,7 @@
           :disabled="autocompleting"
           @redo="autocompleteField.redo()"
           @undo="autocompleteField.undo()" />
+        <HistoryEditNotice :message-id="message.id" />
       </div>
       <div v-if="!editing" @dblclick="startEdit()" v-html="renderedText">
       </div>
@@ -90,6 +91,7 @@ import MessageAssetMixin from './MessageAssetMixin.js';
 import RevisionNav from './RevisionNav.vue';
 import MessageToolbar from './MessageToolbar.vue';
 import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
+import HistoryEditNotice from './HistoryEditNotice.vue';
 
 export default {
   name: 'ContextInvestigationMessage',
@@ -98,6 +100,7 @@ export default {
     RevisionNav,
     MessageToolbar,
     AutocompleteRedoChip,
+    HistoryEditNotice,
   },
   mixins: [MessageAssetMixin],
   data() {

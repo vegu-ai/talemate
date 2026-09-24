@@ -28,6 +28,7 @@
         <v-btn class="ml-1" color="cancel" variant="text" size="small"
             prepend-icon="mdi-cancel" @click="cancelEdit">Cancel</v-btn>
       </div>
+      <HistoryEditNotice v-if="editing" :message-id="message_id" />
     </v-alert>
 
     <v-divider class="mb-4"></v-divider>
@@ -37,8 +38,12 @@
 
 <script>
 import { secondsToAmountUnit } from '@/utils/time';
+import HistoryEditNotice from './HistoryEditNotice.vue';
 
 export default {
+  components: {
+    HistoryEditNotice,
+  },
   data() {
     return {
       show: true,
@@ -80,17 +85,19 @@ export default {
       default: false
     },
   },
-  inject: ['getWebsocket', 'getMessageStyle', 'getMessageColor'],
+  inject: ['requestDeleteMessage', 'getWebsocket', 'getMessageStyle', 'getMessageColor'],
   methods: {
     toggle() {
       this.minimized = !this.minimized;
     },
     deletePassage() {
-      this.getWebsocket().send(JSON.stringify({
-        type: 'time_passage',
-        action: 'delete',
-        message_id: this.message_id,
-      }));
+      this.requestDeleteMessage(this.message_id, () => {
+        this.getWebsocket().send(JSON.stringify({
+          type: 'time_passage',
+          action: 'delete',
+          message_id: this.message_id,
+        }));
+      });
     },
     startEdit() {
       if (this.uxLocked || this.appBusy) return;

@@ -82,6 +82,43 @@ You can turn this off by disabling the auto progress setting, either in the game
 A set of tools to help you interact with the scenario. Find out more about the various actions in the [Scene Tools](/talemate/user-guide/scenario-tools) section of the user guide.
 
 
+## Edit and delete messages
+
+!!! info "Changed in 0.40.0"
+
+You can change the story after it happened: double-click a message to edit its text, or hover over it and click the **:material-close:** button at its top right to delete it. Both work on messages anywhere in the scene, not only the most recent one. Director notes cannot be edited, and some of them cannot be deleted either.
+
+Talemate does not rewrite what came after the change. Later messages, summaries and the world state were built from the old version of the story, and they keep what they learned from it. Say Edwin gave Mara a brass key three messages ago, and you delete that message. Mara can still mention the key in the next message, because the messages after it and the summary of that part of the story still include it.
+
+### Editing a message
+
+When you open an earlier message for editing, a notice appears under the text field:
+
+![Edit notice under a message in edit mode](/talemate/img/0.40.0/message-edit-notice.png)
+
+The notice is a reminder only. Edit the text and press `enter` to save it, or press `escape` (or click anywhere else) to cancel. The notice disappears when you leave edit mode.
+
+The most recent message in the scene history gets no notice: nothing has been built on it yet. Like the delete confirmation below, this goes by the scene history, not by the last message on screen.
+
+An earlier [time passage](/talemate/user-guide/time-passage) shows the same notice while you edit it. It has its own **Save** and **Cancel** buttons instead of the keys.
+
+### Deleting a message
+
+Talemate asks before it deletes a message. What it asks depends on where the message is in the scene history.
+
+An **earlier message** (any message before the last one in the scene history) gets a warning about what can go out of step:
+
+![Delete confirmation for an earlier message](/talemate/img/0.40.0/message-delete-earlier.png)
+
+The **most recent message** gets a short question, to catch a click by accident:
+
+![Delete confirmation for the most recent message](/talemate/img/0.40.0/message-delete-final.png)
+
+Click **Delete** to remove the message, or **Cancel** to keep it. Cancel leaves the scene exactly as it was.
+
+!!! note "The last message in the history, not the last one on screen"
+    The scene history can hold entries that the story view does not show, such as hidden director notes and tracked state updates. If such an entry comes after the last message you can see, that message is an earlier message, and you get the longer warning.
+
 ## Message revision history
 
 !!! info "New in 0.38.0"

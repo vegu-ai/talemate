@@ -11,6 +11,7 @@ Routes frontend-initiated changes to a SceneMessage:
 - ``swap_revision``: moves the active-version pointer to a different
   index on the stack, deferring derived work until keep/catch-up.
 - ``commit_revision``: updates derived evidence for the kept canonical text.
+- ``get_history_position``: whether a message is the final entry of scene history.
 - ``delete``: removes the message from scene history.
 - ``get_perspectives``: one character's view of each message and of the intro.
 - ``edit_perspective``: replaces one character's view of a message by hand.
@@ -74,6 +75,10 @@ class SwapRevisionPayload(pydantic.BaseModel):
 
 class MessageIdPayload(pydantic.BaseModel):
     id: int
+
+
+class HistoryPositionPayload(MessageIdPayload):
+    request_id: str | None = None
 
 
 class PerspectivesPayload(pydantic.BaseModel):
@@ -215,6 +220,25 @@ class SceneMessagePlugin(Plugin):
         self.scene.saved = False
         self.scene.emit_history_message(message)
         await self.signal_operation_done()
+
+    async def handle_get_history_position(self, data: dict):
+        payload = HistoryPositionPayload(**data)
+        if self.scene.message_index(payload.id) < 0:
+            await self.signal_operation_failed(
+                f"Message {payload.id} not found in scene history",
+                request_id=payload.request_id,
+                failed_action="get_history_position",
+            )
+            return
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "history_position",
+                "id": payload.id,
+                "final": self.scene.history[-1].id == payload.id,
+                "request_id": payload.request_id,
+            }
+        )
 
     async def handle_delete(self, data: dict):
         """

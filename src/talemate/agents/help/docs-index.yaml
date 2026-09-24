@@ -690,9 +690,9 @@
     stopping pods and connecting to port 7860.'
 - path: user-guide/interacting.md
   title: Interacting with the scene
-  summary: Send dialogue or narration, regenerate and continue messages, and browse or edit revisions. Analyze perceptions
-    refreshes character views; Update knowledge retries index work. Covers revision ownership, accepted player lines, cancellation
-    and saving.
+  summary: Send dialogue or narration, edit or delete messages, regenerate and continue messages, and browse or edit
+    revisions. Analyze perceptions refreshes character views; Update knowledge retries index work. Covers delete
+    confirmations, edit consistency warnings, revision ownership, accepted player lines, cancellation and saving.
 - path: user-guide/node-editor/core-concepts/collector_nodes.md
   title: Collector Nodes
   summary: Dict/List Collector nodes aggregate dynamic inputs with key inference or Make Key-Value Pair tuples, ordered lists

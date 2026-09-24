@@ -38,9 +38,9 @@ is listed by its duration instead.
 
 ### In the Scene View
 
-Time passage markers in the scene view can be edited by double-clicking them. This opens inline editing controls where you can change the duration amount and unit.
+Time passage markers in the scene view can be edited by double-clicking them. This opens inline editing controls where you can change the duration amount and unit. If the time passage is not the most recent entry in the scene history, a notice under the controls reminds you that later messages, summaries and world state can go out of step with the change (see [Edit and delete messages](/talemate/user-guide/interacting#edit-and-delete-messages)).
 
-![Editing a time passage in the scene view](../img/0.36.0/time-passage-edit-scene.png)
+![Editing a time passage in the scene view](../img/0.40.0/time-passage-edit-scene.png)
 
 1. **Double-click** the time passage message to enter edit mode
 2. Adjust the **Amount** (numeric value) and **Unit** (minutes, hours, days, etc.)
@@ -65,14 +65,14 @@ To edit a time passage in the World State Manager:
 
 ### From the Scene View
 
-Each time passage marker in the scene view has a close button (visible on hover) that allows you to delete it. Click the close button to remove the time passage from the history.
+Each time passage marker in the scene view has a close button (visible on hover) that allows you to delete it. Click the close button, then click **Delete** in the confirmation to remove the time passage from the history. **Cancel** keeps it. The confirmation is the same one that other messages use (see [Deleting a message](/talemate/user-guide/interacting#deleting-a-message)).
 
 ### From the World State Manager
 
 In the World State Manager history view, hover over a time passage entry to reveal a delete button. Click it and confirm the deletion.
 
 !!! warning "Effect on Timestamps"
-    Deleting or editing a time passage automatically recalculates all timestamps in the scene history that follow the changed entry. This ensures temporal consistency throughout the scene.
+    Deleting or editing a time passage automatically recalculates all timestamps in the scene history that follow the changed entry. This ensures temporal consistency throughout the scene. Text that was already written is not rewritten: later messages, summaries and world state that mention the old time keep it.
 
 ## How Time Passages Affect AI Context
 

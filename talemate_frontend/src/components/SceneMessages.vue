@@ -268,6 +268,19 @@
         @confirm="confirmDeleteImage"
     />
 
+    <ConfirmActionPrompt
+        ref="deleteMessageConfirm"
+        :action-label="deleteMessagePrompt.title"
+        :description="deleteMessagePrompt.text"
+        confirm-text="Delete"
+        cancel-text="Cancel"
+        icon="mdi-close-box-outline"
+        color="delete"
+        :max-width="420"
+        @confirm="confirmDeleteMessage"
+        @cancel="cancelDeleteMessage"
+    />
+
     <!-- Insert Time Passage Dialog -->
     <v-dialog v-model="insertTimePassageDialog" max-width="400">
         <v-card>
@@ -441,6 +454,12 @@ import VisualAssetsMixin from './VisualAssetsMixin.js';
 import RevisionStackMixin from './RevisionStackMixin.js';
 import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { isVisualAgentReady, VIS_TYPE } from '@/constants/visual';
+import {
+    DELETE_EARLIER_TEXT,
+    DELETE_EARLIER_TITLE,
+    DELETE_FINAL_TEXT,
+    DELETE_FINAL_TITLE,
+} from '@/constants/historyEditWarnings';
 import { isKnownSceneCharacter } from '@/utils/entityActions';
 import { parseCharacterMessage } from '@/utils/characterMessage.js';
 import { primaryModifierLabel } from '@/utils/keyboardModifiers';
@@ -608,6 +627,10 @@ export default {
         return {
             primaryModifierLabel,
             messages: [],
+            pendingDelete: null,
+            deletePromptFinal: false,
+            pendingEditNotice: null,
+            historyPositionSerial: 0,
             selectedForkMessageId: null,
             pendingForkRequestId: null,
             forkError: '',
@@ -688,6 +711,12 @@ export default {
         }
     },
     computed: {
+        deleteMessagePrompt() {
+            return this.deletePromptFinal
+                ? { title: DELETE_FINAL_TITLE, text: DELETE_FINAL_TEXT }
+                : { title: DELETE_EARLIER_TITLE, text: DELETE_EARLIER_TEXT };
+        },
+
         visibleMessages() {
             return visibleMessages(this.messages, this.revealCount);
         },
@@ -793,6 +822,7 @@ export default {
     provide() {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
+            requestEditNotice: this.requestEditNotice,
             requestRegenerateLastMessage: this.requestRegenerateLastMessage,
             createPin: this.createPin,
             forkSceneInitiate: this.forkSceneInitiate,
@@ -1206,8 +1236,59 @@ export default {
             this.getWebsocket().send(JSON.stringify({ type: 'world_state_agent', action: 'summarize_and_pin', message_id }));
         },
 
-        requestDeleteMessage(message_id) {
-            this.getWebsocket().send(JSON.stringify({ type: 'scene_message', action: 'delete', id: message_id }));
+        // the delete and the edit notice share the answer frame; the request id tells them apart
+        requestHistoryPosition(messageId, kind) {
+            this.historyPositionSerial += 1;
+            const requestId = `${kind}:${messageId}:${this.historyPositionSerial}`;
+            this.getWebsocket().send(JSON.stringify({ type: 'scene_message', action: 'get_history_position', id: messageId, request_id: requestId }));
+            return requestId;
+        },
+
+        requestDeleteMessage(messageId, deleteOnConfirm = null) {
+            if (messageId == null) return;
+            this.pendingDelete = { messageId, deleteOnConfirm, requestId: this.requestHistoryPosition(messageId, 'delete') };
+        },
+
+        requestEditNotice(messageId, onEarlier) {
+            if (messageId == null) return;
+            this.pendingEditNotice = { onEarlier, requestId: this.requestHistoryPosition(messageId, 'edit') };
+        },
+
+        resetHistoryPositionRequests() {
+            // message ids restart with the next scene
+            this.pendingDelete = null;
+            this.pendingEditNotice = null;
+            if (this.$refs.deleteMessageConfirm.confirming) this.$refs.deleteMessageConfirm.cancelAction();
+        },
+
+        handleDeleteConfirmMessages(data) {
+            if (data.type !== 'scene_message' || data.action !== 'history_position') return;
+            const pending = this.pendingDelete;
+            if (!pending || pending.requestId !== data.request_id) return;
+            this.deletePromptFinal = data.final;
+            this.$refs.deleteMessageConfirm.initiateAction(pending);
+        },
+
+        handleEditNoticeMessages(data) {
+            if (data.type !== 'scene_message' || data.action !== 'history_position') return;
+            const pending = this.pendingEditNotice;
+            if (!pending || pending.requestId !== data.request_id) return;
+            this.pendingEditNotice = null;
+            if (!data.final) pending.onEarlier();
+        },
+
+        confirmDeleteMessage(pending) {
+            if (pending !== this.pendingDelete) return;
+            this.pendingDelete = null;
+            if (pending.deleteOnConfirm) {
+                pending.deleteOnConfirm();
+                return;
+            }
+            this.getWebsocket().send(JSON.stringify({ type: 'scene_message', action: 'delete', id: pending.messageId }));
+        },
+
+        cancelDeleteMessage() {
+            this.pendingDelete = null;
         },
 
         // Mark the most recent revision-supporting message as
@@ -2095,9 +2176,12 @@ export default {
         },
 
         handleMessage(data) {
+            this.handleDeleteConfirmMessages(data);
+            this.handleEditNoticeMessages(data);
             if (data.type === 'system'
                 && ['scene.loading', 'scene.closed', 'scene.load_failure'].includes(data.id)) {
                 this.resetForkScene();
+                this.resetHistoryPositionRequests();
             }
             if (this.handleForkSceneMessage(data)) {
                 return;

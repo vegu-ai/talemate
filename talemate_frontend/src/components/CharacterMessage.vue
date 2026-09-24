@@ -31,31 +31,32 @@
         {{ character }}
       </span>
       <div class="character-content" :class="{ 'position-relative': editing, 'character-content--editing': editing }">
-        <v-textarea
-          ref="textarea"
-          v-if="editing"
-          v-model="editing_text"
-          variant="outlined"
-          class="text-normal"
-          :color="color"
+        <div v-if="editing" class="character-editor">
+          <v-textarea
+            ref="textarea"
+            v-model="editing_text"
+            variant="outlined"
+            class="text-normal"
+            :color="color"
 
-          auto-grow
+            auto-grow
 
-          :hint="autocompleteInfoMessage(autocompleting) + ', Shift+Enter for newline'"
-          :loading="autocompleting"
-          :disabled="autocompleting"
+            :hint="autocompleteInfoMessage(autocompleting) + ', Shift+Enter for newline'"
+            :loading="autocompleting"
+            :disabled="autocompleting"
 
-          @keydown.enter.prevent="handleEnter"
-          @blur="autocompleting ? null : cancelEdit()"
-          @keydown.escape.prevent="cancelEdit()"
-          >
-        </v-textarea>
-        <AutocompleteRedoChip
-          v-if="editing"
-          :applied="autocompleteField?.state.applied || false"
-          :disabled="autocompleting"
-          @redo="autocompleteField.redo()"
-          @undo="autocompleteField.undo()" />
+            @keydown.enter.prevent="handleEnter"
+            @blur="autocompleting ? null : cancelEdit()"
+            @keydown.escape.prevent="cancelEdit()"
+            >
+          </v-textarea>
+          <AutocompleteRedoChip
+            :applied="autocompleteField?.state.applied || false"
+            :disabled="autocompleting"
+            @redo="autocompleteField.redo()"
+            @undo="autocompleteField.undo()" />
+          <HistoryEditNotice :message-id="message_id" />
+        </div>
         <div v-if="!editing" class="character-text-wrapper" @dblclick="startEdit()">
           <div class="character-text" v-html="renderedText"></div>
         </div>
@@ -106,12 +107,14 @@ import MessageAssetMixin from './MessageAssetMixin.js';
 import RevisionNav from './RevisionNav.vue';
 import MessageToolbar from './MessageToolbar.vue';
 import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
+import HistoryEditNotice from './HistoryEditNotice.vue';
 export default {
   components: {
     MessageAssetImage,
     RevisionNav,
     MessageToolbar,
     AutocompleteRedoChip,
+    HistoryEditNotice,
   },
   mixins: [MessageAssetMixin],
   props: {
@@ -427,6 +430,11 @@ export default {
    position-relative utility) so the non-editing layout stays unchanged. */
 .character-content--editing {
   --autocomplete-redo-chip-top: 4px;
+}
+
+/* keeps the edit notice beside the floated avatar, under the field */
+.character-editor {
+  display: flow-root;
 }
 
 .character-text :deep(.scene-paragraph:last-child) {

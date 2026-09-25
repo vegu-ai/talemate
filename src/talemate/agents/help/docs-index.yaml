@@ -20,7 +20,7 @@
   summary: intro_knowledge, SourceReference intro, intro_present, opening audience derivation on load; scoped graph memory
     access. Stored views, audience summaries, context_review, push_history, agent.conversation.finalized, portrait cadence,
     before_memory, scene.history_ready, evidence_boundary/evidence_budget, swap_revision/commit_revision, pending_perception_messages,
-    deep retrieval. Tracked age.
+    deep retrieval. Tracked age. Perception exclusions (span, reason) before text, exclusion_errors host check and repair.
 - path: dev/howto/add-a-worldstate-template-type.md
   title: Adding a new world-state template
   summary: 'Developer walkthrough for adding a world-state template type using Writing Style phrase detection: register a
@@ -1019,7 +1019,8 @@
   summary: 'View Perspective chip above the scene tools in a Character perspectives story: splits the scene to show, beside
     each message, what one character noticed of it. Double-click to edit a character''s perspective of a message or write
     one in an empty cell. Covers empty-cell reasons, the read-only introduction, the scene header label, and Analyze them
-    again.'
+    again. Explains how a perspective excludes what the character cannot perceive (whispers, private thoughts) and keeps
+    the rest word for word.'
 - path: user-guide/playthrough.md
   title: Playthrough Mode
   summary: Playthrough replays existing scene messages with Space/click advance, scrubber, time-passage chapters, restart,

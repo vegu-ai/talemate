@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 from structlog.testing import capture_logs
 
+from _perception_response_helpers import exclude_passage, excluding_passage
 from talemate.agents.summarize.perceptions import (
     PerceptionValidationError,
     parse_perceptions,
@@ -18,6 +19,8 @@ from talemate.knowledge.perspectives import set_source_perspectives
 from talemate.knowledge.revision_browsing import defer_revision_work
 from talemate.knowledge.revision_refresh import catch_up_revisions
 from talemate.scene_message import CharacterMessage, NarratorMessage
+
+PASSAGE = "A bell rings."
 
 
 def response(names=("Alice", "Bob")):
@@ -48,7 +51,10 @@ def analysis(scene, monkeypatch):
     summarizer = get_agent("summarizer")
     request = AsyncMock(return_value=result(response()))
     dialog = AsyncMock(return_value="cancel")
-    monkeypatch.setattr("talemate.agents.summarize.perceptions.Prompt.request", request)
+    monkeypatch.setattr(
+        "talemate.agents.summarize.perceptions.Prompt.request",
+        excluding_passage(request),
+    )
     monkeypatch.setattr(summarizer.client, "_prompt_generation_error", dialog)
     with ActiveScene(scene):
         yield scene, summarizer, request, dialog
@@ -69,7 +75,9 @@ def test_unknown_audiences_duplicates_and_host_fields_keep_first_valid_views():
         ]
     )
     with capture_logs() as logs:
-        views = parse_perceptions(json.dumps(payload), ("Alice", "Bob"))
+        views = parse_perceptions(
+            exclude_passage(json.dumps(payload), PASSAGE), ("Alice", "Bob"), PASSAGE
+        )
     assert len(views) == 2
     assert views[0].text == original
     assert views[0].id is None
@@ -92,7 +100,9 @@ def test_unreadable_citations_require_repair_and_warn(field, citations):
     else:
         payload["views"][0][field] = citations
     with capture_logs() as logs, pytest.raises(PerceptionValidationError) as error:
-        parse_perceptions(json.dumps(payload), ("Alice", "Bob"))
+        parse_perceptions(
+            exclude_passage(json.dumps(payload), PASSAGE), ("Alice", "Bob"), PASSAGE
+        )
     assert field in str(error.value)
     assert [view.audience for view in error.value.views] == [("Bob",)]
     assert any(
@@ -158,7 +168,9 @@ def test_missing_audience_error_retains_valid_sibling_and_reason():
     payload = response()
     payload["views"][1]["text"] = " "
     with pytest.raises(PerceptionValidationError, match="Bob") as error:
-        parse_perceptions(json.dumps(payload), ("Alice", "Bob"))
+        parse_perceptions(
+            exclude_passage(json.dumps(payload), PASSAGE), ("Alice", "Bob"), PASSAGE
+        )
     assert "complete replacement text" in str(error.value)
     assert [view.audience for view in error.value.views] == [("Alice",)]
 
@@ -166,14 +178,16 @@ def test_missing_audience_error_retains_valid_sibling_and_reason():
 def test_invalid_duplicate_does_not_hide_later_valid_view():
     payload = response()
     payload["views"].insert(0, {"audience": ["Alice"], "status": "pending"})
-    views = parse_perceptions(json.dumps(payload), ("Alice", "Bob"))
+    views = parse_perceptions(
+        exclude_passage(json.dumps(payload), PASSAGE), ("Alice", "Bob"), PASSAGE
+    )
     assert views[0].text == "Alice hears a bell."
 
 
 @pytest.mark.parametrize("text", [None, "", "not JSON", "{}", '{"views": null}'])
 def test_unreadable_response_has_actionable_validation_error(text):
     with pytest.raises(PerceptionValidationError):
-        parse_perceptions(text, ("Alice", "Bob"))
+        parse_perceptions(text, ("Alice", "Bob"), PASSAGE)
 
 
 async def test_self_citation_is_silent_and_releases_dependents(analysis):

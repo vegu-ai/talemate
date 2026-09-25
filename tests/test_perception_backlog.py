@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from _perception_backlog_helpers import answering
+from _perception_response_helpers import excluding_passage
 from structlog.testing import capture_logs
 
 import talemate.agents.summarize.perceptions as perceptions
@@ -80,7 +81,10 @@ def setup(scene, monkeypatch):
     summarizer = get_agent("summarizer")
     summarizer.actions["perceptions"].config["automatic_repair"].value = False
     request = AsyncMock(side_effect=analysis())
-    monkeypatch.setattr("talemate.agents.summarize.perceptions.Prompt.request", request)
+    monkeypatch.setattr(
+        "talemate.agents.summarize.perceptions.Prompt.request",
+        excluding_passage(request),
+    )
     with ActiveScene(scene):
         yield scene, summarizer, request
 

@@ -4,9 +4,11 @@ In a Character perspectives story you can read each character's view next to the
 
 A perspective uses the same colors as the story: spoken lines in double quotes stand out from the prose around them.
 
-Perspectives keep the original passage's tense, narrator and style. If a character can perceive everything, the passage is copied unchanged. Inaccessible details are removed while recognizable shared activities remain. While Alice and Bob are playing together, Alice's private thought *I loved playing chess with Bob* becomes *I was playing chess with Bob* in Bob's view. The *I* still refers to Alice.
+Perspectives keep the original passage's tense, narrator and style. For each character, the Summarizer first lists the exact parts of the passage that the character cannot perceive, each with a short reason such as *inaudible* or *private-thought*. Then it deletes those parts and keeps the rest word for word. If a character can perceive everything, the passage is copied unchanged.
 
-A known limitation affects whispers: a bystander who sees someone whisper but cannot hear the words may lose the whispering action from their view as well.
+Where a removed part leaves a sentence broken, only that sentence is repaired, and the visible part of an action stays. Alice whispers *"The key is in the blue vase"* to Bob, and Cora stands too far away to hear. Cora's view says *I whispered something*: she saw the whisper, not the words. The same holds when the whispered words end in a question or exclamation mark (*"Is the key in the blue vase?" she whispered*), or when the whisper is told in its own sentence after the words. While Alice and Bob are playing together, Alice's private thought *I loved playing chess with Bob* becomes *I was playing chess with Bob* in Bob's view. The *I* still refers to Alice.
+
+Talemate checks each view against its list. A view that keeps a listed part, or that changes, drops or adds a sentence away from a listed part, is rejected. With **Automatically repair analysis** on (the default), the Summarizer then asks again for that character only; otherwise the analysis stops with an error you can retry. The check cannot tell whether the list itself is right. A known limitation: the Summarizer sometimes lists a part the character can perceive, for example a thin door that lets a hidden listener hear, and that part is then missing from the view ([#783](https://github.com/vegu-ai/talemate-private/issues/783)).
 
 ![The scene split in two, with Edwin's perspective to the right of each message](/talemate/img/0.40.0/scene-perspective-split-view.png)
 

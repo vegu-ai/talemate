@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from _perception_backlog_helpers import answering
+from _perception_response_helpers import exclude_passage, excluding_passage
 from talemate.agents.summarize.perceptions import parse_perceptions, perception_context
 from talemate.character import Character
 from talemate.client.base import _generation_error_futures, resolve_generation_error
@@ -30,8 +31,12 @@ CASES = json.loads(
 )
 
 
-def answer(alice="Alice says hello.", bob="Bob hears Alice say hello."):
-    return json.dumps(
+PASSAGE = "Alice: Hello."
+
+
+def answer(alice="Alice says hello.", bob="Bob hears Alice say hello.", passage=None):
+    """With `passage`, ready views exclude all of it, as a direct parse needs."""
+    payload = json.dumps(
         {
             "views": [
                 {
@@ -45,6 +50,7 @@ def answer(alice="Alice says hello.", bob="Bob hears Alice say hello."):
             ]
         }
     )
+    return exclude_passage(payload, passage) if passage else payload
 
 
 def result(text=None):
@@ -68,7 +74,10 @@ def setup(scene, monkeypatch):
     summarizer = get_agent("summarizer")
     summarizer.actions["perceptions"].config["automatic_repair"].value = False
     request = AsyncMock(return_value=result())
-    monkeypatch.setattr("talemate.agents.summarize.perceptions.Prompt.request", request)
+    monkeypatch.setattr(
+        "talemate.agents.summarize.perceptions.Prompt.request",
+        excluding_passage(request),
+    )
     with ActiveScene(scene):
         yield scene, summarizer, request
 
@@ -224,12 +233,14 @@ async def test_batch_analysis_is_ordered_and_every_passage_registered(setup):
 )
 def test_reject_invalid_analysis(payload):
     with pytest.raises(ValueError):
-        parse_perceptions(payload, ("Alice", "Bob"))
+        parse_perceptions(payload, ("Alice", "Bob"), PASSAGE)
 
 
 def test_accept_complete_views_and_explicit_omission():
     views = parse_perceptions(
-        "```json\n" + answer(bob=None) + "\n```", ("Alice", "Bob")
+        "```json\n" + answer(bob=None, passage=PASSAGE) + "\n```",
+        ("Alice", "Bob"),
+        PASSAGE,
     )
     assert views[0].text == "Alice says hello."
     assert views[1].status == "omitted"
@@ -525,12 +536,11 @@ async def test_shared_prompt_renders_without_additional_requests(scene, monkeypa
     scene.character_data = {name: Character(name=name) for name in ("Alice", "Bob")}
     scene.active_characters = ["Alice", "Bob"]
     client = get_agent("summarizer").client
-    send = AsyncMock(return_value=answer(bob=None))
+    passage = "Alice: *A private thought.*"
+    send = AsyncMock(return_value=answer(bob=None, passage=passage))
     monkeypatch.setattr(client, "send_prompt", send)
     with ActiveScene(scene):
-        await scene.push_history(
-            CharacterMessage(message="Alice: *A private thought.*")
-        )
+        await scene.push_history(CharacterMessage(message=passage))
     send.assert_awaited_once()
     prompt = str(send.await_args.args[0])
     assert "Do not continue the story" in prompt
@@ -637,7 +647,10 @@ async def test_websocket_edit_defers_rebuild_and_saves(setup, monkeypatch):
     ],
 )
 def test_project_code_block_extraction(wrap):
-    assert len(parse_perceptions(wrap(answer()), ("Alice", "Bob"))) == 2
+    assert (
+        len(parse_perceptions(wrap(answer(passage=PASSAGE)), ("Alice", "Bob"), PASSAGE))
+        == 2
+    )
 
 
 @pytest.mark.asyncio
@@ -933,10 +946,10 @@ async def test_drop_unoffered_analytical_input_ids(setup):
     scene, _, _ = setup
     message = CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
     scene.history.append(message)
-    payload = json.loads(answer())
+    payload = json.loads(answer(passage=PASSAGE))
     payload["views"][0]["knowledge_ids"] = ["K1-999"]
     outputs = resolve_perception_inputs(
-        parse_perceptions(json.dumps(payload), ("Alice", "Bob")),
+        parse_perceptions(json.dumps(payload), ("Alice", "Bob"), PASSAGE),
         perception_context(scene, message),
     )
     assert len(outputs) == 2
@@ -949,7 +962,9 @@ async def test_drop_unoffered_analytical_input_ids(setup):
     "wrapper", ["{}", "```json\n{}\n```", "Analysis:\n```JSON\n{}\n```\nDone."]
 )
 def test_literal_fences_inside_perception_prose(text, wrapper):
-    parsed = parse_perceptions(wrapper.format(answer(alice=text)), ("Alice", "Bob"))
+    parsed = parse_perceptions(
+        wrapper.format(answer(alice=text, passage=PASSAGE)), ("Alice", "Bob"), PASSAGE
+    )
     assert parsed[0].text == text
 
 

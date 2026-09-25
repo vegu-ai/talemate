@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from _perception_backlog_helpers import answering
+from _perception_response_helpers import excluding_passage
 from test_perception_backlog import analysis, replace_view, story
 from talemate.character import Character, activate_character
 from talemate.context import ActiveScene
@@ -41,7 +42,10 @@ async def test_saved_perspectives_survive_activation_after_reload(
     }
     scene.active_characters = ["Alice", "Bob"]
     request = AsyncMock(side_effect=analysis())
-    monkeypatch.setattr("talemate.agents.summarize.perceptions.Prompt.request", request)
+    monkeypatch.setattr(
+        "talemate.agents.summarize.perceptions.Prompt.request",
+        excluding_passage(request),
+    )
     with ActiveScene(scene):
         messages = await story(scene)
         stored = [message.knowledge.model_dump(mode="json") for message in messages]
@@ -129,7 +133,10 @@ async def test_absent_stale_ready_view_is_omitted_without_weakening_citations(
     )
     scene.history.extend([evidence, message])
     request = AsyncMock()
-    monkeypatch.setattr("talemate.agents.summarize.perceptions.Prompt.request", request)
+    monkeypatch.setattr(
+        "talemate.agents.summarize.perceptions.Prompt.request",
+        excluding_passage(request),
+    )
     with ActiveScene(scene):
         output = {"audience": ["Carol"], "status": "ready", "text": "I hear the bell."}
         if stale_kind == "dependency":
@@ -194,7 +201,10 @@ async def test_no_presence_requires_no_analysis_and_keeps_stored_views(
     message = CharacterMessage(message="Alice: Carol is away.", present=present)
     scene.history.append(message)
     request = AsyncMock()
-    monkeypatch.setattr("talemate.agents.summarize.perceptions.Prompt.request", request)
+    monkeypatch.setattr(
+        "talemate.agents.summarize.perceptions.Prompt.request",
+        excluding_passage(request),
+    )
     with ActiveScene(scene):
         reference = set_source_perspectives(
             scene,
@@ -232,7 +242,10 @@ async def test_noncurrent_absent_view_does_not_block_generation(
     message = CharacterMessage(message="Alice: A bell rings.", present=["Alice", "Bob"])
     scene.history.append(message)
     request = AsyncMock()
-    monkeypatch.setattr("talemate.agents.summarize.perceptions.Prompt.request", request)
+    monkeypatch.setattr(
+        "talemate.agents.summarize.perceptions.Prompt.request",
+        excluding_passage(request),
+    )
     with ActiveScene(scene):
         reference = set_source_perspectives(
             scene,
@@ -266,7 +279,10 @@ async def test_no_cast_passage_is_omitted_before_and_after_hand_edit(
     scene.active_characters = []
     message = NarratorMessage(message="Alice hears a bell.")
     request = AsyncMock()
-    monkeypatch.setattr("talemate.agents.summarize.perceptions.Prompt.request", request)
+    monkeypatch.setattr(
+        "talemate.agents.summarize.perceptions.Prompt.request",
+        excluding_passage(request),
+    )
     with ActiveScene(scene):
         await scene.push_history(message)
         assert message.present is None
@@ -306,7 +322,10 @@ async def test_editing_passage_with_absent_view_repairs_present_character(
     scene.active_characters = ["Alice"]
     message = CharacterMessage(message="Alice: A bell rings.")
     request = AsyncMock(side_effect=analysis())
-    monkeypatch.setattr("talemate.agents.summarize.perceptions.Prompt.request", request)
+    monkeypatch.setattr(
+        "talemate.agents.summarize.perceptions.Prompt.request",
+        excluding_passage(request),
+    )
     with ActiveScene(scene):
         await scene.push_history(message)
         scene.active_characters.append("Carol")
@@ -363,7 +382,10 @@ async def test_absent_pending_record_does_not_hold_back_readiness(scene, monkeyp
     scene.active_characters = ["Alice"]
     message = CharacterMessage(message="Alice: A bell rings.")
     request = AsyncMock(side_effect=analysis())
-    monkeypatch.setattr("talemate.agents.summarize.perceptions.Prompt.request", request)
+    monkeypatch.setattr(
+        "talemate.agents.summarize.perceptions.Prompt.request",
+        excluding_passage(request),
+    )
     statuses = []
 
     def record(_, entry, state):

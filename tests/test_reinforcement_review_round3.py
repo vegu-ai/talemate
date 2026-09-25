@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 import test_reinforcement_perspectives as cases
+from _perception_response_helpers import excluding_passage
 from test_reinforcement_review import response
 from talemate.agents.visual.schema import PromptFinalizer
 from talemate.character import Character
@@ -59,7 +60,7 @@ async def test_context_db_detail_round_trips_real_prefixed_document(
     request = AsyncMock(
         return_value=response(Elmer="Elmer notices the lantern.", Marie=None)
     )
-    monkeypatch.setattr(Prompt, "request", request)
+    monkeypatch.setattr(Prompt, "request", excluding_passage(request))
     monkeypatch.setattr(
         get_agent("summarizer").client,
         "_prompt_generation_error",
@@ -178,7 +179,7 @@ async def test_context_db_save_does_not_overwrite_a_refresh_during_document_read
     request = AsyncMock(
         return_value=response(Elmer="Elmer notices the lantern.", Marie=None)
     )
-    monkeypatch.setattr(Prompt, "request", request)
+    monkeypatch.setattr(Prompt, "request", excluding_passage(request))
     monkeypatch.setattr(
         get_agent("summarizer").client,
         "_prompt_generation_error",

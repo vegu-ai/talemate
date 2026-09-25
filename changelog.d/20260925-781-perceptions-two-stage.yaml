@@ -1,0 +1,2 @@
+changed:
+- "Character perspectives are written in two steps: the Summarizer first lists the exact parts of a passage a character cannot perceive, then deletes only those parts, so a bystander who sees a whisper but cannot hear it keeps \"I whispered something\". Talemate checks each view against that list and rejects a view in which other text was dropped, changed or added."

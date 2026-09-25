@@ -210,17 +210,47 @@ keeps the first valid view for each requested canonical audience. Unrequested
 audiences, extra fields and model-supplied identities/references are ignored.
 Invalid views leave their audience missing; they do not discard valid siblings.
 The response includes explicit `knowledge_ids` and `passage_ids` arrays per audience,
-naming supplied prior inputs actually used. Replacement prose preserves the source
-passage's tense, grammatical person, narrator, voice and style. Accessible wording
-stays unchanged, including the entire passage when nothing is inaccessible. Only
-local edits needed to remove inaccessible content and retain the observable activity
-within a thought are allowed. A first-person narrator remains the same person
-in every audience's view. The concrete subject of a shared activity remains,
-such as chess at a shared board. Inaudible whispered words and their subject stay
-inaccessible. The visible whispering act can also be omitted from a bystander's
-view; this known limitation is tracked in [#780](https://github.com/vegu-ai/talemate-private/issues/780).
-The host does not split or parse passage markup or require a message shape; double
-quotes identifying dialogue is the accepted convention.
+naming supplied prior inputs actually used.
+
+Each view is written in two ordered steps in one response. Its fields come in the
+order `audience`, `status`, `exclusions`, `text`, `knowledge_ids`, `passage_ids`.
+`exclusions` lists what the audience cannot perceive as `{"span", "reason"}`
+objects: `span` is copied exactly from the passage and `reason` is one word
+(`inaudible`, `private-thought`, `unseen`, `asleep`, `absent`, `reader-only`, ...).
+`text` is the passage with those spans deleted. Everything else keeps the source
+passage's tense, grammatical person, narrator, voice, style and wording, including
+the entire passage when `exclusions` is empty. At a removed span only a local edit
+is allowed: repair the join, keep the observable part of an act (a visible whisper
+becomes "whispered something", which fixes
+[#780](https://github.com/vegu-ai/talemate-private/issues/780)), and keep the
+concrete subject of a shared activity, such as chess at a shared board. A
+first-person narrator remains the same person in every audience's view. Omitted
+views use `exclusions: []` and `text: null`. The exclusions are validated, not stored.
+
+`parse_perceptions` receives the passage text and checks every ready view with
+`exclusion_errors`. A ready view needs an explicit `exclusions` array of objects
+with a nonempty string `span` and a string `reason`. Every span must occur exactly
+once in the passage (an ambiguous span would also remove the copies the audience
+can perceive; overlapping occurrences count) and must be absent from the text. The
+passage is split into sentences at `.`, `!`, `?` or `…` (with any closing `"`, `'`,
+`”`, `’`, `)`, `]`, `}`, `»`, `*` or `_`) before whitespace, and at line breaks. A
+lowercase word after the punctuation continues the sentence, so a speech tag such as
+`"Run!" she hissed at Bob.` stays one sentence. The sentence marks `。`, `！` and `？`
+never split a sentence; such a passage is checked as fewer, longer sentences. A sentence that overlaps a span may carry the local edit. So may
+the next sentence when a span ends a sentence of quoted speech (a quote mark ends
+the sentence, before any end punctuation, `*`, `_` or closing bracket, as in `"…".`
+or `*"…"*`): that is the speech tag or action whose observable act stays, as
+in `"Is the key in the blue vase?" I whispered to him.` or
+`"The key is in the blue vase." *I lean close and whisper it to Bob.*`. Every other
+sentence must appear in the text unchanged and in the passage order. Text between
+two such sentences is allowed only where the passage has an editable sentence. A
+failure invalidates only that view, with the reasons, and goes through the
+validation repair below. The check makes the exact copy outside the editable
+sentences a verified contract. It cannot verify the exclusion decision, and it
+allows any edit inside an editable sentence. A wrong exclusion therefore passes; known cases are tracked in
+[#783](https://github.com/vegu-ai/talemate-private/issues/783). Apart from the
+sentence split, the host does not parse passage markup or require a message
+shape; double quotes identifying dialogue is the accepted convention.
 An explicit empty array means no citations in that category. The host
 drops unknown or cross-audience knowledge IDs with audience/ID warnings and
 resolves offered IDs to its own references. Unknown physical citations are also

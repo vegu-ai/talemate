@@ -6,6 +6,7 @@ import pytest
 import test_perception_lifecycle
 import test_character_retrieval
 import test_memory_audiences
+from _perception_response_helpers import excluding_passage
 from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
 from talemate.knowledge.context import project_character_history
@@ -281,7 +282,7 @@ async def test_real_index_updates_generated_entries_and_cache_then_removes_sourc
 
     scene, memory, _, conversation = rag
     request = AsyncMock()
-    monkeypatch.setattr(Prompt, "request", request)
+    monkeypatch.setattr(Prompt, "request", excluding_passage(request))
 
     def response(text):
         return result(

@@ -662,6 +662,12 @@ async def cached_reply_turn(rag, monkeypatch, mode, *, archive_during_push=False
                     "audience": [item["name"]],
                     "status": "ready",
                     "text": f"{item['name']} hears Elmer reply.",
+                    "exclusions": [
+                        {
+                            "span": prompt.vars["context"]["passage"]["text"],
+                            "reason": "test",
+                        }
+                    ],
                     "knowledge_ids": [],
                     "passage_ids": [],
                 }

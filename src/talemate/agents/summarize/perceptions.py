@@ -70,6 +70,11 @@ if TYPE_CHECKING:
 log = structlog.get_logger(__name__)
 CONTEXT_PASSAGES = 12
 PERCEPTION_BACKLOG_THRESHOLD = 3
+SENTENCE_CLOSERS = "\"'”’)]}»*_"
+SENTENCE_END = re.compile(rf"[.!?…]+[{re.escape(SENTENCE_CLOSERS)}]*(?=\s|$)|\n+")
+SENTENCE_TRAIL = ".!?… " + SENTENCE_CLOSERS
+SPEECH_CLOSERS = "\"'”’»"
+NON_SPEECH_TRAIL = "".join(c for c in SENTENCE_TRAIL if c not in SPEECH_CLOSERS)
 
 PerceptionBacklogDecision = Literal["analyze", "keep", "cancel"]
 
@@ -131,8 +136,113 @@ class PerceptionExtractor(CodeBlockExtractorMixin):
         return super()._extract_code_block_from_content(content)
 
 
+def passage_sentences(passage: str) -> list[tuple[int, int]]:
+    bounds, start = [], 0
+    for match in SENTENCE_END.finditer(passage):
+        following = passage[match.end() :].lstrip(" \t")
+        if match.group().strip("\n") and following[:1].islower():
+            # A lowercase continuation never starts a new sentence, which keeps a
+            # speech tag with its quote: '"Run!" she hissed.'
+            continue
+        bounds.append((start, match.end()))
+        start = match.end()
+    bounds.append((start, len(passage)))
+    sentences = []
+    for begin, end in bounds:
+        piece = passage[begin:end]
+        if piece.strip():
+            sentences.append(
+                (
+                    begin + len(piece) - len(piece.lstrip()),
+                    begin + len(piece.rstrip()),
+                )
+            )
+    return sentences
+
+
+def span_starts(passage: str, span: str) -> list[int]:
+    starts, index = [], passage.find(span)
+    while index >= 0:
+        starts.append(index)
+        index = passage.find(span, index + 1)
+    return starts
+
+
+def exclusion_errors(passage: str, spans: tuple[str, ...], text: str) -> list[str]:
+    """Sentences that overlap an excluded span may carry a local edit, and so
+    may the next sentence when a span ends a sentence of quoted speech (its
+    speech tag or action). Every other sentence must be copied unchanged and
+    in order, with nothing added between them."""
+    errors = []
+    removed = []
+    for span in spans:
+        starts = span_starts(passage, span)
+        if not starts:
+            errors.append(f"exclusion span is not in the passage: {span!r}")
+            continue
+        if len(starts) > 1:
+            # An ambiguous span would also remove, and forbid in the text, the
+            # copies the character can perceive.
+            errors.append(
+                f"exclusion span occurs {len(starts)} times in the passage; quote "
+                f"enough surrounding text to make it unique: {span!r}"
+            )
+            continue
+        removed.append((starts[0], starts[0] + len(span)))
+        if span in text:
+            errors.append(f"excluded span is still in the text: {span!r}")
+    sentences = passage_sentences(passage)
+    editable = set()
+    for index, (start, end) in enumerate(sentences):
+        for span_start, span_end in removed:
+            if span_start < end and start < span_end:
+                editable.add(index)
+                last = passage[start:end].rstrip(NON_SPEECH_TRAIL)[-1:]
+                ends_speech = bool(last) and last in SPEECH_CLOSERS
+                if ends_speech and not passage[span_end:end].strip(SENTENCE_TRAIL):
+                    editable.add(index + 1)
+    position, additions_allowed = 0, False
+    for index, (start, end) in enumerate(sentences):
+        if index in editable:
+            additions_allowed = True
+            continue
+        sentence = passage[start:end]
+        found = text.find(sentence, position)
+        if found < 0:
+            errors.append(
+                f"sentence outside the exclusions is missing or changed: {sentence!r}"
+            )
+            additions_allowed = True
+            continue
+        added = text[position:found].strip()
+        if added and not additions_allowed:
+            errors.append(f"text added outside the exclusions: {added!r}")
+        position, additions_allowed = found + len(sentence), False
+    added = text[position:].strip()
+    if added and not additions_allowed:
+        errors.append(f"text added outside the exclusions: {added!r}")
+    return errors
+
+
+def perception_exclusions(item: dict) -> tuple[str, ...]:
+    values = item.get("exclusions")
+    if not isinstance(values, list):
+        raise ValueError("exclusions must be an explicit array")
+    spans = []
+    for value in values:
+        if (
+            not isinstance(value, dict)
+            or not isinstance(value.get("span"), str)
+            or not value["span"].strip()
+            or not isinstance(value.get("reason"), str)
+        ):
+            raise ValueError("each exclusion needs a nonempty span and a reason")
+        spans.append(value["span"])
+    return tuple(spans)
+
+
 def parse_perceptions(
-    response: str, audiences: tuple[str, ...]
+    response: str, audiences: tuple[str, ...], passage: str
 ) -> tuple[PerceptionAnalysis, ...]:
     extracted = PerceptionExtractor()._extract_code_block_from_content(response)
     if extracted is None:
@@ -174,6 +284,14 @@ def parse_perceptions(
                 knowledge_ids=perception_citations(item, "knowledge_ids", str, name),
                 passage_ids=perception_citations(item, "passage_ids", int, name),
             )
+            if view.status == "ready":
+                errors = exclusion_errors(
+                    passage, perception_exclusions(item), view.text
+                )
+                if errors:
+                    raise ValueError(
+                        "text does not match its exclusions: " + "; ".join(errors)
+                    )
         except (ValueError, ValidationError) as exc:
             reason = (
                 "; ".join(error["msg"] for error in exc.errors(include_input=False))
@@ -1199,7 +1317,9 @@ class PerceptionMixin:
             return None
         error = None
         try:
-            parsed = parse_perceptions(extracted.get("response"), requested)
+            parsed = parse_perceptions(
+                extracted.get("response"), requested, context["passage"]["text"]
+            )
         except PerceptionValidationError as exc:
             parsed, error = exc.views, exc
         return resolve_perception_inputs(parsed, context), error

@@ -210,9 +210,16 @@ keeps the first valid view for each requested canonical audience. Unrequested
 audiences, extra fields and model-supplied identities/references are ignored.
 Invalid views leave their audience missing; they do not discard valid siblings.
 The response includes explicit `knowledge_ids` and `passage_ids` arrays per audience,
-naming supplied prior inputs actually used. Replacement prose preserves the public
-interaction's concrete subject and speech act while excluding private content. The
-host does not split or parse passage markup or require a message shape; double
+naming supplied prior inputs actually used. Replacement prose preserves the source
+passage's tense, grammatical person, narrator, voice and style. Accessible wording
+stays unchanged, including the entire passage when nothing is inaccessible. Only
+local edits needed to remove inaccessible content and retain the observable activity
+within a thought are allowed. A first-person narrator remains the same person
+in every audience's view. The concrete subject of a shared activity remains,
+such as chess at a shared board. Inaudible whispered words and their subject stay
+inaccessible. The visible whispering act can also be omitted from a bystander's
+view; this known limitation is tracked in [#780](https://github.com/vegu-ai/talemate-private/issues/780).
+The host does not split or parse passage markup or require a message shape; double
 quotes identifying dialogue is the accepted convention.
 An explicit empty array means no citations in that category. The host
 drops unknown or cross-audience knowledge IDs with audience/ID warnings and
@@ -280,9 +287,10 @@ until the client returns or cancels.
 Schema validation proves the response structure, not whether the model interpreted
 a whisper or private thought faithfully. The prompt forbids invented events,
 observations, arrivals, awakenings and beliefs, and preserves claims as attributed
-claims. `tests/data/perceptions/passages.json` supplies public/private, whisper and
-unconscious-bystander examples for deterministic orchestration and real-model smoke
-evaluation. The bounded physical-context window can miss older situational details;
+claims. `tests/data/perceptions/passages.json` supplies recorded public/private,
+whisper and unconscious-bystander responses for deterministic lifecycle checks.
+Those paraphrased views are not expected prose for live-model writing checks.
+The bounded physical-context window can miss older situational details;
 this step adds no historical reconstruction or long-term perception retrieval.
 
 ## Character history projection

@@ -4,6 +4,10 @@ In a Character perspectives story you can read each character's view next to the
 
 A perspective uses the same colors as the story: spoken lines in double quotes stand out from the prose around them.
 
+Perspectives keep the original passage's tense, narrator and style. If a character can perceive everything, the passage is copied unchanged. Inaccessible details are removed while recognizable shared activities remain. While Alice and Bob are playing together, Alice's private thought *I loved playing chess with Bob* becomes *I was playing chess with Bob* in Bob's view. The *I* still refers to Alice.
+
+A known limitation affects whispers: a bystander who sees someone whisper but cannot hear the words may lose the whispering action from their view as well.
+
 ![The scene split in two, with Edwin's perspective to the right of each message](/talemate/img/0.40.0/scene-perspective-split-view.png)
 
 Say Mara writes in her notebook alone in her room. With **View Perspective: Edwin** the cell beside that message is empty, because Edwin was not there. An empty cell shows a small icon; hover it to read why it is empty: the character noticed nothing, the analysis did not run yet or failed, or the message is of a type that has no perspectives (a time passage or a director note, for example).

@@ -22,6 +22,12 @@ from talemate.client.remote import (
 from talemate.config.schema import Client as BaseClientConfig
 from talemate.config import get_config
 
+from talemate.client.reasoning_effort import (
+    EffortFormat,
+    ReasoningEffortConfig,
+    ReasoningEffortMixin,
+    reasoning_effort_extra_fields,
+)
 from talemate.client.registry import register
 from talemate.client.toggleable_parameters import (
     ToggleableParametersMixin,
@@ -337,7 +343,12 @@ handlers["talemate_started"].connect(on_talemate_started)
 async_signals.get("config.saved").connect(on_config_saved)
 
 
-class Defaults(ToggleableParametersConfig, CommonDefaults, pydantic.BaseModel):
+class Defaults(
+    ReasoningEffortConfig,
+    ToggleableParametersConfig,
+    CommonDefaults,
+    pydantic.BaseModel,
+):
     max_token_length: int = 16384
     model: str = DEFAULT_MODEL
     # Reasoning on by default: with it off the client is coercible, and several
@@ -349,7 +360,12 @@ class Defaults(ToggleableParametersConfig, CommonDefaults, pydantic.BaseModel):
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
 
 
-class ClientConfig(ToggleableParametersConfig, ConcurrentInference, BaseClientConfig):
+class ClientConfig(
+    ReasoningEffortConfig,
+    ToggleableParametersConfig,
+    ConcurrentInference,
+    BaseClientConfig,
+):
     concurrent_inference_enabled: bool = True
     provider_only: list[str] = pydantic.Field(default_factory=list)
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
@@ -361,8 +377,6 @@ PROVIDER_FIELD_GROUP = FieldGroup(
     description="Configure OpenRouter provider routing.",
     icon="mdi-server-network",
 )
-
-MIN_THINKING_TOKENS = 256
 
 
 def cache_control_for_model(model_name: str) -> dict | None:
@@ -383,7 +397,12 @@ def cache_control_for_model(model_name: str) -> dict | None:
 
 
 @register()
-class OpenRouterClient(ConcurrentInferenceMixin, ToggleableParametersMixin, ClientBase):
+class OpenRouterClient(
+    ReasoningEffortMixin,
+    ConcurrentInferenceMixin,
+    ToggleableParametersMixin,
+    ClientBase,
+):
     """
     OpenRouter client for generating text using various models.
     """
@@ -404,6 +423,7 @@ class OpenRouterClient(ConcurrentInferenceMixin, ToggleableParametersMixin, Clie
         )
         unified_api_key_config_path: str = "openrouter.api_key"
         requires_prompt_template: bool = False
+        reason_tokens_as_allowance: bool = True
         defaults: Defaults = Defaults()
 
         @staticmethod
@@ -429,6 +449,7 @@ class OpenRouterClient(ConcurrentInferenceMixin, ToggleableParametersMixin, Clie
                     required=False,
                 ),
             }
+            fields.update(reasoning_effort_extra_fields())
             fields.update(toggleable_parameters_extra_fields(TOGGLEABLE_PARAMETERS))
             fields.update(concurrent_inference_extra_fields())
             return fields
@@ -458,8 +479,8 @@ class OpenRouterClient(ConcurrentInferenceMixin, ToggleableParametersMixin, Clie
         return False
 
     @property
-    def min_reason_tokens(self) -> int:
-        return MIN_THINKING_TOKENS
+    def reasoning_effort_format(self) -> EffortFormat:
+        return "reasoning"
 
     def emit_status(self, processing: bool = None):
         error_action = None
@@ -568,7 +589,12 @@ class OpenRouterClient(ConcurrentInferenceMixin, ToggleableParametersMixin, Clie
             **parameters,
         }
         if self.reason_enabled:
-            payload["reasoning"] = {"max_tokens": self.validated_reason_tokens}
+            # OpenRouter refuses reasoning.effort and reasoning.max_tokens together.
+            payload["reasoning"] = (
+                {"effort": self.reasoning_effort}
+                if self.reasoning_effort is not None
+                else {"enabled": True}
+            )
 
         self.log.debug(
             "generate",

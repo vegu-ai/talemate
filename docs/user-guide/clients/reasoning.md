@@ -13,9 +13,9 @@ To enable reasoning support for a client:
 
 ## Configuring Reasoning Tokens
 
-The [OpenAI](types/openai.md#reasoning-effort) and [OpenAI Compatible](types/openai-compatible.md#reasoning) clients offer **Reasoning Effort** to control thinking depth. Their token field is called **Extra Completion Tokens**: it adds headroom to the total completion limit, rather than setting a separate thinking budget. Existing saved token values are preserved. Compatible servers also need a **Reasoning Effort Format** selection before an effort is sent. Both clients offer a **Completion Token Parameter** choice: native OpenAI defaults to `max_completion_tokens`, while OpenAI Compatible defaults to `max_tokens`. The native OpenAI client locks Reasoning on for model names starting with `gpt-5` or `gpt-6`, including during per-action overrides. For other models and OpenAI Compatible clients, the effort and the allowance follow your Reasoning setting: with Reasoning off, neither is sent. Saved token and effort values are preserved.
+The [OpenAI](types/openai.md#reasoning-effort), [OpenAI Compatible](types/openai-compatible.md#reasoning) and [OpenRouter](types/openrouter.md#reasoning) clients offer **Reasoning Effort** to control thinking depth. Their token field is called **Extra Completion Tokens**: it adds headroom to the total completion limit, rather than setting a separate thinking budget. Existing saved token values are preserved. Compatible servers also need a **Reasoning Effort Format** selection before an effort is sent. The OpenAI and OpenAI Compatible clients offer a **Completion Token Parameter** choice: native OpenAI defaults to `max_completion_tokens`, while OpenAI Compatible defaults to `max_tokens`. The native OpenAI client locks Reasoning on for model names starting with `gpt-5` or `gpt-6`, including during per-action overrides. For other models, and for OpenAI Compatible and OpenRouter clients, the effort and the allowance follow your Reasoning setting: with Reasoning off, neither is sent. On OpenRouter, the `default` effort only asks the model to think (`{"enabled": true}`), so the model uses its own default effort. Saved token and effort values are preserved.
 
-Once reasoning is enabled, you can set **Reasoning Tokens** in its number field:
+Once reasoning is enabled, you can set **Reasoning Tokens** (or **Extra Completion Tokens** on clients with Reasoning Effort) in its number field:
 
 ![Reasoning tokens configuration](/talemate/img/0.40.0/client-reasoning.png)
 
@@ -23,7 +23,9 @@ Once reasoning is enabled, you can set **Reasoning Tokens** in its number field:
 
 The client's card in the client list has one row for its budgets. The first field is the context token budget. While reasoning is on, the second field is the reasoning token budget, or a dropdown of effort levels for clients that use an effort level. Type an exact value, such as 32768, or use the arrows beside the field; the card saves the change after a short pause. If you leave a field empty, below its minimum (1024 for the context budget) or above 10,000,000, it goes back to the saved value. The arrows stop at the minimum. The :material-brain: button on the card turns reasoning on and off.
 
-![Client card with the context and reasoning token budgets](/talemate/img/0.40.0/client-reasoning-2.png)
+![Client card with the context token budget and the effort dropdown of an OpenRouter client](/talemate/img/0.40.0/client-reasoning-2.png)
+
+The picture shows an OpenRouter client, which uses an effort level. On a client with a reasoning token budget, the second field is a number field instead.
 
 When you turn reasoning off, the reasoning field is replaced by a **Reasoning Disabled** chip in the same row, so you can see the state at a glance. When you turn reasoning back on, the field returns in that row. A client that always reasons, such as an OpenAI gpt-5 model, never shows the chip: its brain button is locked on.
 

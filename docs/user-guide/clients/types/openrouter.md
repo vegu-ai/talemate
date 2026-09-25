@@ -58,11 +58,29 @@ This is **on by default**. See the [Concurrent Requests](/talemate/user-guide/cl
 
 ### Reasoning
 
-New OpenRouter clients start with reasoning on and 2048 **Reasoning Tokens**. A client you saved before keeps its own setting. Turn **Reasoning** on or off in the **Reasoning** section of the client editor, or with the :material-brain: button on the client card.
+New OpenRouter clients start with reasoning on, **Reasoning Effort** `default` and 2048 **Extra Completion Tokens**. A client you saved before keeps its own reasoning setting. Turn **Reasoning** on or off in the **Reasoning** section of the client editor, or with the :material-brain: button on the client card.
 
-With reasoning on, Talemate asks OpenRouter to let the model think first, with a budget set by **Reasoning Tokens** (at least 256). With reasoning off, Talemate sends no reasoning request at all, and the card shows a **Reasoning Disabled** chip. A model that thinks only when asked, such as Claude Haiku 4.5, then answers straight away. A model that always thinks, such as Gemini 3.8 Flash, still thinks by its own default.
+With reasoning on, Talemate asks OpenRouter to let the model think first:
+
+- **Reasoning Effort** sets how much the model thinks. Choose `low`, `medium` or `high`, or another level that OpenRouter defines (`none`, `minimal`, `xhigh` or `max`). Talemate sends your choice as the reasoning effort for any model.
+- With `default`, Talemate only asks the model to think, and the model uses its own default effort. OpenRouter lists that default for each model; for Gemini 3.8 Flash it is `medium`.
+- **Extra Completion Tokens** adds room for the thinking and the answer when you limit the response length with a token cap. It is not a thinking budget. With the default **Adaptive** response length, reasoning sends no token cap, and this number has no effect on the request.
+
+When reasoning is on, the client card shows the effort in a dropdown next to the context token budget, where you can change it quickly.
+
+For example, a story uses Gemini 3.8 Flash to decide what each character saw. With effort `medium`, the model thinks through the scene before it answers. With effort `low`, it often answers at once without thinking.
+
+OpenRouter usually accepts a level that your model does not list. One exception: a model that must always think refuses `none`, and Talemate shows the error from OpenRouter. Choose another level, or turn **Reasoning** off.
+
+With reasoning off, Talemate sends no reasoning request at all, and the card shows a **Reasoning Disabled** chip. A model that thinks only when asked, such as Claude Haiku 4.5, then answers straight away. A model that always thinks, such as Gemini 3.8 Flash, still thinks by its own default.
 
 You can keep reasoning on when you pick a model that cannot think. OpenRouter ignores the reasoning request for such a model, and the model answers as usual.
+
+!!! tip "Getting empty responses?"
+    If you use a response length mode with a token cap, the thinking can use up the whole cap before the model writes its answer. Increase **Extra Completion Tokens**, choose a lower effort, or use the **Adaptive** response length.
+
+!!! note "Reasoning Tokens is now Extra Completion Tokens"
+    Talemate 0.39 sent **Reasoning Tokens** to OpenRouter as a thinking budget. OpenRouter does not accept a budget together with an effort, and a small budget can stop a model such as Gemini 3.8 Flash from thinking at all. So Talemate now sends the effort instead. Your saved number stays, as **Extra Completion Tokens**.
 
 !!! warning "Keep reasoning on for Google models"
     With reasoning off, Talemate may pre-fill the start of the answer to steer the model. Google models on OpenRouter refuse such requests with an error, so keep reasoning on for them.

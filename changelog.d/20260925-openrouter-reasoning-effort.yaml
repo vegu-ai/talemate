@@ -1,0 +1,4 @@
+added:
+- "OpenRouter Client: Choose a Reasoning Effort in the client's Reasoning settings or on the client card. With `default`, the model thinks at its own default effort."
+changed:
+- "OpenRouter Client: Reasoning Tokens is now Extra Completion Tokens. It adds room to a capped response instead of setting a thinking budget, so models such as Gemini 3.8 Flash no longer skip thinking. A saved number from 0.39.0 keeps its value but no longer controls how much the model thinks; if you used it for that, choose a Reasoning Effort instead."

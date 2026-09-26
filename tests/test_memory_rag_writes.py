@@ -7,6 +7,7 @@ from unittest.mock import Mock
 import pytest
 
 from talemate.agents.memory import MemoryAgent
+from talemate.agents.memory.exceptions import MemoryShutdownRefused
 
 
 @pytest.fixture
@@ -71,6 +72,38 @@ async def test_empty_writes_preserve_store_revision_and_rag_cache(memory):
     memory._add.assert_not_called()
     memory._add_many.assert_not_called()
     memory.invalidate_audience_writes.assert_called_once_with([], scene=memory.scene)
+
+
+@pytest.mark.parametrize(
+    "operation,args",
+    [
+        ("add", ("New memory",)),
+        ("add_many", ([{"id": "new", "text": "New memory"}],)),
+        ("delete", ({"ids": "new"},)),
+    ],
+)
+@pytest.mark.parametrize("queued", [False, True])
+async def test_refused_write_is_not_written(
+    memory, monkeypatch, operation, args, queued
+):
+    def refuse(*args):
+        if queued:
+            future = asyncio.get_running_loop().create_future()
+            future.set_exception(MemoryShutdownRefused())
+            return future
+        raise MemoryShutdownRefused()
+
+    monkeypatch.setattr(memory, "_run_in_executor", refuse)
+    error = Mock()
+    monkeypatch.setattr("talemate.agents.memory.log.error", error)
+    call = getattr(MemoryAgent, operation).__wrapped__
+
+    assert await call(memory, *args) is False
+
+    assert memory.scene.memory_revision == 0
+    memory.invalidate_audience_index.assert_not_called()
+    memory.invalidate_audience_writes.assert_not_called()
+    error.assert_not_called()
 
 
 @pytest.mark.asyncio

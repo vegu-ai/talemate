@@ -1,9 +1,51 @@
+import asyncio
 from unittest import mock
 
 import httpx
+import pytest
 
 import talemate.agents.visual.backends as backends
 from talemate.agents.visual.backends.openrouter import Backend as OpenRouterBackend
+
+
+@pytest.mark.parametrize("status_type", list(backends.BackendStatusType))
+async def test_cancelled_probe_keeps_status_without_callback_error(status_type):
+    backend = _ProbeBackend(model="test-model")
+    previous = backends.BackendStatus(type=status_type, message="previous status")
+    backend.status = previous
+    loop = asyncio.get_running_loop()
+    errors = []
+    old_handler = loop.get_exception_handler()
+    loop.set_exception_handler(lambda loop, context: errors.append(context))
+    try:
+        with mock.patch.object(
+            _ProbeBackend, "on_status_change", new_callable=mock.AsyncMock
+        ) as notify:
+            task = await backend.ensure_test_connection_task()
+            await asyncio.sleep(0)
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            await asyncio.sleep(0)
+            assert backend.status is previous
+            notify.assert_not_called()
+        assert errors == []
+    finally:
+        loop.set_exception_handler(old_handler)
+
+
+async def test_failed_probe_still_updates_error_status():
+    backend = _ProbeBackend(model="test-model")
+    future = asyncio.get_running_loop().create_future()
+    future.set_exception(ValueError("probe failed"))
+    with mock.patch.object(
+        _ProbeBackend, "on_status_change", new_callable=mock.AsyncMock
+    ) as notify:
+        backend._update_status_from_future(future)
+        await asyncio.sleep(0)
+        assert backend.status.type == backends.BackendStatusType.ERROR
+        assert backend.status.message == "probe failed"
+        notify.assert_awaited_once()
 
 
 def test_openrouter_cache_maxage_is_60():

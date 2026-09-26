@@ -101,9 +101,9 @@
     pnpm.
 - path: getting-started/installation/troubleshoot.md
   title: Common issues
-  summary: Installation troubleshooting for Windows path characters, Docker NVIDIA device-request failures, CUDA availability,
-    accidentally created config.yaml directories and runtime WebSocket URLs. Includes CPU-only Compose, NVIDIA Toolkit checks
-    and nginx HTTPS reverse-proxy WebSocket upgrade configuration.
+  summary: Windows path characters; Docker NVIDIA device-request failures, CUDA availability, config.yaml directories; CPU-only
+    Compose, NVIDIA Toolkit checks, runtime WebSocket URLs and nginx HTTPS reverse-proxy WebSocket upgrades. Stopping (Ctrl+C stop;
+    "Shutdown exceeded 5 seconds").
 - path: getting-started/installation/windows.md
   title: Windows
   summary: Windows installation from a release ZIP using start.bat, which downloads portable Python and Node.js 22, installs

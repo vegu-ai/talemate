@@ -20,6 +20,7 @@ import talemate.config  # noqa: F401
 from talemate.version import VERSION
 from talemate.path import LOGS_DIR
 from talemate.environ import env_port, env_str
+from talemate.server.shutdown import shutdown_server
 
 print("Initialization time", time.perf_counter() - t_import_start)
 
@@ -139,12 +140,6 @@ async def run_frontend(host: str, port: int, on_started=None):
             else:
                 os.killpg(os.getpgid(process.pid), signal.SIGTERM)
             await process.wait()
-
-
-async def cancel_all_tasks(loop):
-    tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task()]
-    [task.cancel() for task in tasks]
-    await asyncio.gather(*tasks, return_exceptions=True)
 
 
 def run_server(args):
@@ -267,29 +262,9 @@ def run_server(args):
     except KeyboardInterrupt:
         pass
     finally:
-        log.info("Shutting down...")
-
-        try:
-            if frontend_task:
-                frontend_task.cancel()
-
-            # Gracefully close the websocket server
-            websocket_server.close()
-            # Shield against additional Ctrl+C during the close handshake
-            loop.run_until_complete(asyncio.shield(websocket_server.wait_closed()))
-
-            # Cancel any remaining tasks
-            loop.run_until_complete(cancel_all_tasks(loop))
-            loop.run_until_complete(loop.shutdown_asyncgens())
-        except KeyboardInterrupt:
-            # If the user hits Ctrl+C again during shutdown, exit quickly without
-            # another traceback.
-            log.warning(
-                "Forced termination requested during shutdown - exiting immediately"
-            )
-        finally:
-            loop.close()
-            log.info("Shutdown complete")
+        shutdown_server(
+            loop, websocket_server, talemate.instance.get_agent("memory"), frontend_task
+        )
 
 
 def main():

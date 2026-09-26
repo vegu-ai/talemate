@@ -30,6 +30,7 @@
   - "Interface: Updated typography, controls and layouts follow Material Design 3."
   - "Bundled Stories: The original Simulation Suite is now hidden from new scene creation to steer new stories to Simulation Suite V2; existing saves stay available. Infinity Quest has a more concrete backstory."
   fixes:
+  - "Shutdown: Ctrl+C handles cancelled image-backend probes quietly and bounds shutdown to five seconds when background work stalls."
   - "Saves and History: Save As protects read-only destinations, keeps errors open for correction, and preserves pending scene-settings edits when saving is cancelled."
   - "Saves and History: Unsaved changes trigger a warning before leaving; read-only stories keep their save identity and correctly mark changes autosave cannot write."
   - "Saves and History: Timeline forks preserve recorded scene state and warn about damaged history; repair starts fresh history while retaining the old files."

@@ -159,6 +159,53 @@ def test_set_db_records_a_populated_collection_as_persisted(agent):
     assert scene._memory_never_persisted is False
 
 
+@pytest.mark.parametrize("saved", [False, True])
+def test_shutdown_preserves_saved_scene_collection_without_cleanup(agent, saved):
+    agent.scene.saved = saved
+    agent.scene.saved_memory_session_id = "session-saved"
+    agent._set_db()
+    collection = agent.db
+    generation = agent._db_generation
+    agent.refuse_new_memory_work()
+
+    agent.close_db(agent.scene)
+
+    assert agent.db is None
+    assert agent._db_generation > generation
+    assert agent._ready_to_add is False
+    assert agent.db_client.deleted == []
+    assert collection.deletes == []
+
+
+def test_shutdown_discards_never_saved_collection(agent, tmp_path):
+    client = memory.chromadb.PersistentClient(path=str(tmp_path))
+    name = agent.make_collection_name(agent.scene)
+    collection = client.get_or_create_collection(name, embedding_function=None)
+    collection.add(ids=["unsaved"], embeddings=[[1.0, 0.0, 0.0]])
+    agent.db_client = client
+    agent.db = collection
+    agent._ready_to_add = True
+    agent.refuse_new_memory_work()
+
+    agent.close_db(agent.scene)
+
+    assert agent.db is None
+    assert agent._ready_to_add is False
+    with pytest.raises(chromadb.errors.NotFoundError):
+        client.get_collection(name)
+    assert client.list_collections() == []
+
+
+def test_shutdown_mid_build_does_not_install_memory(agent):
+    agent.db_client.on_get_or_create = lambda name: agent.refuse_new_memory_work()
+
+    agent._set_db()
+
+    assert agent.db is None
+    assert agent._ready_to_add is False
+    assert agent.db_client.deleted == []
+
+
 def test_disconnect_mid_set_only_drops_the_handle(agent):
     scene = agent.scene
     released = _FakeScene(memory_id="scene-2")

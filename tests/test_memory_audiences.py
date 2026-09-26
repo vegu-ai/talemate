@@ -8,6 +8,7 @@ from chromadb.api.types import EmbeddingFunction
 import pytest
 
 from talemate.agents.memory import ChromaDBMemoryAgent
+from talemate.agents.memory.exceptions import MemoryShutdownRefused
 from talemate.character import Character
 from talemate.context import ActiveScene, SceneIsLoading
 import talemate.instance as instance
@@ -421,6 +422,100 @@ async def test_cancelled_write_finishes_before_a_retry_can_publish(
     with pytest.raises(asyncio.CancelledError):
         await writer
     assert "Common rain lore." not in await retry
+
+
+@pytest.mark.parametrize("method", ["purge_audience_index", "ensure_audience_index"])
+async def test_audience_cancel_then_refusal_preserves_cancellation(
+    indexed_scene, monkeypatch, method
+):
+    scene, memory, _ = indexed_scene
+    await contents(memory)
+    state = memory._audience_state(scene)
+    if state.task:
+        await state.task
+    state.revision += 1
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def refuse(*args, **kwargs):
+        started.set()
+        await release.wait()
+        raise MemoryShutdownRefused()
+
+    monkeypatch.setattr(memory, "_to_thread", refuse)
+    task = asyncio.create_task(getattr(memory, method)(scene))
+    await asyncio.wait_for(started.wait(), 2)
+    task.cancel()
+    await asyncio.sleep(0)
+    assert not task.done()
+    assert state.lock.locked()
+    release.set()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert task.cancelled()
+    assert task.cancelling() == 1
+    assert not state.lock.locked()
+    assert state.fingerprints is None
+    assert state.dirty is None
+
+
+@pytest.mark.parametrize("queued", [False, True])
+async def test_audience_read_refusal_cancels_without_result(
+    indexed_scene, monkeypatch, queued
+):
+    scene, memory, _ = indexed_scene
+    await contents(memory)
+    state = memory._audience_state(scene)
+    if state.task:
+        await state.task
+    started, release = asyncio.Event(), asyncio.Event()
+    applied = Mock()
+
+    async def refuse(*args, **kwargs):
+        started.set()
+        await release.wait()
+        raise MemoryShutdownRefused()
+
+    monkeypatch.setattr(memory, "_to_thread", refuse)
+
+    async def read():
+        applied(
+            await memory.audience_read(memory._get_document, "lore", viewer="Elmer")
+        )
+
+    if not queued:
+        memory.refuse_new_memory_work()
+    task = asyncio.create_task(read())
+    if queued:
+        await asyncio.wait_for(started.wait(), 2)
+        memory.refuse_new_memory_work()
+        release.set()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert task.cancelled()
+    assert task.cancelling() == 1
+    applied.assert_not_called()
+
+
+async def test_shutdown_while_waiting_for_audience_lock_cancels_read(
+    indexed_scene, monkeypatch
+):
+    scene, memory, _ = indexed_scene
+    await contents(memory)
+    state = memory._audience_state(scene)
+    if state.task:
+        await state.task
+    warning = Mock()
+    monkeypatch.setattr("talemate.agents.memory.audiences.log.warning", warning)
+    async with state.lock:
+        task = asyncio.create_task(contents(memory, viewer=None))
+        await asyncio.sleep(0)
+        assert not task.done()
+        memory.refuse_new_memory_work()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert task.cancelled()
+    assert task.cancelling() == 1
+    warning.assert_not_called()
 
 
 async def test_saved_sources_rebuild_an_empty_real_collection(

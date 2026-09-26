@@ -117,6 +117,8 @@ class Backend(BackendBase):
         await visual_agent.emit_status()
 
     def _update_status_from_future(self, fut: asyncio.Future):
+        if fut.cancelled():
+            return
         current_status = self.status
         try:
             result = fut.result()

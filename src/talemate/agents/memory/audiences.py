@@ -8,6 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from chromadb.utils.batch_utils import create_batches
 
 from talemate.context import scene_is_loading
+from talemate.agents.memory.exceptions import MemoryShutdownRefused
+from talemate.agents.memory.shutdown import cancel_on_memory_shutdown
 
 from talemate.knowledge.memory import audience_documents
 from talemate.knowledge.mode import character_knowledge_enabled
@@ -116,12 +118,15 @@ class AudienceMemoryMixin:
         async with state.lock:
             if self.db is not None:
                 operation = asyncio.create_task(
-                    asyncio.to_thread(self.db.delete, where={"knowledge_index": True})
+                    self._to_thread(self.db.delete, where={"knowledge_index": True})
                 )
                 try:
                     await asyncio.shield(operation)
                 except asyncio.CancelledError:
-                    await asyncio.shield(operation)
+                    try:
+                        await asyncio.shield(operation)
+                    except MemoryShutdownRefused:
+                        pass
                     raise
                 finally:
                     state.fingerprints = None
@@ -129,12 +134,15 @@ class AudienceMemoryMixin:
             self._audience_states.pop(scene, None)
 
     @evidence_writer
+    @cancel_on_memory_shutdown
     async def ensure_audience_index(self, scene):
         if not character_knowledge_enabled(scene):
             return
         state = self._audience_state(scene)
         async with state.lock:
             while True:
+                if self._refuse_memory_work:
+                    raise MemoryShutdownRefused("Memory work refused during shutdown")
                 if not character_knowledge_enabled(scene):
                     return
                 if self.readonly or not self._ready_to_add:
@@ -192,7 +200,7 @@ class AudienceMemoryMixin:
                 state.documents_revision = revision
                 state.dirty = set()
                 operation = asyncio.create_task(
-                    asyncio.to_thread(
+                    self._to_thread(
                         self._sync_audience_documents, db, documents, state.fingerprints
                     )
                 )
@@ -202,6 +210,8 @@ class AudienceMemoryMixin:
                     # Executor writes keep running after cancellation; retain the lock.
                     try:
                         await asyncio.shield(operation)
+                    except MemoryShutdownRefused:
+                        pass
                     finally:
                         state.fingerprints = None
                         state.dirty = None
@@ -293,12 +303,13 @@ class AudienceMemoryMixin:
 
     async def audience_read(self, reader, *args, viewer, **kwargs):
         async def operation(db):
-            return await asyncio.to_thread(
+            return await self._to_thread(
                 reader, *args, viewer=viewer, _collection=db, **kwargs
             )
 
         return await self.audience_operation(viewer, operation)
 
+    @cancel_on_memory_shutdown
     async def audience_operation(self, viewer, operation):
         scene = self.scene
         for attempt in range(2):

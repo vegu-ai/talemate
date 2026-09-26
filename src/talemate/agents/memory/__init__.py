@@ -8,7 +8,7 @@ import hashlib
 import threading
 import traceback
 from contextlib import contextmanager
-from contextvars import ContextVar
+from contextvars import ContextVar, copy_context
 import numpy as np
 from typing import Callable, Literal
 
@@ -37,9 +37,11 @@ import talemate.emit.async_signals as async_signals
 from talemate.agents.memory.context import memory_request, MemoryRequest
 from talemate.agents.memory.exceptions import (
     EmbeddingsModelLoadError,
+    MemoryShutdownRefused,
     SetDBError,
 )
 from talemate.agents.memory.schema import MemoryDocument
+from talemate.agents.memory.shutdown import cancel_on_memory_shutdown
 
 from talemate.agents.memory.rerank import (
     CrossEncoderReranker,
@@ -95,6 +97,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
 
     agent_type = "memory"
     verbose_name = "Memory"
+    _refuse_memory_work = False
 
     @classmethod
     def init_actions(cls, presets: list[dict] | None = None) -> dict[str, AgentAction]:
@@ -188,6 +191,27 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         )
 
         self.actions = MemoryAgent.init_actions(presets=self.get_presets)
+
+    def refuse_new_memory_work(self):
+        self._refuse_memory_work = True
+        self._ready_to_add = False
+
+    def _run_memory_operation(self, operation, *args):
+        if self._refuse_memory_work:
+            raise MemoryShutdownRefused("Memory work refused during shutdown")
+        return operation(*args)
+
+    def _run_in_executor(self, operation, *args):
+        if self._refuse_memory_work:
+            raise MemoryShutdownRefused("Memory work refused during shutdown")
+        return asyncio.get_running_loop().run_in_executor(
+            None, self._run_memory_operation, operation, *args
+        )
+
+    async def _to_thread(self, operation, *args, **kwargs):
+        return await self._run_in_executor(
+            copy_context().run, functools.partial(operation, *args, **kwargs)
+        )
 
     @property
     def readonly(self):
@@ -431,10 +455,11 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
 
     @set_processing
     async def set_db(self):
-        loop = asyncio.get_running_loop()
         try:
-            await loop.run_in_executor(None, self._set_db)
+            await self._run_in_executor(self._set_db)
             self.invalidate_audience_index(reconcile=True)
+        except MemoryShutdownRefused:
+            return False
         except EmbeddingsModelLoadError:
             raise
         except Exception as e:
@@ -466,11 +491,11 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         scene = self.scene
 
         while not self._ready_to_add:
-            if self.scene is not scene:
+            if self._refuse_memory_work or self.scene is not scene:
                 break
             await asyncio.sleep(0.1)
 
-        if self.scene is not scene:
+        if self._refuse_memory_work or self.scene is not scene:
             log.debug("memory agent", status="scene released while waiting for db")
             return False
 
@@ -518,12 +543,10 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             **kwargs,
         )
 
-        loop = asyncio.get_running_loop()
         attempted = False
 
         try:
-            completed = await loop.run_in_executor(
-                None,
+            completed = await self._run_in_executor(
                 functools.partial(
                     self._write_memory,
                     scene,
@@ -535,6 +558,8 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                     **kwargs,
                 ),
             )
+        except MemoryShutdownRefused:
+            return False
         except AttributeError as e:
             attempted = True
             # not sure how this sometimes happens.
@@ -553,8 +578,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             )
             await asyncio.sleep(1.0)
             try:
-                completed = await loop.run_in_executor(
-                    None,
+                completed = await self._run_in_executor(
                     functools.partial(
                         self._write_memory,
                         scene,
@@ -566,6 +590,8 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                         **kwargs,
                     ),
                 )
+            except MemoryShutdownRefused:
+                completed = False
             except Exception as e:
                 log.error(
                     "memory agent",
@@ -606,11 +632,12 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
 
         log.debug("memory agent add many", len=len(objects))
 
-        loop = asyncio.get_running_loop()
-        operation = loop.run_in_executor(
-            None,
-            functools.partial(self._write_memory, scene, self._add_many, objects),
-        )
+        try:
+            operation = self._run_in_executor(
+                functools.partial(self._write_memory, scene, self._add_many, objects),
+            )
+        except MemoryShutdownRefused:
+            return False
         return await self._shielded_write(
             operation,
             functools.partial(self.invalidate_audience_writes, objects, scene=scene),
@@ -619,6 +646,8 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
     async def _shielded_write(self, operation, invalidate):
         try:
             completed = await asyncio.shield(operation)
+        except MemoryShutdownRefused:
+            return False
         except asyncio.CancelledError:
             if operation.done():
                 self._complete_cancelled_write(invalidate, operation)
@@ -638,6 +667,8 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         if operation.cancelled() is True:
             return
         error = operation.exception()
+        if isinstance(error, MemoryShutdownRefused):
+            return
         if error is not None:
             log.warning("memory write failed after cancellation", error=str(error))
             invalidate()
@@ -667,10 +698,12 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         if self.scene is not scene:
             return False
 
-        loop = asyncio.get_running_loop()
-        operation = loop.run_in_executor(
-            None, functools.partial(self._write_memory, scene, self._delete, meta)
-        )
+        try:
+            operation = self._run_in_executor(
+                functools.partial(self._write_memory, scene, self._delete, meta)
+            )
+        except MemoryShutdownRefused:
+            return False
         return await self._shielded_write(
             operation,
             functools.partial(
@@ -685,6 +718,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         raise NotImplementedError()
 
     @set_processing
+    @cancel_on_memory_shutdown
     async def get(self, text, character=None, *, viewer=None, **query):
         with MemoryRequest(query=text, query_params=query) as active_memory_request:
             active_memory_request.max_distance = self.max_distance
@@ -692,15 +726,13 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                 return await self.audience_query(text, character, viewer, query)
             if character_knowledge_enabled(self.scene):
                 await self.prepare_author_index()
-            return await asyncio.to_thread(self._get, text, character, **query)
-            # return await loop.run_in_executor(
-            #    None, functools.partial(self._get, text, character, **query)
-            # )
+            return await self._to_thread(self._get, text, character, **query)
 
     def _get(self, text, character=None, **query):
         raise NotImplementedError()
 
     @set_processing
+    @cancel_on_memory_shutdown
     async def get_document(self, id, *, viewer=None):
         if viewer is not None:
             self.validate_audience_viewer(viewer)
@@ -713,12 +745,12 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                 if ids
                 else {}
             )
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, self._get_document, id)
+        return await self._run_in_executor(self._get_document, id)
 
     def _get_document(self, id):
         raise NotImplementedError()
 
+    @cancel_on_memory_shutdown
     async def get_documents_by_meta(self, meta: dict, *, viewer=None) -> dict:
         """Documents whose metadata carries every given key/value, by id."""
         if viewer is not None:
@@ -730,8 +762,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         await self.prepare_author_index()
         if not self.db:
             return {}
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, self._get_documents_by_meta, meta)
+        return await self._run_in_executor(self._get_documents_by_meta, meta)
 
     def _get_documents_by_meta(self, meta: dict) -> dict:
         raise NotImplementedError()
@@ -803,6 +834,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             return None
 
     @set_processing
+    @cancel_on_memory_shutdown
     async def multi_query(
         self,
         queries: list[str],
@@ -1001,12 +1033,13 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                 break
         return kept
 
+    @cancel_on_memory_shutdown
     async def rerank(self, queries: list[str], docs: list) -> list:
         """Cross-encoder rerank of the merged candidates; unchanged on a load failure."""
         if not docs:
             return docs
         reranker = self.reranker
-        result = await asyncio.to_thread(reranker.rerank, queries, docs, RERANK_KEEP)
+        result = await self._to_thread(reranker.rerank, queries, docs, RERANK_KEEP)
         if reranker.error:
             return docs
         return result
@@ -1015,9 +1048,10 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
     def embedding_function(self) -> Callable:
         raise NotImplementedError()
 
+    @cancel_on_memory_shutdown
     async def embed_texts(self, texts: list[str]) -> np.ndarray:
         vectors = np.asarray(
-            await asyncio.to_thread(self.embedding_function, texts), dtype=float
+            await self._to_thread(self.embedding_function, texts), dtype=float
         )
         norms = np.linalg.norm(vectors, axis=1, keepdims=True)
         return np.divide(vectors, norms, out=np.zeros_like(vectors), where=norms != 0)
@@ -1320,7 +1354,11 @@ class ChromaDBMemoryAgent(MemoryAgent):
         count = db.count()
 
         with self._db_lock:
-            if self._db_generation != generation or self.scene is not scene:
+            if (
+                self._refuse_memory_work
+                or self._db_generation != generation
+                or self.scene is not scene
+            ):
                 # cleanup belongs to `close_db`, which works by name, so the stale
                 # handle is simply dropped. accepted residual: this build may have
                 # re-created the collection as an empty shell after `close_db`
@@ -1528,7 +1566,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             collection_name = getattr(self, "collection_name", None)
             self.db = None
 
-        if not db:
+        if self._refuse_memory_work or not db:
             return
 
         log.info(
@@ -1555,6 +1593,10 @@ class ChromaDBMemoryAgent(MemoryAgent):
             self.db = None
 
         if not getattr(self, "db_client", None):
+            return
+        # Saved scenes rebuild this collection on load. Never-saved scenes get
+        # a new id each time, so their discard must still run within the watchdog.
+        if self._refuse_memory_work and (scene.saved or scene.saved_memory_session_id):
             return
 
         collection_name = self.make_collection_name(scene)
@@ -1834,8 +1876,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
     @set_processing
     async def remove_unsaved_memory(self):
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self._remove_unsaved_memory)
+        await self._run_in_executor(self._remove_unsaved_memory)
 
     def _remove_unsaved_memory(self):
         scene = self.scene

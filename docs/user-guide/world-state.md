@@ -175,7 +175,7 @@ reloaded. Open it for the settings that shape knowledge keeping, grouped by agen
 labels, descriptions and cost notes as the agent settings:
 
 - Conversation → Character Knowledge: the group switch, Limit to character knowledge in Standard mode, and Refine memories with AI.
-- Summarizer → Character Perspectives: Automatically repair analysis, in Character perspectives mode.
+- Summarizer → Character Perspectives: Analyze player perspective (off by default) and Automatically repair analysis, in Character perspectives mode.
 
 ![knowledge hub effort slider](/talemate/img/0.40.0/world-state-knowledge-hub-effort.png)
 

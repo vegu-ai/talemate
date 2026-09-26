@@ -320,7 +320,7 @@ async def test_editing_passage_with_absent_view_repairs_present_character(
     scene.knowledge_eligibility = "perception"
     scene.character_data = {name: Character(name=name) for name in ("Alice", "Carol")}
     scene.active_characters = ["Alice"]
-    message = CharacterMessage(message="Alice: A bell rings.")
+    message = NarratorMessage(message="Alice: A bell rings.")
     request = AsyncMock(side_effect=analysis())
     monkeypatch.setattr(
         "talemate.agents.summarize.perceptions.Prompt.request",
@@ -340,7 +340,7 @@ async def test_editing_passage_with_absent_view_repairs_present_character(
             ]
             outputs.append({**outputs[0], "id": None, "audience": ["Carol"]})
             set_source_perspectives(scene, "message", message.id, outputs)
-            message = CharacterMessage.model_validate_json(message.model_dump_json())
+            message = NarratorMessage.model_validate_json(message.model_dump_json())
             scene.history = [message]
             bind_perspective_sources(scene)
         else:

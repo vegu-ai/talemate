@@ -22,7 +22,7 @@
           "Alice"
         ],
         "status": "ready",
-        "text": "Alice privately thinks of the sapphire hidden in her boot and tells Bob the rain has stopped."
+        "text": "*Privately, Alice thinks of the sapphire hidden in her boot; she gives no outward sign.* \"The rain has stopped,\" she says clearly to Bob."
       },
       {
         "audience": [
@@ -70,7 +70,7 @@
           "Alice"
         ],
         "status": "ready",
-        "text": "Alice whispers to Bob that the key is inside the blue vase."
+        "text": "*She leans to Bob and whispers too quietly for Cara to hear,* \"The key is inside the blue vase.\" *Cara can see Alice lean toward Bob, but cannot make out any words.*"
       },
       {
         "audience": [

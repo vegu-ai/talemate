@@ -29,6 +29,7 @@ function agentsAt(mode, stop, overrides = {}) {
             archive: { enabled: true, can_be_disabled: true, label: 'Summarization', config: {
             } },
             ...(mode === 'perception' ? { perceptions: { enabled: true, label: 'Character Perspectives', config: {
+                analyze_player: bool('Analyze player perspective', v('summarizer.perceptions.analyze_player') ?? false, 'Includes the player in perception analysis.'),
                 automatic_repair: bool('Automatically repair analysis', v('summarizer.perceptions.automatic_repair'), 'One more Summarizer request when a view is invalid.'),
             } } } : {}),
         } },

@@ -76,7 +76,7 @@ def _identity(scene, message, operations: RevisionOperations) -> str:
     return hashlib.sha256(json.dumps(values, sort_keys=True).encode()).hexdigest()
 
 
-def _phase_identity(scene, message) -> str:
+def _phase_identity(scene, message, *, include_settings: bool = True) -> str:
     from talemate.agents.summarize.perceptions import (
         perception_context,
         perception_intention,
@@ -91,11 +91,15 @@ def _phase_identity(scene, message) -> str:
         "eligibility": scene.knowledge_eligibility,
         "context": context,
         "intention": perception_intention(scene),
-        "settings": {
+    }
+    if include_settings:
+        values["settings"] = {
             "enabled": summarizer.resolve_enabled("perceptions"),
             "repair": summarizer.resolve_config("perceptions", "automatic_repair"),
-        },
-    }
+            "analyze_player": summarizer.resolve_config(
+                "perceptions", "analyze_player"
+            ),
+        }
     return hashlib.sha256(
         json.dumps(values, sort_keys=True, default=str).encode()
     ).hexdigest()
@@ -667,12 +671,16 @@ async def _refresh_perceptions(scene, message, identity, operations):
         )
     while True:
         perception_identity = _phase_identity(scene, message)
+        input_identity = _phase_identity(scene, message, include_settings=False)
 
         def still_current():
             if not operation_current():
                 return False
             if _phase_identity(scene, message) != perception_identity:
-                raise PerceptionInputsChanged
+                raise PerceptionInputsChanged(
+                    invalidate=_phase_identity(scene, message, include_settings=False)
+                    != input_identity
+                )
             return True
 
         if not still_current():
@@ -702,12 +710,13 @@ async def _refresh_perceptions(scene, message, identity, operations):
                 raise GenerationCancelled(
                     "The selected version changed during analysis"
                 )
-        except PerceptionInputsChanged:
+        except PerceptionInputsChanged as exc:
             with revision_phase(scene, message, "perceptions"):
                 summarizer._perception_status(
-                    scene, message, "pending", invalidate=True
+                    scene, message, "pending", invalidate=exc.invalidate
                 )
-            warn_perception_regeneration(message)
+            if exc.invalidate:
+                warn_perception_regeneration(message)
             continue
         if not perception_results_current(scene, message):
             raise GenerationCancelled(

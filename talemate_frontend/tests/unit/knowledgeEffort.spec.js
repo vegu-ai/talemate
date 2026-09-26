@@ -42,7 +42,7 @@ describe('approved effort rows and defaults', () => {
     });
     it('does not add optional requests at Minimal', () => {
         expect(effortCost('legacy', 'minimal').extras).toEqual([]);
-        expect(effortCost('perception', 'minimal').extras).toEqual(['Summarizer analysis after each passage']);
+        expect(effortCost('perception', 'minimal').extras).toEqual(['Summarizer analysis when an audience needs it']);
         expect(effortCost('legacy', 'thorough').extras).toEqual(['Refine memories with AI']);
     });
     it.each(['legacy', 'perception'])('%s: unknown or unselected stops use its creation default', mode => {

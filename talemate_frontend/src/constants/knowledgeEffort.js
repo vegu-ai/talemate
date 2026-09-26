@@ -56,15 +56,15 @@ export const EFFORT_MODEL_TIER = Object.freeze({
 
 export const EFFORT_NOTES = Object.freeze({
     perception: {
-        minimal: 'The analysis after each passage is mandatory in this mode, so this is the floor.',
+        minimal: 'Passages with an audience that needs analysis still require it. Player analysis is a separate setting.',
     },
 });
 
 export const EFFORT_DESCRIPTIONS = Object.freeze({
     off: 'Every character sees the full scene history.',
-    minimal: 'No optional work.',
+    minimal: 'No memory refinement or automatic repair.',
     balanced: 'Automatically repair missing or invalid character views.',
-    thorough: 'Enable every optional request.',
+    thorough: 'Enable memory refinement and, in Character perspectives, automatic repair. Player analysis is a separate setting.',
 });
 
 export const REQUEST_TOGGLES = Object.freeze({

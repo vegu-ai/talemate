@@ -49,7 +49,7 @@ async def test_context_id_world_write_compares_before_mutating_live_entry(
         assert all("Public replacement." in r["text"] for r in rows)
     else:
         assert all(not r["meta"]["knowledge_common"] for r in rows)
-        assert all(r["text"] == cases.VISIBLE for r in rows)
+        assert all(r["text"] == f"# Internal note - {cases.VISIBLE}" for r in rows)
 
 
 @pytest.mark.parametrize("changed", [False, True])
@@ -57,6 +57,7 @@ async def test_context_db_detail_round_trips_real_prefixed_document(
     indexed_scene, monkeypatch, changed
 ):
     scene, memory, _ = indexed_scene
+    get_agent("summarizer").actions["perceptions"].config["analyze_player"].value = True
     request = AsyncMock(
         return_value=response(Elmer="Elmer notices the lantern.", Marie=None)
     )
@@ -100,7 +101,8 @@ async def test_context_db_detail_round_trips_real_prefixed_document(
             assert all("Public replacement." in doc.raw for doc in visible.values())
         else:
             assert all(
-                doc.raw == "Elmer notices the lantern." for doc in visible.values()
+                doc.raw == "# Internal note for Marie - Elmer notices the lantern."
+                for doc in visible.values()
             )
             assert not await memory.get_document(identity, viewer="Marie")
             assert all(not doc.meta["knowledge_common"] for doc in visible.values())
@@ -176,6 +178,7 @@ async def test_context_db_save_does_not_overwrite_a_refresh_during_document_read
     indexed_scene, monkeypatch, refresh
 ):
     scene, memory, _ = indexed_scene
+    get_agent("summarizer").actions["perceptions"].config["analyze_player"].value = True
     request = AsyncMock(
         return_value=response(Elmer="Elmer notices the lantern.", Marie=None)
     )
@@ -246,5 +249,8 @@ async def test_context_db_save_does_not_overwrite_a_refresh_during_document_read
             if refresh == "changed_answer"
             else "Elmer notices the lantern."
         )
-        assert visible and all(doc.raw == expected for doc in visible.values())
+        assert visible and all(
+            doc.raw == f"# Internal note for Marie - {expected}"
+            for doc in visible.values()
+        )
         assert not await memory.get_document(identity, viewer="Marie")

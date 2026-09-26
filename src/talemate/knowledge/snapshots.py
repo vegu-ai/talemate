@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.formatting import format_message_view
 from talemate.knowledge.perspective_models import (
     PerspectiveOutput,
     SourceReference,
@@ -63,7 +64,12 @@ def snapshot_audience_context(
                 scene, view.source, name, read=read
             ):
                 continue
-            item = {"source": view.source.model_dump(), "text": view.text}
+            text = view.text
+            if reference.kind == "message":
+                text = format_message_view(
+                    read.sources[reference.key][0].owner, text, "chat"
+                )
+            item = {"source": view.source.model_dump(), "text": text}
             size = count_tokens(json.dumps(item, indent=2))
             if used + size > per_character:
                 continue

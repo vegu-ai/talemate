@@ -68,9 +68,12 @@ def render_inserts(scene, viewer, *, technical=False):
 @pytest.mark.parametrize(
     "insert", ["sequential", "all-context", "conversation-context", "never"]
 )
-@pytest.mark.parametrize("character", [None, "Bob"])
+@pytest.mark.parametrize(
+    "character, prefix",
+    [(None, "# Internal note - "), ("Bob", "# Internal note for Bob - ")],
+)
 async def test_all_modes_analyze_heading_once_and_scope_history_inserts_and_side_entries(
-    setup, insert, character
+    setup, insert, character, prefix
 ):
     scene, summarizer, request = setup
     reinforcement = await apply(scene, request, insert=insert, character=character)
@@ -96,7 +99,7 @@ async def test_all_modes_analyze_heading_once_and_scope_history_inserts_and_side
     rows = audience_documents(scene)
     assert rows and all("poison" not in row["text"] for row in rows.values())
     side = [row for row in rows.values() if row["group"] == ("authored",)]
-    assert side and all(row["text"] == VISIBLE for row in side)
+    assert side and all(row["text"] == prefix + VISIBLE for row in side)
     assert all(row["meta"]["knowledge_audience"] == ["Alice"] for row in side)
     assert all(not row["meta"]["knowledge_common"] for row in side)
     if character:
@@ -201,7 +204,7 @@ async def test_direct_failure_and_retry_use_shared_lifecycle(setup, monkeypatch)
     assert reinforcement.answer == READER
     request.return_value = result(answer(VISIBLE, None))
     await summarizer.ensure_perceptions(scene)
-    assert reinforcement.context_for(scene, "Alice") == VISIBLE
+    assert reinforcement.context_for(scene, "Alice") == f"# Internal note - {VISIBLE}"
     assert request.await_count == 2
     recovery.assert_awaited_once()
 
@@ -281,6 +284,7 @@ async def test_real_index_updates_generated_entries_and_cache_then_removes_sourc
     import json
 
     scene, memory, _, conversation = rag
+    get_agent("summarizer").actions["perceptions"].config["analyze_player"].value = True
     request = AsyncMock()
     monkeypatch.setattr(Prompt, "request", excluding_passage(request))
 
@@ -355,7 +359,8 @@ async def test_direct_answer_changed_during_analysis_discards_stale_response(set
     request.side_effect = changing
     await summarizer.finalize_perceptions(scene, [])
     assert (
-        reinforcement.context_for(scene, "Alice") == "Alice sees the lantern go dark."
+        reinforcement.context_for(scene, "Alice")
+        == "# Internal note - Alice sees the lantern go dark."
     )
     assert calls == 2
 
@@ -377,7 +382,7 @@ async def test_insert_mode_changes_retire_only_the_selected_source(setup):
     assert second.source_for(scene) is second_source
     assert source_reference(scene, "message", first_id) is None
     direct_id = first.source_for(scene).id
-    assert first.context_for(scene, "Alice") == VISIBLE
+    assert first.context_for(scene, "Alice") == f"# Internal note - {VISIBLE}"
     await scene.world_state.add_reinforcement(
         QUESTION, answer=READER, insert="sequential"
     )
@@ -388,7 +393,7 @@ async def test_insert_mode_changes_retire_only_the_selected_source(setup):
         first, world._prepare_reinforcement(first, False), READER, False
     )
     assert first.source_for(scene).id not in (first_id, direct_id)
-    assert first.context_for(scene, "Alice") == VISIBLE
+    assert first.context_for(scene, "Alice") == f"# Internal note - {VISIBLE}"
 
 
 async def test_direct_passage_does_not_acquire_a_later_disclosure_on_retry(setup):

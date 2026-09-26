@@ -15,6 +15,7 @@ from talemate.history import ArchiveEntry, LayeredArchiveEntry
 from talemate.instance import get_agent
 from talemate.knowledge import context
 from talemate.knowledge.context import project_character_history
+from talemate.knowledge.formatting import perception_body
 from talemate.knowledge.summaries import (
     summary_sources,
     summary_inputs,
@@ -80,7 +81,7 @@ def summary_scene(scene, monkeypatch, request):
     publish(scene, scene.history[0], PRIVATE + " " + CLAIM, CLAIM)
     publish(scene, scene.history[1], "Alice hears a PRIVATE-WHISPER.", None)
     for message in scene.history[2:]:
-        publish(scene, message, message.message, message.message)
+        publish(scene, message, perception_body(message), perception_body(message))
     scene.archived_history = [
         ArchiveEntry(
             id="base-a", text="READER-A " + PRIVATE, start=0, end=1
@@ -1166,7 +1167,7 @@ async def test_deleted_uncited_message_cannot_widen_summary(
         message.hide()
     scene.history.insert(position, message)
     if excluded == "hidden":
-        publish(scene, message, message.message, message.message)
+        publish(scene, message, perception_body(message), perception_body(message))
     scene.archived_history[0]["end"] = 2
     for entry in scene.archived_history[1:]:
         entry["start"] += 1

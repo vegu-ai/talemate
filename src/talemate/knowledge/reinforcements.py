@@ -6,6 +6,7 @@ import weakref
 import structlog
 
 from talemate.exceptions import GenerationCancelled
+from talemate.knowledge.formatting import format_message_view
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspectives import (
     PerspectiveReadContext,
@@ -207,7 +208,11 @@ def source_context(
         raise GenerationCancelled(
             f"Reinforcement perception is {selected.status}; it runs again on the next turn"
         )
-    return selected.text if selected.status == "ready" else ""
+    return (
+        format_message_view(source, selected.text, "chat")
+        if selected.status == "ready"
+        else ""
+    )
 
 
 def reinforcement_context(

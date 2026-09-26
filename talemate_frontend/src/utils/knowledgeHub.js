@@ -16,10 +16,11 @@ export const KNOWLEDGE_TOGGLES = Object.freeze([
     { agent: 'conversation', action: 'character_knowledge', config: null },
     { agent: 'conversation', action: 'character_knowledge', config: 'perspective_filter' },
     { agent: 'conversation', action: 'character_knowledge', config: 'memory_pass' },
+    { agent: 'summarizer', action: 'perceptions', config: 'analyze_player' },
     { agent: 'summarizer', action: 'perceptions', config: 'automatic_repair' },
 ]);
 
-export const PERSPECTIVES_ANALYSIS_COST = 'Summarizer analysis after each passage';
+export const PERSPECTIVES_ANALYSIS_COST = 'Summarizer analysis when an audience needs it';
 
 // carried by the status in both modes, but only runs in Character perspectives
 const PERSPECTIVES_ONLY_ACTIONS = new Set(['summarizer.perceptions']);

@@ -73,7 +73,7 @@ async def test_input_changes_retry_until_stable_without_extra_stable_request(
     seen = []
 
     async def analyze(*args, **kwargs):
-        seen.append(kwargs["vars"]["context"]["cast"][1]["authored_description"])
+        seen.append(kwargs["vars"]["context"]["cast"][0]["authored_description"])
         if request.await_count <= changes:
             scene.character_data[
                 "Bob"

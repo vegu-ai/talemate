@@ -847,8 +847,13 @@ class ReinforcementMessage(SceneMessage):
     def question(self):
         return self.source_arguments.get("question", "question")
 
+    @property
+    def perception_prefix(self) -> str:
+        subject = f" for {self.character_name}" if self.character_name else ""
+        return f"# Internal note{subject} - "
+
     def __str__(self):
-        return f"# Internal note for {self.character_name} - {self.question}\n{self.message}"
+        return f"{self.perception_prefix}{self.question}\n{self.message}"
 
     def as_format(self, format: str, **kwargs) -> str:
         if format in ["movie_script", "narrative", "ai_aware"]:
@@ -921,8 +926,12 @@ class ContextInvestigationMessage(SceneMessage):
             return f"Added detail to {entity}"
         return "Internal note"
 
+    @property
+    def perception_prefix(self) -> str:
+        return "# "
+
     def __str__(self):
-        return f"# {self.title}: {self.message}"
+        return f"{self.perception_prefix}{self.title}: {self.message}"
 
     def to_dict(self) -> dict:
         rv = super().to_dict()

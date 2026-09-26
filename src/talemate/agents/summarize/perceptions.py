@@ -5,6 +5,7 @@ import re
 import traceback
 import uuid
 from collections import Counter
+from collections.abc import Collection
 from copy import deepcopy
 from typing import TYPE_CHECKING, Literal
 
@@ -33,6 +34,11 @@ from talemate.knowledge.backlog import (
     record_cancel,
 )
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.formatting import (
+    passage_metadata,
+    perception_body,
+    perception_speaker,
+)
 from talemate.knowledge.readiness import emit_perception_status, perception_readiness
 from talemate.knowledge.presence import relevant_audiences
 from talemate.knowledge.timeline import record_time
@@ -58,11 +64,7 @@ from talemate.knowledge.perspectives import (
     view_staleness,
 )
 from talemate.prompts import Prompt
-from talemate.scene_message import (
-    CharacterMessage,
-    ContextInvestigationMessage,
-    SceneMessage,
-)
+from talemate.scene_message import SceneMessage
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -101,7 +103,9 @@ class PerceptionValidationError(ValueError):
 
 
 class PerceptionInputsChanged(Exception):
-    pass
+    def __init__(self, *, invalidate: bool = True):
+        self.invalidate = invalidate
+        super().__init__("Perception inputs changed")
 
 
 def warn_perception_regeneration(message: SceneMessage) -> None:
@@ -344,6 +348,31 @@ def eligible_passage(message: SceneMessage) -> bool:
     return message.supports_perceptions
 
 
+def filter_analysis_audiences(
+    scene: "Scene", names: Collection[str], *, speaker: str | None = None
+) -> tuple[str, ...]:
+    analyze_player = get_agent("summarizer").resolve_config(
+        "perceptions", "analyze_player"
+    )
+    return tuple(
+        character.name
+        for character in scene.character_data.values()
+        if character.name in names
+        and character.name != speaker
+        and (analyze_player or not character.is_player)
+    )
+
+
+def analysis_audiences(scene: "Scene", message: SceneMessage) -> tuple[str, ...]:
+    if not perception_body(message).strip():
+        return ()
+    return filter_analysis_audiences(
+        scene,
+        relevant_audiences(scene, message),
+        speaker=perception_speaker(message),
+    )
+
+
 def perception_passages(scene: "Scene") -> list[SceneMessage]:
     return sorted(message_sources(scene), key=lambda entry: entry.id)
 
@@ -537,7 +566,11 @@ def perception_backlog(
     read = read or PerspectiveReadContext(scene)
     keepable, empty, staleness = [], [], {}
     for message in passages:
-        if not eligible_passage(message) or message.knowledge is None:
+        if (
+            not eligible_passage(message)
+            or message.knowledge is None
+            or not analysis_audiences(scene, message)
+        ):
             continue
         stale = perception_staleness(scene, message, read=read)
         if stale is None:
@@ -617,7 +650,9 @@ def tracked_character_states(scene: "Scene", name: str) -> dict[str, str]:
     return states
 
 
-def perception_context(scene: "Scene", message: SceneMessage) -> dict:
+def perception_context(
+    scene: "Scene", message: SceneMessage, *, audiences: tuple[str, ...] | None = None
+) -> dict:
     read = PerspectiveReadContext(scene)
     previous = [
         entry
@@ -625,7 +660,7 @@ def perception_context(scene: "Scene", message: SceneMessage) -> dict:
         if entry.id < message.id and eligible_passage(entry)
     ][-CONTEXT_PASSAGES:]
     cast = []
-    for name in relevant_audiences(scene, message):
+    for name in relevant_audiences(scene, message) if audiences is None else audiences:
         character = scene.character_data[name]
         known = []
         for entry in previous:
@@ -636,7 +671,13 @@ def perception_context(scene: "Scene", message: SceneMessage) -> dict:
             if view.status == "ready" and can_cite_view(
                 scene, view.source, character.name, read=read
             ):
-                known.append({"source": view.source.model_dump(), "text": view.text})
+                known.append(
+                    {
+                        "source": view.source.model_dump(),
+                        "text": view.text,
+                        **passage_metadata(entry),
+                    }
+                )
         if scene.knowledge and message.knowledge:
             for disclosure in scene.knowledge.disclosures:
                 if character.name in disclosure.audience and (
@@ -672,7 +713,8 @@ def perception_context(scene: "Scene", message: SceneMessage) -> dict:
         "prior_physical_context": [
             {
                 "id": entry.id,
-                "text": entry.perception_text,
+                "text": perception_body(entry),
+                **passage_metadata(entry),
                 "present": entry.present,
                 "provenance": passage_provenance(entry).model_dump(),
             }
@@ -680,17 +722,8 @@ def perception_context(scene: "Scene", message: SceneMessage) -> dict:
         ],
         "passage": {
             "provenance": passage_provenance(message).model_dump(),
-            "text": message.perception_text,
-            "kind": message.typ,
-            "sub_type": message.sub_type
-            if isinstance(message, ContextInvestigationMessage)
-            else None,
-            "subject_character": message.source_arguments.get("character")
-            if isinstance(message, ContextInvestigationMessage)
-            else None,
-            "speaker": message.character_name
-            if isinstance(message, CharacterMessage)
-            else None,
+            "text": perception_body(message),
+            **passage_metadata(message),
             "present": message.present,
         },
     }
@@ -762,6 +795,18 @@ class PerceptionMixin:
             description="Analyze passages from each character's perspective and repair incomplete analysis.",
             icon="mdi-eye-outline",
             config={
+                "analyze_player": AgentActionConfig(
+                    type="bool",
+                    label="Analyze player perspective",
+                    description="Enable a perspective-limited view of the story for the player character. When off, the player character receives the full passage. Adds perception analysis for the player character; their own messages always stay verbatim.",
+                    value=False,
+                    note_on_value={
+                        True: AgentActionNote(
+                            color="primary",
+                            text="Includes the player in perception analysis. Adds a Summarizer request when no other audience needs analysis; the player's own messages stay verbatim.",
+                        ),
+                    },
+                ),
                 "automatic_repair": AgentActionConfig(
                     type="bool",
                     label="Automatically repair analysis",
@@ -1054,6 +1099,30 @@ class PerceptionMixin:
         record_cancel(scene)
         raise GenerationCancelled("Perception analysis was not confirmed", by_user=True)
 
+    def upcoming_perception_requests(
+        self,
+        scene: "Scene",
+        *,
+        speaker: str | None = None,
+        present: Collection[str] | None = None,
+        message: SceneMessage | None = None,
+    ) -> int:
+        """Regeneration keeps recorded presence; new passages use the current cast."""
+        if message is not None:
+            if not eligible_passage(message) or not perception_body(message).strip():
+                return 0
+            speaker = perception_speaker(message)
+            present = message.present
+        return int(
+            bool(
+                filter_analysis_audiences(
+                    scene,
+                    scene.active_characters if present is None else present,
+                    speaker=speaker,
+                )
+            )
+        )
+
     async def confirm_perception_backlog(
         self, scene: "Scene", *, upcoming: int
     ) -> None:
@@ -1170,7 +1239,9 @@ class PerceptionMixin:
                         if before_message_id is None:
                             self._perception_approved.pop(scene, None)
                         return
-                    if message.id not in self._approved(scene):
+                    if message.id not in self._approved(scene) and analysis_audiences(
+                        scene, message
+                    ):
                         if not await self._approve_perception_backlog(
                             scene,
                             self._backlog_passages(
@@ -1205,7 +1276,7 @@ class PerceptionMixin:
                         running.add(message.id)
                         emit_perception_status(scene, message, "running")
                         await self.analyze_perceptions(scene, message)
-                    except PerceptionInputsChanged:
+                    except PerceptionInputsChanged as exc:
                         if (
                             scene.cancel_requested
                             or scene.cancel_sequence != cancel_sequence
@@ -1218,9 +1289,10 @@ class PerceptionMixin:
                                 "The selected version changed during analysis"
                             )
                         self._perception_status(
-                            scene, message, "pending", invalidate=True
+                            scene, message, "pending", invalidate=exc.invalidate
                         )
-                        warn_perception_regeneration(message)
+                        if exc.invalidate:
+                            warn_perception_regeneration(message)
                         continue
                     except (GenerationCancelled, asyncio.CancelledError) as exc:
                         failures[message.id] = failures.get(message.id, 0) + 1
@@ -1281,9 +1353,26 @@ class PerceptionMixin:
     ) -> bool:
         return (
             self._perception_source_current(scene, message, knowledge)
-            and perception_context(scene, message) == context
+            and perception_context(
+                scene, message, audiences=analysis_audiences(scene, message)
+            )
+            == context
             and perception_intention(scene) == intention
         )
+
+    def _perception_retry_error(self, scene, message, context, intention):
+        # An audience-only change leaves the already published views current.
+        same_inputs = (
+            perception_intention(scene) == intention
+            and all(entry["name"] in scene.character_data for entry in context["cast"])
+            and perception_context(
+                scene,
+                message,
+                audiences=tuple(entry["name"] for entry in context["cast"]),
+            )
+            == context
+        )
+        return PerceptionInputsChanged(invalidate=not same_inputs)
 
     async def _perception_attempt(
         self,
@@ -1313,7 +1402,7 @@ class PerceptionMixin:
         if not self._perception_current(scene, message, knowledge, context, intention):
             log.info("discarding stale perception response", source_id=message.id)
             if self._perception_source_current(scene, message, knowledge):
-                raise PerceptionInputsChanged
+                raise self._perception_retry_error(scene, message, context, intention)
             return None
         error = None
         try:
@@ -1350,11 +1439,12 @@ class PerceptionMixin:
             )
         self._perception_status(scene, message, "pending")
         knowledge = message.knowledge
-        context = deepcopy(perception_context(scene, message))
+        analyzed = analysis_audiences(scene, message)
+        context = deepcopy(perception_context(scene, message, audiences=analyzed))
         intention = perception_intention(scene)
         audiences = relevant_audiences(scene, message)
         answer_budget = max(
-            2048, len(audiences) * (count_tokens(message.perception_text) + 256)
+            2048, len(analyzed) * (count_tokens(context["passage"]["text"]) + 256)
         )
         outputs = {}
         preserved = [
@@ -1364,12 +1454,27 @@ class PerceptionMixin:
             or not set(audiences).intersection(view.audience)
         ]
         preserved_names = {name for view in preserved for name in view.audience}
+        body = context["passage"]["text"]
+        outputs.update(
+            {
+                name: PerspectiveOutput(
+                    audience=(name,),
+                    status="ready" if body.strip() else "omitted",
+                    text=body if body.strip() else None,
+                    passage_provenance=(passage_provenance(message),),
+                )
+                for name in audiences
+                if name not in analyzed and name not in preserved_names
+            }
+        )
 
         try:
             repair = self.resolve_config("perceptions", "automatic_repair")
-            requested = audiences
+            requested = tuple(name for name in analyzed if name not in preserved_names)
             feedback = ""
             for attempt in range(2 if repair else 1):
+                if not requested:
+                    break
                 attempt_result = await self._perception_attempt(
                     scene,
                     message,
@@ -1421,7 +1526,9 @@ class PerceptionMixin:
                 scene, message, knowledge, context, intention
             ):
                 if self._perception_source_current(scene, message, knowledge):
-                    raise PerceptionInputsChanged from exc
+                    raise self._perception_retry_error(
+                        scene, message, context, intention
+                    ) from exc
                 return
             self._mark_perceptions_failed(scene, message, knowledge, outputs, preserved)
             log.warning(

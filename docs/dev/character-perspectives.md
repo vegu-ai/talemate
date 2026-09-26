@@ -27,7 +27,7 @@ use the scene-aware operations below to publish changes.
 | `SourcePerspectives.views` | Nonoverlapping `PerspectiveView` records with persisted `id`, explicit `audience`, `status`, optional `text`, and `sources` dependencies. |
 | `PerspectiveView.audience` | One or more exact canonical scene character names, including inactive characters. Shared views name every recipient. Unknown names, wildcards, empty audiences, duplicates and overlapping assignments are rejected. |
 | `PerspectiveView.revision` | Starts at 1; advances when this view changes or is invalidated. Unaffected siblings retain their revisions and prose. |
-| `PerspectiveView.text` | Complete replacement prose, present only when ready. Never an annotation appended to reader prose. |
+| `PerspectiveView.text` | Complete replacement prose, present only when ready. Generated message views omit host speaker labels and note wrappers. Source metadata retains attribution; consumers use `format_message_view` when they need a speaker label. Never an annotation appended to reader prose. |
 | `PerspectiveView.sources` | Computational dependencies on source revisions and optionally specific views. Every recipient must have current source references. Ready output additionally requires transitively readable (ready) evidence. Omitted, pending and failed outputs can cite current non-ready evidence. |
 | `PerspectiveView.passage_provenance` | Direct analytical inputs, each a `PassageProvenance(message_id, content_digest, revision)`; revision is optional for untracked historical prose. These reference reader passages without granting audience access or following their views' dependencies. Generated ready and omitted views always record their own passage, plus specifically cited prior physical context. |
 | `Disclosure` | Independent `id`, `revision`, `text`, `audience`, `acquired` and `provenance`. Its own text is learning evidence; no containing summary is unlocked. |
@@ -179,9 +179,34 @@ The shared scene-mode predicate from `talemate.knowledge.mode` governs all
 new requests.
 Activation uses the public new-story opt-in; perception does not manage character activation.
 
-The shared `summarizer.perceptions` prompt makes one analytical request per
+The shared `summarizer.perceptions` prompt makes at most one analytical request per
 finalized source attempt for the passage's persisted presence list, resolved to
-canonical scene names. Current activation does not expand that audience. A missing or stale
+canonical scene names. The Summarizer setting `perceptions.analyze_player`
+(**Analyze player perspective**) defaults to `false`, independently of knowledge
+effort and reasoning settings. With it off, present player characters receive a
+ready verbatim view. A present speaker always receives a ready verbatim view of
+their own `CharacterMessage`, including any narrator-voice aside. Each such view
+records the current passage provenance; it is never represented by an absent
+view or a fallback at read time. Narrator messages still analyze every non-skipped
+audience. Only audiences needing analysis enter the request; a passage with none
+makes no request and does not enter the analysis backlog. Existing current views
+(including manual edits) retain the normal preservation behavior when settings
+change. In-flight responses are rejected if the effective requested audience
+changes.
+
+The host's `perception_body` removes the character speaker prefix and generated
+note wrappers before rendering the current passage, prior physical context, and
+established message knowledge. Meaningful titles/questions and authored prose
+formatting stay in the body so secret-bearing headings still receive analysis.
+`speaker`, `kind`, `sub_type`, and `subject_character` metadata travel separately;
+first-person text retains its original speaker in prior context too. Digests and
+provenance continue to identify the full source text. This replaces the unreleased
+prefixed generated-view shape without a migration. History, summaries, memory
+documents, and snapshot evidence restore speaker attribution from the source
+record through `format_message_view` where needed. Reinforcement and investigation sources define their note prefix once in `perception_prefix`; the shared renderer restores it, including the tracker subject, without restoring excluded question text. Tracker prompt inserts use the same renderer. Empty passage bodies yield omitted views with provenance and no analysis request. Player dialogue generation and
+regeneration use the same stored-view history, memory, and summary paths as NPCs.
+
+Current activation does not expand that audience. A missing or stale
 view for an absent character selects as omitted without a request or a stored-view
 rewrite, including a passage with no knowledge record; explicit references to missing view IDs still select as unavailable.
 Current saved views remain selectable. Reading a stored view outside recorded presence that fails freshness checks selects as omitted without changing its data. When analysis runs for a present character, a stale absent view keeps its ID and audience as a pending record, with its old text and evidence cleared; that record remains in the final successful write and is never analyzed for the absent character. Passage readiness and `Scene.pending_perception_messages` read only views whose audience was recorded as present, so the record holds back neither. If analysis fails, the record remains stored as failed. The backlog estimate propagates invalidation through absent views but counts a dependent passage only when an affected audience was recorded as present there. Missing

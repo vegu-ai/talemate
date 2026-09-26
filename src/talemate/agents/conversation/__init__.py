@@ -424,8 +424,12 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
 
         with cancel_stops_other_questions(self.scene):
             if character_knowledge_enabled(self.scene):
-                await get_agent("summarizer").confirm_perception_backlog(
-                    self.scene, upcoming=1
+                summarizer = get_agent("summarizer")
+                await summarizer.confirm_perception_backlog(
+                    self.scene,
+                    upcoming=summarizer.upcoming_perception_requests(
+                        self.scene, speaker=character.name
+                    ),
                 )
             await catch_up_revisions(self.scene)
             if character_knowledge_enabled(self.scene):

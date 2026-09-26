@@ -714,7 +714,15 @@ class Scene(Emitter):
         if not player_submission:
             try:
                 with counting_pushed(
-                    self, sum(message.supports_perceptions for message in messages)
+                    self,
+                    sum(
+                        get_agent("summarizer").upcoming_perception_requests(
+                            self, message=message
+                        )
+                        for message in messages
+                    )
+                    if character_knowledge_enabled(self)
+                    else 0,
                 ):
                     await catch_up_revisions(self)
             except GenerationCancelled:

@@ -10,6 +10,7 @@ from talemate.context import ActiveScene
 from talemate.instance import get_agent
 from talemate.history import ArchiveEntry
 from talemate.knowledge.context import ContextHistoryMessage
+from talemate.knowledge.formatting import perception_body
 from talemate.knowledge.perspectives import set_source_perspectives, source_reference
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage
@@ -57,7 +58,7 @@ def cast(scene, monkeypatch, request):
                     {
                         "audience": ["Alice", "Bob"],
                         "status": "ready",
-                        "text": str(message),
+                        "text": perception_body(message),
                     }
                 ],
             )

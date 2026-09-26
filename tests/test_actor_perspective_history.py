@@ -44,12 +44,12 @@ def cast(scene, monkeypatch):
             {
                 "audience": ["Alice"],
                 "status": "ready",
-                "text": "Alice: " + PRIVATE + " " + PUBLIC,
+                "text": PRIVATE + " " + PUBLIC,
             },
             {
                 "audience": ["Bob", "Cara"],
                 "status": "ready",
-                "text": "Alice: " + PUBLIC,
+                "text": PUBLIC,
             },
         ],
     )
@@ -334,9 +334,9 @@ async def test_pending_editor_analysis_prevents_request(cast, monkeypatch):
         ("narrative", PUBLIC + "The door is open."),
     ],
 )
-@pytest.mark.parametrize("prefixed", [True, False])
+@pytest.mark.parametrize("literal_prefix", [True, False])
 def test_projection_formats_source_speaker_and_passage_type(
-    cast, monkeypatch, format, expected, prefixed
+    cast, monkeypatch, format, expected, literal_prefix
 ):
     scene, mixed = cast
     monkeypatch.setattr(
@@ -350,7 +350,7 @@ def test_projection_formats_source_speaker_and_passage_type(
             {
                 "audience": ["Bob"],
                 "status": "ready",
-                "text": ("Alice: " if prefixed else "") + PUBLIC,
+                "text": ("Alice: " if literal_prefix else "") + PUBLIC,
             }
         ],
     )
@@ -363,6 +363,8 @@ def test_projection_formats_source_speaker_and_passage_type(
         [{"audience": ["Bob"], "status": "ready", "text": "The door is open."}],
     )
     before = [message.model_dump() for message in scene.history]
+    if literal_prefix:
+        expected = expected.replace(PUBLIC, "Alice: " + PUBLIC)
     assert "".join(project_character_history(scene, "Bob")) == expected
     assert [message.model_dump() for message in scene.history] == before
 
@@ -401,7 +403,7 @@ async def test_verbatim_repetition_survives_perception_paraphrasing(cast, mode):
                 {
                     "audience": ["Bob"],
                     "status": "ready",
-                    "text": "Alice: Bob notes the end of the rain and the courtyard's scent.",
+                    "text": "Bob notes the end of the rain and the courtyard's scent.",
                 }
             ],
         )
@@ -440,7 +442,7 @@ async def test_revision_falls_back_without_repairing_its_prefix(
             scene,
             "message",
             message.id,
-            [{"audience": ["Bob"], "status": "ready", "text": "Alice: " + PUBLIC}],
+            [{"audience": ["Bob"], "status": "ready", "text": PUBLIC}],
         )
 
     monkeypatch.setattr(summarizer, "analyze_perceptions", analyze)

@@ -207,7 +207,7 @@ export function effortExplanation(mode, stop, agents = [], preview = false) {
     const retries = [];
     const benefits = [];
     if (perspectives) {
-        requests.push('1 per passage with an audience; summary requests vary by distinct character views and chunks');
+        requests.push('1 per passage with an audience that needs analysis; summary requests vary by distinct character views and chunks');
         benefits.push('keep each character’s view of events consistent');
     } else if (enabled && value(`${ck}.perspective_filter`)) {
         benefits.push('keep characters within what they know');

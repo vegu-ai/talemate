@@ -8,6 +8,7 @@ from test_perception_lifecycle import answer, result
 from test_perception_lifecycle import setup as setup
 from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
+from talemate.knowledge.formatting import perception_body
 from talemate.knowledge.perspective_models import content_digest
 from talemate.knowledge.perspectives import select_character_view, source_reference
 from talemate.knowledge.readiness import perception_readiness
@@ -73,7 +74,7 @@ def assert_ready(scene, message):
         scene, source_reference(scene, "message", message.id), "Bob"
     )
     assert selected.status == "ready"
-    assert selected.text == message.perception_text
+    assert selected.text == perception_body(message)
     assert perception_readiness(scene, message) == "ready"
     assert not refresh(scene, message)["required"]
     assert message.id not in scene.pending_perception_messages
@@ -95,7 +96,9 @@ async def test_automatic_final_text_is_ready_without_action_or_next_send(
     await t.scene.push_history(message)
     expected = original if mode == "off" else original.replace("brass", "silver")
     assert message.message == expected
-    assert [value for phase, value in t.order if phase == "perception"] == [expected]
+    assert [value for phase, value in t.order if phase == "perception"] == [
+        perception_body(message)
+    ]
     assert t.request.await_count == 1
     assert_ready(t.scene, message)
     await catch_up_revisions(t.scene)

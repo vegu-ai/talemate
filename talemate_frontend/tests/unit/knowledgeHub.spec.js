@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { KNOWLEDGE_TOGGLES, PERSPECTIVES_ANALYSIS_COST, resolveKnowledgeToggles, switchTally, thoroughnessSummary } from '@/utils/knowledgeHub';
+import { currentEffort, effortPinPatch } from '@/utils/knowledgeEffort';
 import { agentsAt } from './helpers/effortAgents';
 
 function agents(mode = 'legacy', stop = 'minimal', overrides = {}) {
@@ -12,7 +13,7 @@ function agents(mode = 'legacy', stop = 'minimal', overrides = {}) {
             action.can_be_disabled = name === 'character_knowledge';
             for (const [key, config] of Object.entries(action.config)) {
                 config.label = key;
-                if (['memory_pass', 'automatic_repair'].includes(key)) {
+                if (['memory_pass', 'automatic_repair', 'analyze_player'].includes(key)) {
                     config.note_on_value = { true: { text: 'One optional request.' } };
                 }
             }
@@ -28,6 +29,7 @@ describe('knowledge controls and effective scene values', () => {
             'conversation.character_knowledge.null',
             'conversation.character_knowledge.perspective_filter',
             'conversation.character_knowledge.memory_pass',
+            'summarizer.perceptions.analyze_player',
             'summarizer.perceptions.automatic_repair',
         ]);
         expect(Object.isFrozen(KNOWLEDGE_TOGGLES)).toBe(true);
@@ -43,7 +45,8 @@ describe('knowledge controls and effective scene values', () => {
         expect(resolved.map(g => g.action)).toEqual(['character_knowledge', 'perceptions']);
         expect(resolved[0].toggles.map(t => t.key)).toEqual(['memory_pass']);
         expect(resolved[1]).toMatchObject({ master: false, enabled: true });
-        expect(resolved[1].toggles[0].key).toBe('automatic_repair');
+        expect(resolved[1].toggles.map(t => t.key)).toEqual(['analyze_player', 'automatic_repair']);
+        expect(resolved[1].toggles[0]).toMatchObject({ value: false, costNote: 'One optional request.' });
     });
     it('reads enabled and config overrides without changing global values', () => {
         const status = agents('legacy', 'minimal', {
@@ -53,6 +56,19 @@ describe('knowledge controls and effective scene values', () => {
         expect(group).toMatchObject({ enabled: false, enabledOverridden: true });
         expect(group.toggles.find(t => t.key === 'memory_pass')).toMatchObject({ value: true, overridden: true, costNote: 'One optional request.' });
         expect(status[0].actions.character_knowledge.enabled).toBe(true);
+    });
+    it('exposes the player override without including it in any effort preset', () => {
+        const status = agents('perception', 'balanced', {
+            summarizer: { actions: { perceptions: { config: { analyze_player: { value: true } } } } },
+        });
+        const resolved = resolveKnowledgeToggles(status);
+        expect(resolved[1].toggles[0]).toMatchObject({ key: 'analyze_player', value: true, overridden: true });
+        expect(status[1].actions.perceptions.config.analyze_player.value).toBe(false);
+        expect(currentEffort(status, 'perception').stop).toBe('balanced');
+        expect(thoroughnessSummary(resolved, true).extras).toContain('analyze_player');
+        for (const stop of ['minimal', 'balanced', 'thorough']) {
+            expect(effortPinPatch(status, 'perception', stop).every(p => !Object.hasOwn(p.config, 'analyze_player'))).toBe(true);
+        }
     });
     it('survives missing status and ignores unrelated settings', () => {
         expect(resolveKnowledgeToggles(undefined)).toEqual([]);
@@ -76,7 +92,7 @@ describe('request costs and switch counts', () => {
         expect(thoroughnessSummary(groups('perception', 'minimal'), true).extras).toEqual([PERSPECTIVES_ANALYSIS_COST]);
         expect(thoroughnessSummary(groups('perception', 'balanced'), true).extras).toEqual([PERSPECTIVES_ANALYSIS_COST, 'automatic_repair']);
         expect(thoroughnessSummary(groups('perception', 'thorough'), true).extras).toEqual([PERSPECTIVES_ANALYSIS_COST, 'memory_pass', 'automatic_repair']);
-        expect(switchTally(groups('perception', 'balanced'))).toEqual({ on: 2, total: 3 });
+        expect(switchTally(groups('perception', 'balanced'))).toEqual({ on: 2, total: 4 });
     });
     it('does not charge Standard scenes for a stale perception control', () => {
         expect(thoroughnessSummary(groups('perception', 'balanced'), false).extras).toEqual([]);

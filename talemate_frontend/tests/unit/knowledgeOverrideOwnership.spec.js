@@ -28,7 +28,7 @@ describe('the hub ownership union', () => {
             'memory_pass',
             'perspective_filter',
         ]);
-        expect(owned('summarizer', 'perceptions')).toEqual(['automatic_repair']);
+        expect(owned('summarizer', 'perceptions')).toEqual(['analyze_player', 'automatic_repair']);
     });
 
     it('is exactly the union of both mode tables, so nothing extra is reset', () => {
@@ -113,7 +113,10 @@ describe('the reset lists', () => {
 
     it('names the enable key and each config key for a group', () => {
         expect(groupClearEntries('summarizer', 'perceptions'))
-            .toEqual([{ agent: 'summarizer', action: 'perceptions', config: 'automatic_repair' }]);
+            .toEqual([
+                { agent: 'summarizer', action: 'perceptions', config: 'analyze_player' },
+                { agent: 'summarizer', action: 'perceptions', config: 'automatic_repair' },
+            ]);
         expect(groupClearEntries('conversation', 'character_knowledge'))
             .toEqual(expect.arrayContaining([
                 { agent: 'conversation', action: 'character_knowledge' },

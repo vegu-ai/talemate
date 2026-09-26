@@ -262,7 +262,7 @@ async def test_rename_live_character_reinforcement_leaves_world_question_untouch
         scene.world_state.reinforcement_entry_context(
             f"Robert.detail.{cases.QUESTION}", "Alice"
         )
-        == cases.VISIBLE
+        == f"# Internal note for Robert - {cases.VISIBLE}"
     )
     assert not scene.world_state.reinforcement_entry_context(world_question, "Alice")
     assert not any(
@@ -293,10 +293,13 @@ async def test_unrelated_perspective_events_do_not_rederive_authored_group(
     assert ("authored",) in invalidate.call_args.kwargs["groups"]
 
 
-@pytest.mark.parametrize("character", [None, "Bob"])
+@pytest.mark.parametrize(
+    "character, prefix",
+    [(None, "# Internal note - "), ("Bob", "# Internal note for Bob - ")],
+)
 @pytest.mark.parametrize("insert", ["all-context", "sequential"])
 async def test_blocked_perception_keeps_canonical_entry_and_answer_together(
-    setup, monkeypatch, character, insert
+    setup, monkeypatch, character, prefix, insert
 ):
     scene, summarizer, request = setup
     reinforcement = await cases.apply(
@@ -324,7 +327,7 @@ async def test_blocked_perception_keeps_canonical_entry_and_answer_together(
     assert new_answer in canonical
     request.return_value = response(Alice="Alice sees darkness.", Bob=None)
     await summarizer.ensure_perceptions(scene)
-    assert reinforcement.context_for(scene, "Alice") == "Alice sees darkness."
+    assert reinforcement.context_for(scene, "Alice") == prefix + "Alice sees darkness."
 
 
 @pytest.mark.parametrize("status", ["pending", "failed"])
@@ -418,13 +421,17 @@ async def test_unchanged_scheduled_answer_retains_ready_source_and_acquisition(
     assert source.knowledge.acquired.model_dump() == acquired
     assert source.knowledge.model_dump() == views
     assert request.await_count == 1
-    assert reinforcement.context_for(scene, "Alice") == cases.VISIBLE
+    assert (
+        reinforcement.context_for(scene, "Alice")
+        == f"# Internal note - {cases.VISIBLE}"
+    )
 
 
 @pytest.mark.parametrize("route", ["world", "detail", "detail_defer"])
 async def test_unchanged_entry_save_retains_projected_audience(setup, route):
     scene, _, request = setup
     character = None if route == "world" else "Bob"
+    prefix = "# Internal note - " if route == "world" else "# Internal note for Bob - "
     await cases.apply(scene, request, character=character)
     identity = f"Bob.detail.{cases.QUESTION}" if character else cases.QUESTION
     binding = entry_binding(scene, identity)
@@ -450,7 +457,7 @@ async def test_unchanged_entry_save_retains_projected_audience(setup, route):
     ]
     assert rows
     assert all(not row["meta"]["knowledge_common"] for row in rows)
-    assert all(row["text"] == cases.VISIBLE for row in rows)
+    assert all(row["text"] == prefix + cases.VISIBLE for row in rows)
     pin(scene, identity)
     for template in ["common.extra-context-static", "visual.extra-context"]:
         for viewer in ("Alice", "Bob"):

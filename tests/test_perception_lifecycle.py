@@ -140,7 +140,7 @@ async def test_editor_finalization_precedes_analysis_and_archive(setup):
 
     async def analyze(*args, **kwargs):
         order.append("perception")
-        assert kwargs["vars"]["context"]["passage"]["text"] == "Alice: Polished."
+        assert kwargs["vars"]["context"]["passage"]["text"] == "Polished."
         return result()
 
     async def after(event):
@@ -268,17 +268,22 @@ async def test_visible_retry_blocks_then_resumes_without_duplicate(setup, failur
     try:
         rid = await wait_for_dialog()
         assert not task.done()
-        assert {view.status for view in message.knowledge.views} == {"failed"}
+        assert {view.audience: view.status for view in message.knowledge.views} == {
+            ("Alice",): "ready",
+            ("Bob",): "failed",
+        }
         downstream.assert_not_awaited()
         acquisition = message.knowledge.acquired
-        identities = [view.id for view in message.knowledge.views]
+        identities = {view.audience: view.id for view in message.knowledge.views}
         resolve_generation_error(rid, "retry")
         await asyncio.wait_for(task, 3)
         downstream.assert_awaited_once()
         assert request.await_count == 2
         assert scene.history == [message]
         assert message.knowledge.acquired == acquisition
-        assert [view.id for view in message.knowledge.views] == identities
+        assert {
+            view.audience: view.id for view in message.knowledge.views
+        } == identities
         assert {view.status for view in message.knowledge.views} == {"ready"}
     finally:
         task.cancel()
@@ -297,7 +302,10 @@ async def test_dialog_cannot_bypass_failed_analysis(setup, action):
         with pytest.raises(GenerationCancelled):
             await asyncio.wait_for(task, 3)
         assert scene.history == [message]
-        assert {view.status for view in message.knowledge.views} == {"failed"}
+        assert {view.audience: view.status for view in message.knowledge.views} == {
+            ("Alice",): "ready",
+            ("Bob",): "failed",
+        }
     finally:
         task.cancel()
 
@@ -312,7 +320,7 @@ async def test_manual_edit_discards_inflight_response_until_next_send(setup):
             started.set()
             await release.wait()
             return result(answer("Stale private thought.", "Stale public speech."))
-        assert kwargs["vars"]["context"]["passage"]["text"] == "Alice: Revised."
+        assert kwargs["vars"]["context"]["passage"]["text"] == "Revised."
         return result(answer("Alice says revised.", "Bob hears revised."))
 
     request.side_effect = analyze
@@ -465,7 +473,7 @@ async def test_manual_edit_while_retry_dialog_is_open_defers_new_source(setup):
         await catch_up_revisions(scene)
         assert (
             request.await_args.kwargs["vars"]["context"]["passage"]["text"]
-            == "Alice: Revised."
+            == "Revised."
         )
         assert message.knowledge.revision == 2
     finally:
@@ -495,8 +503,7 @@ async def test_regeneration_analyzes_only_final_version_in_original_slot(
     assert (message.id, message.knowledge.acquired) == identity
     assert request.await_count == 2
     assert (
-        request.await_args.kwargs["vars"]["context"]["passage"]["text"]
-        == "Alice: Polished."
+        request.await_args.kwargs["vars"]["context"]["passage"]["text"] == "Polished."
     )
 
 
@@ -545,15 +552,16 @@ async def test_shared_prompt_renders_without_additional_requests(scene, monkeypa
     prompt = str(send.await_args.args[0])
     assert "Do not continue the story" in prompt
     assert "no authority to activate or deactivate" in prompt
-    assert "Alice: *A private thought.*" in prompt
+    assert "*A private thought.*" in prompt
+    assert "Alice: *A private thought.*" not in prompt
     assert scene.history[0].knowledge.views[1].status == "omitted"
 
 
 @pytest.mark.asyncio
 async def test_prior_view_invalidation_rebuilds_only_affected_sibling(setup):
     scene, summarizer, request = setup
-    first = CharacterMessage(message="Alice: First.")
-    second = CharacterMessage(message="Alice: Second.")
+    first = NarratorMessage(message="First bell.")
+    second = NarratorMessage(message="Second bell.")
     await scene.push_history(first)
     used = json.loads(answer())
     used["views"][0]["knowledge_ids"] = ["K0-0"]
@@ -997,7 +1005,7 @@ async def test_cited_history_has_bounded_rebuild_and_one_index_per_scan(
     with answering("analyze", []):
         await scene.push_history(messages)
     assert request.await_count == 200
-    assert sum(bool(message.knowledge.views[0].sources) for message in messages) > 150
+    assert sum(bool(message.knowledge.views[1].sources) for message in messages) > 150
     original_sources = perspectives._sources
     scans = 0
 

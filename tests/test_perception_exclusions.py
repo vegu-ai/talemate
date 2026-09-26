@@ -383,13 +383,12 @@ async def test_host_check_failure_goes_through_the_repair_path(analysis):
     assert summarizer.resolve_config("perceptions", "automatic_repair") is True
     passage = "Alice: I waved. The key is mine, I thought."
     bad = payload(
-        view("Alice", passage, []),
-        view("Bob", "Alice: I waved.", []),
+        view("Bob", "I waved.", []),
     )
     good = payload(
         view(
             "Bob",
-            "Alice: I waved.",
+            "I waved.",
             [{"span": "The key is mine, I thought.", "reason": "private-thought"}],
         )
     )
@@ -402,6 +401,6 @@ async def test_host_check_failure_goes_through_the_repair_path(analysis):
     assert "The key is mine, I thought." in repair["validation_error"]
     assert "missing or changed" in repair["validation_error"]
     alice, bob = message.knowledge.views
-    assert alice.text == passage
-    assert bob.text == "Alice: I waved."
+    assert alice.text == passage.removeprefix("Alice: ")
+    assert bob.text == "I waved."
     dialog.assert_not_awaited()

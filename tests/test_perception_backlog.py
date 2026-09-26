@@ -91,7 +91,8 @@ def setup(scene, monkeypatch):
 
 async def story(scene, count=5):
     messages = [
-        CharacterMessage(message=f"Alice: Line {index}.") for index in range(count)
+        NarratorMessage(message=f"Line {index}.", source="narrate_scene")
+        for index in range(count)
     ]
     for message in messages:
         await scene.push_history(message)
@@ -335,7 +336,7 @@ async def test_backlog_skips_absent_dependents_but_propagates_to_present(
     carol = select_character_view(
         scene, source_reference(scene, "message", root.id), "Carol"
     )
-    dependent = CharacterMessage(message="Alice: I remember.", present=["Alice"])
+    dependent = NarratorMessage(message="Alice remembers.", present=["Alice"])
     scene.history.append(dependent)
     set_source_perspectives(
         scene,
@@ -352,7 +353,7 @@ async def test_backlog_skips_absent_dependents_but_propagates_to_present(
         ],
     )
     if later_present:
-        later = CharacterMessage(message="Carol: I recall it too.", present=["Carol"])
+        later = NarratorMessage(message="Carol recalls it too.", present=["Carol"])
         scene.history.append(later)
         inherited = select_character_view(
             scene, source_reference(scene, "message", dependent.id), "Carol"
@@ -411,7 +412,7 @@ async def test_keep_makes_stored_views_current_without_a_request(setup):
     assert request.await_count == before
 
     saved = [message.model_dump() for message in scene.history]
-    scene.history = [CharacterMessage.model_validate(entry) for entry in saved]
+    scene.history = [NarratorMessage.model_validate(entry) for entry in saved]
     bind_perspective_sources(scene)
     assert all(perception_results_current(scene, message) for message in scene.history)
 
@@ -981,3 +982,86 @@ async def test_keep_during_a_push_leaves_nothing_for_the_next_catch_up(setup):
     await catch_up_revisions(scene)
     assert request.await_count == before
     assert all(perception_results_current(scene, message) for message in scene.history)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("operation", ["converse", "regenerate", "push"])
+@pytest.mark.parametrize("player_analysis", [False, True])
+async def test_upcoming_npc_counts_only_when_an_audience_needs_analysis(
+    setup, monkeypatch, operation, player_analysis
+):
+    scene, summarizer, request = setup
+    scene.character_data["Bob"].is_player = True
+    summarizer.actions["perceptions"].config["analyze_player"].value = player_analysis
+    actor = with_actor(scene)
+    messages = await story(scene, count=3)
+    target = CharacterMessage(message="Alice: Hello.")
+    if operation == "regenerate":
+        await scene.push_history(target)
+    older_build(messages)
+    reached, frames = [], []
+    stop_at_the_reply_request(request, monkeypatch, reached)
+    before = request.await_count
+    with answering("cancel" if player_analysis else None, frames):
+        if player_analysis:
+            with pytest.raises(GenerationCancelled):
+                if operation == "converse":
+                    await get_agent("conversation").converse(actor)
+                elif operation == "regenerate":
+                    await regenerate(scene)
+                else:
+                    await scene.push_history(target)
+        elif operation == "converse":
+            with pytest.raises(GenerationStarted):
+                await get_agent("conversation").converse(actor)
+        elif operation == "regenerate":
+            await regenerate(scene)
+        else:
+            await scene.push_history(target)
+    if player_analysis:
+        assert [
+            (frame["needed"], frame["new"], frame["total"]) for frame in frames
+        ] == [(4, 1, 4)]
+        assert request.await_count == before
+        assert reached == []
+    else:
+        assert frames == []
+        assert request.await_count == before + 3
+        assert reached == ([] if operation == "push" else ["conversation"])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("was_present", [False, True])
+async def test_regenerate_counts_recorded_cast_after_presence_changes(
+    setup, monkeypatch, was_present
+):
+    scene, summarizer, request = setup
+    scene.character_data["Bob"].is_player = True
+    summarizer.actions["perceptions"].config["analyze_player"].value = False
+    with_actor(scene)
+    messages = await story(scene, count=3)
+    if was_present:
+        scene.active_characters.append("Carol")
+    target = CharacterMessage(message="Alice: Hello.")
+    await scene.push_history(target)
+    recorded = list(target.present)
+    scene.active_characters = ["Alice", "Bob"] + ([] if was_present else ["Carol"])
+    older_build(messages)
+    reached, frames = [], []
+    stop_at_the_reply_request(request, monkeypatch, reached)
+    before = request.await_count
+    with answering("cancel", frames):
+        if was_present:
+            with pytest.raises(GenerationCancelled):
+                await regenerate(scene)
+        else:
+            await regenerate(scene)
+    assert target.present == recorded
+    if was_present:
+        assert [(f["needed"], f["new"], f["total"]) for f in frames] == [(4, 1, 4)]
+        assert request.await_count == before
+        assert reached == []
+    else:
+        assert frames == []
+        assert request.await_count == before + 3
+        assert reached == ["conversation"]

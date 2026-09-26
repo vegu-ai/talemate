@@ -65,6 +65,26 @@ The same toggle and cost note are available in the World State knowledge hub.
 
 ![Summarizer agent character perspectives settings](/talemate/img/0.40.0/summarizer-character-perspectives-settings.png)
 
+##### Analyze player perspective
+
+Off by default. Turn **Analyze player perspective** on under **Settings → Agents →
+Summarizer → Character Perspectives** to give the player character a
+perspective-limited view of new passages. This adds the player to perception
+analysis independently of knowledge effort or the model's reasoning setting.
+You can also override it for one scene in the
+[knowledge hub](/talemate/user-guide/world-state/#knowledge-hub), under
+**Thoroughness → Individual settings**.
+With it off, the player receives the full passage in their stored view. That view
+also feeds their memories, summaries, and prompts when the AI writes their next
+line. The main story column always shows the full story.
+
+A character always takes their own character message verbatim, including thoughts
+and any narrator aside in it. This also applies to the player with the setting on.
+In a scene with one player and one NPC, an NPC line therefore needs no perception
+request with the setting off; a narrator passage analyzes only the NPC. Other
+present NPCs still get analysis. Existing valid views, including hand edits, stay
+as they are when you change the setting.
+
 ##### Automatically repair analysis
 
 When a character’s view is missing or invalid, make one extra request to repair it before showing the generation error dialog. Valid views are kept. On by default; turn off to use manual retries only. This setting applies to stories using [Character perspectives](/talemate/user-guide/world-editor/knowledge/). Self-citations and correctly typed unoffered IDs do not trigger repair. Missing or non-array citation fields and wrongly typed IDs require repair.

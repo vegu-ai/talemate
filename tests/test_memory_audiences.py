@@ -306,12 +306,17 @@ async def test_failed_index_write_blocks_query_and_retries(indexed_scene, monkey
 
 async def test_legacy_viewer_is_rejected_without_backfill(indexed_scene):
     scene, memory, _ = indexed_scene
+    state = memory._audience_state(scene)
+    if state.task:
+        await state.task
+    await memory.purge_audience_index(scene)
     scene.knowledge_eligibility = "legacy"
     before = memory.db.count()
     with pytest.raises(ValueError, match="requires perception mode"):
         await contents(memory)
     await memory.rebuild_audience_index()
     assert memory.db.count() == before
+    assert memory.db.get(where={"knowledge_index": True})["ids"] == []
 
 
 async def test_unchanged_and_unrelated_documents_are_not_reembedded(

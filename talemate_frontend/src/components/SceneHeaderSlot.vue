@@ -3,12 +3,14 @@
         <template v-for="entry in entries" :key="entry.id">
             <SceneHeaderCharacters v-if="entry.widget === 'characters'" class="scene-header__widget" :characters="entry.characters" :hidden="entry.hidden" :scene="scene" />
             <SceneHeaderKnowledgeEffort v-else-if="entry.widget === 'knowledge_effort'" class="scene-header__widget" :mode="entry.mode" />
+            <SceneHeaderTemplateSelect v-else-if="entry.widget === 'template_select'" :item="entry" />
             <template v-else>
                 <v-tooltip v-for="part in entry.parts" :key="`${entry.id}-${part.key}`" :text="part.tooltip" location="bottom" max-width="320">
                     <template v-slot:activator="{ props }">
                         <span v-bind="props" class="scene-header__item" :class="{ 'scene-header__item--muted': part.muted, 'scene-header__item--accent': part.accent }" tabindex="0">
                             <span v-if="part.value" class="scene-header__value">{{ part.value }}</span>
-                            <span class="scene-header__label">{{ part.label }}</span>
+                            <span v-if="part.icon" class="scene-header__icon" role="img" :aria-label="part.label"><v-icon size="small">{{ part.icon }}</v-icon></span>
+                            <span v-else class="scene-header__label">{{ part.label }}</span>
                             <v-icon v-if="part.trailingIcon" class="scene-header__marker" size="small">{{ part.trailingIcon }}</v-icon>
                             <span v-if="part.srText" class="d-sr-only">{{ part.srText }}</span>
                         </span>
@@ -22,12 +24,14 @@
 <script>
 import SceneHeaderCharacters from './SceneHeaderCharacters.vue';
 import SceneHeaderKnowledgeEffort from './SceneHeaderKnowledgeEffort.vue';
+import SceneHeaderTemplateSelect from './SceneHeaderTemplateSelect.vue';
 
 export default {
     name: 'SceneHeaderSlot',
     components: {
         SceneHeaderCharacters,
         SceneHeaderKnowledgeEffort,
+        SceneHeaderTemplateSelect,
     },
     props: {
         entries: {
@@ -66,6 +70,12 @@ export default {
 
 .scene-header__label {
     font-size: 0.8125rem;
+    color: rgba(var(--v-theme-on-background), var(--v-medium-emphasis-opacity));
+}
+
+.scene-header__icon {
+    display: inline-flex;
+    align-self: center;
     color: rgba(var(--v-theme-on-background), var(--v-medium-emphasis-opacity));
 }
 

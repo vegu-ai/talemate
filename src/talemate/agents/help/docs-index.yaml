@@ -245,10 +245,10 @@
     weights and Scene Direction suppression.
 - path: user-guide/agents/scene-overrides.md
   title: Per-Scene Agent Overrides
-  summary: 'Sparse agent overrides: Global/Scene editing, Save/Discard, quick toggles, links, hub reset icons, creation knowledge-effort
-    pins and project-scoped stock sharing. First-save hub changes continue after Save Scene; errors stay open for correction,
-    cancellation keeps Save and apply retry or Discard change. Agents naming refuses files that already exist with choose-new-name
-    or link-existing guidance; other names on read-only scenes require Save As.'
+  summary: 'Sparse agent overrides: Global/Scene editing, per-section override counts, Save/Discard, quick toggles, links, hub reset
+    icons, creation knowledge-effort pins and project-scoped stock sharing. First-save hub changes continue after Save Scene;
+    errors stay open for correction, cancellation keeps Save and apply retry or Discard change. Agents naming refuses files
+    that already exist with choose-new-name or link-existing guidance; other names on read-only scenes require Save As.'
 - path: user-guide/agents/summarizer/index.md
   title: Overview
   summary: 'Summarizer overview: dialogue summaries, progressively compressed layered history, scene analysis and context
@@ -1087,10 +1087,10 @@
     or deleting projects through Scene Library.
 - path: user-guide/scene-header.md
   title: Scene Header
-  summary: Sticky scene header shows the title plus configurable History stats, Summarizer tokens and due reasons, Active
-    character portraits with +N overflow, and a Knowledge effort chip that opens the scene knowledge popup and saves scene
-    overrides. Covers per-side item ordering, Settings > Game visibility, Save and apply / Discard change for pending settings,
-    notice states and the title-only header during Playthrough.
+  summary: 'Sticky, configurable scene header: title, History stats, Summarizer tokens and due reasons, Active character portraits with +N
+    overflow, Knowledge effort chip for the scene knowledge popup (saves scene overrides), Knowledge mode label,
+    Writing style and Visual style menus. Per-side item menus and ordering, Settings > Game visibility, Save and apply / Discard
+    change for pending settings, notice states, title-only header during Playthrough.'
 - path: user-guide/scene-state-reset.md
   title: Reset Scene State
   summary: 'Reset selected scene state: conversation and summaries, optionally static backstory, memory database, intent state,

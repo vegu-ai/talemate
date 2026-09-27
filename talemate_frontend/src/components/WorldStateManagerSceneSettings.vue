@@ -142,7 +142,15 @@
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
 import { queueEffortAcrossSwitch } from '@/utils/knowledgeEffort';
-import { PERSPECTIVES_LOCKED_HINT, PERSPECTIVES_OPEN_HINT, buildSceneSettingsPayload, canChangePerspectives, perspectivesEnabled } from '@/utils/sceneSettings';
+import {
+    PERSPECTIVES_LOCKED_HINT,
+    PERSPECTIVES_OPEN_HINT,
+    buildSceneSettingsPayload,
+    canChangePerspectives,
+    perspectivesEnabled,
+    visualStyleOptions,
+    writingStyleOptions,
+} from '@/utils/sceneSettings';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 import { characterKnowledgeMode } from '@/constants/characterKnowledgeModes';
 
@@ -187,22 +195,7 @@ export default {
             return characterKnowledgeMode(this.perspectives).title;
         },
         writingStyleTemplates() {
-            let templates = Object.values(this.templates.by_type.writing_style).map((template) => {
-                return {
-                    value: `${template.group}__${template.uid}`,
-                    title: template.name,
-                    props: { subtitle: template.description }
-                }
-            });
-
-            // add empty option to the top
-            templates.unshift({
-                value: null,
-                title: 'None',
-                props: { subtitle: 'No writing style template selected.' }
-            });
-
-            return templates;
+            return writingStyleOptions(this.templates);
         },
         agentPersonaTemplates() {
             if(!this.templates || !this.templates.by_type.agent_persona) return [{ value: null, title: 'None' }];
@@ -246,22 +239,7 @@ export default {
             return items;
         },
         visualStyleTemplates() {
-            if(!this.templates || !this.templates.by_type.visual_style) return [{ value: null, title: 'Use Agent Default' }];
-            let templates = Object.values(this.templates.by_type.visual_style)
-                .filter((template) => template.visual_type === 'STYLE')
-                .map((template) => {
-                    return {
-                        value: `${template.group}__${template.uid}`,
-                        title: template.name,
-                        props: { subtitle: template.description }
-                    }
-                });
-            templates.unshift({ 
-                value: null, 
-                title: 'Use Agent Default', 
-                props: { subtitle: 'Use the default art style from agent configuration.' } 
-            });
-            return templates;
+            return visualStyleOptions(this.templates);
         }
     },
     data() {

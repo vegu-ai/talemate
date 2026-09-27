@@ -10,11 +10,11 @@ The scene header sits at the top of the scene, as part of the page. It shows the
 [ Left of the title: items ]   Scene title   [ Right of the title: items ]
 ```
 
-Each item reads as a value with a short label next to it, for example **105** messages. Both sides hold as many items as you like, in the order you pick them, and either side can be empty. A long title is cut short with an ellipsis; hover over it to read the whole title. Hover over any item, or move to it with the keyboard, for an explanation of what its number means.
+Each item reads as a value with a short label next to it, for example **105** messages. The **Knowledge mode**, **Writing style** and **Visual style** items show their icon in place of the label, the same icon as in the item menu; hover over the item to read its name. Both sides hold as many items as you like, in the order you pick them, and either side can be empty. A long title is cut short with an ellipsis; hover over it to read the whole title. Hover over any item, or move to it with the keyboard, for an explanation of what its number means.
 
 In a narrow scene column (the creative environment, or a phone) the title moves to its own line above the items.
 
-While [Playthrough Mode](playthrough.md) runs, the header shows the title alone: the information items and the two buttons are put away. A playthrough shows no title bar at all when you have turned the header off.
+While [Playthrough Mode](playthrough.md) runs, the header shows the title alone: the information items and the header buttons are put away. A playthrough shows no title bar at all when you have turned the header off.
 
 Because the header carries the title, the scene's tab in the main navigation reads **:material-script: Story** rather than the scene title, in both the gameplay and the creative environment.
 
@@ -58,15 +58,33 @@ For example, when a long conversation starts to feel slow, open the chip and dra
 
 The chip's explanation also names the state the settings are in: while the agents have not reported yet, while another knowledge settings change is being applied, and while one waits for a scene save. A change that waits for a scene save, for example because you cancelled the **Save Scene** dialog of a story that has no save file yet, offers **Save and apply** and **Discard change** in the popup itself. When a change could not be saved, the explanation names the reason.
 
+##### :material-account-eye-outline: Knowledge mode
+
+The story's character knowledge mode: **Standard** or **Perspectives** (Character perspectives), followed by the :material-account-eye-outline: icon. The item shows the mode only; it has no control. Hover over it to read where the mode is chosen: **World Editor > Scene > Settings > Character perspectives**, before the story has history. Once the story has history, the mode stays as it is.
+
+##### :material-script-text-outline: Writing style
+
+![Scene header with the knowledge mode, writing style and visual style items, and the writing style menu open](/talemate/img/0.40.0/scene-header-styles.png)
+
+The scene's writing style template by name, followed by the :material-script-text-outline: icon, for example **Adventure Game** :material-script-text-outline:. Click it for a menu of your writing style templates and pick another one, or **None** for no template. It is the same setting as **Writing Style** in **World Editor > Scene > Settings**, so a change in one place shows in the other. Like any change in the scene settings, it marks the scene as unsaved.
+
+A scene without a writing style reads **None**, dimmed. When the scene names a template that is no longer in your template list, the item reads **Missing template** at full strength, not dimmed; pick another one from the menu.
+
+##### :material-palette-outline: Visual style
+
+The scene's visual art style template by name, followed by the :material-palette-outline: icon: the style new images of this scene are made in. Click it to pick another one from your visual style templates, or **Use Agent Default** to follow the Visualizer's own art style; the item then reads **Agent default**. It is the same setting as **Visual Art Style** in **World Editor > Scene > Settings**.
+
+For example, when a noir story moves to a sunny coast, pick a watercolour style from the header before you generate the next scene image.
+
 ## Choosing the items
 
-![Scene header item picker](/talemate/img/0.40.0/scene-header-picker.png)
+![The item menu of the left side of the scene header](/talemate/img/0.40.0/scene-header-picker.png)
 
-Hover over the header and click the **:material-tune-variant:** button at its right edge. A small menu lists every item under **Left of the title** and **Right of the title**; tick an item to add it to that side, untick it to remove it. A newly ticked item goes to the end of its side, so untick and tick an item again to move it to the end. The header updates at once and the choice is saved.
+Each side of the header has its own menu. Hover over the header and click the **:material-tune-variant:** button at its left edge for the items **Left of the title**, or the one at its right edge for the items **Right of the title**. The menu lists every item with its icon; tick an item to add it to that side, untick it to remove it. A menu changes only its own side. A newly ticked item goes to the end of its side, so untick and tick an item again to move it to the end. The header updates at once and the choice is saved.
 
 The same choice is available as **Left of the title** and **Right of the title** in [Settings > Game > General](/talemate/user-guide/app-settings/game#scene-header). Both places edit the same setting, so a change in one shows in the other.
 
-By default the header is on, with **History stats** on the left and **Summarizer** on the right. **Active characters** and **Knowledge effort** are off until you tick them for a side.
+By default the header is on, with **History stats** on the left and **Summarizer** on the right. The other items are off until you tick them for a side.
 
 ## Perspective label
 
@@ -76,4 +94,4 @@ While you [view a character's perspective](/talemate/user-guide/perspective-view
 
 Hover over the header and click the **:material-close:** button at its right edge to hide it. Hiding the header this way turns off the same setting as **Show scene header** in [Settings > Game > General](/talemate/user-guide/app-settings/game#scene-header), which is where you turn it back on. Your item choices are kept while the header is hidden.
 
-Both buttons are also reachable with the keyboard, and they are always visible on touch screens.
+The menu and close buttons are also reachable with the keyboard, and they are always visible on touch screens.

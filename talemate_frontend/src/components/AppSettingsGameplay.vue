@@ -21,7 +21,7 @@
     </v-row>
     <v-row>
         <v-col cols="12" data-setting-anchor="scene_header">
-            <v-checkbox color="primary" v-model="config.game.scene_header.enabled" label="Show scene header" messages="Keep the scene title and your chosen information items at the top of the scene. The header's own close button turns this off as well, and its edit button picks the items."></v-checkbox>
+            <v-checkbox color="primary" v-model="config.game.scene_header.enabled" label="Show scene header" messages="Keep the scene title and your chosen information items at the top of the scene. The header's own close button turns this off as well, and the item menus on each side of the header pick the items."></v-checkbox>
         </v-col>
     </v-row>
     <v-row>

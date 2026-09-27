@@ -7,6 +7,7 @@ import Header from '@/components/SceneHeader.vue';
 import HeaderSlot from '@/components/SceneHeaderSlot.vue';
 import HeaderEffort from '@/components/SceneHeaderKnowledgeEffort.vue';
 import HeaderCharacters from '@/components/SceneHeaderCharacters.vue';
+import HeaderTemplateSelect from '@/components/SceneHeaderTemplateSelect.vue';
 import { CHARACTER_CAP, resolveSlotItems } from '@/utils/sceneHeaderItems.js';
 import { agentsAt } from './helpers/effortAgents.js';
 import { installFakeCanvas } from './helpers/fakeCanvas.js';
@@ -130,7 +131,7 @@ function mountApp(root, injections = {}, vuetify = DARK) {
         ...injections,
     };
     for (const [key, value] of Object.entries(provided)) app.provide(key, value);
-    for (const name of ['VList', 'VCard', 'VCardText', 'VChip', 'VIcon', 'VCheckbox']) app.component(name, Container);
+    for (const name of ['VList', 'VListSubheader', 'VCard', 'VCardText', 'VChip', 'VIcon', 'VCheckbox', 'VCheckboxBtn']) app.component(name, Container);
     app.component('VTooltip', Tooltip);
     app.component('VMenu', Menu);
     app.component('VListItem', ListItem);
@@ -412,5 +413,151 @@ describe('a slot with a text item and both widgets', () => {
         expect(root.querySelector('.scene-header__item').textContent).toContain('12');
         expect(root.querySelector('.scene-header-characters button').getAttribute('aria-label')).toBe('Open Nora in the World Editor');
         expect(root.querySelector('.knowledge-effort-stop').textContent.trim()).toBe('Minimal');
+    });
+});
+
+describe('the header item menus, one per side', () => {
+    let original;
+
+    beforeAll(() => {
+        original = globalThis.ResizeObserver;
+        globalThis.ResizeObserver = class {
+            observe() {}
+            disconnect() {}
+        };
+        return () => {
+            globalThis.ResizeObserver = original;
+        };
+    });
+
+    function mountHeader(settings) {
+        const sent = [];
+        mountApp(defineComponent({
+            setup: () => () => h(Header, { scene: { name: 'x', data: {} }, settings }),
+        }), {
+            getWebsocket: () => ({ send: (frame) => sent.push(JSON.parse(frame)) }),
+        });
+        return sent;
+    }
+
+    const side = (slot) => host.querySelector(`.scene-header__actions--${slot}`);
+    const openMenu = async (slot) => {
+        side(slot).querySelector('button[aria-label^="Choose the scene header items"]').click();
+        await nextTick();
+        return side(slot).querySelector('.menu-content');
+    };
+    const rows = (menu) => [...menu.querySelectorAll('.list-item')].map((row) => [row.textContent.trim(), row.getAttribute('aria-checked')]);
+
+    it('puts one trigger on each side, named for its side', () => {
+        mountHeader({ slot_a: [], slot_b: [] });
+        const label = (slot) => side(slot).querySelector('button[aria-label^="Choose"]').getAttribute('aria-label');
+        expect(label('slot_a')).toBe('Choose the scene header items left of the title');
+        expect(label('slot_b')).toBe('Choose the scene header items right of the title');
+        expect(side('slot_a').querySelector('button[aria-label="Hide the scene header"]')).toBeNull();
+        expect(side('slot_b').querySelector('button[aria-label="Hide the scene header"]')).not.toBeNull();
+    });
+
+    it('lists every item with the selection of its own side only', async () => {
+        mountHeader({ slot_a: ['history_stats', 'writing_style'], slot_b: ['summarizer'] });
+        const left = await openMenu('slot_a');
+        expect(left.textContent).toContain('Left of the title');
+        expect(left.textContent).not.toContain('Right of the title');
+        expect(rows(left)).toEqual([
+            ['History stats', 'true'],
+            ['Summarizer', 'false'],
+            ['Active characters', 'false'],
+            ['Knowledge effort', 'false'],
+            ['Knowledge mode', 'false'],
+            ['Writing style', 'true'],
+            ['Visual style', 'false'],
+        ]);
+        const right = await openMenu('slot_b');
+        expect(right.textContent).toContain('Right of the title');
+        expect(rows(right).filter(([, checked]) => checked === 'true')).toEqual([['Summarizer', 'true']]);
+    });
+
+    it('writes only the slot of the menu it was clicked in', async () => {
+        const sent = mountHeader({ slot_a: [], slot_b: ['summarizer'] });
+        const left = await openMenu('slot_a');
+        [...left.querySelectorAll('.list-item')].find((row) => row.textContent.trim() === 'Knowledge mode').click();
+        const right = await openMenu('slot_b');
+        [...right.querySelectorAll('.list-item')].find((row) => row.textContent.trim() === 'Summarizer').click();
+        expect(sent).toEqual([
+            { type: 'quick_settings', action: 'set', setting: 'scene_header_slot_a', value: { item: 'knowledge_mode', shown: true } },
+            { type: 'quick_settings', action: 'set', setting: 'scene_header_slot_b', value: { item: 'summarizer', shown: false } },
+        ]);
+        await nextTick();
+        expect(rows(side('slot_a').querySelector('.menu-content')).find(([title]) => title === 'Knowledge mode')).toEqual(['Knowledge mode', 'true']);
+    });
+});
+
+describe('the header style select', () => {
+    const templates = {
+        by_type: {
+            writing_style: {
+                noir: { group: 'g', uid: 'noir', name: 'Noir', description: 'Hard-boiled.' },
+                cozy: { group: 'g', uid: 'cozy', name: 'Cozy', description: 'Warm.' },
+            },
+        },
+    };
+
+    function mountSelect(current) {
+        const sent = [];
+        const entry = resolveSlotItems(['writing_style'], { scene: { name: 'x', data: { writing_style_template: current } }, templates })[0];
+        mountApp(defineComponent({ setup: () => () => h(HeaderTemplateSelect, { item: entry }) }), {
+            getWebsocket: () => ({ send: (frame) => sent.push(JSON.parse(frame)) }),
+        });
+        return sent;
+    }
+
+    const trigger = () => host.querySelector('button.scene-header-select');
+    const open = async () => {
+        trigger().click();
+        await nextTick();
+        return [...host.querySelectorAll('.menu-content .list-item')];
+    };
+
+    it('reads as the template name with the item icon in place of a label, and names both in the button', () => {
+        mountSelect('g__noir');
+        expect(trigger().querySelector('.scene-header-select__value').textContent).toBe('Noir');
+        expect(trigger().querySelector('.scene-header-select__label')).toBeNull();
+        const icon = trigger().querySelector('.scene-header-select__icon');
+        expect(icon.getAttribute('role')).toBe('img');
+        expect(icon.getAttribute('aria-label')).toBe('Writing style');
+        expect(icon.textContent.trim()).toBe('mdi-script-text-outline');
+        expect(trigger().getAttribute('aria-label')).toBe('Scene writing style: Noir');
+    });
+
+    it('dims an unset style but not a missing template, which asks for a new pick', () => {
+        mountSelect(null);
+        expect(trigger().querySelector('.scene-header-select__value').textContent).toBe('None');
+        expect(trigger().classList.contains('scene-header-select--muted')).toBe(true);
+        app.unmount();
+        app = null;
+        host.remove();
+        mountSelect('g__gone');
+        expect(trigger().querySelector('.scene-header-select__value').textContent).toBe('Missing template');
+        expect(trigger().classList.contains('scene-header-select--muted')).toBe(false);
+    });
+
+    it('lists the templates of the settings page and marks the current one', async () => {
+        mountSelect('g__cozy');
+        const items = await open();
+        expect(items.map((item) => item.textContent.trim())).toEqual(['None', 'Noir', 'Cozy']);
+        expect(items.map((item) => [item.getAttribute('role'), item.getAttribute('aria-checked')]))
+            .toEqual([['menuitemradio', 'false'], ['menuitemradio', 'false'], ['menuitemradio', 'true']]);
+    });
+
+    it('sends only the style setting for a new pick, and nothing for the current one', async () => {
+        const sent = mountSelect('g__noir');
+        let items = await open();
+        items[1].click();
+        expect(sent).toEqual([]);
+        items[2].click();
+        items[0].click();
+        expect(sent).toEqual([
+            { type: 'world_state_manager', action: 'update_scene_settings', writing_style_template: 'g__cozy' },
+            { type: 'world_state_manager', action: 'update_scene_settings', writing_style_template: null },
+        ]);
     });
 });

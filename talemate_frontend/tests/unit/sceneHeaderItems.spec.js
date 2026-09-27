@@ -7,6 +7,7 @@ import {
     SCENE_HEADER_SLOTS,
     applySlotEdit,
 } from "@/utils/sceneHeaderItems.js";
+import { visualStyleOptions, writingStyleOptions } from "@/utils/sceneSettings";
 
 const scene = (historyStats) => ({
     name: "vester-sound",
@@ -28,7 +29,9 @@ const texts = (entries) => entries.flatMap((entry) => entry.parts.map(text));
 
 describe("scene header item catalog", () => {
     it("ships its items with the fields the header, its picker and the settings page render", () => {
-        expect(SCENE_HEADER_ITEMS.map((item) => item.id)).toEqual(["history_stats", "summarizer", "active_characters", "knowledge_effort"]);
+        expect(SCENE_HEADER_ITEMS.map((item) => item.id)).toEqual([
+            "history_stats", "summarizer", "active_characters", "knowledge_effort", "knowledge_mode", "writing_style", "visual_style",
+        ]);
         for (const item of SCENE_HEADER_ITEMS) {
             expect(item.label).toBeTruthy();
             expect(item.icon).toMatch(/^mdi-/);
@@ -219,6 +222,114 @@ describe("knowledge effort item", () => {
         expect(read({ knowledge_eligibility: "legacy" })).toMatchObject({ widget: "knowledge_effort", mode: "legacy" });
         expect(read({ knowledge_eligibility: "perception" })).toMatchObject({ widget: "knowledge_effort", mode: "perception" });
         expect(read({})).toMatchObject({ mode: "legacy" });
+    });
+});
+
+describe("knowledge mode item", () => {
+    const read = (data) => resolveSlotItems(["knowledge_mode"], { scene: { name: "x", data }, agentStatus: readyAgents })[0];
+
+    it("reads Standard or Perspectives from the scene's knowledge eligibility, as text without a control", () => {
+        const value = (data) => read(data).parts.map((part) => part.value);
+        expect(value({ knowledge_eligibility: "legacy" })).toEqual(["Standard"]);
+        expect(value({ knowledge_eligibility: "perception" })).toEqual(["Perspectives"]);
+        expect(value({})).toEqual(["Standard"]);
+        expect(value(undefined)).toEqual(["Standard"]);
+        expect(read({ knowledge_eligibility: "perception" }).widget).toBeUndefined();
+    });
+
+    it("leaves the older text items with their text labels", () => {
+        const [history] = resolveSlotItems(["history_stats"], { scene: scene(stats()), agentStatus: readyAgents });
+        const [summarizer] = resolveSlotItems(["summarizer"], { scene: scene(stats()), agentStatus: readyAgents });
+        expect([...history.parts, ...summarizer.parts].every((part) => part.icon === undefined)).toBe(true);
+    });
+
+    it("shows the item's menu icon in place of a text label, named by the item label", () => {
+        const item = findSceneHeaderItem("knowledge_mode");
+        expect(read({}).parts[0]).toMatchObject({ icon: item.icon, label: item.label });
+        expect(item).toMatchObject({ icon: "mdi-account-eye-outline", label: "Knowledge mode" });
+    });
+
+    it("says in the tooltip where the mode is chosen, and that history fixes it", () => {
+        const open = read({ knowledge_eligibility: "legacy", can_change_knowledge_eligibility: true }).parts[0].tooltip;
+        expect(open).toBe("Knowledge mode: Standard. Change it in World Editor > Scene > Settings > Character perspectives while the story has no history.");
+        const locked = read({ knowledge_eligibility: "perception", can_change_knowledge_eligibility: false }).parts[0].tooltip;
+        expect(locked).toContain("Knowledge mode: Character perspectives.");
+        expect(locked).toContain("The story has history, so the mode is fixed.");
+        expect(locked).toContain("World Editor > Scene > Settings > Character perspectives");
+    });
+});
+
+describe("writing style and visual style items", () => {
+    const templates = {
+        by_type: {
+            writing_style: {
+                noir: { group: "g", uid: "noir", name: "Noir", description: "Hard-boiled." },
+            },
+            visual_style: {
+                ink: { group: "g", uid: "ink", name: "Ink wash", description: "Brush and ink.", visual_type: "STYLE" },
+                neg: { group: "g", uid: "neg", name: "No text", description: "Negative only.", visual_type: "NEGATIVE" },
+            },
+        },
+    };
+    const read = (id, data, list = templates) => resolveSlotItems([id], { scene: { name: "x", data }, agentStatus: readyAgents, templates: list })[0];
+
+    it("offers the options of the scene settings page", () => {
+        expect(read("writing_style", {}).options).toEqual(writingStyleOptions(templates));
+        expect(read("visual_style", {}).options).toEqual(visualStyleOptions(templates));
+        expect(read("writing_style", {}).options.map((option) => option.title)).toEqual(["None", "Noir"]);
+        expect(read("visual_style", {}).options.map((option) => option.title)).toEqual(["Use Agent Default", "Ink wash"]);
+    });
+
+    it("reads the current template by name and writes its own scene setting", () => {
+        expect(read("writing_style", { writing_style_template: "g__noir" })).toMatchObject({
+            widget: "template_select",
+            setting: "writing_style_template",
+            selected: "g__noir",
+            value: "Noir",
+            label: "Writing style",
+            icon: "mdi-script-text-outline",
+            title: "Scene writing style",
+            muted: false,
+        });
+        expect(read("writing_style", { writing_style_template: "g__noir" }).tooltip).toBe("Writing style: Noir. Click to pick another one.");
+        expect(read("visual_style", { visual_style_template: "g__ink" })).toMatchObject({
+            setting: "visual_style_template",
+            selected: "g__ink",
+            value: "Ink wash",
+            label: "Visual style",
+            icon: "mdi-palette-outline",
+        });
+        expect(read("visual_style", { visual_style_template: "g__ink" }).tooltip).toMatch(/^Visual style: Ink wash\./);
+    });
+
+    it("takes its icon and name from the item definition, the ones the item menu shows", () => {
+        for (const id of ["writing_style", "visual_style"]) {
+            const item = findSceneHeaderItem(id);
+            expect(read(id, {})).toMatchObject({ icon: item.icon, label: item.label });
+        }
+    });
+
+    it("reads an unset style, stored as null or as an empty string, as the first option", () => {
+        for (const stored of [null, "", undefined]) {
+            expect(read("writing_style", { writing_style_template: stored })).toMatchObject({
+                selected: null, value: "None", label: "Writing style", muted: true,
+            });
+            expect(read("writing_style", { writing_style_template: stored }).tooltip).toMatch(/^Writing style: none\./);
+            expect(read("visual_style", { visual_style_template: stored })).toMatchObject({
+                selected: null, value: "Agent default", label: "Visual style", muted: false,
+            });
+            expect(read("visual_style", { visual_style_template: stored }).tooltip).toMatch(/^Visual style: Agent default\./);
+        }
+    });
+
+    it("waits for the template list, then names a template that is not in it as missing", () => {
+        const waiting = read("writing_style", { writing_style_template: "g__gone" }, {});
+        expect(waiting).toMatchObject({ selected: "g__gone", value: null, label: "Writing style", muted: true, tooltip: "Writing style: waiting for the template list." });
+        const missing = read("writing_style", { writing_style_template: "g__gone" });
+        // the state that asks the user to act is not dimmed, unlike an unset style
+        expect(missing).toMatchObject({ selected: "g__gone", value: "Missing template", muted: false });
+        expect(read("writing_style", { writing_style_template: null }).muted).toBe(true);
+        expect(missing.tooltip).toContain("no longer in your template list");
     });
 });
 

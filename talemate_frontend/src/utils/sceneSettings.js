@@ -16,6 +16,39 @@ export function buildSceneSettingsPayload(sceneData, { knowledgeEligibility } = 
     };
 }
 
+function templateOption(template) {
+    return {
+        value: `${template.group}__${template.uid}`,
+        title: template.name,
+        props: { subtitle: template.description },
+    };
+}
+
+export function writingStyleOptions(templates) {
+    return [
+        { value: null, title: 'None', props: { subtitle: 'No writing style template selected.' } },
+        ...Object.values(templates?.by_type?.writing_style || {}).map(templateOption),
+    ];
+}
+
+export function visualStyleOptions(templates) {
+    return [
+        { value: null, title: 'Use Agent Default', props: { subtitle: 'Use the default art style from agent configuration.' } },
+        ...Object.values(templates?.by_type?.visual_style || {})
+            .filter((template) => template.visual_type === 'STYLE')
+            .map(templateOption),
+    ];
+}
+
+// Only the named setting: the server leaves every omitted field as it is.
+export function sceneSettingPayload(setting, value) {
+    return {
+        type: 'world_state_manager',
+        action: 'update_scene_settings',
+        [setting]: value,
+    };
+}
+
 export function perspectivesEnabled(sceneData) {
     return sceneData?.knowledge_eligibility === 'perception';
 }

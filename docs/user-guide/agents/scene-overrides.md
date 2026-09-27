@@ -31,9 +31,11 @@ When a scene is loaded and the agent has at least one setting that supports over
 - **:material-earth: Global** — the normal view. Changes here affect every scene.
 - **:material-movie-open-outline: Scene** — the override view. Changes here apply only to the current scene.
 
-A small number next to the **Scene** button shows how many overrides are currently active for that agent.
+A small number next to the **Scene** button shows how many overrides are currently active for that agent. Each section that holds some of them shows its own share on the right of its header, with the :material-movie-open-outline: icon, in both **Global** and **Scene** mode. Hover over it to read, for example, **2 scene overrides**. In **Scene** mode the section numbers add up to the number on the **Scene** button, so you can see which sections to open without expanding each one. In **Global** mode a section that only shows under a condition, such as a Visualizer backend section while another backend is selected globally, stays hidden, so its overrides count only on the **Scene** button there. For example, when the Summarizer shows **Scene 3**, the headers can tell you that two of them are in **Summarization** and one in **Layered history**.
 
-![The Agents settings page in Scene mode](/talemate/img/0.40.0/agents-scene-overrides.png)
+The section numbers follow your edits before you save: clear the last override of a section and its number goes away.
+
+![The Agents settings page in Scene mode, with the number of scene overrides on the Summarization and Layered history sections](/talemate/img/0.40.0/agents-scene-overrides.png)
 
 !!! note
     The switch only appears while a saved scene is loaded. Overrides need a scene (and its project folder) to be stored in, so they aren't available on the placeholder/empty scene.
@@ -57,7 +59,7 @@ In Scene mode, the page only shows the settings (and sections) that actually sup
 
 Some settings only apply while another setting is switched on — for example the Creator agent's Fast-mode fields (Consolidate, One-shot token budget, Fill in misses) only matter while **Fast Character Generation** is on. Those settings appear in Scene mode only while their gating setting allows it, and the gate is read as this scene sees it: the scene's override if there is one, otherwise the global value. So overriding the gate for a scene reveals the settings it gates, and a section whose settings are all currently hidden drops out of Scene mode entirely.
 
-One exception keeps things recoverable: a setting you have **already** overridden stays visible even when its gate is off, so you can always see it in the count and clear it. Its stored value still applies whenever the gate is on again.
+One exception keeps things recoverable: a setting you have **already** overridden stays visible even when its gate is off, so you can always see it in the count and clear it. Its stored value still applies whenever the gate is on again. The same holds for a whole section: in Scene mode, a section that holds an override stays listed even when the setting that normally shows it is off, for example a Visualizer backend section while another backend is selected.
 
 ### Saving
 

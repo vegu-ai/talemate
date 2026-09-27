@@ -8,6 +8,7 @@ const read = (path) => readSource(fileURLToPath(new URL(path, import.meta.url)))
 const gameplay = read("../../src/components/AppSettingsGameplay.vue");
 const header = read("../../src/components/SceneHeader.vue");
 const slotComponent = read("../../src/components/SceneHeaderSlot.vue");
+const itemMenu = read("../../src/components/SceneHeaderItemMenu.vue");
 const app = read("../../src/components/TalemateApp.vue");
 const fonts = read("../../src/plugins/webfontloader.js");
 
@@ -108,14 +109,14 @@ describe("scene header settings", () => {
 describe("scene header document look", () => {
     it("sits on the page, not on a sheet or card", () => {
         const template = header.slice(0, header.indexOf("<script>"));
-        const headerMarkup = template.slice(0, template.indexOf("<v-menu"));
+        const headerMarkup = template.slice(0, template.indexOf("</section>"));
         expect(headerMarkup + slotComponent).not.toMatch(/<v-sheet|<v-card|<v-chip/);
     });
 
     it("is a region named Scene header, read in the order it is shown", () => {
         const template = header.slice(0, header.indexOf("</template>\n\n<script>"));
         expect(template).toContain('<section class="scene-header" :class="{ \'scene-header--title-only\': titleOnly }" aria-label="Scene header">');
-        const order = ["scene-header__slot--slot_a", "<h1", "scene-header__slot--slot_b", "scene-header__actions"]
+        const order = ["scene-header__actions--slot_a", "scene-header__slot--slot_a", "<h1", "scene-header__slot--slot_b", "scene-header__actions--slot_b"]
             .map((marker) => template.indexOf(marker));
         expect(order.every((index) => index > -1)).toBe(true);
         expect([...order].sort((a, b) => a - b)).toEqual(order);
@@ -146,7 +147,8 @@ describe("scene header document look", () => {
         expect(slotComponent).toMatch(/<v-tooltip v-for="part in entry\.parts"[^>]*:text="part\.tooltip"/);
         expect(slotComponent).toMatch(/entries: \{\s*type: Array,\s*default: \(\) => \[\],/);
         expect(item).toContain('<span v-if="part.value" class="scene-header__value">{{ part.value }}</span>');
-        expect(item).toContain('<span class="scene-header__label">{{ part.label }}</span>');
+        expect(item).toContain('<span v-if="part.icon" class="scene-header__icon" role="img" :aria-label="part.label"><v-icon size="small">{{ part.icon }}</v-icon></span>');
+        expect(item).toContain('<span v-else class="scene-header__label">{{ part.label }}</span>');
         expect(item).toContain('<v-icon v-if="part.trailingIcon"');
         expect(item).toContain('<span v-if="part.srText" class="d-sr-only">{{ part.srText }}</span>');
         expect(header.match(/<SceneHeaderSlot [^>]*\/>/g)).toEqual([
@@ -158,6 +160,7 @@ describe("scene header document look", () => {
     it("renders a widget item as its component instead of text parts", () => {
         expect(slotComponent).toContain('<SceneHeaderCharacters v-if="entry.widget === \'characters\'" class="scene-header__widget" :characters="entry.characters" :hidden="entry.hidden" :scene="scene" />');
         expect(slotComponent).toContain('<SceneHeaderKnowledgeEffort v-else-if="entry.widget === \'knowledge_effort\'" class="scene-header__widget" :mode="entry.mode" />');
+        expect(slotComponent).toContain('<SceneHeaderTemplateSelect v-else-if="entry.widget === \'template_select\'" :item="entry" />');
         expect(slotComponent).toMatch(/<template v-else>\s*<v-tooltip v-for="part in entry\.parts"/);
     });
 
@@ -170,24 +173,29 @@ describe("scene header document look", () => {
 });
 
 describe("scene header item picker", () => {
-    it("opens from a labelled edit button and lists every catalog item in each slot", () => {
-        expect(header).toContain('aria-label="Choose the scene header items"');
-        expect(header).toContain(':close-on-content-click="false"');
-        expect(header).toMatch(/<fieldset v-for="slot in slotDefinitions"[\s\S]*?<legend[^>]*>\{\{ slot\.label \}\}<\/legend>/);
-        const checkbox = /<v-checkbox[\s\S]*?\/>/.exec(header)[0];
-        expect(checkbox).toContain('v-for="item in catalog"');
-        expect(checkbox).toContain(':model-value="isShown(slot.id, item.id)"');
-        expect(checkbox).toContain('@update:model-value="toggle(slot, item.id)"');
+    it("gives each side its own menu, fed with that side's slot only", () => {
+        const menus = header.match(/<SceneHeaderItemMenu [\s\S]*?\/>/g) || [];
+        expect(menus).toEqual([
+            '<SceneHeaderItemMenu :definition="slotDefinitions[0]" :catalog="catalog" :shown="slotIds(\'slot_a\')" @toggle="(itemId) => toggle(slotDefinitions[0], itemId)" />',
+            '<SceneHeaderItemMenu :definition="slotDefinitions[1]" :catalog="catalog" :shown="slotIds(\'slot_b\')" @toggle="(itemId) => toggle(slotDefinitions[1], itemId)" />',
+        ]);
+        expect(SCENE_HEADER_SLOTS.map((slot) => slot.id)).toEqual(["slot_a", "slot_b"]);
+        expect(itemMenu).toContain(':close-on-content-click="false"');
+        expect(itemMenu).toContain("<v-list-subheader>{{ definition.label }}</v-list-subheader>");
+        expect(itemMenu).toMatch(/<v-list class="scene-header-picker"[^>]*role="menu" :aria-label="definition\.label"/);
+        expect(itemMenu).toContain('role="menuitemcheckbox"');
+        expect(itemMenu).toContain(':aria-label="`Choose the scene header items ${sideLabel}`"');
+        expect(itemMenu).not.toMatch(/slot_b|slotDefinitions/);
     });
 
-    it("the edit button follows the close button's reveal rules", () => {
-        const buttons = header.match(/<v-btn[\s\S]*?\/>/g) || [];
+    it("both menu buttons follow the close button's reveal rules", () => {
+        const buttons = [...(header.match(/<v-btn[\s\S]*?\/>/g) || []), ...(itemMenu.match(/<v-btn[\s\S]*?\/>/g) || [])];
         expect(buttons).toHaveLength(2);
         for (const button of buttons) {
             expect(button).toContain('class="scene-header__action"');
         }
-        expect(header).toMatch(/\.scene-header:focus-within \.scene-header__action/);
-        expect(header).toMatch(/@media \(hover: none\) \{\s*\.scene-header__action \{\s*opacity: 1;/);
+        expect(header).toMatch(/\.scene-header:focus-within :deep\(\.scene-header__action\)/);
+        expect(header).toMatch(/@media \(hover: none\) \{\s*\.scene-header :deep\(\.scene-header__action\) \{\s*opacity: 1;/);
     });
 
     it("listens for the answers to its edits while mounted", () => {

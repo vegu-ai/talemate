@@ -95,7 +95,9 @@ describe("the surfaces a replay hides", () => {
         const slots = template.match(/<SceneHeaderSlot[\s\S]*?\/>/g);
         expect(slots).toHaveLength(2);
         for (const slot of slots) expect(slot).toContain('v-if="!titleOnly"');
-        expect(element(template, 'class="scene-header__actions"', "<div")).toContain('v-if="!titleOnly"');
+        for (const side of ["slot_a", "slot_b"]) {
+            expect(element(template, `class="scene-header__actions scene-header__actions--${side}"`, "<div")).toContain('v-if="!titleOnly"');
+        }
         expect(element(template, 'class="scene-header__title"', "<h1")).not.toContain("titleOnly");
     });
 

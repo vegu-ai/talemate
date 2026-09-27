@@ -80,7 +80,7 @@
                 <strong class="mr-2 text-deep-purple-lighten-3">Group</strong>{{ toLabel(group.name) }}
             </v-chip>
             <v-chip label size="x-small" color="muted" class="ml-1">
-                <strong class="mr-2 text-high-emphasis">Type</strong>{{ toLabel(template.template_type) }}
+                <strong class="mr-2 text-high-emphasis">Type</strong>{{ templateTypeTitle(template.template_type) }}
             </v-chip>
         </v-card-title>
         <v-card-title v-else>
@@ -90,7 +90,7 @@
                 <strong class="mr-2 text-deep-purple-lighten-3">Group</strong>{{ toLabel(group.name) }}
             </v-chip>
             <v-chip label size="x-small" color="muted" class="ml-1" v-if="template.template_type">
-                {{ toLabel(template.template_type) }}
+                {{ templateTypeTitle(template.template_type) }}
             </v-chip>
         </v-card-title>
         <v-card-text>
@@ -111,19 +111,30 @@
                             </v-text-field>
                         </v-col>
                         <v-col cols="12" sm="6" xl="4" xxl="3">
-                            <v-select 
-                            v-model="template.template_type" 
+                            <v-select
+                            v-model="template.template_type"
                             @update:model-value="onTemplateTypeChange"
                             :items="templateTypes"
                             label="Template type">
+                                <template v-slot:item="{ props, item }">
+                                    <v-list-item v-bind="props" slim>
+                                        <template v-slot:prepend>
+                                            <v-icon :color="item.color" class="opacity-100">{{ item.icon }}</v-icon>
+                                        </template>
+                                    </v-list-item>
+                                </template>
+                                <template v-slot:selection="{ item }">
+                                    <v-icon :color="item.color" size="small" class="mr-2">{{ item.icon }}</v-icon>
+                                    {{ item.title }}
+                                </template>
                             </v-select>
                         </v-col>
                     </v-row>
                 </div>
 
                 
-                <v-alert v-if="template && helpMessages[template.template_type] !== undefined" :icon="iconForTemplate(template)" color="muted" variant="text" density="compact" class="mt-2 mb-2">
-                    {{ helpMessages[template.template_type] }}
+                <v-alert v-if="template && templateTypeHelp(template.template_type)" :icon="iconForTemplate(template)" color="muted" variant="text" density="compact" class="mt-2 mb-2">
+                    {{ templateTypeHelp(template.template_type) }}
                 </v-alert>
 
 
@@ -283,13 +294,13 @@
                     </v-card-actions>
                 </v-card>
 
-                <v-card elevation="3" density="compact" class="mt-2" v-for="[templateType, helpMessage] in sortedHelpMessages" :key="templateType">
+                <v-card elevation="3" density="compact" class="mt-2" v-for="templateType in templateTypes" :key="templateType.value">
                     <v-card-title>
-                        <v-icon size="small" class="mr-2" :color="colorForTemplate({template_type: templateType})">{{ iconForTemplate({template_type: templateType}) }}</v-icon>
-                        {{ toLabel(templateType) }}
+                        <v-icon size="small" class="mr-2" :color="templateType.color">{{ templateType.icon }}</v-icon>
+                        {{ templateType.title }}
                     </v-card-title>
                     <v-card-text class="text-muted">
-                        {{ helpMessage }}
+                        {{ templateType.help }}
                     </v-card-text>
                 </v-card>
             </v-col>
@@ -314,7 +325,8 @@ import TemplateSpices from './TemplateSpices.vue';
 import TemplateSceneType from './TemplateSceneType.vue';
 import TemplateSceneToolShortcut from './TemplateSceneToolShortcut.vue';
 import TemplateTheme from './TemplateTheme.vue';
-import { iconForTemplate, colorForTemplate, hydrateThemeTemplate } from '../utils/templateMappings.js';
+import { iconForTemplate, hydrateThemeTemplate } from '../utils/templateMappings.js';
+import { templateTypeHelp, templateTypeItems, templateTypeTitle } from '../utils/templateTypes.js';
 import { getActiveCodeEditorTheme } from '../utils/codeEditorTheme.js';
 import { validateGroupName } from '../utils/sceneToolShortcuts.js';
 import { adoptedTemplateUid } from '../utils/templateSaveEcho.js';
@@ -386,12 +398,6 @@ export default {
                         .filter((template) => template.template_type === 'theme'),
                 }))
                 .filter((group) => group.themes.length > 0);
-        },
-        sortedHelpMessages() {
-            if (!this.helpMessages) return [];
-            
-            // Convert helpMessages object to array of [key, value] pairs and sort by key
-            return Object.entries(this.helpMessages).sort((a, b) => a[0].localeCompare(b[0]));
         }
     },
     data() {
@@ -409,37 +415,12 @@ export default {
             externalChange: false,
             adoptedSnapshot: null,
             templates: null,
-            templateTypes: [
-                { "title": 'State reinforcement', "value": 'state_reinforcement' },
-                { "title": 'Character attribute', "value": 'character_attribute' },
-                { "title": 'Character detail', "value": 'character_detail' },
-                { "title": "Spice collection", "value": 'spices'},
-                { "title": "Writing style", "value": 'writing_style'},
-                { "title": "Visual style", "value": 'visual_style'},
-                { "title": "Visual prompt finalizer", "value": 'visual_finalizer'},
-                { "title": "Agent persona", "value": 'agent_persona'},
-                { "title": "Scene type", "value": 'scene_type'},
-                { "title": "Scene tool shortcut", "value": 'scene_tool_shortcut'},
-                { "title": "Theme", "value": 'theme'},
-            ],
+            templateTypes: templateTypeItems(),
             template: null,
             group: null,
             deferredSelect: null,
             selectedGroups: [],
             selected: null,
-            helpMessages: {
-                state_reinforcement: "State reinforcement templates are used to quickly (or even automatically) setup common attribues and states you want to track for characters or the world itself. They revolve around a question, statement or attribute name that you want to track for a character. The AI will use this template to generate content that matches the query, based on the current progression of the scene.",
-                character_attribute: "Character attribute templates are used to define attributes that a character can have. They can be used to define character traits, skills, or other properties. The AI will use this template to generate content that matches the attribute, based on the current progression of the scene or their backstory.",
-                character_detail: "Character detail templates are used to define details about a character. They generally are longer form questions or statements that can be used to flesh out a character's backstory or personality. The AI will use this template to generate content that matches the detail, based on the current progression of the scene or their backstory.",
-                spices: "Spice collections are used to define a set of instructions that can be applied during the generation of character attributes or details. They can be used to add a bit of randomness or unexpectedness. A template must explicitly support spice to be able to use a spice collection.",
-                writing_style: "Writing style templates are used to define a writing style that can be applied to the generated content. They can be used to add a specific flavor or tone. A template must explicitly support writing styles to be able to use a writing style template.",
-                visual_style: "Visual style templates define how image prompts are constructed (positive/negative prefixes and suffixes) and the prompting type (keywords vs descriptive).",
-                visual_finalizer: "Visual prompt finalizer templates define a reusable set of post-processing actions (exact, fuzzy or regex match and replace, or AI processing) applied to image generation prompts. Select one as the preset in the visualizer agent's Prompt Finalization settings.",
-                agent_persona: "Agent personas define how an agent should present and behave in prompts (tone, perspective, style). Assign a persona per agent in Scene Settings. (Currently director only)",
-                scene_type: "Scene type templates are used to define different types of scenes that can be played in your game. Each scene type has different rules and constraints that guide the generation and flow of the scene.",
-                scene_tool_shortcut: "Scene tool shortcut templates package a scene tool action together with a label, an icon and canned instructions. Installing one adds the shortcut to your scene tools menu, where it can be run with a single click.",
-                theme: "Theme templates hold a complete set of colors for the app, its surfaces, the scene messages and the chats, together with how message text is styled. Applying one repaints Talemate with those colors. The node editor canvas keeps its own colors, but the borders of the module tiles in its library follow the App panel.",
-            }
         };
     },
     inject: [
@@ -534,7 +515,8 @@ export default {
             };
         },
         iconForTemplate,
-        colorForTemplate,
+        templateTypeHelp,
+        templateTypeTitle,
         onTemplateTypeChange() {
             if(this.template && this.template.template_type === 'character_attribute') {
                 if(!this.template.attribute)

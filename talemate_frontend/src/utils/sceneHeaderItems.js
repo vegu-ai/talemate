@@ -1,10 +1,12 @@
-// read({ scene, agentStatus, narrow }) -> { parts: [{ key, value?, label, tooltip, muted?, accent?, trailingIcon?, srText? }] }
+// read({ scene, agentStatus, templates, narrow }) -> { parts: [{ key, value?, label, icon?, tooltip, muted?, accent?, trailingIcon?, srText? }] }
 //                                     or { widget, ...props } for an item the slot renders as a component
 // A part reads as a value with a quiet label; a part without a value is a
 // muted unavailable or inactive state. An accent part carries a state worth a
-// glance, marked by its trailing icon and spoken via srText.
+// glance, marked by its trailing icon and spoken via srText. A part with an
+// icon shows the icon in place of its label, which then names the icon.
+import { characterKnowledgeMode } from '@/constants/characterKnowledgeModes';
 import { effortMode } from '@/utils/knowledgeEffort';
-import { perspectivesEnabled } from '@/utils/sceneSettings';
+import { canChangePerspectives, perspectivesEnabled, visualStyleOptions, writingStyleOptions } from '@/utils/sceneSettings';
 
 // circles in the row, the "+N" circle included
 export const CHARACTER_CAP = Object.freeze({ wide: 6, narrow: 3 });
@@ -110,8 +112,92 @@ const KNOWLEDGE_EFFORT = {
     },
 };
 
+const WRITING_STYLE = {
+    id: 'writing_style',
+    label: 'Writing style',
+    icon: 'mdi-script-text-outline',
+    description: "The scene's writing style template. Click it to pick another one.",
+    read({ scene, templates }) {
+        return templateSelect({
+            setting: 'writing_style_template',
+            label: this.label,
+            icon: this.icon,
+            title: 'Scene writing style',
+            templates,
+            options: writingStyleOptions(templates),
+            current: scene?.data?.writing_style_template,
+            unset: { value: 'None', muted: true, tooltip: 'Writing style: none. The scene uses no writing style template. Click to pick one.' },
+            tooltip: (name) => `Writing style: ${name}. Click to pick another one.`,
+        });
+    },
+};
+
+const VISUAL_STYLE = {
+    id: 'visual_style',
+    label: 'Visual style',
+    icon: 'mdi-palette-outline',
+    description: "The scene's visual art style template. Click it to pick another one.",
+    read({ scene, templates }) {
+        return templateSelect({
+            setting: 'visual_style_template',
+            label: this.label,
+            icon: this.icon,
+            title: 'Scene visual style',
+            templates,
+            options: visualStyleOptions(templates),
+            current: scene?.data?.visual_style_template,
+            unset: { value: 'Agent default', muted: false, tooltip: "Visual style: Agent default. Images use the Visualizer's default art style. Click to pick a style for this scene." },
+            tooltip: (name) => `Visual style: ${name}. The art style of the images of this scene. Click to pick another one.`,
+        });
+    },
+};
+
+const KNOWLEDGE_MODE = {
+    id: 'knowledge_mode',
+    label: 'Knowledge mode',
+    icon: 'mdi-account-eye-outline',
+    description: 'Whether the scene runs Standard character knowledge or Character perspectives.',
+    read({ scene }) {
+        const perspectives = perspectivesEnabled(scene?.data);
+        const where = canChangePerspectives(scene?.data)
+            ? 'Change it in World Editor > Scene > Settings > Character perspectives while the story has no history.'
+            : 'The story has history, so the mode is fixed. It is chosen in World Editor > Scene > Settings > Character perspectives before play.';
+        return {
+            parts: [{
+                key: 'mode',
+                value: perspectives ? 'Perspectives' : 'Standard',
+                label: this.label,
+                icon: this.icon,
+                tooltip: `Knowledge mode: ${characterKnowledgeMode(perspectives).title}. ${where}`,
+            }],
+        };
+    },
+};
+
 function unavailable(item, label, tooltip) {
     return { parts: [{ key: `${item.id}-unavailable`, label, tooltip, muted: true }] };
+}
+
+// The scene stores '' for a style it never had and null for one cleared on the
+// settings page; both read as the unset option.
+function templateSelect({ setting, label, icon, title, templates, options, current, unset, tooltip }) {
+    const selected = current || null;
+    const base = { widget: 'template_select', setting, title, options, selected, label, icon, muted: false };
+    if (selected === null) {
+        return { ...base, value: unset.value, tooltip: unset.tooltip, muted: unset.muted };
+    }
+    const option = options.find((candidate) => candidate.value === selected);
+    if (option) {
+        return { ...base, value: option.title, tooltip: tooltip(option.title) };
+    }
+    if (!templates?.by_type) {
+        return { ...base, value: null, tooltip: `${label}: waiting for the template list.`, muted: true };
+    }
+    return {
+        ...base,
+        value: 'Missing template',
+        tooltip: `${label}: the scene uses a template that is no longer in your template list. Click to pick another one.`,
+    };
 }
 
 function characterBadge(character) {
@@ -124,7 +210,7 @@ function characterBadge(character) {
     };
 }
 
-export const SCENE_HEADER_ITEMS = [HISTORY_STATS, SUMMARIZER, ACTIVE_CHARACTERS, KNOWLEDGE_EFFORT];
+export const SCENE_HEADER_ITEMS = [HISTORY_STATS, SUMMARIZER, ACTIVE_CHARACTERS, KNOWLEDGE_EFFORT, KNOWLEDGE_MODE, WRITING_STYLE, VISUAL_STYLE];
 
 export const SCENE_HEADER_SLOTS = [
     { id: 'slot_a', label: 'Left of the title', setting: 'scene_header_slot_a' },

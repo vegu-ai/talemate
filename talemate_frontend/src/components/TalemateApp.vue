@@ -218,7 +218,7 @@
       </v-navigation-drawer>
 
       <!-- debug tools navigation drawer -->
-      <v-navigation-drawer v-model="debugDrawer" app location="right" width="400" disable-resize-watcher class="stable-scrollbar-gutter">
+      <v-navigation-drawer v-model="debugDrawer" app location="right" width="450" disable-resize-watcher class="stable-scrollbar-gutter">
         <v-list>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
           <DebugTools ref="debugTools" :scene="scene" :prompts="promptsViewPrompts" :app-config="appConfig" @clear-prompts="clearPrompts"></DebugTools>
@@ -266,6 +266,7 @@
                     v-if="sceneHeaderVisible"
                     :scene="scene"
                     :agent-status="agentStatus"
+                    :templates="worldStateTemplates"
                     :settings="appConfig.game.scene_header"
                     :over-backdrop="!!sceneBackdropSrc"
                     :title-only="playthroughActive"

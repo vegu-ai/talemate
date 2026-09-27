@@ -40,11 +40,30 @@ export function countSceneOverrides(overlay) {
   const actions = overlay?.actions || {};
   let n = 0;
   for (const k in actions) {
-    const a = actions[k];
-    if (hasEnabledOverride(a)) n += 1;
-    if (a.config) n += Object.keys(a.config).length;
+    n += countSliceOverrides(actions[k]);
   }
   return n;
+}
+
+function countSliceOverrides(slice) {
+  return (hasEnabledOverride(slice) ? 1 : 0) + Object.keys(slice?.config || {}).length;
+}
+
+/**
+ * The active scene overrides of an overlay per section of the Agents settings
+ * page: a container action is its own section, every other action sits in
+ * General (`_config`). The counts add up to `countSceneOverrides`.
+ */
+export function sectionOverrideCounts(overlay, schemaActions) {
+  const counts = {};
+  const actions = overlay?.actions || {};
+  for (const actionKey in actions) {
+    const n = countSliceOverrides(actions[actionKey]);
+    if (!n) continue;
+    const section = schemaActions?.[actionKey]?.container ? actionKey : '_config';
+    counts[section] = (counts[section] || 0) + n;
+  }
+  return counts;
 }
 
 /**
@@ -160,7 +179,7 @@ export function effectiveActionEnabled(actions, overlay, actionKey) {
 }
 
 /** True if a per-action override slice holds anything at all. */
-function actionHasActiveOverride(overrides) {
+export function actionHasActiveOverride(overrides) {
   if (!overrides) return false;
   if (hasEnabledOverride(overrides)) return true;
   return Object.keys(overrides.config || {}).length > 0;

@@ -94,9 +94,18 @@
                     <v-expansion-panel v-for="section in sections" :key="section.key" :value="section.key"
                         :data-agent-section="section.key">
                         <v-expansion-panel-title :class="section.parentKey ? 'pl-8' : ''">
-                            <v-icon class="mr-2" color="primary" size="small">{{ section.parentKey ? 'mdi-subdirectory-arrow-right' : (section.icon || 'mdi-cog-outline') }}</v-icon>
-                            {{ section.label }}
-                            <v-chip v-if="section.subtitle" class="ml-2" size="x-small" variant="tonal" label color="secondary">{{ section.subtitle }}</v-chip>
+                            <span class="d-flex align-center flex-grow-1">
+                                <v-icon class="mr-2" color="primary" size="small">{{ section.parentKey ? 'mdi-subdirectory-arrow-right' : (section.icon || 'mdi-cog-outline') }}</v-icon>
+                                {{ section.label }}
+                                <v-chip v-if="section.subtitle" class="ml-2" size="x-small" variant="tonal" label color="secondary">{{ section.subtitle }}</v-chip>
+                            </span>
+                            <v-tooltip v-if="sectionOverrides[section.key]" :text="overrideCountLabel(sectionOverrides[section.key])" location="top">
+                                <template v-slot:activator="{ props }">
+                                    <v-chip v-bind="props" class="mr-3 my-n1" size="x-small" variant="tonal" label color="primary"
+                                        prepend-icon="mdi-movie-open-outline" data-section-overrides
+                                        :aria-label="overrideCountLabel(sectionOverrides[section.key])">{{ sectionOverrides[section.key] }}</v-chip>
+                                </template>
+                            </v-tooltip>
                         </v-expansion-panel-title>
                         <v-expansion-panel-text>
                             <!-- GENERAL — client assignment (global only) and every
@@ -175,9 +184,11 @@ import {
     DEFAULT_SCENE_AGENT_SETTINGS_FILENAME,
     SCENE_AGENT_SETTINGS_DIRNAME,
     SCENE_AGENT_SETTINGS_FILENAME_RULES,
+    actionHasActiveOverride,
     actionHasOverridable,
     countSceneOverrides,
     effectiveConditionMet,
+    sectionOverrideCounts,
 } from '@/constants/sceneAgentSettings';
 import {
     OP_KIND,
@@ -422,6 +433,9 @@ export default {
         sceneOverrideCount() {
             return countSceneOverrides(this.sceneOverlay);
         },
+        sectionOverrides() {
+            return this.sceneOverridesAvailable ? sectionOverrideCounts(this.sceneOverlay, this.schemaActions) : {};
+        },
         hasAnyOverridable() {
             if (!this.sceneOverridesAvailable) {
                 return false;
@@ -506,7 +520,9 @@ export default {
             // General first, then one section per container action whose
             // condition is met, with dynamic children nested under their
             // parent. Scene mode
-            // keeps only what it can actually override.
+            // keeps only what it can actually override, and always a section
+            // that holds an active override: the backend applies it whatever
+            // the condition, and the Scene count includes it.
             const sections = [];
             if (this.mode !== 'scene' || this.generalHasOverridable) {
                 sections.push({ key: '_config', label: 'General', icon: 'mdi-cog', parentKey: null, registry: null });
@@ -515,7 +531,8 @@ export default {
             for (const key in this.schemaActions) {
                 const schema = this.schemaActions[key];
                 if (!schema.container) continue;
-                if (!this.actionConditionMet(schema)) continue;
+                const overridden = this.mode === 'scene' && actionHasActiveOverride(this.sceneOverlay.actions[key]);
+                if (!overridden && !this.actionConditionMet(schema)) continue;
                 if (this.mode === 'scene' && !actionHasOverridable(schema, this.sceneConditionCtx(key))) continue;
                 const section = {
                     key: key,
@@ -538,6 +555,13 @@ export default {
                 result.push(section);
                 for (const child of (childrenByParent[section.key] || [])) {
                     result.push(child);
+                }
+            }
+            if (this.mode === 'scene') {
+                for (const [parentKey, children] of Object.entries(childrenByParent)) {
+                    if (sections.some((section) => section.key === parentKey)) continue;
+                    const overridden = children.filter((child) => actionHasActiveOverride(this.sceneOverlay.actions[child.key]));
+                    result.push(...overridden.map((child) => ({ ...child, parentKey: null })));
                 }
             }
             return result;
@@ -659,6 +683,10 @@ export default {
                     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             });
+        },
+
+        overrideCountLabel(count) {
+            return count === 1 ? '1 scene override' : `${count} scene overrides`;
         },
 
         isBusy(agent) {

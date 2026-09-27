@@ -1,6 +1,9 @@
 <template>
     <div class="scene-header-anchor" :class="{ 'scene-header-anchor--backdrop': overBackdrop }">
         <section class="scene-header" :class="{ 'scene-header--title-only': titleOnly }" aria-label="Scene header">
+            <div v-if="!titleOnly" class="scene-header__actions scene-header__actions--slot_a">
+                <SceneHeaderItemMenu :definition="slotDefinitions[0]" :catalog="catalog" :shown="slotIds('slot_a')" @toggle="(itemId) => toggle(slotDefinitions[0], itemId)" />
+            </div>
             <SceneHeaderSlot v-if="!titleOnly" class="scene-header__slot scene-header__slot--slot_a" :entries="slotEntries('slot_a')" :scene="scene" />
             <v-tooltip :text="title" location="bottom" max-width="480">
                 <template v-slot:activator="{ props }">
@@ -8,42 +11,8 @@
                 </template>
             </v-tooltip>
             <SceneHeaderSlot v-if="!titleOnly" class="scene-header__slot scene-header__slot--slot_b" :entries="slotEntries('slot_b')" :scene="scene" />
-            <div v-if="!titleOnly" class="scene-header__actions">
-                <v-menu v-model="pickerOpen" location="bottom end" :close-on-content-click="false">
-                    <template v-slot:activator="{ props: menuProps }">
-                        <v-tooltip text="Choose the information items" location="bottom" :disabled="pickerOpen">
-                            <template v-slot:activator="{ props: tooltipProps }">
-                                <v-btn
-                                    v-bind="mergeProps(menuProps, tooltipProps)"
-                                    class="scene-header__action"
-                                    :class="{ 'scene-header__action--open': pickerOpen }"
-                                    icon="mdi-tune-variant"
-                                    size="x-small"
-                                    variant="text"
-                                    color="muted"
-                                    aria-label="Choose the scene header items"
-                                />
-                            </template>
-                        </v-tooltip>
-                    </template>
-                    <v-card class="scene-header-picker" min-width="240">
-                        <v-card-text class="pa-3">
-                            <fieldset v-for="slot in slotDefinitions" :key="slot.id" class="scene-header-picker__slot">
-                                <legend class="text-label-large text-medium-emphasis">{{ slot.label }}</legend>
-                                <v-checkbox
-                                    v-for="item in catalog"
-                                    :key="item.id"
-                                    :label="item.label"
-                                    :model-value="isShown(slot.id, item.id)"
-                                    density="compact"
-                                    color="primary"
-                                    hide-details
-                                    @update:model-value="toggle(slot, item.id)"
-                                />
-                            </fieldset>
-                        </v-card-text>
-                    </v-card>
-                </v-menu>
+            <div v-if="!titleOnly" class="scene-header__actions scene-header__actions--slot_b">
+                <SceneHeaderItemMenu :definition="slotDefinitions[1]" :catalog="catalog" :shown="slotIds('slot_b')" @toggle="(itemId) => toggle(slotDefinitions[1], itemId)" />
                 <v-tooltip text="Hide the scene header (turn it back on in Settings > Game)" location="bottom">
                     <template v-slot:activator="{ props }">
                         <v-btn
@@ -78,7 +47,7 @@
 </template>
 
 <script>
-import { mergeProps } from 'vue';
+import SceneHeaderItemMenu from './SceneHeaderItemMenu.vue';
 import SceneHeaderSlot from './SceneHeaderSlot.vue';
 import { SCENE_HEADER_ITEMS, SCENE_HEADER_SLOTS, applySlotEdit, resolveSlotItems } from '@/utils/sceneHeaderItems.js';
 import { perspectiveHeaderLabel } from '@/utils/messagePerspective';
@@ -89,6 +58,7 @@ const NARROW_HEADER_WIDTH = 640;
 export default {
     name: 'SceneHeader',
     components: {
+        SceneHeaderItemMenu,
         SceneHeaderSlot,
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler'],
@@ -98,6 +68,10 @@ export default {
             default: () => ({}),
         },
         agentStatus: {
+            type: Object,
+            default: () => ({}),
+        },
+        templates: {
             type: Object,
             default: () => ({}),
         },
@@ -123,7 +97,6 @@ export default {
         return {
             catalog: SCENE_HEADER_ITEMS,
             slotDefinitions: SCENE_HEADER_SLOTS,
-            pickerOpen: false,
             // edits sent per slot and not yet answered by set_done; the
             // backend queues the app_config broadcast of an edit before its
             // set_done, so the displayed list is the saved one plus these
@@ -136,7 +109,7 @@ export default {
             return this.scene?.title || this.scene?.name || 'Untitled Scenario';
         },
         context() {
-            return { scene: this.scene, agentStatus: this.agentStatus, narrow: this.narrow };
+            return { scene: this.scene, agentStatus: this.agentStatus, templates: this.templates, narrow: this.narrow };
         },
         perspectiveLabel() {
             return perspectiveHeaderLabel(this.perspectiveCharacter);
@@ -159,7 +132,6 @@ export default {
         this.resizeObserver.disconnect();
     },
     methods: {
-        mergeProps,
         slotIds(slotId) {
             return this.pending[slotId].reduce(applySlotEdit, this.settings?.[slotId] ?? []);
         },
@@ -290,25 +262,33 @@ export default {
 .scene-header__actions {
     position: absolute;
     top: 50%;
-    right: 4px;
     transform: translateY(-50%);
     display: flex;
     gap: 2px;
 }
 
-.scene-header__action {
+.scene-header__actions--slot_a {
+    left: 4px;
+}
+
+.scene-header__actions--slot_b {
+    right: 4px;
+}
+
+/* the menu buttons render inside SceneHeaderItemMenu */
+.scene-header :deep(.scene-header__action) {
     opacity: 0;
     transition: opacity 0.15s ease;
 }
 
-.scene-header:hover .scene-header__action,
-.scene-header:focus-within .scene-header__action,
-.scene-header__action--open {
+.scene-header:hover :deep(.scene-header__action),
+.scene-header:focus-within :deep(.scene-header__action),
+.scene-header :deep(.scene-header__action--open) {
     opacity: 1;
 }
 
 @media (hover: none) {
-    .scene-header__action {
+    .scene-header :deep(.scene-header__action) {
         opacity: 1;
     }
 }
@@ -320,16 +300,6 @@ export default {
     justify-content: center;
     margin-left: 50%;
     padding-bottom: 6px;
-}
-
-.scene-header-picker__slot {
-    border: none;
-    margin: 0;
-    padding: 0;
-}
-
-.scene-header-picker__slot + .scene-header-picker__slot {
-    margin-top: 8px;
 }
 
 @container (max-width: 640px) {

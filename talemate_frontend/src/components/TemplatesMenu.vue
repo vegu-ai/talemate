@@ -40,7 +40,7 @@
                 </template>
                 <v-list-item-title>{{ template.name }}</v-list-item-title>
                 <v-list-item-subtitle class="text-body-small">
-                    {{ toLabel(template.template_type) }}
+                    {{ templateTypeTitle(template.template_type) }}
                 </v-list-item-subtitle>
                 <v-list-item-subtitle>
                     <v-chip label size="x-small" variant="outlined" class="mr-1" v-if="template.state_type">{{ template.state_type
@@ -60,6 +60,7 @@
 
 <script>
 import { iconForTemplate, colorForTemplate } from '../utils/templateMappings.js';
+import { templateTypeTitle } from '../utils/templateTypes.js';
 
 export default {
     name: "TemplatesMenu",
@@ -132,6 +133,7 @@ export default {
     methods: {
         iconForTemplate,
         colorForTemplate,
+        templateTypeTitle,
         groupIsOpen(index) {
             return this.selectedGroups && this.selectedGroups.includes(index);
         },

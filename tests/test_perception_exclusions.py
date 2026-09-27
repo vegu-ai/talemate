@@ -4,10 +4,13 @@ from unittest.mock import AsyncMock
 import pytest
 
 from talemate.agents.summarize.perceptions import (
+    PerceptionExclusion,
     PerceptionValidationError,
     exclusion_errors,
+    forbidden_in_text,
     parse_perceptions,
     passage_sentences,
+    rewrite_regions,
 )
 from talemate.character import Character
 from talemate.context import ActiveScene
@@ -15,276 +18,11 @@ from talemate.instance import get_agent
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage
 
-WHISPER = (
-    'Alice: I leaned close to Bob. "The key is in the blue vase," I whispered, '
-    "too softly for Cora to hear. A floorboard creaked under my heel."
-)
-PRETENCE = (
-    "Alice: I let my eyes fall shut and pretended to sleep, though I heard every "
-    'word. Bob set the blue vase on the sill. "She\'s out cold," he muttered.'
-)
-DOOR = (
-    'Alice leaned close to Bob. "The key is in the blue vase," she said quietly. '
-    "The kitchen door was thin, and Cora, at the sink, could hear every word."
-)
-CHESS = (
-    "Alice: She drummed two fingers beside the board—tap, tap. Playing chess with "
-    "Bob was her one private delight. Beneath the table, unseen by anyone else, she "
-    'hid a brass key in her cuff. "Your turn," she said. Rain rattled the glass.'
-)
-READER = (
-    "What does Alice keep hidden in her locked drawer?\n"
-    "A sapphire stolen from Mira lay under the false bottom."
-)
 
-
-def test_sentences_split_after_closing_quotes_and_line_breaks():
-    text = 'Alice: "Hello." She smiled.\nA bell rang!'
-    assert [text[start:end] for start, end in passage_sentences(text)] == [
-        'Alice: "Hello."',
-        "She smiled.",
-        "A bell rang!",
-    ]
-
-
-def test_sentences_split_after_emphasis_markup_and_investigation_headings():
-    thought = 'Alice: *I hate him.* "Hello, Bob!" *He must never know.* "Nice day."'
-    assert [thought[start:end] for start, end in passage_sentences(thought)] == [
-        "Alice: *I hate him.*",
-        '"Hello, Bob!"',
-        "*He must never know.*",
-        '"Nice day."',
-    ]
-    note = "# Internal note for Alice - Where is the key?\nIt lies in the vase."
-    assert [note[start:end] for start, end in passage_sentences(note)] == [
-        "# Internal note for Alice - Where is the key?",
-        "It lies in the vase.",
-    ]
-
-
-def test_sentences_continue_into_a_lowercase_speech_tag_and_close_after_braces():
-    tag = (
-        'Bob looked up. "Is the key in the blue vase?" she whispered to him. Cora ate.'
+def exclusion(span, forbidden=(), trace=None):
+    return PerceptionExclusion(
+        span=span, reason="private", forbidden=list(forbidden), trace=trace
     )
-    assert [tag[start:end] for start, end in passage_sentences(tag)] == [
-        "Bob looked up.",
-        '"Is the key in the blue vase?" she whispered to him.',
-        "Cora ate.",
-    ]
-    for passage, first in (
-        ('Alice said {"Run!"} Bob hid the key. Carol waved.', 'Alice said {"Run!"}'),
-        ("«Cours !» Bob hid the key. Carol waved.", "«Cours !»"),
-    ):
-        start, end = passage_sentences(passage)[0]
-        assert passage[start:end] == first
-
-
-@pytest.mark.parametrize(
-    "passage,span,text",
-    [
-        (
-            'Bob looked up. "Is the key in the blue vase?" she whispered to him. '
-            "Cora kept washing.",
-            '"Is the key in the blue vase?"',
-            "Bob looked up. She whispered something to him. Cora kept washing.",
-        ),
-        (
-            '"Run!" she hissed at Bob. The guards turned.',
-            '"Run!"',
-            "She hissed something at Bob. The guards turned.",
-        ),
-        (
-            'Alice: I leaned close to Bob. "Is the key in the blue vase?" I whispered '
-            "to him. Cora kept washing.",
-            '"Is the key in the blue vase?"',
-            "Alice: I leaned close to Bob. I whispered something to him. Cora kept "
-            "washing.",
-        ),
-        (
-            'Alice: "The key is in the blue vase." *I lean close and whisper it to '
-            "Bob.* A floorboard creaks.",
-            "The key is in the blue vase.",
-            "Alice: *I lean close and whisper something to Bob.* A floorboard creaks.",
-        ),
-        (
-            'She leaned in. "The key is in the blue vase". I whispered to him. '
-            "Cora kept washing.",
-            '"The key is in the blue vase"',
-            "She leaned in. I whispered something to him. Cora kept washing.",
-        ),
-        (
-            "Elle se pencha. «Le secret est ici». Il chuchota. Cora regardait.",
-            "«Le secret est ici»",
-            "Elle se pencha. Il chuchota quelque chose. Cora regardait.",
-        ),
-        (
-            'She leaned in. *"The key is in the blue vase."* I whispered to him. '
-            "Cora kept washing.",
-            '"The key is in the blue vase."',
-            "She leaned in. I whispered something to him. Cora kept washing.",
-        ),
-        (
-            'She leaned in. ("The key is in the blue vase.") I whispered to him. '
-            "Cora kept washing.",
-            '"The key is in the blue vase."',
-            "She leaned in. I whispered something to him. Cora kept washing.",
-        ),
-    ],
-)
-def test_host_check_accepts_the_kept_act_after_a_removed_quote(passage, span, text):
-    assert exclusion_errors(passage, (span,), text) == []
-
-
-@pytest.mark.parametrize(
-    "passage,span,text",
-    [
-        (
-            'Alice: I leaned close to Bob. "Is the key in the blue vase?" I whispered '
-            "to him. Cora kept washing.",
-            '"Is the key in the blue vase?"',
-            "Alice: I leaned close to Bob. I whispered something to him. Cora smiled.",
-        ),
-        (
-            "«Cours !» Bob hid the key. Carol waved.",
-            "Bob hid the key.",
-            "«Cours !» Something else. Carol smiled.",
-        ),
-        (
-            'She leaned in. "The key is in the blue vase, Bob." I whispered to him. '
-            "Cora kept washing.",
-            '"The key is in the blue vase',
-            'She leaned in. "Bob." I whispered something to him. Cora kept washing.',
-        ),
-        (
-            "Alice whispered the plan.\n***\nBob left. Cora ate.",
-            "plan.\n***",
-            "Alice whispered something.\nSomething invented. Cora ate.",
-        ),
-    ],
-)
-def test_host_check_keeps_sentences_beyond_the_speech_tag(passage, span, text):
-    assert any(
-        "missing or changed" in error
-        for error in exclusion_errors(passage, (span,), text)
-    )
-
-
-@pytest.mark.parametrize(
-    "passage,span,text",
-    [
-        (
-            'Bob asked, "Coming?" "Yes," Alice whispered to Cora. "Yes," Alice said '
-            "aloud to Bob.",
-            '"Yes," ',
-            'Bob asked, "Coming?" Alice whispered something to Cora. "Yes," Alice said '
-            "aloud to Bob.",
-        ),
-        (
-            "Alice thought of the key. The monkey screeched.",
-            "key",
-            "Alice thought of something. The monkey screeched.",
-        ),
-        ("Alice smiled. Bob waved. The bell rang.", ".", "Something else happened"),
-        ("Alice laughed: ha ha ha.", "ha ha", "Alice laughed: ha."),
-    ],
-)
-def test_host_check_rejects_a_span_that_is_not_unique(passage, span, text):
-    errors = exclusion_errors(passage, (span,), text)
-    assert any("occurs 2 times" in e or "occurs 3 times" in e for e in errors)
-
-
-def test_host_check_rejects_a_rewrite_after_an_emphasized_thought():
-    passage = 'Alice: *I loved playing chess with Bob.* "Your turn," I said. Rain fell.'
-    assert exclusion_errors(
-        passage,
-        ("I loved playing chess with Bob.",),
-        'Alice: *I was playing chess with Bob.* "Checkmate," I shouted. Rain fell.',
-    ) == [
-        "sentence outside the exclusions is missing or changed: '\"Your turn,\" I said.'"
-    ]
-
-
-@pytest.mark.parametrize(
-    "passage,spans,text",
-    [
-        (WHISPER, [], WHISPER),
-        (
-            WHISPER,
-            ['"The key is in the blue vase,"'],
-            "Alice: I leaned close to Bob. I whispered something, too softly for "
-            "Cora to hear. A floorboard creaked under my heel.",
-        ),
-        (
-            PRETENCE,
-            [" and pretended to sleep, though I heard every word"],
-            PRETENCE.replace(" and pretended to sleep, though I heard every word", ""),
-        ),
-        (
-            DOOR,
-            [", and Cora, at the sink, could hear every word"],
-            'Alice leaned close to Bob. "The key is in the blue vase," she said '
-            "quietly. The kitchen door was thin.",
-        ),
-        (
-            CHESS,
-            [
-                "Playing chess with Bob was her one private delight.",
-                "Beneath the table, unseen by anyone else, she hid a brass key in "
-                "her cuff.",
-            ],
-            "Alice: She drummed two fingers beside the board—tap, tap. She was "
-            'playing chess with Bob. "Your turn," she said. Rain rattled the glass.',
-        ),
-        (
-            "From the dark hayloft, Dorian watched Alice pass the letter to Bob.",
-            ["From the dark hayloft, Dorian watched "],
-            "Alice passed the letter to Bob.",
-        ),
-    ],
-)
-def test_host_check_accepts_deletions_and_local_edits_at_spans(passage, spans, text):
-    assert exclusion_errors(passage, tuple(spans), text) == []
-
-
-@pytest.mark.parametrize(
-    "passage,spans,text,reason",
-    [
-        (
-            WHISPER,
-            [],
-            WHISPER.replace("Alice: I leaned", "Alice: Alice leaned"),
-            "missing or changed",
-        ),
-        (
-            WHISPER,
-            ['"The key is in the blue vase,"'],
-            "Alice: I leaned close to Bob. I whispered something. ",
-            "missing or changed",
-        ),
-        (WHISPER, [], "Bob sees: " + WHISPER, "text added"),
-        (WHISPER, [], WHISPER + " Cora saw it.", "text added"),
-        (
-            CHESS,
-            ["Playing chess with Bob was her one private delight."],
-            CHESS.replace(
-                "Playing chess with Bob was her one private delight.",
-                "She was playing chess with Bob.",
-            ).replace('"Your turn,"', 'He waited. "Your turn,"'),
-            "text added",
-        ),
-        (WHISPER, ['"The key is in the blue vase,"'], WHISPER, "still in the text"),
-        (WHISPER, ["the red vase"], WHISPER, "not in the passage"),
-        (
-            READER,
-            [],
-            "What does Alice keep hidden in her locked drawer?",
-            "missing or changed",
-        ),
-    ],
-)
-def test_host_check_rejects_text_outside_the_spans(passage, spans, text, reason):
-    errors = exclusion_errors(passage, tuple(spans), text)
-    assert any(reason in error for error in errors), errors
 
 
 def payload(*views):
@@ -292,7 +30,7 @@ def payload(*views):
 
 
 def view(name, text, exclusions=None, status="ready"):
-    entry = {
+    result = {
         "audience": [name],
         "status": status,
         "text": text,
@@ -300,66 +38,460 @@ def view(name, text, exclusions=None, status="ready"):
         "passage_ids": [],
     }
     if exclusions is not None:
-        entry["exclusions"] = exclusions
-    return entry
+        result["exclusions"] = [
+            item.model_dump() if isinstance(item, PerceptionExclusion) else item
+            for item in exclusions
+        ]
+    return result
 
 
-def test_parser_rejects_a_view_that_fails_the_host_check_and_keeps_its_sibling():
-    response = payload(
-        view("Alice", WHISPER, []),
-        view(
-            "Cora",
-            "Alice: I leaned close to Bob. I whispered something, too softly for "
-            "Cora to hear.",
-            [{"span": '"The key is in the blue vase,"', "reason": "inaudible"}],
+def test_sentences_split_after_quotes_markup_and_headings():
+    for text, expected in (
+        (
+            'Alice: "Hello." She smiled.\nA bell rang!',
+            ['Alice: "Hello."', "She smiled.", "A bell rang!"],
         ),
+        (
+            'Alice: *I hate him.* "Hello, Bob!" *He must never know.* "Nice day."',
+            [
+                "Alice: *I hate him.*",
+                '"Hello, Bob!"',
+                "*He must never know.*",
+                '"Nice day."',
+            ],
+        ),
+        (
+            "# Where is the key?\nIt lies in the vase.",
+            ["# Where is the key?", "It lies in the vase."],
+        ),
+        (
+            'Bob looked up. "Where is it?" she whispered. Cora ate.',
+            ["Bob looked up.", '"Where is it?" she whispered.', "Cora ate."],
+        ),
+        (
+            'Alice said {"Run!"} Bob hid. Carol waved.',
+            ['Alice said {"Run!"}', "Bob hid.", "Carol waved."],
+        ),
+    ):
+        assert [text[start:end] for start, end in passage_sentences(text)] == expected
+
+
+SOURCE = "Rain fell. I waved. I hid the key with a clink. Bob waited. The clock ticked."
+SPAN = "I hid the key with a clink."
+REWRITTEN = (
+    "Rain fell. I waved as a clink sounded. Bob waited nearby. The clock ticked."
+)
+
+
+def test_rewrite_regions_include_only_touched_sentences_and_immediate_neighbors():
+    start = SOURCE.index(SPAN)
+    regions = rewrite_regions(SOURCE, ((start, start + len(SPAN)),))
+    assert len(regions) == 1
+    assert (
+        SOURCE[regions[0].start : regions[0].end]
+        == " I waved. I hid the key with a clink. Bob waited. "
     )
-    with pytest.raises(PerceptionValidationError) as error:
-        parse_perceptions(response, ("Alice", "Cora"), WHISPER)
-    assert [v.audience for v in error.value.views] == [("Alice",)]
-    assert "Cora: text does not match its exclusions" in str(error.value)
-    assert "A floorboard creaked under my heel." in str(error.value)
+    assert not regions[0].partial
+    assert exclusion_errors(SOURCE, (exclusion(SPAN, ["key"]),), REWRITTEN) == []
 
 
-def test_host_check_cannot_see_edits_inside_a_sentence_that_touches_a_span():
-    # The check verifies text against the exclusions, not the exclusions
-    # themselves: losing the whisper act inside the edited sentence passes.
+@pytest.mark.parametrize(
+    "changed",
+    [
+        REWRITTEN.replace("Rain fell.", "Rain stopped."),
+        REWRITTEN.replace("The clock ticked.", "The clock chimed."),
+        "Someone arrived. " + REWRITTEN,
+        REWRITTEN + " Someone left.",
+        REWRITTEN.replace("Rain fell.", ""),
+        REWRITTEN.replace("The clock ticked.", ""),
+    ],
+)
+def test_region_cannot_change_remove_or_add_outside_its_bounds(changed):
+    assert any(
+        "outside rewrite regions" in e
+        for e in exclusion_errors(SOURCE, (exclusion(SPAN),), changed)
+    )
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        SOURCE + " ",
+        " " + SOURCE,
+        SOURCE.replace(". ", ".\n", 1),
+        SOURCE.replace("Rain", "Snow"),
+    ],
+)
+def test_without_exclusions_the_entire_passage_stays_byte_identical(text):
+    assert exclusion_errors(SOURCE, (), text)
+    assert exclusion_errors(SOURCE, (), SOURCE) == []
+
+
+@pytest.mark.parametrize(
+    "text,token,found",
+    [
+        ("A KEY fell.", "key", True),
+        ("The monkey used a keyboard.", "key", False),
+        ("The silver\nkey fell.", "silver key", True),
+        ("A silver keyboard.", "silver key", False),
+        ("(Mira's ring)", "Mira's ring", True),
+        ("A BRASS KEY!", "brass key", True),
+        ("A keyhole.", "key", False),
+        ("Her keys.", "key", False),
+    ],
+)
+def test_forbidden_check_uses_case_insensitive_whole_tokens_and_phrases(
+    text, token, found
+):
+    assert forbidden_in_text(text, token) is found
+
+
+def test_unchanged_block_keeps_its_internal_whitespace_byte_identical():
+    source = "I hid a key. Bob waited. Rain fell.\n\nThe clock ticked. Cora nodded. I hid a ring."
+    edits = (exclusion("I hid a key."), exclusion("I hid a ring."))
+    accepted = "Bob waited. Rain fell.\n\nThe clock ticked. Cora nodded."
+    assert exclusion_errors(source, edits, accepted) == []
+    assert exclusion_errors(source, edits, accepted.replace("\n\n", " "))
+
+
+def test_forbidden_check_catches_a_secret_even_when_the_excluded_span_is_gone():
+    text = REWRITTEN.replace("a clink", "a KEY's clink")
+    errors = exclusion_errors(SOURCE, (exclusion(SPAN, ["key"]),), text)
+    assert errors == ["forbidden content in rewrite region: ['key']"]
+
+
+def test_a_forbidden_word_in_unchanged_text_does_not_make_it_editable():
+    source = (
+        "The key lay there. Bob smiled. I hid a second key. Cora waited. Rain fell."
+    )
+    text = "The key lay there. Bob smiled. Cora waited. Rain fell."
+    assert (
+        exclusion_errors(source, (exclusion("I hid a second key.", ["key"]),), text)
+        == []
+    )
+
+
+def test_excluded_span_itself_cannot_remain_even_with_an_empty_forbidden_list():
+    assert any(
+        "still in the text" in e
+        for e in exclusion_errors(SOURCE, (exclusion(SPAN),), SOURCE)
+    )
+
+
+@pytest.mark.parametrize(
+    "span,reason", [("missing", "not in the passage"), ("ha ha", "occurs 2 times")]
+)
+def test_source_spans_must_exist_and_be_unique(span, reason):
+    assert any(
+        reason in e
+        for e in exclusion_errors(
+            "Alice laughed: ha ha ha.", (exclusion(span),), "Alice laughed."
+        )
+    )
+
+
+@pytest.mark.parametrize("result", ["", "  ", "\n\t"])
+def test_partially_excluded_sentence_needs_a_nonempty_region(result):
+    assert exclusion_errors(
+        "I whispered a secret.", (exclusion("a secret", ["secret"]),), result
+    ) == ["a partially excluded sentence needs a nonempty rewrite region"]
+
+
+def test_full_sentence_exclusion_may_leave_an_empty_region():
+    assert (
+        exclusion_errors("I hid a key.", (exclusion("I hid a key.", ["key"]),), "")
+        == []
+    )
+
+
+@pytest.mark.parametrize("result", ["", "  ", "\n\t"])
+def test_wholly_excluded_merged_region_may_be_empty(result):
+    source = "I hid a key.\n \tI hid a ring."
+    edits = (exclusion("I hid a key."), exclusion("I hid a ring."))
+    assert exclusion_errors(source, edits, result) == []
+
+
+@pytest.mark.parametrize(
+    "source,rewritten",
+    [
+        (
+            "Alice smiled. Bob hid the key under the rug. Carol left. Dan sat. Eve slept.",
+            "Dan sat. Eve slept.",
+        ),
+        ("🔔\nBob hid the key under the rug.", " \n"),
+        ("Bob hid the key under the rug. Carol left.", ""),
+    ],
+)
+def test_full_sentence_exclusion_cannot_erase_unexcluded_neighbors(source, rewritten):
+    assert exclusion_errors(
+        source, (exclusion("Bob hid the key under the rug.", ["key"]),), rewritten
+    ) == ["a rewrite region with unexcluded source text must be nonempty"]
+
+
+def test_excluding_words_but_leaving_punctuation_is_partial():
+    assert exclusion_errors(
+        "I hid a key.", (exclusion("I hid a key", ["key"]),), ""
+    ) == ["a partially excluded sentence needs a nonempty rewrite region"]
+
+
+def test_nonempty_region_can_retain_meaningful_symbols():
+    source = "🔔 — secretly a signal."
+    edits = (exclusion(" — secretly a signal", ["secretly", "signal"]),)
+    assert exclusion_errors(source, edits, "🔔.") == []
+    assert exclusion_errors(source, edits, "") == [
+        "a partially excluded sentence needs a nonempty rewrite region"
+    ]
+
+
+def test_nonempty_check_applies_to_each_separate_region():
+    source = "I whispered a secret. Bob listened. Rain fell. Cora waited. I hid a key."
+    edits = (exclusion("a secret", ["secret"]), exclusion("I hid a key.", ["key"]))
+    assert any(
+        "nonempty" in e
+        for e in exclusion_errors(source, edits, "Rain fell. Cora waited.")
+    )
+    assert exclusion_errors(source, edits, "I whispered. Bob listened. Rain fell.") == [
+        "a rewrite region with unexcluded source text must be nonempty"
+    ]
     assert (
         exclusion_errors(
-            WHISPER,
-            ('"The key is in the blue vase,"',),
-            "Alice: I leaned close to Bob. A floorboard creaked under my heel.",
+            source, edits, "I whispered. Bob listened. Rain fell. Cora waited."
         )
         == []
     )
 
 
+def test_declared_secrets_cannot_move_to_another_rewrite_region():
+    source = "I hid the key. Bob waited. Rain fell. Cora nodded. I hid the ring."
+    edits = (
+        exclusion("I hid the key.", ["key"]),
+        exclusion("I hid the ring.", ["ring"]),
+    )
+    assert any(
+        "forbidden" in e
+        for e in exclusion_errors(
+            source, edits, "Bob waited. Rain fell. Cora nodded at the KEY."
+        )
+    )
+
+
+def test_repeated_unchanged_anchors_do_not_force_the_first_alignment():
+    source = (
+        "I whispered a secret. Bob listened. Rain fell. Cora waited. I hid the ring."
+    )
+    edits = (exclusion("a secret", ["secret"]), exclusion("I hid the ring.", ["ring"]))
+    text = "Rain fell. I whispered something. Bob listened. Rain fell. Cora waited."
+    assert exclusion_errors(source, edits, text) == []
+    assert exclusion_errors(source, edits, text.replace("Rain fell.", "Rain stopped."))
+
+
 @pytest.mark.parametrize(
-    "exclusions",
-    [None, {}, "all", [None], [{"span": "Alice"}], [{"span": " ", "reason": "x"}]],
+    "source,span,expected",
+    [
+        (
+            "From the dark hayloft, Dorian watched Alice pass the letter to Bob.",
+            "From the dark hayloft, Dorian watched ",
+            "Alice passed the letter to Bob.",
+        ),
+        (
+            'Playing chess with Bob was my one private delight. "Your turn," I said.',
+            "was my one private delight",
+            'I was playing chess with Bob. "Your turn," I said.',
+        ),
+        (
+            'Alice taps the board twice, wishing Bob would hurry up and lose, and says, "Your move." Rain streaks the window.',
+            "wishing Bob would hurry up and lose",
+            'Alice taps the board twice and says, "Your move." Rain streaks the window.',
+        ),
+        (
+            "„Der Schlüssel ist in der Vase“. Ich flüsterte es ihm zu. Regen fiel.",
+            "„Der Schlüssel ist in der Vase“",
+            "Ich flüsterte ihm etwas zu. Regen fiel.",
+        ),
+    ],
 )
-def test_ready_views_need_a_readable_exclusion_array(exclusions):
-    entry = view("Alice", WHISPER)
-    if exclusions is not None:
-        entry["exclusions"] = exclusions
-    with pytest.raises(PerceptionValidationError, match="Alice: .*exclusion"):
-        parse_perceptions(payload(entry), ("Alice",), WHISPER)
+def test_secondary_joins_can_be_rewritten_as_grammatical_prose(source, span, expected):
+    assert exclusion_errors(source, (exclusion(span),), expected) == []
+
+
+def test_trace_can_be_reworded_inside_its_region_and_is_not_stored():
+    response = payload(
+        view(
+            "Bob", REWRITTEN, [exclusion(SPAN, ["key"], "There was a clinking sound.")]
+        )
+    )
+    result = parse_perceptions(response, ("Bob",), SOURCE)
+    assert result[0].text == REWRITTEN
+    assert "trace" not in result[0].model_dump()
+    assert "exclusions" not in result[0].model_dump()
+
+
+def test_host_does_not_claim_to_detect_a_missing_sensory_fact():
+    text = "Rain fell. I waved. Bob waited. The clock ticked."
+    response = payload(
+        view("Bob", text, [exclusion(SPAN, ["key"], "A clink sounded.")])
+    )
+    assert parse_perceptions(response, ("Bob",), SOURCE)[0].text == text
+
+
+@pytest.mark.parametrize(
+    "item",
+    [
+        None,
+        {},
+        "all",
+        [None],
+        [{"span": "Alice"}],
+        [{"span": " ", "reason": "x", "forbidden": []}],
+        [{"span": "Alice", "reason": "x"}],
+        [{"span": "Alice", "reason": "x", "forbidden": "Alice"}],
+        [{"span": "Alice", "reason": "x", "forbidden": [1]}],
+        [{"span": "Alice", "reason": "x", "forbidden": [""]}],
+    ],
+)
+def test_ready_views_need_a_typed_exclusion_array_and_forbidden_lists(item):
+    entry = view("Alice", SOURCE)
+    if item is not None:
+        entry["exclusions"] = item
+    with pytest.raises(PerceptionValidationError, match="exclusion|forbidden"):
+        parse_perceptions(payload(entry), ("Alice",), SOURCE)
+
+
+@pytest.mark.parametrize("trace", ["", "  ", 1, True, [], {}])
+def test_trace_needs_a_nonempty_string(trace):
+    entry = {"span": SPAN, "reason": "unseen", "forbidden": ["key"], "trace": trace}
+    with pytest.raises(PerceptionValidationError, match="trace"):
+        parse_perceptions(payload(view("Bob", REWRITTEN, [entry])), ("Bob",), SOURCE)
+
+
+def test_null_or_absent_trace_keeps_the_same_rewrite_contract():
+    for entry in (
+        exclusion(SPAN, ["key"]).model_dump(),
+        {"span": SPAN, "reason": "unseen", "forbidden": ["key"]},
+    ):
+        assert (
+            parse_perceptions(
+                payload(view("Bob", REWRITTEN, [entry])), ("Bob",), SOURCE
+            )[0].text
+            == REWRITTEN
+        )
+
+
+def test_parser_keeps_valid_siblings_when_a_region_fails():
+    response = payload(
+        view("Alice", SOURCE, []),
+        view(
+            "Bob", REWRITTEN.replace("Rain fell.", "Rain stopped."), [exclusion(SPAN)]
+        ),
+    )
+    with pytest.raises(PerceptionValidationError) as error:
+        parse_perceptions(response, ("Alice", "Bob"), SOURCE)
+    assert [v.audience for v in error.value.views] == [("Alice",)]
+    assert "outside rewrite regions" in str(error.value)
+    assert repr("Rain fell.") in str(error.value)
+
+
+@pytest.mark.parametrize(
+    "source,edits,rewritten,fragment",
+    [
+        (SOURCE, [], SOURCE.replace("Rain", "Snow"), SOURCE),
+        (SOURCE, [exclusion(SPAN)], REWRITTEN.replace("Rain", "Snow"), "Rain fell."),
+        (
+            SOURCE,
+            [exclusion(SPAN)],
+            REWRITTEN.replace("The clock ticked.", "The clock chimed."),
+            "The clock ticked.",
+        ),
+        (
+            "I hid a key. Bob waited. Rain fell. Cora nodded. I hid a ring.",
+            [exclusion("I hid a key."), exclusion("I hid a ring.")],
+            "Bob waited. Snow fell. Cora nodded.",
+            "Rain fell.",
+        ),
+    ],
+)
+def test_alignment_failure_reports_the_unchanged_fragment(
+    source, edits, rewritten, fragment
+):
+    with pytest.raises(PerceptionValidationError) as error:
+        parse_perceptions(payload(view("Bob", rewritten, edits)), ("Bob",), source)
+    assert "outside rewrite regions" in str(error.value)
+    assert repr(fragment) in str(error.value)
+
+
+@pytest.mark.parametrize("padding", ["a", "\x01"])
+def test_large_passage_error_quotes_a_bounded_window_at_the_first_difference(padding):
+    source = padding * 21000 + "EXPECTED" + padding * 21000
+    text = source.replace("EXPECTED", "CHANGED")
+    errors = exclusion_errors(source, (), text)
+    assert len(errors) == 1
+    assert "EXPECTED" in errors[0]
+    assert "…" in errors[0]
+    assert len(errors[0]) < 500
+
+
+@pytest.mark.parametrize("position", ["start", "end"])
+def test_large_passage_error_handles_first_and_last_character_changes(position):
+    source = "Start. " + "a" * 42000 + " End.\n"
+    text = source[1:] if position == "start" else source[:-1]
+    errors = exclusion_errors(source, (), text)
+    assert len(errors) == 1
+    assert ("Start." if position == "start" else "End.\\n") in errors[0]
+    assert len(errors[0]) < 250
+
+
+def test_large_unchanged_prefix_error_quotes_the_mismatch_window():
+    prefix = "a" * 21000 + "EXPECTED" + "a" * 21000 + "."
+    source = prefix + " I waved. I hid a key. Bob waited. Rain fell."
+    text = prefix.replace("EXPECTED", "CHANGED") + " I waved. Bob waited. Rain fell."
+    errors = exclusion_errors(source, (exclusion("I hid a key."),), text)
+    assert len(errors) == 1
+    assert "EXPECTED" in errors[0]
+    assert len(errors[0]) < 250
+
+
+def test_large_unchanged_anchor_error_is_bounded():
+    anchor = "A long anchor " + "a" * 42000 + "."
+    source = "I hid a key. Bob waited. " + anchor
+    text = "Bob waited. " + anchor.replace("anchor", "fragment")
+    errors = exclusion_errors(source, (exclusion("I hid a key."),), text)
+    assert len(errors) == 1
+    assert "A long anchor" in errors[0]
+    assert len(errors[0]) < 250
+
+
+def test_repeated_anchor_error_quotes_where_alignment_stopped():
+    source = "A. X hid key. B. Rain fell. C. Y hid ring. D. Rain fell. End."
+    edits = (exclusion("X hid key."), exclusion("Y hid ring."))
+    text = "A. B. Snow fell. C. D. Rain fell. End."
+    errors = exclusion_errors(source, edits, text)
+    assert len(errors) == 1
+    assert repr("Rain fell. End.") in errors[0]
 
 
 def test_omitted_views_need_no_exclusions():
-    views = parse_perceptions(
-        payload(view("Dorian", None, status="omitted")), ("Dorian",), WHISPER
+    result = parse_perceptions(
+        payload(view("Bob", None, status="omitted")), ("Bob",), SOURCE
     )
-    assert views[0].status == "omitted"
+    assert result[0].status == "omitted"
 
 
-def test_prompt_orders_exclusions_before_text(scene):
+@pytest.mark.parametrize("enabled", [False, True])
+def test_prompt_orders_exclusions_and_forbidden_content_before_text(scene, enabled):
     rendered = Prompt.get(
         "summarizer.perceptions",
-        vars={"scene": scene, "context": {}, "validation_error": ""},
+        vars={
+            "scene": scene,
+            "context": {},
+            "validation_error": "",
+            "rewrite_hidden_traces": enabled,
+        },
     ).render()
     assert "STEP 1, EXCLUSIONS" in rendered
     assert "STEP 2, TEXT" in rendered
+    assert "rewrite region" in rendered
+    assert "forbidden" in rendered
+    assert ('"trace":' in rendered) is enabled
     shape = rendered[rendered.index("Example shape:") :]
     assert shape.index('"exclusions"') < shape.index('"text"')
 
@@ -378,29 +510,22 @@ def analysis(scene, monkeypatch):
         yield scene, summarizer, request, dialog
 
 
-async def test_host_check_failure_goes_through_the_repair_path(analysis):
+@pytest.mark.parametrize("enabled", [False, True])
+async def test_forbidden_content_repairs_in_both_trace_modes(analysis, enabled):
     scene, summarizer, request, dialog = analysis
-    assert summarizer.resolve_config("perceptions", "automatic_repair") is True
-    passage = "Alice: I waved. The key is mine, I thought."
-    bad = payload(
-        view("Bob", "I waved.", []),
-    )
-    good = payload(
-        view(
-            "Bob",
-            "I waved.",
-            [{"span": "The key is mine, I thought.", "reason": "private-thought"}],
-        )
-    )
+    assert summarizer.resolve_config("perceptions", "rewrite_hidden_traces") is False
+    summarizer.actions["perceptions"].config["rewrite_hidden_traces"].value = enabled
+    edits = [exclusion(SPAN, ["key"], "A clink sounded." if enabled else None)]
+    bad = payload(view("Bob", REWRITTEN.replace("a clink", "a key's clink"), edits))
+    good = payload(view("Bob", REWRITTEN, edits))
     request.side_effect = [(bad, {"response": bad}), (good, {"response": good})]
-    message = CharacterMessage(message=passage)
+    message = CharacterMessage(message="Alice: " + SOURCE)
     await scene.push_history(message)
     assert request.await_count == 2
-    repair = request.await_args_list[1].kwargs["vars"]
-    assert [entry["name"] for entry in repair["context"]["cast"]] == ["Bob"]
-    assert "The key is mine, I thought." in repair["validation_error"]
-    assert "missing or changed" in repair["validation_error"]
+    for call in request.await_args_list:
+        assert call.kwargs["vars"]["rewrite_hidden_traces"] is enabled
+    assert "forbidden" in request.await_args.kwargs["vars"]["validation_error"]
     alice, bob = message.knowledge.views
-    assert alice.text == passage.removeprefix("Alice: ")
-    assert bob.text == "I waved."
+    assert alice.text == SOURCE
+    assert bob.text == REWRITTEN
     dialog.assert_not_awaited()

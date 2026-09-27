@@ -145,11 +145,12 @@ async def test_wrongly_typed_offered_id_repairs_dependency_and_edit_invalidates(
 
 
 @pytest.mark.parametrize("mode", [None, "legacy", "perception"])
+@pytest.mark.parametrize("setting", ["automatic_repair", "rewrite_hidden_traces"])
 def test_perception_off_value_is_present_in_persisted_settings_payload(
-    analysis, monkeypatch, mode
+    analysis, monkeypatch, mode, setting
 ):
     scene, summarizer, _, _ = analysis
-    summarizer.actions["perceptions"].config["automatic_repair"].value = False
+    summarizer.actions["perceptions"].config[setting].value = False
     if mode is None:
         monkeypatch.delattr(summarizer, "scene")
     else:
@@ -157,11 +158,9 @@ def test_perception_off_value_is_present_in_persisted_settings_payload(
     payload = summarizer.sanitized_action_config
     saved = AgentConfig(actions=payload)
     reloaded = AgentConfig.model_validate_json(saved.model_dump_json())
-    assert reloaded.actions["perceptions"].config["automatic_repair"].value is False
+    assert reloaded.actions["perceptions"].config[setting].value is False
     assert payload["perceptions"]["description"]
-    assert payload["perceptions"]["config"]["automatic_repair"]["note_on_value"][True][
-        "text"
-    ]
+    assert payload["perceptions"]["config"][setting]["note_on_value"][True]["text"]
 
 
 def test_missing_audience_error_retains_valid_sibling_and_reason():

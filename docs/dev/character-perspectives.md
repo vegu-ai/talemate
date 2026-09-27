@@ -239,43 +239,62 @@ naming supplied prior inputs actually used.
 
 Each view is written in two ordered steps in one response. Its fields come in the
 order `audience`, `status`, `exclusions`, `text`, `knowledge_ids`, `passage_ids`.
-`exclusions` lists what the audience cannot perceive as `{"span", "reason"}`
-objects: `span` is copied exactly from the passage and `reason` is one word
-(`inaudible`, `private-thought`, `unseen`, `asleep`, `absent`, `reader-only`, ...).
-`text` is the passage with those spans deleted. Everything else keeps the source
-passage's tense, grammatical person, narrator, voice, style and wording, including
-the entire passage when `exclusions` is empty. At a removed span only a local edit
-is allowed: repair the join, keep the observable part of an act (a visible whisper
-becomes "whispered something", which fixes
-[#780](https://github.com/vegu-ai/talemate-private/issues/780)), and keep the
-concrete subject of a shared activity, such as chess at a shared board. A
-first-person narrator remains the same person in every audience's view. Omitted
-views use `exclusions: []` and `text: null`. The exclusions are validated, not stored.
+Each exclusion contains an exact unique source `span`, a short `reason`, and a
+required `forbidden` array of secret-bearing words or phrases. The model supplies
+that array; the host does not ban every word in the source span. A first-person
+narrator remains the same person in every audience's view. Omitted views use
+`exclusions: []` and `text: null`. Exclusions are validated and are not stored.
 
-`parse_perceptions` receives the passage text and checks every ready view with
-`exclusion_errors`. A ready view needs an explicit `exclusions` array of objects
-with a nonempty string `span` and a string `reason`. Every span must occur exactly
-once in the passage (an ambiguous span would also remove the copies the audience
-can perceive; overlapping occurrences count) and must be absent from the text. The
-passage is split into sentences at `.`, `!`, `?` or `…` (with any closing `"`, `'`,
-`”`, `’`, `)`, `]`, `}`, `»`, `*` or `_`) before whitespace, and at line breaks. A
-lowercase word after the punctuation continues the sentence, so a speech tag such as
-`"Run!" she hissed at Bob.` stays one sentence. The sentence marks `。`, `！` and `？`
-never split a sentence; such a passage is checked as fewer, longer sentences. A sentence that overlaps a span may carry the local edit. So may
-the next sentence when a span ends a sentence of quoted speech (a quote mark ends
-the sentence, before any end punctuation, `*`, `_` or closing bracket, as in `"…".`
-or `*"…"*`): that is the speech tag or action whose observable act stays, as
-in `"Is the key in the blue vase?" I whispered to him.` or
-`"The key is in the blue vase." *I lean close and whisper it to Bob.*`. Every other
-sentence must appear in the text unchanged and in the passage order. Text between
-two such sentences is allowed only where the passage has an editable sentence. A
-failure invalidates only that view, with the reasons, and goes through the
-validation repair below. The check makes the exact copy outside the editable
-sentences a verified contract. It cannot verify the exclusion decision, and it
-allows any edit inside an editable sentence. A wrong exclusion therefore passes; known cases are tracked in
-[#783](https://github.com/vegu-ai/talemate-private/issues/783). Apart from the
-sentence split, the host does not parse passage markup or require a message
-shape; double quotes identifying dialogue is the accepted convention.
+For both trace settings, a sentence overlapping an exclusion and its immediate
+neighbours form a rewrite region. Overlapping regions merge; neighbouring
+sentences do not expand the region again. Inside it the model may reword the prose
+for grammatical joins while preserving accessible facts, events, attribution,
+uncertainty, voice, tense and narrator. Outside it the text remains byte-identical.
+No exclusions means the entire passage must be identical. Existing valid views are
+retained; this is the default for subsequent analysis, not a scene migration.
+
+The off-by-default `perceptions.rewrite_hidden_traces` setting adds an optional
+`trace` string to an exclusion in the same response. It conveys only a supported
+sensory effect available to the audience, without identifying the hidden object or
+act. No effect means no trace. Step 2 may reword the declared trace inside the
+rewrite region as long as its sensory fact survives. The option adds no LLM stage,
+but may increase reasoning/output tokens, latency and validation repairs. Turning
+it off removes the trace instructions; the default sentence-rewrite rule still
+applies, so the disabled prompt differs from the earlier deletion-only prompt.
+
+`parse_perceptions` validates exclusions with the `PerceptionExclusion` Pydantic
+model and checks each ready view with `exclusion_errors`. Spans must be nonempty
+and occur exactly once in the source, including overlapping occurrences in the
+uniqueness count. A listed span cannot remain in the final text. Forbidden entries
+and traces must be nonempty strings; an absent or null trace is allowed. The host
+checks every declared forbidden word or phrase in every rewritten region,
+case-insensitively at Unicode word boundaries. Whitespace between words in a
+phrase may vary. Inflections and synonyms are not inferred: `key` does not ban
+`keys` or `monkey`.
+
+`rewrite_regions` uses sentence boundaries at `.`, `!`, `?` or `…` with closing
+quotes, brackets or emphasis markup before whitespace, and at line breaks. A
+lowercase continuation keeps a speech tag in the same sentence. The sentence
+marks `。`, `！` and `？` do not split; such prose has fewer, longer regions.
+Whitespace bordering a region belongs to that region. All unchanged source
+fragments must match exactly and in order; repeated fragments are tested against
+all possible alignments. A region must contain non-whitespace text if any touched
+sentence retains non-whitespace characters outside the excluded spans. The same
+requirement applies when any non-whitespace source character in the merged region,
+including its neighbours, lies outside the excluded spans. A region can be empty
+only when every non-whitespace source character in it is excluded. Alignment
+failures quote the unchanged fragment where alignment stopped. Quotes are limited
+to 81 source characters, with truncation markers; passage and prefix mismatches
+show about 40 characters on each side of the first difference. A failure
+invalidates only that audience, preserving valid siblings and using the existing
+repair flow.
+
+The host does not determine whether the exclusion or forbidden list is complete,
+whether a rewritten fact is true, or whether a sensory effect survives rewording.
+Those are model-behaviour checks, assessed by reading live outputs. A known
+limitation is that the model can wrongly exclude observable content, such as a
+thin door that lets a hidden listener hear.
+
 An explicit empty array means no citations in that category. The host
 drops unknown or cross-audience knowledge IDs with audience/ID warnings and
 resolves offered IDs to its own references. Unknown physical citations are also

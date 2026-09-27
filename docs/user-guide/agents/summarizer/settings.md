@@ -90,6 +90,26 @@ as they are when you change the setting.
 When a character’s view is missing or invalid, make one extra request to repair it before showing the generation error dialog. Valid views are kept. On by default; turn off to use manual retries only. This setting applies to stories using [Character perspectives](/talemate/user-guide/world-editor/knowledge/). Self-citations and correctly typed unoffered IDs do not trigger repair. Missing or non-array citation fields and wrongly typed IDs require repair.
 With automatic repair off, an unreadable citation field stops the passage and shows the generation error dialog.
 
+##### Rewrite hidden acts as observable traces
+
+Off by default. Enable this under **Settings → Agents → Summarizer → Character
+Perspectives** to keep the sensory effect of an otherwise hidden action. If Alice
+moves an object behind Bob and it makes a clink, Bob's view can keep the sound
+without revealing the object or what Alice did. Touch, smell, vibration and visible
+side effects work the same way. An act with no perceptible effect stays hidden.
+The wording keeps the passage's voice and tense; an apparent condition, such as
+sleep, stays uncertain.
+
+This uses the same analysis request, but can increase reasoning, output tokens
+and response time. **Automatically repair analysis** can still add a request for
+an invalid view. The setting affects subsequent analysis; existing valid views
+and hand edits stay as they are. Turning it off restores the usual deletion
+instructions for hidden acts. In both modes, sentences affected by an exclusion
+and their immediate neighbours may be rewritten for grammatical prose while
+preserving facts, voice and tense; other sentences stay verbatim. The AI decides
+which sensory effects are supported, so inspect a
+character's view if a detail seems wrong.
+
 ## Layered History
 
 Settings for the layered history summarization.

@@ -666,6 +666,7 @@ async def cached_reply_turn(rag, monkeypatch, mode, *, archive_during_push=False
                         {
                             "span": prompt.vars["context"]["passage"]["text"],
                             "reason": "test",
+                            "forbidden": [],
                         }
                     ],
                     "knowledge_ids": [],

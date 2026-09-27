@@ -20,7 +20,8 @@
   summary: intro_knowledge, SourceReference intro, intro_present, opening audience derivation on load; scoped graph memory
     access. Stored views, audience summaries, context_review, push_history, agent.conversation.finalized, portrait cadence,
     before_memory, scene.history_ready, evidence_boundary/evidence_budget, swap_revision/commit_revision, pending_perception_messages,
-    deep retrieval. Tracked age. Perception exclusions (span, reason) before text, exclusion_errors host check and repair.
+    deep retrieval, tracked age; perception exclusions (span, reason, forbidden, trace), rewrite regions, observable traces,
+    exclusion_errors.
 - path: dev/howto/add-a-worldstate-template-type.md
   title: Adding a new world-state template
   summary: 'Developer walkthrough for adding a world-state template type using Writing Style phrase detection: register a
@@ -254,8 +255,10 @@
     investigation. Deep analysis can retrieve additional historical context but may add many prompts.'
 - path: user-guide/agents/summarizer/settings.md
   title: Settings
-  summary: Summarization thresholds, methods and instructions, audience-view analysis and optional automatic repair. Covers
-    layered history, scene analysis and caching, character evidence, history budgets and best-fit selection.
+  summary: 'Summarization thresholds, methods and instructions; audience-view analysis; Character Perspectives settings: Analyze
+    player perspective, Automatically repair analysis, and Rewrite hidden acts as observable traces (off by default, same
+    request, possible token/time cost). Covers default sentence rewrite regions, layered history, scene analysis and caching,
+    character evidence, history budgets and best-fit selection.'
 - path: user-guide/agents/visualizer/backends/a1111.md
   title: AUTOMATIC1111
   summary: Legacy AUTOMATIC1111 text-to-image backend setup with API URL, steps, sampler, schedule, CFG, keyword/descriptive
@@ -1016,11 +1019,10 @@
     legacy bucket/viewer/memory-pass behavior and perception restrictions.
 - path: user-guide/perspective-view.md
   title: View a character's perspective
-  summary: 'View Perspective chip above the scene tools in a Character perspectives story: splits the scene to show, beside
-    each message, what one character noticed of it. Double-click to edit a character''s perspective of a message or write
-    one in an empty cell. Covers empty-cell reasons, the read-only introduction, the scene header label, and Analyze them
-    again. Explains how a perspective excludes what the character cannot perceive (whispers, private thoughts) and keeps
-    the rest word for word.'
+  summary: View Perspective splits the scene beside each message to show one character's view; double-click to edit a view
+    or empty cell. Covers empty-cell reasons, read-only introduction, scene header label, Analyze them again, private thoughts
+    and whispers, default rewrite regions with verbatim text outside them, and optional observable traces without revealing
+    hidden acts or objects.
 - path: user-guide/playthrough.md
   title: Playthrough Mode
   summary: Playthrough replays existing scene messages with Space/click advance, scrubber, time-passage chapters, restart,

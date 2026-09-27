@@ -20,7 +20,7 @@ def exclude_passage(response, passage: str):
                 "exclusions",
                 []
                 if isinstance(text, str) and passage in text
-                else [{"span": passage, "reason": "test"}],
+                else [{"span": passage, "reason": "test", "forbidden": []}],
             )
     return json.dumps(data)
 

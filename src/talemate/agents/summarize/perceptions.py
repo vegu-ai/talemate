@@ -74,9 +74,6 @@ CONTEXT_PASSAGES = 12
 PERCEPTION_BACKLOG_THRESHOLD = 3
 SENTENCE_CLOSERS = "\"'”’)]}»*_"
 SENTENCE_END = re.compile(rf"[.!?…]+[{re.escape(SENTENCE_CLOSERS)}]*(?=\s|$)|\n+")
-SENTENCE_TRAIL = ".!?… " + SENTENCE_CLOSERS
-SPEECH_CLOSERS = "\"'”’»"
-NON_SPEECH_TRAIL = "".join(c for c in SENTENCE_TRAIL if c not in SPEECH_CLOSERS)
 
 PerceptionBacklogDecision = Literal["analyze", "keep", "cancel"]
 
@@ -172,81 +169,197 @@ def span_starts(passage: str, span: str) -> list[int]:
     return starts
 
 
-def exclusion_errors(passage: str, spans: tuple[str, ...], text: str) -> list[str]:
-    """Sentences that overlap an excluded span may carry a local edit, and so
-    may the next sentence when a span ends a sentence of quoted speech (its
-    speech tag or action). Every other sentence must be copied unchanged and
-    in order, with nothing added between them."""
-    errors = []
-    removed = []
-    for span in spans:
-        starts = span_starts(passage, span)
-        if not starts:
-            errors.append(f"exclusion span is not in the passage: {span!r}")
-            continue
-        if len(starts) > 1:
-            # An ambiguous span would also remove, and forbid in the text, the
-            # copies the character can perceive.
-            errors.append(
-                f"exclusion span occurs {len(starts)} times in the passage; quote "
-                f"enough surrounding text to make it unique: {span!r}"
-            )
-            continue
-        removed.append((starts[0], starts[0] + len(span)))
-        if span in text:
-            errors.append(f"excluded span is still in the text: {span!r}")
-    sentences = passage_sentences(passage)
-    editable = set()
-    for index, (start, end) in enumerate(sentences):
-        for span_start, span_end in removed:
-            if span_start < end and start < span_end:
-                editable.add(index)
-                last = passage[start:end].rstrip(NON_SPEECH_TRAIL)[-1:]
-                ends_speech = bool(last) and last in SPEECH_CLOSERS
-                if ends_speech and not passage[span_end:end].strip(SENTENCE_TRAIL):
-                    editable.add(index + 1)
-    position, additions_allowed = 0, False
-    for index, (start, end) in enumerate(sentences):
-        if index in editable:
-            additions_allowed = True
-            continue
-        sentence = passage[start:end]
-        found = text.find(sentence, position)
-        if found < 0:
-            errors.append(
-                f"sentence outside the exclusions is missing or changed: {sentence!r}"
-            )
-            additions_allowed = True
-            continue
-        added = text[position:found].strip()
-        if added and not additions_allowed:
-            errors.append(f"text added outside the exclusions: {added!r}")
-        position, additions_allowed = found + len(sentence), False
-    added = text[position:].strip()
-    if added and not additions_allowed:
-        errors.append(f"text added outside the exclusions: {added!r}")
-    return errors
+class PerceptionExclusion(BaseModel):
+    span: StrictStr
+    reason: StrictStr
+    forbidden: list[StrictStr]
+    trace: StrictStr | None = None
 
 
-def perception_exclusions(item: dict) -> tuple[str, ...]:
+class PerceptionRewriteRegion(BaseModel):
+    start: int
+    end: int
+    partial: bool
+
+
+def perception_exclusions(item: dict) -> tuple[PerceptionExclusion, ...]:
     values = item.get("exclusions")
     if not isinstance(values, list):
         raise ValueError("exclusions must be an explicit array")
+    try:
+        exclusions = tuple(
+            PerceptionExclusion.model_validate(value) for value in values
+        )
+    except ValidationError as exc:
+        raise ValueError(
+            "invalid exclusion: "
+            + "; ".join(
+                f"{'.'.join(map(str, error['loc']))}: {error['msg']}"
+                for error in exc.errors(include_input=False)
+            )
+        ) from exc
+    for exclusion in exclusions:
+        if not exclusion.span.strip():
+            raise ValueError("each exclusion needs a nonempty span")
+        if any(not token.strip() for token in exclusion.forbidden):
+            raise ValueError("forbidden words and phrases must be nonempty")
+        if exclusion.trace is not None and not exclusion.trace.strip():
+            raise ValueError(
+                "a trace must be nonempty; omit it when there is no observable effect"
+            )
+    return exclusions
+
+
+def rewrite_regions(
+    passage: str, spans: tuple[tuple[int, int], ...]
+) -> tuple[PerceptionRewriteRegion, ...]:
+    sentences = passage_sentences(passage)
+    touched = {
+        index
+        for index, (start, end) in enumerate(sentences)
+        if any(span_start < end and start < span_end for span_start, span_end in spans)
+    }
+    partial = {
+        index
+        for index in touched
+        if any(
+            not passage[position].isspace()
+            and not any(start <= position < end for start, end in spans)
+            for position in range(*sentences[index])
+        )
+    }
+    editable = sorted(
+        {
+            neighbor
+            for index in touched
+            for neighbor in (index - 1, index, index + 1)
+            if 0 <= neighbor < len(sentences)
+        }
+    )
+    regions = []
+    for index in editable:
+        start = sentences[index - 1][1] if index else 0
+        end = sentences[index + 1][0] if index + 1 < len(sentences) else len(passage)
+        if regions and start <= regions[-1].end:
+            regions[-1].end = end
+            regions[-1].partial |= index in partial
+        else:
+            regions.append(
+                PerceptionRewriteRegion(start=start, end=end, partial=index in partial)
+            )
+    return tuple(regions)
+
+
+def forbidden_in_text(text: str, token: str) -> bool:
+    phrase = r"\s+".join(re.escape(part) for part in token.split())
+    return re.search(rf"(?<!\w){phrase}(?!\w)", text, re.IGNORECASE) is not None
+
+
+def alignment_excerpt(expected: str, actual: str | None = None) -> str:
+    context = 40
+    if len(expected) <= 2 * context + 1:
+        return expected
+    start, end = 0, 2 * context + 1
+    if actual is not None:
+        difference = next(
+            (index for index, (a, b) in enumerate(zip(expected, actual)) if a != b),
+            min(len(expected), len(actual)),
+        )
+        start, end = max(0, difference - context), difference + context + 1
+    return (
+        ("…" if start else "")
+        + expected[start:end]
+        + ("…" if end < len(expected) else "")
+    )
+
+
+def exclusion_errors(
+    passage: str, exclusions: tuple[PerceptionExclusion, ...], text: str
+) -> list[str]:
+    errors = []
     spans = []
-    for value in values:
-        if (
-            not isinstance(value, dict)
-            or not isinstance(value.get("span"), str)
-            or not value["span"].strip()
-            or not isinstance(value.get("reason"), str)
-        ):
-            raise ValueError("each exclusion needs a nonempty span and a reason")
-        spans.append(value["span"])
-    return tuple(spans)
+    for exclusion in exclusions:
+        starts = span_starts(passage, exclusion.span)
+        if not starts:
+            errors.append(f"exclusion span is not in the passage: {exclusion.span!r}")
+            continue
+        if len(starts) > 1:
+            errors.append(
+                f"exclusion span occurs {len(starts)} times in the passage; quote "
+                f"enough surrounding text to make it unique: {exclusion.span!r}"
+            )
+            continue
+        spans.append((starts[0], starts[0] + len(exclusion.span)))
+        if exclusion.span in text:
+            errors.append(f"excluded span is still in the text: {exclusion.span!r}")
+    if errors:
+        return errors
+    regions = rewrite_regions(passage, tuple(spans))
+    outside_error = (
+        "text outside rewrite regions is missing or changed, or text was added; "
+        "expected unchanged source fragment"
+    )
+    if not regions:
+        return (
+            []
+            if text == passage
+            else [f"{outside_error}: {alignment_excerpt(passage, text)!r}"]
+        )
+    prefix = passage[: regions[0].start]
+    if not text.startswith(prefix):
+        return [f"{outside_error}: {alignment_excerpt(prefix, text)!r}"]
+    forbidden = {token for exclusion in exclusions for token in exclusion.forbidden}
+    positions = {len(prefix)}
+    for index, region in enumerate(regions):
+        end = regions[index + 1].start if index + 1 < len(regions) else len(passage)
+        anchor = passage[region.end : end]
+        ends = span_starts(text, anchor) if anchor else [len(text)]
+        following = set()
+        failures = set()
+        has_kept_text = any(
+            not passage[position].isspace()
+            and not any(start <= position < end for start, end in spans)
+            for position in range(region.start, region.end)
+        )
+        # Repeated unchanged text can delimit more than one valid alignment.
+        for position in positions:
+            for found in ends:
+                if found < position:
+                    continue
+                if index + 1 == len(regions) and found + len(anchor) != len(text):
+                    continue
+                rewritten = text[position:found]
+                if region.partial and not rewritten.strip():
+                    failures.add(
+                        "a partially excluded sentence needs a nonempty rewrite region"
+                    )
+                    continue
+                if has_kept_text and not rewritten.strip():
+                    failures.add(
+                        "a rewrite region with unexcluded source text must be nonempty"
+                    )
+                    continue
+                leaked = [
+                    token
+                    for token in sorted(forbidden)
+                    if forbidden_in_text(rewritten, token)
+                ]
+                if leaked:
+                    failures.add(f"forbidden content in rewrite region: {leaked!r}")
+                    continue
+                following.add(found + len(anchor))
+        if not following:
+            return sorted(failures) or [
+                f"{outside_error}: {alignment_excerpt(anchor)!r}"
+            ]
+        positions = following
+    return []
 
 
 def parse_perceptions(
-    response: str, audiences: tuple[str, ...], passage: str
+    response: str,
+    audiences: tuple[str, ...],
+    passage: str,
 ) -> tuple[PerceptionAnalysis, ...]:
     extracted = PerceptionExtractor()._extract_code_block_from_content(response)
     if extracted is None:
@@ -819,6 +932,18 @@ class PerceptionMixin:
                         ),
                     },
                 ),
+                "rewrite_hidden_traces": AgentActionConfig(
+                    type="bool",
+                    label="Rewrite hidden acts as observable traces",
+                    description="Keep an ambiguous sensory effect of a hidden act when the character can perceive it, without revealing the hidden object or act. Applies to new analysis; existing valid views are kept.",
+                    value=False,
+                    note_on_value={
+                        True: AgentActionNote(
+                            color="primary",
+                            text="Uses the same Summarizer request, but can increase reasoning, output tokens and response time. Invalid views can still trigger automatic repair.",
+                        ),
+                    },
+                ),
             },
         )
 
@@ -1385,6 +1510,9 @@ class PerceptionMixin:
         answer_budget,
         feedback,
     ):
+        rewrite_hidden_traces = self.resolve_config(
+            "perceptions", "rewrite_hidden_traces"
+        )
         request_context = {
             **context,
             "cast": [entry for entry in context["cast"] if entry["name"] in requested],
@@ -1397,6 +1525,7 @@ class PerceptionMixin:
                 "scene": scene,
                 "context": request_context,
                 "validation_error": feedback,
+                "rewrite_hidden_traces": rewrite_hidden_traces,
             },
         )
         if not self._perception_current(scene, message, knowledge, context, intention):
@@ -1407,7 +1536,9 @@ class PerceptionMixin:
         error = None
         try:
             parsed = parse_perceptions(
-                extracted.get("response"), requested, context["passage"]["text"]
+                extracted.get("response"),
+                requested,
+                context["passage"]["text"],
             )
         except PerceptionValidationError as exc:
             parsed, error = exc.views, exc

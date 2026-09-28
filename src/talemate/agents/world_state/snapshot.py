@@ -12,6 +12,7 @@ import structlog
 import talemate.emit.async_signals
 from talemate.emit import emit
 from talemate.events import GameLoopActorIterEvent
+from talemate.decisions.characters import referenced_characters
 from talemate.exceptions import GenerationCancelled
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.snapshots import (
@@ -229,6 +230,12 @@ class WorldStateSnapshotMixin:
             quick_toggle=True,
             description="Will attempt to update the world state based on the current scene. Runs automatically every N character turns.",
             config={
+                "audience_decision_model": AgentActionConfig(
+                    type="bool",
+                    label="Use Decision Model for Snapshot Audiences",
+                    description="Recognize off-stage characters mentioned by pronoun, title or nickname when building perspectives. Adds one quick decision request per snapshot with off-stage characters to check; unclear or failed answers use name matching.",
+                    value=True,
+                ),
                 "initial": AgentActionConfig(
                     type="bool",
                     label="When a new scene is started",
@@ -314,6 +321,27 @@ class WorldStateSnapshotMixin:
                     ),
                 ),
             },
+        )
+
+    async def audience_context_with_references(self, scene, budget, focus_text=""):
+        names = await referenced_characters(
+            scene,
+            focus_text,
+            [
+                name
+                for name in scene.character_data
+                if name not in scene.active_characters
+            ],
+            uid="world_state.decision-snapshot-references",
+            enabled=self.resolve_config(
+                "update_world_state", "audience_decision_model"
+            ),
+            match=lambda name: bool(
+                re.search(rf"(?<!\w){re.escape(name)}(?!\w)", focus_text, re.IGNORECASE)
+            ),
+        )
+        return snapshot_audience_context(
+            scene, budget, focus_text, referenced_names=names
         )
 
     # config property helpers
@@ -625,7 +653,7 @@ class WorldStateSnapshotMixin:
         )
         perception = character_knowledge_enabled(scene)
         audience_context = (
-            snapshot_audience_context(
+            await self.audience_context_with_references(
                 scene, max(1, self.client.max_token_length // 4), str(message)
             )
             if perception
@@ -847,7 +875,7 @@ class WorldStateSnapshotMixin:
 
         durable_snapshot = self.update_world_state_durable_snapshot
         audience_context = (
-            snapshot_audience_context(
+            await self.audience_context_with_references(
                 scene,
                 max(1, self.client.max_token_length // 4),
                 "\n".join(

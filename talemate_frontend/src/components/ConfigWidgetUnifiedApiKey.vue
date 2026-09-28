@@ -5,7 +5,7 @@
         <v-icon class="mr-2">mdi-key-variant</v-icon>
         {{ title }}
         <v-chip v-if="apiKey" color="success" size="small" class="ml-2">Configured</v-chip>
-        <v-chip v-else color="error" size="small" class="ml-2">Required</v-chip>
+        <v-chip v-else :color="required ? 'error' : undefined" size="small" class="ml-2">{{ required ? 'Required' : 'Optional' }}</v-chip>
         <v-spacer></v-spacer>
         <v-btn
           icon
@@ -50,6 +50,10 @@ export default {
     description: {
       type: String,
       default: 'This API key is stored in application settings and shared across all clients of this type. You can also edit it on the API Keys page.',
+    },
+    required: {
+      type: Boolean,
+      default: true,
     },
     // The host's unsaved working copy of the config — the key is written into
     // it and the host's Save persists it, so Discard drops the key too.
@@ -101,4 +105,3 @@ export default {
   },
 };
 </script>
-

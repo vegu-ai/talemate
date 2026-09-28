@@ -1,0 +1,236 @@
+[
+  {
+    "questions": {
+      "s0": {
+        "type": "score",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. Grade Alice's access to the current passage.",
+        "rubric": [
+          "No perceptible information; omit the view.",
+          "Some perceptible information; must rewrite locally to remove inaccessible content.",
+          "Every detail is accessible; verbatim copy is safe."
+        ]
+      },
+      "s1": {
+        "type": "score",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. Grade Bob's access to the current passage.",
+        "rubric": [
+          "No perceptible information; omit the view.",
+          "Some perceptible information; must rewrite locally to remove inaccessible content.",
+          "Every detail is accessible; verbatim copy is safe."
+        ]
+      }
+    },
+    "response": {
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "s0": {
+          "type": "score",
+          "score": 0.35,
+          "legend": {
+            "0": "No perceptible information; omit the view.",
+            "1": "Some perceptible information; must rewrite locally to remove inaccessible content.",
+            "2": "Every detail is accessible; verbatim copy is safe."
+          },
+          "probabilities": {
+            "0": 0.68,
+            "1": 0.28,
+            "2": 0.03
+          },
+          "confidence": 0.48
+        },
+        "s1": {
+          "type": "score",
+          "score": 0.22,
+          "legend": {
+            "0": "No perceptible information; omit the view.",
+            "1": "Some perceptible information; must rewrite locally to remove inaccessible content.",
+            "2": "Every detail is accessible; verbatim copy is safe."
+          },
+          "probabilities": {
+            "0": 0.79,
+            "1": 0.2,
+            "2": 0.01
+          },
+          "confidence": 0.66
+        }
+      },
+      "usage": {
+        "input_tokens": 2582,
+        "output_tokens": 32,
+        "cost": 0.000108444
+      }
+    }
+  },
+  {
+    "questions": {
+      "s0": {
+        "type": "score",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. Grade Alice's access to the current passage.",
+        "rubric": [
+          "No perceptible information; omit the view.",
+          "Some perceptible information; must rewrite locally to remove inaccessible content.",
+          "Every detail is accessible; verbatim copy is safe."
+        ]
+      },
+      "s1": {
+        "type": "score",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. Grade Bob's access to the current passage.",
+        "rubric": [
+          "No perceptible information; omit the view.",
+          "Some perceptible information; must rewrite locally to remove inaccessible content.",
+          "Every detail is accessible; verbatim copy is safe."
+        ]
+      }
+    },
+    "response": {
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "s0": {
+          "type": "score",
+          "score": 1.73,
+          "legend": {
+            "0": "No perceptible information; omit the view.",
+            "1": "Some perceptible information; must rewrite locally to remove inaccessible content.",
+            "2": "Every detail is accessible; verbatim copy is safe."
+          },
+          "probabilities": {
+            "0": 0.08,
+            "1": 0.1,
+            "2": 0.81
+          },
+          "confidence": 0.6
+        },
+        "s1": {
+          "type": "score",
+          "score": 0.18,
+          "legend": {
+            "0": "No perceptible information; omit the view.",
+            "1": "Some perceptible information; must rewrite locally to remove inaccessible content.",
+            "2": "Every detail is accessible; verbatim copy is safe."
+          },
+          "probabilities": {
+            "0": 0.82,
+            "1": 0.17,
+            "2": 0.01
+          },
+          "confidence": 0.74
+        }
+      },
+      "usage": {
+        "input_tokens": 1095,
+        "output_tokens": 32,
+        "cost": 4.599e-05
+      }
+    }
+  },
+  {
+    "questions": {
+      "s0": {
+        "type": "score",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. Grade Alice's access to the current passage.",
+        "rubric": [
+          "No perceptible information; omit the view.",
+          "Some perceptible information; must rewrite locally to remove inaccessible content.",
+          "Every detail is accessible; verbatim copy is safe."
+        ]
+      },
+      "s1": {
+        "type": "score",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. Grade Bob's access to the current passage.",
+        "rubric": [
+          "No perceptible information; omit the view.",
+          "Some perceptible information; must rewrite locally to remove inaccessible content.",
+          "Every detail is accessible; verbatim copy is safe."
+        ]
+      },
+      "s2": {
+        "type": "score",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. Grade Cora's access to the current passage.",
+        "rubric": [
+          "No perceptible information; omit the view.",
+          "Some perceptible information; must rewrite locally to remove inaccessible content.",
+          "Every detail is accessible; verbatim copy is safe."
+        ]
+      },
+      "s3": {
+        "type": "score",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. Grade Dorian's access to the current passage.",
+        "rubric": [
+          "No perceptible information; omit the view.",
+          "Some perceptible information; must rewrite locally to remove inaccessible content.",
+          "Every detail is accessible; verbatim copy is safe."
+        ]
+      }
+    },
+    "response": {
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "s0": {
+          "type": "score",
+          "score": 1.64,
+          "legend": {
+            "0": "No perceptible information; omit the view.",
+            "1": "Some perceptible information; must rewrite locally to remove inaccessible content.",
+            "2": "Every detail is accessible; verbatim copy is safe."
+          },
+          "probabilities": {
+            "0": 0.07,
+            "1": 0.23,
+            "2": 0.7
+          },
+          "confidence": 0.46
+        },
+        "s1": {
+          "type": "score",
+          "score": 1.15,
+          "legend": {
+            "0": "No perceptible information; omit the view.",
+            "1": "Some perceptible information; must rewrite locally to remove inaccessible content.",
+            "2": "Every detail is accessible; verbatim copy is safe."
+          },
+          "probabilities": {
+            "0": 0.16,
+            "1": 0.54,
+            "2": 0.3
+          },
+          "confidence": 0.31
+        },
+        "s2": {
+          "type": "score",
+          "score": 0.78,
+          "legend": {
+            "0": "No perceptible information; omit the view.",
+            "1": "Some perceptible information; must rewrite locally to remove inaccessible content.",
+            "2": "Every detail is accessible; verbatim copy is safe."
+          },
+          "probabilities": {
+            "0": 0.25,
+            "1": 0.72,
+            "2": 0.03
+          },
+          "confidence": 0.58
+        },
+        "s3": {
+          "type": "score",
+          "score": 0.08,
+          "legend": {
+            "0": "No perceptible information; omit the view.",
+            "1": "Some perceptible information; must rewrite locally to remove inaccessible content.",
+            "2": "Every detail is accessible; verbatim copy is safe."
+          },
+          "probabilities": {
+            "0": 0.93,
+            "1": 0.05,
+            "2": 0.01
+          },
+          "confidence": 0.88
+        }
+      },
+      "usage": {
+        "input_tokens": 4692,
+        "output_tokens": 60,
+        "cost": 0.000197064
+      }
+    }
+  }
+]

@@ -17,7 +17,7 @@ The Prompt Manager is organized into four main tabs:
 - **LLM Prompt Templates** -- manage the base chat-format templates (ChatML, Llama3, etc.) used for local LLM inference (see [LLM Prompt Templates](llm-prompt-templates.md))
 - **Scene Context** -- review how scene history is rendered into AI context (see [Scene Context History Review](context-history-review.md))
 
-The sidebar also provides quick-access panels for recent prompts and recently rendered templates.
+The sidebar also provides quick-access panels for recent prompts, recent decision requests and recently rendered templates. Its three tabs carry icons only, so hover a tab to read its name. The Decisions panel is the same log the Debug Tools show -- see [Debug Tools](../debug-tools.md#decisions).
 
 !!! tip "Outdated override warning"
     When one or more of your active template overrides is older than the built-in default it overrides, the top-level **Prompts** tab in the main navigation shows a warning icon. Open the **Active** tab (see below) to see which templates are flagged and review or remove them.

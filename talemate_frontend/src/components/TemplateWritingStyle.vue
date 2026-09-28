@@ -55,6 +55,14 @@
             </v-col>
         </v-row>
         
+        <WritingStyleDecisionChecks
+            :key="template.uid || 'new'"
+            :model-value="template.decision_checks"
+            :defaults="defaultDecisionChecks"
+            @update:model-value="updateDecisionChecks"
+            @editing="checksEditing = $event"
+        />
+
         <v-card class="mt-4">
             <v-card-title>
                 <v-icon size="small" class="mr-2">mdi-text-box-search</v-icon>
@@ -200,13 +208,19 @@
 
 <script>
 import ContextualGenerate from './ContextualGenerate.vue';
+import WritingStyleDecisionChecks from './WritingStyleDecisionChecks.vue';
 
 export default {
     name: 'TemplateWritingStyle',
     components: {
         ContextualGenerate,
+        WritingStyleDecisionChecks,
     },
     props: {
+        defaultDecisionChecks: {
+            type: Array,
+            default: () => []
+        },
         immutableTemplate: {
             type: Object,
             required: true
@@ -217,6 +231,10 @@ export default {
         }
     },
     computed: {
+        dirty: {
+            get() { return this.fieldsDirty || this.checksEditing; },
+            set(value) { this.fieldsDirty = value; }
+        },
         phrasesCount() {
             return this.template.phrases ? this.template.phrases.length : 0;
         },
@@ -234,8 +252,10 @@ export default {
     watch: {
         immutableTemplate: {
             handler(newVal) {
+                if (newVal.uid !== this.template.uid) this.checksEditing = false;
                 this.template = {
                     ...newVal,
+                    decision_checks: JSON.parse(JSON.stringify(newVal.decision_checks || [])),
                     phrases: Array.isArray(newVal.phrases) ? [...newVal.phrases].map(phrase => ({
                         ...phrase,
                         active: phrase.active === undefined ? true : phrase.active
@@ -253,9 +273,11 @@ export default {
                 description: '',
                 instructions: '',
                 phrases: [],
+                decision_checks: [],
                 favorite: false
             },
-            dirty: false,
+            fieldsDirty: false,
+            checksEditing: false,
             newPhrase: '',
             newInstructions: '',
             newClassification: 'unwanted',
@@ -279,6 +301,10 @@ export default {
     },
     emits: ['update'],
     methods: {
+        updateDecisionChecks(checks) {
+            this.template.decision_checks = checks;
+            this.save();
+        },
         addPhrase() {
             if (!this.newPhrase || !this.newInstructions) return;
             
@@ -359,6 +385,7 @@ export default {
     created() {
         this.template = {
             ...this.immutableTemplate,
+            decision_checks: JSON.parse(JSON.stringify(this.immutableTemplate.decision_checks || [])),
             phrases: this.immutableTemplate.phrases ? [...this.immutableTemplate.phrases].map(phrase => ({
                 ...phrase,
                 active: phrase.active === undefined ? true : phrase.active
@@ -381,4 +408,4 @@ export default {
 .td-active {
     width: 80px;
 }
-</style> 
+</style>

@@ -13,6 +13,8 @@ from talemate import Scene
 from talemate.config.schema import SceneAssetUpload
 from talemate.config import get_config, Config
 from talemate.context import ActiveScene
+from talemate.decisions import decision_service
+from talemate.decisions.slot import emit_decision_model_status
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 import talemate.emit.async_signals as async_signals
 from talemate.exceptions import ControlFlowException
@@ -26,6 +28,7 @@ from talemate.server import (
     assistant,
     character_importer,
     config,
+    decisions,
     devtools,
     quick_settings,
     scene_message as scene_message_plugin,
@@ -78,6 +81,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             quick_settings.QuickSettingsPlugin.router: quick_settings.QuickSettingsPlugin(
                 self
             ),
+            decisions.DecisionsPlugin.router: decisions.DecisionsPlugin(self),
             devtools.DevToolsPlugin.router: devtools.DevToolsPlugin(self),
             node_editor.NodeEditorPlugin.router: node_editor.NodeEditorPlugin(self),
             package_manager.PackageManagerPlugin.router: package_manager.PackageManagerPlugin(
@@ -106,6 +110,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         self.set_agent_routers()
 
         instance.emit_agents_status()
+        emit_decision_model_status()
 
     @property
     def config(self) -> Config:
@@ -286,6 +291,10 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 return await self.load_scene_failure(
                     Exception("Scene loading interrupted"), request_id
                 )
+
+            # the log belongs to the scene that made it; anything still running
+            # was cancelled with the outgoing scene and is kept until it ends
+            decision_service.log.clear_finished()
 
             if callback:
                 await callback()
@@ -633,6 +642,9 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 else None,
             }
         )
+
+    def handle_decision_model_status(self, emission: Emission):
+        self.queue_put({"type": "decision_model_status", "data": emission.data})
 
     def handle_agent_status(self, emission: Emission):
         self.queue_put(

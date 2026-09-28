@@ -98,6 +98,10 @@ When **Dedupe** is active it will be restricted to finding repetition and removi
 
 ![Editor agent revision settings - Unslop](/talemate/img/0.40.0/editor-revision-settings-unslop.png)
 
+Example configuration using Unslop with Decision Checks enabled and Fuzzy matching
+selected. Decision Checks defaults to off, and repetition detection defaults to
+Semantic similarity.
+
 When **Unslop** is active, it calls 1 additional prompt after a generation and will attempt to remove repetition, purple prose, unnatural dialogue, and over-description. May cause details to be lost. This is a general-purpose cleanup method that can also use unwanted prose detection when enabled.
 
 **Targeted Rewrite (AI assisted)**
@@ -129,6 +133,8 @@ You want to keep this relatively high.
 This is the number of **MESSAGES** to consider in the history when checking for repetition.
 
 At its default of `15` it means the last 15 messages will be considered.
+Decision Checks uses this same setting for its preceding story context. The current
+message is excluded; narration, character and context-investigation messages count.
 
 ##### Repetition Min. Length
 
@@ -145,6 +151,10 @@ Controls what the AI-assisted revision does when it detects repetition. (Availab
 - **Remove** (default) - flagged repetitions are deleted from the text. This is the safer choice for weaker models, which often struggle to substitute genuinely different content and end up rephrasing the same idea, re-introducing the very repetition the rule is meant to fix.
 - **Attempt rewrite** - the editor asks the model to replace flagged repetitions with genuinely different content rather than deleting them. Because matches are based on meaning (not just wording), simply rephrasing the same idea is not enough - the underlying beat has to change. When the model cannot produce a meaningful rewrite, it falls back to removing the repetition. This works best with stronger models.
 
+With Decision Checks, these choices apply to repeated beats. A reused description
+of a new event instead receives fresh wording while preserving the event, even
+when repetition handling is **Remove**.
+
 #### Preferences for Rewriting (Targeted Rewrite only)
 
 ##### Test parts of sentences, split on commas
@@ -154,6 +164,10 @@ If active this means that when a sentence doesn't produce a hit, if it has one o
 ##### Minimum issues
 
 The minimum amount of issues that need to be detected to trigger a rewrite.
+
+With Decision Checks enabled, this counts distinct flagged passages and also
+applies to Unslop. A passage flagged for a repeated beat, reused description and/or
+style counts once. Without Decision Checks, this setting has no effect on Unslop.
 
 #### Unwanted Prose (Both Unslop & Targeted Rewrite)
 
@@ -168,3 +182,69 @@ Check this to enable unwanted prose detection. Available for both **Unslop** and
 Similarity threshold for unwanted prose detection. (0.4 - 1.0)
 
 You want to keep this relatively high.
+
+## Decision Checks
+
+![Editor Decision Checks settings](/talemate/img/0.40.0/editor-decision-checks.png)
+
+Decision Checks is an experimental Editor option, **off by default**. Enable the
+[Decision Model](../../app-settings/decision-model.md), enable **Revision**, choose
+**Targeted Rewrite** or **Unslop**, then switch on **Decision checks** inside
+**Revision**. Select a [writing style with decision checks](../../templates/writing-style.md#decision-checks)
+in the scene settings. This does not
+enable automatic revision or change its selected targets. Automatic revision
+continues to exclude player input. Dedupe is unchanged.
+
+Each eligible invocation sends one decision request containing the complete current
+text, numbered passages, preceding story messages from **Repetition Range** (15 by
+default), and the
+applicable writing style and active prose rules. Generated context includes its
+existing task instructions and source information; summaries use their supplied
+source history. This does not generate additional context with an LLM.
+
+The writing style owns the list of checks, their questions, true/false criteria,
+correction instructions and probability thresholds. Open its template editor to
+change them. **Add default checks** adds two common checks in one click, including
+to a new writing style:
+
+- **Repeated beats and description reuse** asks separately about a redundant story
+  beat and reused distinctive wording or imagery. The description question can
+  flag a reused description of a new event; its correction preserves the event.
+- **Writing style and unwanted prose** checks the style instructions and active
+  prose rules.
+
+Each default check starts at **0.80**. Values at or above a check's threshold
+select a finding; probability describes uncertainty, not severity. Edit each
+threshold separately in the writing style.
+
+New and existing styles without checks use the usual Editor detection until you
+add checks. The same applies when no scene style is selected, the list is empty,
+or all checks are inactive or inapplicable. No decision request is made on these
+paths. A style check marked as requiring instructions or prose rules is omitted
+when neither is available.
+
+Revision uses the scene's writing style and active prose rules, including when
+revising contextual generation. A style selected just for generating that content
+does not replace the scene's revision style.
+
+Successful checks **replace** fuzzy, embedding and phrase detection for that
+invocation. All selected findings go into one call to the configured revision
+method. If no passages qualify, or fewer than **Minimum issues** qualify, the text
+stays unchanged—even with Unslop. For example, a repeated observation in the first
+sentence and an unwanted phrase in the second can both be addressed by one rewrite.
+
+When checks are off, the Decision Model is unavailable, or evaluation fails before
+revision starts, the Editor uses its usual detection and revision path. The
+Decision Log records failures and the fallback's outcome. A failure after a revision
+starts never launches another rewrite. Cancellation or a changed scene/message
+stops the operation. Oversize requests fail visibly; text is not silently truncated
+or split into extra requests.
+
+Inspect **Decision Log** in Debug Tools or the Prompt Manager to see the submitted
+passages and questions, probabilities, the selected action or skip reason, and
+separate decision and action durations. One successful action does not necessarily
+mean the text changed: the existing response and length checks still apply.
+
+The `editor.decision-checks` prompt renders the writing style's questions and
+applies its thresholds. Prompt overrides remain subject to Revision enablement,
+the selected method and the one-revision-call limit.

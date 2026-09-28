@@ -161,6 +161,7 @@ def run_server(args):
     import talemate.agents.tts.voice_library as voice_library
     from talemate.changelog import ensure_changelogs_for_all_scenes
     from talemate.scene_assets import migrate_scene_assets_to_library
+    from talemate.decisions.slot import configure_decision_service
 
     # import node libraries
     import talemate.game.engine.nodes.load_definitions
@@ -195,6 +196,7 @@ def run_server(args):
     loop.run_until_complete(voice_library.require_instance())
     loop.run_until_complete(talemate.instance.instantiate_clients())
     loop.run_until_complete(talemate.instance.instantiate_agents())
+    configure_decision_service()
 
     # websockets>=12 requires ``websockets.serve`` to be called from within a
     # running event-loop (it uses ``asyncio.get_running_loop()`` internally).

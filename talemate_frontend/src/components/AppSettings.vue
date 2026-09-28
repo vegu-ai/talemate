@@ -51,6 +51,9 @@
                 <v-window-item value="clients">
                     <AppSettingsClients ref="clients" :config="app_config" />
                 </v-window-item>
+                <v-window-item value="decision-model">
+                    <AppSettingsDecisionModel ref="decision-model" :config="app_config" :status="decisionModelStatus" />
+                </v-window-item>
                 <v-window-item value="agents">
                     <AppSettingsAgents ref="agents" :config="app_config" :dirty="dirty"
                         @extra-dirty="(value) => setExtraDirty('agents', value)"
@@ -117,6 +120,7 @@ import AppSettingsSound from './AppSettingsSound.vue';
 import AppSettingsAgents from './AppSettingsAgents.vue';
 import AppSettingsApiKeys from './AppSettingsApiKeys.vue';
 import AppSettingsClients from './AppSettingsClients.vue';
+import AppSettingsDecisionModel from './AppSettingsDecisionModel.vue';
 import AppSettingsEnvVariables from './AppSettingsEnvVariables.vue';
 import AppSettingsStringList from './AppSettingsStringList.vue';
 import AppConfigAppearanceScene from './AppConfigAppearanceScene.vue';
@@ -137,6 +141,7 @@ export default {
         AppSettingsAgents,
         AppSettingsApiKeys,
         AppSettingsClients,
+        AppSettingsDecisionModel,
         AppSettingsEnvVariables,
         AppSettingsStringList,
         AppConfigAppearanceScene,
@@ -150,6 +155,7 @@ export default {
         agentStatus: Object,
         sceneActive: Boolean,
         clientStatus: Object,
+        decisionModelStatus: Object,
         visible: Boolean,
         worldStateTemplates: Object,
     },
@@ -495,6 +501,18 @@ export default {
                     // differs from the baseline we're editing against.
                     this.pendingConfig = message.data;
                     this.adoptTheme(message.data.theme, message.data.appearance?.theme);
+                    // an outside change of the decision model switch (the sidebar
+                    // button saves nothing else) moves the baseline and the draft
+                    // together, unless the draft changed that switch itself or an
+                    // outside change is already waiting for the user's choice
+                    const enabled = message.data.decision_model?.enabled;
+                    const baseline = JSON.parse(this.snapshot);
+                    if (!this.externalChange && enabled !== undefined && baseline.decision_model
+                        && this.app_config.decision_model?.enabled === baseline.decision_model.enabled) {
+                        baseline.decision_model.enabled = enabled;
+                        this.snapshot = JSON.stringify(baseline);
+                        this.app_config.decision_model.enabled = enabled;
+                    }
                     const incoming = JSON.stringify(this.normalizedPayload(message.data, this.app_config));
                     if (!this.saving && incoming !== this.snapshot) {
                         this.externalChange = true;

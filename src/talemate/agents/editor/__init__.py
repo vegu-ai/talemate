@@ -25,6 +25,7 @@ import talemate.agents.editor.nodes
 
 from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.agents.editor.revision import RevisionMixin
+from talemate.agents.editor.decision_checks import DecisionChecksMixin
 from talemate.agents.editor.websocket_handler import EditorWebsocketHandler
 
 if TYPE_CHECKING:
@@ -39,6 +40,7 @@ log = structlog.get_logger("talemate.agents.editor")
 class EditorAgent(
     MemoryRAGMixin,
     RevisionMixin,
+    DecisionChecksMixin,
     Agent,
 ):
     """

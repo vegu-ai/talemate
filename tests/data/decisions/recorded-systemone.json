@@ -1,0 +1,70 @@
+{
+  "source": "https://raw.githubusercontent.com/jaredpalmer/kev/5920c5fe4ca8e0970ed4209ac2c9b8e18bea5109/README.md",
+  "request": {
+    "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges on my card.",
+    "model": "kev-latest",
+    "questions": {
+      "department": {
+        "type": "choice",
+        "instructions": "Which team should handle this?",
+        "criteria": {
+          "returns": "Exchanges, refunds, wrong or damaged items",
+          "shipping": "Delivery status, delays, lost packages",
+          "billing": "Charges, invoices, payment problems"
+        }
+      },
+      "escalate": {
+        "type": "noul",
+        "instructions": "Does this need urgent human attention?"
+      },
+      "frustration": {
+        "type": "score",
+        "instructions": "How frustrated is the customer?",
+        "criteria": [
+          "Calm",
+          "Frustrated",
+          "Very angry"
+        ]
+      }
+    }
+  },
+  "response": {
+    "model": "kev-latest",
+    "answers": {
+      "department": {
+        "type": "choice",
+        "choice": "returns",
+        "confidence": 0.21,
+        "probabilities": {
+          "returns": 0.47,
+          "shipping": 0.28,
+          "billing": 0.25
+        }
+      },
+      "escalate": {
+        "type": "noul",
+        "noul": 0.93
+      },
+      "frustration": {
+        "type": "score",
+        "score": 1.44,
+        "confidence": 0.34,
+        "legend": {
+          "0": "Calm",
+          "1": "Frustrated",
+          "2": "Very angry"
+        },
+        "probabilities": {
+          "0": 0.0,
+          "1": 0.56,
+          "2": 0.44
+        }
+      }
+    },
+    "usage": {
+      "input_tokens": 101,
+      "output_tokens": 161
+    },
+    "latency_ms": 495
+  }
+}

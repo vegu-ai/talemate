@@ -20,6 +20,7 @@ RequestInput = signal("request_input")
 ReceiveInput = signal("receive_input")
 
 ClientStatus = signal("client_status")
+DecisionModelStatus = signal("decision_model_status")
 RateLimited = signal("rate_limited")
 RateLimitReset = signal("rate_limit_reset")
 AutoRetry = signal("auto_retry")
@@ -88,6 +89,7 @@ handlers = {
     "request_input": RequestInput,
     "receive_input": ReceiveInput,
     "client_status": ClientStatus,
+    "decision_model_status": DecisionModelStatus,
     "rate_limited": RateLimited,
     "rate_limit_reset": RateLimitReset,
     "auto_retry": AutoRetry,

@@ -37,7 +37,15 @@ A result whose embedding is more similar than this (cosine) to one already selec
 
 ##### Entity lookup
 
-When the recent lines name a character who is not in the scene (aliases from the world state's name mappings count), that character's description is fetched from the memory store and placed ahead of the similarity results. A name that carries a capital must appear as written, so "Will" is not found in "I will go"; an alias that is lower-case in the name mappings matches whatever the case. On by default.
+When the recent lines refer to a character who is not in the scene, that character's description is fetched from the memory store and placed ahead of the similarity results. On by default. Character knowledge still limits which descriptions the viewer may retrieve.
+
+##### Use Decision Model for Entity Lookup
+
+On by default. With a [decision model](/talemate/user-guide/app-settings/decision-model/) configured, entity lookup can recognize a character by pronoun, title or nickname, including names written in lower case. For example, "she takes the innkeeper's advice" can refer to Mara even without naming her. "I will go" need not refer to a character called Will.
+
+This adds one short decision request per entity lookup, typically about 0.3–0.5 seconds depending on the provider. All off-stage candidates are checked together. Confident answers include or exclude each character; uncertain or failed answers use the original name match. That match requires capitalized aliases to appear as written and matches lower-case aliases without regard to case. With the option off or no decision model, only that matching is used.
+
+The policy `memory.decision-entity-references` in **Prompts** controls the questions and confidence threshold. **Decision Log** shows the answers and fallback use. A confident answer can still select the wrong character; turn the option off if the name match better suits your scene.
 
 ##### Cross-encoder rerank
 

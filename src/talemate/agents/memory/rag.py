@@ -13,6 +13,11 @@ from talemate.agents.base import (
     AgentActionNote,
 )
 from talemate.knowledge.bucket import KnowledgeIndex, knowledge_digest
+from talemate.decisions.characters import (
+    character_aliases,
+    referenced_characters,
+)
+from talemate.decisions.gate import decision_gate_enabled
 from talemate.knowledge.context import ContextHistoryMessage, project_character_history
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspective_models import content_digest
@@ -23,16 +28,6 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Character
 
 __all__ = ["MemoryRAGMixin"]
-
-
-def _entity_aliases(scene, name: str) -> set[str]:
-    """The character's name and its name-mapping group, capitalisation kept."""
-    aliases = {name}
-    for key, values in scene.world_state.character_name_mappings.items():
-        group = {key, *values}
-        if name.lower() in {g.lower() for g in group}:
-            aliases |= group
-    return {a.strip() for a in aliases if a and a.strip()}
 
 
 def _paragraph_order(doc_id: str) -> tuple[int, int]:
@@ -192,6 +187,7 @@ class MemoryRAGMixin:
             memory.retrieval_recency_weight,
             memory.retrieval_mmr_threshold,
             memory.retrieval_entity_lookup,
+            decision_gate_enabled(memory.retrieval_entity_decision_model),
             memory.retrieval_rerank,
             memory.max_distance,
             getattr(self.client, "max_token_length", None),
@@ -827,7 +823,7 @@ class MemoryRAGMixin:
         self, history: list[str], filter: Callable | None = None, *, viewer=None
     ) -> list:
         """
-        Descriptions of characters the recent lines name who are not in the
+        Descriptions of characters the recent lines refer to who are not in the
         scene, fetched by metadata (no similarity search).
         """
         memory = instance.get_agent("memory")
@@ -839,11 +835,16 @@ class MemoryRAGMixin:
             return []
 
         scene = self.scene
-        named = [
-            name
-            for name in scene.inactive_characters
-            if any(_alias_named(alias, text) for alias in _entity_aliases(scene, name))
-        ]
+        named = await referenced_characters(
+            scene,
+            text,
+            list(scene.inactive_characters),
+            uid="memory.decision-entity-references",
+            enabled=memory.retrieval_entity_decision_model,
+            match=lambda name: any(
+                _alias_named(alias, text) for alias in character_aliases(scene, name)
+            ),
+        )
         if not named:
             return []
 

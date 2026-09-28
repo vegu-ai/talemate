@@ -202,6 +202,47 @@ def _read_back(path: Path) -> dict:
 
 
 class TestSaveConfig:
+    @pytest.mark.parametrize(
+        "limits",
+        [
+            {"max_input_tokens": 0},
+            {"max_question_input_tokens": 0},
+            {"max_input_tokens": 0, "max_question_input_tokens": 0},
+        ],
+    )
+    def test_undeclared_decision_limits_survive_repeated_disk_round_trips(
+        self, isolated_config, tmp_path, monkeypatch, limits
+    ):
+        from talemate.config.schema import DecisionModelConfig
+
+        isolated_config.decision_model = DecisionModelConfig(**limits)
+        for _ in range(2):
+            config_state.save_config()
+            saved = yaml.safe_load((tmp_path / "config.yaml").read_text())
+            for field, value in limits.items():
+                assert saved["decision_model"][field] == value
+            reloaded = config_state._load_config()
+            for field, value in limits.items():
+                assert getattr(reloaded.decision_model, field) == value
+            monkeypatch.setattr(config_state, "CONFIG", reloaded)
+
+    @pytest.mark.parametrize("field", ["max_input_tokens", "max_question_input_tokens"])
+    @pytest.mark.parametrize(
+        "literal,expected", [("64000.0", 64000), ("6.4e+4", 64000), ("0.0", 0)]
+    )
+    def test_integral_float_limit_survives_load_save_load(
+        self, isolated_config, tmp_path, monkeypatch, field, literal, expected
+    ):
+        path = tmp_path / "config.yaml"
+        path.write_text(f"decision_model:\n  {field}: {literal}\n")
+        loaded = config_state._load_config()
+        assert getattr(loaded.decision_model, field) == expected
+        assert type(getattr(loaded.decision_model, field)) is int
+        monkeypatch.setattr(config_state, "CONFIG", loaded)
+        config_state.save_config()
+        reloaded = config_state._load_config()
+        assert getattr(reloaded.decision_model, field) == expected
+
     def test_writes_yaml_to_config_file_path(self, isolated_config, tmp_path):
         config_state.save_config()
         target = tmp_path / "config.yaml"

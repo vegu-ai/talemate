@@ -1,0 +1,24 @@
+{% import "decision-check-macros.jinja2" as checks %}
+{% set state = decision_state() %}
+{% set batch = namespace() %}
+{% set _ = checks.build_questions(state.passages, decision_checks, batch) %}
+{% if batch.questions %}
+    {% set r = decide("editor-checks", state=state, questions=batch.questions, presentation=batch.presentation) %}
+    {% set results = namespace() %}
+    {% call(probability, evaluation, match) checks.collect_findings(r.answers, batch.evaluations, results) %}
+        {% set match.value = probability >= evaluation.threshold %}
+    {% endcall %}
+    {% set minimum = agent_config("editor.revision.min_issues") %}
+    {% if not results.findings %}
+        {{ decision_outcome(r, "no_action", reason="below_thresholds", thresholds=results.thresholds, flagged_question_ids=results.flagged_questions) }}
+        {{ decision_result(info.text) }}
+    {% elif len(results.flagged) < minimum %}
+        {{ decision_outcome(r, "no_action", reason="below_minimum", minimum=minimum, flagged_passages=len(results.flagged), flagged_question_ids=results.flagged_questions) }}
+        {{ decision_result(info.text) }}
+    {% else %}
+        {{ decision_outcome(r, "revision_" ~ revision_method, reason="flagged_passages", flagged_question_ids=results.flagged_questions) }}
+        {{ decision_result(agent_action("editor", "revision_" ~ revision_method, info=info, decision_findings=results.findings, _decision=r)) }}
+    {% endif %}
+{% else %}
+    {{ decision_result(info.text) }}
+{% endif %}

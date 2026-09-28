@@ -3,6 +3,7 @@ from talemate.agents.base import (
     AgentActionConfig,
     AgentActionNote,
 )
+from talemate.decisions.gate import decision_gate
 
 
 class AvatarMixin:
@@ -21,6 +22,12 @@ class AvatarMixin:
             icon="mdi-image-auto-adjust",
             description="Portrait-related features for world state management.",
             config={
+                "decision_model": AgentActionConfig(
+                    type="bool",
+                    label="Use Decision Model",
+                    description="Keep the portrait or pick another existing one with the decision model when it is sure, without the usual request. A wrong answer can miss a portrait change.",
+                    value=True,
+                ),
                 "selection_frequency": AgentActionConfig(
                     type="number",
                     label="Selection Frequency",
@@ -52,3 +59,30 @@ class AvatarMixin:
     @property
     def avatar_selection_frequency(self) -> int:
         return self.resolve_config("avatars", "selection_frequency")
+
+    async def determine_avatar_with_decisions(
+        self, character, content, assets, fallback
+    ):
+        scene = self.scene
+        current = character.current_avatar
+        portraits = {
+            asset.id: {"name": asset.meta.name, "tags": asset.meta.tags}
+            for asset in assets
+        }
+        result = await decision_gate(
+            "world_state.decision-avatar",
+            enabled=self.resolve_config("avatars", "decision_model"),
+            candidates={"avatar": list(portraits)},
+            variables=lambda: {
+                "state": {
+                    "character": character.name,
+                    "content": content,
+                    "current_avatar": current if current in portraits else None,
+                    "portraits": portraits,
+                },
+            },
+            fallback=fallback,
+            is_current=lambda: self.scene is scene
+            and character.current_avatar == current,
+        )
+        return result["avatar"]

@@ -1,0 +1,15 @@
+{% set threshold = 0.9 %}
+{% set questions = {} %}
+{% for id, pin in pins.items() %}
+    {% set _ = questions.update({id: {"type": "noul", "instructions": "At the end of the scene, is this condition true? " ~ pin.condition}}) %}
+{% endfor %}
+{% set r = decide("pin-conditions", state={"history": history, "previous_states": pins}, questions=questions) %}
+{% set answers = {} %}
+{% for id in pins %}
+    {% set p = r.answers[id].p_true %}
+    {% set confidence = [p, 1 - p] | max %}
+    {% set answer = (p >= threshold) if confidence >= threshold else none %}
+    {% set _ = answers.update({id: answer}) %}
+    {{ decision_outcome(r, "answer" if answer is not none else "fallback", reason="confident" if answer is not none else "uncertain", pin=id, p_true=p, confidence=confidence, threshold=threshold) }}
+{% endfor %}
+{{ decision_result(agent_action("gate", "resolve", answers=answers, _decision=r)) }}

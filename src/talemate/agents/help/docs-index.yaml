@@ -189,9 +189,10 @@
     originals, regeneration in both story modes, history fallback and skipped-revision statuses.
 - path: user-guide/agents/editor/settings.md
   title: Settings
-  summary: Editor settings for formatting cleanup, incomplete sentences, added detail and automatic revision targets including
-    context investigations. Covers Dedupe, Unslop and Targeted Rewrite, fuzzy/semantic repetition detection, thresholds/range,
-    Remove versus Attempt rewrite, comma splitting and writing-style unwanted prose.
+  summary: 'Editor settings for Dedupe, Unslop and Targeted Rewrite: fuzzy/semantic repetition, Remove versus Attempt rewrite,
+    split sentences, unwanted prose threshold, cleanup formatting and automatic targets. Decision checks toggle inside Revision
+    uses writing-style definitions and per-check thresholds; covers Repetition Range, Minimum issues, fallback and Decision
+    Log.'
 - path: user-guide/agents/help/index.md
   title: Overview
   summary: Help chat reads docs/configuration and changes settings, inference presets, themes and templates with permission.
@@ -222,8 +223,9 @@
     API automatically. Explains the client/status banner and reverting to a local embedding in Memory settings.
 - path: user-guide/agents/memory/settings.md
   title: Settings
-  summary: Select embeddings and switch CPU/CUDA devices. Retrieval ranks eligible memories using recency, diversity, entity
-    descriptions and optional local cross-encoder reranking, with no text-generation requests.
+  summary: Select embeddings, switch CPU/CUDA devices; memory retrieval ranks eligible memories by recency weight, diversity
+    threshold, entity descriptions and optional local cross-encoder reranking with no text-generation requests. Use Decision
+    Model for Entity Lookup recognizes pronouns, titles and nicknames with name-match fallback.
 - path: user-guide/agents/memory/testing.md
   title: Testing Embeddings
   summary: Test embeddings through Debug Tools → Memory by inspecting generation-time requests, result distances and selected
@@ -385,9 +387,9 @@
     and proposes character description/attribute progression changes. Requires an assigned text-generation client.
 - path: user-guide/agents/world-state/settings.md
   title: Settings
-  summary: World State settings for snapshot frequency, Lines in the moment, Look at/Add Detail highlights, context pinning,
-    durable snapshots and eviction. Also covers state reinforcements, conditional pins, character progression proposals, tagged
-    portrait selection/generation and semantic long-term memory.
+  summary: Snapshot frequency, Lines in the moment, Look at/Add Detail highlights, context pinning, durable snapshots/eviction,
+    state reinforcements, conditional pins, character progression proposals, tagged portrait selection/generation, semantic
+    long-term memory. Decision model snapshot audiences, tracked state no change (skipped), yes/no queries, character portraits.
 - path: user-guide/api-key-encryption.md
   title: API Key Encryption
   summary: 'Transparent Fernet encryption of API keys in config.yaml with ENC: values, automatic plaintext migration and OS-keyring
@@ -433,14 +435,21 @@
     Immersive and backdrop panel opacity/text shadow.
 - path: user-guide/app-settings/application.md
   title: Connections
-  summary: Connections settings group links Clients and Agents, centralizes API keys and shared HuggingFace Token for gated
-    model downloads, and manages encrypted environment variables passed to spawned Pi Bridge processes. Covers variable naming,
-    adding/editing/removing values and saving changes.
+  summary: Connections settings group links Clients, Decision Model and Agents, centralizes API keys and shared HuggingFace
+    Token for gated model downloads, and manages encrypted environment variables passed to spawned Pi Bridge processes. Covers
+    variable naming, adding/editing/removing values and saving changes.
 - path: user-guide/app-settings/creator.md
   title: Storytelling
   summary: Storytelling settings manage global Content Classification and Perspective Presets used as scene picker suggestions.
     Covers adding/removing presets, narrative perspective and tense, custom values, and {player_name} substitution or suppression
     when no player character exists.
+- path: user-guide/app-settings/decision-model.md
+  title: 'Decision Model and SystemOne: provider setup, sidebar on/off, token limits and size estimate margin'
+  summary: 'Opt-in: sends scene text; provider/model ID, shared or optional API key. API local/hosted TypeSafe https://api.typesafe.ai,
+    Von, Kev, Decider, litjev, openjev-sglang; base URL, container localhost, calibration. Request deadline without retry,
+    timeout. Green dot Configured setup (not key test/authentication); Off/Incomplete/failure state banners. Request not sent;
+    oversize input conservative token estimates; config.yaml defaults/limits max_input_tokens, max_question_input_tokens,
+    input_token_multiplier; zero/0 limit undeclared. Default-on World State/Memory; Editor checks separate opt-in.'
 - path: user-guide/app-settings/game.md
   title: Game
   summary: Application settings navigation, search, Save/Discard, unsaved-edit badges and outside-change warnings; Game controls
@@ -616,10 +625,10 @@
     connection failures.
 - path: user-guide/debug-tools.md
   title: Debug Tools
-  summary: 'Debug Tools Prompts, Memory and Vars: inspect Active requests and Completed/Failed/Cancelled outcomes, grouped
-    retries, Clear retaining active entries, Dump to file and per-action reasoning overrides. Covers memory retrieval, pinned
-    Debug Vars/Scene toolbar targets, shared labels/tooltips/order/read-only settings, type-matched bounds/sliders/choices,
-    path subtitles, slash paths, Game State Editor entry points and full JSON editing.'
+  summary: 'Debug Tools prompt log: Active requests, Completed/Failed/Cancelled outcomes, grouped retries, Clear, Dump to file
+    and reasoning overrides. Decisions use compact rows and report dialogs with passage cards, thresholds, technical/raw details
+    and Previous/Next; memory retrieval, pinned Vars watch paths and scene toolbar knobs include labels/order/read-only,
+    bounds/sliders/choices, slash paths and Game State Editor JSON editing.'
 - path: user-guide/howto/create-a-new-scene/create-empty-scene.md
   title: Create an empty scene
   summary: Create New Story from Home, choose a writing style and director persona, set the outline and save. Standard starts
@@ -858,7 +867,8 @@
   title: World State Agent Nodes
   summary: World-state node reference for time advancement/chapter titles, character progression suggestions, presence checks,
     sheet extraction and tracked State Reinforcement. Covers Evaluate Query, Request/Emit World State, avatar selection, deactivation
-    and websocket handlers with sockets/properties.
+    and websocket handlers with sockets/properties; Evaluate Query and Determine Avatar use decision model confidence with
+    LLM fallback.
 - path: user-guide/node-editor/reference/nodes/agents.md
   title: Agent Nodes
   summary: 'Generic agent node reference: Get Agent, Call Agent Function and conditional calls, Dynamic Instruction, Toggle
@@ -1043,7 +1053,8 @@
   summary: Prompt Manager tabs for prompt inspection, Template Files, LLM Prompt Templates and Scene Context; Jinja2 template
     groups, priority, resolved override indicators and outdated override warnings. Covers immediate Active entries, Completed/Failed/Cancelled
     outcomes, grouped retries, Clear retaining active requests, live details preserving edits, Test Changes after completion,
-    and updating/resetting incompatible world snapshot overrides with the snapshot_request.context_history contract.
+    the Recent sidebar's shared Decisions panel, and updating/resetting incompatible world snapshot overrides with the
+    snapshot_request.context_history contract.
 - path: user-guide/prompts/llm-prompt-templates.md
   title: LLM Prompt Templates
   summary: 'Manage local-model chat-format wrappers such as ChatML, Llama3, Mistral and Gemma4 in LLM Prompt Templates: create
@@ -1145,10 +1156,11 @@
     Includes the shipped Ideogram JSON and Qwen 2.1 Image references presets and insertion as editable copies through Visualizer
     Prompt Finalization, plus template creation, editing and removal.
 - path: user-guide/templates/writing-style.md
-  title: Writing Styles
-  summary: Writing Style templates steer generated tone and define unwanted phrases for Editor revision through regex or semantic-similarity
-    matching, with Active toggles and embedding cost considerations. Covers scene assignment for phrase detection, Generation
-    Settings selection and Alt-click rewrites.
+  title: Writing Styles and Decision Checks
+  summary: Writing styles define tone, unwanted phrase rules and decision checks. Add default checks to a new style in one
+    click, or edit custom questions, rewrite instructions, each probability threshold and, under More options, true/false
+    criteria and short names. Covers active checks, empty-style fallback, regex/semantic phrase detection, scene assignment,
+    Generation Settings and Alt-click rewrites.
 - path: user-guide/time-passage.md
   title: Time Passage Management
   summary: Insert, edit or delete time-passage markers using Scene Tools presets/custom durations, scene messages or World

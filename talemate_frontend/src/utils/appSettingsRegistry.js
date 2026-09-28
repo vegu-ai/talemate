@@ -128,6 +128,21 @@ export const SETTINGS_GROUPS = [
                 ],
             },
             {
+                id: 'decision-model',
+                title: 'Decision Model',
+                icon: 'mdi-scale-balance',
+                description: 'A small, fast model that answers quick questions about your story, so some features can skip a slower request. It writes no text. Off until you turn it on.',
+                entries: [
+                    { label: 'Use a decision model', anchor: 'decision_model_enabled', keywords: ['decision', 'enable', 'disable', 'on', 'off', 'opt in', 'jev', 'typesafe', 'noul', 'choice', 'score'] },
+                    { label: 'Provider', anchor: 'decision_model_provider', keywords: ['decision', 'provider', 'openrouter', 'local', 'hosted', 'systemone', 'compatible', 'typesafe'] },
+                    { label: 'Server address', anchor: 'decision_model_base_url', keywords: ['decision', 'local', 'hosted', 'systemone', 'typesafe', 'server', 'address', 'url', 'base url'] },
+                    { label: 'Model', anchor: 'decision_model_model', keywords: ['decision', 'model', 'decision model', 'openrouter', 'jev', 'typesafe'] },
+                    { label: 'Provider API key', anchor: 'decision_model_credential', keywords: ['decision', 'api key', 'credential', 'openrouter', 'systemone', 'typesafe', 'optional', 'bearer'] },
+                    { label: 'Time limit', anchor: 'decision_model_advanced', keywords: ['decision', 'advanced', 'timeout', 'time limit', 'request timeout', 'deadline', 'seconds', 'retry'] },
+                    { label: 'Input limits and size margin', anchor: 'decision_model_advanced', keywords: ['decision', 'advanced', 'input limit', 'tokens', 'max_input_tokens', 'max_question_input_tokens', 'input_token_multiplier', 'margin', 'oversize'] },
+                ],
+            },
+            {
                 id: 'agents',
                 title: 'Agents',
                 icon: 'mdi-transit-connection-variant',

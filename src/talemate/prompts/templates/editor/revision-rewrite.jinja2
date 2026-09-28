@@ -25,10 +25,12 @@ Override example:
 {% endset %}
 {# END VOLATILE CONTEXT #}
 
+{% set rendered_decision_findings %}{% include "decision-findings.jinja2" %}{% endset %}
+
 {# SCENE CONTEXT #}
 {% set scene_context_text %}
 {% set scene_context = revision_context_history(character,
-    budget=max_tokens-300-count_tokens(rendered_context)-count_tokens(volatile_context_text),
+    budget=max_tokens-300-count_tokens(rendered_context)-count_tokens(volatile_context_text)-count_tokens(rendered_decision_findings),
     min_dialogue=15,
     sections=False,
     keep_director=False,
@@ -288,7 +290,7 @@ Each item below is a phrase or concept the director has flagged as bad writing, 
 <|CLOSE_SECTION|>
 {# end unwanted prose #}{% endif %}
 
-{% include "dynamic-instructions.jinja2" %}
+{{ rendered_decision_findings }}{% include "dynamic-instructions.jinja2" %}
 <|SECTION:TASK|>
 Every flagged item above must be addressed in your revision. "Addressed" means substantially rewritten or deleted — not lightly tweaked and not ignored.
 
@@ -297,6 +299,7 @@ Every flagged item above must be addressed in your revision. "Addressed" means s
 - Keep the overall length close to the original. Prefer dropping redundant sentences over padding with new ones.
 - Make a single pass: plan every fix first, then emit one complete revision.
 
+{% if not decision_findings %}
 **For each flagged item, pick one:**
 {% if repetition_handling == "rewrite" %}
 - **Rewrite** — for repetition, replace the flagged beat with genuinely different content (a different observation, action, or detail) that advances the scene without re-conveying what was already on the page. Because the match is SEMANTIC, simply rephrasing the same idea is NOT enough — the underlying meaning must change. For unwanted prose, rewrite per the director's INSTRUCTIONS so you don't replace the flagged phrasing with something equally bad. This is the right call for both issue types under this mode.
@@ -305,9 +308,10 @@ Every flagged item above must be addressed in your revision. "Addressed" means s
 - **Drop** — if the information was already conveyed elsewhere, delete the sentence and let the surrounding prose bridge the gap. This is usually the right call for repetition.
 - **Rewrite** — if the beat genuinely needs to stay, rewrite it so the meaning lands without reusing the flagged phrasing or falling into the pattern the director flagged.
 {% endif %}
+{% endif %}
 
-**Output format (follow exactly, as shown in the examples):**
-1. A `<PLAN>` block. One bullet per flagged item, referenced by its label (`REPEATED 1`, `PHRASE 2`, etc.) with a one-line fix strategy. End with a single `Coverage:` line listing every label you addressed — it must cover all of them.
+**Output format (follow exactly{% if not decision_findings %}, as shown in the examples{% endif %}):**
+1. A `<PLAN>` block. One bullet per flagged item, referenced by its label ({% if decision_findings %}`F1`, `F2`, etc. from DECISION FINDINGS{% else %}`REPEATED 1`, `PHRASE 2`, etc.{% endif %}) with a one-line fix strategy. End with a single `Coverage:` line listing every label you addressed — it must cover all of them.
 2. A `<REVISION>` block containing the complete rewritten draft text. No commentary, no partial excerpts, no text outside the tags.
 
 Do not emit a revision that leaves any flagged item untouched.

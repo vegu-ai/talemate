@@ -779,6 +779,47 @@ class ShortcutsConfig(pydantic.BaseModel):
         return self
 
 
+class DecisionModelConfig(pydantic.BaseModel):
+    enabled: bool = False
+    provider: Literal["openrouter", "systemone"] = "openrouter"
+    base_url: str = ""
+    api_key: str | None = None
+    model: str = "typesafe/jev-1.13"
+    timeout_seconds: float = pydantic.Field(default=1.5, gt=0, allow_inf_nan=False)
+    max_input_tokens: int = pydantic.Field(default=64000, ge=0, strict=True)
+    max_question_input_tokens: int = pydantic.Field(default=32000, ge=0, strict=True)
+    input_token_multiplier: float = pydantic.Field(
+        default=1.5, ge=1, allow_inf_nan=False, strict=True
+    )
+
+    @pydantic.field_validator("base_url")
+    @classmethod
+    def http_base_url(cls, value):
+        value = value.strip()
+        if not value:
+            return ""
+        url = pydantic.AnyHttpUrl(value)
+        if (
+            url.username
+            or url.password
+            or url.query is not None
+            or url.fragment is not None
+        ):
+            raise ValueError(
+                "Use an HTTP(S) base URL without credentials, query or fragment"
+            )
+        return str(url).rstrip("/")
+
+    @pydantic.field_validator(
+        "max_input_tokens", "max_question_input_tokens", mode="before"
+    )
+    @classmethod
+    def integer_limits(cls, value):
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+        return value
+
+
 class Config(pydantic.BaseModel):
     clients: Dict[str, AnnotatedClient] = {}
 
@@ -797,6 +838,8 @@ class Config(pydantic.BaseModel):
     anthropic: AnthropicConfig = AnthropicConfig()
 
     openrouter: OpenRouterConfig = OpenRouterConfig()
+
+    decision_model: DecisionModelConfig = DecisionModelConfig()
 
     cohere: CohereConfig = CohereConfig()
 

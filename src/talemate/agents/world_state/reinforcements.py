@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, Literal, NamedTuple
 
 import structlog
 
 import talemate.emit.async_signals
 from talemate.events import GameLoopEvent
+from talemate.decisions.gate import decision_gate, decision_gate_enabled
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.reinforcements import (
     prepare_reinforcement_source,
@@ -17,7 +18,7 @@ from talemate.prompts.response import AnchorExtractor, ResponseSpec
 from talemate.scene_message import ReinforcementMessage
 from talemate.util.async_tools import bounded_gather_apply
 
-from talemate.agents.base import AgentAction, set_processing
+from talemate.agents.base import AgentAction, AgentActionConfig, set_processing
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -47,7 +48,14 @@ class WorldStateReinforcementsMixin:
             icon="mdi-image-auto-adjust",
             label="Update state reinforcements",
             description="Will attempt to update any due state reinforcements.",
-            config={},
+            config={
+                "decision_model": AgentActionConfig(
+                    type="bool",
+                    label="Use Decision Model",
+                    description="Skip a scheduled update when the decision model is sure the tracked state has not changed. A wrong answer can delay an update; manual updates always run.",
+                    value=True,
+                ),
+            },
         )
 
     # config property helpers
@@ -93,7 +101,8 @@ class WorldStateReinforcementsMixin:
         due reinforcements run concurrently against the same scene snapshot
         and their results apply sequentially in list order afterwards (history
         pushes and state writes stay ordered); otherwise each reinforcement is
-        queried and applied one at a time.
+        queried and applied one at a time. With a decision gate, batch clients
+        retain that generation/application boundary but requests run sequentially.
         """
 
         due = []
@@ -112,6 +121,14 @@ class WorldStateReinforcementsMixin:
             else:
                 reinforcement.due -= 1
 
+        use_decision = (
+            not force
+            and not reset
+            and decision_gate_enabled(
+                self.resolve_config("update_reinforcements", "decision_model")
+            )
+        )
+
         supports_concurrent = bool(
             self.client and self.client.supports_concurrent_inference
         )
@@ -122,7 +139,10 @@ class WorldStateReinforcementsMixin:
         if not supports_concurrent or reset or len(due) < 2:
             for reinforcement in due:
                 await self.update_reinforcement(
-                    reinforcement.question, reinforcement.character, reset=reset
+                    reinforcement.question,
+                    reinforcement.character,
+                    reset=reset,
+                    decision_model=use_decision,
                 )
             return
 
@@ -133,10 +153,12 @@ class WorldStateReinforcementsMixin:
             for reinforcement in due
         ]
 
-        async def generate(item: PreparedReinforcement) -> str:
-            return await self.generate_reinforcement(item.reinforcement, reset)
+        async def generate(item: PreparedReinforcement) -> str | Literal[False]:
+            return await self.generate_reinforcement(
+                item.reinforcement, reset, decision_model=use_decision
+            )
 
-        async def apply(item: PreparedReinforcement, answer: str):
+        async def apply(item: PreparedReinforcement, answer: str | Literal[False]):
             await self._apply_reinforcement(
                 item.reinforcement, item.message, answer, reset
             )
@@ -150,12 +172,23 @@ class WorldStateReinforcementsMixin:
                 exc_info=error,
             )
 
-        await bounded_gather_apply(prepared, generate, apply, on_error=on_error)
+        await bounded_gather_apply(
+            prepared,
+            generate,
+            apply,
+            max_concurrent=1 if use_decision else 3,
+            on_error=on_error,
+        )
 
     @set_processing
     async def update_reinforcement(
-        self, question: str, character: "str | Character" = None, reset: bool = False
-    ) -> str:
+        self,
+        question: str,
+        character: "str | Character" = None,
+        reset: bool = False,
+        *,
+        decision_model: bool = False,
+    ) -> ReinforcementMessage | None:
         """
         Queries a single re-inforcement
         """
@@ -175,7 +208,9 @@ class WorldStateReinforcementsMixin:
             return
 
         message = self._prepare_reinforcement(reinforcement, reset)
-        answer = await self.generate_reinforcement(reinforcement, reset)
+        answer = await self.generate_reinforcement(
+            reinforcement, reset, decision_model=decision_model
+        )
         return await self._apply_reinforcement(reinforcement, message, answer, reset)
 
     def _prepare_reinforcement(
@@ -198,50 +233,97 @@ class WorldStateReinforcementsMixin:
 
     @set_processing
     async def generate_reinforcement(
-        self, reinforcement: "Reinforcement", reset: bool
-    ) -> str:
+        self,
+        reinforcement: "Reinforcement",
+        reset: bool,
+        *,
+        decision_model: bool = False,
+    ) -> str | Literal[False]:
         if reinforcement.insert == "sequential":
             kind = "analyze_freeform_medium_short"
         else:
             kind = "analyze_freeform"
 
-        response, extracted = await Prompt.request(
-            "world_state.update-reinforcements",
-            self.client,
-            kind,
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "question": reinforcement.question,
-                "instructions": reinforcement.instructions or "",
-                "character": (
-                    self.scene.get_character(reinforcement.character)
-                    if reinforcement.character
-                    else None
-                ),
-                "answer": (reinforcement.answer if not reset else None) or "",
-                "reinforcement": reinforcement,
-            },
-            response_spec=ResponseSpec(
-                extractors={
-                    "response": AnchorExtractor(
-                        left="<ANSWER>",
-                        right="</ANSWER>",
-                        fallback_to_full=True,
-                    ),
-                },
+        scene = self.scene
+        variables = {
+            "scene": scene,
+            "max_tokens": self.client.max_token_length,
+            "question": reinforcement.question,
+            "instructions": reinforcement.instructions or "",
+            "character": (
+                scene.get_character(reinforcement.character)
+                if reinforcement.character
+                else None
             ),
+            "answer": (reinforcement.answer if not reset else None) or "",
+            "reinforcement": reinforcement,
+        }
+        response_spec = ResponseSpec(
+            extractors={
+                "response": AnchorExtractor(
+                    left="<ANSWER>",
+                    right="</ANSWER>",
+                    fallback_to_full=True,
+                ),
+            },
         )
+        if not decision_gate_enabled(decision_model) or not reinforcement.answer:
+            _, extracted = await Prompt.request(
+                "world_state.update-reinforcements",
+                self.client,
+                kind,
+                vars=variables,
+                response_spec=response_spec,
+            )
+            return extracted["response"]
 
-        return extracted["response"]
+        prompt = Prompt.get(
+            "world_state.update-reinforcements",
+            vars={**variables, "decensor": self.client.decensor_enabled},
+        )
+        # Render the actual update once, including overrides, memory, pins and
+        # its full history budget. A fallback sends this same prepared prompt.
+        context = prompt.prepare(self.client)
+
+        async def fallback(ids):
+            _, extracted = await prompt.send(
+                self.client, kind, response_spec=response_spec
+            )
+            return {"state": extracted["response"]}
+
+        result = await decision_gate(
+            "world_state.decision-reinforcement",
+            enabled=True,
+            candidates={"state": [False]},
+            variables=lambda: {
+                "state": {
+                    "question": reinforcement.question,
+                    "character": reinforcement.character,
+                    "instructions": reinforcement.instructions,
+                    "previous_answer": reinforcement.answer,
+                    "last_updated_ts": reinforcement.updated_ts,
+                    "current_ts": scene.ts,
+                    "context": context,
+                },
+            },
+            fallback=fallback,
+            is_current=lambda: self.scene is scene
+            and reinforcement in scene.world_state.reinforce,
+        )
+        return result["state"]
 
     async def _apply_reinforcement(
         self,
         reinforcement: "Reinforcement",
         message: ReinforcementMessage,
-        answer: str,
+        answer: str | Literal[False],
         reset: bool,
-    ) -> ReinforcementMessage:
+    ) -> ReinforcementMessage | None:
+        if answer is False:
+            reinforcement.due = reinforcement.interval
+            self.scene.world_state.emit()
+            return None
+
         changed = answer != reinforcement.answer
         reinforcement.set_answer(self.scene, answer)
         reinforcement.due = reinforcement.interval

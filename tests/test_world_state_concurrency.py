@@ -79,7 +79,7 @@ def add_reinforcements(scene, questions):  # noqa: F811
 
 
 def wire_reinforcements(agent, recorder, monkeypatch):
-    async def _generate(reinforcement, reset):
+    async def _generate(reinforcement, reset, *, decision_model=False):
         return await recorder.generate(reinforcement.question)
 
     async def _apply(reinforcement, message, answer, reset):
@@ -182,7 +182,9 @@ class TestReinforcementConcurrency:
 
         called = []
 
-        async def _fake_update(question, character, reset=False):
+        async def _fake_update(
+            question, character, reset=False, *, decision_model=False
+        ):
             called.append(question)
 
         monkeypatch.setattr(agent, "update_reinforcement", _fake_update)
@@ -260,7 +262,9 @@ class TestReinforcementConcurrency:
 
         called = []
 
-        async def _fake_update(question, character, reset=False):
+        async def _fake_update(
+            question, character, reset=False, *, decision_model=False
+        ):
             called.append((question, reset))
 
         monkeypatch.setattr(agent, "update_reinforcement", _fake_update)

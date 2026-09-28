@@ -35,6 +35,7 @@ from .snapshot import WorldStateSnapshotMixin
 from .snapshot import SNAPSHOT_TASK as SNAPSHOT_TASK
 from .reinforcements import WorldStateReinforcementsMixin
 from .pin_conditions import WorldStatePinConditionsMixin
+from .queries import WorldStateQueriesMixin
 from .websocket_handler import WorldStateWebsocketHandler
 import talemate.agents.world_state.nodes
 
@@ -70,6 +71,7 @@ class WorldStateAgent(
     WorldStateSnapshotMixin,
     WorldStateReinforcementsMixin,
     WorldStatePinConditionsMixin,
+    WorldStateQueriesMixin,
     CharacterProgressionMixin,
     AvatarMixin,
     Agent,
@@ -91,6 +93,7 @@ class WorldStateAgent(
         WorldStateSnapshotMixin.add_actions(actions)
         WorldStateReinforcementsMixin.add_actions(actions)
         WorldStatePinConditionsMixin.add_actions(actions)
+        WorldStateQueriesMixin.add_actions(actions)
         MemoryRAGMixin.add_actions(actions)
         CharacterProgressionMixin.add_actions(actions)
         AvatarMixin.add_actions(actions)
@@ -343,18 +346,6 @@ class WorldStateAgent(
         )
 
         return extracted["response"].strip()
-
-    @set_processing
-    async def answer_query_true_or_false(
-        self,
-        query: str,
-        text: str,
-    ) -> bool:
-        query = f"{query} Answer with a yes or no."
-        response = await self.analyze_text_and_answer_question(
-            query=query, text=text, response_length=10
-        )
-        return response.lower().startswith("y")
 
     @set_processing
     async def identify_characters(

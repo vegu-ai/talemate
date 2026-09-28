@@ -6,7 +6,7 @@ Signals:
 - agent.editor.revision-analysis.after - sent after the revision analysis is requested
 """
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Callable, Literal
 import structlog
 import uuid
 import pydantic
@@ -48,6 +48,10 @@ from talemate.prompts.response import ResponseSpec, AnchorExtractor, RegexExtrac
 from talemate.exceptions import GenerationCancelled
 from talemate.status import LoadingStatus
 from talemate.world_state.templates.content import PhraseDetection
+from talemate.agents.editor.findings import (
+    DecisionFinding,
+    decision_findings_adapter,
+)
 from contextvars import ContextVar
 
 if TYPE_CHECKING:
@@ -156,6 +160,7 @@ class RevisionContext:
 
 
 class Issues(pydantic.BaseModel):
+    decision_findings: list[DecisionFinding] = pydantic.Field(default_factory=list)
     repetition: list[dict] = pydantic.Field(default_factory=list)
     repetition_matches: list[SimilarityMatch] = pydantic.Field(default_factory=list)
     bad_prose: list[PhraseDetection] = pydantic.Field(default_factory=list)
@@ -164,7 +169,14 @@ class Issues(pydantic.BaseModel):
 
     @property
     def log(self) -> list[str]:
-        return self.repetition_log + self.bad_prose_log
+        return (
+            self.repetition_log
+            + self.bad_prose_log
+            + [
+                f"{finding.kind} ({finding.passage_id}): `{finding.text}` — {finding.instructions}"
+                for finding in self.decision_findings
+            ]
+        )
 
 
 class RevisionInformation(pydantic.BaseModel):
@@ -177,6 +189,8 @@ class RevisionInformation(pydantic.BaseModel):
         default_factory=LoadingStatus, exclude=True
     )
     summarization_history: list[str] | None = None
+    source_context: dict | None = None
+    is_current: Callable[[], bool] = pydantic.Field(default=lambda: True, exclude=True)
     skip_reason: RevisionSkipReason | None = pydantic.Field(default=None, exclude=True)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -385,6 +399,13 @@ class RevisionMixin:
                         ),
                     },
                 ),
+                "decision_checks": AgentActionConfig(
+                    type="bool",
+                    label="Decision checks",
+                    condition=rewrite_unslop_condition,
+                    description="Find problems with the decision checks of the scene's writing style instead of the usual detection. Needs the decision model turned on. Adds one quick decision request, then at most one rewrite prompt. Edit the checks in the writing style template.",
+                    value=False,
+                ),
                 "split_on_comma": AgentActionConfig(
                     title="Preferences for rewriting",
                     type="bool",
@@ -396,8 +417,8 @@ class RevisionMixin:
                 "min_issues": AgentActionConfig(
                     type="number",
                     label="Minimum issues",
-                    condition=rewrite_condition,
-                    description="The minimum number of issues to trigger a rewrite.",
+                    condition=rewrite_unslop_condition,
+                    description="Minimum issues for Targeted Rewrite. With Decision Checks, counts distinct flagged passages and also gates Unslop. Has no effect on Unslop when Decision Checks is off.",
                     value=1,
                     min=1,
                     max=10,
@@ -637,6 +658,22 @@ class RevisionMixin:
         if isinstance(emission, (SummarizeEmission, LayeredHistoryFinalizeEmission)):
             info.summarization_history = emission.summarization_history or []
 
+        if isinstance(emission, ContextualGenerateEmission):
+            context = emission.content_generation_context
+            info.source_context = context.model_dump(
+                include={
+                    "context",
+                    "instructions",
+                    "information",
+                    "original",
+                    "partial",
+                    "character",
+                }
+            )
+
+        scene = self.scene
+        info.is_current = lambda: self.scene is scene and emission.response == info.text
+
         if (
             isinstance(emission, ContextualGenerateEmission)
             and info.context_type not in CONTEXTUAL_GENERATION_TYPES
@@ -645,6 +682,8 @@ class RevisionMixin:
 
         revised_text = await self.revision_revise(info)
 
+        if info.skip_reason == "cancelled" or not info.is_current():
+            return
         emission.response = revised_text
         log.info(
             "Revision done",
@@ -701,10 +740,24 @@ class RevisionMixin:
             character = self.scene.get_character(message.character_name)
 
         original = message.message
-        info = RevisionInformation(text=original, character=character)
+        scene = self.scene
+        version = message.active_version, len(message.versions)
+        info = RevisionInformation(
+            text=original,
+            character=character,
+            is_current=lambda: (
+                self.scene is scene
+                and message.message == original
+                and (message.active_version, len(message.versions)) == version
+            ),
+        )
         revised = await self.revision_revise(info)
 
-        if revised == original:
+        if (
+            revised == original
+            or info.skip_reason == "cancelled"
+            or not info.is_current()
+        ):
             return False
 
         log.info(
@@ -768,7 +821,7 @@ class RevisionMixin:
             status="idle",
         )
 
-    async def revision_collect_repetition_range(self) -> list[str]:
+    def revision_repetition_history(self) -> list[str]:
         # Repetition detection is author output: compare exact reader prose in every
         # mode, because perception paraphrases cannot establish lexical repetition.
         scene: "Scene" = self.scene
@@ -830,6 +883,8 @@ class RevisionMixin:
         """
 
         try:
+            if self.revision_decision_checks_active:
+                return await self.revision_with_decisions(info)
             if self.revision_method == "dedupe":
                 return await self.revision_dedupe(info)
             elif self.revision_method == "rewrite":
@@ -866,7 +921,7 @@ class RevisionMixin:
         if character_name_prefix:
             text = text[len(character.name) + 2 :]
 
-        compare_against = await self.revision_collect_repetition_range()
+        compare_against = self.revision_repetition_history()
 
         text_sentences = compile_text_to_sentences(text)
 
@@ -918,7 +973,7 @@ class RevisionMixin:
         Will return a tuple with the deduped text and the deduped text
         """
 
-        compare_against = await self.revision_collect_repetition_range()
+        compare_against = self.revision_repetition_history()
 
         matches = []
 
@@ -1060,6 +1115,20 @@ class RevisionMixin:
                 "method": "regex",
             }
         ]
+
+    async def revision_issues(
+        self,
+        text: str,
+        character: "Character | None",
+        decision_findings: list[DecisionFinding | dict] | None,
+    ) -> Issues:
+        if decision_findings is None:
+            return await self.revision_collect_issues(text, character)
+        return Issues(
+            decision_findings=decision_findings_adapter.validate_python(
+                decision_findings
+            )
+        )
 
     async def revision_collect_issues(
         self,
@@ -1246,6 +1315,7 @@ class RevisionMixin:
     async def revision_rewrite(
         self,
         info: RevisionInformation,
+        decision_findings: list[DecisionFinding | dict] | None = None,
     ) -> str:
         """
         Revise the text by rewriting.
@@ -1262,14 +1332,14 @@ class RevisionMixin:
 
         text, had_character_prefix = _strip_character_prefix(original_text, character)
 
-        issues = await self.revision_collect_issues(text, character)
+        issues = await self.revision_issues(text, character, decision_findings)
 
         num_issues = len(issues.log)
 
-        if not num_issues:
+        if decision_findings is None and not num_issues:
             return original_text
 
-        if num_issues < self.revision_min_issues:
+        if decision_findings is None and num_issues < self.revision_min_issues:
             info.skip_reason = "min_issues"
             log.debug(
                 "revision_rewrite: not enough issues found, returning original text",
@@ -1313,6 +1383,7 @@ class RevisionMixin:
             "repetition": issues.repetition,
             "repetition_handling": self.revision_repetition_handling,
             "bad_prose": issues.bad_prose,
+            "decision_findings": issues.decision_findings,
             "dynamic_instructions": emission.dynamic_instructions,
             "context_type": info.context_type,
             "context_name": info.context_name,
@@ -1386,6 +1457,7 @@ class RevisionMixin:
         self,
         info: RevisionInformation,
         response_length: int = REVISION_RESPONSE_HEADROOM,
+        decision_findings: list[DecisionFinding | dict] | None = None,
     ) -> str:
         """
         Unslop the text
@@ -1396,7 +1468,7 @@ class RevisionMixin:
 
         text, had_character_prefix = _strip_character_prefix(original_text, character)
 
-        issues = await self.revision_collect_issues(text, character)
+        issues = await self.revision_issues(text, character, decision_findings)
 
         summarizer = get_agent("summarizer")
         scene_analysis = None
@@ -1433,6 +1505,7 @@ class RevisionMixin:
             "repetition": issues.repetition,
             "repetition_handling": self.revision_repetition_handling,
             "bad_prose": issues.bad_prose,
+            "decision_findings": issues.decision_findings,
             "dynamic_instructions": emission.dynamic_instructions,
             "context_type": info.context_type,
             "context_name": info.context_name,

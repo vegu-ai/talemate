@@ -160,7 +160,13 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                     "entity_lookup": AgentActionConfig(
                         type="bool",
                         label="Entity lookup",
-                        description="When the recent lines name a character who is not in the scene (a name with a capital must appear as written), fetch that character's description from the memory store and add it ahead of the similarity results.",
+                        description="When the recent lines refer to a character who is not in the scene, fetch that character's description from the memory store and add it ahead of the similarity results.",
+                        value=True,
+                    ),
+                    "entity_decision_model": AgentActionConfig(
+                        type="bool",
+                        label="Use Decision Model for Entity Lookup",
+                        description="Recognize off-stage characters mentioned by pronoun, title or nickname. Adds one quick decision request per lookup; unclear or failed answers use name matching.",
                         value=True,
                     ),
                     "rerank": AgentActionConfig(
@@ -327,6 +333,10 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
     @property
     def retrieval_entity_lookup(self) -> bool:
         return bool(self.resolve_config("retrieval", "entity_lookup"))
+
+    @property
+    def retrieval_entity_decision_model(self) -> bool:
+        return bool(self.resolve_config("retrieval", "entity_decision_model"))
 
     @property
     def retrieval_rerank(self) -> bool:

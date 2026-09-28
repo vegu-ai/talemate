@@ -7,7 +7,7 @@ Targets:
 - Schema/property behavior: ``Issues.log``, ``RevisionInformation``, the
   context managers (``RevisionDisabled``, ``RevisionContext``).
 - RevisionMixin: action registration, config property helpers,
-  ``revision_collect_repetition_range``, ``revision_detect_bad_prose`` (regex
+  ``revision_repetition_history``, ``revision_detect_bad_prose`` (regex
   branch), ``revision_collect_issues`` for the fuzzy path,
   ``revision_dedupe`` (full happy-path and reduction-too-high path),
   ``revision_revise`` dispatch + GenerationCancelled handling, the
@@ -308,7 +308,7 @@ class TestRevisionActionRegistration:
 
 
 # ---------------------------------------------------------------------------
-# revision_collect_repetition_range
+# revision_repetition_history
 # ---------------------------------------------------------------------------
 
 
@@ -322,7 +322,7 @@ class TestCollectRepetitionRange:
         ]
         editor.actions["revision"].config["repetition_range"].value = 10
 
-        result = await editor.revision_collect_repetition_range()
+        result = editor.revision_repetition_history()
 
         # CharacterMessage uses without_name (everything after the colon),
         # NarratorMessage falls into the else branch and uses .message.
@@ -340,13 +340,13 @@ class TestCollectRepetitionRange:
         ]
         editor.actions["revision"].config["repetition_range"].value = 3
 
-        result = await editor.revision_collect_repetition_range()
+        result = editor.revision_repetition_history()
         assert len(result) == 3
 
     async def test_empty_history_returns_empty_list(self, editor_scene):
         scene, editor = editor_scene
         scene.history = []
-        result = await editor.revision_collect_repetition_range()
+        result = editor.revision_repetition_history()
         assert result == []
 
     async def test_includes_context_investigation_messages(self, editor_scene):
@@ -360,7 +360,7 @@ class TestCollectRepetitionRange:
         ]
         editor.actions["revision"].config["repetition_range"].value = 10
 
-        result = await editor.revision_collect_repetition_range()
+        result = editor.revision_repetition_history()
 
         assert any("The wind blows." in r for r in result)
         assert any("closer look at the lantern" in r for r in result)
@@ -379,7 +379,7 @@ class TestCollectRepetitionRange:
         editor.actions["revision"].config["repetition_range"].value = 10
 
         with RevisionContext(message_id=target.id):
-            result = await editor.revision_collect_repetition_range()
+            result = editor.revision_repetition_history()
 
         assert any("earlier one" in r for r in result)
         assert all("the target message" not in r for r in result)

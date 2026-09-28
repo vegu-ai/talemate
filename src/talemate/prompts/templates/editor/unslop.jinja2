@@ -379,9 +379,9 @@ I have identified no issues, i will mark with: <NO_FIX_REQUIRED/>
 
 {% include "content-classification.jinja2" %}
 
-{% include "writing-style-instructions.jinja2" %}
+{% if not decision_findings %}{% include "writing-style-instructions.jinja2" %}{% endif %}
 
-{% include "dynamic-instructions.jinja2" %}
+{% include "decision-findings.jinja2" %}{% include "dynamic-instructions.jinja2" %}
 <|SECTION:TASK|>
 Fix bad AI writing by making it simpler, shorter, and more natural. 
 

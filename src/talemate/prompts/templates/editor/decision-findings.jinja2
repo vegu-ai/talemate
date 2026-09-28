@@ -1,0 +1,18 @@
+{% if decision_findings %}
+{% if scene.writing_style %}
+<|SECTION:WRITING STYLE AND PROSE RULES|>
+{{ scene.writing_style.render(scene, character.name if character else none) }}
+{% for rule in scene.writing_style.active_prose_rules %}
+- {{ rule.phrase }}: {{ rule.instructions }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endif %}
+<|SECTION:DECISION FINDINGS|>
+Address every finding below in one complete revision of the original text. These findings identify supplied passages; their probabilities express uncertainty, not severity or similarity.
+Follow each finding's instructions. For a repeated-beat finding, {% if repetition_handling == "rewrite" %}replace the repeated beat with genuinely different content, dropping it if no meaningful rewrite is possible{% else %}remove the repeated beat{% endif %}. For a description-reuse finding, replace the reused description while preserving the event, unless a repeated-beat finding also identifies that event as redundant. For style, follow the finding's instructions while preserving factual content.
+{% for finding in decision_findings %}
+- F{{ loop.index }} ({{ finding.passage_id }} / {{ finding.kind }}): {{ finding.text }}
+  Instructions: {{ finding.instructions }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endif %}

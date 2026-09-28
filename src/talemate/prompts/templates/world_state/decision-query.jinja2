@@ -1,0 +1,9 @@
+{% set threshold = 0.9 %}
+{% set r = decide("yes-no-query", state=text, questions={"query": {
+    "type": "noul", "instructions": query
+}}) %}
+{% set p = r.answers.query.p_true %}
+{% set confidence = [p, 1 - p] | max %}
+{% set answer = (p >= threshold) if confidence >= threshold else none %}
+{{ decision_outcome(r, "answer" if answer is not none else "fallback", reason="confident" if answer is not none else "uncertain", p_true=p, confidence=confidence, threshold=threshold) }}
+{{ decision_result(agent_action("gate", "resolve", answers={"query": answer}, _decision=r)) }}

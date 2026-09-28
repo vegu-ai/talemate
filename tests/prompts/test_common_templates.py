@@ -137,6 +137,8 @@ class TestCommonTemplatesDocumentation:
             "chat-title.jinja2",
             "content-classification.jinja2",
             "context_id_items.jinja2",
+            "decision-character-references.jinja2",
+            "decision-check-macros.jinja2",
             "dynamic-instructions.jinja2",
             "generation-options-instructions.jinja2",
             "extra-context.jinja2",

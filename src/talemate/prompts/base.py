@@ -1530,6 +1530,28 @@ class Prompt(pydantic.BaseModel):
             except IndexError:
                 return {}
 
+    def prepare(self, client: Any, dedupe_enabled: bool | None = None) -> str:
+        """Render with client settings, retaining the prompt for a later send."""
+        self.client = client
+
+        # Resolve dedupe: explicit arg > existing prompt setting > client default.
+        if dedupe_enabled is not None:
+            self.dedupe_enabled = dedupe_enabled
+        elif self.dedupe_enabled is None:
+            self.dedupe_enabled = bool(getattr(client, "dedupe_enabled", False))
+
+        # Apply client's section format preference if set
+        client_section_format = getattr(client, "section_format", None)
+        if client_section_format:
+            handler = SECTION_FORMAT_TO_HANDLER.get(client_section_format)
+            if handler:
+                self.sectioning_handler = handler
+
+        # Ensure template is rendered before sending (render() is a no-op
+        # if already rendered, but must happen here while context like
+        # active_agent is still available).
+        return self.render()
+
     async def send(
         self,
         client: Any,
@@ -1555,26 +1577,7 @@ class Prompt(pydantic.BaseModel):
                 returns (response, parsed_data). Otherwise returns (response, extracted_dict)
                 where extracted_dict contains fields defined in response_spec.
         """
-
-        self.client = client
-
-        # Resolve dedupe: explicit arg > existing prompt setting > client default.
-        if dedupe_enabled is not None:
-            self.dedupe_enabled = dedupe_enabled
-        elif self.dedupe_enabled is None:
-            self.dedupe_enabled = bool(getattr(client, "dedupe_enabled", False))
-
-        # Apply client's section format preference if set
-        client_section_format = getattr(client, "section_format", None)
-        if client_section_format:
-            handler = SECTION_FORMAT_TO_HANDLER.get(client_section_format)
-            if handler:
-                self.sectioning_handler = handler
-
-        # Ensure template is rendered before sending (render() is a no-op
-        # if already rendered, but must happen here while context like
-        # active_agent is still available).
-        self.render()
+        self.prepare(client, dedupe_enabled)
 
         # Set the active template_uid context for tracking
         token = active_template_uid.set(self.uid if self.uid else None)

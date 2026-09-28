@@ -179,9 +179,9 @@ Name: {{ character.name }}
 
 {% include "content-classification.jinja2" %}
 
-{% include "writing-style-instructions.jinja2" %}
+{% if not decision_findings %}{% include "writing-style-instructions.jinja2" %}{% endif %}
 
-{% include "dynamic-instructions.jinja2" %}
+{% include "decision-findings.jinja2" %}{% include "dynamic-instructions.jinja2" %}
 <|SECTION:TASK|>
 Fix overwritten descriptions by making them cleaner and more readable while maintaining their descriptive purpose.
 

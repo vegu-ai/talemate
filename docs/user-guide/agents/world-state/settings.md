@@ -24,6 +24,12 @@ How many of the most recent messages count as the "current moment". These are th
 
 When on, **Look at** and **Add Detail** results also count as part of the current moment and can receive inline highlights. Off by default.
 
+###### Use Decision Model for Snapshot Audiences
+
+On by default. When a decision model is configured and character knowledge is enabled, the snapshot can recognize off-stage characters mentioned by pronoun, title or nickname. For example, "the innkeeper" can select Mara's perspective, while "I will go" need not select Will. On-stage characters are still included, and each character's knowledge limits still apply.
+
+This adds one quick decision request per snapshot with off-stage characters to check, typically about 0.3–0.5 seconds depending on the provider. A snapshot with no off-stage characters sends none. Uncertain or failed decisions use the existing name match for each character. With the option off or no decision model, matching works as before. The editable policy is `world_state.decision-snapshot-references` in **Prompts**.
+
 ###### Custom instructions
 
 Free-form instructions that steer what the snapshot focuses on. Use this to nudge the agent toward (or away from) certain kinds of detail. Empty by default.
@@ -64,6 +70,14 @@ This is checked every turn and if there are any state reinforcements that are du
 
 --8<-- "docs/snippets/tips.md:what_is_a_tracked_state"
 
+###### Use Decision Model
+
+On by default. With a decision model configured, a due tracked state is checked before its usual LLM update. A confident "no change" keeps the answer and resets its interval. Other answers and failed decisions run the usual update once. Manual refreshes, forced updates and resets still run, as do states that have no answer yet.
+
+The check sees the same context as the update, including active pins, the character's description, instructions, memories and scene history.
+
+An incorrect "no change" can leave an outdated answer until a later update. Turn this option off or refresh the state manually when needed. The editable policy is `world_state.decision-reinforcement` in **Prompts**.
+
 ##### Update conditional context pins
 
 Will attempt to evaluate and update any due [conditional context pins](/talemate/user-guide/world-editor/pins/#automatically-pinning-entries).
@@ -71,6 +85,20 @@ Will attempt to evaluate and update any due [conditional context pins](/talemate
 ###### Turns
 
 How many turns to wait before the conditional context pins are updated.
+
+###### Use Decision Model
+
+On by default. With a [decision model](/talemate/user-guide/app-settings/decision-model/) configured, checks all due pin conditions together. Confident answers toggle their pins immediately; only uncertain conditions go to the usual LLM request. A failed decision uses that request once. Pin decay still runs as usual. With no decision model or this option off, pin checks work as before.
+
+## Yes/No Queries
+
+###### Use Decision Model
+
+On by default. The **Evaluate Query** node and yes/no script queries use the configured decision model first. A confident answer returns immediately; an uncertain or failed decision uses the usual LLM request once. With no decision model or this option off, they use the LLM as before.
+
+Both options have their own editable policy template in **Prompts** (`world_state.decision-pin-conditions` and `world_state.decision-query`). The templates control the questions and confidence threshold. **Decision Log** shows the answers and whether the fallback ran. A confident answer can still be wrong; turn the option off if it misses a condition you expect to change.
+
+When editing a decision policy for these features, keep its `gate.resolve` action inside `decision_result`. It validates the answers and runs any needed fallback. Returning a dictionary directly is treated as a failed policy.
 
 ## Character Progression
 
@@ -119,6 +147,12 @@ When a message is generated, the agent examines the content and context of the s
 
 !!! tip "Tag Your Portraits"
     The selection algorithm relies on portrait tags to make decisions. Portraits without tags cannot be intelligently selected. Add descriptive tags like "happy", "sad", "angry", "combat", "formal" to each portrait using the Visual Library.
+
+### Use Decision Model
+
+On by default. With a decision model configured, scheduled portrait selection can keep the current portrait or choose another existing portrait without the usual LLM request. If no existing portrait is a confident fit, or the decision fails, the existing selection and new-portrait generation path runs once. The selection frequency and generation permissions still apply.
+
+An incorrect confident answer can miss a needed portrait change. Turn this option off to always use the usual request. The editable policy is `world_state.decision-avatar` in **Prompts**. Both portrait and tracked-state decisions appear in **Decision Log** with their outcome and fallback use.
 
 ### Generate New Portraits
 

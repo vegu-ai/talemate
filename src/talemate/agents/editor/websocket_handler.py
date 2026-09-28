@@ -57,13 +57,26 @@ class EditorWebsocketHandler(Plugin):
             raise Exception("Message not found")
 
         original = message.message
+        version = message.active_version, len(message.versions)
+
+        def is_current():
+            return (
+                editor.scene is scene
+                and scene.get_message(message.id) is message
+                and message.message == original
+                and (message.active_version, len(message.versions)) == version
+            )
 
         with RevisionContext(message.id):
             info = RevisionInformation(
                 text=original,
                 character=character,
+                is_current=is_current,
             )
             revised = await editor.revision_revise(info)
+            if info.skip_reason == "cancelled" or not is_current():
+                await self.signal_operation_done(signal_only=True)
+                return
             if isinstance(message, CharacterMessage):
                 revised = CharacterMessage.with_name_prefix(character.name, revised)
 

@@ -1436,10 +1436,10 @@
       "x": 1200,
       "y": 1590,
       "width": 270,
-      "height": 334,
+      "height": 410,
       "collapsed": false,
       "inherited": false,
-      "registry": "prompt/GenerateResponse",
+      "registry": "agents/world_state/DetermineAvatar",
       "base_type": "core/Node"
     },
     "dff77d08-664a-491b-8305-919f52976cb6": {
@@ -1952,13 +1952,16 @@
       "db15d297-eda7-482e-a8f2-1f25bdf4d466.template"
     ],
     "d7273b1c-0ba1-43b5-aa1c-461065bb444a.value": [
-      "db15d297-eda7-482e-a8f2-1f25bdf4d466.item0"
+      "db15d297-eda7-482e-a8f2-1f25bdf4d466.item0",
+      "a015ca87-d3f1-4bc8-aa5d-25ac16d26495.content"
     ],
     "30ff7767-79ae-4f58-944f-07aaedf9c486.value": [
-      "db15d297-eda7-482e-a8f2-1f25bdf4d466.item1"
+      "db15d297-eda7-482e-a8f2-1f25bdf4d466.item1",
+      "a015ca87-d3f1-4bc8-aa5d-25ac16d26495.character"
     ],
     "fa202813-d279-4e72-986b-9abf647f1a6d.value": [
-      "db15d297-eda7-482e-a8f2-1f25bdf4d466.item2"
+      "db15d297-eda7-482e-a8f2-1f25bdf4d466.item2",
+      "a015ca87-d3f1-4bc8-aa5d-25ac16d26495.assets"
     ],
     "7c3fcc25-eeec-4cf4-9180-6353fb170624.value": [
       "654dd0e6-ae83-4721-837e-02dee5a79f71.value"

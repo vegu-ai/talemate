@@ -1,0 +1,46 @@
+{% macro build_questions(passages, decision_checks, output) %}
+{% set output.questions = {} %}
+{% set output.presentation = {} %}
+{% set output.evaluations = [] %}
+{% for passage in passages %}
+    {% for check in decision_checks %}
+        {% for question in check.questions %}
+            {% set id = passage.id ~ "_" ~ question.id %}
+            {% set has_criteria = question.true_criteria.strip() and question.false_criteria.strip() %}
+            {% set _ = output.questions.update({id: {
+                "type": "noul",
+                "instructions": question.question.replace("{passage_id}", passage.id) if "{passage_id}" in question.question else "Passage " ~ passage.id ~ ": " ~ question.question,
+                "true_criteria": question.true_criteria.replace("{passage_id}", passage.id) if has_criteria else none,
+                "false_criteria": question.false_criteria.replace("{passage_id}", passage.id) if has_criteria else none
+            }}) %}
+            {% set _ = output.presentation.update({id: {
+                "group_id": question.id,
+                "label": check.name,
+                "instructions": question.question.replace("{passage_id}", "shown below"),
+                "passage_id": passage.id,
+                "passage_text": passage.text,
+                "threshold": check.threshold
+            }}) %}
+            {% set _ = output.evaluations.append({"id": id, "passage": passage, "kind": question.kind, "instructions": question.instructions, "threshold": check.threshold}) %}
+        {% endfor %}
+    {% endfor %}
+{% endfor %}
+{% endmacro %}
+
+{% macro collect_findings(answers, evaluations, output) %}
+{% set output.findings = [] %}
+{% set output.flagged = [] %}
+{% set output.flagged_questions = [] %}
+{% set output.thresholds = {} %}
+    {% for evaluation in evaluations %}
+        {% set probability = answers[evaluation.id].p_true %}
+        {% set _ = output.thresholds.update({evaluation.id: evaluation.threshold}) %}
+        {% set match = namespace(value=probability >= evaluation.threshold) %}
+        {% if caller is defined %}{% set _ = caller(probability, evaluation, match) %}{% endif %}
+        {% if match.value %}
+            {% set _ = output.flagged_questions.append(evaluation.id) %}
+            {% set _ = output.findings.append({"passage_id": evaluation.passage.id, "text": evaluation.passage.text, "kind": evaluation.kind, "instructions": evaluation.instructions, "p_true": probability}) %}
+            {% if evaluation.passage.id not in output.flagged %}{% set _ = output.flagged.append(evaluation.passage.id) %}{% endif %}
+        {% endif %}
+    {% endfor %}
+{% endmacro %}

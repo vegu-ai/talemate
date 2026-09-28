@@ -9,6 +9,7 @@ from talemate.game.engine.nodes.core import (
 )
 from talemate.game.engine.nodes.registry import register
 from talemate.game.engine.nodes.agent import AgentSettingsNode, AgentNode
+from talemate.game.engine.nodes.prompt import GenerateResponse
 import talemate.game.focal as focal
 from talemate.util.time import coerce_ts
 from talemate.world_state import InsertionMode
@@ -24,6 +25,57 @@ TYPE_CHOICES.extend(
 )
 
 log = structlog.get_logger("talemate.game.engine.nodes.agents.world_state")
+
+
+@register("agents/world_state/DetermineAvatar")
+class DetermineAvatar(GenerateResponse):
+    """
+    Selects an existing portrait with the configured decision model when confident.
+    Otherwise sends the supplied prompt through Generate Response. Uses the World
+    State Character Portraits → Use Decision Model setting.
+
+    Inputs:
+
+    - character: The character whose portrait is being selected
+    - content: The message to select a portrait for
+    - assets: The existing portraits available to the character
+
+    Other inputs and outputs match Generate Response. The extracted asset_id
+    identifies the selected portrait; an empty fallback result may request generation.
+    """
+
+    def setup(self):
+        super().setup()
+        self.add_input("character", socket_type="character")
+        self.add_input("content", socket_type="str")
+        self.add_input("assets", socket_type="list")
+
+    async def run(self, state: GraphState):
+        agent = self.require_input("agent")
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "agent": agent,
+                "prompt": self.require_input("prompt"),
+                "response_spec": self.normalized_input_value("response_spec"),
+                "response": "",
+                "rendered_prompt": "",
+                "captured_context": "",
+                "data_obj": None,
+            }
+        )
+
+        async def fallback(ids):
+            await super(DetermineAvatar, self).run(state)
+            return {"avatar": self.get_output_socket("extracted").value["asset_id"]}
+
+        asset_id = await agent.determine_avatar_with_decisions(
+            self.require_input("character"),
+            self.require_input("content"),
+            self.require_input("assets"),
+            fallback,
+        )
+        self.set_output_values({"extracted": {"asset_id": asset_id}})
 
 
 @register("agents/world_state/Settings")
@@ -306,6 +358,10 @@ class DetermineCharacterPresence(AgentNode):
 class EvaluateQuery(AgentNode):
     """
     Evaluates a query on the world state.
+
+    World State → Yes/No Queries → Use Decision Model answers confident queries
+    with the configured decision model. Uncertain or failed decisions use the
+    usual LLM request. With the option off or no decision model, only the LLM is used.
 
     Inputs:
 

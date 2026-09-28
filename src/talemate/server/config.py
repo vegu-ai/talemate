@@ -25,6 +25,7 @@ from talemate.config.schema import (
 )
 from talemate.config import get_config, Config, mark_apply_pending, update_config
 from talemate.config.state import ApplySectionKey, PENDING_APPLY
+from talemate.decisions.slot import configure_decision_service
 from talemate.emit import emit
 from talemate.files import scenes_directory, RESERVED_SCENES_DIRS
 from talemate.instance import (
@@ -88,6 +89,20 @@ class AgentsApplySection(ApplySection):
         await configure_agents()
 
 
+class DecisionModelApplySection(ApplySection):
+    key = "decision_model"
+
+    def changed(self, config_before: dict, config_after: dict) -> bool:
+        # OpenRouter uses the shared client key outside the slot's own section.
+        return (
+            super().changed(config_before, config_after)
+            or config_before["openrouter"] != config_after["openrouter"]
+        )
+
+    async def apply(self):
+        configure_decision_service()
+
+
 class ApplyOutcome(pydantic.BaseModel):
     """What one pipeline run tried, what got through, and what stopped it."""
 
@@ -109,6 +124,7 @@ class ConfigApplyPipeline:
         self.sections: tuple[ApplySection, ...] = (
             ClientsApplySection(),
             AgentsApplySection(),
+            DecisionModelApplySection(),
         )
 
         # keys are unique and in-Literal, and a cover reaches backward only: a

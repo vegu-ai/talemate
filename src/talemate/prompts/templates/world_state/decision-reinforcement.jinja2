@@ -1,0 +1,10 @@
+{% set threshold = 0.9 %}
+{% set r = decide("tracked-state-update", state=state, questions={"changed": {
+    "type": "noul",
+    "instructions": "Has the scene since the last update changed this tracked state's answer, or does the previous answer conflict with the current scene? Judge the question for the specified character, or the world when no character is specified. Consider the update instructions."
+}}) %}
+{% set p = r.answers.changed.p_true %}
+{% set confidence = [p, 1 - p] | max %}
+{% set unchanged = 1 - p >= threshold %}
+{{ decision_outcome(r, "keep_state" if unchanged else "fallback", reason="confident_no_change" if unchanged else "update_needed_or_uncertain", p_true=p, confidence=confidence, threshold=threshold) }}
+{{ decision_result(agent_action("gate", "resolve", answers={"state": false if unchanged else none}, _decision=r)) }}

@@ -931,7 +931,9 @@ class TestUpdateReinforcementsRequireActive:
 
         called = {"args": None}
 
-        async def _fake_update(question, character, reset=False):
+        async def _fake_update(
+            question, character, reset=False, *, decision_model=False
+        ):
             called["args"] = (question, character, reset)
 
         monkeypatch.setattr(agent, "update_reinforcement", _fake_update)

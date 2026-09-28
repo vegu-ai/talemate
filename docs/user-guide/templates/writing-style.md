@@ -1,4 +1,4 @@
-# Writing Styles
+# Writing Styles and Decision Checks
 
 Writing style templates are used to define a writing style that can be applied to the generated content. They can be used to add a specific flavor or tone. A template must explicitly support writing styles to be able to use a writing style template.
 
@@ -89,6 +89,72 @@ When running with local embeddings, using CUDA is highly recommended.
 ### Deactivation
 
 You can deactivate defined phrases by unselecting the **Active** checkbox, at which point it will no longer be considered for phrase detection.
+
+### Decision checks
+
+![Writing style decision checks](/talemate/img/0.40.0/writing-style-decision-checks.png)
+
+Decision checks are questions the Editor asks the optional
+[Decision Model](../app-settings/decision-model.md) about new text, to find passages that need
+a rewrite. A writing style holds the checks and their
+settings, so different styles can ask different questions. New styles start with
+no checks.
+
+Click **Add default checks** to add the common checks in one action, including
+while creating a new writing style. It adds:
+
+- **Repeated beats and description reuse**, with separate questions for redundant
+  story events and reused distinctive descriptions. The latter keeps the event
+  and changes its description.
+- **Writing style and unwanted prose**, which checks the style instructions and
+  active phrase rules.
+
+Each check starts at a probability threshold of **0.80**, shown as **Flags at 0.80** in the list. The button adds missing
+default questions without replacing your edits or adding duplicate questions.
+If a check with the same name already exists, the added check gets a numbered
+name, such as **Repeated beats and description reuse (2)**.
+
+Click **Edit** to change a check's name, threshold and questions. Each question has a
+**Question**, a **Rewrite instruction** and a **Finding type**. Use `{passage_id}` in a
+question or its criteria to refer to the passage being evaluated. The model also receives
+the full current text, preceding history, style instructions and active prose rules.
+The token is optional: without it, the Editor names the passage before your question.
+
+**More options** under each question holds the optional settings:
+
+- **What counts as yes** and **What counts as no** are optional guidance (the true and
+  false criteria). Fill both to use them; if either is blank, the check uses its
+  question without either criterion.
+- **Short name** (the question ID) identifies the answer in the Decision Log. It must be
+  unique within the style.
+
+Click **Apply check** to keep the edit, or **Cancel** to discard it.
+
+A check can contain several questions sharing one threshold. Use **Add custom
+check** to give another question its own threshold. For example, a terse mystery
+style could ask whether a passage explains a character's feelings instead of
+showing an action, and instruct the rewrite to replace that explanation with a
+physical detail. Its threshold can differ from the repetition check's threshold.
+
+**Finding type** categorizes the finding as repetition or writing style/unwanted prose.
+The rewrite instruction tells the selected Revision method how to correct it.
+The **Only run when this writing style has instructions or active prose rules** option
+omits that check when neither kind of guidance is available. Uncheck a check to make
+it inactive, or click **Remove** to delete it.
+
+When loading a shared or hand-edited template file, invalid check settings are
+repaired where possible and logged as warnings. An unusable check is omitted;
+the writing style's instructions and phrase rules remain available. Review the
+checks after importing a file that reports warnings.
+
+To use the checks, select this writing style in **World Editor → Scene → Settings**,
+enable the Decision Model, then turn on **Decision checks** in **Editor → Revision**
+with **Targeted Rewrite** or **Unslop** selected. Successful checks replace the
+usual detection and can lead to at most one revision call. If no passage meets
+its check's threshold, the text stays unchanged. With no style selected, no
+checks, or no active applicable checks, Revision uses its usual detection without
+a decision request. See [Editor settings](../agents/editor/settings.md#decision-checks)
+for failure handling and the Decision Log.
 
 ## Create the template
 

@@ -4,13 +4,17 @@
         Recent
     </v-list-subheader>
     <v-tabs :model-value="activeTab" @update:model-value="$emit('update:activeTab', $event)" density="compact" grow color="primary">
-        <v-tab value="prompts">
-            <v-icon class="mr-1">mdi-message-text-outline</v-icon>
-            Prompts
+        <v-tab value="prompts" aria-label="Prompts" min-width="0">
+            <v-icon>mdi-message-text-outline</v-icon>
+            <v-tooltip activator="parent" location="bottom">Prompts</v-tooltip>
         </v-tab>
-        <v-tab value="templates">
-            <v-icon class="mr-1">mdi-file-document-outline</v-icon>
-            Templates
+        <v-tab value="decisions" aria-label="Decisions" min-width="0">
+            <v-icon>mdi-scale-balance</v-icon>
+            <v-tooltip activator="parent" location="bottom">Decisions</v-tooltip>
+        </v-tab>
+        <v-tab value="templates" aria-label="Templates" min-width="0">
+            <v-icon>mdi-file-document-outline</v-icon>
+            <v-tooltip activator="parent" location="bottom">Templates</v-tooltip>
         </v-tab>
     </v-tabs>
 
@@ -42,6 +46,13 @@
                 <v-list-item v-if="prompts.length === 0">
                     <v-list-item-subtitle class="text-body-small">No recent prompts</v-list-item-subtitle>
                 </v-list-item>
+            </v-list>
+        </v-tabs-window-item>
+
+        <!-- Recent Decisions Tab -->
+        <v-tabs-window-item value="decisions">
+            <v-list density="compact" slim>
+                <DecisionLogView />
             </v-list>
         </v-tabs-window-item>
 
@@ -77,11 +88,13 @@
 
 <script>
 import PromptLogItem from './PromptLogItem.vue';
+import DecisionLogView from '../decisions/DecisionLogView.vue';
 
 export default {
     name: "PromptsMenu",
     components: {
         PromptLogItem,
+        DecisionLogView,
     },
     props: {
         prompts: {

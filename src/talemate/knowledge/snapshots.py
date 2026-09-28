@@ -33,7 +33,11 @@ def snapshot_digest(name: str, snapshot: str | None, emotion: str | None = None)
 
 
 def snapshot_audience_context(
-    scene: "Scene", budget: int, focus_text: str = ""
+    scene: "Scene",
+    budget: int,
+    focus_text: str = "",
+    *,
+    referenced_names: list[str] | None = None,
 ) -> dict:
     read = PerspectiveReadContext(scene)
     candidates = []
@@ -51,7 +55,13 @@ def snapshot_audience_context(
         name
         for name in scene.character_data
         if name in scene.active_characters
-        or re.search(rf"(?<!\w){re.escape(name)}(?!\w)", focus_text, re.IGNORECASE)
+        or (
+            name in referenced_names
+            if referenced_names is not None
+            else re.search(
+                rf"(?<!\w){re.escape(name)}(?!\w)", focus_text, re.IGNORECASE
+            )
+        )
     ]
     per_character = max(1, budget // max(1, len(names)))
     cast = []

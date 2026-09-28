@@ -197,6 +197,10 @@
         <v-list>
           <AIClient ref="aiClient" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig" @pin-inference-params="pinInferenceParams" :immutable-config="appConfig" :app-config="appConfig"></AIClient>
           <v-divider></v-divider>
+          <template v-if="decisionModelStatus">
+            <DecisionModelSlot :status="decisionModelStatus"></DecisionModelSlot>
+            <v-divider></v-divider>
+          </template>
           <AIAgent ref="aiAgent" @agents-updated="saveAgents" :agentState="agentState" :app-config="appConfig" :scene="scene"></AIAgent>
           <!-- More sections can be added here -->
         </v-list>
@@ -425,6 +429,7 @@
             :agent-status="agentStatus"
             :scene-active="sceneActive"
             :client-status="clientStatus"
+            :decision-model-status="decisionModelStatus"
             :visible="tab === 'settings'"
             :world-state-templates="worldStateTemplates"
             @appearance-preview="onAppearancePreview"
@@ -501,6 +506,7 @@
   
 <script>
 import AIClient from './AIClient.vue';
+import DecisionModelSlot from './DecisionModelSlot.vue';
 import ClientInferenceParamsPanel from './ClientInferenceParamsPanel.vue';
 import AIAgent from './AIAgent.vue';
 import AgentActivityBar from './AgentActivityBar.vue';
@@ -543,6 +549,7 @@ import TemplatesMenu from './TemplatesMenu.vue';
 import OnboardingWizard from './OnboardingWizard.vue';
 import PromptsView from './prompts/PromptsView.vue';
 import { capturePrompt, clearFinishedPrompts } from '@/utils/promptLog';
+import { applyDecisionFrame, decisionLog } from '@/utils/decisionLog';
 import { perspectiveCharacterValid } from '@/utils/messagePerspective';
 import PromptsMenu from './prompts/PromptsMenu.vue';
 import ThemeSwitcher from './ThemeSwitcher.vue';
@@ -563,6 +570,7 @@ import { pinnedPanelClient } from '../utils/inferencePresets.js';
 export default {
   components: {
     AIClient,
+    DecisionModelSlot,
     ClientInferenceParamsPanel,
     AIAgent,
     AgentActivityBar,
@@ -741,6 +749,7 @@ export default {
       // null prototype — keyed by user-chosen client names, see
       // utils/nameKeyedMap.js
       clientStatus: Object.create(null),
+      decisionModelStatus: null,
       // timestamps for last agent and client updates
       // received from the backend
       lastAgentUpdate: null,
@@ -1261,6 +1270,7 @@ export default {
         this.requestWorldStateTemplates();
         this.requestPromptOutdatedCheck();
         this.requestAgentActions();
+        this.requestDecisionLog();
       };
       this.websocket.onclose = (event) => {
         console.log('WebSocket connection closed', event);
@@ -1316,6 +1326,11 @@ export default {
       if (data.type === 'world_state_manager' && data.action === 'scene_saved'
           && data.scene_identity === String(this.scene?.data?.id)) {
         this.scene.saved = true;
+      }
+
+      if (data.type === 'decisions') {
+        applyDecisionFrame(decisionLog, data);
+        return;
       }
 
       // Handle prompt_sent messages (capture prompts for PromptsMenu)
@@ -1401,6 +1416,10 @@ export default {
 
       if(data.type === 'client_status') {
         this.setClientStatus(data);
+      }
+
+      if(data.type === 'decision_model_status') {
+        this.decisionModelStatus = data.data;
       }
 
       if(data.type === 'config' && data.request_id) {
@@ -1724,6 +1743,11 @@ export default {
 
     requestAppConfig() {
       this.websocket.send(JSON.stringify({ type: 'request_app_config' }));
+    },
+
+    // decisions captured before this browser connected only arrive in the snapshot
+    requestDecisionLog() {
+      this.websocket.send(JSON.stringify({ type: 'decisions', action: 'snapshot' }));
     },
     sendConfigSave(config, options = {}) {
       return this.configSaveQueue.sendConfigSave(config, options);

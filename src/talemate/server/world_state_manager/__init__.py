@@ -9,6 +9,9 @@ import pydantic
 import structlog
 
 import talemate.world_state.templates as world_state_templates
+from talemate.world_state.templates.decision_checks import (
+    default_writing_style_decision_checks,
+)
 from talemate.game.schema import ConditionGroup
 from talemate.export import ExportOptions, export
 from talemate.instance import emit_agents_status, get_agent
@@ -247,6 +250,14 @@ async def templates_message(world_state_manager: WorldStateManager) -> dict:
         "data": {
             "by_type": templates.model_dump()["templates"],
             "managed": world_state_manager.template_collection.model_dump(),
+            "defaults": {
+                "writing_style": {
+                    "decision_checks": [
+                        check.model_dump(mode="json")
+                        for check in default_writing_style_decision_checks()
+                    ]
+                }
+            },
         },
     }
 

@@ -59,4 +59,4 @@ Every node available in the node editor, grouped by category. Each page lists th
 | [Voice Agent Nodes](agents-tts.md) | 7 | Text-to-speech: get and unpack voices, generate speech and read or rewrite generation text through the voice agent. |
 | [Websocket Nodes](websocket.md) | 4 | Websocket plumbing: routers, responses and operation done/failed signals. |
 | [World Entry Nodes](scene-world-state.md) | 8 | World entries (get, save, unpack, remove) and generation options: spices and writing styles. |
-| [World State Agent Nodes](agents-world-state.md) | 13 | World state operations: time advancement, character progression, world state emission and extraction. |
+| [World State Agent Nodes](agents-world-state.md) | 14 | World state operations: time advancement, character progression, world state emission and extraction. |

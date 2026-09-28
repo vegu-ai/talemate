@@ -42,7 +42,7 @@
 
       <div v-for="(field, configKey) in schema.config" :key="configKey">
         <div v-if="configKey !== 'dynamic_children' && (values.enabled || alwaysVisible) && testConfigConditional(field)">
-          <div v-if="field.title">
+          <div v-if="field.title" class="mt-4">
             <div class="text-body-small text-muted text-uppercase">{{ field.title }}</div>
             <v-divider class="mb-2"></v-divider>
           </div>

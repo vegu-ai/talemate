@@ -1,0 +1,8 @@
+{
+  "previous": "Mara looked along the deserted platform.",
+  "current": "She scanned the empty platform once more. A shiver ran down her spine.",
+  "revised": "She checked the departure board. Her hands tightened on the ticket.",
+  "style": "Use concrete actions. Avoid stock physiological reactions such as a shiver running down a spine.",
+  "rule": {"phrase": "A shiver ran down her spine.", "instructions": "Replace the stock reaction with a concrete action."},
+  "probabilities": {"s1_repetition": 0.93, "s1_style": 0.12, "s2_repetition": 0.10, "s2_style": 0.91}
+}

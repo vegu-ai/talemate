@@ -22,7 +22,7 @@ async_signals.register(
     "config.loaded",
 )
 
-ApplySectionKey = Literal["clients", "agents"]
+ApplySectionKey = Literal["clients", "agents", "decision_model"]
 
 # config sections whose apply failed and that the next config save has to
 # apply again even when they diff as unchanged - the config is stored before it

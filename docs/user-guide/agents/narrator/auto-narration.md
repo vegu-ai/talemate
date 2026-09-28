@@ -23,7 +23,7 @@ Only when all four gates pass does narration actually fire. Any non-zero result 
 
 The settings live under the **Auto Narration** section in the narrator agent panel.
 
-![Auto Narration settings panel](../../../img/0.37.0/narrator-auto-narration-settings.png)
+![Auto Narration settings panel](../../../img/0.40.0/narrator-auto-narration-settings.png)
 
 ### Chance
 

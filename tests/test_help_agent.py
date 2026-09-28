@@ -267,47 +267,6 @@ def test_find_docs_help_model_selection_and_apply_retries(query, expected):
 
 
 @pytest.mark.parametrize(
-    "query",
-    [
-        "commit_revision",
-        "pending_perception_messages",
-        "scene.history_ready",
-        "agent.conversation.finalized",
-        "evidence_boundary evidence_budget",
-        "intro_knowledge",
-        "SourceReference intro",
-        "opening audience derivation on load",
-        "scoped graph memory access",
-        "intro_present",
-        "context_review",
-        "push_history",
-        "before_memory",
-        "swap_revision",
-        "deep retrieval",
-    ],
-)
-def test_find_docs_scene_processing_api_routes(query):
-    assert "dev/character-perspectives.md" in [
-        entry["path"] for entry in docs.find_docs(query)
-    ]
-
-
-@pytest.mark.parametrize("symbol,limit", [("SourceReference", 1)])
-def test_find_docs_perspective_symbols_keep_code_spelling_near_top(symbol, limit):
-    results = docs.find_docs(symbol, limit=limit)
-    result = next(
-        (
-            entry
-            for entry in results
-            if entry["path"] == "dev/character-perspectives.md"
-        ),
-        None,
-    )
-    assert result is not None
-    assert symbol in result["summary"]
-
-
-@pytest.mark.parametrize(
     "query,expected",
     [
         ("summarization settings", "user-guide/agents/summarizer/settings.md"),
@@ -316,9 +275,6 @@ def test_find_docs_perspective_symbols_keep_code_spelling_near_top(symbol, limit
             "user-guide/agents/summarizer/settings.md",
         ),
         ("scene analysis caching", "user-guide/agents/summarizer/settings.md"),
-        ("stored views", "dev/character-perspectives.md"),
-        ("audience summaries", "dev/character-perspectives.md"),
-        ("portrait cadence", "dev/character-perspectives.md"),
         ("flow diagrams", "user-guide/world-editor/knowledge-how-it-works.md"),
         ("reply inputs", "user-guide/world-editor/knowledge-how-it-works.md"),
         (
@@ -359,7 +315,15 @@ def test_find_docs_preserves_parent_knowledge_routes(query, expected):
             "user-guide/node-editor/core-concepts/collector_nodes.md",
         ),
         ("character card import", "user-guide/character-card-import.md"),
-        ("pytest compose test exclusions", "dev/testing.md"),
+        ("template overrides", "user-guide/prompts/template-overrides.md"),
+        (
+            "State Counter",
+            "user-guide/node-editor/reference/nodes/state-counters.md",
+        ),
+        (
+            "resettable",
+            "user-guide/node-editor/reference/nodes/state-counters.md",
+        ),
         # a thorough summary must keep its phrase bonus: this page is the only
         # one about the pi coding agent, and competes with node-reference
         # pages that match nothing but the token "agent"

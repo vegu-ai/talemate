@@ -6,6 +6,8 @@ Use **Scene revisions** to browse saved scene states and continue from an earlie
 
 Each save records a snapshot of the scene, including its messages, characters and world state. Each row shows its message count and save time. Select a row to preview the messages at that point. The newest revision is marked **Latest**; inherited rows name their original save, and **Fork point** marks where a branch began.
 
+![Scene revisions dialog with a selected revision and its message preview](/talemate/img/0.40.0/scene-revisions-dialog.png)
+
 ### Opening Scene revisions
 
 - **While playing** — open :material-content-save: **Save** in the [Scene tools](/talemate/user-guide/scenario-tools) and choose :material-source-branch: **Scene revisions**.

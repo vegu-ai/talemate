@@ -94,7 +94,7 @@ Check the provider specific documentation for more information on how to configu
 **OpenAI Compatible:**
 
 - Manually add voices using the voice identifiers supported by your server
-- Voices are not auto-discovered (see the [OpenAI Compatible backend docs](openai-compatible.md))
+- Voices are not auto-discovered (see the [OpenAI Compatible backend docs](/talemate/user-guide/agents/voice/openai-compatible/))
 
 **Google Gemini-TTS:**
 

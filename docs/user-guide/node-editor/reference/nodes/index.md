@@ -50,7 +50,8 @@ Every node available in the node editor, grouped by category. Each page lists th
 | [Scene Intent Nodes](scene-intent.md) | 10 | Scene intention: read and set the scene intent, scene phase and scene types. |
 | [Scene Message Nodes](scene-messages.md) | 6 | Scene messages: create, version, hide and manipulate messages in the scene log. |
 | [Scene Nodes](scene.md) | 18 | Scene lifecycle and metadata: title, description, introduction, content classification, scene loop and storyline modules. |
-| [State Nodes](state.md) | 15 | Graph state variables: get/set/unset across scopes (local, parent, shared, scene loop, game), counters and path variants. |
+| [State Counter Nodes](state-counters.md) | 3 | Increment a numeric state variable in place and restart it at a reset cap, with a conditional and a path variant. |
+| [State Nodes](state.md) | 12 | Graph state variables: get/set/unset across scopes (local, parent, shared, scene loop, game) and path variants. |
 | [String Nodes](data-string.md) | 16 | Strings: formatting, templates, joining, splitting, cleanup and excerpts. |
 | [Summarizer Agent Nodes](agents-summarizer.md) | 5 | Summarization: scene progression summaries, tag generation and message avatar hooks. |
 | [Utility Nodes](util.md) | 5 | Miscellaneous helpers: counters, diffs, list extraction, durations and module styling. |

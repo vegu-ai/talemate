@@ -63,7 +63,7 @@ Select the appropriate module type.
 |-------------|-------------|
 | :material-file-multiple: Copy current | Copies the currently open module into a new module |
 | :material-source-fork: Extend current | [Extends](module-inheritance.md) the currently open module into a new module |
-| :material-console-line: Command | Creates a new [command](command-module.md) module |
+| :material-console-line: Command | Creates a new [command](command_module.md) module |
 | :material-alpha-e-circle: Event | Creates a new [event](events.md) module |
 | :material-function: Function | Creates a new [function](functions.md) module |
 | :material-file: Module | Creates a new module |

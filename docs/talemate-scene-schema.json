@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
-  "$comment": "Compatibility contract: dev/scene-format.md.",
+  "$comment": "Compatibility contract: talemate.scene.format (read_scene_format).",
   "if": {
     "properties": {"knowledge_eligibility": {"const": "perception"}},
     "required": ["knowledge_eligibility"]

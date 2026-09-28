@@ -1,71 +1,6 @@
 # Machine-readable index of the Talemate documentation (docs/).
 # Consumed by the help agent to route questions to the right document.
 # Generated file - regenerate with the docs-index claude skill in the work repo.
-- path: dev/agent-actions.md
-  title: Generation action identity
-  summary: Generation action keys in prompt logs and per-action overrides, including memory passes. Covers nested context
-    restoration, foreground/background status and concurrent actions.
-- path: dev/character-evidence-guidance.md
-  title: Character evidence in guidance and analysis
-  summary: Actor guidance and conversation analysis in perception scenes use projected history, disclosures, visibility-scoped
-    authored entries and last-known snapshots; director planning and narration retain reader context with separate character
-    evidence. Covers advice_context, advice_fingerprint, RAG, cache freshness, stale Focal action batches and evidence budgets.
-- path: dev/character-memory-retrieval.md
-  title: Character memory retrieval
-  summary: Character-scoped retrieval uses projected history, Chroma audience eligibility, scoped metadata and ID lookups,
-    entity descriptions and optional AI memory refinement. Covers source fingerprints, cache invalidation, collection ownership,
-    retryable failures and memory_viewer enforcement.
-- path: dev/character-perspectives.md
-  title: Character perspective records
-  summary: intro_knowledge, SourceReference intro, intro_present, opening audience derivation on load; scoped graph memory
-    access. Stored views, audience summaries, context_review, push_history, agent.conversation.finalized, portrait cadence,
-    before_memory, scene.history_ready, evidence_boundary/evidence_budget, swap_revision/commit_revision, pending_perception_messages,
-    deep retrieval, tracked age; perception exclusions (span, reason, forbidden, trace), rewrite regions, observable traces,
-    exclusion_errors.
-- path: dev/howto/add-a-worldstate-template-type.md
-  title: Adding a new world-state template
-  summary: 'Developer walkthrough for adding a world-state template type using Writing Style phrase detection: register a
-    Pydantic schema, build a Vue editor with immutableTemplate and update/save handling, then register its rendering, icon,
-    color, help text and type selector in WorldStateManagerTemplates.'
-- path: dev/index.md
-  title: Developer documentation
-  summary: Landing page for developer references covering deterministic test setup and exclusions, Jinja2 prompt templates,
-    and the generated node registry glossary.
-- path: dev/nodes-glossary.md
-  title: Node reference glossary
-  summary: Regenerate the node reference glossary from the live registry with the node tools CLI glossary --write, and detect
-    documentation drift with glossary --check. Handwritten intros above the glossary:generated marker survive regeneration.
-- path: dev/reinforcement-investigation-perspectives.md
-  title: Reinforcement and investigation perspectives
-  summary: Perception-mode reinforcement and investigation lifecycle, including non-sequential perspective_source records,
-    complete replacement prose and Retry/Cancel/Ignore recovery. Covers viewer-scoped direct inserts, generated detail/world-entry
-    associations, authored visibility, pin and memory projections, invalidation and shared-data export behavior.
-- path: dev/scene-format.md
-  title: Saved scene format
-  summary: Saved format_version and knowledge_eligibility validation, creation opt-in, empty-history mode switching, saves,
-    exports, forks and request-owned scene_initialization.agent_settings with explicit pins, success-only persistence and
-    correlated lifecycle frames. Accepted player dispatch uses history_dispatch_pending/history_dispatch_completed, persisted
-    receiver checkpoints, stable node identity, deferred cooldown retries and refresh-before-generation ordering.
-- path: dev/snapshot-perspectives.md
-  title: Audience-targeted snapshots
-  summary: 'Audience-targeted world-state snapshots in perception scenes: evidence budgets, entity views and location_views,
-    stored SnapshotPerspectives, durable updates and snapshot_for(viewer) rendering; missing/stale replacements are omitted,
-    model compliance determines semantic support, and snapshots do not grant knowledge. Documents snapshot_request.context_history
-    after memory retrieval, source provenance, incompatible override notices and quiet cancellation/stale-input handling.'
-- path: dev/templates.md
-  title: Template Overrides
-  summary: 'Older reference for Talemate''s Jinja2 prompt templates: section tags, overriding a default by dropping a same-named
-    file into ./templates/prompts/{agent}/, template inheritance, the creator attribute/detail/dialogue naming conventions
-    and template sets, extending with {% extends %} and blocks, and helpers for prepared responses, JSON output, scene queries,
-    memory retrieval and token counting.'
-- path: dev/testing.md
-  title: Testing
-  summary: Developer test setup with uv and NLTK, the full default pytest suite, Docker Compose config checks and their explicit
-    requires_compose exclusion, plus isolation from active config.yaml, local scenes and user templates.
-- path: dev/third-party-reference.md
-  title: Third-party reference
-  summary: Links to third-party chat-completion API references for Anthropic, Cohere, Google, Groq, KoboldCpp, LMStudio, Mistral,
-    OpenAI, TabbyAPI and text-generation-webui.
 - path: getting-started/advanced/change-host-and-port.md
   title: Changing host and port
   summary: Configure backend/frontend listen hosts and ports with TALEMATE_BACKEND_HOST, TALEMATE_BACKEND_PORT, TALEMATE_FRONTEND_HOST
@@ -389,7 +324,7 @@
   title: Settings
   summary: Snapshot frequency, Lines in the moment, Look at/Add Detail highlights, context pinning, durable snapshots/eviction,
     state reinforcements, conditional pins, character progression proposals, tagged portrait selection/generation, semantic
-    long-term memory. Decision model snapshot audiences, tracked state no change (skipped), yes/no queries, character portraits.
+    long-term memory. Decision model tracked state no change (skipped), snapshot audiences, yes/no queries, character portraits.
 - path: user-guide/api-key-encryption.md
   title: API Key Encryption
   summary: 'Transparent Fernet encryption of API keys in config.yaml with ENC: values, automatic plaintext migration and OS-keyring
@@ -1001,11 +936,14 @@
   summary: Scene lifecycle nodes run Scene Loop or Creative Loop, select actors, trigger turn events, restore scenes and generate
     dynamic storylines. Includes scene/loop state access, title, description, introduction and content classification getters/setters,
     plus Unpack Interaction State.
+- path: user-guide/node-editor/reference/nodes/state-counters.md
+  title: State Counter Nodes
+  summary: State Counter, State Counter (Path) and Counter State (Conditional) increment a resettable number stored in state, for example
+    to count turns. A reset input or reset_cap restarts the count; new_cycle reports a new cycle.
 - path: user-guide/node-editor/reference/nodes/state.md
   title: State Nodes
   summary: State nodes get, set, unset and test named graph variables in local, parent, shared, scene loop and persisted game
-    scopes. Includes nested Path variants, conditional mutations, resettable State Counter with reset_cap/new_cycle, and Game
-    State variable access.
+    scopes. Includes nested Path variants, conditional mutations, and Game State variable access.
 - path: user-guide/node-editor/reference/nodes/util-packaging.md
   title: Packaging Nodes
   summary: Packaging nodes define installable node-module packages, mark modules with Install Node Module and expose their
@@ -1069,9 +1007,8 @@
   title: Prompt Manager
   summary: Prompt Manager tabs for prompt inspection, Template Files, LLM Prompt Templates and Scene Context; Jinja2 template
     groups, priority, resolved override indicators and outdated override warnings. Covers immediate Active entries, Completed/Failed/Cancelled
-    outcomes, grouped retries, Clear retaining active requests, live details preserving edits, Test Changes after completion,
-    the Recent sidebar's shared Decisions panel, and updating/resetting incompatible world snapshot overrides with the
-    snapshot_request.context_history contract.
+    outcomes, grouped retries, Clear retaining active requests, live details preserving edits, Test Changes after completion
+    and the Recent sidebar's shared Decisions panel.
 - path: user-guide/prompts/llm-prompt-templates.md
   title: LLM Prompt Templates
   summary: 'Manage local-model chat-format wrappers such as ChatML, Llama3, Mistral and Gemma4 in LLM Prompt Templates: create
@@ -1082,6 +1019,11 @@
   summary: Customize response extraction in Jinja2 templates with set_anchor_extractor, set_as_is_extractor or set_after_anchor_extractor.
     A dialogue/analysis example covers nesting-aware tracked_tags, case-insensitive markers, fallback_to_full and additive
     mod_response_length token budgets.
+- path: user-guide/prompts/template-overrides.md
+  title: Template Overrides
+  summary: Override a default prompt template by copying it into the user, scene or a custom group with the same agent directory
+    and filename; delete the copy to restore the default. Keep outdated overrides current after an update. World snapshot overrides
+    follow the snapshot input contract, the snapshot_request.context_history call; incompatible snapshot prompt notices.
 - path: user-guide/prompts/volatile-context-placement.md
   title: Volatile Context Placement
   summary: Optimize for Prompt Caching moves volatile RAG, dynamic notes and other changing context after scene history to

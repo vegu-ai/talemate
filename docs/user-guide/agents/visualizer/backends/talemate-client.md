@@ -11,11 +11,11 @@ The Talemate Client backend for image analysis lets you reuse an existing Talema
 
 Before a client can be used for image analysis, you need to enable its vision capabilities:
 
-1. Open the client's settings by clicking on the client in the sidebar
-2. Look for the **Vision** configuration section
-3. Enable the **Enable Vision** toggle
+1. Open the client's settings: click :material-cogs: on its card in the sidebar, or select it under **Settings → Connections → Clients**
+2. Expand the **Vision** section
+3. Check **Enable Vision** and click **Save**
 
-![Vision configuration in LLM client settings](../../../../img/0.36.0/client-vision-settings.png)
+![Vision configuration in LLM client settings](../../../../img/0.40.0/client-vision-settings.png)
 
 !!! warning "Model Must Support Vision"
     Only enable vision if the model currently loaded on the client actually supports multimodal vision input. For local models this generally means a mmproj (multimodal projector) file was loaded alongside the model. Enabling vision on a text-only model will result in errors when image analysis is attempted.
@@ -33,7 +33,7 @@ Vision support is currently available on the following clients:
 3. Set the **Backend (image analysis)** dropdown to **Talemate Client**
 4. In the backend settings that appear, select the client to use from the **Client** dropdown
 
-![Talemate Client vision backend settings](../../../../img/0.36.0/visual-backend-talemate-client.png)
+![Talemate Client vision backend settings](../../../../img/0.40.0/visual-backend-talemate-client.png)
 
 The client dropdown only shows clients that have vision enabled. If no clients appear, you need to enable vision on at least one client first.
 

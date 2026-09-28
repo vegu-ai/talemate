@@ -122,7 +122,9 @@ the character’s stored evidence and last-known context. Cached advice is reuse
 for the same audience and unchanged evidence. Reader planning remains available,
 but its advice must not assume that characters know private reader information.
 Actor prompts use only the character evidence described above.
-See [Character evidence in guidance and analysis](/talemate/dev/character-evidence-guidance/)
-for the development boundary and model-compliance limits. Legacy scenes retain the
+Talemate selects the evidence and checks that it is current; whether the generated
+advice keeps to it depends on the model. See
+[Author responsibilities](/talemate/user-guide/world-editor/knowledge/#author-responsibilities)
+for what stays shared with every character. Legacy scenes retain the
 settings behavior described above.
 <!-- --8<-- [end:character_evidence_guidance] -->

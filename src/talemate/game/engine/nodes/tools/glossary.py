@@ -144,10 +144,14 @@ NODE_OVERRIDES: dict[str, str] = {
     "agents/visual/SelectBackend": "agents-visual-generation",
     "agents/visual/UnpackGenerationRequest": "agents-visual-generation",
     "agents/visual/UnpackGenerationResponse": "agents-visual-generation",
-    # scene header controls and the world snapshot: split off so the state
-    # and world state pages stay within the help agent's read budget
+    # scene header controls, state counters and the world snapshot: split off
+    # so the state and world state pages stay within the help agent's read
+    # budget
     "state/GetGameStatePathSettings": "scene-header-controls",
     "state/PinGameStatePath": "scene-header-controls",
+    "state/ConditionalCounterState": "state-counters",
+    "state/CounterState": "state-counters",
+    "state/CounterStatePath": "state-counters",
     "agents/world_state/AddSnapshotEntity": "world-panel",
     "agents/world_state/GetSnapshot": "world-panel",
 }
@@ -341,7 +345,11 @@ PAGE_TITLES: dict[str, tuple[str, str]] = {
     ),
     "state": (
         "State Nodes",
-        "Graph state variables: get/set/unset across scopes (local, parent, shared, scene loop, game), counters and path variants.",
+        "Graph state variables: get/set/unset across scopes (local, parent, shared, scene loop, game) and path variants.",
+    ),
+    "state-counters": (
+        "State Counter Nodes",
+        "Increment a numeric state variable in place and restart it at a reset cap, with a conditional and a path variant.",
     ),
     "util": (
         "Utility Nodes",

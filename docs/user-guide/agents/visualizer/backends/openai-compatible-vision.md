@@ -15,7 +15,7 @@ The OpenAI Compatible backend for image analysis allows you to connect to any AP
 
 ### Configuration
 
-![OpenAI Compatible vision backend settings](../../../../img/0.36.0/visual-backend-openai-compatible-vision.png)
+![OpenAI Compatible vision backend settings](../../../../img/0.40.0/visual-backend-openai-compatible-vision.png)
 
 ##### Base URL
 

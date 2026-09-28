@@ -20,7 +20,7 @@ Browser restrictions are described in [MDN's beforeunload documentation](https:/
 
 To save while looking at the scene, click the :material-content-save: **Save** button on the right of the [Scene tools](/talemate/user-guide/scenario-tools) toolbar.
 
-![Scene save](/talemate/img/0.39.0/scene-save.png)
+![Scene save](/talemate/img/0.40.0/scene-save.png)
 
 ## Saving from the world editor
 

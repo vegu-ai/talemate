@@ -62,7 +62,6 @@ SECTION_DESCRIPTIONS = {
     "user-guide/prompts": "Prompt template overrides",
     "user-guide/templates": "World-state templates (attributes, details, spices, writing styles, ...)",
     "user-guide/world-editor": "World editor: scene, characters, world entries, context DB, history, pins, suggestions",
-    "dev": "Developer documentation: agent/client internals, templates, third-party reference",
 }
 
 # tokens too generic to contribute to find_docs scoring

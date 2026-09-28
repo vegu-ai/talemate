@@ -2,7 +2,7 @@
 
 The Prompt Manager provides a centralized interface for working with the Jinja2 prompt templates that drive all AI interactions in Talemate. It replaces the need to manually locate and edit template files, offering visual tools for template management, override tracking, and prompt inspection.
 
-![Prompt Manager overview](../../img/0.36.0/prompt-manager-overview.png)
+![Prompt Manager overview](../../img/0.40.0/prompt-manager-overview.png)
 
 ## Accessing the Prompt Manager
 
@@ -74,28 +74,7 @@ For fine-grained control, you can set the source group for individual templates 
 
 ## Editing Templates
 
-To edit a template, navigate to its group tab (user, scene, or a custom group) and select the template file. The built-in editor opens with the full Jinja2 source.
-
-!!! warning "Default templates are read-only"
-    You cannot edit templates in the `default` group directly. To customize a default template, create a copy in the `user` group or another editable group.
-
-To create a customized version of a default template:
-
-1. Open the **Active** tab and locate the template you want to customize
-2. View the template content in the default group
-3. Switch to the target group tab (e.g., **user**)
-4. Create a new template with the same agent directory and filename
-5. Paste and modify the content
-
-Templates are standard Jinja2 files with access to Talemate's template context variables and functions. For developer-level template documentation, see the [Developer Templates Guide](/talemate/dev/templates/).
-
-### World snapshot overrides
-
-World snapshot overrides must use `snapshot_request.context_history(...)` to supply their broad story history after memory retrieval. Older copies of `world_state/request-world-state-v2.jinja2` that call only `scene.context_history(...)` cannot establish the inputs needed for safe snapshot regeneration. This also applies to `world_state/add-snapshot-entity.jinja2` overrides.
-
-If Talemate reports an incompatible snapshot prompt, open **Template Files → Active** in the Prompt Manager and locate the template named in the notice. Compare it with the current default and update your override, or delete the override to restore the default. An incompatible result is not applied; Talemate makes no automatic retry. The existing outdated-override indicator can help identify copies that need review.
-
-See the [snapshot input contract](/talemate/dev/snapshot-perspectives/#snapshot-input-provenance) for the required call and its placement.
+To edit a template, navigate to its group tab (user, scene, or a custom group) and select the template file. The built-in editor opens with the full Jinja2 source. Templates in the `default` group are read-only: to change one, create an override in an editable group. [Template Overrides](template-overrides.md) explains the steps, how to keep overrides current after an update, and the call that world snapshot overrides need.
 
 ## Response Extraction Directives
 
@@ -127,7 +106,7 @@ Requests appear as **Active** as soon as they start, including when you open the
 
 **Clear** removes finished entries while keeping active requests and their eventual results. Both this viewer and Debug Tools share the same list. Open details update as results arrive, preserving local prompt and parameter edits. **Test Changes** becomes available after the request ends.
 
-![Prompts tab showing recent activity](../../img/0.36.0/prompt-manager-prompts-tab.png)
+![Prompts tab showing recent activity](../../img/0.40.0/prompt-manager-prompts-tab.png)
 
 ### Prompt Detail View
 

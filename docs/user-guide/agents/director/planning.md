@@ -134,7 +134,7 @@ See [Director Chat](/talemate/user-guide/agents/director/chat#chat-modes) for th
 
 The agent-level defaults for planning live under **Arc Generation** in the director's agent settings panel:
 
-![Director Arc Generation settings](../../../img/0.37.0/director-arc-generation-settings.png)
+![Director Arc Generation settings](../../../img/0.40.0/director-arc-generation-settings.png)
 
 ##### Dialogue beat ratio
 

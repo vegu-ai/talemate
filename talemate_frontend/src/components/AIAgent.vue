@@ -231,13 +231,14 @@ export default {
         'requestSceneSave',
     ],
     methods: {
-        // The hub's only write path. A sparse per-agent patch, so a delayed hub
-        // action never replaces an unrelated edit that landed first.
-        applySceneAgentValues(entries, label) {
-            this.overrides?.applySceneAgentValues(entries, label);
+        // The scene-only write path outside the settings page. A sparse
+        // per-agent patch, so a delayed change never replaces an unrelated edit
+        // that landed first.
+        applySceneAgentValues(entries, label, reply = null) {
+            this.overrides?.applySceneAgentValues(entries, label, reply);
         },
-        clearSceneAgentValues(entries) {
-            this.overrides?.clearSceneAgentValues(entries);
+        clearSceneAgentValues(entries, reply = null) {
+            this.overrides?.clearSceneAgentValues(entries, reply);
         },
         sceneOverrideCount(agent) {
             return countSceneOverrides(agent?.data?.scene_overrides);
@@ -510,7 +511,10 @@ export default {
         // Transport teardown / unmount: drop the hub writer's queued and
         // in-flight work and any stop still waiting for a scene to report.
         resetSceneAgentOverrides() {
-            this.overrides?.reset();
+            this.overrides?.reset(
+                'The connection closed before the change was sent.',
+                'The connection closed before the answer arrived; the change may have been saved.',
+            );
             this.pendingEffort = null;
         },
         getQuickToggleActions(agent) {

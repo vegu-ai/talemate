@@ -1,0 +1,4 @@
+changed:
+- "Prompts → Scene Context: the view controls (Preview for and one Refresh) sit in a toolbar above the preview, and the Summarizer's scene history settings sit in their own card: the scene context Format and the history budget settings. Every setting is saved at once and the preview refreshes; the Apply button is gone."
+added:
+- "Prompts → Scene Context: the scene context Format can be changed directly next to the preview. Each scene history setting shows whether it comes from your global settings or from a scene override. Click Global to override a setting for the scene, Scene to go back to the global value, or Use global to remove all overrides of the card."

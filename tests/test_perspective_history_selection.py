@@ -2,10 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from talemate.agents.summarize.context_history import (
-    ContextHistoryParams,
-    ContextHistoryPreviewOverrides,
-)
+from talemate.agents.summarize.context_history import ContextHistoryParams
 from talemate.character import Character
 from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
@@ -1207,20 +1204,6 @@ def test_ratio_boundary_uses_assured_recent_character_message_count(
     assert [line.message_id for line in open_boundary] == [
         message.id for message in scene.history[7:]
     ]
-
-
-def test_preview_overrides_do_not_mutate_saved_history_settings(
-    perspective_history_scene,
-):
-    summarizer = get_agent("summarizer")
-    saved = summarizer.scene_history_best_fit_min_dialogue
-    summarizer.context_history_preview(
-        perspective_history_scene,
-        budget=100,
-        overrides=ContextHistoryPreviewOverrides(best_fit_min_dialogue=saved + 4),
-        params=ContextHistoryParams(stored_views=True, perspective="Bob"),
-    )
-    assert summarizer.scene_history_best_fit_min_dialogue == saved
 
 
 @pytest.mark.parametrize("budget", [0, 1])

@@ -1,7 +1,8 @@
-// The one writer the knowledge hub uses. Every hub mutation goes through here
-// as a sparse per-agent patch against the scene's current overlay, so an
-// unrelated settings-page edit that lands first is not replaced, and a change
-// made for one scene never touches the global agent values.
+// The one writer for scene overrides outside the settings page. Every
+// mutation goes through here as a sparse per-agent patch against the scene's
+// current overlay, so an unrelated settings-page edit that lands first is not
+// replaced, and a change made for one scene never touches the global agent
+// values.
 //
 // Operations are serialized: one patch is in flight at a time and the next is
 // dispatched only once the server acknowledges it by request id. A new hub
@@ -10,6 +11,7 @@
 // bound to the scene generation it started in — work queued for a scene that
 // unloads is discarded rather than written into whatever loads next.
 import { DEFAULT_SCENE_AGENT_SETTINGS_FILENAME } from '@/constants/sceneAgentSettings';
+import { replyAfterAll } from '@/utils/writeReply';
 
 let requestSeq = 0;
 const nextRequestId = () => `hub-overrides-${Date.now().toString(36)}-${(++requestSeq).toString(36)}`;
@@ -78,7 +80,12 @@ export class SceneAgentOverridesCoordinator {
      * scene load start/failure, a disconnect, or an unmount. The next
      * `scene_status` binds the new generation.
      */
-    reset() {
+    reset(
+        reason = 'The scene changed before the change was sent.',
+        lost = 'The scene changed before the answer arrived; the change may have been saved.',
+    ) {
+        const inFlight = this.inFlight;
+        const queued = this.queue;
         this.awaitingSave = false;
         this.saveRequired = false;
         this.confirmedSaveIdentity = null;
@@ -90,6 +97,9 @@ export class SceneAgentOverridesCoordinator {
         this.failed = false;
         if (this.state) this.state.error = null;
         this.syncState();
+        // the backend may have stored a patch that was sent; its answer is lost
+        inFlight?.reply?.onError(lost, false, true);
+        for (const op of queued) op.reply?.onError(reason);
     }
 
     /**
@@ -121,8 +131,12 @@ export class SceneAgentOverridesCoordinator {
         this.linked = false;
     }
 
-    /** entries: [{ agent, action, enabled?, config: { key: value } }] */
-    applySceneAgentValues(entries, label = null) {
+    /**
+     * entries: [{ agent, action, enabled?, config: { key: value } }]
+     * reply: {onComplete, onError(message, applyFailed, unknown)} for the whole
+     * change, once; `unknown` when a sent patch lost its answer and may be stored.
+     */
+    applySceneAgentValues(entries, label = null, reply = null) {
         this.enqueueGroups(entries, (group, entry) => {
             const action = { config: {} };
             if (entry.enabled !== undefined) action.enabled = entry.enabled;
@@ -133,26 +147,33 @@ export class SceneAgentOverridesCoordinator {
                 ...action,
                 config: { ...(existing.config || {}), ...action.config },
             };
-        }, label);
+        }, label, reply);
     }
 
     /** entries: [{ agent, action, config? }] — no config clears the enable override. */
-    clearSceneAgentValues(entries) {
+    clearSceneAgentValues(entries, reply = null) {
         this.enqueueGroups(entries, (group, entry) => {
             group.clear.push(entry.config ? { action: entry.action, config: entry.config } : { action: entry.action });
-        });
+        }, null, reply);
     }
 
-    enqueueGroups(entries, add, label = null) {
+    enqueueGroups(entries, add, label = null, reply = null) {
         const scene = this.getScene();
         if (!sceneCanPersist(scene) && !this.requestSave) {
-            this.report('Save the scene to change its knowledge settings.');
+            this.report('Save the scene to change its scene overrides.');
+            reply?.onError('Save the scene to change its scene overrides.');
             return;
         }
         const identity = sceneIdentityOf(scene);
-        if (!identity || this.saveRequired) return;
+        if (this.saveRequired) {
+            reply?.onError('An earlier change is waiting for the scene to be saved.');
+            return;
+        }
         if (this.identity === null) this.identity = identity;
-        if (identity !== this.identity) return;
+        if (!identity || identity !== this.identity) {
+            reply?.onError('The scene changed before the change was saved.');
+            return;
+        }
 
         // A deliberate new hub action is what clears a retained partial-batch
         // failure — not the success of a later agent in the same batch.
@@ -165,8 +186,9 @@ export class SceneAgentOverridesCoordinator {
             add(group, entry);
             groups.set(entry.agent, group);
         }
+        const answer = replyAfterAll(reply, groups.size);
         for (const [agent, patch] of groups) {
-            this.queue.push({ agent, patch, identity, label, requestId: nextRequestId() });
+            this.queue.push({ agent, patch, identity, label, reply: answer, requestId: nextRequestId() });
         }
         this.syncState();
         this.dispatch();
@@ -236,14 +258,14 @@ export class SceneAgentOverridesCoordinator {
             this.saveRequired = false;
             this.dispatch();
         } else {
-            this.report(result?.status === 'failed' ? result.message : 'Save cancelled. Your knowledge change is still pending.');
+            this.report(result?.status === 'failed' ? result.message : 'Save cancelled. Your change is still pending.');
         }
         this.syncState();
     }
 
     discardPendingSave() {
         if (!this.saveRequired || this.awaitingSave) return;
-        this.reset();
+        this.reset('The change was discarded.');
         this.bindScene(this.getScene()?.data);
     }
 
@@ -277,9 +299,11 @@ export class SceneAgentOverridesCoordinator {
             // in the same batch must not clear it.
             this.failed = true;
             this.report(data.error.message || 'The scene override could not be saved.');
+            this.inFlight.reply?.onError(data.error.message || 'The scene override could not be saved.');
         } else {
             this.linked = true;
             if (!this.failed) this.report(null);
+            this.inFlight.reply?.onComplete();
         }
         this.inFlight = null;
         this.syncState();

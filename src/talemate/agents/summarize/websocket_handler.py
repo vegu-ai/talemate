@@ -2,7 +2,6 @@ import pydantic
 import structlog
 
 from talemate.exceptions import GenerationCancelled
-from talemate.agents.summarize.context_history import ContextHistoryPreviewOverrides
 from talemate.agents.summarize.perceptions import (
     PerceptionBacklogDecision,
     resolve_perception_backlog,
@@ -17,16 +16,6 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.server.summarize")
-
-
-class ApplyContextHistoryConfigPayload(pydantic.BaseModel):
-    dialogue_ratio: int
-    summary_detail_ratio: int
-    max_budget: int
-    enforce_boundary: bool
-    best_fit: bool
-    best_fit_min_dialogue: int
-    best_fit_max_dialogue: int
 
 
 class PerceptionBacklogResponsePayload(pydantic.BaseModel):
@@ -59,17 +48,13 @@ class SummarizeWebsocketHandler(Plugin):
             )
             return
 
-        overrides = None
-        if "overrides" in data:
-            overrides = ContextHistoryPreviewOverrides(**data["overrides"])
-
         name = data.get("character")
         if name is not None:
             if not isinstance(name, str) or name not in scene.active_characters:
                 raise ValueError("Select an active character for the context preview")
             try:
                 preview = await character_context_review(
-                    scene, scene.character_data[name], overrides
+                    scene, scene.character_data[name]
                 )
             except GenerationCancelled as exc:
                 if exc.message_id is None or exc.view_status is None:
@@ -92,9 +77,7 @@ class SummarizeWebsocketHandler(Plugin):
                 )
                 return
         else:
-            preview = self.summarizer.context_history_preview(
-                scene, overrides=overrides
-            )
+            preview = self.summarizer.context_history_preview(scene)
             preview.update({"perspective": None, "exclusions": []})
         preview["scene_id"] = scene.id
         preview["characters"] = list(scene.active_characters)
@@ -106,54 +89,3 @@ class SummarizeWebsocketHandler(Plugin):
                 "request_id": data.get("request_id"),
             }
         )
-
-    async def handle_apply_context_history_config(self, data: dict):
-        """Apply context history config overrides to the summarizer agent and persist.
-
-        Each field routes through ``write_config`` so any active scene-level
-        override receives the new value instead of being silently shadowed by
-        a write to the global config it overrides.
-        """
-        payload = ApplyContextHistoryConfigPayload(**data.get("config", {}))
-
-        for field in (
-            "dialogue_ratio",
-            "summary_detail_ratio",
-            "max_budget",
-            "enforce_boundary",
-            "best_fit",
-            "best_fit_min_dialogue",
-            "best_fit_max_dialogue",
-        ):
-            self.summarizer.write_config(
-                "manage_scene_history", field, getattr(payload, field)
-            )
-
-        # `write_config` routes per-field: overridden fields land in the
-        # overlay, the rest in the global. There's no transaction across the
-        # two targets, so we persist both independently and surface an overlay
-        # failure to the user without suppressing the global save — otherwise
-        # any non-overridden field's edit would be silently lost on restart.
-        # Overridden-field edits still revert on next scene load if the
-        # overlay write failed.
-        overlay_error: OSError | None = None
-        overrides = self.summarizer.scene_overrides()
-        if overrides is not None:
-            try:
-                await overrides.write_to_file()
-            except OSError as exc:
-                log.warning(
-                    "scene-overrides write failed",
-                    filepath=str(overrides.filepath),
-                    error=str(exc),
-                )
-                overlay_error = exc
-
-        await self.summarizer.save_config()
-        await self.summarizer.emit_status()
-
-        if overlay_error is not None:
-            await self.signal_operation_failed(
-                f"Failed to write agent-settings file: "
-                f"{overlay_error.strerror or overlay_error}"
-            )

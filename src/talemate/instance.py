@@ -302,14 +302,32 @@ async def apply_agent_config(agent: "Agent", **config) -> None:
 
 async def configure_agents():
     config: Config = get_config()
-    for name, agent_config in config.agents.items():
-        agent = AGENTS.get(name)
-        if not agent:
-            log.warn("agent not found", name=name)
-            continue
+    reported = set()
+    try:
+        for name, agent_config in config.agents.items():
+            agent = AGENTS.get(name)
+            if not agent:
+                log.warn("agent not found", name=name)
+                continue
 
-        await apply_agent_config(agent, **agent_config.model_dump())
-        await agent.emit_status()
+            await apply_agent_config(agent, **agent_config.model_dump())
+            await agent.emit_status()
+            reported.add(name)
+    except Exception:
+        # the failed agent and the ones after it still run on their earlier
+        # values; a frontend that sent a change keeps showing it until a
+        # status says otherwise
+        for name, agent in AGENTS.items():
+            if not agent or name in reported:
+                continue
+            try:
+                await agent.emit_status()
+            except Exception as exc:
+                # the apply error is the one the save reports
+                log.warning(
+                    "agent status after a failed apply", agent=name, error=str(exc)
+                )
+        raise
 
     await ensure_agent_llm_client()
 

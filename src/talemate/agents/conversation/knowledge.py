@@ -145,7 +145,6 @@ class CharacterKnowledgeMixin:
         *,
         keep_director=None,
         preview=False,
-        overrides=None,
         diagnostics=None,
     ):
         # Summarizer imports its websocket handler, which imports knowledge.review.
@@ -170,7 +169,7 @@ class CharacterKnowledgeMixin:
         if preview:
             params._diagnostics = diagnostics
             return get_agent("summarizer").context_history_preview(
-                self.scene, budget=budget, overrides=overrides, params=params
+                self.scene, budget=budget, params=params
             )
         return self.scene.context_history(budget=budget, **params.model_dump())
 

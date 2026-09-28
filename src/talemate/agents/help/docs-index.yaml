@@ -258,9 +258,9 @@
 - path: user-guide/agents/summarizer/settings.md
   title: Settings
   summary: 'Summarization threshold, method, instructions; audience-view analysis; Character Perspectives: Analyze player
-    perspective, Automatically repair analysis, Rewrite hidden acts: observable traces, same request, token/time cost; default
+    perspective, Automatically repair analysis, Rewrite hidden acts as observable traces, default off, token cost; default
     sentence rewrite regions; layered history; scene analysis caching; character evidence; history budgets; best-fit selection;
-    scene context format: Screenplay format, Chat format, Narrative format, AI Aware format; change dialogue format.'
+    scene context format: Screenplay format, Chat format (legacy), Narrative format, AI Aware format; change dialogue format.'
 - path: user-guide/agents/visualizer/backends/a1111.md
   title: AUTOMATIC1111
   summary: Legacy AUTOMATIC1111 text-to-image backend setup with API URL, steps, sampler, schedule, CFG, keyword/descriptive
@@ -1041,9 +1041,9 @@
     using revision state or trimmed legacy history.
 - path: user-guide/prompts/context-history-review.md
   title: Scene Context History Review
-  summary: Preview reader or character context without generation. Shows selected history, existing analysis evidence, presence/audience/budget
-    exclusions with capped samples, and pending perception status. Budget edits remain local until Apply; the scene context
-    Format selector (Screenplay, Chat, Narrative, AI Aware) saves at once.
+  summary: 'Preview reader or character context without generation: selected history, existing analysis evidence, presence/audience/budget
+    exclusions, capped samples, pending perception status. Scene context Format selector (Screenplay, Chat, Narrative, AI Aware)
+    and budget edits no longer remain local until Apply: save at once, global or scene.'
 - path: user-guide/prompts/deduplication.md
   title: Prompt Deduplication
   summary: Prompt deduplication removes near-duplicate long lines but is off by default because it can damage structured content

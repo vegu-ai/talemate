@@ -201,7 +201,7 @@ In Character perspectives mode, a new player line, an earlier passage edit, a di
 
 ## Scene History
 
-Controls how scene history is split between actual dialogue and summarized content when generating context for AI prompts. The same controls apply to the reader-facing Scene view and to each character's stored views in Character perspectives mode. These settings can also be adjusted and previewed through the [Scene Context tab](/talemate/user-guide/prompts/context-history-review/) in the Prompt Manager.
+Controls how scene history is split between actual dialogue and summarized content when generating context for AI prompts. The same controls apply to the reader-facing Scene view and to each character's stored views in Character perspectives mode. You can also change these settings, and override them for one scene, in the [Scene Context tab](/talemate/user-guide/prompts/context-history-review/) of the Prompt Manager, next to a preview of the result.
 
 ##### Format
 

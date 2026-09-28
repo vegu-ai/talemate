@@ -50,7 +50,7 @@ Missing audiences on load use the first narrative message's explicit presence, o
 
 The Summarizer `context_review` WebSocket action accepts an optional active `character` and echoes `request_id`. The Conversation template and preview use `history_context` to resolve the same history audience and director-message settings. Standard previews reuse the history collectors; Perspectives previews obtain entry metadata from `project_character_history(entries=...)`, so labels do not introduce another selector.
 
-`knowledge.review` adds the analysis renderer and author-facing exclusion diagnostics. The selectors report exclusions through `ContextDiagnostics`, including base archive and layer identities; counts cover all decisions while samples are capped at 20 per reason and 500 characters. Character previews derive their default budget from the Conversation client’s context window. Exclusions are separate from rendered character sections. Previewing never generates missing analysis or runs dynamic RAG retrieval, and history-budget overrides do not mutate agent settings. The existing Apply action remains scene-wide.
+`knowledge.review` adds the analysis renderer and author-facing exclusion diagnostics. The selectors report exclusions through `ContextDiagnostics`, including base archive and layer identities; counts cover all decisions while samples are capped at 20 per reason and 500 characters. Character previews derive their default budget from the Conversation client’s context window. Exclusions are separate from rendered character sections. Previewing never generates missing analysis or runs dynamic RAG retrieval.
 
 ## Publish and select
 
@@ -433,9 +433,9 @@ preserve stable raw message IDs for memory-overlap filtering and perform no mode
 request.
 
 Production prompt history and its character context preview consume the same
-structured, chronological selection result. The preview reports effective settings,
-allocation, actual token cost and floor overflow; preview-local overrides never
-mutate saved agent settings. The projection may return less than the requested budget.
+structured, chronological selection result. The preview reports the stored settings,
+allocation, actual token cost and floor overflow. The projection may return less than
+the requested budget.
 Reader/author calls without a perspective and legacy scenes retain their existing
 history assembly.
 

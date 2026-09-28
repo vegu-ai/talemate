@@ -977,3 +977,60 @@ class TestEnsureAgentLLMClient:
         for typ, agent in instance.AGENTS.items():
             if agent.requires_llm_client:
                 assert agent.client is active, f"{typ} not wired to active client"
+
+
+# ---------------------------------------------------------------------------
+# configure_agents
+# ---------------------------------------------------------------------------
+
+
+class TestConfigureAgentsReportsAFailedApply:
+    class _Entry:
+        def model_dump(self):
+            return {"actions": {}}
+
+    def _agent(self, name, reported, fails=False):
+        class _Stub:
+            agent_type = name
+            config_apply_failed = False
+
+            async def apply_config(self, **kwargs):
+                if fails:
+                    raise RuntimeError(f"{name} failed")
+
+            async def emit_status(self):
+                reported.append(name)
+
+        return _Stub()
+
+    @pytest.mark.asyncio
+    async def test_every_agent_reports_after_a_failed_apply(self, monkeypatch):
+        reported = []
+        for name, fails in (("a", False), ("b", True), ("c", False)):
+            instance.AGENTS[name] = self._agent(name, reported, fails)
+        config = type("Cfg", (), {"agents": {n: self._Entry() for n in "abc"}})()
+        monkeypatch.setattr(instance, "get_config", lambda: config)
+        monkeypatch.setattr(instance, "mark_apply_pending", lambda *keys: None)
+
+        with pytest.raises(RuntimeError, match="b failed"):
+            await instance.configure_agents()
+
+        assert reported == ["a", "b", "c"]
+
+    @pytest.mark.asyncio
+    async def test_a_status_that_fails_does_not_replace_the_apply_error(
+        self, monkeypatch
+    ):
+        reported = []
+        instance.AGENTS["a"] = self._agent("a", reported, fails=True)
+
+        async def broken_status():
+            raise ValueError("no status")
+
+        instance.AGENTS["a"].emit_status = broken_status
+        config = type("Cfg", (), {"agents": {"a": self._Entry()}})()
+        monkeypatch.setattr(instance, "get_config", lambda: config)
+        monkeypatch.setattr(instance, "mark_apply_pending", lambda *keys: None)
+
+        with pytest.raises(RuntimeError, match="a failed"):
+            await instance.configure_agents()

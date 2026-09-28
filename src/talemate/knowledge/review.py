@@ -110,7 +110,7 @@ def _analysis_review_section(scene, character, preview, summarizer):
     return result
 
 
-async def character_context_review(scene, character, overrides=None):
+async def character_context_review(scene, character):
     conversation = get_agent("conversation")
     summarizer = get_agent("summarizer")
     diagnostics = ContextDiagnostics()
@@ -118,7 +118,6 @@ async def character_context_review(scene, character, overrides=None):
         character,
         conversation.client.max_token_length,
         preview=True,
-        overrides=overrides,
         diagnostics=diagnostics,
     )
     history_tokens = preview["summary"]["total_tokens"]

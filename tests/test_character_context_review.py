@@ -3,10 +3,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from talemate.agents.summarize.context_history import (
-    ContextHistoryParams,
-    ContextHistoryPreviewOverrides,
-)
+from talemate.agents.summarize.context_history import ContextHistoryParams
 from talemate.agents.context import ActiveAgent
 from talemate.agents.summarize.websocket_handler import SummarizeWebsocketHandler
 from talemate.character import Character
@@ -69,6 +66,13 @@ def history_lines(preview):
         if section["type"] not in ("knowledge", "analysis")
         for text in section["entries"]
     ]
+
+
+def set_scene_history(monkeypatch, **values):
+    """Set the summarizer's manage_scene_history values for one test."""
+    config = get_agent("summarizer").actions["manage_scene_history"].config
+    for key, value in values.items():
+        monkeypatch.setattr(config[key], "value", value)
 
 
 def handler(scene):
@@ -188,15 +192,12 @@ def test_pending_selected_source_cannot_be_reported_ready(review_scene):
 
 
 @pytest.mark.asyncio
-async def test_overrides_do_not_mutate_scene_settings(review_scene):
+async def test_review_reports_settings_without_mutating_them(review_scene, monkeypatch):
     summ = get_agent("summarizer")
+    set_scene_history(monkeypatch, max_budget=512, best_fit=False, dialogue_ratio=75)
     before = summ.actions["manage_scene_history"].model_dump()
     preview = await character_context_review(
-        review_scene,
-        review_scene.character_data["Alice"],
-        ContextHistoryPreviewOverrides(
-            max_budget=512, best_fit=False, dialogue_ratio=75
-        ),
+        review_scene, review_scene.character_data["Alice"]
     )
     assert preview["budget"]["total"] == 512
     assert preview["summary"]["dialogue_ratio"] == 75
@@ -398,7 +399,7 @@ async def test_opening_witness_keeps_budgeted_intro_when_first_archive_is_privat
 @pytest.mark.asyncio
 @pytest.mark.parametrize("best_fit", [False, True])
 async def test_oversized_intro_is_reported_instead_of_overrunning_budget(
-    scene, best_fit
+    scene, best_fit, monkeypatch
 ):
     from talemate.util import count_tokens
 
@@ -408,11 +409,8 @@ async def test_oversized_intro_is_reported_instead_of_overrunning_budget(
     config = get_agent("summarizer").actions["manage_scene_history"].config
     config["best_fit"].value = best_fit
     config["best_fit_min_dialogue"].value = 0
-    preview = await character_context_review(
-        scene,
-        scene.character_data["Alice"],
-        ContextHistoryPreviewOverrides(max_budget=50),
-    )
+    set_scene_history(monkeypatch, max_budget=50)
+    preview = await character_context_review(scene, scene.character_data["Alice"])
     assert count_tokens(history_lines(preview)) <= 50
     assert any(
         item["kind"] == "intro" and item["reason"] == "budget"
@@ -423,7 +421,7 @@ async def test_oversized_intro_is_reported_instead_of_overrunning_budget(
 @pytest.mark.asyncio
 @pytest.mark.parametrize("best_fit", [False, True])
 async def test_archive_and_layer_exclusions_come_from_history_selectors(
-    review_scene, best_fit
+    review_scene, best_fit, monkeypatch
 ):
     scene = review_scene
     archive = {
@@ -460,11 +458,8 @@ async def test_archive_and_layer_exclusions_come_from_history_selectors(
             [{"audience": ["Bob"], "status": "ready", "text": layer["text"]}],
             layer=1,
         )
-    preview = await character_context_review(
-        scene,
-        scene.character_data["Alice"],
-        ContextHistoryPreviewOverrides(best_fit=best_fit),
-    )
+    set_scene_history(monkeypatch, best_fit=best_fit)
+    preview = await character_context_review(scene, scene.character_data["Alice"])
     missing = {(item["kind"], item["id"]): item for item in preview["exclusions"]}
     reason = (
         "not_in_audience" if scene.knowledge_eligibility == "perception" else "absent"
@@ -497,9 +492,8 @@ async def test_character_preview_uses_client_window_and_bounds_exclusion_samples
                 [{"audience": ["Alice"], "status": "ready", "text": str(message)}],
             )
     reason = "omitted" if scene.knowledge_eligibility == "perception" else "absent"
-    preview = await character_context_review(
-        scene, scene.character_data["Bob"], ContextHistoryPreviewOverrides(max_budget=0)
-    )
+    set_scene_history(monkeypatch, max_budget=0)
+    preview = await character_context_review(scene, scene.character_data["Bob"])
     assert preview["budget"]["total"] == 2048
     assert preview["exclusion_counts"][reason] >= 45
     assert (

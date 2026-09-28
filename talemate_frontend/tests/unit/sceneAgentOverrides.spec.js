@@ -192,7 +192,7 @@ describe('the coordinator scene binding', () => {
         });
         coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
         expect(sent).toHaveLength(0);
-        expect(state.error).toBe('Save the scene to change its knowledge settings.');
+        expect(state.error).toBe('Save the scene to change its scene overrides.');
     });
 });
 
@@ -231,5 +231,68 @@ describe('scene identity helpers', () => {
         expect(sceneCanPersist({ data: { filename: 's.json', project_name: 'p' } })).toBe(true);
         expect(sceneCanPersist({ data: { filename: null, project_name: 'p' } })).toBe(false);
         expect(sceneCanPersist({ data: { filename: 's.json', project_name: null } })).toBe(false);
+    });
+});
+
+describe('the answer to one change', () => {
+    const reply = () => ({ onComplete: vi.fn(), onError: vi.fn() });
+
+    it('completes once every agent of the change is acknowledged', () => {
+        const { sent, coordinator, done } = harness();
+        const answer = reply();
+        coordinator.applySceneAgentValues([
+            setEntry('conversation', 'character_knowledge', { memory_pass: true }),
+            setEntry('memory', 'retrieval', {}, false),
+        ], null, answer);
+        done({ request_id: sent[0].request_id });
+        expect(answer.onComplete).not.toHaveBeenCalled();
+        done({ request_id: sent[1].request_id });
+        expect(answer.onComplete).toHaveBeenCalledTimes(1);
+        expect(answer.onError).not.toHaveBeenCalled();
+    });
+
+    it('reports a refused patch with the backend message', () => {
+        const { sent, coordinator, done } = harness();
+        const answer = reply();
+        coordinator.clearSceneAgentValues([{ agent: 'summarizer', action: 'manage_scene_history', config: 'format' }], answer);
+        done({ request_id: sent[0].request_id, error: { message: 'Failed to write agent-settings file' } });
+        expect(answer.onError).toHaveBeenCalledWith('Failed to write agent-settings file');
+        expect(answer.onComplete).not.toHaveBeenCalled();
+    });
+
+    it('reports work that a scene change dropped', () => {
+        const { coordinator } = harness();
+        const inFlight = reply();
+        const queued = reply();
+        coordinator.applySceneAgentValues([setEntry('summarizer', 'manage_scene_history', { format: 'chat' })], null, inFlight);
+        coordinator.applySceneAgentValues([setEntry('summarizer', 'manage_scene_history', { max_budget: 4096 })], null, queued);
+        coordinator.handleMessage({ type: 'system', id: 'scene.loading' });
+        // the sent patch may be stored; the queued one never left
+        expect(inFlight.onError).toHaveBeenCalledWith('The scene changed before the answer arrived; the change may have been saved.', false, true);
+        expect(queued.onError).toHaveBeenCalledWith('The scene changed before the change was sent.');
+    });
+
+    it('says that a discarded change was discarded', async () => {
+        const scene = { data: { id: 'scene-1', filename: null, project_name: null, agent_settings_file: null } };
+        const state = { busy: false, error: null };
+        const coordinator = new SceneAgentOverridesCoordinator({
+            getWebsocket: () => ({ send: vi.fn() }),
+            scene: () => scene,
+            state,
+            requestSave: () => Promise.resolve({ status: 'cancelled' }),
+        });
+        const answer = reply();
+        coordinator.applySceneAgentValues([setEntry('summarizer', 'manage_scene_history', { max_budget: 4096 })], null, answer);
+        await Promise.resolve();
+        await Promise.resolve();
+        coordinator.discardPendingSave();
+        expect(answer.onError).toHaveBeenCalledWith('The change was discarded.');
+    });
+
+    it('refuses at once when the scene cannot take the change', () => {
+        const { coordinator } = harness({ scene: { data: {} } });
+        const answer = reply();
+        coordinator.applySceneAgentValues([setEntry('summarizer', 'manage_scene_history', { format: 'chat' })], null, answer);
+        expect(answer.onError).toHaveBeenCalledTimes(1);
     });
 });

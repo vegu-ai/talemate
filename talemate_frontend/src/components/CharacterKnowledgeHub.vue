@@ -102,7 +102,7 @@
                 <KnowledgeEffortSlider :mode="effortMode" :agents="getAgents()" :pin="true" :disabled="settingsLocked" @apply="applyEffort" />
             </v-card-text>
             <v-card-text v-if="pendingSave" class="pt-1 pb-0">
-                <KnowledgePendingSave />
+                <SceneOverridePendingSave />
             </v-card-text>
             <v-card-text v-if="saveError" class="pt-1 pb-0 text-body-small text-error">{{ saveError }}</v-card-text>
             <v-card-text v-if="!groups.length" class="pt-1 text-body-small text-muted">Waiting for the agents to report.</v-card-text>
@@ -186,7 +186,7 @@
 import { reactive } from 'vue';
 import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
 import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
-import KnowledgePendingSave from './KnowledgePendingSave.vue';
+import SceneOverridePendingSave from './SceneOverridePendingSave.vue';
 import SceneOverrideResetControl from './SceneOverrideResetControl.vue';
 import { effortMode, effortPinPatch, queueEffortAcrossSwitch } from '@/utils/knowledgeEffort';
 import { resolveKnowledgeToggles, switchTally, thoroughnessSummary } from '@/utils/knowledgeHub';
@@ -194,10 +194,10 @@ import {
     effortOverrideState,
     groupClearEntries,
     groupHasOwnedOverride,
-    hubClearEntries,
-    hubHasOverrides,
+    clearEntriesFor,
+    hasOverridesFor,
     settingClearEntry,
-} from '@/utils/knowledgeOverrideOwnership';
+} from '@/utils/sceneOverrideOwnership';
 import { EFFORT_LABELS } from '@/constants/knowledgeEffort';
 import { KNOWLEDGE_RULES } from '@/constants/knowledgeRules';
 import {
@@ -216,7 +216,7 @@ const individualPane = reactive({ open: false });
 
 export default {
     name: 'CharacterKnowledgeHub',
-    components: { CharacterKnowledgeModeComparison, KnowledgeEffortSlider, KnowledgePendingSave, SceneOverrideResetControl },
+    components: { CharacterKnowledgeModeComparison, KnowledgeEffortSlider, SceneOverridePendingSave, SceneOverrideResetControl },
     props: {
         // absent where the hub is opened for the scene rather than for one
         // character: the popup then carries the scene-wide settings alone
@@ -298,7 +298,7 @@ export default {
                 : 'Mix of scene overrides and global settings.';
         },
         hubOverridden() {
-            return hubHasOverrides(this.getAgents());
+            return hasOverridesFor(this.getAgents());
         },
         summary() {
             return thoroughnessSummary(this.groups, this.perspectives);
@@ -396,7 +396,7 @@ export default {
         },
         clearHub() {
             if (this.settingsLocked) return;
-            this.clearSceneAgentValues(hubClearEntries());
+            this.clearSceneAgentValues(clearEntriesFor());
         },
         toggleGroup(group) {
             if (this.settingsLocked) return false;

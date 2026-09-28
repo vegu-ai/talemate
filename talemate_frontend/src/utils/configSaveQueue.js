@@ -13,6 +13,16 @@ export function createConfigSaveQueue({ send, getConfig, notifyError, resetPendi
     // saves stack on while any of them is still in flight (see saveAppConfig)
     let pendingConfigSave = null;
 
+    // newest first: a sender that restores its previous value on a refusal
+    // must find the value it wrote, not one a later save wrote over it
+    function failNewestFirst(saves, error) {
+        for (const save of [...saves].reverse()) {
+            if (save.onError) {
+                save.onError(error);
+            }
+        }
+    }
+
     /**
      * Sends one `config/save` tagged with a request id, which the backend
      * echoes on `save_complete` / `operation_done` — the router is shared, so
@@ -135,11 +145,7 @@ export function createConfigSaveQueue({ send, getConfig, notifyError, resetPendi
         pendingConfigSave = null;
         const labels = [...new Set(affected.map(save => save.label))].join(', ');
         notifyError(`Settings save failed (${labels}): ${error}`);
-        for (const save of affected) {
-            if (save.onError) {
-                save.onError(error);
-            }
-        }
+        failNewestFirst(affected, error);
         // the drawer keeps its rows optimistically ahead of the backend while a
         // save is confirmed — let the next status broadcast restore the truth
         resetPendingSaves();
@@ -168,11 +174,7 @@ export function createConfigSaveQueue({ send, getConfig, notifyError, resetPendi
          * base — for when the answers can no longer arrive at all.
          */
         dropAll(message) {
-            for (const save of configSaves) {
-                if (save.onError) {
-                    save.onError(message);
-                }
-            }
+            failNewestFirst(configSaves, message);
             configSaves.length = 0;
             pendingConfigSave = null;
         },

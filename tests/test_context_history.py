@@ -67,6 +67,13 @@ def _make_message(index: int, total_chars: int) -> CharacterMessage:
     return CharacterMessage(message=text, source="ai")
 
 
+def _set_scene_history(monkeypatch, summarizer, **values):
+    """Set manage_scene_history config values for the duration of one test."""
+    config = summarizer.actions["manage_scene_history"].config
+    for key, value in values.items():
+        monkeypatch.setattr(config[key], "value", value)
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -2388,17 +2395,13 @@ class TestBestFit:
         assert "L0-" not in text
         assert "L1-" not in text
 
-    def test_best_fit_preview(self, summarizer, test_data):
+    def test_best_fit_preview(self, summarizer, test_data, monkeypatch):
         """Preview in best-fit mode returns correct structure."""
         self._enable_best_fit(summarizer)
         scene = self._make_test_scene(test_data)
 
-        from talemate.agents.summarize.context_history import (
-            ContextHistoryPreviewOverrides,
-        )
-
-        overrides = ContextHistoryPreviewOverrides(best_fit=True, max_budget=5000)
-        preview = summarizer.context_history_preview(scene, overrides=overrides)
+        _set_scene_history(monkeypatch, summarizer, best_fit=True, max_budget=5000)
+        preview = summarizer.context_history_preview(scene)
 
         assert preview["summary"]["best_fit"] is True
         assert "total" in preview["budget"]
@@ -2581,19 +2584,21 @@ class TestBestFit:
             f"with duplicate texts, got {dialogue_count}"
         )
 
-    def test_best_fit_preview_includes_min_dialogue(self, summarizer, test_data):
+    def test_best_fit_preview_includes_min_dialogue(
+        self, summarizer, test_data, monkeypatch
+    ):
         """Preview response includes best_fit_min_dialogue in summary."""
         self._enable_best_fit(summarizer)
         scene = self._make_test_scene(test_data)
 
-        from talemate.agents.summarize.context_history import (
-            ContextHistoryPreviewOverrides,
+        _set_scene_history(
+            monkeypatch,
+            summarizer,
+            best_fit=True,
+            max_budget=5000,
+            best_fit_min_dialogue=7,
         )
-
-        overrides = ContextHistoryPreviewOverrides(
-            best_fit=True, max_budget=5000, best_fit_min_dialogue=7
-        )
-        preview = summarizer.context_history_preview(scene, overrides=overrides)
+        preview = summarizer.context_history_preview(scene)
 
         assert preview["summary"]["best_fit_min_dialogue"] == 7
 
@@ -2879,18 +2884,16 @@ class TestBestFit:
         )
         assert has_summary, "Summary content should fill gaps when dialogue doesn't fit"
 
-    def test_best_fit_preview_prefers_dialogue(self, summarizer, test_data):
+    def test_best_fit_preview_prefers_dialogue(
+        self, summarizer, test_data, monkeypatch
+    ):
         """Preview in best-fit mode also prefers full dialogue when budget allows."""
         self._enable_best_fit(summarizer)
         scene = self._make_test_scene(test_data)
 
-        from talemate.agents.summarize.context_history import (
-            ContextHistoryPreviewOverrides,
-        )
-
         # Budget large enough for all 30 messages (3000 chars)
-        overrides = ContextHistoryPreviewOverrides(best_fit=True, max_budget=5000)
-        preview = summarizer.context_history_preview(scene, overrides=overrides)
+        _set_scene_history(monkeypatch, summarizer, best_fit=True, max_budget=5000)
+        preview = summarizer.context_history_preview(scene)
 
         types = [s["type"] for s in preview["sections"]]
         assert "dialogue" in types
@@ -2945,13 +2948,11 @@ class TestBestFit:
         # Summary entries may appear (if budget allows)
         # The important thing is the permanent note was filtered out
 
-    def test_best_fit_preview_includes_intro_when_sparse(self, summarizer, test_data):
+    def test_best_fit_preview_includes_intro_when_sparse(
+        self, summarizer, test_data, monkeypatch
+    ):
         """Preview includes scene intro in dialogue section when context is sparse."""
         self._enable_best_fit(summarizer)
-
-        from talemate.agents.summarize.context_history import (
-            ContextHistoryPreviewOverrides,
-        )
 
         # Scene with no history/archives — context is empty, so intro should appear
         scene = MockScene()
@@ -2961,8 +2962,8 @@ class TestBestFit:
         scene.ts = test_data["basic_scene"]["ts"]
         scene.intro = "Welcome to the test adventure."
 
-        overrides = ContextHistoryPreviewOverrides(best_fit=True, max_budget=5000)
-        preview = summarizer.context_history_preview(scene, overrides=overrides)
+        _set_scene_history(monkeypatch, summarizer, best_fit=True, max_budget=5000)
+        preview = summarizer.context_history_preview(scene)
 
         dialogue_section = next(
             s for s in preview["sections"] if s["type"] == "dialogue"
@@ -2972,12 +2973,10 @@ class TestBestFit:
             "Intro should appear in dialogue section when context is sparse"
         )
 
-    def test_ratio_preview_includes_intro_when_sparse(self, summarizer, test_data):
+    def test_ratio_preview_includes_intro_when_sparse(
+        self, summarizer, test_data, monkeypatch
+    ):
         """Ratio-mode preview includes scene intro in dialogue when context is sparse."""
-        from talemate.agents.summarize.context_history import (
-            ContextHistoryPreviewOverrides,
-        )
-
         scene = MockScene()
         scene.history = []
         scene.archived_history = []
@@ -2985,8 +2984,8 @@ class TestBestFit:
         scene.ts = test_data["basic_scene"]["ts"]
         scene.intro = "A stormy night begins."
 
-        overrides = ContextHistoryPreviewOverrides(best_fit=False, max_budget=5000)
-        preview = summarizer.context_history_preview(scene, overrides=overrides)
+        _set_scene_history(monkeypatch, summarizer, best_fit=False, max_budget=5000)
+        preview = summarizer.context_history_preview(scene)
 
         dialogue_section = next(
             s for s in preview["sections"] if s["type"] == "dialogue"
@@ -3039,17 +3038,13 @@ class TestBestFit:
         )
 
     def test_best_fit_preview_all_dialogue_with_few_summaries(
-        self, summarizer, test_data
+        self, summarizer, test_data, monkeypatch
     ):
         """Repro (preview path): 25 messages (~3000 tokens), 2 archived, budget=12000."""
         self._enable_best_fit(summarizer)
         summarizer.actions["manage_scene_history"].config[
             "best_fit_max_dialogue"
         ].value = 250
-
-        from talemate.agents.summarize.context_history import (
-            ContextHistoryPreviewOverrides,
-        )
 
         messages = [_make_message(i, 120) for i in range(25)]
         archived = [
@@ -3063,10 +3058,14 @@ class TestBestFit:
         scene.layered_history = []
         scene.ts = test_data["basic_scene"]["ts"]
 
-        overrides = ContextHistoryPreviewOverrides(
-            best_fit=True, max_budget=12000, best_fit_max_dialogue=250
+        _set_scene_history(
+            monkeypatch,
+            summarizer,
+            best_fit=True,
+            max_budget=12000,
+            best_fit_max_dialogue=250,
         )
-        preview = summarizer.context_history_preview(scene, overrides=overrides)
+        preview = summarizer.context_history_preview(scene)
 
         types = [s["type"] for s in preview["sections"]]
         assert "dialogue" in types
@@ -3289,11 +3288,7 @@ class TestBuildPreviewParity:
         best_fit_min_dialogue=5,
         best_fit_max_dialogue=250,
     ):
-        """Configure summarizer and return matching preview overrides."""
-        from talemate.agents.summarize.context_history import (
-            ContextHistoryPreviewOverrides,
-        )
-
+        """Configure the summarizer's scene history settings."""
         cfg = summarizer.actions["manage_scene_history"].config
         cfg["max_budget"].value = 0
         cfg["best_fit"].value = best_fit
@@ -3303,16 +3298,6 @@ class TestBuildPreviewParity:
         cfg["best_fit_min_dialogue"].value = best_fit_min_dialogue
         cfg["best_fit_max_dialogue"].value = best_fit_max_dialogue
         summarizer.actions["layered_history"].enabled = True
-
-        return ContextHistoryPreviewOverrides(
-            max_budget=0,
-            best_fit=best_fit,
-            dialogue_ratio=dialogue_ratio,
-            summary_detail_ratio=summary_detail_ratio,
-            enforce_boundary=enforce_boundary,
-            best_fit_min_dialogue=best_fit_min_dialogue,
-            best_fit_max_dialogue=best_fit_max_dialogue,
-        )
 
     @classmethod
     def _make_test_scene(
@@ -3379,12 +3364,10 @@ class TestBuildPreviewParity:
         scene.intro = intro or ""
         return scene
 
-    def _assert_parity(self, summarizer, scene, budget, overrides):
+    def _assert_parity(self, summarizer, scene, budget):
         """Assert build and preview produce identical flattened entries."""
         build_result = scene.context_history(budget=budget)
-        preview = summarizer.context_history_preview(
-            scene, budget=budget, overrides=overrides
-        )
+        preview = summarizer.context_history_preview(scene, budget=budget)
         preview_entries = self._flatten_preview(preview)
 
         assert build_result == preview_entries, (
@@ -3399,48 +3382,48 @@ class TestBuildPreviewParity:
 
     def test_best_fit_all_dialogue_fits(self, summarizer, test_data):
         """Parity when all dialogue fits within budget (no summaries)."""
-        overrides = self._setup_summarizer(summarizer, best_fit=True)
+        self._setup_summarizer(summarizer, best_fit=True)
         scene = self._make_test_scene(test_data)
-        self._assert_parity(summarizer, scene, budget=100000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=100000)
 
     def test_best_fit_with_layers_tight_budget(self, summarizer, test_data):
         """Parity in best-fit mode with layers and a tight budget."""
-        overrides = self._setup_summarizer(summarizer, best_fit=True)
+        self._setup_summarizer(summarizer, best_fit=True)
         scene = self._make_test_scene(test_data)
-        self._assert_parity(summarizer, scene, budget=2000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=2000)
 
     def test_best_fit_no_layers(self, summarizer, test_data):
         """Parity in best-fit mode with only archived + dialogue."""
-        overrides = self._setup_summarizer(summarizer, best_fit=True)
+        self._setup_summarizer(summarizer, best_fit=True)
         scene = self._make_test_scene(test_data, with_layers=False)
-        self._assert_parity(summarizer, scene, budget=2000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=2000)
 
     def test_best_fit_medium_budget_expansion(self, summarizer, test_data):
         """Parity when budget allows partial expansion of archived to dialogue."""
-        overrides = self._setup_summarizer(summarizer, best_fit=True)
+        self._setup_summarizer(summarizer, best_fit=True)
         scene = self._make_test_scene(test_data)
-        self._assert_parity(summarizer, scene, budget=3500, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=3500)
 
     def test_best_fit_dialogue_exceeds_budget(self, summarizer, test_data):
         """Parity when mandatory dialogue alone exceeds the budget."""
-        overrides = self._setup_summarizer(summarizer, best_fit=True)
+        self._setup_summarizer(summarizer, best_fit=True)
         scene = self._make_test_scene(test_data)
-        self._assert_parity(summarizer, scene, budget=300, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=300)
 
     def test_best_fit_empty_scene_with_intro(self, summarizer, test_data):
         """Parity with empty history and an intro (sparse context path)."""
-        overrides = self._setup_summarizer(summarizer, best_fit=True)
+        self._setup_summarizer(summarizer, best_fit=True)
         scene = MockScene()
         scene.history = []
         scene.archived_history = []
         scene.layered_history = []
         scene.ts = test_data["basic_scene"]["ts"]
         scene.intro = "Welcome to the adventure."
-        self._assert_parity(summarizer, scene, budget=5000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=5000)
 
     def test_best_fit_with_orphan_entries(self, summarizer, test_data):
         """Parity when layers have orphan entries not covered by the layer above."""
-        overrides = self._setup_summarizer(summarizer, best_fit=True)
+        self._setup_summarizer(summarizer, best_fit=True)
 
         messages = [_make_message(i, self.MSG_CHARS) for i in range(40)]
         archived = [
@@ -3481,13 +3464,13 @@ class TestBuildPreviewParity:
         scene.layered_history = [layer_0, layer_1]
         scene.ts = test_data["basic_scene"]["ts"]
 
-        self._assert_parity(summarizer, scene, budget=5000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=5000)
 
     # --- Ratio mode ---
 
     def test_ratio_no_layers_no_boundary(self, summarizer, test_data):
         """Parity in ratio mode without layers or boundary enforcement."""
-        overrides = self._setup_summarizer(
+        self._setup_summarizer(
             summarizer,
             best_fit=False,
             dialogue_ratio=50,
@@ -3495,22 +3478,22 @@ class TestBuildPreviewParity:
         )
         summarizer.actions["layered_history"].enabled = False
         scene = self._make_test_scene(test_data, with_layers=False)
-        self._assert_parity(summarizer, scene, budget=2000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=2000)
 
     def test_ratio_with_layers(self, summarizer, test_data):
         """Parity in ratio mode with layered history."""
-        overrides = self._setup_summarizer(
+        self._setup_summarizer(
             summarizer,
             best_fit=False,
             dialogue_ratio=40,
             summary_detail_ratio=40,
         )
         scene = self._make_test_scene(test_data)
-        self._assert_parity(summarizer, scene, budget=3000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=3000)
 
     def test_ratio_with_boundary(self, summarizer, test_data):
         """Parity in ratio mode with boundary enforcement."""
-        overrides = self._setup_summarizer(
+        self._setup_summarizer(
             summarizer,
             best_fit=False,
             dialogue_ratio=50,
@@ -3518,33 +3501,33 @@ class TestBuildPreviewParity:
             enforce_boundary=True,
         )
         scene = self._make_test_scene(test_data, with_layers=False)
-        self._assert_parity(summarizer, scene, budget=3000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=3000)
 
     def test_ratio_high_dialogue_ratio(self, summarizer, test_data):
         """Parity in ratio mode with high dialogue ratio (80%)."""
-        overrides = self._setup_summarizer(
+        self._setup_summarizer(
             summarizer,
             best_fit=False,
             dialogue_ratio=80,
             summary_detail_ratio=50,
         )
         scene = self._make_test_scene(test_data, with_layers=False)
-        self._assert_parity(summarizer, scene, budget=5000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=5000)
 
     def test_ratio_low_dialogue_ratio_with_layers(self, summarizer, test_data):
         """Parity in ratio mode with low dialogue ratio and layers."""
-        overrides = self._setup_summarizer(
+        self._setup_summarizer(
             summarizer,
             best_fit=False,
             dialogue_ratio=20,
             summary_detail_ratio=60,
         )
         scene = self._make_test_scene(test_data)
-        self._assert_parity(summarizer, scene, budget=4000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=4000)
 
     def test_ratio_empty_scene_with_intro(self, summarizer, test_data):
         """Parity in ratio mode with empty history and intro."""
-        overrides = self._setup_summarizer(
+        self._setup_summarizer(
             summarizer,
             best_fit=False,
             dialogue_ratio=50,
@@ -3556,7 +3539,7 @@ class TestBuildPreviewParity:
         scene.layered_history = []
         scene.ts = test_data["basic_scene"]["ts"]
         scene.intro = "A stormy night begins."
-        self._assert_parity(summarizer, scene, budget=5000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=5000)
 
 
 def test_an_emptied_summary_does_not_carry_the_intro():

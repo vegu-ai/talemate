@@ -63,45 +63,29 @@ describe('character context review', () => {
     vm.fetchPreview();
     expect(vm.sent[0].character).toBeNull();
     vm.receive(response(vm.sent[0]));
-    expect(vm.characterOptions).toEqual([{ title: 'Scene (default)', value: null }, { title: 'Alice', value: 'Alice' }, { title: 'Bob', value: 'Bob' }]);
+    expect(vm.perspectiveOptions).toEqual([{ title: 'Scene', value: '__scene__' }, { title: 'Alice', value: 'Alice' }, { title: 'Bob', value: 'Bob' }]);
+    expect(vm.perspective).toBe('__scene__');
+    vm.setPerspective('Bob');
+    expect(vm.selectedCharacter).toBe('Bob');
+    vm.setPerspective('__scene__');
+    expect(vm.selectedCharacter).toBeNull();
     expect(vm.loading).toBe(false);
     expect(vm.handlers.size).toBe(1);
   });
 
-  it('selection and refresh preserve the character and budget edits', () => {
+  it('selection and refresh keep the character and send no settings of their own', () => {
     const vm = review();
     vm.fetchPreview();
     vm.receive(response(vm.sent[0]));
-    vm.overrides.max_budget = 512;
     vm.selectedCharacter = 'Bob';
     Review.watch.selectedCharacter.call(vm);
     expect(vm.preview).toBeNull();
     expect(vm.sent[1].character).toBe('Bob');
-    expect(vm.sent[1].overrides.max_budget).toBe(512);
+    expect(vm.sent[1]).not.toHaveProperty('overrides');
     vm.receive(response(vm.sent[1]));
     vm.fetchPreview();
     expect(vm.sent[2].character).toBe('Bob');
-    expect(vm.sent[2].overrides.max_budget).toBe(512);
-  });
-
-  it('adopts effective history controls for a character perspective', () => {
-    const vm = review();
-    vm.selectedCharacter = 'Bob';
-    vm.fetchPreview();
-    vm.receive(response(vm.sent[0], { summary: {
-      total_tokens: 45, max_budget: 1024, dialogue_ratio: 35,
-      summary_detail_ratio: 70, enforce_boundary: true, best_fit: true,
-      best_fit_min_dialogue: 7, best_fit_max_dialogue: 15,
-    } }));
-    expect(vm.overrides).toEqual({
-      dialogue_ratio: 35,
-      summary_detail_ratio: 70,
-      max_budget: 1024,
-      enforce_boundary: true,
-      best_fit: true,
-      best_fit_min_dialogue: 7,
-      best_fit_max_dialogue: 15,
-    });
+    expect(vm.sent[2]).not.toHaveProperty('overrides');
   });
 
   it('a stale response cannot replace the selected character preview', () => {
@@ -146,15 +130,6 @@ describe('character context review', () => {
     Review.watch.connected.call(vm, true);
     expect(vm.sent).toHaveLength(2);
     expect(vm.loading).toBe(true);
-  });
-
-  it('Apply sends only scene-wide budget settings', () => {
-    const vm = review();
-    vm.selectedCharacter = 'Bob';
-    vm.overrides.max_budget = 2048;
-    vm.applyConfig();
-    expect(vm.sent[0]).toEqual({ type: 'summarizer', action: 'apply_context_history_config', config: { ...vm.overrides } });
-    expect(vm.sent[0]).not.toHaveProperty('character');
   });
 
   it('correlated errors clear loading and do not change selection', () => {

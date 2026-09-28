@@ -97,23 +97,6 @@ class _CollectedHistory(pydantic.BaseModel):
     has_layered: bool
 
 
-class ContextHistoryPreviewOverrides(pydantic.BaseModel):
-    """Optional overrides for context_history_preview.
-
-    Allows the frontend to test different configurations without
-    changing the saved action settings. None values fall back to
-    the current action config.
-    """
-
-    dialogue_ratio: int | None = None
-    summary_detail_ratio: int | None = None
-    max_budget: int | None = None
-    enforce_boundary: bool | None = None
-    best_fit: bool | None = None
-    best_fit_min_dialogue: int | None = None
-    best_fit_max_dialogue: int | None = None
-
-
 class _BestFitLevel(pydantic.BaseModel):
     """A single level in the best-fit hierarchy."""
 
@@ -450,11 +433,6 @@ class ContextHistoryMixin:
         )
 
     # --- Shared Primitives ---
-
-    @staticmethod
-    def _resolve_override(override_val, config_val):
-        """Return override_val if not None, otherwise config_val."""
-        return override_val if override_val is not None else config_val
 
     @staticmethod
     def _context_history_extract_params(kwargs: dict) -> ContextHistoryParams:
@@ -2231,7 +2209,6 @@ class ContextHistoryMixin:
         self,
         scene: Scene,
         budget: int | None = None,
-        overrides: ContextHistoryPreviewOverrides | None = None,
         params: ContextHistoryParams | None = None,
     ) -> dict:
         """Build a structured preview of context history for visualization.
@@ -2239,30 +2216,15 @@ class ContextHistoryMixin:
         Delegates collection to ``_context_history_collect_all``, then
         formats the result as structured data with per-section entries and
         token counts for the frontend.
-
-        Optional ``overrides`` allow the frontend to test different
-        configurations without changing the saved action settings.
         """
         params = (params or ContextHistoryParams()).bind(scene)
-        ovr = overrides or ContextHistoryPreviewOverrides()
-
-        # Resolve effective values: override > action config
-        _r = self._resolve_override
-        eff_max_budget = _r(ovr.max_budget, self.scene_history_max_budget)
-        eff_dialogue_ratio = _r(ovr.dialogue_ratio, self.scene_history_dialogue_ratio)
-        eff_summary_detail_ratio = _r(
-            ovr.summary_detail_ratio, self.scene_history_summary_detail_ratio
-        )
-        eff_enforce_boundary = _r(
-            ovr.enforce_boundary, self.scene_history_enforce_boundary
-        )
-        eff_best_fit = _r(ovr.best_fit, self.scene_history_best_fit)
-        eff_best_fit_min_dialogue = _r(
-            ovr.best_fit_min_dialogue, self.scene_history_best_fit_min_dialogue
-        )
-        eff_best_fit_max_dialogue = _r(
-            ovr.best_fit_max_dialogue, self.scene_history_best_fit_max_dialogue
-        )
+        eff_max_budget = self.scene_history_max_budget
+        eff_dialogue_ratio = self.scene_history_dialogue_ratio
+        eff_summary_detail_ratio = self.scene_history_summary_detail_ratio
+        eff_enforce_boundary = self.scene_history_enforce_boundary
+        eff_best_fit = self.scene_history_best_fit
+        eff_best_fit_min_dialogue = self.scene_history_best_fit_min_dialogue
+        eff_best_fit_max_dialogue = self.scene_history_best_fit_max_dialogue
 
         if eff_max_budget > 0:
             budget = (

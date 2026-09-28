@@ -1,62 +1,66 @@
-// The settings the knowledge hub owns. One set for the whole hub, derived from
-// the toggles it shows and every key of both effort tables, so a group reset
-// and the whole-hub reset clear the same keys and nothing outside them.
+// The scene overrides a view owns: the keys its "use global settings" controls
+// clear and its origin markers read, so a reset of one group and a reset of the
+// whole view clear the same keys and nothing outside them.
+//
+// The knowledge hub owns the toggles it shows and every key of both effort
+// tables; other views build their own set with `buildOwnership`.
 import { EFFORT_PRESETS, EFFORT_STOPS } from '@/constants/knowledgeEffort';
 import { KNOWLEDGE_TOGGLES } from '@/utils/knowledgeHub';
 import { effortKey, effortValueOf } from '@/utils/knowledgeEffort';
 import { configOverrideActive, enabledOverrideActive } from '@/constants/sceneAgentSettings';
 
-function buildOwned() {
+/** entries: [{ agent, action, key }] — `key` is a config name or 'enabled'. */
+export function buildOwnership(entries) {
     const owned = {};
-    const add = (agent, action, key) => {
+    for (const { agent, action, key } of entries) {
         const id = `${agent}.${action}`;
         if (!owned[id]) owned[id] = { agent, action, keys: new Set() };
         owned[id].keys.add(key);
-    };
-    for (const spec of KNOWLEDGE_TOGGLES) add(spec.agent, spec.action, spec.config ?? 'enabled');
+    }
+    return Object.freeze(owned);
+}
+
+function knowledgeEntries() {
+    const entries = KNOWLEDGE_TOGGLES.map((spec) => ({ agent: spec.agent, action: spec.action, key: spec.config ?? 'enabled' }));
     for (const mode of Object.keys(EFFORT_PRESETS)) {
         for (const stop of EFFORT_STOPS[mode]) {
             for (const key of Object.keys(EFFORT_PRESETS[mode][stop])) {
                 const [agent, action, config] = key.split('.');
-                add(agent, action, config);
+                entries.push({ agent, action, key: config });
             }
         }
     }
-    return owned;
+    return entries;
 }
 
-export const HUB_OWNED_OVERRIDES = Object.freeze(buildOwned());
+export const HUB_OWNED_OVERRIDES = buildOwnership(knowledgeEntries());
 
-/** The keys the hub owns on one action, or an empty list for an unknown one. */
-export function ownedKeys(agent, action) {
-    return [...(HUB_OWNED_OVERRIDES[`${agent}.${action}`]?.keys || [])];
+/** The keys owned on one action, or an empty list for an unknown one. */
+export function ownedKeys(agent, action, owned = HUB_OWNED_OVERRIDES) {
+    return [...(owned[`${agent}.${action}`]?.keys || [])];
 }
 
 /** The owned keys of one action that the overlay actually overrides. */
-export function overriddenOwnedKeys(overlay, agent, action) {
-    const keys = HUB_OWNED_OVERRIDES[`${agent}.${action}`]?.keys;
+export function overriddenOwnedKeys(overlay, agent, action, owned = HUB_OWNED_OVERRIDES) {
+    const keys = owned[`${agent}.${action}`]?.keys;
     if (!keys) return [];
-    const slice = overlay?.actions?.[action];
-    if (!slice) return [];
     const result = [];
     for (const key of keys) {
-        if (key === 'enabled') {
-            if (slice.enabled !== undefined && slice.enabled !== null) result.push(key);
-        } else if (slice.config?.[key]) {
+        if (key === 'enabled' ? enabledOverrideActive(overlay, action) : configOverrideActive(overlay, action, key)) {
             result.push(key);
         }
     }
     return result;
 }
 
-/** True when any key the hub owns on that action is currently overridden. */
-export function groupHasOwnedOverride(overlay, agent, action) {
-    return overriddenOwnedKeys(overlay, agent, action).length > 0;
+/** True when any owned key on that action is currently overridden. */
+export function groupHasOwnedOverride(overlay, agent, action, owned = HUB_OWNED_OVERRIDES) {
+    return overriddenOwnedKeys(overlay, agent, action, owned).length > 0;
 }
 
 /** True when the action's own enable override is active — the master chip's case. */
-export function masterOverrideActive(overlay, agent, action) {
-    if (!HUB_OWNED_OVERRIDES[`${agent}.${action}`]?.keys.has('enabled')) return false;
+export function masterOverrideActive(overlay, agent, action, owned = HUB_OWNED_OVERRIDES) {
+    if (!owned[`${agent}.${action}`]?.keys.has('enabled')) return false;
     return enabledOverrideActive(overlay, action);
 }
 
@@ -91,8 +95,8 @@ export function effortOverrideState(agents, mode) {
 }
 
 /** The clear entries that drop a whole group's owned overrides. */
-export function groupClearEntries(agent, action) {
-    return ownedKeys(agent, action).map((key) => (
+export function groupClearEntries(agent, action, owned = HUB_OWNED_OVERRIDES) {
+    return ownedKeys(agent, action, owned).map((key) => (
         key === 'enabled' ? { agent, action } : { agent, action, config: key }
     ));
 }
@@ -101,16 +105,16 @@ export function settingClearEntry(agent, action, config) {
     return { agent, action, config };
 }
 
-/** The clear entries that drop the whole hub's owned overrides across both modes. */
-export function hubClearEntries() {
-    return Object.values(HUB_OWNED_OVERRIDES).flatMap(({ agent, action }) => groupClearEntries(agent, action));
+/** The clear entries that drop every owned override — for the hub, across both modes. */
+export function clearEntriesFor(owned = HUB_OWNED_OVERRIDES) {
+    return Object.values(owned).flatMap(({ agent, action }) => groupClearEntries(agent, action, owned));
 }
 
-/** True when anything the hub owns — hidden keys included — is overridden. */
-export function hubHasOverrides(agents) {
-    for (const { agent, action } of Object.values(HUB_OWNED_OVERRIDES)) {
+/** True when anything owned — hidden keys included — is overridden. */
+export function hasOverridesFor(agents, owned = HUB_OWNED_OVERRIDES) {
+    for (const { agent, action } of Object.values(owned)) {
         const entry = (agents || []).find((candidate) => candidate.name === agent);
-        if (groupHasOwnedOverride(entry?.data?.scene_overrides || {}, agent, action)) return true;
+        if (groupHasOwnedOverride(entry?.data?.scene_overrides || {}, agent, action, owned)) return true;
     }
     return false;
 }

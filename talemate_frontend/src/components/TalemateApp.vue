@@ -1106,8 +1106,8 @@ export default {
       toggleAgentAction: (agentName, actionName) => this.toggleAgentAction(agentName, actionName),
       toggleAgentConfig: (agentName, actionName, configName) => this.toggleAgentConfig(agentName, actionName, configName),
       applyAgentValues: (agentName, actionName, values, reply) => this.applyAgentValues(agentName, actionName, values, reply),
-      applySceneAgentValues: (entries, label) => this.applySceneAgentValues(entries, label),
-      clearSceneAgentValues: (entries) => this.clearSceneAgentValues(entries),
+      applySceneAgentValues: (entries, label, reply) => this.applySceneAgentValues(entries, label, reply),
+      clearSceneAgentValues: (entries, reply) => this.clearSceneAgentValues(entries, reply),
       sceneOverridesState: () => this.$refs.aiAgent?.overridesState || { busy: false, error: null },
       requestSceneSave: () => this.$refs.sceneSaveDialog.open(),
       retrySceneOverrides: () => this.$refs.aiAgent?.overrides?.retrySave(),
@@ -1885,13 +1885,15 @@ export default {
       if (!agent?.actions?.[actionName]) return false;
       return this.$refs.aiAgent.applyActionValues(agent, actionName, values, reply);
     },
-    // The knowledge hub's scene-only writer: sparse patches against the scene
-    // overlay, never the global agent values.
-    applySceneAgentValues(entries, label) {
-      this.$refs.aiAgent?.applySceneAgentValues(entries, label);
+    // The scene-only writer outside the settings page: sparse patches against
+    // the scene overlay, never the global agent values.
+    applySceneAgentValues(entries, label, reply = null) {
+      if (!this.$refs.aiAgent) return reply?.onError('The agents are not available.');
+      this.$refs.aiAgent.applySceneAgentValues(entries, label, reply);
     },
-    clearSceneAgentValues(entries) {
-      this.$refs.aiAgent?.clearSceneAgentValues(entries);
+    clearSceneAgentValues(entries, reply = null) {
+      if (!this.$refs.aiAgent) return reply?.onError('The agents are not available.');
+      this.$refs.aiAgent.clearSceneAgentValues(entries, reply);
     },
     toggleAgentConfig(agentName, actionName, configName) {
       const agent = this.getAgents().find((candidate) => candidate.name === agentName);

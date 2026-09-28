@@ -5,12 +5,12 @@ import {
     effortOverrideState,
     groupClearEntries,
     groupHasOwnedOverride,
-    hubClearEntries,
-    hubHasOverrides,
+    clearEntriesFor,
+    hasOverridesFor,
     ownedKeys,
     overriddenOwnedKeys,
     settingClearEntry,
-} from '@/utils/knowledgeOverrideOwnership';
+} from '@/utils/sceneOverrideOwnership';
 import { agentsAt } from './helpers/effortAgents.js';
 
 const owned = (agent, action) => [...HUB_OWNED_OVERRIDES[`${agent}.${action}`].keys].sort();
@@ -125,7 +125,7 @@ describe('the reset lists', () => {
     });
 
     it('clears the union across both modes, hidden keys included', () => {
-        const entries = hubClearEntries();
+        const entries = clearEntriesFor();
         const ids = entries.map((entry) => `${entry.agent}.${entry.action}.${entry.config ?? 'enabled'}`);
         expect(ids).toContain('conversation.character_knowledge.perspective_filter');
         expect(ids).toContain('summarizer.perceptions.automatic_repair');
@@ -134,6 +134,6 @@ describe('the reset lists', () => {
     it('sees a mode-hidden override as something to reset', () => {
         const agents = agentsAt('legacy', 'minimal');
         overlay(agents, 'summarizer', 'perceptions', { config: { automatic_repair: { value: true } } });
-        expect(hubHasOverrides(agents)).toBe(true);
+        expect(hasOverridesFor(agents)).toBe(true);
     });
 });

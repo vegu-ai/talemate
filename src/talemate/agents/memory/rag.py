@@ -16,6 +16,7 @@ from talemate.knowledge.bucket import KnowledgeIndex, knowledge_digest
 from talemate.knowledge.context import ContextHistoryMessage, project_character_history
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspective_models import content_digest
+from talemate.knowledge.revision_browsing import RevisionCheck
 from talemate.util.dedupe import compile_sentences_to_length, compile_text_to_sentences
 
 if TYPE_CHECKING:
@@ -727,26 +728,16 @@ class MemoryRAGMixin:
         return character.name if character is not None else None
 
     def rag_knowledge_filter(self, character: "Character | None"):
-        from talemate.knowledge.revision_browsing import (
-            has_stale_revisions,
-            memory_document_current,
-        )
-
+        check = RevisionCheck(self.scene)
         viewer = self.rag_knowledge_viewer(character)
-        knowledge_filter = (
-            KnowledgeIndex.from_scene(self.scene).retrieval_filter(self.scene, viewer)
-            if viewer is not None and not character_knowledge_enabled(self.scene)
-            else None
-        )
-        if knowledge_filter is None and not has_stale_revisions(self.scene):
-            return None
-
-        def current(document):
-            return memory_document_current(self.scene, document) and (
-                knowledge_filter is None or knowledge_filter(document)
+        if viewer is not None and not character_knowledge_enabled(self.scene):
+            # the retrieval filter rejects stale documents itself
+            return KnowledgeIndex.from_scene(self.scene, check).retrieval_filter(
+                self.scene, viewer, check
             )
-
-        return current
+        if not check.revisions.stale:
+            return None
+        return check
 
     async def semantic_context(
         self,

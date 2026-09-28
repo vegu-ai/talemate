@@ -30,7 +30,7 @@ from .event import (
     disconnect_auto_register_listeners,
 )
 import talemate.events as events
-from talemate.emit import wait_for_input
+from talemate.emit import emit, wait_for_input
 from talemate.exceptions import ActedAsCharacter, AbortWaitForInput, GenerationCancelled
 from talemate.context import active_scene, InteractionState, handle_generation_cancelled
 from talemate.instance import get_agent, AGENTS
@@ -1892,8 +1892,12 @@ class SceneLoop(Loop):
         if scene.auto_save:
             await scene.save(auto=True)
 
-        if scene._changelog:
-            await scene._changelog.append_delta()
+        if scene._changelog and not await scene.append_changelog_delta():
+            emit(
+                "status",
+                status="error",
+                message="The revision history could not record the last change",
+            )
 
         scene.emit_status()
 

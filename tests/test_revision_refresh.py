@@ -11,6 +11,7 @@ from talemate.knowledge.perspectives import select_character_view, source_refere
 from talemate.knowledge.revision_refresh import (
     catch_up_revisions,
     refresh_revision,
+    revision_operations,
     revision_refresh_payload,
 )
 from talemate.knowledge.schema import KnowledgeEdge
@@ -50,6 +51,45 @@ async def revised(setup, monkeypatch):
         plugin=plugin,
         edge=edge,
     )
+
+
+@pytest.mark.asyncio
+async def test_status_refreshes_match_the_payload_of_a_history_scan(revised):
+    t = revised
+    payload = revision_refresh_payload(t.scene, t.message)["revision_refresh"]
+    refreshes = {item["id"]: item for item in t.scene.revision_refreshes}
+
+    assert payload["required"]
+    assert refreshes[t.message.id]["revision_refresh"] == payload
+    assert revision_operations(t.scene, t.message).any
+
+    t.scene.history.remove(t.message)
+
+    assert not revision_operations(t.scene, t.message).any
+
+
+class CountingHistory(list):
+    scans = 0
+
+    def __iter__(self):
+        CountingHistory.scans += 1
+        return super().__iter__()
+
+
+@pytest.mark.asyncio
+async def test_status_refreshes_scan_the_history_once_not_per_message(revised):
+    t = revised
+    t.scene.history.extend(
+        NarratorMessage(message=f"The tide turns {i}.") for i in range(50)
+    )
+    t.scene.history = CountingHistory(t.scene.history)
+    CountingHistory.scans = 0
+
+    refreshes = t.scene.revision_refreshes
+
+    assert len(refreshes) == 51
+    # the loop itself, plus the archive lookup of the one required message
+    assert CountingHistory.scans <= 3
 
 
 @pytest.mark.asyncio

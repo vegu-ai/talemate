@@ -21,6 +21,8 @@ import pytest
 
 from _changelog_test_helpers import persist_test_mutation, make_changelog_scene
 from talemate.changelog import (
+    _base_path,
+    _changelog_log_path,
     _get_latest_changelog_file,
     _latest_path,
     check_chain_divergence,
@@ -388,3 +390,40 @@ async def test_fork_carries_rev_n_long_lived_and_current_derived_state(temp_dir)
     assert fork["world_state"]["pins"] == {"pin-1": {"text": "v1", "active": True}}
     # current derived state, not rev-0's
     assert fork["world_state"]["characters"] == {"Alice": {"snapshot": "s2"}}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["root", "root['world_state']"])
+async def test_a_0_39_first_save_op_does_not_unmask_the_legacy_subtrees(temp_dir, path):
+    """0.39.0 wrote a sparse scene file as the base and, at the first save,
+    one op at ``root`` or ``root['world_state']`` (DeepDiff reports a dict
+    whole when most keys are new). Later pins moved only in the latest
+    snapshot. Such a chain must stay healthy."""
+    sparse = {"history": [], "intro": "intro", "world_state": {}}
+    scene = make_changelog_scene(temp_dir, initial_serialize=sparse)
+    await save_changelog(scene)
+    first_save = _serialize()
+    new_value = first_save if path == "root" else first_save["world_state"]
+    log_path = _changelog_log_path(scene, 0)
+    with open(log_path, "w") as f:
+        json.dump(
+            {
+                "version": 1,
+                "base": os.path.basename(_base_path(scene)),
+                "deltas": [
+                    {
+                        "rev": 1,
+                        "ts": 0,
+                        "delta": {"values_changed": {path: {"new_value": new_value}}},
+                        "meta": {},
+                    }
+                ],
+                "latest_rev": 1,
+            },
+            f,
+        )
+    latest = _serialize(pins={"pin-1": {"text": "later", "active": True}})
+    with open(_latest_path(scene), "w") as f:
+        json.dump(latest, f)
+
+    assert await check_chain_divergence(scene) == []

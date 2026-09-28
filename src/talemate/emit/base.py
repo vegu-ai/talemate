@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import weakref
 from typing import TYPE_CHECKING, Callable
 
 import pydantic
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "emit",
+    "flush_emissions",
     "Receiver",
     "Emission",
     "Emitter",
@@ -178,6 +180,15 @@ def abort_wait_for_input():
         handlers["receive_input"].disconnect(receiver)
 
 
+_connected_receivers: "weakref.WeakSet[Receiver]" = weakref.WeakSet()
+
+
+async def flush_emissions():
+    """Wait until every connected receiver has delivered what was emitted so far."""
+    for receiver in list(_connected_receivers):
+        await receiver.flush()
+
+
 class Receiver:
     def handle(self, emission: Emission):
         fn = getattr(self, f"handle_{emission.typ}", None)
@@ -186,13 +197,18 @@ class Receiver:
         fn(emission)
         return True
 
+    async def flush(self):
+        pass
+
     def connect(self):
         for typ in handlers:
             handlers[typ].connect(self.handle)
+        _connected_receivers.add(self)
 
     def disconnect(self):
         for typ in handlers:
             handlers[typ].disconnect(self.handle)
+        _connected_receivers.discard(self)
 
 
 class Emitter:

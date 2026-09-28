@@ -914,13 +914,13 @@ def test_delta_reproduces_state_ignores_excluded_paths():
 
 
 @pytest.mark.asyncio
-async def test_in_memory_changelog_verification_failure_skips_write(
+async def test_in_memory_changelog_verification_failure_writes_the_full_state(
     mock_scene, monkeypatch
 ):
     """A delta that does not reproduce the scene state must not be written.
 
-    The latest snapshot stays at the previous state so the next append
-    retries from the same baseline instead of diverging the chain.
+    The full state is written in its place, so the chain stays exact and the
+    next append diffs against the new state instead of refusing again.
     """
     from structlog.testing import capture_logs
 
@@ -938,25 +938,26 @@ async def test_in_memory_changelog_verification_failure_skips_write(
     with capture_logs() as logs:
         result = await persist_test_mutation(mock_scene, {"action": "add_character"})
 
-    assert result is None
+    assert result == 1
     assert any(
         log["event"] == "delta_verification_failed" and log["log_level"] == "error"
         for log in logs
     )
 
-    # nothing written: no revisions, latest snapshot still the base state
-    assert list_revisions(mock_scene) == []
+    # the bogus delta is not written; the full state is
+    assert list_revisions(mock_scene) == [1]
+    _, log_path = _get_latest_changelog_file(mock_scene)
+    with open(log_path) as f:
+        written = json.load(f)["deltas"][-1]["delta"]
+    assert written == {"values_changed": {"root": {"new_value": mock_scene.serialize}}}
     with open(_latest_path(mock_scene)) as f:
-        assert json.load(f) == {
-            "characters": [],
-            "entries": [],
-            "metadata": {"version": "1.0"},
-        }
+        assert json.load(f) == mock_scene.serialize
 
 
 @pytest.mark.asyncio
 async def test_in_memory_append_delta_verification_failure(mock_scene, monkeypatch):
-    """InMemoryChangelog refuses a delta that does not reproduce the state."""
+    """InMemoryChangelog replaces a delta that does not reproduce the state
+    with the full state."""
     from structlog.testing import capture_logs
 
     await save_changelog(mock_scene)
@@ -978,9 +979,12 @@ async def test_in_memory_append_delta_verification_failure(mock_scene, monkeypat
         with capture_logs() as logs:
             result = await changelog.append_delta({"action": "add_character"})
 
-        assert result is None
-        assert changelog.pending_count == 0
-        assert changelog.last_state is last_state_before
+        assert result == 1
+        assert changelog.pending_count == 1
+        assert changelog.pending_deltas[0]["delta"] == {
+            "values_changed": {"root": {"new_value": mock_scene.serialize}}
+        }
+        assert changelog.last_state is not last_state_before
         assert any(
             log["event"] == "delta_verification_failed" and log["log_level"] == "error"
             for log in logs
@@ -2896,10 +2900,10 @@ async def test_rebase_flush_failure_restores_staged_deltas(mock_scene, monkeypat
         before = _changelog_dir_contents(mock_scene)
         real_write = changelog_mod._write_json
 
-        def failing_write(path, data, cls=None):
+        def failing_write(path, data, cls=None, indent=2):
             if ".changelog." in os.path.basename(path):
                 raise OSError("no space left on device")
-            return real_write(path, data, cls=cls)
+            return real_write(path, data, cls=cls, indent=indent)
 
         monkeypatch.setattr(changelog_mod, "_write_json", failing_write)
 
@@ -2937,10 +2941,10 @@ async def test_rebase_failure_after_flush_restores_staged_deltas(
         marker_path = _rebase_marker_path(mock_scene)
         real_write = changelog_mod._write_json
 
-        def failing_write(path, data, cls=None):
+        def failing_write(path, data, cls=None, indent=2):
             if path == marker_path:
                 raise OSError("no space left on device")
-            return real_write(path, data, cls=cls)
+            return real_write(path, data, cls=cls, indent=indent)
 
         monkeypatch.setattr(changelog_mod, "_write_json", failing_write)
 

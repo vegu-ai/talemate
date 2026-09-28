@@ -29,6 +29,7 @@ from _changelog_test_helpers import (
 from talemate import changelog as changelog_mod
 from talemate.agents.creator.assistant import AssistantMixin
 from talemate.changelog import (
+    ChangelogDeltaError,
     ForkTargetMissingError,
     InMemoryChangelog,
     _apply_delta,
@@ -506,7 +507,9 @@ class TestAppendDeltaRevStamp:
             "talemate.changelog._delta_reproduces_state", return_value=False
         ):
             async with InMemoryChangelog(scene) as changelog:
-                assert await changelog.append_delta() is None
+                # not even the full state replays: nothing is staged
+                with pytest.raises(ChangelogDeltaError):
+                    await changelog.append_delta()
                 # The refusal means the stamped rev never exists — the
                 # message must not keep it.
                 assert msg.rev == 0
@@ -768,7 +771,7 @@ class TestAppendDeltaRevStampRobustness:
         scene.history.append(msg)
 
         with mock.patch(
-            "talemate.changelog._compute_delta",
+            "talemate.changelog._serialize_scene_plain",
             side_effect=RuntimeError("boom"),
         ):
             async with InMemoryChangelog(scene) as changelog:
@@ -895,7 +898,7 @@ class TestCommitTransaction:
                 real_write = changelog_mod._write_json
                 failed = []
 
-                def failing_write(path, data, cls=None):
+                def failing_write(path, data, cls=None, indent=2):
                     is_target = (
                         ".changelog." in os.path.basename(path)
                         if failure_target == "segment"
@@ -904,7 +907,7 @@ class TestCommitTransaction:
                     if is_target and not failed:
                         failed.append(path)
                         raise OSError(f"simulated {failure_target} failure")
-                    return real_write(path, data, cls=cls)
+                    return real_write(path, data, cls=cls, indent=indent)
 
                 monkeypatch.setattr(changelog_mod, "_write_json", failing_write)
                 with pytest.raises(OSError, match=f"simulated {failure_target}"):
@@ -940,10 +943,10 @@ class TestCommitTransaction:
             assert await changelog.append_delta() == 1
             real_write = changelog_mod._write_json
 
-            def failing_write(path, data, cls=None):
+            def failing_write(path, data, cls=None, indent=2):
                 if path == _base_path(scene):
                     raise OSError("simulated base failure")
-                return real_write(path, data, cls=cls)
+                return real_write(path, data, cls=cls, indent=indent)
 
             monkeypatch.setattr(changelog_mod, "_write_json", failing_write)
             with pytest.raises(OSError, match="simulated base failure"):
@@ -969,12 +972,12 @@ class TestCommitTransaction:
             real_write = changelog_mod._write_json
             split_calls = []
 
-            def failing_write(path, data, cls=None):
+            def failing_write(path, data, cls=None, indent=2):
                 if path.endswith(".changelog.2.json"):
                     split_calls.append(path)
                     if len(split_calls) == 2:
                         raise OSError("simulated split failure")
-                return real_write(path, data, cls=cls)
+                return real_write(path, data, cls=cls, indent=indent)
 
             monkeypatch.setattr(changelog_mod, "MAX_CHANGELOG_FILE_SIZE", 1)
             monkeypatch.setattr(changelog_mod, "_write_json", failing_write)
@@ -1047,10 +1050,10 @@ class TestCommitTransaction:
             real_write = changelog_mod._write_json
             real_remove = changelog_mod.os.remove
 
-            def failing_write(path, data, cls=None):
+            def failing_write(path, data, cls=None, indent=2):
                 if path == _latest_path(scene):
                     raise OSError("simulated latest failure")
-                return real_write(path, data, cls=cls)
+                return real_write(path, data, cls=cls, indent=indent)
 
             def failing_remove(path):
                 if os.fspath(path) == log_path:

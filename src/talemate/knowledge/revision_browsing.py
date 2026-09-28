@@ -1,8 +1,9 @@
+import asyncio
 from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import TYPE_CHECKING
 
-from talemate.knowledge.perspective_models import content_digest
+from pydantic import BaseModel, ConfigDict
 
 if TYPE_CHECKING:
     from talemate.knowledge.schema import KnowledgeEdge
@@ -20,20 +21,6 @@ def defer_revision_work():
         yield
     finally:
         defer_derived_jobs.reset(token)
-
-
-def revision_source_current(
-    scene: "Scene", message_id: int | None, digest: str | None = None
-) -> bool:
-    if message_id is None:
-        return True
-    message = scene.get_message(message_id)
-    if message is None:
-        return False
-    if digest is not None:
-        return digest == content_digest(message.perception_text)
-    state = getattr(message, "revision_state", None)
-    return state is None or message.revision_matches_baseline
 
 
 def affected_archive_ids(scene: "Scene", message) -> set[str]:
@@ -75,42 +62,100 @@ def affected_archive_ids(scene: "Scene", message) -> set[str]:
     return affected
 
 
-def stale_archive_ids(scene: "Scene") -> set[str]:
-    affected = set()
-    for message in scene.history:
-        state = getattr(message, "revision_state", None)
-        if state is not None and not message.revision_matches_baseline:
-            affected.update(affected_archive_ids(scene, message))
-            journal = state.refresh_journal or {}
-            affected.update(journal.get("affected_archive_ids", ()))
-    return affected
+class RevisionCurrency(BaseModel):
+    """Which history messages and archive entries are current, read in one
+    pass over the history. It is true for the history it was read from; a
+    check across awaits uses RevisionCheck.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    sources: dict[int, bool] = {}
+    stale_archive_ids: frozenset[str] = frozenset()
+    stale: bool = False
+
+    @classmethod
+    def from_scene(cls, scene: "Scene") -> "RevisionCurrency":
+        sources: dict[int, bool] = {}
+        stale_archive_ids: set[str] = set()
+        stale = False
+        for message in scene.history:
+            state = getattr(message, "revision_state", None)
+            current = state is None or message.revision_matches_baseline
+            # a later message with the same id wins, as in Scene.get_message
+            sources[message.id] = current
+            if not current:
+                stale = True
+                stale_archive_ids.update(affected_archive_ids(scene, message))
+                journal = state.refresh_journal or {}
+                stale_archive_ids.update(journal.get("affected_archive_ids", ()))
+        return cls(
+            sources=sources,
+            stale_archive_ids=frozenset(stale_archive_ids),
+            stale=stale,
+        )
+
+    def source_current(self, message_id: int | None) -> bool:
+        if message_id is None:
+            return True
+        return self.sources.get(message_id, False)
+
+    def edge_current(self, edge: "KnowledgeEdge") -> bool:
+        return self.source_current(edge.message_id)
+
+    def document_current(self, document) -> bool:
+        meta = getattr(document, "meta", {}) or {}
+        if meta.get("knowledge_kind") == "message":
+            try:
+                identity = int(meta.get("knowledge_id"))
+            except (TypeError, ValueError):
+                return False
+            return self.source_current(identity)
+        if meta.get("typ") == "history":
+            return str(getattr(document, "id", "")) not in self.stale_archive_ids
+        return True
 
 
-def edge_current(scene: "Scene", edge: "KnowledgeEdge") -> bool:
-    return revision_source_current(scene, edge.message_id)
+class RevisionCheck:
+    """Tells if a memory document is current for the history as it is at the
+    check.
 
+    Another task can select a version, edit or delete a message while a
+    retrieval awaits a query or an LLM call, so the history is read again
+    once the event loop has run. Checks with no await between them share
+    one read; a caller must not change the history between two such checks.
+    """
 
-def current_edges(scene: "Scene") -> list["KnowledgeEdge"]:
-    return [edge for edge in scene.world_state.knowledge if edge_current(scene, edge)]
+    def __init__(self, scene: "Scene"):
+        self.scene = scene
+        self._revisions: RevisionCurrency | None = None
 
-
-def has_stale_revisions(scene: "Scene") -> bool:
-    return any(
-        message.revision_state is not None and not message.revision_matches_baseline
-        for message in scene.history
-    )
-
-
-def memory_document_current(scene: "Scene", document) -> bool:
-    meta = getattr(document, "meta", {}) or {}
-    if meta.get("knowledge_kind") == "message":
+    @property
+    def revisions(self) -> RevisionCurrency:
+        if self._revisions is not None:
+            return self._revisions
+        revisions = RevisionCurrency.from_scene(self.scene)
         try:
-            identity = int(meta.get("knowledge_id"))
-        except (TypeError, ValueError):
-            return False
-        return revision_source_current(scene, identity)
-    if meta.get("typ") == "history":
-        identity = str(getattr(document, "id", ""))
-        if identity in stale_archive_ids(scene):
-            return False
-    return True
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # no loop: the read cannot be tied to one, so it is not kept
+            return revisions
+        self._revisions = revisions
+        loop.call_soon(self._expire)
+        return revisions
+
+    def _expire(self) -> None:
+        self._revisions = None
+
+    def __call__(self, document) -> bool:
+        return self.revisions.document_current(document)
+
+
+def current_edges(
+    scene: "Scene", check: RevisionCheck | None = None
+) -> list["KnowledgeEdge"]:
+    edges = scene.world_state.knowledge
+    if not edges:
+        return []
+    revisions = (check or RevisionCheck(scene)).revisions
+    return [edge for edge in edges if revisions.edge_current(edge)]

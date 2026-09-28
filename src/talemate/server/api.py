@@ -42,6 +42,26 @@ def get_active_frontend_handler():
     return _active_frontend_websocket_handler
 
 
+async def send_queued_frames(websocket, message_queue: asyncio.Queue) -> Exception:
+    """Send the queued frames in order until the socket closes; return the
+    exception that closed it."""
+    while True:
+        # check if there are messages in the queue
+        if message_queue.empty():
+            await asyncio.sleep(0.01)
+            continue
+
+        message = await message_queue.get()
+        try:
+            payload = json.dumps(message, cls=JSONEncoder)
+            await websocket.send(payload)
+        except WEBSOCKET_DISCONNECT_EXCEPTIONS as exc:
+            return exc
+        finally:
+            # WebsocketHandler.flush joins the queue
+            message_queue.task_done()
+
+
 async def client_status_loop(interval: float = 3.0):
     """Emit client and agent status while a frontend is connected."""
     steps = (instance.emit_clients_status, instance.agent_ready_checks, commit_config)
@@ -123,19 +143,7 @@ async def websocket_endpoint(websocket):
     # Create a task to send messages from the queue
     async def send_messages():
         nonlocal disconnect_exc
-        while True:
-            # check if there are messages in the queue
-            if message_queue.empty():
-                await asyncio.sleep(0.01)
-                continue
-
-            message = await message_queue.get()
-            payload = json.dumps(message, cls=JSONEncoder)
-            try:
-                await websocket.send(payload)
-            except WEBSOCKET_DISCONNECT_EXCEPTIONS as exc:
-                disconnect_exc = exc
-                return
+        disconnect_exc = await send_queued_frames(websocket, message_queue)
 
     # task to test connection
     async def test_connection():

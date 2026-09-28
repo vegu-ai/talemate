@@ -18,8 +18,8 @@ from talemate.knowledge.perspective_models import (
 )
 from talemate.knowledge.perspectives import select_character_view, source_reference
 from talemate.knowledge.revision_browsing import (
+    RevisionCurrency,
     defer_revision_work,
-    memory_document_current,
 )
 from talemate.knowledge.revision_refresh import (
     _archive_vector_repairs,
@@ -466,7 +466,7 @@ async def test_standard_refresh_prunes_stale_archive_closure_without_model_work(
     monkeypatch.setattr(memory, "delete", delete)
 
     document = SimpleNamespace(id="A1", meta={"typ": "history"})
-    assert not memory_document_current(scene, document)
+    assert not RevisionCurrency.from_scene(scene).document_current(document)
     await refresh_revision(scene, message)
 
     assert scene.archived_history == []

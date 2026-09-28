@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Literal
 import pydantic
 
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.revision_browsing import RevisionCheck, current_edges
 from talemate.knowledge.schema import EntryVisibility
 
 if TYPE_CHECKING:
@@ -181,14 +182,14 @@ class KnowledgeIndex:
         self.revokes = revokes
 
     @classmethod
-    def from_scene(cls, scene: "Scene") -> "KnowledgeIndex":
-        from talemate.knowledge.revision_browsing import current_edges
-
+    def from_scene(
+        cls, scene: "Scene", check: RevisionCheck | None = None
+    ) -> "KnowledgeIndex":
         pairs: dict[str, set[tuple[str, str]]] = {
             "grant": set(),
             "revoke": set(),
         }
-        edges = current_edges(scene)
+        edges = current_edges(scene, check)
         for edge in edges:
             if edge.kind != "grant" and character_knowledge_enabled(scene):
                 continue
@@ -288,8 +289,13 @@ class KnowledgeIndex:
             return character.description
         return ""
 
-    def retrieval_filter(self, scene: "Scene", character: str) -> "RetrievalFilter":
-        return RetrievalFilter(self, scene, character)
+    def retrieval_filter(
+        self,
+        scene: "Scene",
+        character: str,
+        check: RevisionCheck | None = None,
+    ) -> "RetrievalFilter":
+        return RetrievalFilter(self, scene, character, check or RevisionCheck(scene))
 
 
 class RetrievalFilter:
@@ -298,15 +304,20 @@ class RetrievalFilter:
     callable with the reason a document was rejected.
     """
 
-    def __init__(self, index: KnowledgeIndex, scene: "Scene", character: str):
+    def __init__(
+        self,
+        index: KnowledgeIndex,
+        scene: "Scene",
+        character: str,
+        check: RevisionCheck,
+    ):
         self.index = index
         self.scene = scene
         self.character = character
+        self.check = check
 
     def rejection(self, doc) -> Rejection | None:
-        from talemate.knowledge.revision_browsing import memory_document_current
-
-        if not memory_document_current(self.scene, doc):
+        if not self.check(doc):
             return "stale"
         return self.index.rejection(
             self.character, KnowledgeItem.from_memory_document(doc, self.scene)

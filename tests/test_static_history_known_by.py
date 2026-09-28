@@ -16,6 +16,7 @@ from talemate.knowledge.bucket import KnowledgeIndex, RetrievalFilter, knowledge
 from talemate.agents.memory.schema import MemoryDocument
 from talemate.scene_message import CharacterMessage
 from talemate.knowledge.entry import character_knowledge_report, known_by_line
+from talemate.knowledge.revision_browsing import RevisionCheck
 from talemate.knowledge.schema import EntryVisibility
 from talemate.shared_context import SharedContext
 from talemate.world_state.manager import WorldStateManager
@@ -123,7 +124,9 @@ class TestPresenceFilter:
     async def test_static_known_by_blocks_memory_retrieval(self, scene):
         scene.history.append(CharacterMessage(message="Alice: Bob fought.", id=5))
         await set_known_by(scene, EntryVisibility(mode="list", characters=["Alice"]))
-        gate = RetrievalFilter(KnowledgeIndex.from_scene(scene), scene, "Carol")
+        gate = RetrievalFilter(
+            KnowledgeIndex.from_scene(scene), scene, "Carol", RevisionCheck(scene)
+        )
 
         assert gate.rejection(self.doc("S1", "history", ["Alice"])) == "presence"
 

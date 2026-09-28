@@ -67,11 +67,13 @@ File Layout:
 
 from typing import TYPE_CHECKING, Callable
 import copy
+import functools
 import json
+import marshal
 import os
 import structlog
 import deepdiff
-from deepdiff.path import parse_path
+from deepdiff.path import GET, parse_path, stringify_path
 from datetime import datetime, timezone
 import glob
 import uuid
@@ -241,7 +243,9 @@ async def save_changelog(scene: "Scene"):
             pass
         _write_json(base_path, serialized_scene, cls=SceneEncoder)
         # initialize latest snapshot to base
-        _write_json(_latest_path(scene), serialized_scene, cls=SceneEncoder)
+        _write_json(
+            _latest_path(scene), serialized_scene, cls=SceneEncoder, indent=None
+        )
         return
 
 
@@ -354,7 +358,7 @@ def _read_changelog_log_strict(path: str) -> dict | None:
     return content
 
 
-def _write_json(path: str, data: dict, cls=None):
+def _write_json(path: str, data: dict, cls=None, indent: int | None = 2):
     """
     Write JSON data to file, creating parent directories as needed.
 
@@ -365,6 +369,7 @@ def _write_json(path: str, data: dict, cls=None):
         path: Path to write the JSON file
         data: Dictionary data to write as JSON
         cls: Optional JSON encoder class (e.g. SceneEncoder)
+        indent: None writes unindented JSON, which uses the C encoder
 
     Returns:
         None
@@ -376,7 +381,7 @@ def _write_json(path: str, data: dict, cls=None):
     tmp_path = f"{path}.tmp.{os.getpid()}"
     try:
         with open(tmp_path, "w") as f:
-            json.dump(data, f, indent=2, cls=cls)
+            f.write(json.dumps(data, indent=indent, cls=cls))
         os.replace(tmp_path, path)
     except Exception:
         try:
@@ -562,7 +567,7 @@ async def _ensure_latest_initialized(scene: "Scene") -> None:
         data = await reconstruct_scene_data(scene)
     else:
         data = _load_base_scene_data(scene)
-    _write_json(latest, data)
+    _write_json(latest, data, indent=None)
 
 
 def _parse_delta_path(path: str) -> list[str | int]:
@@ -839,6 +844,182 @@ def _full_subtree_world_state_ops(delta_dict: dict, prev: dict, curr: dict) -> N
         }
 
 
+def _strictly_equal(a, b) -> bool:
+    """``==`` that also tells ``1``, ``1.0`` and ``true`` apart, as JSON does.
+
+    marshal writes the type of every value; version 2 writes no
+    back-references, so equal bytes mean equal values of equal types.
+    """
+    try:
+        return marshal.dumps(a, 2) == marshal.dumps(b, 2)
+    except ValueError:
+        return False
+
+
+def _share_unchanged(prev, curr, path: tuple = (), replaced: dict | None = None):
+    """Return ``curr`` with every subtree that equals its ``prev`` counterpart,
+    by value and by JSON type, replaced by the ``prev`` object.
+
+    DeepDiff returns at once for two identical objects but walks two equal
+    ones in full, which makes a diff of a long scene cost seconds even when
+    only one message changed. A shared subtree is the same JSON as the
+    ``curr`` subtree, so the diff and every value it reports stay the same.
+    ``==`` alone is not enough: ``1 == 1.0 == True``, and a subtree that
+    DeepDiff reports whole would then store the ``prev`` type. Lists are
+    paired by index, as DeepDiff pairs them.
+
+    With ``replaced``, a node that changes its container kind, or a dict with
+    a key that no delta path can name, is hidden from DeepDiff (the ``prev``
+    node stays) and recorded by its path, for the caller to write whole
+    (_write_replaced_containers).
+    """
+    if prev == curr and _strictly_equal(prev, curr):
+        return prev
+    if replaced is not None and (
+        _changes_container_kind(prev, curr) or _has_unnamed_key(prev, curr)
+    ):
+        replaced[path] = curr
+        return prev
+    if isinstance(prev, dict) and isinstance(curr, dict):
+        return {
+            key: _share_unchanged(prev[key], value, (*path, key), replaced)
+            if key in prev
+            else value
+            for key, value in curr.items()
+        }
+    if isinstance(prev, list) and isinstance(curr, list):
+        return [
+            _share_unchanged(p, c, (*path, index), replaced)
+            for index, (p, c) in enumerate(zip(prev, curr))
+        ] + curr[len(prev) :]
+    return curr
+
+
+@functools.lru_cache(maxsize=1024)
+def _key_has_path(key) -> bool:
+    return parse_path(stringify_path([key], root_element=("root", GET))) == [key]
+
+
+def _has_unnamed_key(prev, curr) -> bool:
+    """A dict with a key that a delta path cannot name: DeepDiff writes a key
+    with both quote kinds as ``["a'b"c"]``, which no parser reads back."""
+    if not (isinstance(prev, dict) and isinstance(curr, dict)):
+        return False
+    return not all(_key_has_path(key) for key in prev.keys() | curr.keys())
+
+
+def _changes_container_kind(prev, curr) -> bool:
+    """A dict or list that becomes a value of another kind.
+
+    DeepDiff's type group puts list, dict and str together: it diffs such a
+    change item by item and writes a delta that replays wrong (``["sword"]``
+    -> ``"sword"`` replays as ``["s", "w", "o", "r", "d"]``, ``[]`` and
+    ``{}`` count as equal), or it raises (a dict or list that becomes an
+    int).
+    """
+    if isinstance(prev, dict):
+        return not isinstance(curr, dict)
+    if isinstance(prev, list):
+        return not isinstance(curr, list)
+    return False
+
+
+def _scene_diff(
+    prev: dict,
+    curr: dict,
+    exclude_paths: list[str] = EXCLUDE_FROM_DELTAS,
+    replaced: dict | None = None,
+) -> deepdiff.DeepDiff:
+    return deepdiff.DeepDiff(
+        prev,
+        _share_unchanged(prev, curr, replaced=replaced),
+        ignore_order=False,
+        exclude_paths=exclude_paths,
+        exclude_regex_paths=EXCLUDE_FROM_DELTAS_REGEX,
+        ignore_type_in_groups=[(type(None), str, int, float, bool, list, dict)],
+    )
+
+
+def _value_at(data, path: str):
+    """The value a delta path points at; KeyError when it does not exist."""
+    if path == "root":
+        return data
+    parts = _parse_delta_path(path)
+    if not parts:
+        raise KeyError(path)
+    for key in parts:
+        if isinstance(data, list) and isinstance(key, int) and 0 <= key < len(data):
+            data = data[key]
+        elif isinstance(data, dict) and key in data:
+            data = data[key]
+        else:
+            raise KeyError(path)
+    return data
+
+
+def _written_paths(delta_dict: dict) -> list[str]:
+    """The paths whose value in the new state the delta writes."""
+    paths = []
+    for op in (
+        "values_changed",
+        "type_changes",
+        "dictionary_item_added",
+        "iterable_item_added",
+    ):
+        paths.extend(delta_dict.get(op) or {})
+    for moved in (delta_dict.get("iterable_item_moved") or {}).values():
+        paths.append(moved["new_path"])
+    return paths
+
+
+def _excluded(path: str, exclude_paths: list[str] = EXCLUDE_FROM_DELTAS) -> bool:
+    return any(
+        path == excluded or path.startswith(excluded + "[")
+        for excluded in exclude_paths
+    ) or any(pattern.search(path) for pattern in EXCLUDE_FROM_DELTAS_REGEX)
+
+
+def _replaced_paths(
+    replaced: dict[tuple, object], exclude_paths: list[str] = EXCLUDE_FROM_DELTAS
+) -> dict[str, object]:
+    paths = {
+        stringify_path(keys, root_element=("root", GET)): node
+        for keys, node in replaced.items()
+    }
+    return {
+        path: node for path, node in paths.items() if not _excluded(path, exclude_paths)
+    }
+
+
+def _write_replaced_containers(
+    delta_dict: dict, curr: dict, replaced: dict[tuple, object]
+) -> None:
+    """Write each node that _share_unchanged hid from DeepDiff whole, from
+    ``curr``.
+
+    DeepDiff saw the ``prev`` node there, so an op it reports on an ancestor
+    (a dict it reports whole) holds that ``prev`` node too: such an op takes
+    its value from ``curr`` and covers the node, also a node at an excluded
+    path. The ancestors of a hidden node were paired by key and index, so
+    their path is the same in ``curr``.
+    """
+    paths = _replaced_paths(replaced, exclude_paths=[])
+    if not paths:
+        return
+    for op in ("values_changed", "type_changes"):
+        for path, change in (delta_dict.get(op) or {}).items():
+            covered = [p for p in paths if p.startswith(path + "[")]
+            if covered:
+                change["new_value"] = copy.deepcopy(_value_at(curr, path))
+                for p in covered:
+                    del paths[p]
+    for path, node in paths.items():
+        if not _excluded(path):
+            delta_dict.setdefault("values_changed", {})[path] = {
+                "new_value": copy.deepcopy(node)
+            }
+
+
 def _compute_delta(prev: dict, curr: dict) -> dict:
     """
     Compute the delta (difference) between two scene states.
@@ -855,18 +1036,13 @@ def _compute_delta(prev: dict, curr: dict) -> dict:
     Returns:
         dict: The delta containing the changes, or empty dict if no changes
     """
-    diff = deepdiff.DeepDiff(
-        prev,
-        curr,
-        ignore_order=False,
-        exclude_paths=EXCLUDE_FROM_DELTAS,
-        exclude_regex_paths=EXCLUDE_FROM_DELTAS_REGEX,
-        ignore_type_in_groups=[(type(None), str, int, float, bool, list, dict)],
-    )
-    if not diff:
+    replaced: dict[tuple, object] = {}
+    diff = _scene_diff(prev, curr, replaced=replaced)
+    delta_dict = diff._to_delta_dict() if diff else {}
+    _write_replaced_containers(delta_dict, curr, replaced)
+    if not delta_dict:
         return {}
 
-    delta_dict = diff._to_delta_dict()
     _full_list_opcode_ops(delta_dict, prev, curr)
     _full_subtree_world_state_ops(delta_dict, prev, curr)
     _warn_on_orphan_delta_ops(prev, delta_dict)
@@ -883,6 +1059,10 @@ def _delta_reproduces_state(prev: dict, curr: dict, delta_dict: dict) -> bool:
     Applies strictly: the end-state comparison catches anything a lenient
     application would have skipped, and applying strictly additionally
     guarantees the delta replays under _apply_delta's strict rules.
+
+    The end-state comparison does not tell ``1`` from ``1.0`` or ``true``
+    (DeepDiff's type groups), so every value the delta writes is also
+    compared by its JSON.
     """
     try:
         # replay the serialized form, since that is what reconstruction reads
@@ -890,14 +1070,64 @@ def _delta_reproduces_state(prev: dict, curr: dict, delta_dict: dict) -> bool:
         applied = _apply_delta(prev, json.loads(json.dumps(delta_dict)))
     except Exception:
         return False
-    return not deepdiff.DeepDiff(
-        applied,
-        curr,
-        ignore_order=False,
-        exclude_paths=EXCLUDE_FROM_DELTAS,
-        exclude_regex_paths=EXCLUDE_FROM_DELTAS_REGEX,
-        ignore_type_in_groups=[(type(None), str, int, float, bool, list, dict)],
+    if _scene_diff(applied, curr):
+        return False
+    return all(
+        _written_value_matches(applied, curr, path)
+        for path in _written_paths(delta_dict)
     )
+
+
+def _written_value_matches(applied: dict, curr: dict, path: str) -> bool:
+    try:
+        value = _value_at(applied, path)
+    except KeyError:
+        value = KeyError
+    try:
+        expected = _value_at(curr, path)
+    except KeyError:
+        expected = KeyError
+    if value is KeyError or expected is KeyError:
+        # a path of the old state can end past the new list; it must end
+        # past it in both
+        return value is expected
+    # JSON text tells 1, 1.0 and true apart, and sorted keys ignore the order
+    return json.dumps(value, sort_keys=True) == json.dumps(expected, sort_keys=True)
+
+
+class ChangelogDeltaError(Exception):
+    """No delta, not even the full state, replays to the scene state."""
+
+
+def _exact_delta(prev: dict, curr: dict) -> dict:
+    """The delta from ``prev`` to ``curr``, checked to replay exactly.
+
+    A computed delta that fails the check, or a DeepDiff error, is replaced
+    by one that writes the full state at ``root``: the chain stays exact and
+    the next save diffs against this state again, instead of refusing the
+    same change at every save.
+
+    Raises:
+        ChangelogDeltaError: the full state does not replay either
+    """
+    try:
+        delta = _compute_delta(prev, curr)
+        if not delta or _delta_reproduces_state(prev, curr, delta):
+            return delta
+        log.error(
+            "delta_verification_failed",
+            detail="computed delta does not reproduce the scene state; writing the full state",
+        )
+    except Exception as e:
+        log.error(
+            "delta_computation_failed",
+            error=e,
+            detail="writing the full state",
+        )
+    delta = {"values_changed": {"root": {"new_value": copy.deepcopy(curr)}}}
+    if not _delta_reproduces_state(prev, curr, delta):
+        raise ChangelogDeltaError("the full scene state does not replay")
+    return delta
 
 
 def _serialize_scene_plain(scene: "Scene") -> dict:
@@ -1409,15 +1639,14 @@ async def check_chain_divergence(scene: "Scene") -> list[str] | None:
     if not _chain_records_world_state(scene):
         exclude_paths += LEGACY_UNTRACKED_WORLD_STATE
 
-    diff = deepdiff.DeepDiff(
-        reconstructed,
-        latest_data,
-        ignore_order=False,
-        exclude_paths=exclude_paths,
-        exclude_regex_paths=EXCLUDE_FROM_DELTAS_REGEX,
-        ignore_type_in_groups=[(type(None), str, int, float, bool, list, dict)],
+    # a dict or list that differs in kind is divergence that the diff
+    # counts as equal ([] and {}) or raises on
+    replaced: dict[tuple, object] = {}
+    diff = _scene_diff(reconstructed, latest_data, exclude_paths, replaced=replaced)
+    divergent_paths = sorted(
+        set(_diff_paths(diff) if diff else [])
+        | set(_replaced_paths(replaced, exclude_paths))
     )
-    divergent_paths = _diff_paths(diff) if diff else []
 
     if divergent_paths:
         log.warning(
@@ -1803,7 +2032,7 @@ async def _rebase_onto_latest(
     staged_base = f"{base_path}.rebasing.{os.getpid()}"
     staged_latest = f"{latest_path}.rebasing.{os.getpid()}"
     _write_json(staged_base, rebased_data)
-    _write_json(staged_latest, rebased_data)
+    _write_json(staged_latest, rebased_data, indent=None)
 
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     attempt = 1
@@ -2088,25 +2317,15 @@ class InMemoryChangelog:
 
         try:
             curr_data = _serialize_scene_plain(self.scene)
-            delta = _compute_delta(self.last_state, curr_data)
-            staged = bool(delta) and _delta_reproduces_state(
-                self.last_state, curr_data, delta
-            )
+            delta = _exact_delta(self.last_state, curr_data)
         except Exception:
             for message in stamped:
                 message.rev = 0
             raise
 
-        if not staged:
+        if not delta:
             for message in stamped:
                 message.rev = 0
-            if delta:
-                # last_state is left unchanged so the next append retries from
-                # the same baseline instead of diverging the chain.
-                log.error(
-                    "delta_verification_failed",
-                    detail="computed delta does not reproduce the scene state; delta not staged",
-                )
             return None
 
         # Store the actual revision number that will be used when committing
@@ -2179,7 +2398,7 @@ class InMemoryChangelog:
                 committed_revs.append(entry_rev)
                 log.debug("committed_in_memory_delta", rev=entry_rev)
 
-            _write_json(_latest_path(self.scene), self.last_state)
+            _write_json(_latest_path(self.scene), self.last_state, indent=None)
         except Exception as write_error:
             try:
                 restore_files()

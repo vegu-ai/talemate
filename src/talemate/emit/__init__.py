@@ -7,6 +7,7 @@ from .base import (
     Receiver,  # noqa: F401
     abort_wait_for_input,  # noqa: F401
     emit,  # noqa: F401
+    flush_emissions,  # noqa: F401
     wait_for_input,  # noqa: F401
     wait_for_input_yesno,  # noqa: F401
 )

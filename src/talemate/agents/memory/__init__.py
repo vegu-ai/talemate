@@ -899,22 +899,31 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         # start filling the final context. This prevents early queries from
         # monopolising the token budget.
 
-        per_query_results: list[list[str]] = []
+        raw_per_query: list[list | None] = []
         for query in queries:
             # Skip empty queries so that we keep indexing consistent for the
             # round-robin step that follows.
             if not query:
-                per_query_results.append([])
+                raw_per_query.append(None)
                 continue
 
             # Fetch potential memories for this query.
-            raw_results = await self.get(
-                formatter(query),
-                limit=limit,
-                **({"viewer": viewer} if viewer is not None else {}),
-                **where,
+            raw_per_query.append(
+                await self.get(
+                    formatter(query),
+                    limit=limit,
+                    **({"viewer": viewer} if viewer is not None else {}),
+                    **where,
+                )
             )
 
+        # every result is filtered after the last query, with no await in
+        # between: a filter that reads the scene (RevisionCheck) reads it once
+        per_query_results: list[list[str]] = []
+        for raw_results in raw_per_query:
+            if raw_results is None:
+                per_query_results.append([])
+                continue
             accepted = [
                 document
                 for document in raw_results

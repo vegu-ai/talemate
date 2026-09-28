@@ -21,7 +21,7 @@ from talemate.knowledge.backlog import counting_pushed
 from talemate.knowledge.intro import initialize_intro_audience, sync_intro_knowledge
 from talemate.config import Config, get_config
 from talemate.context import interaction, handle_generation_cancelled
-from talemate.emit import Emitter, emit
+from talemate.emit import Emitter, emit, flush_emissions
 from talemate.exceptions import (
     ExitScene,
     LLMAccuracyError,
@@ -84,7 +84,7 @@ from talemate.character import Character, NAME_EXISTS_MESSAGE, name_is_taken
 from talemate.agents.tts.schema import VoiceLibrary
 from talemate.instance import get_agent
 from talemate.regenerate import regeneration_status
-from talemate.changelog import InMemoryChangelog
+from talemate.changelog import ChangelogDeltaError, InMemoryChangelog
 from talemate.shared_context import SharedContext
 from talemate.scene_agent_settings import SceneAgentSettings
 
@@ -795,6 +795,9 @@ class Scene(Emitter):
             message.history_dispatch_pending = True
             if emit_message:
                 self.emit_history_message(message)
+        if emit_message:
+            # the line is on screen before the save starts
+            await flush_emissions()
         await self.attempt_auto_save()
 
     def emit_history_message(self, message: SceneMessage):
@@ -1307,7 +1310,9 @@ class Scene(Emitter):
         for message in self.history:
             if message.revision_state is None:
                 continue
-            payload = revision_refresh_payload(self, message)
+            payload = revision_refresh_payload(
+                self, message, skip_history_membership_check=True
+            )
             item = {"id": message.id, **payload}
             if payload["revision_refresh"]["required"]:
                 item["archive_ids"] = sorted(affected_archive_ids(self, message))
@@ -2251,8 +2256,9 @@ class Scene(Emitter):
         # Update the changelog before serializing: append_delta stamps new
         # history messages with their revision, and the scene file must carry
         # the same revs as the chain's latest snapshot.
+        recorded = True
         if self._changelog:
-            await self._changelog.append_delta()
+            recorded = await self.append_changelog_delta()
             if self.shared_context:
                 await self.shared_context.commit_changes(self)
             await self._changelog.commit()
@@ -2265,7 +2271,13 @@ class Scene(Emitter):
 
         self.saved = True
 
-        if not auto:
+        if not recorded:
+            emit(
+                "status",
+                status="error",
+                message="Saved scene, but its revision history could not record this change",
+            )
+        elif not auto:
             emit("status", status="success", message="Saved scene")
 
         if hasattr(self, "_save_files"):
@@ -2275,6 +2287,19 @@ class Scene(Emitter):
 
         # add this scene to recent scenes in config
         await self.add_to_recent_scenes()
+
+    async def append_changelog_delta(self) -> bool:
+        """
+        Stage the changelog delta of the current state. False when not even
+        the full state replays (logged): the caller goes on, the scene file is
+        still written, and the next append tries again.
+        """
+        try:
+            await self._changelog.append_delta()
+        except ChangelogDeltaError as e:
+            log.error("changelog_delta_failed", error=str(e))
+            return False
+        return True
 
     async def save_restore(self, filename: str):
         """

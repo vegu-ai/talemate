@@ -41,14 +41,19 @@ class RevisionOperations(BaseModel):
         return ("perceptions",) if self.perceptions else ()
 
 
-def revision_operations(scene, message) -> RevisionOperations:
+def revision_operations(
+    scene, message, *, skip_history_membership_check: bool = False
+) -> RevisionOperations:
     """Resolve eligibility from the effective scene-aware configuration."""
     content = message.perception_text if message is not None else ""
     if isinstance(message, CharacterMessage) and ":" in content:
         content = content.split(":", 1)[1]
     if (
         message is None
-        or not any(entry is message for entry in scene.history)
+        or not (
+            skip_history_membership_check
+            or any(entry is message for entry in scene.history)
+        )
         or not message.supports_perceptions
         or message.hidden
         or not content.strip()
@@ -141,8 +146,14 @@ def _revision_work_required(scene, message, operations=None) -> bool:
     return False
 
 
-def revision_refresh_payload(scene, message) -> dict:
-    operations = revision_operations(scene, message)
+def revision_refresh_payload(
+    scene, message, *, skip_history_membership_check: bool = False
+) -> dict:
+    operations = revision_operations(
+        scene,
+        message,
+        skip_history_membership_check=skip_history_membership_check,
+    )
     pending_repair = bool(
         message.revision_state and message.revision_state.pending_index_repair
     )

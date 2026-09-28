@@ -34,20 +34,23 @@ Every node available in the node editor, grouped by category. Each page lists th
 | [Flow Exception Nodes](raise.md) | 3 | Stop graph execution or raise errors: Stop, input value errors and acted-as-character signals. |
 | [Function Nodes](core-functions.md) | 11 | Callable node modules: define, get and call functions, for-each calls, returns, error handlers, breakpoints and scoped API functions. |
 | [Input Nodes](input.md) | 2 | Process and wait for player input in the scene loop. |
-| [Knowledge Nodes](knowledge.md) | 8 | Who knows what: an entry's Known by line, a character's knowledge report, entry visibility, disclosures and grant/revoke knowledge edges. Grant Knowledge Metadata and Grant Knowledge Confirmation select the director wording for the scene's knowledge mode. |
+| [Knowledge Nodes](knowledge.md) | 13 | Who knows what: an entry's Known by line, a character's knowledge report, entry visibility, disclosures and grant/revoke knowledge edges. Grant Knowledge Metadata and Grant Knowledge Confirmation select the director wording for the scene's knowledge mode. |
 | [Logic Nodes](core-logic.md) | 12 | Branching and comparison: switches, routers, boolean logic and conditional routing. |
-| [Memory Agent Nodes](agents-memory.md) | 2 | Query the long-term memory context database and unpack memory documents. |
+| [Memory Agent Nodes](agents-memory.md) | 3 | Query the long-term memory context database and unpack memory documents. |
 | [Narrator Agent Nodes](agents-narrator.md) | 12 | Generate narration messages: progress, scene, environment, query, character entry/exit and time narration. |
 | [Number Nodes](data-number.md) | 9 | Numeric values: conversion, arithmetic, comparison and random numbers. |
 | [Packaging Nodes](util-packaging.md) | 4 | Node module packaging: define, install and configure scene packages. |
+| [Perspective Nodes](scene-perspectives.md) | 2 | Character Perspectives: read and replace one character's view of a message. |
 | [Prompt Nodes](prompt.md) | 7 | Build prompts and control generation: prompt construction, defaults and inference settings. |
+| [Question Nodes](ask-questions.md) | 3 | Ask the decision model a yes/no, choice or score question and branch on the answer's probability, with an uncertain route when no answer comes. |
 | [Response Parsing Nodes](response.md) | 9 | Parse LLM responses: extractors for anchors, lists, movie-script dialogue and structured data. |
 | [Scene Character Nodes](scene-characters.md) | 18 | Characters in the scene: get, make, activate/deactivate, remove and read/write attributes, details and descriptions. |
-| [Scene History Nodes](scene-history.md) | 11 | Scene message history: query, summarize and manage archive entries and character activity. |
+| [Scene Header Control Nodes](scene-header-controls.md) | 2 | Game state variables shown as scene header controls or in Debug Tools: read a variable's control settings and pin or unpin it. |
+| [Scene History Nodes](scene-history.md) | 13 | Scene message history: query, summarize and manage archive entries and character activity. |
 | [Scene Intent Nodes](scene-intent.md) | 10 | Scene intention: read and set the scene intent, scene phase and scene types. |
 | [Scene Message Nodes](scene-messages.md) | 6 | Scene messages: create, version, hide and manipulate messages in the scene log. |
 | [Scene Nodes](scene.md) | 18 | Scene lifecycle and metadata: title, description, introduction, content classification, scene loop and storyline modules. |
-| [State Nodes](state.md) | 14 | Graph state variables: get/set/unset across scopes (local, parent, shared, scene loop, game), counters and path variants. |
+| [State Nodes](state.md) | 15 | Graph state variables: get/set/unset across scopes (local, parent, shared, scene loop, game), counters and path variants. |
 | [String Nodes](data-string.md) | 16 | Strings: formatting, templates, joining, splitting, cleanup and excerpts. |
 | [Summarizer Agent Nodes](agents-summarizer.md) | 5 | Summarization: scene progression summaries, tag generation and message avatar hooks. |
 | [Utility Nodes](util.md) | 5 | Miscellaneous helpers: counters, diffs, list extraction, durations and module styling. |
@@ -56,7 +59,8 @@ Every node available in the node editor, grouped by category. Each page lists th
 | [Visualizer Agent Generation Nodes](agents-visual-generation.md) | 7 | Visual generation: generation requests, image generation, backend selection/status and image analysis. |
 | [Visualizer Agent Modules](agents-visual-modules.md) | 10 | Ready-made visual generation flows: generate visual assets, avatars, portraits, image edits and regenerations. |
 | [Visualizer Agent Prompt Nodes](agents-visual.md) | 8 | Visual prompt building: prompt parts, styles, finalization and unpacking. |
-| [Voice Agent Nodes](agents-tts.md) | 7 | Text-to-speech: get and unpack voices, generate speech and read or rewrite generation text through the voice agent. |
+| [Voice Agent Nodes](agents-tts.md) | 8 | Text-to-speech: get and unpack voices, generate speech and read or rewrite generation text through the voice agent. |
 | [Websocket Nodes](websocket.md) | 4 | Websocket plumbing: routers, responses and operation done/failed signals. |
 | [World Entry Nodes](scene-world-state.md) | 8 | World entries (get, save, unpack, remove) and generation options: spices and writing styles. |
+| [World Panel Nodes](world-panel.md) | 2 | The characters, items, places and location the World State panel shows: read them, and add a person, object or place named in a message. |
 | [World State Agent Nodes](agents-world-state.md) | 14 | World state operations: time advancement, character progression, world state emission and extraction. |

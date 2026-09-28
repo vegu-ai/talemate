@@ -1,6 +1,5 @@
 import hashlib
 import json
-import re
 from typing import TYPE_CHECKING, Callable
 
 import structlog
@@ -14,7 +13,7 @@ from talemate.agents.base import (
 )
 from talemate.knowledge.bucket import KnowledgeIndex, knowledge_digest
 from talemate.decisions.characters import (
-    character_aliases,
+    character_named,
     referenced_characters,
 )
 from talemate.decisions.gate import decision_gate_enabled
@@ -25,28 +24,30 @@ from talemate.knowledge.revision_browsing import RevisionCheck
 from talemate.util.dedupe import compile_sentences_to_length, compile_text_to_sentences
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Character
+    from talemate.tale_mate import Character, Scene
 
 __all__ = ["MemoryRAGMixin"]
+
+
+def knowledge_retrieval_filter(scene: "Scene", viewer: str | None):
+    """
+    The filter memory retrieval applies: in a Standard scene with a viewer,
+    what the viewer does not know; otherwise stale documents only, or None.
+    """
+    check = RevisionCheck(scene)
+    if viewer is not None and not character_knowledge_enabled(scene):
+        # the retrieval filter rejects stale documents itself
+        return KnowledgeIndex.from_scene(scene, check).retrieval_filter(
+            scene, viewer, check
+        )
+    if not check.revisions.stale:
+        return None
+    return check
 
 
 def _paragraph_order(doc_id: str) -> tuple[int, int]:
     tail = doc_id.rsplit(".", 1)[-1]
     return (1, int(tail)) if tail.isdigit() else (0, 0)
-
-
-def _alias_named(alias: str, text: str) -> bool:
-    """
-    Whole-word match. An alias that carries a capital (a name) must appear
-    with that capitalisation, so "Will" is not found in "I will go"; an alias
-    that is lower-case in the name mappings matches case-insensitively.
-    """
-    if not alias:
-        return False
-    pattern = rf"\b{re.escape(alias)}\b"
-    if alias == alias.lower():
-        return re.search(pattern, text, re.IGNORECASE) is not None
-    return re.search(pattern, text) is not None
 
 
 log = structlog.get_logger()
@@ -724,16 +725,9 @@ class MemoryRAGMixin:
         return character.name if character is not None else None
 
     def rag_knowledge_filter(self, character: "Character | None"):
-        check = RevisionCheck(self.scene)
-        viewer = self.rag_knowledge_viewer(character)
-        if viewer is not None and not character_knowledge_enabled(self.scene):
-            # the retrieval filter rejects stale documents itself
-            return KnowledgeIndex.from_scene(self.scene, check).retrieval_filter(
-                self.scene, viewer, check
-            )
-        if not check.revisions.stale:
-            return None
-        return check
+        return knowledge_retrieval_filter(
+            self.scene, self.rag_knowledge_viewer(character)
+        )
 
     async def semantic_context(
         self,
@@ -841,9 +835,7 @@ class MemoryRAGMixin:
             list(scene.inactive_characters),
             uid="memory.decision-entity-references",
             enabled=memory.retrieval_entity_decision_model,
-            match=lambda name: any(
-                _alias_named(alias, text) for alias in character_aliases(scene, name)
-            ),
+            match=lambda name: character_named(scene, name, text),
         )
         if not named:
             return []

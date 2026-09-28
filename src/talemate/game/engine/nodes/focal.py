@@ -488,6 +488,9 @@ class UnpackCall(Node):
     - uid: The UID of the call
     - called: Whether the call was made
     - error: The error message if the call failed
+    - skipped_reason: Why a call was not applied (reject, reject_with_instructions, over_budget, unknown_callback, timed_out, interrupted, failed, aborted), or None
+    - rejection_instructions: The correction the user gave with a rejection
+    - subcalls: The calls this call made, as focal calls
     """
 
     def __init__(self, title="Unpack AI Function Call", **kwargs):
@@ -501,6 +504,9 @@ class UnpackCall(Node):
         self.add_output("uid", socket_type="str")
         self.add_output("called", socket_type="bool")
         self.add_output("error", socket_type="str")
+        self.add_output("skipped_reason", socket_type="str")
+        self.add_output("rejection_instructions", socket_type="str")
+        self.add_output("subcalls", socket_type="list")
 
     async def run(self, state: GraphState):
         call = self.get_input_value("call")
@@ -512,6 +518,9 @@ class UnpackCall(Node):
                 "uid": call.uid,
                 "called": call.called,
                 "error": call.error,
+                "skipped_reason": call.skipped_reason,
+                "rejection_instructions": call.rejection_instructions,
+                "subcalls": list(call.subcalls),
             }
         )
 

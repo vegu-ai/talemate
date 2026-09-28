@@ -1,18 +1,68 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import pydantic
 
+import talemate.emit.async_signals as async_signals
 from talemate.emit import emit
-from talemate.knowledge.schema import EdgeKind, KnowledgeEdge
+from talemate.events import Event
+from talemate.knowledge.schema import EdgeKind, EntryVisibility, KnowledgeEdge
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
+
+
+async_signals.register(
+    "knowledge.changed",
+    "knowledge.visibility_changed",
+    "knowledge.edge_removed",
+    "knowledge.disclosure_added",
+)
 
 
 class KnowledgeChange(pydantic.BaseModel):
     character: str
     target: str
     kind: EdgeKind = "grant"
+
+
+class LabeledKnowledgeChange(KnowledgeChange):
+    label: str
+
+
+class KnowledgeChangedEvent(Event):
+    """What a character now knows (grant) or no longer knows (revoke)."""
+
+    changes: list[LabeledKnowledgeChange]
+
+
+VisibilityKind = Literal["world_entry", "sheet"]
+
+
+class KnowledgeVisibilityChangedEvent(Event):
+    """The Known by setting of a world entry or a character sheet entry changed."""
+
+    entry_id: str
+    kind: VisibilityKind
+    owner: str | None = None
+    key: str | None = None
+    previous: EntryVisibility | None = None
+    visibility: EntryVisibility
+
+
+class KnowledgeEdgeRemovedEvent(Event):
+    """A Learn or Never Learn rule was removed."""
+
+    edge: KnowledgeEdge
+    changed: bool
+
+
+class DisclosureAddedEvent(Event):
+    """Information was shared with characters as a disclosure."""
+
+    disclosure_id: str
+    text: str
+    audience: list[str]
+    origin: str | None = None
 
 
 def edge_change(edge: KnowledgeEdge) -> KnowledgeChange:
@@ -72,19 +122,24 @@ def emit_knowledge_changes(
         else knowledge_label(scene, target)
         for target in {c.target for c in unique.values()}
     }
-    entries = []
-    for change in unique.values():
-        entries.append(
-            {
-                **change.model_dump(),
-                "label": labels[change.target],
-            }
-        )
+    entries = [
+        LabeledKnowledgeChange(**change.model_dump(), label=labels[change.target])
+        for change in unique.values()
+    ]
     emit(
         "knowledge_changed",
         scene=scene,
-        data={"scene_id": scene.id, "changes": entries},
+        data={
+            "scene_id": scene.id,
+            "changes": [entry.model_dump() for entry in entries],
+        },
         websocket_passthrough=True,
+    )
+    async_signals.send_soon(
+        "knowledge.changed",
+        KnowledgeChangedEvent(
+            scene=scene, event_type="knowledge.changed", changes=entries
+        ),
     )
 
 

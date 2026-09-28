@@ -4,7 +4,6 @@ import asyncio
 import hashlib
 import json
 from contextlib import contextmanager
-from contextvars import ContextVar
 from weakref import WeakKeyDictionary
 
 import structlog
@@ -16,15 +15,21 @@ from talemate.instance import get_agent
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspective_models import content_digest
 from talemate.knowledge.presence import relevant_audiences
-from talemate.knowledge.revision_browsing import (
-    affected_archive_ids,
+import talemate.emit.async_signals as async_signals
+from talemate.knowledge.revision_browsing import affected_archive_ids
+from talemate.knowledge.revision_scope import (
+    JobEvents,
+    active_revision_phase,
+    after_catch_up_events,
+    catch_up_owners,
+    catch_up_running,
+    hold_until_catch_up_ends,
+    job_perception_events,
 )
 from talemate.scene_message import CharacterMessage, RevisionIndexRepair
 
-_active_transaction = ContextVar("revision_refresh_transaction", default=None)
 _archive_vector_repairs = WeakKeyDictionary()
 _catch_up_locks = WeakKeyDictionary()
-_catch_up_owners = WeakKeyDictionary()
 log = structlog.get_logger(__name__)
 
 
@@ -394,11 +399,11 @@ def _record_transaction_writes(scene, message, before: dict, phase: str) -> None
 @contextmanager
 def revision_phase(scene, message, phase: str):
     """Make synchronous mutation seams inside one awaited phase journal-aware."""
-    token = _active_transaction.set((scene, message, phase))
+    token = active_revision_phase.set((scene, message, phase))
     try:
         yield
     finally:
-        _active_transaction.reset(token)
+        active_revision_phase.reset(token)
 
 
 @contextmanager
@@ -409,7 +414,7 @@ def capture_revision_mutations(scene, *, message=None, phase: str | None = None)
     another task can write while generation is pending, and those writes must
     never be claimed by this revision transaction.
     """
-    active = _active_transaction.get()
+    active = active_revision_phase.get()
     if active is not None and active[0] is scene:
         _, active_message, active_phase = active
         if message is None:
@@ -939,7 +944,7 @@ async def refresh_revision(scene, message):
     job = jobs.get(message.id)
     if job is None or job.done() or getattr(job, "revision_identity", None) != identity:
         job = asyncio.create_task(
-            _refresh_revision(scene, message, identity, operations)
+            _refresh_revision_job(scene, message, identity, operations)
         )
         job.revision_identity = identity
         jobs[message.id] = job
@@ -948,6 +953,26 @@ async def refresh_revision(scene, message):
     finally:
         if job.done() and jobs.get(message.id) is job:
             jobs.pop(message.id, None)
+
+
+async def _refresh_revision_job(scene, message, identity, operations):
+    """
+    The refresh job owns the perception events of its analysis and sends
+    them when it ends, also when its waiter was cancelled: after a running
+    catch-up (generation waits for every pending revision), or in tasks.
+    """
+    events = JobEvents()
+    token = job_perception_events.set(events)
+    try:
+        return await _refresh_revision(scene, message, identity, operations)
+    finally:
+        job_perception_events.reset(token)
+        events.closed = True
+        if catch_up_running(scene):
+            hold_until_catch_up_ends(scene, events)
+        else:
+            for name, emission in events:
+                async_signals.send_soon(name, emission)
 
 
 def revisions_before_rebuild(scene) -> list:
@@ -996,28 +1021,47 @@ async def _repair_scene_indexes(scene) -> None:
 async def catch_up_revisions(scene) -> None:
     """Await every pending revision in history order before new generation."""
     # History listeners may push another message from inside this dispatch.
-    if _catch_up_owners.get(scene) is asyncio.current_task():
+    if catch_up_owners.get(scene) is asyncio.current_task():
         return
     lock = _catch_up_locks.setdefault(scene, asyncio.Lock())
-    async with lock:
-        _catch_up_owners[scene] = asyncio.current_task()
+    held = []
+    try:
+        async with lock:
+            catch_up_owners[scene] = asyncio.current_task()
+            try:
+                await _catch_up_pending(scene)
+            finally:
+                catch_up_owners.pop(scene, None)
+                held = after_catch_up_events.pop(scene, [])
+    except BaseException:
+        for name, emission in held:
+            async_signals.send_soon(name, emission)
+        raise
+    # the lock is free: a listener's own catch-up finds nothing pending
+    for index, (name, emission) in enumerate(held):
         try:
-            await _repair_scene_indexes(scene)
-            for message in list(scene.history):
-                if message.revision_state is not None and revision_requires_refresh(
-                    scene, message
-                ):
-                    await refresh_revision(scene, message)
-                if message.history_dispatch_pending:
-                    if not any(entry is message for entry in scene.history):
-                        continue
-                    # Acceptance is durable before refresh; dispatch must not append
-                    # or emit the player's line again after an interrupted refresh.
-                    try:
-                        await scene.dispatch_history([message])
-                        message.history_dispatch_pending = False
-                        message.history_dispatch_completed.clear()
-                    finally:
-                        await scene.attempt_auto_save()
-        finally:
-            _catch_up_owners.pop(scene, None)
+            await async_signals.get(name).send(emission)
+        except BaseException:
+            for rest_name, rest in held[index + 1 :]:
+                async_signals.send_soon(rest_name, rest)
+            raise
+
+
+async def _catch_up_pending(scene) -> None:
+    await _repair_scene_indexes(scene)
+    for message in list(scene.history):
+        if message.revision_state is not None and revision_requires_refresh(
+            scene, message
+        ):
+            await refresh_revision(scene, message)
+        if message.history_dispatch_pending:
+            if not any(entry is message for entry in scene.history):
+                continue
+            # Acceptance is durable before refresh; dispatch must not append
+            # or emit the player's line again after an interrupted refresh.
+            try:
+                await scene.dispatch_history([message])
+                message.history_dispatch_pending = False
+                message.history_dispatch_completed.clear()
+            finally:
+                await scene.attempt_auto_save()

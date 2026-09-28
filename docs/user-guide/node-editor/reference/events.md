@@ -32,6 +32,7 @@ List of currently supported events.
 | [`agent.conversation.before_generate`](#agentconversationbefore_generate) | Conversation Agent |
 | [`agent.conversation.inject_instructions`](#agentconversationinject_instructions) | Conversation Agent |
 | [`agent.conversation.generated`](#agentconversationgenerated) | Conversation Agent |
+| [`agent.conversation.finalized`](#agentconversationfinalized) | Conversation Agent |
 | [`agent.creator.contextual_generate.before`](#agentcreatorcontextual_generatebefore) | Creator Agent |
 | [`agent.creator.contextual_generate.after`](#agentcreatorcontextual_generateafter) | Creator Agent |
 | [`agent.creator.autocomplete.before`](#agentcreatorautocompletebefore) | Creator Agent |
@@ -40,6 +41,7 @@ List of currently supported events.
 | [`agent.creator.dialogue_examples.after`](#agentcreatordialogue_examplesafter) | Creator Agent |
 | [`agent.editor.revision-analysis.before`](#agenteditorrevision-analysisbefore) | Editor Agent |
 | [`agent.editor.revision-analysis.after`](#agenteditorrevision-analysisafter) | Editor Agent |
+| [`agent.editor.revision.decision-checks.before`](#agenteditorrevisiondecision-checksbefore) | Editor Agent |
 | [`agent.editor.revision-revise.before`](#agenteditorrevision-revisebefore) | Editor Agent |
 | [`agent.editor.revision-revise.after`](#agenteditorrevision-reviseafter) | Editor Agent |
 | [`agent.help.chat.before`](#agenthelpchatbefore) | Help Agent |
@@ -55,7 +57,10 @@ List of currently supported events.
 | [`agent.director.generate_choices.generated`](#agentdirectorgenerate_choicesgenerated) | Director Agent |
 | [`agent.director.character_management.before_persist_character`](#agentdirectorcharacter_managementbefore_persist_character) | Director Agent |
 | [`agent.director.character_management.after_persist_character`](#agentdirectorcharacter_managementafter_persist_character) | Director Agent |
+| [`agent.director.chat.batch_complete`](#agentdirectorchatbatch_complete) | Director Agent |
 | [`agent.world_state.time`](#agentworld_statetime) | World State Agent |
+| [`agent.world_state.reinforcement.skipped`](#agentworld_statereinforcementskipped) | World State Agent |
+| [`agent.world_state.snapshot.entity_added`](#agentworld_statesnapshotentity_added) | World State Agent |
 | [`agent.summarization.scene_analysis.before`](#agentsummarizationscene_analysisbefore) | Summarization Agent |
 | [`agent.summarization.scene_analysis.cached`](#agentsummarizationscene_analysiscached) | Summarization Agent |
 | [`agent.summarization.scene_analysis.before_deep_analysis`](#agentsummarizationscene_analysisbefore_deep_analysis) | Summarization Agent |
@@ -67,6 +72,9 @@ List of currently supported events.
 | [`agent.summarization.after_build_archive`](#agentsummarizationafter_build_archive) | Summarization Agent |
 | [`agent.summarization.layered_history.finalize`](#agentsummarizationlayered_historyfinalize) | Summarization Agent |
 | [`agent.summarization.rag_build_sub_instruction`](#agentsummarizationrag_build_sub_instruction) | Summarization Agent |
+| [`agent.summarization.perceptions.before`](#agentsummarizationperceptionsbefore) | Summarization Agent |
+| [`agent.summarization.perceptions.after`](#agentsummarizationperceptionsafter) | Summarization Agent |
+| [`agent.summarization.perceptions.failed`](#agentsummarizationperceptionsfailed) | Summarization Agent |
 | [`agent.tts.prepare.before`](#agentttspreparebefore) | TTS Agent |
 | [`agent.tts.prepare.after`](#agentttsprepareafter) | TTS Agent |
 | [`agent.tts.generate.before`](#agentttsgeneratebefore) | TTS Agent |
@@ -80,6 +88,19 @@ List of currently supported events.
 | [`scene.backdrop_changed`](#scenebackdrop_changed) | Scene Assets |
 | [`scene.cover_image_changed`](#scenecover_image_changed) | Scene Assets |
 | [`character.cover_image_changed`](#charactercover_image_changed) | Scene Assets |
+| [`game_state.changed`](#game_statechanged) | Game State |
+| [`character.activated`](#characteractivated) | Characters |
+| [`character.deactivated`](#characterdeactivated) | Characters |
+| [`knowledge.changed`](#knowledgechanged) | Knowledge |
+| [`knowledge.visibility_changed`](#knowledgevisibility_changed) | Knowledge |
+| [`knowledge.edge_removed`](#knowledgeedge_removed) | Knowledge |
+| [`knowledge.disclosure_added`](#knowledgedisclosure_added) | Knowledge |
+| [`perspective.view_edited`](#perspectiveview_edited) | Knowledge |
+| [`decision.invocation.finished`](#decisioninvocationfinished) | Decision Model |
+| [`decision.gate.resolved`](#decisiongateresolved) | Decision Model |
+| [`client.enabled`](#clientenabled) | Clients |
+| [`client.disabled`](#clientdisabled) | Clients |
+| [`client.embeddings_available`](#clientembeddings_available) | Clients |
 
 ## Game Loop
 
@@ -340,6 +361,24 @@ Handlers can edit `generation` in-place to clean up or transform the text (the E
     | `character` | `Character` | The speaking character |
     | `response` | `str` | **Mutable.** Final text lines that will be turned into messages |
 
+---
+
+### agent.conversation.finalized
+
+Emitted once a character's message is in the history and the follow-up work on it is done: perceptions, summaries and voice preparation. The message is already visible to the player at this point.
+Handlers can set `avatar` to an asset id to change the portrait shown with the message. The shipped portrait module listens here.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `ConversationAgent` | The agent instance |
+    | `actor` | `Actor` | Actor that spoke |
+    | `character` | `Character` | The speaking character |
+    | `response` | `str` | The final message text |
+    | `message_ids` | `list[int]` | The id of the finished message |
+    | `avatar` | `str` | **Mutable.** Asset id of the portrait for the message |
+
 ## Creator Agent Events
 
 ### agent.creator.contextual_generate.before
@@ -455,6 +494,8 @@ Handlers can add extra revise instructions via `dynamic_instructions` or adjust 
     | `agent` | `EditorAgent` | The agent instance |
     | `template_vars` | `dict` | Variables that will be fed into the prompt – **mutable** |
     | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable.** Push additional `DynamicInstruction` objects to influence generation |
+    | `info` | `RevisionInformation` | The text being revised and where it comes from (`text`, `character`, `context_type`, `context_name`) |
+    | `issues` | `Issues` | What the revision will fix. With Editor Decision Checks on, `issues.decision_findings` lists the findings (`passage_id`, `text`, `kind`, `instructions`, `p_true`) — **mutable**, remove a finding to leave that passage alone |
 
 ---
 
@@ -516,6 +557,24 @@ notification hook for observers of the rewrite flow.
     |-------|------|-------|
     | `agent` | `EditorAgent` | The agent instance |
     | `template_vars` | `dict` | Same vars used for the prompt |
+
+---
+
+### agent.editor.revision.decision-checks.before
+
+Emitted before the Editor Decision Checks of one revision run, with the checks of the scene's writing style that are active.
+Handlers can add, remove or change checks for this message only; the writing style is not changed. With no checks left, the usual revision detection runs instead.
+
+Example: during the mystery act a module adds a check "Does this passage reveal who the killer is?".
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `EditorAgent` | The agent instance |
+    | `info` | `RevisionInformation` | The text being revised |
+    | `checks` | `list[DecisionCheck]` | **Mutable.** The checks that will run |
+    | `writing_style` | `str` | Template id of the scene's writing style |
 
 ## Help Agent Events
 
@@ -696,6 +755,26 @@ Emitted **after** the character has been fully persisted: actor added, generatio
     | `agent` | `DirectorAgent` | The agent instance |
     | `character` | `Character` | The character that was just persisted |
 
+---
+
+### agent.director.chat.batch_complete
+
+Emitted after the Director Chat has handled one batch of proposed actions, including actions the user confirmed or rejected.
+
+Each call is a dict with `function`, `arguments` and `applied`, and when set `reason` (`confirm`, `reject`, `reject_with_instructions`, `over_budget`, `unknown_callback`, `timed_out`, `interrupted`, `failed`, `aborted`), `error`, `instructions` and `subcalls`.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `DirectorAgent` | The agent instance |
+    | `chat_id` | `str` | The Director Chat |
+    | `applied` | `list[dict]` | Calls that were applied |
+    | `not_applied` | `list[dict]` | Calls that were not applied |
+    | `rejections` | `list[dict]` | Calls the user rejected with a correction (`function`, `arguments`, `reason`, `instructions`) |
+    | `applied_count` | `int` | Applied calls, sub-calls included |
+    | `not_applied_count` | `int` | Calls not applied, sub-calls included |
+
 ## World State Agent Events
 
 ### agent.world_state.time
@@ -710,6 +789,40 @@ Emitted when the world state agent advances the time in the scene.
     | `duration` | `int` | The duration of the time passage, in seconds |
     | `human_duration` | `str` | The human-readable duration of the time passage |
     | `narrative` | `str` | The narrative direction of the time passage |
+
+---
+
+### agent.world_state.reinforcement.skipped
+
+Emitted when the decision model finds that a tracked state has not changed, so no update request runs. The state keeps its answer until its next interval.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `WorldStateAgent` | The agent instance |
+    | `question` | `str` | The tracked state's question |
+    | `character` | `str` | The character the state belongs to, or `None` |
+    | `answer` | `str` | The answer it keeps |
+    | `interval` | `int` | Turns until the next check |
+
+---
+
+### agent.world_state.snapshot.entity_added
+
+Emitted when a person, object or place selected in a message was added to the world snapshot, from the message menu or with the **Add Snapshot Entity** node.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `WorldStateAgent` | The agent instance |
+    | `message_id` | `int` | The message the text was selected in |
+    | `selection` | `str` | The selected text |
+    | `name` | `str` | The entry name in the snapshot |
+    | `kind` | `str` | `character`, `item` or `place` |
+    | `in_moment` | `bool` | Whether the message is in the snapshot's current moment |
+    | `mentions` | `list[str]` | Phrases of the message marked as the entry |
 
 ## Summarization Agent Events
 
@@ -880,6 +993,61 @@ Fires when the summarizer assembles the additional sub-instruction used when fet
     |-------|------|-------|
     | `agent` | `SummarizeAgent` | The agent instance |
     | `sub_instruction` | `str \| None` | **Mutable.** Concatenated sub-instruction to attach to the RAG query |
+
+---
+
+### agent.summarization.perceptions.before
+
+Emitted before the Summarizer asks for the characters' views of a passage (Character Perspectives). It is emitted again for a repair attempt.
+Handlers can add `dynamic_instructions` to the request.
+
+Example: a mystery module adds "Nobody but Mara can perceive the masked figure's identity."
+
+!!! warning
+    Do not start a generation from this event: the analysis waits for the handler.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `SummarizeAgent` | The agent instance |
+    | `message_id` | `int` | The passage |
+    | `characters` | `list[str]` | The characters whose views are requested |
+    | `attempt` | `int` | `1`, or `2` for the repair attempt |
+    | `validation_error` | `str` | Why the first attempt was refused, on a repair attempt |
+    | `template_vars` | `dict` | Variables of the request |
+    | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable.** Instructions added to the request |
+
+---
+
+### agent.summarization.perceptions.after
+
+Emitted once the characters' views of a passage are stored, after the analysis has finished. When a revised message is analyzed again, the event is sent when that revision refresh ends; if a generation is catching up on pending revisions, it is sent after all of them are done. A handler can start a generation from this event.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `SummarizeAgent` | The agent instance |
+    | `message_id` | `int` | The passage |
+    | `views` | `list[PerceptionView]` | One entry per character: `character`, `status` (`ready` or `omitted`), `text` |
+    | `analyzed` | `list[str]` | Characters whose view the model wrote |
+    | `verbatim` | `list[str]` | Characters who received the full passage without analysis, such as the speaker |
+
+---
+
+### agent.summarization.perceptions.failed
+
+Emitted after the analysis of a passage failed, once the analysis has finished.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `SummarizeAgent` | The agent instance |
+    | `message_id` | `int` | The passage |
+    | `characters` | `list[str]` | The characters whose views were requested |
+    | `error` | `str` | Why it failed |
 
 ## TTS Agent Events
 
@@ -1069,3 +1237,225 @@ Emitted when a character's cover image is set.
     |-------|------|-------|
     | `asset` | `Asset` | The new cover image asset |
     | `character_name` | `str` | The character the cover image belongs to |
+
+## Game State Events
+
+### game_state.changed
+
+Emitted once for each game state value that changes, whoever changes it:
+
+- a control in the scene header, or Debug Tools
+- the World Editor's game state editor
+- the Director's game state updates
+- a node graph: the state nodes in the `game` scope and **Update Game State**
+- a scene script or template that calls `game_state.set_var` or `game_state.unset_var`
+
+A nested value has its own event with its full path. A removed value has `value` `None`. A write that leaves a value as it was sends no event, and loading a scene sends none. The new value is already stored, after the control's bounds and choices were applied. The event is sent in a task after the change, without waiting for its handlers, so a handler can start a generation.
+
+A change made in place on the dict from the **Game State** node sends no event. Use **Update Game State** or a state node in the `game` scope.
+
+!!! warning "Handlers that write game state"
+    A handler that writes the game state emits this event again. Write only when the value must change, or the handler runs in a loop.
+
+Example: the player switches `stance` from `friendly` to `hostile`, and a module at once adds a director instruction for the next turn.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `path` | `str` | The value's path, e.g. `player/health` |
+    | `value` | `any` | The new value, or `None` when it was removed |
+    | `previous_value` | `any` | The value before the change, or `None` |
+
+## Character Events
+
+### character.activated
+
+Emitted when a character enters the scene.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `character` | `Character` | The character |
+    | `transition` | `CharacterTransitionMessage` | The arrival entry in the history, or `None` when none was written (for example while a scene loads). Read it with **Unpack Character Transition** |
+
+---
+
+### character.deactivated
+
+Emitted when a character leaves the scene.
+
+Example: a module narrates the exit, or notes where the character went.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `character` | `Character` | The character |
+    | `transition` | `CharacterTransitionMessage` | The departure entry in the history, or `None` when none was written |
+
+## Knowledge Events
+
+### knowledge.changed
+
+Emitted when what a character knows changes: an entry is learned or blocked (Learn, Never Learn, Known by of static history) or information is shared as a disclosure. It is sent right after the change, without waiting for it.
+
+Example: when the player learns where the key is hidden, a module shows a hint.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `changes` | `list` | One entry per change: `character`, `target` (entry or disclosure id), `kind` (`grant` or `revoke`), `label` |
+
+---
+
+### knowledge.visibility_changed
+
+Emitted when the Known by setting of a world entry or a character sheet entry changes. It is sent right after the change, without waiting for it.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `entry_id` | `str` | The entry, e.g. `Hidden Door` or `Bob.secret` |
+    | `kind` | `str` | `world_entry` or `sheet` |
+    | `owner` | `str` | The character a sheet entry belongs to |
+    | `key` | `str` | The sheet entry key, e.g. `secret` or `detail.the fall` |
+    | `previous` | `EntryVisibility` | The setting before (`mode`, `characters`) |
+    | `visibility` | `EntryVisibility` | The new setting |
+
+---
+
+### knowledge.edge_removed
+
+Emitted when a Learn or Never Learn rule is removed. It is sent right after the change, without waiting for it.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `edge` | `KnowledgeEdge` | The removed rule (`character`, `target`, `kind`, `source`, `note`) |
+    | `changed` | `bool` | Whether the Learn / Never Learn state between the character and the entry changed. The entry's Known by or the character's presence can still give the same access as before |
+
+---
+
+### knowledge.disclosure_added
+
+Emitted when information is shared with characters as a disclosure (Character Perspectives). It is sent right after the change, without waiting for it.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `disclosure_id` | `str` | The disclosure |
+    | `text` | `str` | The shared information |
+    | `audience` | `list[str]` | Who knows it now |
+    | `origin` | `str` | The entry it comes from, or `None` |
+
+---
+
+### perspective.view_edited
+
+Emitted when one character's view of a message is replaced by hand, in the perspective panel or with the **Set Message View** node. It is sent right after the change, without waiting for it.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `message_id` | `int` | The message |
+    | `character` | `str` | The character |
+    | `status` | `str` | `ready`, or `omitted` for an empty view |
+    | `text` | `str` | The new view |
+    | `dependents` | `int` | Later views built on this one; they stay valid |
+
+## Decision Model Events
+
+!!! note
+    These events report the decision checks Talemate runs itself (editor checks, yes/no queries, pin conditions, tracked states, portraits, character references). A question asked with the **Ask Decision Model** node returns its answer to the node and does not emit them.
+
+    Some checks run while a prompt is put together, for example the character references for memory retrieval. Their events are sent once that prompt is complete, so a handler can start a generation. The handler then runs while the generation that built the prompt continues, so a message it adds can come before the generated line.
+
+### decision.invocation.finished
+
+Emitted when a decision policy has finished.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `invocation_id` | `str` | The Decision Log invocation |
+    | `template_uid` | `str` | The policy, e.g. `world_state.decision-query` |
+    | `source_group` | `str` | Where the policy template came from, e.g. `scene` for a scene override |
+    | `status` | `str` | `completed`: the policy ran; answers the decision model was not sure of still went to the usual request (see `fallback_ids` of `decision.gate.resolved`). `fallback`: the decision model was off or failed and the usual request ran instead. `preserved`: the original result was kept |
+    | `requests` | `list` | One entry per decision model request: `request_id`, `label`, `status`, `failure_code`, `answers`, `elapsed_ms` |
+    | `actions` | `list[dict]` | The actions the policy ran |
+
+---
+
+### decision.gate.resolved
+
+Emitted when a yes/no decision gate has settled its candidates: queries, pin conditions, tracked states, portraits and character references.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `uid` | `str` | The policy, e.g. `world_state.decision-pin-conditions` |
+    | `gate_enabled` | `bool` | Whether the decision model was used |
+    | `candidates` | `list[str]` | The candidate ids |
+    | `decided` | `dict` | Answers the decision model gave |
+    | `fallback_ids` | `list[str]` | Candidates the usual request answered |
+    | `result` | `dict` | The final answer for every candidate |
+
+## Client Events
+
+!!! note
+    Clients change in the settings, also when no scene is loaded. Scene node graphs only see these events while their scene is loaded.
+
+### client.enabled
+
+Emitted when a client is switched on.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `client` | `ClientBase` | The client (`client.name` is its name) |
+    | `enabled` | `bool` | `True` |
+
+---
+
+### client.disabled
+
+Emitted when a client is switched off.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `client` | `ClientBase` | The client |
+    | `enabled` | `bool` | `False` |
+
+---
+
+### client.embeddings_available
+
+Emitted when a client reports that it can serve embeddings (KoboldCpp).
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `client` | `ClientBase` | The client |
+    | `embedding_name` | `str` | The embedding model name |
+    | `seen` | `bool` | **Mutable.** Set by the Memory agent when it offered the embeddings |

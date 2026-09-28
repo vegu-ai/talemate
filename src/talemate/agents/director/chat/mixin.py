@@ -2,8 +2,14 @@ import structlog
 import json
 from typing import Any, Literal, TYPE_CHECKING, Callable, Awaitable
 
+import talemate.emit.async_signals as async_signals
 import talemate.instance as instance
-from talemate.agents.base import set_processing, AgentAction, AgentActionConfig
+from talemate.agents.base import (
+    AgentAction,
+    AgentActionConfig,
+    AgentEmission,
+    set_processing,
+)
 from talemate.emit import emit
 from talemate.exceptions import GenerationCancelled
 from talemate.game.engine.nodes.core import GraphState
@@ -33,6 +39,24 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
 log = structlog.get_logger("talemate.agent.director.chat")
+
+async_signals.register("agent.director.chat.batch_complete")
+
+
+class DirectorChatBatchEmission(AgentEmission):
+    """
+    One batch of Director Chat actions has finished. Each call is a dict with
+    `function`, `arguments`, `applied` and, when set, `reason` (confirm,
+    reject, reject_with_instructions, over_budget, aborted, failed ...),
+    `error`, `instructions` and `subcalls`.
+    """
+
+    chat_id: str
+    applied: list[dict]
+    not_applied: list[dict]
+    rejections: list[dict]
+    applied_count: int
+    not_applied_count: int
 
 
 class DirectorChatMixin:
@@ -967,11 +991,9 @@ class DirectorChatMixin:
                 }
 
             outcomes = list(walk(calls))
-            if not any(not call.called for call in outcomes):
-                return
             applied = [outcome(call) for call in calls if call.called]
             skipped = [outcome(call) for call in calls if not call.called]
-            rejections.extend(
+            batch_rejections = [
                 {
                     **call.payload,
                     "reason": call.skipped_reason,
@@ -979,7 +1001,21 @@ class DirectorChatMixin:
                 }
                 for call in outcomes
                 if call.rejection_instructions
+            ]
+            await async_signals.get("agent.director.chat.batch_complete").send(
+                DirectorChatBatchEmission(
+                    agent=self,
+                    chat_id=chat_id,
+                    applied=applied,
+                    not_applied=skipped,
+                    rejections=batch_rejections,
+                    applied_count=sum(call.called for call in outcomes),
+                    not_applied_count=sum(not call.called for call in outcomes),
+                )
             )
+            if not any(not call.called for call in outcomes):
+                return
+            rejections.extend(batch_rejections)
             note = "Action batch results\n\nApplied:\n\n```json\n" + json.dumps(
                 applied, ensure_ascii=False, indent=2, default=str
             )

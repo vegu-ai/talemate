@@ -1,14 +1,19 @@
-from typing import Literal, get_args
+from typing import Literal
 
 import pydantic
 
 from .base import ExtraField, FieldGroup, ReasoningDisplay
+from .context import client_context_attribute
+from .effort import EFFORT_LEVELS, EffortLevel
 
-
-EffortLevel = Literal[
-    "default", "none", "minimal", "low", "medium", "high", "xhigh", "max"
+__all__ = [
+    "EFFORT_LEVELS",
+    "EffortLevel",
+    "ReasoningEffortConfig",
+    "ReasoningEffortMixin",
+    "reasoning_effort_extra_fields",
 ]
-EFFORT_LEVELS = list(get_args(EffortLevel))
+
 EffortFormat = Literal["none", "reasoning_effort", "reasoning"]
 
 
@@ -53,6 +58,13 @@ class ReasoningEffortMixin:
     def reasoning_effort(self) -> EffortLevel | None:
         if self.reasoning_disabled_for_action:
             return None
+        requested = client_context_attribute("reasoning_effort")
+        if (
+            requested
+            and self.reason_enabled_configured
+            and self.reasoning_effort_format != "none"
+        ):
+            return None if requested == "default" else requested
         return self.reasoning_effort_configured
 
     @property

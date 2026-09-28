@@ -1,6 +1,11 @@
 from bisect import bisect_right
 
-from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
+import talemate.emit.async_signals as async_signals
+from talemate.knowledge.changes import (
+    DisclosureAddedEvent,
+    KnowledgeChange,
+    emit_knowledge_changes,
+)
 from talemate.knowledge.entry import _item_from_id, entry_text
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspectives import add_disclosure, source_reference
@@ -42,12 +47,33 @@ def grant_disclosure(scene, character, target, *, text=None, whole_entry=False):
         text = source_text
     elif not isinstance(text, str) or not text.strip():
         raise ValueError("A partial grant requires the information to disclose")
+    return disclose(scene, text, (character,), provenance=provenance, origin=target)
+
+
+def disclose(scene, text, audience, *, provenance=(), origin=None):
+    """Share `text` with `audience` from now on and announce the change."""
     disclosure = add_disclosure(
-        scene, text, (character,), provenance=provenance, origin=target
+        scene, text, audience, provenance=provenance, origin=origin
     )
     emit_knowledge_changes(
-        scene, [KnowledgeChange(character=character, target=disclosure.id)]
+        scene,
+        [
+            KnowledgeChange(character=name, target=disclosure.id)
+            for name in disclosure.audience
+        ],
     )
+    if scene.active:
+        async_signals.send_soon(
+            "knowledge.disclosure_added",
+            DisclosureAddedEvent(
+                scene=scene,
+                event_type="knowledge.disclosure_added",
+                disclosure_id=disclosure.id,
+                text=disclosure.text,
+                audience=list(disclosure.audience),
+                origin=disclosure.origin,
+            ),
+        )
     return disclosure
 
 

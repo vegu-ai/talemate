@@ -26,15 +26,12 @@ import talemate.instance as instance
 from talemate.scene_message import VersionSource, CharacterTransitionMessage
 from talemate.knowledge.message_views import (
     character_message_views,
+    edit_character_view,
     edited_view_dependents,
     intro_view,
-    message_view,
 )
 from talemate.knowledge.mode import character_knowledge_enabled
-from talemate.knowledge.perspectives import (
-    edit_message_view,
-    invalidate_message_view_dependents,
-)
+from talemate.knowledge.perspectives import invalidate_message_view_dependents
 from talemate.knowledge.revision_browsing import defer_revision_work
 from talemate.knowledge.revision_refresh import (
     refresh_revision,
@@ -43,9 +40,7 @@ from talemate.knowledge.revision_refresh import (
 )
 from talemate.server.websocket_plugin import Plugin
 from talemate.status import background_task
-from talemate.knowledge.transitions import (
-    transition_available,
-)
+from talemate.knowledge.transitions import set_arrival_note
 
 log = structlog.get_logger("talemate.server.scene_message")
 
@@ -145,14 +140,8 @@ class SceneMessagePlugin(Plugin):
             )
             return
         try:
-            current = message_view(self.scene, message, payload.character)
-            if not current.editable:
-                raise ValueError(current.reason or "This perspective cannot be edited")
-            changed = (
-                edit_message_view(
-                    self.scene, payload.id, payload.character, payload.text
-                )
-                is not None
+            edit = await edit_character_view(
+                self.scene, message, payload.character, payload.text
             )
         except ValueError as exc:
             await self.signal_operation_failed(
@@ -165,14 +154,11 @@ class SceneMessagePlugin(Plugin):
                 "action": "perspective_edited",
                 "id": payload.id,
                 "character": payload.character,
-                "view": message_view(
-                    self.scene, message, payload.character
-                ).model_dump(),
-                "changed": changed,
+                "view": edit.view.model_dump(),
+                "changed": edit.changed,
             }
         )
-        if changed:
-            self.scene.saved = False
+        if edit.changed:
             await self.scene.attempt_auto_save()
             self.scene.emit_status()
         await self.signal_operation_done(signal_only=True)
@@ -204,21 +190,13 @@ class SceneMessagePlugin(Plugin):
 
     async def handle_transition_note(self, data: dict):
         payload = EditPayload(**data)
-        message = self.scene.get_message(payload.id)
-        if (
-            not isinstance(message, CharacterTransitionMessage)
-            or message.kind != "activated"
-        ):
-            await self.signal_operation_failed("Activation entry not found")
-            return
-        if not transition_available(self.scene, message):
-            await self.signal_operation_failed(
-                "Activation entry is no longer available"
+        try:
+            set_arrival_note(
+                self.scene, self.scene.get_message(payload.id), payload.text
             )
+        except ValueError as exc:
+            await self.signal_operation_failed(str(exc))
             return
-        message.arrival_note = payload.text.strip()
-        self.scene.saved = False
-        self.scene.emit_history_message(message)
         await self.signal_operation_done()
 
     async def handle_get_history_position(self, data: dict):

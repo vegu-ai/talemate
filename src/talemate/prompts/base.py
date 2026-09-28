@@ -14,6 +14,7 @@ import os
 import random
 import re
 import uuid
+from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime
 from typing import Any, Literal
@@ -24,6 +25,7 @@ import nest_asyncio
 import pydantic
 import structlog
 
+import talemate.emit.async_signals as async_signals
 import talemate.instance as instance
 import talemate.thematic_generators as thematic_generators
 from talemate.config import get_config
@@ -74,6 +76,62 @@ log = structlog.get_logger("talemate")
 
 prepended_template_dirs = ContextVar("prepended_template_dirs", default=[])
 active_template_uid = ContextVar("active_template_uid", default=None)
+
+
+class _HeldSignals(list):
+    # set once the render has sent them; a task started inside the render
+    # keeps this list in its context and must then send directly
+    closed: bool = False
+
+
+# signals held back while a template renders; see send_outside_render
+_render_signals: ContextVar[_HeldSignals | None] = ContextVar(
+    "render_signals", default=None
+)
+
+
+@contextmanager
+def signals_after_render():
+    """
+    Hold back signals sent while a template renders. A template's
+    agent_action and decide() calls run in a nested event loop, where a
+    listener graph must not run; the outermost render sends the held
+    signals in tasks once it returns.
+    """
+    current = _render_signals.get()
+    if current is not None and not current.closed:
+        yield
+        return
+    held = _HeldSignals()
+    token = _render_signals.set(held)
+    try:
+        yield
+    finally:
+        _render_signals.reset(token)
+        held.closed = True
+        for name, emission in held:
+            async_signals.send_soon(name, emission)
+
+
+async def send_outside_render(name: str, emission) -> None:
+    """Send a signal now, or after the template render it happens in."""
+    held = _render_signals.get()
+    if held is not None and not held.closed:
+        held.append((name, emission))
+        return
+    await async_signals.get(name).send(emission)
+
+
+def send_soon_outside_render(name: str, emission) -> None:
+    """
+    From synchronous code: send a signal in a task, or after the template
+    render it happens in.
+    """
+    held = _render_signals.get()
+    if held is not None and not held.closed:
+        held.append((name, emission))
+        return
+    async_signals.send_soon(name, emission)
 
 
 class PydanticJsonEncoder(json.JSONEncoder):
@@ -517,6 +575,12 @@ class Prompt(pydantic.BaseModel):
             raise ValueError(f"Unsupported loader type for template '{name}'")
 
     def render(self, force: bool = False, apply_sectioning: bool = True) -> str:
+        with signals_after_render():
+            return self._render_template(force=force, apply_sectioning=apply_sectioning)
+
+    def _render_template(
+        self, force: bool = False, apply_sectioning: bool = True
+    ) -> str:
         """
         Render the prompt using jinja2.
 

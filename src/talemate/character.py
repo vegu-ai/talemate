@@ -24,7 +24,7 @@ import talemate.agents.base as agent_base
 from talemate.agents.tts.schema import Voice
 from talemate.agents.visual.schema import PromptFinalizer as VisualPromptFinalizer
 import talemate.emit.async_signals as async_signals
-from talemate.events import CharacterActivatedEvent
+from talemate.events import CharacterActivatedEvent, CharacterDeactivatedEvent
 from talemate.game.engine.context_id.character import (
     CharacterContext,
 )
@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Scene, Actor
 
 __all__ = [
+    "character_name",
     "Character",
     "CharacterStatus",
     "VoiceChangedEvent",
@@ -47,6 +48,11 @@ __all__ = [
 log = structlog.get_logger("talemate.character")
 
 NAME_EXISTS_MESSAGE = 'Name "{name}" already exists.'
+
+
+def character_name(value: "str | Character") -> str:
+    """The name of a character given as a name or as a Character."""
+    return value if isinstance(value, str) else value.name
 
 
 def name_is_taken(
@@ -66,7 +72,9 @@ def name_is_taken(
     return None
 
 
-async_signals.register("character.voice_changed", "character.activated")
+async_signals.register(
+    "character.voice_changed", "character.activated", "character.deactivated"
+)
 
 
 class Character(pydantic.BaseModel):
@@ -777,9 +785,16 @@ async def deactivate_character(
         # already deactivated
         return False
 
-    if record_transition:
-        record_departure(scene, character)
+    transition = record_departure(scene, character) if record_transition else None
     await scene.remove_actor(character.actor)
+    await async_signals.get("character.deactivated").send(
+        CharacterDeactivatedEvent(
+            scene=scene,
+            character=character,
+            transition=transition,
+            event_type="character.deactivated",
+        )
+    )
 
 
 async def activate_character(scene: "Scene", character: Union[str, "Character"]):
@@ -810,10 +825,13 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
 
     await scene.add_actor(actor)
 
-    record_arrival(scene, character)
+    transition = record_arrival(scene, character)
     await async_signals.get("character.activated").send(
         CharacterActivatedEvent(
-            scene=scene, character=character, event_type="character.activated"
+            scene=scene,
+            character=character,
+            transition=transition,
+            event_type="character.activated",
         )
     )
 

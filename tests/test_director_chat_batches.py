@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+import talemate.emit.async_signals as async_signals
 import talemate.game.engine.nodes.load_definitions  # noqa: F401
 
 from _node_test_helpers import run_node
@@ -267,6 +268,12 @@ async def test_real_chat_action_graph_preserves_applied_changes_and_reports_reje
         )
 
     monkeypatch.setattr(nodes, "emit", emit)
+    changes = []
+
+    async def changed(event):
+        changes.append((event.path, event.value, event.previous_value))
+
+    async_signals.get("game_state.changed").connect(changed)
     response = "\n".join(
         "```json\n"
         + json.dumps(
@@ -291,8 +298,13 @@ async def test_real_chat_action_graph_preserves_applied_changes_and_reports_reje
         )
     client_responses.reset(token)
     await asyncio.gather(*pending_replies)
+    for _ in range(5):
+        await asyncio.sleep(0)
+    async_signals.get("game_state.changed").disconnect(changed)
     assert len(confirmations) == 2
     assert scene.game_state.variables["color"] == "red"
+    # the module writes through the game state write path
+    assert changes == [("color", "red", None)]
     assert corrections == [
         {
             "function": "update_gamestate",

@@ -2,6 +2,8 @@ from functools import partial
 
 from pydantic import TypeAdapter
 
+import talemate.emit.async_signals as async_signals
+from talemate.agents.base import AgentEmission
 from talemate.decisions import (
     ActionBudget,
     PolicyAction,
@@ -9,10 +11,25 @@ from talemate.decisions import (
     decision_service,
 )
 from talemate.util.dedupe import compile_text_to_sentences
+from talemate.world_state.templates.decision_checks import DecisionCheck
 from .findings import decision_findings_adapter
 from .revision import RevisionInformation, _strip_character_prefix, revision_context
 
 text_adapter = TypeAdapter(str)
+
+async_signals.register("agent.editor.revision.decision-checks.before")
+
+
+class DecisionChecksEmission(AgentEmission):
+    """
+    Before the decision checks of one revision run. `checks` may be changed:
+    add, remove or edit checks for this message only. With no checks left,
+    the usual revision runs.
+    """
+
+    info: RevisionInformation
+    checks: list[DecisionCheck]
+    writing_style: str
 
 
 class DecisionChecksMixin:
@@ -76,6 +93,16 @@ class DecisionChecksMixin:
                 or writing_style.active_prose_rules
             )
         ]
+        emission = DecisionChecksEmission(
+            agent=self,
+            info=info,
+            checks=[check.model_copy(deep=True) for check in checks],
+            writing_style=writing_style.uid,
+        )
+        await async_signals.get("agent.editor.revision.decision-checks.before").send(
+            emission
+        )
+        checks = emission.checks
         if not checks:
             return await disabled_path()
         method = self.revision_method

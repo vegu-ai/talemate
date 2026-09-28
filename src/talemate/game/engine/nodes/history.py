@@ -25,6 +25,8 @@ from talemate.history import (
     history_with_relative_time,
 )
 from talemate.game.engine.context_id.history import HistoryContextItem
+from talemate.character import character_name
+from talemate.knowledge.transitions import absence_seconds, set_arrival_note
 from talemate.util.time import amount_unit_to_seconds
 
 if TYPE_CHECKING:
@@ -539,6 +541,7 @@ class ContextHistory(Node):
     Inputs:
 
     - budget: The budget for the history (number of tokens, defaults to 8192)
+    - perspective: Compile the history as this character knows it (optional). With Character Perspectives on, it is built from the character's own views of each passage; otherwise passages and summaries the character does not know are left out.
 
     Properties:
 
@@ -615,6 +618,7 @@ class ContextHistory(Node):
 
     def setup(self):
         self.add_input("budget", socket_type="int", optional=True)
+        self.add_input("perspective", socket_type="str,character", optional=True)
 
         self.set_property("budget", 8192)
         self.set_property("keep_director_messages", False)
@@ -640,6 +644,12 @@ class ContextHistory(Node):
             "min_dialogue_length", types=(int,)
         )
         label_chapters = self.get_property("label_chapters")
+        perspective = self.normalized_input_value("perspective")
+        if perspective is not None:
+            perspective = character_name(perspective)
+        perspective_kwargs = (
+            {"perspective": perspective, "stored_views": True} if perspective else {}
+        )
 
         messages = scene.context_history(
             budget=budget,
@@ -649,15 +659,16 @@ class ContextHistory(Node):
             show_hidden=show_hidden,
             assured_dialogue_num=min_dialogue_length,
             chapter_labels=label_chapters,
+            **perspective_kwargs,
         )
 
         characters = {}
 
         for message in scene.history:
             if message.typ == "character":
-                character_name = message.character_name
-                if character_name not in characters:
-                    characters[character_name] = scene.get_character(character_name)
+                name = message.character_name
+                if name not in characters:
+                    characters[name] = scene.get_character(name)
 
         self.set_output_values(
             {
@@ -665,6 +676,120 @@ class ContextHistory(Node):
                 "compiled": "\n".join(messages),
                 "characters": list(characters.values()),
             }
+        )
+
+
+def _transition(node: Node, message) -> "scene_message.CharacterTransitionMessage":
+    if not isinstance(message, scene_message.CharacterTransitionMessage):
+        raise InputValueError(
+            node, "message", "The message is not an arrival or departure entry."
+        )
+    return message
+
+
+@register("scene/history/UnpackCharacterTransition")
+class UnpackCharacterTransition(Node):
+    """
+    Read an arrival or departure entry of the history, for example the
+    `transition` of a character.activated or character.deactivated event.
+
+    Inputs:
+
+    - message: the arrival or departure entry
+
+    Outputs:
+
+    - message: the entry, passed through
+    - character_name: who arrived or left
+    - kind: activated (arrival) or deactivated (departure)
+    - returning: True when the character arrives back after a departure
+    - participants: the characters in the scene at the arrival
+    - arrival_note: the note written for the arrival
+    - departure_message_id: the entry the absence started at, or None
+    - absence_seconds: scene time the character was away, or None
+    """
+
+    def __init__(self, title="Unpack Character Transition", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("message", socket_type="message_object")
+        self.add_output("message", socket_type="message_object")
+        self.add_output("character_name", socket_type="str")
+        self.add_output("kind", socket_type="str")
+        self.add_output("returning", socket_type="bool")
+        self.add_output("participants", socket_type="list")
+        self.add_output("arrival_note", socket_type="str")
+        self.add_output("departure_message_id", socket_type="int")
+        self.add_output("absence_seconds", socket_type="int")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        transition = _transition(self, self.require_input("message"))
+        self.set_output_values(
+            {
+                "message": transition,
+                "character_name": transition.character_name,
+                "kind": transition.kind,
+                "returning": transition.returning,
+                "participants": list(transition.participants),
+                "arrival_note": transition.arrival_note,
+                "departure_message_id": transition.departure_message_id,
+                "absence_seconds": absence_seconds(scene, transition)
+                if transition.kind == "activated"
+                else None,
+            }
+        )
+
+
+@register("scene/history/SetArrivalNote")
+class SetArrivalNote(Node):
+    """
+    Write the note of an arrival entry, as the note field under an arrival
+    in the history does: what the character did or learned while away.
+
+    Inputs:
+
+    - state: graph state (passthrough)
+    - message: the arrival entry
+    - text: the note; empty removes it
+
+    Outputs:
+
+    - state: graph state
+    - message: the arrival entry
+    """
+
+    class Fields:
+        text = PropertyField(
+            name="text",
+            description="The arrival note",
+            type="text",
+            default="",
+        )
+
+    def __init__(self, title="Set Arrival Note", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("message", socket_type="message_object")
+        self.add_input("text", socket_type="str", optional=True)
+        self.set_property("text", "")
+        self.add_output("state")
+        self.add_output("message", socket_type="message_object")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        transition = _transition(self, self.require_input("message"))
+        try:
+            set_arrival_note(
+                scene, transition, self.normalized_input_value("text") or ""
+            )
+        except ValueError as exc:
+            raise InputValueError(self, "message", str(exc)) from exc
+        self.set_output_values(
+            {"state": self.get_input_value("state"), "message": transition}
         )
 
 

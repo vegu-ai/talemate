@@ -14,10 +14,13 @@ from weakref import WeakKeyDictionary
 
 import structlog
 
+import talemate.emit.async_signals as async_signals
 from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
     AgentActionNote,
+    AgentEmission,
+    AgentTemplateEmission,
     set_processing,
 )
 from talemate.exceptions import GenerationCancelled
@@ -40,11 +43,18 @@ from talemate.knowledge.formatting import (
     perception_speaker,
 )
 from talemate.knowledge.readiness import emit_perception_status, perception_readiness
+from talemate.knowledge.revision_scope import (
+    catch_up_running,
+    hold_until_catch_up_ends,
+    in_revision_phase,
+    job_perception_events,
+)
 from talemate.knowledge.presence import relevant_audiences
 from talemate.knowledge.timeline import record_time
 from talemate.knowledge.reinforcements import prepare_reinforcement_source
 from talemate.knowledge.perspective_models import (
     PerspectiveOutput,
+    PerspectiveStatus,
     PerspectiveView,
     PassageProvenance,
     SourceReference,
@@ -70,6 +80,47 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
 log = structlog.get_logger(__name__)
+
+
+async_signals.register(
+    "agent.summarization.perceptions.before",
+    "agent.summarization.perceptions.after",
+    "agent.summarization.perceptions.failed",
+)
+
+
+class PerceptionsBeforeEmission(AgentTemplateEmission):
+    """Before one perception request; `dynamic_instructions` go into its prompt."""
+
+    message_id: int
+    characters: list[str]
+    attempt: int = 1
+    validation_error: str = ""
+
+
+class PerceptionView(BaseModel):
+    character: str
+    status: PerspectiveStatus
+    text: str | None = None
+
+
+class PerceptionsAfterEmission(AgentEmission):
+    """The stored views of one passage, sent once the analysis pass has ended."""
+
+    message_id: int
+    views: list[PerceptionView]
+    analyzed: list[str]
+    verbatim: list[str]
+
+
+class PerceptionsFailedEmission(AgentEmission):
+    """A passage whose analysis failed, sent once the analysis pass has ended."""
+
+    message_id: int
+    characters: list[str]
+    error: str
+
+
 CONTEXT_PASSAGES = 12
 PERCEPTION_BACKLOG_THRESHOLD = 3
 SENTENCE_CLOSERS = "\"'”’)]}»*_"
@@ -957,6 +1008,7 @@ class PerceptionMixin:
         self._perception_approved = WeakKeyDictionary()
         # the event loop keeps only a weak reference to a task
         self._perception_reviews = WeakKeyDictionary()
+        self._perception_events = WeakKeyDictionary()
 
     def _perception_status(
         self,
@@ -1289,8 +1341,34 @@ class PerceptionMixin:
                     self._perception_status(scene, message, "pending")
                 del deferred[identity]
 
+    async def ensure_perceptions(self, scene: "Scene", **kwargs) -> None:
+        # Listeners run after the perception lock is released, and after any
+        # revision work (see _refresh_revision_job and catch_up_revisions): a
+        # listener that starts a generation waits for both.
+        try:
+            await self._ensure_perceptions(scene, **kwargs)
+        finally:
+            if not in_revision_phase(scene):
+                if catch_up_running(scene):
+                    hold_until_catch_up_ends(
+                        scene, self._perception_events.pop(scene, [])
+                    )
+                else:
+                    await self.send_perception_events(scene)
+
+    async def send_perception_events(self, scene: "Scene") -> None:
+        events = self._perception_events.pop(scene, [])
+        for name, emission in events:
+            await async_signals.get(name).send(emission)
+
+    def _queue_perception_event(self, scene: "Scene", name: str, emission) -> None:
+        events = job_perception_events.get()
+        if events is None or events.closed:
+            events = self._perception_events.setdefault(scene, [])
+        events.append((name, emission))
+
     @evidence_writer
-    async def ensure_perceptions(
+    async def _ensure_perceptions(
         self,
         scene: "Scene",
         *,
@@ -1517,15 +1595,27 @@ class PerceptionMixin:
             **context,
             "cast": [entry for entry in context["cast"] if entry["name"] in requested],
         }
+        emission = PerceptionsBeforeEmission(
+            agent=self,
+            message_id=message.id,
+            characters=list(requested),
+            attempt=2 if feedback else 1,
+            validation_error=feedback,
+            template_vars={
+                "scene": scene,
+                "context": request_context,
+                "validation_error": feedback,
+                "rewrite_hidden_traces": rewrite_hidden_traces,
+            },
+        )
+        await async_signals.get("agent.summarization.perceptions.before").send(emission)
         _, extracted = await Prompt.request(
             "summarizer.perceptions",
             self.client,
             make_kind("analyze", answer_budget),
             vars={
-                "scene": scene,
-                "context": request_context,
-                "validation_error": feedback,
-                "rewrite_hidden_traces": rewrite_hidden_traces,
+                **emission.template_vars,
+                "dynamic_instructions": emission.dynamic_instructions,
             },
         )
         if not self._perception_current(scene, message, knowledge, context, intention):
@@ -1665,6 +1755,16 @@ class PerceptionMixin:
             log.warning(
                 "perception analysis failed", source_id=message.id, error=str(exc)
             )
+            self._queue_perception_event(
+                scene,
+                "agent.summarization.perceptions.failed",
+                PerceptionsFailedEmission(
+                    agent=self,
+                    message_id=message.id,
+                    characters=list(analyzed),
+                    error=str(exc),
+                ),
+            )
             action = await self.client._prompt_generation_error(
                 f"Perception analysis failed for passage {message.id}. "
                 f"Reason: {exc}\n\n"
@@ -1676,9 +1776,27 @@ class PerceptionMixin:
                     "Perception analysis requires a successful retry", by_user=True
                 )
             return
-        set_source_perspectives(
-            scene, "message", message.id, [*preserved, *outputs.values()]
-        )
+        stored = [*preserved, *outputs.values()]
+        set_source_perspectives(scene, "message", message.id, stored)
         # Every required audience completed successfully. Retained pending views
         # for absent audiences do not prevent this version's analysis receipt.
         message.mark_revision_feature("perceptions")
+        self._queue_perception_event(
+            scene,
+            "agent.summarization.perceptions.after",
+            PerceptionsAfterEmission(
+                agent=self,
+                message_id=message.id,
+                views=[
+                    PerceptionView(character=name, status=view.status, text=view.text)
+                    for view in stored
+                    for name in view.audience
+                ],
+                analyzed=list(analyzed),
+                verbatim=[
+                    name
+                    for name in audiences
+                    if name not in analyzed and name not in preserved_names
+                ],
+            ),
+        )

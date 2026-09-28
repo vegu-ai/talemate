@@ -224,6 +224,7 @@ class UnpackGenerationEmission(AgentNode):
     - api: The TTS provider (API) generating the chunk
     - message_id: The ID of the message the chunk belongs to
     - voice: The voice the chunk will be spoken with
+    - model: The model of the voice, when the voice sets one
     """
 
     _agent_name: ClassVar[str] = "tts"
@@ -241,6 +242,7 @@ class UnpackGenerationEmission(AgentNode):
         self.add_output("api", socket_type="str")
         self.add_output("message_id", socket_type="int,str")
         self.add_output("voice", socket_type="tts/voice")
+        self.add_output("model", socket_type="str")
 
     async def run(self, state: GraphState):
         emission: VoiceGenerationEmission = self.require_input("emission")
@@ -255,6 +257,80 @@ class UnpackGenerationEmission(AgentNode):
                 "api": chunk.api,
                 "message_id": chunk.message_id,
                 "voice": chunk.voice,
+                "model": chunk.model,
+            }
+        )
+
+
+@register("agents/tts/AudioTagSupport")
+class AudioTagSupport(AgentNode):
+    """
+    Whether the voice backend of a chunk accepts sound tags such as [laugh]
+    or [sigh], and which ones. Use it on agent.tts.generate.before before
+    adding a tag with Set Chunk Text.
+
+    Inputs:
+
+    - emission: The generation emission
+    - tag: A tag name to format for this backend, e.g. laugh (optional)
+
+    Outputs:
+
+    - emission: The emission, passed through
+    - supported: True when the backend and model accept sound tags
+    - allowed_tags: The tags the backend accepts, or None when any tag is accepted
+    - tag_format: How a tag is written for this backend, with {{ tag }} for the name
+    - formatted_tag: The tag input written in the backend's format, or None when the backend does not accept it
+    """
+
+    _agent_name: ClassVar[str] = "tts"
+
+    class Fields:
+        tag = PropertyField(
+            name="tag",
+            description="A tag name to format for this backend",
+            type="str",
+            default="",
+        )
+
+    def __init__(self, title="Audio Tag Support", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("emission", socket_type="event,tts/generation_emission")
+        self.add_input("tag", socket_type="str", optional=True)
+        self.set_property("tag", "")
+
+        self.add_output("emission", socket_type="tts/generation_emission")
+        self.add_output("supported", socket_type="bool")
+        self.add_output("allowed_tags", socket_type="list")
+        self.add_output("tag_format", socket_type="str")
+        self.add_output("formatted_tag", socket_type="str")
+
+    async def run(self, state: GraphState):
+        emission: VoiceGenerationEmission = self.require_input("emission")
+        chunk = emission.chunk
+        supported = self.agent.chunk_supports_audio_tags(chunk)
+        allowed = None
+        tag_format = None
+        if supported:
+            tag_format = self.agent.get_audio_tag_format(chunk.api)
+            tags_fn = getattr(self.agent, f"{chunk.api}_supported_audio_tags", None)
+            tags = tags_fn(model=chunk.model) if tags_fn else None
+            allowed = list(tags) if tags else None
+
+        tag = (self.normalized_input_value("tag") or "").strip().strip("[]")
+        formatted = None
+        if supported and tag and (allowed is None or tag in allowed):
+            formatted = tag_format.replace("{{ tag }}", tag)
+
+        self.set_output_values(
+            {
+                "emission": emission,
+                "supported": supported,
+                "allowed_tags": allowed,
+                "tag_format": tag_format,
+                "formatted_tag": formatted,
             }
         )
 

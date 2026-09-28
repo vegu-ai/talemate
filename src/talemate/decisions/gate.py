@@ -1,7 +1,9 @@
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from pydantic import RootModel, StrictBool, StrictStr
+from pydantic import BaseModel, RootModel, StrictBool, StrictStr
+
+from talemate.prompts.base import send_outside_render
 
 from .policy import PolicyAction, PolicyInvocation
 from .service import decision_service
@@ -9,6 +11,36 @@ from .service import decision_service
 
 class GateAnswers(RootModel[dict[str, StrictBool | StrictStr | None]]):
     pass
+
+
+class DecisionGateResolved(BaseModel):
+    """
+    A decision gate settled its candidates. `decided` holds the answers the
+    decision model gave; `fallback_ids` went to the usual request, which is
+    every candidate when the gate was not enabled or the model failed.
+    """
+
+    uid: str
+    gate_enabled: bool
+    candidates: list[str]
+    decided: dict[str, Any]
+    fallback_ids: list[str]
+    result: dict[str, Any]
+
+
+async def _resolved(uid, gate_enabled, ids, fallback_ids, result):
+    fallback = set(fallback_ids)
+    await send_outside_render(
+        "decision.gate.resolved",
+        DecisionGateResolved(
+            uid=uid,
+            gate_enabled=gate_enabled,
+            candidates=list(ids),
+            decided={k: v for k, v in result.items() if k not in fallback},
+            fallback_ids=list(dict.fromkeys(fallback_ids)),
+            result=dict(result),
+        ),
+    )
 
 
 def decision_gate_enabled(enabled: bool) -> bool:
@@ -34,7 +66,9 @@ async def decision_gate(
     if not ids:
         return {}
     if not decision_gate_enabled(enabled):
-        return await fallback(ids)
+        result = await fallback(ids)
+        await _resolved(uid, False, ids, ids, result)
+        return result
 
     fallback_ids = []
     fallback_error = None
@@ -125,4 +159,5 @@ async def decision_gate(
     result = await invocation.run()
     if fallback_error is not None:
         raise fallback_error
+    await _resolved(uid, True, ids, fallback_ids, result)
     return result

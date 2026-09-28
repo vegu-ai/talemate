@@ -85,7 +85,7 @@ async def test_real_edge_node_emits_and_repeated_assignment_is_quiet(
     assert notifications[0].data["changes"][0]["kind"] == kind
 
 
-def test_websocket_passthrough_and_inactive_scene_silence(scene, notifications):
+async def test_websocket_passthrough_and_inactive_scene_silence(scene, notifications):
     change = KnowledgeChange(character="Mara", target="F1")
     emit_knowledge_changes(scene, [change, change])
     handler = object.__new__(WebsocketHandler)
@@ -100,7 +100,7 @@ def test_websocket_passthrough_and_inactive_scene_silence(scene, notifications):
     assert len(notifications) == 1
 
 
-def test_history_edge_has_a_readable_label(scene, notifications):
+async def test_history_edge_has_a_readable_label(scene, notifications):
     scene.archived_history = [
         {"id": "archive-id", "text": "Mara found the cellar key.", "end": 3}
     ]
@@ -133,7 +133,7 @@ async def test_edge_writers_ignore_source_changes_and_duplicate_grants(
     assert [n.data["changes"][0]["kind"] for n in notifications] == ["revoke"]
 
 
-def test_replacing_conflicting_edges_notifies_only_when_effective_kind_changes(
+async def test_replacing_conflicting_edges_notifies_only_when_effective_kind_changes(
     scene, notifications
 ):
     scene.world_state.knowledge = [
@@ -182,7 +182,7 @@ def test_notification_labels_resolve_only_requested_targets(scene, target, label
     assert knowledge_label(scene, target) == label
 
 
-def test_disclosure_notification_labels_only_selected_text(
+async def test_disclosure_notification_labels_only_selected_text(
     scene, notifications, monkeypatch
 ):
     from talemate.knowledge.disclosures import grant_disclosure

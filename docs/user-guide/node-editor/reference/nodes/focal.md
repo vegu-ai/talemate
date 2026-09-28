@@ -241,3 +241,6 @@ Unpacks a focal.Call instance
 | `uid` | `str` | The UID of the call |
 | `called` | `bool` | Whether the call was made |
 | `error` | `str` | The error message if the call failed |
+| `skipped_reason` | `str` | Why a call was not applied (reject, reject_with_instructions, over_budget, unknown_callback, timed_out, interrupted, failed, aborted), or None |
+| `rejection_instructions` | `str` | The correction the user gave with a rejection |
+| `subcalls` | `list` | The calls this call made, as focal calls |

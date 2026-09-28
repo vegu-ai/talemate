@@ -40,7 +40,8 @@ from talemate.status import LoadingStatus, set_loading
 from talemate.world_state import WorldState
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene.intent import SceneIntent
-from talemate.scene.schema import ScenePerspectives, load_game_state_path_settings
+from talemate.game.state import load_game_state_path_settings
+from talemate.scene.schema import ScenePerspectives
 from talemate.scene.format import CURRENT_SCENE_FORMAT_VERSION, read_scene_format
 from talemate.knowledge.reinforcements import reinforcement_source_keys
 from talemate.knowledge.perspectives import (

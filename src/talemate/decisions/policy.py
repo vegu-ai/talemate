@@ -9,13 +9,26 @@ from uuid import uuid4
 import jinja2
 from pydantic import BaseModel, ConfigDict, Field
 
+import talemate.emit.async_signals as async_signals
 from talemate.context import active_scene
 from talemate.exceptions import ControlFlowException
-from talemate.prompts.base import Prompt, active_template_uid
+from talemate.prompts.base import (
+    Prompt,
+    active_template_uid,
+    send_outside_render,
+    signals_after_render,
+)
 from talemate.prompts.groups import get_group_template_path
 from talemate.util.logging import serialize_log_value
 
-from .events import ActionRecord, Failure, InvocationRecord, InvocationStatus
+from .events import (
+    ActionRecord,
+    Failure,
+    InvocationRecord,
+    InvocationStatus,
+    RequestRecord,
+    RequestStatus,
+)
 from .ownership import Ownership
 from .provider import DecisionError, FailureCode
 from .service import DecisionHandle, DecisionService, Unavailable
@@ -50,6 +63,44 @@ class PolicyActionError(DecisionError):
     def __init__(self, code, records):
         super().__init__(code)
         self.request_ids = tuple(record.id for record in records)
+
+
+async_signals.register("decision.invocation.finished", "decision.gate.resolved")
+
+
+class DecisionRequestOutcome(BaseModel):
+    request_id: str
+    label: str
+    status: RequestStatus
+    failure_code: str | None = None
+    answers: dict | None = None
+    elapsed_ms: float | None = None
+
+    @classmethod
+    def from_record(cls, record: RequestRecord) -> "DecisionRequestOutcome":
+        return cls(
+            request_id=record.id,
+            label=record.label,
+            status=record.status,
+            failure_code=record.failure.code.value if record.failure else None,
+            answers=record.answers,
+            elapsed_ms=record.elapsed_ms,
+        )
+
+
+class DecisionInvocationFinished(BaseModel):
+    """
+    A decision policy has finished: completed (the decision model answered),
+    fallback (the usual request ran instead) or preserved (the original
+    result was kept).
+    """
+
+    invocation_id: str
+    template_uid: str
+    source_group: str | None = None
+    status: InvocationStatus
+    requests: list[DecisionRequestOutcome] = Field(default_factory=list)
+    actions: list[dict] = Field(default_factory=list)
 
 
 class PolicyInvocation(Generic[T]):
@@ -132,7 +183,8 @@ class PolicyInvocation(Generic[T]):
         self.source_group = self._source_group(template)
         self.service.log.invocations[self.id].source_group = self.source_group
         context = {**self.prompt.vars, **helpers}
-        self.rendered_text = template.render(context)
+        with signals_after_render():
+            self.rendered_text = template.render(context)
 
     def _check_running(self):
         if self.status != "running":
@@ -166,7 +218,22 @@ class PolicyInvocation(Generic[T]):
             await self._recover(exc)
         finally:
             active_template_uid.reset(token)
+            finished = DecisionInvocationFinished(
+                invocation_id=self.id,
+                template_uid=self.prompt.uid,
+                source_group=self.source_group,
+                status=self.status,
+                requests=[
+                    DecisionRequestOutcome.from_record(record)
+                    for record in self.service.log.records.values()
+                    if record.invocation_id == self.id
+                ],
+                actions=[
+                    action.model_dump(mode="json") for action in self.action_trace
+                ],
+            )
             self.service.log.finish_invocation(self.id, status=self.status)
+        await send_outside_render("decision.invocation.finished", finished)
         return self.result
 
     def _failure_records(self, exc):

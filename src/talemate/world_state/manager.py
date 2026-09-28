@@ -38,8 +38,12 @@ from talemate.knowledge.schema import (
     ReinforcementEntry,
     is_memory_attribute,
 )
+import talemate.emit.async_signals as async_signals
 from talemate.knowledge.changes import (
     KnowledgeChange,
+    KnowledgeEdgeRemovedEvent,
+    KnowledgeVisibilityChangedEvent,
+    VisibilityKind,
     edge_change,
     edge_changes_knowledge,
     emit_knowledge_changes,
@@ -707,8 +711,37 @@ class WorldStateManager:
     async def set_world_entry_visibility(
         self, entry_id: str, visibility: EntryVisibility
     ):
-        self.world_state.manual_context[entry_id].visibility = visibility
+        entry = self.world_state.manual_context[entry_id]
+        previous = entry.visibility
+        entry.visibility = visibility
         invalidate_memory_audiences(self.scene)
+        await self._visibility_changed(entry_id, "world_entry", previous, visibility)
+
+    async def _visibility_changed(
+        self,
+        entry_id: str,
+        kind: VisibilityKind,
+        previous: EntryVisibility | None,
+        visibility: EntryVisibility,
+        *,
+        owner: str | None = None,
+        key: str | None = None,
+    ):
+        if previous == visibility or not self.scene.active:
+            return
+        async_signals.send_soon(
+            "knowledge.visibility_changed",
+            KnowledgeVisibilityChangedEvent(
+                scene=self.scene,
+                event_type="knowledge.visibility_changed",
+                entry_id=entry_id,
+                kind=kind,
+                owner=owner,
+                key=key,
+                previous=previous,
+                visibility=visibility,
+            ),
+        )
 
     async def set_static_history_known_by(
         self, entry_id: str, visibility: EntryVisibility
@@ -774,11 +807,21 @@ class WorldStateManager:
         default and is removed rather than stored.
         """
         character = self.scene.get_character(character_name)
+        previous = character.visibility.get(key)
         if visibility.mode == "everyone":
             character.visibility.pop(key, None)
         else:
             character.visibility[key] = visibility
         invalidate_memory_audiences(self.scene)
+        everyone = EntryVisibility(mode="everyone")
+        await self._visibility_changed(
+            f"{character.name}.{key}",
+            "sheet",
+            previous or everyone,
+            visibility,
+            owner=character.name,
+            key=key,
+        )
 
     def knowledge_targets(self) -> list[KnowledgeTarget]:
         """Everything a knowledge edge can point at, by memory document id."""
@@ -918,10 +961,23 @@ class WorldStateManager:
             emit_knowledge_changes(self.scene, [edge_change(edge)])
         return edge
 
-    async def remove_knowledge_edge(self, edge_id: str):
-        self.world_state.knowledge = [
-            edge for edge in self.world_state.knowledge if edge.id != edge_id
-        ]
+    async def remove_knowledge_edge(self, edge_id: str) -> KnowledgeEdge | None:
+        before = list(self.world_state.knowledge)
+        removed = next((edge for edge in before if edge.id == edge_id), None)
+        self.world_state.knowledge = [edge for edge in before if edge.id != edge_id]
+        if removed is not None and self.scene.active:
+            async_signals.send_soon(
+                "knowledge.edge_removed",
+                KnowledgeEdgeRemovedEvent(
+                    scene=self.scene,
+                    event_type="knowledge.edge_removed",
+                    edge=removed,
+                    changed=edge_changes_knowledge(
+                        removed, before, self.world_state.knowledge
+                    ),
+                ),
+            )
+        return removed
 
     async def set_world_entry_shared(self, entry_id: str, shared: bool):
         """

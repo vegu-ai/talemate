@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 
 import structlog
 
@@ -6,7 +6,10 @@ from talemate.context import active_scene
 from talemate.game.engine.nodes.focal import Metadata
 from talemate.game.engine.nodes.data import ListCollector
 from talemate.game.engine.nodes.string import AdvancedFormat
+from talemate.character import character_name
 from talemate.instance import get_agent
+from talemate.knowledge.bucket import KnowledgeIndex
+from talemate.knowledge.disclosures import disclose
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.entry import (
     VISIBILITY_KINDS,
@@ -22,14 +25,7 @@ from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge
 from .core import GraphState, InputValueError, Node, PropertyField
 from .registry import register
 
-if TYPE_CHECKING:
-    from talemate.character import Character
-
 log = structlog.get_logger("talemate.game.engine.nodes.knowledge")
-
-
-def _character_name(value: "str | Character") -> str:
-    return value if isinstance(value, str) else value.name
 
 
 class _EdgeNode(Node):
@@ -51,7 +47,7 @@ class _EdgeNode(Node):
         )
         replace = PropertyField(
             name="replace",
-            description="Keep one edge per character and entry: the new edge replaces an existing grant or revoke for the pair",
+            description="Keep one edge per character and entry: the new edge replaces an existing grant or revoke for the pair. Without it, an earlier Never Learn stays and still wins over a new grant",
             type="bool",
             default=False,
         )
@@ -80,7 +76,7 @@ class _EdgeNode(Node):
             raise InputValueError(
                 self, "character", "Revokes are unavailable in perception mode."
             )
-        character = _character_name(self.require_input("character"))
+        character = character_name(self.require_input("character"))
         target = self.normalized_input_value("target")
         item = self.normalized_input_value("context_id_item")
         if item is not None:
@@ -118,6 +114,8 @@ class GrantKnowledge(_EdgeNode):
     """
     Establish selected information in perception mode, or a whole-entry edge in legacy mode.
     Disclosures are acquired now without inventing dialogue; whole_entry explicitly copies all source text.
+    In legacy mode a grant does not lift an earlier Never Learn for the same entry unless
+    `replace` is on; the World Editor's Learn lifts it.
 
     Inputs:
     - state: graph state (passthrough)
@@ -167,7 +165,7 @@ class GrantKnowledge(_EdgeNode):
         )
         try:
             disclosure = scene.world_state_manager.grant_character_disclosure(
-                _character_name(self.require_input("character")),
+                character_name(self.require_input("character")),
                 target,
                 text=self.normalized_input_value("information"),
                 whole_entry=self.normalized_input_value("whole_entry") or False,
@@ -358,6 +356,96 @@ class SetEntryVisibility(Node):
         )
 
 
+@register("knowledge/SetStaticHistoryKnownBy")
+class SetStaticHistoryKnownBy(Node):
+    """
+    Set who knows a static history entry, in Standard knowledge scenes:
+    everyone, nobody, or the listed characters.
+
+    Inputs:
+
+    - state: graph state (passthrough)
+    - context_id_item: the static history entry as a Context ID item
+    - mode: everyone, nobody or list (required)
+    - characters: the character names for the list mode
+
+    Outputs:
+
+    - state: graph state
+    - entry_id: the static history entry id
+    - present: the characters who know it, or None for everyone
+    - text: the entry's Known by line after the change
+    """
+
+    class Fields:
+        mode = PropertyField(
+            name="mode",
+            description="Who knows the entry",
+            type="str",
+            default="everyone",
+            choices=["everyone", "nobody", "list"],
+        )
+
+    def __init__(self, title="Set Static History Known By", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("context_id_item", socket_type="context_id_item")
+        self.add_input("mode", socket_type="str")
+        self.add_input("characters", socket_type="list", optional=True)
+        self.set_property("mode", "everyone")
+        self.add_output("state")
+        self.add_output("entry_id", socket_type="str")
+        self.add_output("present", socket_type="list")
+        self.add_output("text", socket_type="str")
+
+    async def run(self, state: GraphState):
+        scene = active_scene.get()
+        item = self.require_input("context_id_item")
+        mode = self.require_input("mode")
+        mode = mode.strip().lower() if isinstance(mode, str) else ""
+        if mode not in ("everyone", "nobody", "list"):
+            raise InputValueError(
+                self, "mode", f"`{mode}` is not one of everyone, nobody, list."
+            )
+        entry = entry_knowledge(scene, item)
+        if entry.kind != "static":
+            raise InputValueError(
+                self,
+                "context_id_item",
+                f"`{item.context_id}` is not a static history entry.",
+            )
+        try:
+            characters = resolve_character_names(
+                scene, self.normalized_input_value("characters") or []
+            )
+        except ValueError as exc:
+            raise InputValueError(self, "characters", str(exc)) from exc
+        if mode == "list" and not characters:
+            raise InputValueError(
+                self, "characters", "The list mode needs at least one character."
+            )
+        visibility = EntryVisibility(
+            mode={"everyone": "everyone", "nobody": "owner", "list": "list"}[mode],
+            characters=characters if mode == "list" else [],
+        )
+        try:
+            present = await scene.world_state_manager.set_static_history_known_by(
+                entry.id, visibility
+            )
+        except ValueError as exc:
+            raise InputValueError(self, "context_id_item", str(exc)) from exc
+        self.set_output_values(
+            {
+                "state": self.normalized_input_value("state"),
+                "entry_id": entry.id,
+                "present": present,
+                "text": known_by_line(scene, entry.id),
+            }
+        )
+
+
 @register("knowledge/CharacterKnowledge")
 class CharacterKnowledge(Node):
     """
@@ -373,6 +461,9 @@ class CharacterKnowledge(Node):
 
     - character: the character name
     - text: the report
+    - grants: the character's Learn edges as dicts
+    - revokes: the character's Never Learn edges as dicts (Standard only)
+    - disclosures: disclosures shared with the character as dicts (Character Perspectives only)
     """
 
     def __init__(self, title="Character Knowledge", **kwargs):
@@ -382,13 +473,261 @@ class CharacterKnowledge(Node):
         self.add_input("character", socket_type="str,character")
         self.add_output("character", socket_type="str")
         self.add_output("text", socket_type="str")
+        self.add_output("grants", socket_type="list")
+        self.add_output("revokes", socket_type="list")
+        self.add_output("disclosures", socket_type="list")
 
     async def run(self, state: GraphState):
-        name = _character_name(self.require_input("character"))
+        scene = active_scene.get()
+        name = character_name(self.require_input("character"))
+        knowledge = await scene.world_state_manager.get_character_knowledge(name)
         self.set_output_values(
             {
                 "character": name,
-                "text": character_knowledge_report(active_scene.get(), name),
+                "text": character_knowledge_report(scene, name),
+                "grants": [
+                    e.model_dump() for e in knowledge.edges if e.kind == "grant"
+                ],
+                "revokes": [
+                    e.model_dump() for e in knowledge.edges if e.kind == "revoke"
+                ],
+                "disclosures": [d.model_dump() for d in knowledge.disclosures],
+            }
+        )
+
+
+@register("knowledge/CharacterKnowsEntry")
+class CharacterKnowsEntry(Node):
+    """
+    Whether a character knows an entry: a character sheet entry, a world entry
+    or a history entry, by the same rule that decides what reaches the
+    character's memories. Answers without an LLM request.
+
+    Reasons for not knowing: revoke (a Never Learn rule), visibility (the
+    entry's Known by leaves the character out) or presence (the character did
+    not witness the history entry).
+
+    Inputs:
+
+    - character: character name or character
+    - target: entry id (or give context_id_item)
+    - context_id_item: the entry as a Context ID item (or give target)
+
+    Outputs:
+
+    - known: True when the character knows the entry
+    - reason: why not, or None
+    - entry_id: the id knowledge edges use for the entry
+    """
+
+    def __init__(self, title="Character Knows Entry", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("character", socket_type="str,character")
+        self.add_input("target", socket_type="str", optional=True, group="target")
+        self.add_input(
+            "context_id_item",
+            socket_type="context_id_item",
+            optional=True,
+            group="target",
+        )
+        self.add_output("known", socket_type="bool")
+        self.add_output("reason", socket_type="str")
+        self.add_output("entry_id", socket_type="str")
+
+    async def run(self, state: GraphState):
+        scene = active_scene.get()
+        character = character_name(self.require_input("character"))
+        item = self.normalized_input_value("context_id_item")
+        target = (
+            item.knowledge_id
+            if item is not None
+            else self.normalized_input_value("target")
+        )
+        if not target:
+            raise InputValueError(
+                self, "target", "Either target or context_id_item must be set"
+            )
+        entry = entry_knowledge(scene, item if item is not None else target)
+        if entry.kind == "unknown":
+            raise InputValueError(self, "target", f"`{target}` names no entry.")
+        index = KnowledgeIndex.from_scene(scene)
+        reason = index.rejection(character, index.item_for_entry(scene, entry.id))
+        self.set_output_values(
+            {"known": reason is None, "reason": reason, "entry_id": entry.id}
+        )
+
+
+@register("knowledge/RemoveKnowledgeEdge")
+class RemoveKnowledgeEdge(Node):
+    """
+    Remove Learn and Never Learn rules: one edge by its id, or every edge
+    between a character and an entry. What the character knows then follows
+    the entry's Known by setting again.
+
+    Inputs:
+
+    - state: graph state (passthrough)
+    - edge_id: the id of one edge (or give character and target)
+    - character: character name or character
+    - target: entry id
+
+    Outputs:
+
+    - state: graph state
+    - removed: the removed edges as dicts
+    - text: the entry's Known by line after the change
+    """
+
+    def __init__(self, title="Remove Knowledge Edge", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("edge_id", socket_type="str", optional=True)
+        self.add_input("character", socket_type="str,character", optional=True)
+        self.add_input("target", socket_type="str", optional=True)
+        self.add_output("state")
+        self.add_output("removed", socket_type="list")
+        self.add_output("text", socket_type="str")
+
+    async def run(self, state: GraphState):
+        scene = active_scene.get()
+        edge_id = self.normalized_input_value("edge_id")
+        character = self.normalized_input_value("character")
+        target = self.normalized_input_value("target")
+        edges = scene.world_state.knowledge
+        if edge_id:
+            ids = [e.id for e in edges if e.id == edge_id]
+        elif character and target:
+            name = character_name(character)
+            ids = [e.id for e in edges if e.character == name and e.target == target]
+        else:
+            raise InputValueError(
+                self, "edge_id", "Give edge_id, or character and target."
+            )
+        removed = []
+        for identity in ids:
+            edge = await scene.world_state_manager.remove_knowledge_edge(identity)
+            if edge is not None:
+                removed.append(edge)
+        entry = target or (removed[0].target if removed else None)
+        self.set_output_values(
+            {
+                "state": self.normalized_input_value("state"),
+                "removed": [e.model_dump() for e in removed],
+                "text": known_by_line(scene, entry) if entry else "",
+            }
+        )
+
+
+@register("knowledge/AddDisclosure")
+class AddDisclosure(Node):
+    """
+    Share information with one or more characters from now on, as a
+    disclosure: they know the text, whether or not it comes from an entry.
+    Character Perspectives only; in Standard scenes use Grant Knowledge.
+
+    Inputs:
+
+    - state: graph state (passthrough)
+    - text: the information
+    - characters: the character names
+
+    Outputs:
+
+    - state: graph state
+    - disclosure: the saved disclosure as a dict
+    """
+
+    class Fields:
+        text = PropertyField(
+            name="text",
+            description="The information to share",
+            type="text",
+            default="",
+        )
+
+    def __init__(self, title="Add Disclosure", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("text", socket_type="str", optional=True)
+        self.add_input("characters", socket_type="list")
+        self.set_property("text", "")
+        self.add_output("state")
+        self.add_output("disclosure", socket_type="dict")
+
+    async def run(self, state: GraphState):
+        scene = active_scene.get()
+        if not character_knowledge_enabled(scene):
+            raise InputValueError(
+                self, "characters", "Disclosures need Character Perspectives."
+            )
+        text = self.normalized_input_value("text")
+        if not text or not str(text).strip():
+            raise InputValueError(self, "text", "The information is empty.")
+        try:
+            characters = resolve_character_names(
+                scene, self.require_input("characters") or []
+            )
+        except ValueError as exc:
+            raise InputValueError(self, "characters", str(exc)) from exc
+        if not characters:
+            raise InputValueError(self, "characters", "Name at least one character.")
+        try:
+            disclosure = disclose(scene, str(text).strip(), characters)
+        except ValueError as exc:
+            raise InputValueError(self, "characters", str(exc)) from exc
+        await get_agent("memory").ensure_audience_index(scene)
+        self.set_output_values(
+            {
+                "state": self.normalized_input_value("state"),
+                "disclosure": disclosure.model_dump(),
+            }
+        )
+
+
+@register("knowledge/ListDisclosures")
+class ListDisclosures(Node):
+    """
+    The disclosures of a Character Perspectives scene, optionally only those
+    shared with one character. Empty in Standard scenes.
+
+    Inputs:
+
+    - character: character name or character (optional)
+
+    Outputs:
+
+    - disclosures: list of disclosure dicts (id, text, audience, origin ...)
+    """
+
+    def __init__(self, title="List Disclosures", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("character", socket_type="str,character", optional=True)
+        self.add_output("disclosures", socket_type="list")
+
+    async def run(self, state: GraphState):
+        scene = active_scene.get()
+        character = self.normalized_input_value("character")
+        name = character_name(character) if character else None
+        disclosures = (
+            scene.knowledge.disclosures
+            if scene.knowledge and character_knowledge_enabled(scene)
+            else ()
+        )
+        self.set_output_values(
+            {
+                "disclosures": [
+                    d.model_dump()
+                    for d in disclosures
+                    if name is None or name in d.audience
+                ]
             }
         )
 

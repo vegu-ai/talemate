@@ -16,7 +16,9 @@ from talemate.agents.base import DynamicInstruction
 from talemate.agents.registry import get_agent_types
 from talemate.agents.base import Agent
 from talemate.prompts.base import Prompt, PrependTemplateDirectories
+from talemate.client.context import ClientContext
 from talemate.client.presets import make_kind
+from talemate.client.reasoning_effort import EFFORT_LEVELS
 from talemate.agents.context import ActiveAgent
 from talemate.context import active_scene
 from talemate.util import strip_partial_sentences
@@ -592,6 +594,8 @@ class GenerateResponse(Node):
     - action_type: Classification of the generated response (optional)
     - response_length: The maximum length of the response (optional)
     - response_spec: Optional ResponseSpec for extracting structured data from response
+    - reasoning_effort: Reasoning effort for this request (optional). Replaces the client's Reasoning Effort while its Reasoning is on; clients with a Reasoning Effort setting only (OpenAI, OpenAI compatible, OpenRouter). `default` lets the model choose.
+    - disable_reasoning: Turn reasoning off for this request (optional)
 
     Properties:
 
@@ -600,6 +604,8 @@ class GenerateResponse(Node):
     - attempts: The number of attempts (retry on empty response)
     - response_length: The maximum length of the response
     - action_type: Classification of the generated response
+    - reasoning_effort: Reasoning effort for this request; empty uses the client setting
+    - disable_reasoning: Turn reasoning off for this request
 
     Outputs:
 
@@ -672,6 +678,21 @@ class GenerateResponse(Node):
             default="scene_direction",
         )
 
+        reasoning_effort = PropertyField(
+            name="reasoning_effort",
+            type="str",
+            default="",
+            description="Reasoning effort for this request; empty uses the client setting",
+            choices=["", *EFFORT_LEVELS],
+        )
+
+        disable_reasoning = PropertyField(
+            name="disable_reasoning",
+            type="bool",
+            default=False,
+            description="Turn reasoning off for this request",
+        )
+
     def __init__(self, title="Generate Response", **kwargs):
         super().__init__(title=title, **kwargs)
 
@@ -682,12 +703,16 @@ class GenerateResponse(Node):
         self.add_input("action_type", socket_type="str", optional=True)
         self.add_input("response_length", socket_type="int", optional=True)
         self.add_input("response_spec", socket_type="response/spec", optional=True)
+        self.add_input("reasoning_effort", socket_type="str", optional=True)
+        self.add_input("disable_reasoning", socket_type="bool", optional=True)
 
         self.set_property("data_output", False)
         self.set_property("data_multiple", False)
         self.set_property("response_length", 256)
         self.set_property("action_type", "scene_direction")
         self.set_property("attempts", 1)
+        self.set_property("reasoning_effort", "")
+        self.set_property("disable_reasoning", False)
 
         self.add_output("state", socket_type="state")
         self.add_output("agent", socket_type="agent")
@@ -698,6 +723,21 @@ class GenerateResponse(Node):
         self.add_output("rendered_prompt", socket_type="str")
         self.add_output("response_spec", socket_type="response/spec")
         self.add_output("extracted", socket_type="dict")
+
+    def reasoning_context(self) -> dict:
+        effort = self.normalized_input_value("reasoning_effort") or ""
+        if effort and effort not in EFFORT_LEVELS:
+            raise InputValueError(
+                self,
+                "reasoning_effort",
+                f"`{effort}` is not one of {', '.join(EFFORT_LEVELS)}.",
+            )
+        context = {}
+        if effort:
+            context["reasoning_effort"] = effort
+        if self.normalized_input_value("disable_reasoning"):
+            context["disable_reasoning"] = True
+        return context
 
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
@@ -734,7 +774,10 @@ class GenerateResponse(Node):
 
         send_prompt.__name__ = self.title.replace(" ", "_").lower()
 
-        with PrependTemplateDirectories(scene.template_dir):
+        with (
+            PrependTemplateDirectories(scene.template_dir),
+            ClientContext(**self.reasoning_context()),
+        ):
             for _ in range(attempts):
                 response = await agent.delegate(send_prompt)
                 if response:

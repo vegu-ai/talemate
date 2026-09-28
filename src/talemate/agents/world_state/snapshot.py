@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+from contextvars import ContextVar
 import re
 import time
 import traceback
-from typing import Any, Iterable, Literal, TYPE_CHECKING
+from typing import Any, Awaitable, Callable, Iterable, Literal, TYPE_CHECKING
 
 import pydantic
 import structlog
@@ -47,6 +48,7 @@ from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
     AgentActionConditional,
+    AgentEmission,
     set_processing,
 )
 
@@ -73,6 +75,19 @@ WORLD_STATE_SNAPSHOT_IGNORE = [
 # the key so the user's explicit action takes over the slot the refresh uses,
 # and the panel's existing spinner and cancel button drive it unchanged.
 SNAPSHOT_TASK = "world_state_update"
+# set inside the work of the tracked snapshot task: its awaited child tasks
+# (a listener graph's RunModule) inherit it, send_soon listeners do not
+_snapshot_slot_held = ContextVar("snapshot_slot_held", default=None)
+talemate.emit.async_signals.detach_in_listener_tasks(_snapshot_slot_held)
+
+
+async def _in_snapshot_slot(work: Callable[[], Awaitable]):
+    token = _snapshot_slot_held.set(True)
+    try:
+        return await work()
+    finally:
+        _snapshot_slot_held.reset(token)
+
 
 # Longest text selection accepted by the manual add. The frontend mirrors it in
 # talemate_frontend/src/utils/messageSelection.js.
@@ -83,6 +98,9 @@ SNAPSHOT_ENTITY_BUCKETS: dict[str, tuple[str, type]] = {
     "item": ("items", ObjectState),
     "place": ("places", PlaceState),
 }
+
+
+talemate.emit.async_signals.register("agent.world_state.snapshot.entity_added")
 
 
 class SnapshotEntityAddition(pydantic.BaseModel):
@@ -98,6 +116,17 @@ class SnapshotEntityAddition(pydantic.BaseModel):
     @property
     def highlighted(self) -> bool:
         return self.in_moment and bool(self.mentions)
+
+
+class SnapshotEntityAddedEmission(AgentEmission):
+    """A selected character, item or place was added to the world snapshot."""
+
+    message_id: int
+    selection: str
+    name: str
+    kind: Literal["character", "item", "place"]
+    in_moment: bool
+    mentions: list[str]
 
 
 class CurrentMoment(pydantic.BaseModel):
@@ -486,7 +515,9 @@ class WorldStateSnapshotMixin:
         """
         task = await self.run_tracked_task(
             SNAPSHOT_TASK,
-            lambda: self.scene.world_state.request_update(instructions=instructions),
+            lambda: _in_snapshot_slot(
+                lambda: self.scene.world_state.request_update(instructions=instructions)
+            ),
             background=self.snapshot_runs_in_background,
             cancel_in_flight=cancel_in_flight,
             error_handler=self.on_world_state_error,
@@ -550,13 +581,46 @@ class WorldStateSnapshotMixin:
 
         task = await self.run_tracked_task(
             SNAPSHOT_TASK,
-            lambda: self.add_and_report_snapshot_entity(message_id, text),
+            lambda: _in_snapshot_slot(
+                lambda: self.add_and_report_snapshot_entity(message_id, text)
+            ),
             background=self.snapshot_runs_in_background,
             cancel_in_flight=True,
             error_handler=self.on_add_snapshot_entity_error,
         )
         track_evidence_task(self.scene, task)
         return task is not None
+
+    async def add_snapshot_entity_in_slot(
+        self, message_id: int, text: str
+    ) -> SnapshotEntityAddition:
+        """
+        The manual add under the snapshot's single-flight key, cancelling an
+        in-flight refresh as the UI add does, awaited for its result. Called
+        from inside the snapshot work (a listener of its events), it adds
+        directly.
+        """
+        if _snapshot_slot_held.get():
+            return await self.add_snapshot_entity(message_id, text)
+
+        async def add():
+            # a refused selection is the caller's error, not a failed task
+            try:
+                return await self.add_snapshot_entity(message_id, text)
+            except ValueError as exc:
+                return exc
+
+        task = await self.run_tracked_task(
+            SNAPSHOT_TASK,
+            lambda: _in_snapshot_slot(add),
+            background=False,
+            cancel_in_flight=True,
+        )
+        track_evidence_task(self.scene, task)
+        result = await task
+        if isinstance(result, ValueError):
+            raise result
+        return result
 
     async def on_add_snapshot_entity_error(self, error: Exception):
         # A scene change or a user cancel is a quiet stop, not a failure —
@@ -693,9 +757,23 @@ class WorldStateSnapshotMixin:
                 retain_previous(
                     world_state, before, snapshot_request.verified_provenance(), scene
                 )
-            return result
         finally:
             world_state.emit()
+        if result.resolved:
+            await talemate.emit.async_signals.get(
+                "agent.world_state.snapshot.entity_added"
+            ).send(
+                SnapshotEntityAddedEmission(
+                    agent=self,
+                    message_id=message.id,
+                    selection=selection,
+                    name=result.name,
+                    kind=result.kind,
+                    in_moment=result.in_moment,
+                    mentions=list(result.mentions),
+                )
+            )
+        return result
 
     async def _resolve_and_merge_snapshot_entity(
         self,

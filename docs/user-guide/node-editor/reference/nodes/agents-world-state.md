@@ -131,6 +131,8 @@ identifies the selected portrait; an empty fallback result may request generatio
 | `action_type` | `str` | (optional) |
 | `response_length` | `int` | (optional) |
 | `response_spec` | `response/spec` | (optional) |
+| `reasoning_effort` | `str` | (optional) |
+| `disable_reasoning` | `bool` | (optional) |
 | `character` | `character` | The character whose portrait is being selected |
 | `content` | `str` | The message to select a portrait for |
 | `assets` | `list` | The existing portraits available to the character |
@@ -158,6 +160,8 @@ identifies the selected portrait; an empty fallback result may request generatio
 | `response_length` | `int` | `256` | The maximum length of the response |
 | `action_type` | `str` | `"scene_direction"` | Classification of the generated response. Choices: `analyze`, `conversation`, `create`, `edit`, `narrate`, `scene_direction`, `summarize`, `visualize`, `world_state`. |
 | `attempts` | `int` | `1` | The number of attempts (retry on empty response) |
+| `reasoning_effort` | `str` | `""` | Reasoning effort for this request; empty uses the client setting. Choices: ``, `default`, `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`. |
+| `disable_reasoning` | `bool` | `False` | Turn reasoning off for this request |
 
 ## Determine Character Avatar
 
@@ -310,7 +314,7 @@ Requests the current world state.
 | Output | Type | Description |
 | --- | --- | --- |
 | `state` | `any` | The current state |
-| `world_state` | `dict` | The current world state |
+| `world_state` | `dict` | The world snapshot after the update: characters, items, places and location |
 
 ## Worldstate Settings
 

@@ -89,6 +89,9 @@ class PassageProvenance(KnowledgeRecord):
     revision: int | None = Field(default=None, ge=1, strict=True)
 
 
+PerspectiveStatus = Literal["ready", "pending", "failed", "omitted"]
+
+
 class PerspectiveOutput(AudienceRecord):
     @model_validator(mode="before")
     @classmethod
@@ -99,7 +102,7 @@ class PerspectiveOutput(AudienceRecord):
         return data
 
     id: str | None = Field(default=None, min_length=1)
-    status: Literal["ready", "pending", "failed", "omitted"]
+    status: PerspectiveStatus
     text: StrictStr | None = None
     sources: tuple[SourceReference, ...] = ()
     passage_provenance: tuple[PassageProvenance, ...] = ()

@@ -1,3 +1,5 @@
+import asyncio
+import contextvars
 import structlog
 import traceback
 
@@ -7,6 +9,7 @@ __all__ = [
     "register",
     "get",
     "handlers",
+    "send_soon",
     "DEFERRED",
 ]
 
@@ -14,6 +17,19 @@ log = structlog.get_logger("talemate.emit.async_signals")
 
 handlers = {}
 DEFERRED = object()
+# the event loop keeps only a weak reference to a task
+_pending_sends: set[asyncio.Task] = set()
+# context vars a send_soon listener must not inherit from its sender
+_detached_vars: list[contextvars.ContextVar] = []
+
+
+def detach_in_listener_tasks(var: contextvars.ContextVar) -> None:
+    """
+    A send_soon listener runs while its sender goes on; it starts with `var`
+    unset instead of sharing the sender's value.
+    """
+    if var not in _detached_vars:
+        _detached_vars.append(var)
 
 
 class AsyncSignal:
@@ -110,3 +126,33 @@ def get(name: str):
         name (str): The name of the signal handler
     """
     return handlers.get(name)
+
+
+def _sent(task: asyncio.Task) -> None:
+    _pending_sends.discard(task)
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        log.warning(
+            "Signal task ended with an exception",
+            task=task.get_name(),
+            error_type=type(exc).__name__,
+            error=str(exc),
+        )
+
+
+def send_soon(name: str, emission) -> asyncio.Task:
+    """
+    Send a signal from synchronous code: receivers run in a task on the running
+    loop, after the caller returns.
+    """
+    context = contextvars.copy_context()
+    for var in _detached_vars:
+        context.run(var.set, None)
+    task = asyncio.get_running_loop().create_task(
+        get(name).send(emission), name=f"signal:{name}", context=context
+    )
+    _pending_sends.add(task)
+    task.add_done_callback(_sent)
+    return task

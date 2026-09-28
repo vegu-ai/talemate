@@ -8,7 +8,7 @@ from conftest import MockScene, bootstrap_scene
 
 from talemate.agents.base import background_processing
 from talemate.changelog import reconstruct_cleanup
-from talemate.scene.schema import (
+from talemate.game.state import (
     GameStatePathSettings,
     load_game_state_path_settings,
 )

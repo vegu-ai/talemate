@@ -64,6 +64,7 @@ PREFIX_MAP: dict[str, str] = {
     "data": "data",
     "data/number": "data-number",
     "data/string": "data-string",
+    "decisions": "ask-questions",
     "event": "event",
     "focal": "focal",
     "input": "input",
@@ -75,6 +76,7 @@ PREFIX_MAP: dict[str, str] = {
     "scene/history": "scene-history",
     "scene/intention": "scene-intent",
     "scene/message": "scene-messages",
+    "scene/perspective": "scene-perspectives",
     "scene/worldstate": "scene-world-state",
     "state": "state",
     "util": "util",
@@ -142,6 +144,12 @@ NODE_OVERRIDES: dict[str, str] = {
     "agents/visual/SelectBackend": "agents-visual-generation",
     "agents/visual/UnpackGenerationRequest": "agents-visual-generation",
     "agents/visual/UnpackGenerationResponse": "agents-visual-generation",
+    # scene header controls and the world snapshot: split off so the state
+    # and world state pages stay within the help agent's read budget
+    "state/GetGameStatePathSettings": "scene-header-controls",
+    "state/PinGameStatePath": "scene-header-controls",
+    "agents/world_state/AddSnapshotEntity": "world-panel",
+    "agents/world_state/GetSnapshot": "world-panel",
 }
 
 # slug -> (page title, one-line description used in the index table and as
@@ -154,6 +162,22 @@ PAGE_TITLES: dict[str, tuple[str, str]] = {
     "agents": (
         "Agent Nodes",
         "Generic agent interaction: get an agent, call agent functions, read and count agent state variables.",
+    ),
+    "ask-questions": (
+        "Question Nodes",
+        "Ask the decision model a yes/no, choice or score question and branch on the answer's probability, with an uncertain route when no answer comes.",
+    ),
+    "scene-perspectives": (
+        "Perspective Nodes",
+        "Character Perspectives: read and replace one character's view of a message.",
+    ),
+    "scene-header-controls": (
+        "Scene Header Control Nodes",
+        "Game state variables shown as scene header controls or in Debug Tools: read a variable's control settings and pin or unpin it.",
+    ),
+    "world-panel": (
+        "World Panel Nodes",
+        "The characters, items, places and location the World State panel shows: read them, and add a person, object or place named in a message.",
     ),
     "knowledge": (
         "Knowledge Nodes",

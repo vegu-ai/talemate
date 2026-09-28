@@ -1,0 +1,7 @@
+added:
+- "Node Editor: Ask the decision model a yes/no, choice or score question from a graph and branch on the probability, with an uncertain route when the model is off (Ask Decision Model, Decide Yes/No, Decision Model Status)."
+- "Node Editor: Graphs can check what a character knows, remove Learn and Never Learn rules, set Known by for static history, share information as disclosures and read or replace a character's view of a message. Context History and Query Context DB can work from one character's knowledge."
+- "Node Editor: New nodes update game state variables, read and pin them as scene header controls, read arrival and departure entries and set arrival notes, add entities to the world snapshot and read it, check a voice's sound tag support, and set reasoning effort per Generate Response request. Unpack AI Function Call shows why a Director action was not applied."
+- "Node Editor: New events for every game state change (scene header, Debug Tools, World Editor, Director, node graphs and scripts), character departures, knowledge and disclosure changes, edited perspectives, character perception analysis, Director Chat action batches, editor decision checks, decision model results, unchanged tracked states and world snapshot additions. character.activated now includes the arrival entry."
+fixed:
+- "Node Editor: Request World State outputs the world snapshot after its update; the output was always empty."

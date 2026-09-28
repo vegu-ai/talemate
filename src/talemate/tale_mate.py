@@ -55,7 +55,8 @@ from talemate.game.engine.nodes.core import GraphState
 from talemate.game.engine.nodes.layout import load_graph
 from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
-from talemate.scene.schema import GameStatePathSettings, ScenePerspectives
+from talemate.game.state import GameStatePathSettings
+from talemate.scene.schema import ScenePerspectives
 from talemate.history import (
     emit_archive_add,
     ArchiveEntry,
@@ -108,6 +109,7 @@ async_signals.register(
     "player_turn_start",
     "push_history",
     "push_history.after",
+    "game_state.changed",
 )
 
 

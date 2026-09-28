@@ -118,6 +118,8 @@ that is used as the extracted value.
 | `action_type` | `str` | Classification of the generated response (optional) |
 | `response_length` | `int` | The maximum length of the response (optional) |
 | `response_spec` | `response/spec` | (optional) Optional ResponseSpec for extracting structured data from response |
+| `reasoning_effort` | `str` | Reasoning effort for this request (optional). Replaces the client's Reasoning Effort while its Reasoning is on; clients with a Reasoning Effort setting only (OpenAI, OpenAI compatible, OpenRouter). `default` lets the model choose. |
+| `disable_reasoning` | `bool` | Turn reasoning off for this request (optional) |
 
 **Outputs**
 
@@ -142,6 +144,8 @@ that is used as the extracted value.
 | `response_length` | `int` | `256` | The maximum length of the response |
 | `action_type` | `str` | `"scene_direction"` | Classification of the generated response. Choices: `analyze`, `conversation`, `create`, `edit`, `narrate`, `scene_direction`, `summarize`, `visualize`, `world_state`. |
 | `attempts` | `int` | `1` | The number of attempts (retry on empty response) |
+| `reasoning_effort` | `str` | `""` | Reasoning effort for this request; empty uses the client setting. Choices: ``, `default`, `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`. |
+| `disable_reasoning` | `bool` | `False` | Turn reasoning off for this request |
 
 ## Load Template
 

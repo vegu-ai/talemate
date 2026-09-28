@@ -45,9 +45,11 @@ def append_transition(scene: Scene, transition: CharacterTransitionMessage) -> N
     scene.emit_history_message(transition)
 
 
-def record_departure(scene: Scene, character: Character) -> None:
+def record_departure(
+    scene: Scene, character: Character
+) -> CharacterTransitionMessage | None:
     if scene_is_loading.get() is scene:
-        return
+        return None
     departure = CharacterTransitionMessage(
         character_name=character.name,
         kind="deactivated",
@@ -57,6 +59,7 @@ def record_departure(scene: Scene, character: Character) -> None:
     # The entry is the departure point: a time passage placed after it in
     # history is part of the absence, one placed before it is not.
     departures(scene)[character.name] = {"message_id": departure.id}
+    return departure
 
 
 def latest_transition(
@@ -119,6 +122,22 @@ def transition_index(
 
 def transition_available(scene: Scene, transition: CharacterTransitionMessage) -> bool:
     return transition_index(scene, transition) is not None
+
+
+def set_arrival_note(
+    scene: Scene, transition: CharacterTransitionMessage, text: str
+) -> None:
+    """Raises ValueError unless `transition` is an arrival still in the history."""
+    if (
+        not isinstance(transition, CharacterTransitionMessage)
+        or transition.kind != "activated"
+    ):
+        raise ValueError("Activation entry not found")
+    if not transition_available(scene, transition):
+        raise ValueError("Activation entry is no longer available")
+    transition.arrival_note = text.strip()
+    scene.saved = False
+    scene.emit_history_message(transition)
 
 
 def absence_seconds(scene: Scene, transition: CharacterTransitionMessage) -> int | None:

@@ -18,13 +18,32 @@ from talemate.prompts.response import AnchorExtractor, ResponseSpec
 from talemate.scene_message import ReinforcementMessage
 from talemate.util.async_tools import bounded_gather_apply
 
-from talemate.agents.base import AgentAction, AgentActionConfig, set_processing
+from talemate.agents.base import (
+    AgentAction,
+    AgentActionConfig,
+    AgentEmission,
+    set_processing,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
     from talemate.world_state import Reinforcement
 
 log = structlog.get_logger("talemate.agents.world_state")
+
+talemate.emit.async_signals.register("agent.world_state.reinforcement.skipped")
+
+
+class ReinforcementSkippedEmission(AgentEmission):
+    """
+    The decision model found a tracked state unchanged, so no update request
+    ran and the state keeps its answer until its next interval.
+    """
+
+    question: str
+    character: str | None = None
+    answer: str | None = None
+    interval: int
 
 
 class PreparedReinforcement(NamedTuple):
@@ -322,6 +341,17 @@ class WorldStateReinforcementsMixin:
         if answer is False:
             reinforcement.due = reinforcement.interval
             self.scene.world_state.emit()
+            await talemate.emit.async_signals.get(
+                "agent.world_state.reinforcement.skipped"
+            ).send(
+                ReinforcementSkippedEmission(
+                    agent=self,
+                    question=reinforcement.question,
+                    character=reinforcement.character,
+                    answer=reinforcement.answer,
+                    interval=reinforcement.interval,
+                )
+            )
             return None
 
         changed = answer != reinforcement.answer

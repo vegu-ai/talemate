@@ -830,9 +830,9 @@
     command-prefix exemptions.
 - path: user-guide/node-editor/reference/nodes/agents-memory.md
   title: Memory Agent Nodes
-  summary: Memory node reference for Query Context DB and Unpack Memory Document. Configure semantic queries, metadata filters,
-    token budgets, per-query limits and filter/formatter functions, then extract document IDs, raw/text/dict data, metadata
-    and context_id.
+  summary: Memory node reference for Query Context DB, Referenced Characters and Unpack Memory Document. Configure semantic
+    queries, metadata filters, token budgets, per-query limits and filter/formatter functions, then extract document IDs,
+    raw/text/dict data, metadata and context_id.
 - path: user-guide/node-editor/reference/nodes/agents-narrator.md
   title: Narrator Agent Nodes
   summary: Narrator node reference for progress, scene/environment descriptions, queries, post-dialogue, character entry/exit
@@ -846,8 +846,8 @@
 - path: user-guide/node-editor/reference/nodes/agents-tts.md
   title: Voice Agent Nodes
   summary: Voice/TTS node reference for Generate TTS, Get Voice/Get Narrator Voice and Unpack Voice, plus chunk text manipulation.
-    Use Unpack Generation Emission and Set Chunk Text on agent.tts.generate.before to inspect speaker/API/message metadata
-    and rewrite text before synthesis.
+    Use Unpack Generation Emission, Set Chunk Text and a sound tag support check on agent.tts.generate.before to inspect speaker/API/message
+    metadata and rewrite text before synthesis.
 - path: user-guide/node-editor/reference/nodes/agents-visual-generation.md
   title: Visualizer Agent Generation Nodes
   summary: 'Visualizer generation node reference: GenerationRequest/Generate Image, Backend Status/Select Backend and request/response
@@ -874,6 +874,10 @@
   summary: 'Generic agent node reference: Get Agent, Call Agent Function and conditional calls, Dynamic Instruction, Toggle
     Agent Action and Get/Set/Unset/Counter Agent State. Covers scene/context scopes, keyword arguments, counter resets and
     effective scene override behavior when toggling actions.'
+- path: user-guide/node-editor/reference/nodes/ask-questions.md
+  title: Question Nodes
+  summary: Ask the decision model a yes/no, choice or score question from a graph and branch on the answer's probability,
+    with an uncertain route when no answer comes (Ask Decision Model, Decide Yes/No, Decision Model Status).
 - path: user-guide/node-editor/reference/nodes/assets-meta.md
   title: Asset Meta And Selection Nodes
   summary: 'Asset metadata/selection node reference: Make/Unpack Asset Meta, Search Assets tag filters, and Select Assets
@@ -929,8 +933,8 @@
 - path: user-guide/node-editor/reference/nodes/focal.md
   title: AI Function Nodes (Focal)
   summary: Focal AI function nodes define typed arguments, callback instructions and examples, send callable functions to
-    an agent, and unpack or collect call results. Covers max_calls, retries, response length, concurrent callbacks and director
-    chat action plumbing.
+    an agent, and unpack or collect call results, including rejected or skipped calls. Covers max_calls, retries, response
+    length, concurrent callbacks and director chat action plumbing.
 - path: user-guide/node-editor/reference/nodes/index.md
   title: Node Reference
   summary: Complete node editor reference grouped by category, with registry paths, input/output sockets and properties for
@@ -942,9 +946,9 @@
     player_character, reason, prefix, ! command handling and abort_condition branches that interrupt the input loop.
 - path: user-guide/node-editor/reference/nodes/knowledge.md
   title: Knowledge Nodes
-  summary: Knowledge nodes report entry visibility and character access, set Known by, and grant or revoke authored knowledge.
-    Grant Knowledge creates disclosures in Character perspectives; director metadata and confirmation adapters use the selected
-    mode.
+  summary: Knowledge nodes report entry visibility and character access, check whether a character knows an entry, set Known
+    by (also for static history), and grant, revoke or remove authored knowledge. Grant Knowledge and Add Disclosure create
+    disclosures in Character perspectives; director metadata and confirmation adapters use the selected mode.
 - path: user-guide/node-editor/reference/nodes/prompt.md
   title: Prompt Nodes
   summary: Prompt nodes build Jinja2 prompts with scene, character, memory, game state and dynamic context toggles; load templates
@@ -965,6 +969,10 @@
   summary: Scene character nodes fetch by name or player status, list active/inactive characters, create and remove characters,
     and activate or deactivate them. Read/write descriptions, attributes and details with context IDs, unpack character fields,
     or update name, color and sheet data.
+- path: user-guide/node-editor/reference/nodes/scene-header-controls.md
+  title: Scene Header Control Nodes
+  summary: 'Read and set how a variable shows as a scene header control or in Debug Tools: label, bounds, step, slider, choices
+    and read only (Get Game State Path Settings, Pin Game State Path).'
 - path: user-guide/node-editor/reference/nodes/scene-history.md
   title: Scene History Nodes
   summary: Scene history nodes compile prompt context with token budgets and hidden-message filters, query messages by ID/type,
@@ -980,6 +988,10 @@
   summary: Scene message nodes create character, narrator and director messages, toggle AI context visibility and unpack generation
     metadata. Add Message Version appends canonical text with source/reason while preserving earlier revisions for supported
     message types and auto-prefixing character names.
+- path: user-guide/node-editor/reference/nodes/scene-perspectives.md
+  title: Perspective Nodes
+  summary: Perspective nodes read and replace one character's view of a message in Character perspectives scenes, with its
+    status and whether it can be edited.
 - path: user-guide/node-editor/reference/nodes/scene-world-state.md
   title: World Entry Nodes
   summary: World entry nodes fetch, save, remove and unpack world information, including metadata, shared status and optional
@@ -1017,6 +1029,10 @@
   title: Websocket Nodes
   summary: Websocket nodes fetch routers, queue frontend responses and signal Operation Done or Failed. Documents action/data
     payloads, status messages, automatic scene saving after successful operations, and signal_only or allow_auto_save controls.
+- path: user-guide/node-editor/reference/nodes/world-panel.md
+  title: World Panel Nodes
+  summary: Read the characters, items, places and location the World State panel shows, and add a person, object or place
+    named in a message to it, as Add to world state does (Get Snapshot, Add Snapshot Entity).
 - path: user-guide/node-editor/reference/template_functions.md
   title: Template Functions
   summary: 'Prompt template functions: set_prepared_response/set_data_response scaffolding, disable_dedupe, query_scene, query_memory,

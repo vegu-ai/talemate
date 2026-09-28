@@ -1,3 +1,4 @@
+import re
 from collections.abc import Callable
 
 from pydantic import BaseModel
@@ -18,6 +19,25 @@ def character_aliases(scene, name: str) -> set[str]:
         if name.lower() in {value.lower() for value in group}:
             aliases |= group
     return {alias.strip() for alias in aliases if alias and alias.strip()}
+
+
+def alias_named(alias: str, text: str) -> bool:
+    """
+    Whole-word match. An alias that carries a capital (a name) must appear
+    with that capitalisation, so "Will" is not found in "I will go"; an alias
+    that is lower-case in the name mappings matches case-insensitively.
+    """
+    if not alias:
+        return False
+    pattern = rf"\b{re.escape(alias)}\b"
+    if alias == alias.lower():
+        return re.search(pattern, text, re.IGNORECASE) is not None
+    return re.search(pattern, text) is not None
+
+
+def character_named(scene, name: str, text: str) -> bool:
+    """Whether `text` names the character by its name or a mapped alias."""
+    return any(alias_named(alias, text) for alias in character_aliases(scene, name))
 
 
 async def referenced_characters(

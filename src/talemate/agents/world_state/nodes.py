@@ -3,6 +3,8 @@ from typing import ClassVar, TYPE_CHECKING
 from talemate.context import active_scene
 from talemate.game.engine.nodes.core import (
     GraphState,
+    InputValueError,
+    Node,
     PropertyField,
     UNRESOLVED,
     TYPE_CHOICES,
@@ -407,6 +409,129 @@ class EvaluateQuery(AgentNode):
         self.set_output_values({"state": state, "result": result})
 
 
+def snapshot_values(world_state) -> dict:
+    return {
+        "characters": {
+            name: entry.model_dump() for name, entry in world_state.characters.items()
+        },
+        "items": {
+            name: entry.model_dump() for name, entry in world_state.items.items()
+        },
+        "places": {
+            name: entry.model_dump() for name, entry in world_state.places.items()
+        },
+        "location": world_state.location,
+    }
+
+
+@register("agents/world_state/AddSnapshotEntity")
+class AddSnapshotEntity(AgentNode):
+    """
+    Add a person, object or place named in a message to the world snapshot
+    and keep it tracked, as selecting text in a message and choosing Add to
+    world state does. One analysis request; the model may find no distinct
+    entity in the text, and then nothing is added. Like the UI add, it
+    cancels a running snapshot refresh; run from a listener of the
+    snapshot's own events, it adds without cancelling it.
+
+    Inputs:
+
+    - state: graph state (passthrough)
+    - message: the message the text comes from (or give message_id)
+    - message_id: the message id (or give message)
+    - text: the text that names the entity
+
+    Outputs:
+
+    - state: graph state
+    - resolved: True when an entity was added
+    - name: the entity name
+    - kind: character, item or place
+    - in_moment: True when the message is in the snapshot's current moment
+    - mentions: phrases of the message marked as the entity
+    - waiting_for_regeneration: True when nothing ran because the snapshot is being regenerated
+    """
+
+    _agent_name: ClassVar[str] = "world_state"
+
+    def __init__(self, title="Add Snapshot Entity", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("message", socket_type="message_object", optional=True)
+        self.add_input("message_id", socket_type="int", optional=True)
+        self.add_input("text", socket_type="str")
+        self.set_property("message_id", 0)
+        self.add_output("state")
+        self.add_output("resolved", socket_type="bool")
+        self.add_output("name", socket_type="str")
+        self.add_output("kind", socket_type="str")
+        self.add_output("in_moment", socket_type="bool")
+        self.add_output("mentions", socket_type="list")
+        self.add_output("waiting_for_regeneration", socket_type="bool")
+
+    async def run(self, state: GraphState):
+        if not self.agent.can_add_snapshot_entity:
+            raise InputValueError(
+                self,
+                "text",
+                "The world state agent cannot update the world snapshot now.",
+            )
+        message = self.normalized_input_value("message")
+        message_id = (
+            message.id
+            if message is not None
+            else self.normalized_input_value("message_id")
+        )
+        if not message_id:
+            raise InputValueError(self, "message_id", "Give a message or a message_id.")
+        try:
+            result = await self.agent.add_snapshot_entity_in_slot(
+                message_id, self.require_input("text")
+            )
+        except ValueError as exc:
+            raise InputValueError(self, "text", str(exc)) from exc
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "resolved": result.resolved,
+                "name": result.name or None,
+                "kind": result.kind or None,
+                "in_moment": result.in_moment,
+                "mentions": list(result.mentions),
+                "waiting_for_regeneration": result.waiting_for_regeneration,
+            }
+        )
+
+
+@register("agents/world_state/GetSnapshot")
+class GetSnapshot(Node):
+    """
+    The current world snapshot, as the World State panel shows it. Reads the
+    stored snapshot; it does not refresh it.
+
+    Outputs:
+
+    - characters: name to state (snapshot, emotion, mentions) for each character
+    - items: name to state (snapshot, mentions) for each item
+    - places: name to state (snapshot, mentions) for each place
+    - location: the location description, or None
+    """
+
+    def __init__(self, title="Get Snapshot", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_output("characters", socket_type="dict")
+        self.add_output("items", socket_type="dict")
+        self.add_output("places", socket_type="dict")
+        self.add_output("location", socket_type="str")
+
+    async def run(self, state: GraphState):
+        self.set_output_values(snapshot_values(active_scene.get().world_state))
+
+
 @register("agents/world_state/RequestWorldState")
 class RequestWorldState(AgentNode):
     """
@@ -419,7 +544,7 @@ class RequestWorldState(AgentNode):
     Outputs:
 
     - state: The current state
-    - world_state: The current world state
+    - world_state: The world snapshot after the update: characters, items, places and location
     """
 
     _agent_name: ClassVar[str] = "world_state"
@@ -435,9 +560,11 @@ class RequestWorldState(AgentNode):
 
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
-        world_state = await scene.world_state.request_update()
+        await scene.world_state.request_update()
 
-        self.set_output_values({"state": state, "world_state": world_state})
+        self.set_output_values(
+            {"state": state, "world_state": snapshot_values(scene.world_state)}
+        )
 
 
 @register("agents/world_state/EmitWorldState")

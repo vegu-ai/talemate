@@ -780,9 +780,9 @@
     registry/socket/property reference, event reference and prompt-template functions.
 - path: user-guide/node-editor/reference/events.md
   title: Events
-  summary: Reference of supported event names, firing order and mutable payloads for game/scene loops, regeneration and agent
-    generation/instruction hooks. Covers creator dialogue examples, editor rewrite compatibility, help chat, summarizer archives/RAG,
-    TTS chunk/audio hooks, visual finalization and asset/backdrop changes.
+  summary: 'Event names, firing order, mutable payloads: game/scene loops, regeneration, agent generation/instruction hooks,
+    creator dialogue examples, editor rewrite compatibility, help chat, summarizer archives/RAG, TTS chunk/audio hooks,
+    visual finalization, asset/backdrop changes. scene.revision_saved, scene.revision_forked, scene.revisions_deleted, scene.revision_failed.'
 - path: user-guide/node-editor/reference/nodes/agents-conversation.md
   title: Conversation Agent Nodes
   summary: Conversation node reference for Generate Conversation and Conversation Settings, including registry paths, sockets
@@ -1088,16 +1088,16 @@
     preserve stable prompt prefixes. Covers the client Advanced toggle, per-agent Auto/On/Off overrides, before_history/after_history
     behavior and model suitability.
 - path: user-guide/restoring-scenes.md
-  title: Restoring Scenes
-  summary: Restore scenes through Timeline revision previews and Fork to new save, or reset to a configured restore-point
-    save. Covers entry points from messages, Quick load and Scene Library, shared-context disconnection, chain-health Repair
-    with archived old deltas, and historical world-state reconstruction limits.
+  title: Scene revisions and restore points
+  summary: 'Scene revisions (formerly Timeline): revision previews, Fork to new save, inherited revisions and playthrough fork
+    points; configured restore-point saves. Access through messages, Quick load or Scene Library. Damaged revision recovery,
+    exact world-state reconstruction, current shared context and the 0.39.0 changelog upgrade.'
 - path: user-guide/saving.md
   title: Saving
-  summary: Scene JSON saves, Auto Save, locked starting saves, Save As checkpoints, restore points and Timeline forks. World
-    Editor plain Save authors the loaded file and persists its lock; Save As protects locked destinations. Dirty-scene warnings
-    before tab close, reload or navigation clear after saving; browser interaction is required, and mobile tab discard, crashes
-    and backend shutdown remain unprotected.
+  summary: Scene JSON saves, Auto Save, locked starting saves, Save As checkpoints, restore points, Scene revisions (formerly
+    Timeline) and playthrough forks. World Editor Save authors the loaded file and persists its lock; Save As protects locked
+    destinations. Dirty-scene warnings before tab close, reload or navigation clear after saving. Requires browser interaction;
+    mobile tab discard, crashes and backend shutdown remain unprotected.
 - path: user-guide/scenario-tools.md
   title: Scene Tools
   summary: Scene toolbar reference for agent activity, regenerate/nuke with Ctrl or Ctrl+Alt direction, Actor/Director/Narrator
@@ -1105,12 +1105,12 @@
     Covers Auto Save/Progress, Immersive/Playthrough quick settings, reusable shortcuts and shortcut templates.
 - path: user-guide/scene-browser.md
   title: Home Screen & Scene Library
-  summary: Home screen and Scene Library manage Quick load cards, project/save trees, character cards, filtering and scene
-    or ZIP imports, plus blank-scene creation. Covers Timeline menus, removing recent cards, protected loaded saves, project
-    deletion and deprecated shipped scenes such as Simulation Suite.
+  summary: 'Home screen and Scene Library: Quick load cards, project/save trees, character cards, filtering, scene/ZIP imports
+    and blank-scene creation. Scene revisions (formerly Timeline) menus, recent-card removal, protected loaded saves, project
+    deletion, deprecated shipped scenes and Simulation Suite.'
 - path: user-guide/scene-directory.md
   title: Scene Directory Structure
-  summary: Scene projects under scenes/ group JSON saves with assets, changelog base/latest snapshots and deltas, node graphs,
+  summary: Scene projects under scenes/ group JSON saves with assets, data.db revision snapshots and legacy changelog files, node graphs,
     prompt templates, shared-context files and info. Explains immediate directory creation, backups, sharing and browsing
     or deleting projects through Scene Library.
 - path: user-guide/scene-header.md
@@ -1300,9 +1300,9 @@
     global Custom Instructions and reusable type templates for style/pacing.
 - path: user-guide/world-editor/scene/export.md
   title: Export
-  summary: Export a Talemate scene as JSON or a Complete Scene Package ZIP containing assets, nodes, info, templates and per-scene
-    agent settings. Set an export name and optionally reset exported progress without affecting the current session; load
-    exports from Home.
+  summary: Export a Talemate scene as JSON or a Complete Scene Package ZIP with assets, nodes, info, templates and per-scene
+    agent settings. Set the export name, load from Home, or Reset Progress; ZIP saved revisions and inherited ancestry are
+    included unless progress is reset.
 - path: user-guide/world-editor/scene/game-state.md
   title: Game State
   summary: Game State JSON editor stores persisted game-scope variables and pins labeled paths to Debug Vars or the scene

@@ -20,3 +20,9 @@ The file name (Without extension) that the exported scene will be saved as.
 ### Reset progress
 
 If checked, the exported scene will have its progress reset - clearing messages, choices and other stateful data. Your current session is not affected.
+
+## Saved revisions
+
+A complete ZIP export with **Reset Progress** off includes the selected save's revisions and its inherited ancestry. Importing the ZIP restores those revisions under the new save name. Other saves in the project are not included.
+
+With **Reset Progress** on, the archive omits earlier revisions so the original story cannot be recovered from them. JSON-only exports carry the scene itself without its saved revisions.

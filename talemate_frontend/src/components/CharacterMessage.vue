@@ -75,6 +75,8 @@
         :tts-busy="ttsBusy"
         :rev="rev"
         :scene-rev="sceneRev"
+          :can-copy-unsaved="canCopyUnsaved"
+          :immutable-save="immutableSave"
         :show-illustration-menu="illustrationMenuAvailable"
         @open-illustration-menu="openIllustrationMenu"
       >
@@ -164,8 +166,10 @@ export default {
     },
     rev: {
       type: Number,
-      default: 0,
+      default: null,
     },
+    canCopyUnsaved: Boolean,
+    immutableSave: Boolean,
     sceneRev: {
       type: Number,
       default: 0,

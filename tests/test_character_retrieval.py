@@ -825,7 +825,7 @@ async def test_disabling_rag_cache_disables_refinement_lookup_and_store(
 async def test_rag_boundary_ignores_message_storage_stamps(rag):
     scene, _, message, conversation = rag
     before = conversation.rag_history_boundary()
-    message.rev += 1
+    message.rev = (message.rev or 0) + 1
     message.asset_id = "portrait"
     message.asset_type = "avatar"
     assert conversation.rag_history_boundary() == before

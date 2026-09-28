@@ -7,7 +7,6 @@ import pytest
 from conftest import MockScene, bootstrap_scene
 
 from talemate.agents.base import background_processing
-from talemate.changelog import reconstruct_cleanup
 from talemate.game.state import (
     GameStatePathSettings,
     load_game_state_path_settings,
@@ -232,18 +231,6 @@ def test_knob_paths_and_settings_are_saved_and_reported_in_scene_status(scene):
     (status,) = [call for call in emit.call_args_list if call.args[0] == "scene_status"]
     assert status.kwargs["data"]["game_state_knob_paths"] == ["player/health"]
     assert status.kwargs["data"]["game_state_path_settings"] == expected
-
-
-async def test_changelog_cleanup_keeps_knob_paths_as_a_list():
-    result = await reconstruct_cleanup(
-        {
-            "game_state_knob_paths": {0: "player/health", 1: "quest/active"},
-            "game_state_path_settings": {"player/health": {"label": "Health"}},
-        }
-    )
-
-    assert result["game_state_knob_paths"] == ["player/health", "quest/active"]
-    assert result["game_state_path_settings"] == {"player/health": {"label": "Health"}}
 
 
 async def test_full_game_state_updates_are_persisted(scene):

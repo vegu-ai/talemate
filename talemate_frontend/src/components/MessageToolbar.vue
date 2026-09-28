@@ -25,10 +25,16 @@
     </v-chip>
 
     <!-- fork scene -->
-    <v-chip v-if="showFork && forkable" size="x-small" class="ml-2" label :color="rev > 0 ? 'highlight1' : 'muted'" variant="tonal" @click="forkSceneInitiate(messageId)" :disabled="uxLocked || appBusy">
-      <v-icon class="mr-1">mdi-source-fork</v-icon>
-      Fork
-    </v-chip>
+    <v-tooltip v-if="showFork" :text="forkHint" location="top">
+      <template #activator="{ props }">
+        <span v-bind="props" class="ml-2">
+          <v-chip size="x-small" label :color="forkable ? 'highlight1' : 'muted'" variant="tonal" @click="forkSceneInitiate(messageId)" :disabled="!forkable || uxLocked || appBusy">
+            <v-icon class="mr-1">mdi-source-fork</v-icon>
+            {{ canCopyUnsaved ? 'Copy from here' : 'Fork' }}
+          </v-chip>
+        </span>
+      </template>
+    </v-tooltip>
 
     <!-- type-specific actions (e.g. Continue) -->
     <slot name="extra-actions" />
@@ -120,8 +126,10 @@ export default {
     },
     rev: {
       type: Number,
-      default: 0,
+      default: null,
     },
+    canCopyUnsaved: Boolean,
+    immutableSave: Boolean,
     sceneRev: {
       type: Number,
       default: 0,
@@ -173,7 +181,12 @@ export default {
   ],
   computed: {
     forkable() {
-      return this.rev <= this.sceneRev;
+      return this.canCopyUnsaved || (Number.isInteger(this.rev) && this.rev >= 0 && this.rev <= this.sceneRev);
+    },
+    forkHint() {
+      if (this.canCopyUnsaved) return 'Copy the scene through this message, using current world state and character details';
+      if (this.forkable) return 'Open this saved state in Scene revisions';
+      return this.immutableSave ? 'Save As first to fork from this message' : 'Save the scene to fork from this message';
     },
     revisionLabel() {
       return REVISION_METHOD_LABELS[this.editorRevisionMethod] || 'Revise';

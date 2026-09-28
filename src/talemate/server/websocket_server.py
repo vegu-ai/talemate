@@ -33,7 +33,7 @@ from talemate.server import (
     quick_settings,
     scene_message as scene_message_plugin,
     time_passage,
-    timeline,
+    scene_revisions,
     ux,
     world_state_manager,
     node_editor,
@@ -99,7 +99,9 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             scene_message_plugin.SceneMessagePlugin.router: scene_message_plugin.SceneMessagePlugin(
                 self
             ),
-            timeline.TimelinePlugin.router: timeline.TimelinePlugin(self),
+            scene_revisions.SceneRevisionsPlugin.router: scene_revisions.SceneRevisionsPlugin(
+                self
+            ),
             playthrough.PlaythroughPlugin.router: playthrough.PlaythroughPlugin(self),
         }
 

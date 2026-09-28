@@ -159,7 +159,6 @@ def run_server(args):
     import talemate.client.system_prompts as system_prompts
     from talemate.emit.base import emit
     import talemate.agents.tts.voice_library as voice_library
-    from talemate.changelog import ensure_changelogs_for_all_scenes
     from talemate.scene_assets import migrate_scene_assets_to_library
     from talemate.decisions.slot import configure_decision_service
 
@@ -219,8 +218,7 @@ def run_server(args):
     # Start the websocket server and keep a reference so we can shut it down
     websocket_server = loop.run_until_complete(_start_websocket_server())
 
-    # create task to ensure changelogs for all scenes exists
-    loop.create_task(ensure_changelogs_for_all_scenes())
+    # Initialize saved-state revisions without loading scene agents.
 
     # migrate scene assets to unified library.json files
     migrate_scene_assets_to_library()

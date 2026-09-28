@@ -8,7 +8,7 @@ from typing import get_args
 
 from talemate import VERSION
 from talemate.agents import observed_actions
-from talemate.changelog import delete_changelog_files, scene_ref_from_path
+from talemate.changelog import delete_scene_revisions, scene_ref_from_path
 from talemate.client.model_prompts import model_prompt, PromptSpec
 from talemate.client.registry import CLIENT_CLASSES
 from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
@@ -759,21 +759,8 @@ class ConfigPlugin(Plugin):
         except FileNotFoundError:
             log.warning("File not found", path=payload.path)
 
-        # remove associated changelog files (base, latest, and segmented changelog files)
-        try:
-            scene_ref = scene_ref_from_path(payload.path)
-            result = delete_changelog_files(scene_ref)
-            log.info(
-                "Deleted scene changelog artifacts",
-                deleted_files=len(result.get("deleted", [])),
-                dir_removed=result.get("dir_removed"),
-            )
-        except Exception as e:
-            log.warning(
-                "Failed to delete associated changelog files",
-                scene_path=payload.path,
-                error=e,
-            )
+        result = await delete_scene_revisions(scene_ref_from_path(payload.path))
+        log.info("Deleted scene revisions", **result)
 
         self.websocket_handler.queue_put(
             {

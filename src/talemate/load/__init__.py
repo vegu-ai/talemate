@@ -58,10 +58,7 @@ import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
 from talemate.util.gpu import release_cuda_cache
 from talemate.util.time import migrate_scene_time
-from talemate.changelog import (
-    _get_overall_latest_revision,
-    quarantine_corrupted_changelog_files,
-)
+from talemate.changelog import import_scene_revisions, resolve_scene_revision
 from talemate.shared_context import SharedContext
 from talemate.scene_agent_settings import AGENT_SETTINGS_DIRNAME, resolve_link_on_load
 from talemate.load.character_card import CharacterCardImportOptions
@@ -354,31 +351,15 @@ async def load_scene(
                 await creation_settings.persist(loaded_scene)
 
 
-def _quarantine_and_resolve_rev(scene):
-    """Quarantine corrupted changelog artifacts, then resolve ``scene.rev``.
-
-    Order matters: quarantining lost segments writes a marker whose revision
-    hint keeps new revisions above the lost range, so the rev resolution must
-    run after it. Quarantined files are renamed aside (never deleted) and the
-    user is told — the chain is unverifiable from then on, so previews and forks
-    warn that they may be missing data while saves keep working.
-    """
-    quarantined = quarantine_corrupted_changelog_files(scene)
-    if quarantined:
-        from talemate.emit import emit
-
-        log.error("changelog_files_quarantined", paths=quarantined)
-        emit(
-            "status",
-            status="warning",
-            message=(
-                "This scene's history chain had corrupted files, which were "
-                "set aside. The timeline may be incomplete — previews and "
-                "forks from it may be missing data."
-            ),
-        )
-
-    scene.rev = _get_overall_latest_revision(scene, strict=False)
+def prepare_scene_data(scene_data: dict) -> dict:
+    read_scene_format(scene_data)
+    validate_saved_knowledge(scene_data)
+    migrate_character_data(scene_data)
+    migrate_director_chat_state(scene_data)
+    migrate_scene_time(scene_data)
+    scene_data["format_version"] = CURRENT_SCENE_FORMAT_VERSION
+    scene_data.setdefault("knowledge_eligibility", "legacy")
+    return scene_data
 
 
 async def _apply_shared_static_history(scene, start_from_shared_entries: bool):
@@ -404,17 +385,17 @@ async def load_scene_from_data(
     empty: bool = False,
     creation_settings=None,
 ) -> Scene:
+    scene_data = prepare_scene_data(scene_data)
     metadata = read_scene_format(scene_data)
     knowledge = validate_saved_knowledge(scene_data)
+    if scene._changelog:
+        await scene._changelog.__aexit__(None, None, None)
+        scene._changelog = None
     loading_status = LoadingStatus(1)
     reset_message_id()
     config: Config = get_config()
 
     memory = instance.get_agent("memory")
-
-    migrate_character_data(scene_data)
-    migrate_director_chat_state(scene_data)
-    migrate_scene_time(scene_data)
 
     scene.knowledge_eligibility = metadata.knowledge_eligibility
     scene.description = scene_data.get("description", "")
@@ -625,7 +606,7 @@ async def load_scene_from_data(
     scene.voice_library = await voice_library.load_scene_voice_library(scene)
     log.debug("scene voice library", voice_library=scene.voice_library)
 
-    _quarantine_and_resolve_rev(scene)
+    await resolve_scene_revision(scene)
     log.debug("Loaded scene", rev=scene.rev)
 
     # Initialize intro and title for new scenes
@@ -696,6 +677,7 @@ async def load_scene_from_zip(scene, zip_path, reset: bool = False):
 
         # Set the scene name (which will determine save_dir via the property)
         scene.name = scene_name
+        scene.project_name = to_project_name(scene_name)
 
         log.debug(
             "Generated unique scene name for ZIP import",
@@ -777,7 +759,8 @@ async def load_scene_from_zip(scene, zip_path, reset: bool = False):
 
         # Update scene_data with the conflict-resolved name so saves go to the right directory
         scene_data = scene_data.copy()  # Don't modify the original
-        scene_data["name"] = scene.name  # Use the conflict-resolved name
+        scene_data["name"] = scene.name
+        scene_data["project_name"] = to_project_name(scene.name)
 
         log.info(
             "Complete scene import finished",
@@ -794,6 +777,14 @@ async def load_scene_from_zip(scene, zip_path, reset: bool = False):
             else zip_basename
         )
         result = await load_scene_from_data(scene, scene_data, reset, name=clean_name)
+
+        scene.filename = (
+            scene.filename
+            if scene.filename.endswith(".json")
+            else scene.filename + ".json"
+        )
+        if not reset:
+            await import_scene_revisions(temp_path / "data.db", scene)
 
         # If no restore_from is set, set it to the initial.json file
         if not scene.restore_from:

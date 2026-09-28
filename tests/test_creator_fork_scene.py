@@ -2,7 +2,7 @@
 Tests for the save-name guard on ``creator.fork_scene``.
 
 Forking from a message reaches this path with a user-typed name. Like the
-timeline fork, it must refuse a name that is unsafe as a filename or that
+revision fork, it must refuse a name that is unsafe as a filename or that
 would land on an existing save, rather than escaping the save directory or
 overwriting a save with forked data.
 """
@@ -15,6 +15,7 @@ import pytest
 
 import talemate.instance as instance
 from talemate.scene_message import NarratorMessage
+from talemate.changelog import SceneChangelog
 
 from conftest import MockClient, MockScene, bootstrap_engine
 
@@ -38,9 +39,7 @@ class _ForkScene(MockScene):
 def creator(tmp_path):
     bootstrap_engine()
     scene = _ForkScene(save_dir=str(tmp_path))
-    # distinct from the name, so a test can tell which one a generated save
-    # name was built from
-    scene.filename = "test_scene.json"
+    scene.filename = None
     scene.name = "Project Scene"
     scene.history.append(NarratorMessage("the scene begins"))
     agent = instance.get_agent("creator")
@@ -80,6 +79,8 @@ async def test_fork_writes_a_new_save(creator, message_id, tmp_path):
 async def test_fork_without_a_name_writes_a_timestamped_save(
     creator, message_id, tmp_path, save_name
 ):
+    creator.scene.filename = "test_scene.json"
+    await SceneChangelog(creator.scene).record()
     fork_path = await creator.fork_scene(message_id, save_name=save_name)
 
     assert fork_path is not None

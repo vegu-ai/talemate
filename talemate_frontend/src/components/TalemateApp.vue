@@ -325,6 +325,7 @@
                         :fork-target="playthroughForkTarget()"
                         :scene-rev="scene.data?.rev || 0"
                         :shared-context="!!scene.data?.shared_context"
+                        :immutable-save="!!scene.data?.immutable_save"
                         :fork-pending="!!playthroughForkRequestId"
                         :fork-error="playthroughForkError"
                         @advance="advancePlaythrough"
@@ -490,8 +491,8 @@
   <AutoRetryAlert ref="autoRetryAlert" />
   <GenerationErrorDialog ref="generationErrorDialog" />
   <PerceptionBacklogDialog ref="perceptionBacklogDialog" />
-  <SceneTimeline
-    ref="sceneTimeline"
+  <SceneRevisions
+    ref="sceneRevisions"
     :scene="scene"
     :appearance-config="effectiveAppearanceConfig"
     :theme-colors="effectiveThemeColors"
@@ -531,7 +532,7 @@ import RateLimitAlert from './RateLimitAlert.vue';
 import AutoRetryAlert from './AutoRetryAlert.vue';
 import GenerationErrorDialog from './GenerationErrorDialog.vue';
 import PerceptionBacklogDialog from './PerceptionBacklogDialog.vue';
-import SceneTimeline from './SceneTimeline.vue';
+import SceneRevisions from './SceneRevisions.vue';
 import VersionMismatchAlert from './VersionMismatchAlert.vue';
 import { versionsMatch } from '@/constants/version';
 import VisualLibrary from './VisualLibrary.vue';
@@ -600,7 +601,7 @@ export default {
     AutoRetryAlert,
     GenerationErrorDialog,
     PerceptionBacklogDialog,
-    SceneTimeline,
+    SceneRevisions,
     VersionMismatchAlert,
     DirectorConsoleWidget,
     HelpChat,
@@ -1128,7 +1129,7 @@ export default {
       notifyError: (error) => this.uxErrorHandler(error),
       openAgentActionOverrides: (options) => this.$refs.agentActionOverrides?.open(options),
       settingsDirty: () => this.appSettingsDirty,
-      openSceneTimeline: (options) => this.$refs.sceneTimeline.open(options),
+      openSceneRevisions: (options) => this.$refs.sceneRevisions.open(options),
       configurationRequired: () => this.configurationRequired(),
       getTrackedCharacterState: (name, question) => this.$refs.worldState.trackedCharacterState(name, question),
       getTrackedCharacterStates: (name) => this.$refs.worldState.trackedCharacterStates(name),

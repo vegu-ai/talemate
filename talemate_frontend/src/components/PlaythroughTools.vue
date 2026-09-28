@@ -135,6 +135,7 @@ export default {
             type: Number,
             default: 0,
         },
+        immutableSave: Boolean,
         sharedContext: {
             type: Boolean,
             default: false,
@@ -162,7 +163,7 @@ export default {
         // history, which a revision the scene has not saved yet is not in -
         // the same gate the Fork chip under a message carries.
         forkTargetSaved() {
-            return (this.forkTarget?.rev || 0) <= this.sceneRev;
+            return Number.isInteger(this.forkTarget?.rev) && this.forkTarget.rev >= 0 && this.forkTarget.rev <= this.sceneRev;
         },
         canFork() {
             return !!this.forkTarget && this.forkTargetSaved;
@@ -172,7 +173,9 @@ export default {
                 return 'The story forks at a character or narrator message - move to one to fork from here';
             }
             if (!this.forkTargetSaved) {
-                return 'This message has not been saved yet - leave the playthrough and save the scene to fork from it';
+                return this.immutableSave
+                    ? 'This message has not been saved yet — leave the playthrough and Save As first'
+                    : 'This message has not been saved yet — leave the playthrough and save the scene to fork from it';
             }
             return 'Continue the story from here in a new scene of your own';
         },
@@ -182,8 +185,7 @@ export default {
             if (!this.sharedContext) {
                 return instructions;
             }
-            return `${instructions}\n\nForking disconnects the scene from its shared world `
-                + 'context, since shared context cannot be reconstructed to a specific revision.';
+            return `${instructions}\n\nThe fork keeps its shared world connection at the world's current state.`;
         },
         autoAdvanceHint() {
             return this.ttsAvailable
@@ -205,6 +207,7 @@ export default {
         // auto-advance would otherwise walk the cursor on behind the dialog and
         // fork somewhere the reader never picked.
         promptFork() {
+            if (!this.canFork || this.busy) return;
             this.$emit('fork-prompt');
             this.$refs.requestForkName.openDialog({ message_id: this.forkTarget.id });
         },

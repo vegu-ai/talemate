@@ -163,7 +163,7 @@ class SceneMessage(PerspectiveSourceModel):
 
     typ: str = "scene"
 
-    rev: int = 0
+    rev: int | None = None
 
     history_dispatch_pending: bool = False
     history_dispatch_completed: list[str] = pydantic.Field(default_factory=list)

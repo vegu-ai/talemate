@@ -645,7 +645,7 @@ async def test_startup_replay_compares_only_visible_window(
                 message.id,
                 [{"audience": ["Bob"], "status": "failed"}],
             )
-            message.rev += 1
+            message.rev = (message.rev or 0) + 1
             message.present = ["Alice"]
         elif change == "outside":
             scene.history[0].message = "Changed outside the window."

@@ -15,7 +15,7 @@ describe('forking from a message', () => {
     async function mount(send = null, connected = true) {
         const sent = [];
         app = createApp(SceneMessages, {
-            appearanceConfig: {},
+            appearanceConfig: { scene: {} },
             agentStatus: {},
             scene: { data: { assets: { assets: {} }, shared_context: '' } },
         });
@@ -32,7 +32,7 @@ describe('forking from a message', () => {
         app.provide('clearUxInteractions', vi.fn());
         app.provide('requestSceneAssets', vi.fn());
         app.provide('openVisualLibraryWithAsset', vi.fn());
-        app.provide('openSceneTimeline', vi.fn());
+        app.provide('openSceneRevisions', vi.fn());
         app.provide('isPlaythroughActive', () => false);
 
         for (const name of [
@@ -183,4 +183,23 @@ describe('forking from a message', () => {
         expect(host.textContent).toContain('Not connected');
         expect(host.textContent).not.toContain('Still in CONNECTING state');
     });
+    it('requires a recorded message for revisions while preserving revision zero', async () => {
+        const { vm } = await mount();
+        vm.$refs.requestForkName.open = false;
+        vm.scene.data.filename = 'scene.json';
+        vm.scene.data.rev = 0;
+        vm.messages = [{ id: 7, rev: null }];
+        vm.forkSceneInitiate(7);
+        expect(vm.openSceneRevisions).not.toHaveBeenCalled();
+        expect(vm.$refs.requestForkName.open).toBe(false);
+        vm.messages[0].rev = 0;
+        vm.forkSceneInitiate(7);
+        expect(vm.openSceneRevisions).toHaveBeenCalledWith({ initialRev: 0, initialMessageId: 7 });
+        vm.scene.data.filename = null;
+        vm.messages[0].rev = null;
+        vm.forkSceneInitiate(7);
+        expect(vm.$refs.requestForkName.open).toBe(true);
+        expect(vm.forkInstructions).toContain('current values');
+    });
+
 });

@@ -127,7 +127,7 @@ describe("component registration", () => {
     // pin what it must see: a mount after body-text apostrophes, a mount whose
     // tag follows an attribute carrying angle brackets, and a kebab-case mount
     it.each([
-        ["components/TalemateApp.vue", "SceneTimeline"],
+        ["components/TalemateApp.vue", "SceneRevisions"],
         ["components/TalemateApp.vue", "SceneMessages"],
         ["components/ClientConfigEditor.vue", "AppConfigPresetsSystemPrompts"],
         ["components/DirectorConsoleSceneDirection.vue", "ConfirmActionInline"],

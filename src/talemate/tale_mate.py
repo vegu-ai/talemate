@@ -85,7 +85,7 @@ from talemate.character import Character, NAME_EXISTS_MESSAGE, name_is_taken
 from talemate.agents.tts.schema import VoiceLibrary
 from talemate.instance import get_agent
 from talemate.regenerate import regeneration_status
-from talemate.changelog import ChangelogDeltaError, InMemoryChangelog
+from talemate.changelog import SceneChangelog, SaveRevisionOutcome, emit_revision_event
 from talemate.shared_context import SharedContext
 from talemate.scene_agent_settings import SceneAgentSettings
 
@@ -209,6 +209,7 @@ class Scene(Emitter):
         self.memory_session_id = str(uuid.uuid4())[:10]
         self.restore_from = None
         self._changelog = None
+        self._save_lock = asyncio.Lock()
 
         # has scene been saved before?
         self.saved = False
@@ -700,7 +701,7 @@ class Scene(Emitter):
         Messages are not stamped with a revision here: ``message.rev`` must
         name a revision of this scene's own changelog chain whose
         reconstruction contains the message, so stamping happens in
-        ``InMemoryChangelog.append_delta`` when the revision actually exists.
+        ``SceneChangelog.record`` when the revision actually exists.
         """
 
         if isinstance(messages, SceneMessage):
@@ -2010,7 +2011,7 @@ class Scene(Emitter):
                 log.debug(f"Starting scene loop: {self.environment}")
 
                 self.world_state.emit()
-                async with InMemoryChangelog(self) as changelog:
+                async with SceneChangelog(self) as changelog:
                     self._changelog = changelog
                     if self.environment == "creative":
                         self.creative_node_graph, _ = load_graph(
@@ -2206,10 +2207,64 @@ class Scene(Emitter):
         force: bool = False,
         copy_name: str = None,
     ):
+        outcome = SaveRevisionOutcome()
+        error = None
+        try:
+            async with self._save_lock:
+                await self._save(
+                    save_as=save_as,
+                    auto=auto,
+                    force=force,
+                    copy_name=copy_name,
+                    outcome=outcome,
+                )
+        except Exception as exc:
+            error = str(exc)
+            raise
+        finally:
+            # Report committed SQLite state even if writing the JSON later failed.
+            # Listeners run outside the save lock and may initiate another save.
+            if outcome.forked:
+                await emit_revision_event(
+                    "scene.revision_forked",
+                    self,
+                    "fork",
+                    revision=outcome.forked,
+                    filename=outcome.filename,
+                    source_filename=outcome.source_filename,
+                    error=error,
+                )
+            if outcome.revision:
+                await emit_revision_event(
+                    "scene.revision_saved",
+                    self,
+                    "save",
+                    revision=outcome.revision,
+                    filename=outcome.filename,
+                    error=error,
+                )
+            elif outcome.stage == "revision" and error:
+                await emit_revision_event(
+                    "scene.revision_failed",
+                    self,
+                    "save",
+                    filename=outcome.filename,
+                    error=error,
+                )
+
+    async def _save(
+        self,
+        save_as: bool = False,
+        auto: bool = False,
+        force: bool = False,
+        copy_name: str = None,
+        outcome: SaveRevisionOutcome | None = None,
+    ):
         """
         Saves the scene data, conversation history, archived history, and characters to a json file.
         """
 
+        outcome = outcome if outcome is not None else SaveRevisionOutcome()
         if self.immutable_save and not save_as and not force:
             save_as = True
 
@@ -2222,20 +2277,28 @@ class Scene(Emitter):
             if auto and not copy_name:
                 self._mark_scene_unsaved()
                 return
-            self.filename = copy_name
+        filename = copy_name if save_as else self.filename
 
         if not self.name and not auto:
             raise TalemateError("Scene has no name, cannot save")
 
-        elif not self.filename and not auto:
-            self.filename = str(uuid.uuid4())[:10]
-            self.filename = self.filename.replace(" ", "-").lower() + ".json"
+        elif not filename and not auto:
+            filename = str(uuid.uuid4())[:10] + ".json"
 
-        if not self.filename or not self.name and auto:
+        if not filename or not self.name and auto:
             # scene has never been saved, don't auto save
             return
 
-        self.filename = save.scene_save_filename(self.filename)
+        filename = save.scene_save_filename(filename)
+        outcome.filename = filename
+        source, source_head = None, None
+        save_identity = self.filename, self.immutable_save, self.hidden, self.deprecated
+        if self._changelog is None:
+            self._changelog = SceneChangelog(self)
+        if save_as and self.filename:
+            await self._changelog._initialize()
+            source, source_head = self._changelog.ref, self._changelog.head
+        self.filename = filename
 
         if save_as:
             self.immutable_save = False
@@ -2255,53 +2318,50 @@ class Scene(Emitter):
         # Generate filename with date and normalized character name
         filepath = os.path.join(saves_dir, self.filename)
 
-        # Update the changelog before serializing: append_delta stamps new
-        # history messages with their revision, and the scene file must carry
-        # the same revs as the chain's latest snapshot.
-        recorded = True
-        if self._changelog:
-            recorded = await self.append_changelog_delta()
-            if self.shared_context:
-                await self.shared_context.commit_changes(self)
-            await self._changelog.commit()
+        if self.shared_context:
+            await self.shared_context.commit_changes(self)
+        outcome.stage = "revision"
+        if save_as:
+            outcome.source_filename = source.filename if source else None
 
-        # Create a dictionary to store the scene data
-        scene_data = self.serialize
+        async def persist():
+            try:
+                scene_data = await self._changelog.record(
+                    outcome, save_as=save_as, source=source, source_head=source_head
+                )
+            except BaseException:
+                if save_as:
+                    self.filename, self.immutable_save, self.hidden, self.deprecated = (
+                        save_identity
+                    )
+                raise
+            outcome.stage = "file"
 
-        with open(filepath, "w") as f:
-            f.write(save.scene_data_dumps(scene_data))
+            with open(filepath, "w") as f:
+                f.write(save.scene_data_dumps(scene_data))
 
-        self.saved = True
+            self.saved = True
+            if hasattr(self, "_save_files"):
+                delattr(self, "_save_files")
 
-        if not recorded:
-            emit(
-                "status",
-                status="error",
-                message="Saved scene, but its revision history could not record this change",
-            )
-        elif not auto:
+        if save_as:
+            # A disconnect must not separate a committed replacement from its JSON.
+            saving = asyncio.create_task(persist())
+            try:
+                await asyncio.shield(saving)
+            except asyncio.CancelledError:
+                await saving
+                raise
+        else:
+            await persist()
+
+        if not auto:
             emit("status", status="success", message="Saved scene")
-
-        if hasattr(self, "_save_files"):
-            delattr(self, "_save_files")
 
         self.emit_status()
 
         # add this scene to recent scenes in config
         await self.add_to_recent_scenes()
-
-    async def append_changelog_delta(self) -> bool:
-        """
-        Stage the changelog delta of the current state. False when not even
-        the full state replays (logged): the caller goes on, the scene file is
-        still written, and the next append tries again.
-        """
-        try:
-            await self._changelog.append_delta()
-        except ChangelogDeltaError as e:
-            log.error("changelog_delta_failed", error=str(e))
-            return False
-        return True
 
     async def save_restore(self, filename: str):
         """

@@ -1,55 +1,41 @@
-# Restoring Scenes
+# Scene revisions and restore points
 
-Talemate provides two ways to get back to an earlier state of a scene:
+Use **Scene revisions** to browse saved scene states and continue from an earlier point in a new save. A configured **restore point** instead resets the scene to a chosen baseline file.
 
-- **Timeline** — use the automatic version history to browse every previous revision and fork from any point (covered on this page)
-- **Restore from Restore Point** — reset to a specific save file you've designated as a baseline in the [scene settings](/talemate/user-guide/world-editor/scene/settings#restoration-settings)
+## Scene revisions
 
-!!! info "The timeline never modifies the scene you are playing"
-    Forking a revision into a new save is the only action the timeline applies — it writes a new save alongside the scene and leaves every existing save untouched. Browsing and previewing write nothing at all.
+Each save records a snapshot of the scene, including its messages, characters and world state. Each row shows its message count and save time. Select a row to preview the messages at that point. The newest revision is marked **Latest**; inherited rows name their original save, and **Fork point** marks where a branch began.
 
-## The timeline
+### Opening Scene revisions
 
-Every time you save, Talemate records the changes as a delta in the scene's [changelog directory](/talemate/user-guide/scene-directory#changelog). The timeline lets you browse this version history: drag the slider to any revision to preview the scene's messages as they were at that point, then fork that revision into a new save. Browsing and previewing change nothing on disk.
-
-![Timeline dialog](/talemate/img/0.40.0/timeline-dialog.png)
-
-### Opening the timeline
-
-The timeline can be opened from four places:
-
-- **While playing a scene** — click the :material-content-save: **Save** button in the [Scene tools](/talemate/user-guide/scenario-tools) toolbar and select :material-history: **Timeline**
-- **From a message** — click the :material-source-fork: **Fork** button underneath any message; the timeline opens positioned at that message's revision
-- **From the main screen** — click the three-dot menu (⋯) beneath a scene card in the **Quick load** section and select :material-history: **Timeline**
-- **From the Scene Library** — click the three-dot menu (⋮) on any save file row and select :material-history: **Timeline**
+- **While playing** — open :material-content-save: **Save** in the [Scene tools](/talemate/user-guide/scenario-tools) and choose :material-source-branch: **Scene revisions**.
+- **From a message** — click :material-source-fork: **Fork** to open the message's saved revision. An unrecorded message asks you to save first; in a read-only scene, use **Save As**.
+- **From Quick load or Scene Library** — open the save's three-dot menu and choose :material-source-branch: **Scene revisions**.
 
 ### Forking a revision
 
-Once you've found the point you want to continue from, click **Fork to new save**. It creates a new save file in the same project directory from the selected revision, and asks for a name. The scene you are playing is not modified, and a name an existing save already uses is refused rather than written over.
+Select a row, review its preview, then choose **Fork to new save** and enter a name. Talemate opens the new save through its normal scene loader. Existing saves remain untouched. If the name is already taken, choose another in the same dialog.
 
-A [playthrough](/talemate/user-guide/playthrough#forking-from-where-you-are) forks the same way from the message it is on, without opening the timeline.
+A fork keeps all revisions up to the selected point. You can browse those inherited revisions even after deleting the source save. Continuing the fork adds revisions of its own.
 
-!!! info
-    Forking never destroys your version history. Every revision is kept, so you can open the timeline again and scrub to any other point.
+A [playthrough](/talemate/user-guide/playthrough#forking-from-where-you-are) uses the same saved state for its current message. Several messages saved together share one revision, so a fork may include more than the selected message.
 
-!!! warning
-    Scenes connected to a shared world context are disconnected from it when forked, since shared context cannot be reconstructed to a specific revision.
+### World state and shared context
 
-### Chain health and repair
+The selected revision restores every recorded scene section, including world snapshots, pins, reinforcements and character data. A scene connected to a **shared world context** keeps that connection. Shared world files retain their current state; they are not rewound with the scene.
 
-Reconstructing a revision replays the recorded deltas onto the scene's first revision. If a scene's chain has diverged — recorded changes that no longer match the state they were made against, for example because of a bug in an older version — Talemate does not guess: the timeline shows a warning, and previews and forks taken from such a chain may be missing or misrepresenting data.
+### Empty or damaged revisions
 
-The **Repair** action on that warning starts a fresh history chain from the scene's current state, after a confirmation. The old chain files are moved to a `rebased-<date>` folder inside the scene's [changelog directory](/talemate/user-guide/scene-directory#changelog) and kept for reference. Revisions recorded before the repair leave the timeline and can no longer be previewed or forked — they stay exactly as lossy as they were — but everything recorded from the repair onward reconstructs exactly.
+**No revisions yet** means the save has no recorded snapshots. Save the scene to record its first revision.
 
-### World state at a past revision
+If a revision contains missing or damaged content, its preview explains the problem and forking is unavailable. Choose another revision or restore a project backup. Revisions that do not use the damaged content can still open. A damaged older revision does not prevent saving new play or working with other saves in the project.
 
-The world state is reconstructed in two parts:
+### Upgrading from 0.39.0
 
-- **Pins, reinforcements and character name mappings** are recorded in the changelog and come back exactly as they were at the selected revision. Saves written before this tracking was introduced have no recorded history for them, so revisions from before then still show the values from the scene's first revision.
-- **Character and item snapshots and the location description** are maintained by the world state agent and are not recorded per revision — a reconstruction starts from the scene's *current* values for these, and the agent refreshes them on its next analysis cycle.
+Your current save becomes the first revision when you first load or save it. Restore-point files are not seeded, and bundled read-only scenes start recording when you save a writable copy. Earlier changelog files are not converted. Talemate ignores the old `<project>/changelog/` directory and leaves it untouched; you can delete it by hand. New revisions live in [data.db](/talemate/user-guide/scene-directory#datadb).
 
 ## Restore from restore point
 
 If you've configured a restore point in the [scene settings](/talemate/user-guide/world-editor/scene/settings#restoration-settings), you can reset the scene to that baseline state using the **:material-backup-restore: Restore Scene** button. This is useful for scenes you want to replay from a fixed starting point, such as testing a scene during development.
 
-Unlike the timeline, which uses the automatic version history, restore points use a specific save file you've chosen as the baseline. See the [restoration settings documentation](/talemate/user-guide/world-editor/scene/settings#restoration-settings) for setup details.
+Saving after a restore starts a fresh revision chain. Restore points use a specific save file you've chosen as the baseline. See the [restoration settings documentation](/talemate/user-guide/world-editor/scene/settings#restoration-settings) for setup details.

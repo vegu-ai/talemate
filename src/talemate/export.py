@@ -15,6 +15,7 @@ import pydantic
 import structlog
 
 import talemate.save as save
+from talemate.changelog import export_scene_revisions
 from talemate.scene_agent_settings import AGENT_SETTINGS_DIRNAME
 from talemate.tale_mate import Scene
 
@@ -250,6 +251,9 @@ async def export_talemate_complete(scene: Scene, options: ExportOptions) -> byte
                     error=str(e),
                     filename=scene.restore_from,
                 )
+
+        if not options.reset_progress and scene.filename:
+            await export_scene_revisions(scene, temp_path / "data.db")
 
         # Create ZIP file
         with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as temp_zip:

@@ -20,6 +20,10 @@ List of currently supported events.
 | [`game_loop_new_message`](#game_loop_new_message) | Game Loop |
 | [`player_turn_start`](#player_turn_start) | Game Loop |
 | [`scene_init`](#scene_init) | Scene Loop |
+| [`scene.revision_saved`](#scene-revision-events) | Scene Revisions |
+| [`scene.revision_forked`](#scene-revision-events) | Scene Revisions |
+| [`scene.revisions_deleted`](#scene-revision-events) | Scene Revisions |
+| [`scene.revision_failed`](#scene-revision-events) | Scene Revisions |
 | [`scene_loop_init`](#scene_loop_init) | Scene Loop |
 | [`scene_loop_init_after`](#scene_loop_init_after) | Scene Loop |
 | [`scene_loop_start_cycle`](#scene_loop_start_cycle) | Scene Loop |
@@ -1459,3 +1463,79 @@ Emitted when a client reports that it can serve embeddings (KoboldCpp).
     | `client` | `ClientBase` | The client |
     | `embedding_name` | `str` | The embedding model name |
     | `seen` | `bool` | **Mutable.** Set by the Memory agent when it offered the embeddings |
+
+## Scene revision events
+
+Use a **Listen** event module to react to saved scene states, and **Get** to read its detached payload. These events describe committed revision storage. Changes made by a listener belong to a later save. Save events run outside the save lock; loading an existing save and read-only previews do not emit them.
+
+For a node with a required `state` input, such as **Set State (Path)** or **Update Game State**, connect the **Event** node's `event` output, or another value from the module, to that input. Pass the event data through the node's separate data inputs; its `state` output passes the activation value through unchanged. **Set State** and **Unset State** have no `state` input.
+
+Every payload identifies the project with `project_path` and the save with `filename`. Revision numbers belong to that save's ancestry; `revision_id` identifies the recorded state independently of its filename.
+
+### scene.revision_saved
+
+Fires after a normal save commits a new revision. Usually the JSON file has also been written. If a later part of the save fails, this event still fires with `error` set: the revision exists even though the save operation reported an error. A save that records no new revision emits no saved event.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `operation` | `str` | `save` |
+    | `project_path` | `str` | Project directory |
+    | `filename` | `str` | Save filename |
+    | `revision` | `int` | Committed revision number |
+    | `revision_id` | `str` | Committed revision identity |
+    | `parent_id` | `str \| None` | Preceding revision |
+    | `error` | `str \| None` | Error after the revision committed, or `None` |
+
+---
+
+### scene.revision_forked
+
+Fires when a fork's file and inherited link are ready. **Save As** also emits this event when its inherited link and new revision commit together, followed by `scene.revision_saved` for the new state. If writing the destination's JSON later fails, both events include `error`.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `operation` | `str` | `fork` |
+    | `project_path` | `str` | Project directory |
+    | `filename` | `str` | New save filename |
+    | `source_filename` | `str` | Source save filename |
+    | `revision` | `int` | Fork-point revision number |
+    | `revision_id` | `str` | Fork-point identity |
+    | `parent_id` | `str \| None` | Revision preceding the fork point |
+    | `error` | `str \| None` | Later Save As error, or `None` |
+
+---
+
+### scene.revisions_deleted
+
+Fires after removing a save's revision link and collecting content that no remaining save uses. Inherited revisions still used by forks remain available. If damaged content prevents safe collection, unused blobs are retained and `removed_blobs` is zero.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `operation` | `str` | `delete` |
+    | `project_path` | `str` | Project directory |
+    | `filename` | `str` | Deleted save filename |
+    | `removed_revisions` | `int` | Revisions collected |
+    | `removed_blobs` | `int` | Unused content items collected |
+
+---
+
+### scene.revision_failed
+
+Fires when saving, forking or deleting revisions fails without committing that revision operation. A save rejected before recording starts, such as a scene without a name, emits no revision event. A committed revision followed by a JSON write error emits `scene.revision_saved` with an error instead. If recording a Save As replacement fails, the destination keeps its previous revisions and no fork event is emitted.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `operation` | `str` | `save`, `fork` or `delete` |
+    | `project_path` | `str` | Project directory |
+    | `filename` | `str` | Affected save filename |
+    | `error` | `str` | Failure reason |
+
+The shared payload also has `source_filename`, revision fields and deletion counts when they are not relevant to an event: unused source and revision fields default to `None`, and counts to zero.

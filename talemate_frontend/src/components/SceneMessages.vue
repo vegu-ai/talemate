@@ -1,7 +1,7 @@
 <template>
     <RequestInput
     ref="requestForkName"
-    title="Save Forked Scene As"
+    title="Save copy as"
     :instructions="forkInstructions"
     :close-on-continue="false"
     :loading="!!pendingForkRequestId"
@@ -322,7 +322,7 @@
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :data-message-type="message.type" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="revisionIsLatestMessage(message)" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" :disable_avatar_fallback="message.disable_avatar_fallback || false" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="revisionBusyState(message)" :revisionUncommitted="message.revision_uncommitted || false" :revisionRefresh="message.revision_refresh" @keep-revision="commitRevision(message.id)" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="revisionIsLatestMessage(message)" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :rev="message.rev ?? null" :can-copy-unsaved="!scene?.data?.filename" :immutable-save="!!scene?.data?.immutable_save" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" :disable_avatar_fallback="message.disable_avatar_fallback || false" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="revisionBusyState(message)" :revisionUncommitted="message.revision_uncommitted || false" :revisionRefresh="message.revision_refresh" @keep-revision="commitRevision(message.id)" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -364,7 +364,7 @@
             </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
                 <div class="narrator-message"  :id="`message-${message.id}`" :data-message-type="message.type">
-                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="revisionIsLatestMessage(message)" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="revisionBusyState(message)" :revisionUncommitted="message.revision_uncommitted || false" :revisionRefresh="message.revision_refresh" @keep-revision="commitRevision(message.id)" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
+                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="revisionIsLatestMessage(message)" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev ?? null" :can-copy-unsaved="!scene?.data?.filename" :immutable-save="!!scene?.data?.immutable_save" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="revisionBusyState(message)" :revisionUncommitted="message.revision_uncommitted || false" :revisionRefresh="message.revision_refresh" @keep-revision="commitRevision(message.id)" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
             <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
@@ -806,19 +806,15 @@ export default {
             return assetType === 'card' || assetType === 'scene_illustration';
         },
         forkInstructions() {
-            // only legacy messages (rev 0, predating the changelog) reach this
-            // dialog — changelog-backed messages fork through the timeline
-            let instructions = "Creating a shallow fork: All progress after the selected message will be removed. This may require manual cleanup of world state and character details in complex scenes.";
-
-            // Add shared context disconnection warning if scene has shared context
+            let instructions = "Copy the scene up to this message. World state and character details use their current values.";
             if (this.scene?.data?.shared_context) {
-                instructions += "\n\n⚠️ Note: The forked scene will be disconnected from its shared context since shared world context cannot be reconstructed to a specific revision.";
+                instructions += "\n\nThe copy keeps its shared world connection at the world's current state.";
             }
 
             return instructions;
         },
     },
-    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets', 'openVisualLibraryWithAsset', 'openSceneTimeline', 'isConnected'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets', 'openVisualLibraryWithAsset', 'openSceneRevisions', 'isConnected'],
     provide() {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
@@ -1457,11 +1453,11 @@ export default {
         forkSceneInitiate(message_id) {
             const message = this.messages.find(m => m.id === message_id);
 
-            // changelog-backed messages fork through the timeline, positioned
-            // at the message's revision; legacy messages (rev 0, predating the
-            // changelog) fall back to the shallow fork flow
-            if (message && message.rev > 0) {
-                this.openSceneTimeline({ initialRev: message.rev });
+            if (!message) return;
+            if (this.scene?.data?.filename) {
+                if (Number.isInteger(message.rev) && message.rev >= 0 && message.rev <= (this.scene.data.rev || 0)) {
+                    this.openSceneRevisions({ initialRev: message.rev, initialMessageId: message.id });
+                }
                 return;
             }
 
@@ -2323,7 +2319,7 @@ export default {
             }
 
             if (data.type == "message_revs") {
-                // The backend emits message revs when the changelog deltas
+                // The backend emits message revs when the snapshots
                 // are committed; patch them in by id.
                 const revs = (data.data && data.data.revs) || [];
                 for (const r of revs) {
@@ -2439,7 +2435,7 @@ export default {
                         asset_id: finalAssetId,
                         asset_type: finalAssetType,
                         disable_avatar_fallback: disableAvatarFallback,
-                        rev: data.rev || 0
+                        rev: data.rev ?? null
                     };
                     this.revisionApplyServerState(charMsg, data.versions, data.active_version, data.revision_refresh, data.revision_uncommitted);
                     this.messages.push(charMsg);
@@ -2453,7 +2449,7 @@ export default {
                             direction_mode: data.direction_mode,
                             action: data.action,
                             subtype: data.subtype,
-                            rev: data.rev || 0
+                            rev: data.rev ?? null
                         }
                     );
                 } else if (data.type === 'context_investigation') {
@@ -2477,7 +2473,7 @@ export default {
                         text: data.message,
                         character: data.character,
                         meta: data.meta,
-                        rev: data.rev || 0,
+                        rev: data.rev ?? null,
                         asset_id: data.asset_id || null,
                         asset_type: data.asset_type || null,
                     };
@@ -2496,7 +2492,7 @@ export default {
                         ts: data.ts,
                         title: data.title || null,
                         meta: data.meta,
-                        rev: data.rev || 0,
+                        rev: data.rev ?? null,
                         asset_id: data.asset_id || null,
                         asset_type: data.asset_type || null,
                     };

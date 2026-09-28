@@ -1,3 +1,0 @@
-fixed:
-- "Revision history: A save no longer ends in an error when a stored value, for example a game state variable, changes from a list or a dict to a number or a yes/no value, or from an empty dict to a list."
-- "Revision history: When a stored value changes from a list to a text or a dict, from a dict to an empty list, or between an empty list and an empty dict, the revisions recorded from now on show the right value. Revisions that an older version recorded keep the value they were recorded with."

@@ -54,6 +54,9 @@ describe("the fork action", () => {
 
         // the scene intro reveals first and is not a message in the history
         expect(canFork.call(host(null, 4))).toBe(false);
+        expect(canFork.call(host({ id: 7, rev: null }, 4))).toBe(false);
+        expect(canFork.call(host({ id: 7 }, 4))).toBe(false);
+        expect(canFork.call(host({ id: 7, rev: 0 }, 0))).toBe(true);
         expect(canFork.call(host({ id: 7, rev: 3 }, 4))).toBe(true);
         // the scene's own revision is saved, so it forks
         expect(canFork.call(host({ id: 7, rev: 4 }, 4))).toBe(true);
@@ -80,13 +83,16 @@ describe("the fork action", () => {
             .toContain("character or narrator message");
         expect(hint.call({ forkTarget: { id: 7 }, forkTargetSaved: false }))
             .toContain("not been saved");
+        expect(hint.call({ forkTarget: { id: 7 }, forkTargetSaved: false, immutableSave: true }))
+            .toContain("Save As first");
         expect(hint.call({ forkTarget: { id: 7 }, forkTargetSaved: true }))
             .toContain("new scene of your own");
     });
 
-    it("warns that a fork loses the shared world context, and only then", () => {
+    it("explains that a fork keeps the shared world at its current state", () => {
         const instructions = lift(toolbar, "forkInstructions", "PlaythroughTools.vue");
-        expect(instructions.call({ sharedContext: true })).toContain("shared world");
+        expect(instructions.call({ sharedContext: true })).toContain("keeps its shared world connection");
+        expect(instructions.call({ sharedContext: true })).toContain("current state");
         expect(instructions.call({ sharedContext: false })).not.toContain("shared world");
         expect(instructions.call({ sharedContext: false })).toContain("not changed");
     });

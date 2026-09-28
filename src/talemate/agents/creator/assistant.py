@@ -21,9 +21,9 @@ from talemate.world_state.templates import (
     Spices,
     WritingStyle,
 )
+from talemate.storage.changelog import SnapshotStore
 from talemate.changelog import (
     ForkSaveNameError,
-    ForkTargetMissingError,
     fork_scene_at_revision,
     resolve_fork_save_name,
 )
@@ -846,8 +846,22 @@ class AssistantMixin:
             if not message:
                 raise ValueError(f"Message with id {message_id} not found.")
 
-            # Determine fork type based on message revision
-            use_reconstructive_fork = message.rev > 0
+            # Revision zero is saved state; None identifies an unrecorded message.
+            head = (
+                await SnapshotStore(self.scene.save_dir).head(self.scene.filename)
+                if self.scene.filename
+                else None
+            )
+            if self.scene.filename and (message.rev is None or head is None):
+                emit(
+                    "status",
+                    "Save As first to fork from this message"
+                    if self.scene.immutable_save
+                    else "Save the scene to fork from this message",
+                    status="error",
+                )
+                return
+            use_reconstructive_fork = head is not None
 
             if use_reconstructive_fork:
                 log.info(
@@ -857,26 +871,9 @@ class AssistantMixin:
                 )
                 emit("status", "Creating reconstructive fork...", status="busy")
 
-                try:
-                    # Create fork file with reconstructed scene data (shared_context will be disconnected)
-                    fork_file_path = await fork_scene_at_revision(
-                        self.scene, message.rev, save_name, expect_message_id=message_id
-                    )
-                except ForkTargetMissingError as e:
-                    log.warning(
-                        "Reconstructive fork target missing, falling back to shallow fork",
-                        message_id=message_id,
-                        rev=message.rev,
-                        detail=str(e),
-                    )
-                    use_reconstructive_fork = False
-                else:
-                    log.info(
-                        "Reconstructive fork created",
-                        save_name=save_name,
-                        rev=message.rev,
-                        path=fork_file_path,
-                    )
+                fork_file_path = await fork_scene_at_revision(
+                    self.scene, message.rev, save_name, expect_message_id=message_id
+                )
             if not use_reconstructive_fork:
                 log.info("Creating shallow fork", message_id=message_id)
                 emit("status", "Creating shallow fork...", status="busy")
@@ -895,9 +892,8 @@ class AssistantMixin:
                 if index < 0:
                     raise ValueError(f"Message with id {message_id} not found.")
 
-                # zero revs on copies; the live scene's messages must not be mutated
                 scene_data["history"] = [
-                    msg.model_copy(update={"rev": 0})
+                    msg.model_copy(update={"rev": None})
                     for msg in self.scene.history[: index + 1]
                 ]
 
@@ -921,18 +917,17 @@ class AssistantMixin:
 
                 scene_data["layered_history"] = new_layered_history
 
-                # Clear shared_context for fork (same logic as reconstructive fork)
-                if scene_data.get("shared_context"):
-                    log.info(
-                        "Disconnecting forked scene from shared_context",
-                        shared_context=scene_data.get("shared_context"),
-                    )
-                    scene_data["shared_context"] = ""
-
                 # Write the fork file
                 fork_file_path = os.path.join(self.scene.save_dir, f"{save_name}.json")
-                with open(fork_file_path, "w") as f:
-                    json.dump(scene_data, f, indent=2, cls=SceneEncoder)
+                encoded = json.dumps(scene_data, indent=2, cls=SceneEncoder)
+                destination = open(fork_file_path, "x")
+                try:
+                    with destination:
+                        destination.write(encoded)
+                    await SnapshotStore(self.scene.save_dir).delete(f"{save_name}.json")
+                except BaseException:
+                    os.remove(fork_file_path)
+                    raise
 
                 log.info(
                     "Shallow fork created", save_name=save_name, path=fork_file_path

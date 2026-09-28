@@ -27,9 +27,9 @@
                 <v-list-item-title>Restore</v-list-item-title>
                 <v-list-item-subtitle>Restore point can be selected in the scene settings</v-list-item-subtitle>
             </v-list-item>
-            <v-list-item @click="openSceneTimeline()" prepend-icon="mdi-history" :disabled="!canUseTimeline">
-                <v-list-item-title>Timeline</v-list-item-title>
-                <v-list-item-subtitle>Browse the scene's history and fork from any point</v-list-item-subtitle>
+            <v-list-item @click="openSceneRevisions()" prepend-icon="mdi-source-branch" :disabled="!canUseRevisions">
+                <v-list-item-title>Scene revisions</v-list-item-title>
+                <v-list-item-subtitle>Browse saved states and fork from a revision</v-list-item-subtitle>
             </v-list-item>
             <v-divider />
             <v-list-item @click="openSceneStateReset" prepend-icon="mdi-refresh">
@@ -63,12 +63,12 @@ export default {
         },
         scene: Object,
     },
-    inject: ['getWebsocket', 'openSceneTimeline', 'requestSceneSave'],
+    inject: ['getWebsocket', 'openSceneRevisions', 'requestSceneSave'],
     computed: {
         canSaveToCurrentFile() {
             return this.scene?.data?.filename && !this.scene?.data?.immutable_save;
         },
-        canUseTimeline() {
+        canUseRevisions() {
             return !!this.scene?.data?.filename;
         },
         saveRequired() {

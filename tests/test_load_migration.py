@@ -28,15 +28,11 @@ from _changelog_test_helpers import persist_test_mutation, make_changelog_scene
 from conftest import MockScene, bootstrap_scene
 from talemate.character import Character
 from talemate.changelog import (
-    InMemoryChangelog,
-    _base_path,
-    _compute_delta,
-    _latest_path,
-    _load_latest_scene_data,
     fork_scene_at_revision,
-    reconstruct_cleanup,
     reconstruct_scene_data,
+    save_changelog,
 )
+from talemate.storage.changelog import SnapshotStore
 from talemate.history import add_history_entry, history_with_relative_time
 from talemate.knowledge.timeline import record_time
 from talemate.load import SceneInitialization, load_scene_from_data
@@ -968,225 +964,39 @@ async def test_shared_context_read_leaves_fixture_file_untouched():
 
 
 @pytest.mark.asyncio
-async def test_reconstruct_base_revision_migrates(changelog_scene):
-    data = await reconstruct_scene_data(changelog_scene, to_rev=0)
-
-    assert data["ts"] == 3 * MONTH + HOUR
-    assert [m["ts"] for m in data["history"] if m["typ"] == "time"] == [HOUR]
-    assert [e["ts"] for e in data["archived_history"]] == [MONTH, 3 * MONTH]
-
-
-@pytest.mark.asyncio
-async def test_reconstruct_delta_revision_migrates(changelog_scene):
-    data = await reconstruct_scene_data(changelog_scene, to_rev=1)
-
-    assert data["ts"] == 3 * MONTH + 25 * HOUR
+async def test_snapshot_migration_uses_normal_load_preparation(changelog_scene):
+    legacy_bytes = _digests(changelog_scene.save_dir)
+    await save_changelog(changelog_scene)
+    data = await reconstruct_scene_data(changelog_scene, 0)
+    _assert_scene_time_is_int(data)
+    assert data["ts"] == EXPECTED_SCENE_TS
     assert [m["ts"] for m in data["history"] if m["typ"] == "time"] == [HOUR, DAY]
-    assert [e["ts"] for e in data["archived_history"]] == [
-        MONTH,
-        3 * MONTH,
-        3 * MONTH + HOUR,
-    ]
-    layer_entry = data["layered_history"][0][0]
-    assert (layer_entry["ts"], layer_entry["ts_start"], layer_entry["ts_end"]) == (
-        MONTH,
-        MONTH,
-        3 * MONTH + HOUR,
-    )
-
-
-@pytest.mark.asyncio
-async def test_reconstruct_leaves_changelog_files_untouched(changelog_scene):
-    before = _digests(changelog_scene.save_dir)
-    await reconstruct_scene_data(changelog_scene, to_rev=0)
-    await reconstruct_scene_data(changelog_scene, to_rev=1)
-    assert _digests(changelog_scene.save_dir) == before
-
-
-@pytest.mark.asyncio
-async def test_fork_writes_migrated_scene(changelog_scene):
+    assert {
+        key: value
+        for key, value in _digests(changelog_scene.save_dir).items()
+        if key in legacy_bytes
+    } == legacy_bytes
     fork_path = await fork_scene_at_revision(changelog_scene, 0, "forked")
-
-    with open(fork_path, "r") as f:
-        forked = json.load(f)
-
-    assert forked["ts"] == 3 * MONTH + HOUR
-    assert [e["ts"] for e in forked["archived_history"]] == [MONTH, 3 * MONTH]
+    forked = json.loads(Path(fork_path).read_text())
+    _assert_scene_time_is_int(forked)
+    assert forked["ts"] == EXPECTED_SCENE_TS
     assert forked["immutable_save"] is False
 
 
 @pytest.mark.asyncio
-async def test_legacy_latest_snapshot_does_not_diff_against_migrated_scene(
-    changelog_scene,
-):
-    """A migrated scene must not diff against its pre-migration snapshot.
-
-    The latest snapshot is the baseline new deltas are computed from. Left
-    unmigrated, every scene time field would show up as a change on the first
-    save after the migration.
-    """
-    changelog_scene.serialize = migrate_scene_time(_read_fixture())
-
-    async with InMemoryChangelog(changelog_scene) as changelog:
-        assert await changelog.append_delta({"action": "no_op"}) is None
-
-    # ... while a real change still produces a delta that carries integers.
+async def test_new_snapshot_after_migration_keeps_raw_ancestor(changelog_scene):
+    await save_changelog(changelog_scene)
+    raw = await SnapshotStore(changelog_scene.save_dir).assemble(
+        changelog_scene.filename, 0
+    )
+    assert isinstance(raw["ts"], str)
     changelog_scene.serialize = migrate_scene_time(_read_fixture())
     changelog_scene.serialize["ts"] = EXPECTED_SCENE_TS + DAY
-
-    async with InMemoryChangelog(changelog_scene) as changelog:
-        assert await changelog.append_delta({"action": "time_passage"}) == 1
-
-    delta = changelog.pending_deltas[0]["delta"]
-    assert delta["values_changed"]["root['ts']"]["new_value"] == EXPECTED_SCENE_TS + DAY
-
-
-@pytest.mark.asyncio
-async def test_delta_written_after_migration_reconstructs(changelog_scene):
-    """A changelog may mix legacy and migrated revisions.
-
-    Reconstruction only survives that because the migration runs after every
-    delta has been applied: an integer delta written post-migration is
-    applied on top of ISO8601 values, and the whole result is converted at
-    the end.
-    """
-    scene_data = migrate_scene_time(_read_fixture())
-    scene_data["history"].append(
-        {
-            "typ": "time",
-            "message": "A day passes.",
-            "ts": DAY,
-            "source": "manual",
-            "flags": 0,
-            "id": 5,
-        }
-    )
-    scene_data["ts"] = 3 * MONTH + 25 * HOUR + DAY
-    changelog_scene.serialize = scene_data
-
-    assert await persist_test_mutation(changelog_scene, {"action": "time_passage"}) == 2
-
-    latest = await reconstruct_scene_data(changelog_scene)
-    assert latest["ts"] == 3 * MONTH + 25 * HOUR + DAY
-    assert [m["ts"] for m in latest["history"] if m["typ"] == "time"] == [
-        HOUR,
-        DAY,
-        DAY,
-    ]
-    _assert_scene_time_is_int(latest)
-
-    # the legacy revisions still reconstruct as integers
-    for to_rev in (0, 1):
-        _assert_scene_time_is_int(await reconstruct_scene_data(changelog_scene, to_rev))
-
-
-@pytest.mark.asyncio
-async def test_reconstruct_cleanup_repairs_damaged_scene_time():
-    """Reconstruction repairs damaged time values instead of aborting.
-
-    Deltas are applied with `force=True`, so a reconstructed revision can carry
-    values no parser accepts. Fork and preview have no way to recover from an
-    exception here, so the migration repairs alongside the other
-    reconstruction repairs.
-    """
-    data = _read_fixture()
-    data["ts"] = ""
-    data["history"][1]["ts"] = "1 hour"
-    data["archived_history"][0]["ts"] = ""
-    data["layered_history"][0][0]["ts_end"] = "P"
-
-    result = await reconstruct_cleanup(data)
-
-    assert result["ts"] == 0
-    assert result["history"][1]["ts"] == 0
-    assert result["archived_history"][0]["ts"] == 0
-    assert result["layered_history"][0][0]["ts_end"] is None
-
-    # the rest of the timeline reconstructs untouched
-    assert result["history"][3]["ts"] == DAY
-    assert [e["ts"] for e in result["archived_history"][1:]] == [
-        3 * MONTH,
-        3 * MONTH + HOUR,
-    ]
-    assert result["layered_history"][0][0]["ts"] == MONTH
-    assert result["name"] == "Legacy Time Scene"
-
-
-@pytest.mark.asyncio
-async def test_repaired_reconstruction_loads_and_commits(load_env, monkeypatch):
-    """A repaired revision has to survive the load that follows a fork.
-
-    A fork writes the reconstructed data to a new scene file, and the load
-    that follows commits it to memory. `ArchiveEntry.ts` is not nullable, so
-    an entry repaired to null would make the forked scene unloadable.
-    """
-    data = _read_fixture()
-    data["archived_history"][0]["ts"] = ""
-
-    repaired = await reconstruct_cleanup(data)
-    assert repaired["archived_history"][0]["ts"] == 0
-
-    committed = []
-
-    async def _record(items):
-        committed.extend(items)
-
-    memory = instance.get_agent("memory")
-    monkeypatch.setattr(memory, "drop_db", lambda: None, raising=False)
-    monkeypatch.setattr(memory, "add_many", _record)
-
-    scene = await load_scene_from_data(load_env, repaired, name=SCENE_FILE)
-    await scene.commit_to_memory()
-
-    assert scene.archived_history[0]["ts"] == 0
-    for entry in scene.archived_history:
-        assert isinstance(entry["ts"], int)
-
-    assert [entry["meta"]["ts"] for entry in committed][:2] == [0, 3 * MONTH]
-
-
-@pytest.mark.asyncio
-async def test_reconstruct_survives_damaged_base_snapshot(changelog_scene):
-    base_path = _base_path(changelog_scene)
-    with open(base_path, "r") as f:
-        base_data = json.load(f)
-    base_data["archived_history"][0]["ts"] = ""
-    with open(base_path, "w") as f:
-        json.dump(base_data, f)
-
-    data = await reconstruct_scene_data(changelog_scene, to_rev=0)
-
-    assert data["archived_history"][0]["ts"] == 0
-    assert data["archived_history"][1]["ts"] == 3 * MONTH
-    assert data["ts"] == 3 * MONTH + HOUR
-
-
-def test_load_latest_scene_data_survives_damaged_timestamp(changelog_scene):
-    """The latest snapshot is a fallback-able optimization, not a hard input."""
-    latest_path = _latest_path(changelog_scene)
-    with open(latest_path, "r") as f:
-        latest_data = json.load(f)
-    latest_data["archived_history"][0]["ts"] = ""
-    with open(latest_path, "w") as f:
-        json.dump(latest_data, f)
-
-    data = _load_latest_scene_data(changelog_scene)
-
-    assert data is not None
-    assert data["archived_history"][0]["ts"] == 0
-    assert data["ts"] == 3 * MONTH + 25 * HOUR
-
-
-def test_unmigrated_baseline_would_diff_every_timestamp():
-    """Guards the premise of the migration above: the raw legacy snapshot and
-    the migrated scene data differ on every scene time field."""
-    delta = _compute_delta(_read_fixture(), migrate_scene_time(_read_fixture()))
-
-    changed = set(delta["values_changed"])
-    assert "root['ts']" in changed
-    assert "root['archived_history'][0]['ts']" in changed
-    assert "root['history'][1]['ts']" in changed
-    assert "root['layered_history'][0][0]['ts_end']" in changed
+    assert await persist_test_mutation(changelog_scene) == 1
+    assert (await reconstruct_scene_data(changelog_scene, 0))["ts"] == EXPECTED_SCENE_TS
+    assert (await reconstruct_scene_data(changelog_scene, 1))[
+        "ts"
+    ] == EXPECTED_SCENE_TS + DAY
 
 
 def _with_pin(data: dict, ts, shared: bool = False) -> dict:

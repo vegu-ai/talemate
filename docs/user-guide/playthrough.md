@@ -79,23 +79,11 @@ had got to, and the fork is a save of its own — an existing save is never
 written over. If a name is already in use, the dialog stays open so you can pick
 a different one.
 
-What the fork contains is restored from the scene's
-[revision history](restoring-scenes.md): the story, the world state and the
-characters as they were at the message you forked from. The history is recorded
-in steps rather than per message, so a fork can carry a message or two that were
-recorded in the same step as the one you picked. A message the scene
-recorded no revision for — anything played before Talemate kept a history — is
-forked by copying the scene and cutting its story at that message instead, which
-may leave world state and character details that belong to a later point in the
-story.
+A fork restores the scene's [saved revision](restoring-scenes.md): its story, world state and characters. Several messages saved together share one revision, so the fork can include messages recorded in the same save. The new save keeps earlier revisions and their origins through its fork point.
 
-The story forks at the messages the scene view offers a **Fork** on — what a
-character said and what the narrator wrote. On anything else the cursor can land
-on, the scene intro and time passages among them, the action is unavailable, as
-it is on a message whose revision the scene has not saved yet: with
-[Auto Save](scenario-tools.md#quick-settings) off, leave the playthrough and save
-the scene to fork from those. Forking a scene that draws on a shared world
-context disconnects it from that context.
+The action is available for recorded character and narrator messages. If the selected message has not been saved yet, leave the playthrough and save the scene first. Use **Save As** for a read-only scene.
+
+Forking preserves the shared world connection. Shared context remains at its current state; it is not restored to the selected revision.
 
 ## What else the mode offers
 

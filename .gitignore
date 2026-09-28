@@ -44,3 +44,7 @@ legacy-state-reinforcements.yaml
 CLAUDE.md
 docs/update-progress
 talemate_frontend/eslint.config.cjs
+
+/data.db
+/data.db-wal
+/data.db-shm

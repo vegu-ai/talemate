@@ -17,7 +17,7 @@ The **Quick load** row shows your most recently saved scenes as cards. Click a c
 
 Each card has a three-dot menu (⋯) beneath it with additional actions:
 
-- :material-history: **Timeline** — browse and fork from the scene's version history, see [Restoring Scenes](/talemate/user-guide/restoring-scenes)
+- :material-source-branch: **Scene revisions** — browse and fork from saved scene states, see [Restoring Scenes](/talemate/user-guide/restoring-scenes)
 - **Remove from Quick Load** — remove the card without deleting any files
 - **Delete** — delete the scene file itself (refused for the currently loaded scene — load a different scene first)
 
@@ -32,7 +32,7 @@ Expanding a project reveals:
 - An information row summarizing the project's contents — how many media assets and [node modules](/talemate/user-guide/node-editor/) it holds
 - The project's save files, each with its scene name, last-modified date, and file size
 
-Click a save file to load it. Each save file row also has a three-dot menu (⋮) with the same actions as the quick-load cards — **Timeline**, **Remove from Quick Load** (only shown when the save is in Quick Load), and **Delete**.
+Click a save file to load it. Each save file row also has a three-dot menu (⋮) with the same actions as the quick-load cards — **Scene revisions**, **Remove from Quick Load** (only shown when the save is in Quick Load), and **Delete**.
 
 !!! tip "Filtering"
     The **Filter scenes** field narrows the tree to matching projects, save files, and character cards. Matching projects expand automatically so you can see the hits.

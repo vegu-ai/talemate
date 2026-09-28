@@ -163,7 +163,7 @@ class TestSceneMessageBase:
         assert d["typ"] == "scene"
         assert d["source"] == "ai"
         assert d["flags"] == int(Flags.HIDDEN)
-        assert d["rev"] == 0
+        assert d["rev"] is None
         assert "id" in d
         assert "meta" not in d  # omitted when None
 

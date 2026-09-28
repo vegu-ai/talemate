@@ -14,7 +14,6 @@ from conftest import MockScene, bootstrap_scene
 from talemate.changelog import (
     fork_scene_at_revision,
     save_changelog,
-    write_reconstructed_scene,
 )
 from talemate.export import ExportOptions, scene_export_json
 from talemate.exceptions import TalemateError
@@ -61,7 +60,7 @@ def load_env(tmp_path, monkeypatch):
 async def test_load_save_reload_retains_legacy_eligibility(load_env, name):
     data = fixture_data(name)
     await load_scene_from_data(load_env, data, name="original.json")
-    original_history = [message.to_dict() for message in load_env.history]
+    original_history = [{**message.to_dict(), "rev": 0} for message in load_env.history]
     assert not character_knowledge_enabled(load_env)
 
     await load_env.save()
@@ -280,6 +279,7 @@ async def test_shallow_fork_retains_eligibility(load_env, monkeypatch, name):
     if name == "perception":
         data.update(format_version=1, knowledge_eligibility="perception")
     await load_scene_from_data(load_env, data)
+    load_env.filename = None
     creator = instance.get_agent("creator")
     fork_path = await creator.fork_scene(load_env.history[0].id, save_name="shallow")
     forked = json.loads(Path(fork_path).read_text())
@@ -297,7 +297,7 @@ async def test_reconstructed_fork_retains_snapshot_eligibility(
     source = make_changelog_scene(str(tmp_path / "chain"), initial_serialize=data)
     await save_changelog(source)
     before = {
-        p: p.read_bytes() for p in Path(source.changelog_dir).rglob("*") if p.is_file()
+        p: p.read_bytes() for p in Path(source.save_dir).rglob("*.json") if p.is_file()
     }
     source.knowledge_eligibility = "perception"
     fork_path = await fork_scene_at_revision(source, 0, "reconstructed")
@@ -311,65 +311,15 @@ async def test_reconstructed_fork_retains_snapshot_eligibility(
     assert load_env.knowledge_eligibility == forked["knowledge_eligibility"]
 
 
-async def test_reconstructed_write_rejects_future_before_mutation_or_write(tmp_path):
-    source = make_changelog_scene(str(tmp_path))
+async def test_reconstructed_fork_rejects_future_before_write(tmp_path):
     data = {**fixture_data(), "format_version": 2}
-    data["history"][0]["rev"] = 10
+    source = make_changelog_scene(str(tmp_path), initial_serialize=data)
+    await save_changelog(source)
     before = copy.deepcopy(data)
     with pytest.raises(SceneFormatError, match="Unsupported scene format"):
-        await write_reconstructed_scene(
-            source, 0, precomputed_data=data, zero_message_revs=True
-        )
+        await fork_scene_at_revision(source, 0, "future")
     assert data == before
-    assert list(tmp_path.iterdir()) == []
-
-
-@pytest.mark.parametrize(
-    "metadata,overrides,error",
-    [
-        ({"format_version": 2}, {"format_version": 1}, "Unsupported scene format"),
-        (
-            {"format_version": 1, "knowledge_eligibility": "perception"},
-            {"knowledge_eligibility": "legacy"},
-            "overrides cannot change",
-        ),
-        ({}, {"knowledge_eligibility": "perception"}, "overrides cannot change"),
-        ({}, {"format_version": 2}, "overrides cannot change"),
-    ],
-)
-async def test_reconstruction_overrides_cannot_relabel_metadata(
-    tmp_path, metadata, overrides, error
-):
-    source = make_changelog_scene(str(tmp_path))
-    data = {**fixture_data(), **metadata}
-    data["history"][0]["rev"] = 10
-    before = copy.deepcopy(data)
-    with pytest.raises(TalemateError, match=error):
-        await write_reconstructed_scene(
-            source,
-            0,
-            precomputed_data=data,
-            overrides=overrides,
-            zero_message_revs=True,
-        )
-    assert data == before
-    assert list(tmp_path.iterdir()) == []
-
-
-async def test_reconstruction_applies_history_override_after_zeroing(tmp_path):
-    source = make_changelog_scene(str(tmp_path))
-    data = fixture_data()
-    data["history"][0]["rev"] = 10
-    history_override = [{**data["history"][0], "rev": 7}]
-    path = await write_reconstructed_scene(
-        source,
-        0,
-        precomputed_data=data,
-        overrides={"history": history_override},
-        zero_message_revs=True,
-    )
-    assert json.loads(Path(path).read_text())["history"][0]["rev"] == 7
-    assert history_override[0]["rev"] == 7
+    assert not (tmp_path / "future.json").exists()
 
 
 @pytest.mark.parametrize("name", ["legacy", "perception"])
@@ -542,3 +492,38 @@ async def test_disclosure_scene_switch_off_save_reload(load_env, with_sources):
     await load_scene_from_data(load_env, saved)
     assert load_env.knowledge_eligibility == "legacy"
     assert load_env.knowledge is None
+
+
+@pytest.mark.parametrize("reset", [False, True])
+async def test_complete_zip_preserves_only_nonreset_revisions(
+    load_env, tmp_path, monkeypatch, reset
+):
+    import io
+
+    from talemate.export import export_talemate_complete
+    from talemate.storage.changelog import SnapshotStore
+
+    monkeypatch.setattr("talemate.load.SCENES_DIR", tmp_path)
+    await load_scene_from_data(load_env, fixture_data(), name="source.json")
+    await load_env.save(force=True)
+    original_dir = load_env.save_dir
+    load_env.intro = "Second saved introduction"
+    await load_env.save(force=True)
+    original_revision = await SnapshotStore(original_dir).assemble("source.json", 0)
+    archive = await export_talemate_complete(
+        load_env, ExportOptions(name="branch", reset_progress=reset)
+    )
+    with zipfile.ZipFile(io.BytesIO(archive)) as zipped:
+        assert ("data.db" in zipped.namelist()) is (not reset)
+    archive_path = tmp_path / "branch.zip"
+    archive_path.write_bytes(archive)
+    await load_scene_from_zip(load_env, str(archive_path))
+    assert load_env.save_dir != original_dir
+    store = SnapshotStore(load_env.save_dir)
+    if reset:
+        assert len(await store.entries(load_env.filename)) == 1
+        assert load_env.history == []
+    else:
+        assert await store.assemble(load_env.filename, 0) == original_revision
+        assert len(await store.entries(load_env.filename)) == 3
+        assert load_env.intro == "Second saved introduction"

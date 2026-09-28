@@ -10,8 +10,8 @@ const VUETIFY_TAGS = [
     'VListItemSubtitle', 'VListItemTitle', 'VListSubheader', 'VMenu', 'VNumberInput', 'VProgressCircular',
     'VSelect', 'VTextField', 'VTooltip',
 ];
-const EFFORT_DISPLAY = { show_token_slider: false, show_effort_selector: true, effort_choices: ['default', 'low', 'high'] };
-const TOKEN_DISPLAY = { show_token_slider: true };
+const EFFORT_DISPLAY = { control: 'effort', effort_choices: ['default', 'low', 'high'] };
+const TOKEN_DISPLAY = { control: 'tokens' };
 const REASONING_ON = { reason_enabled: true, reason_locked: false, reasoning_display: EFFORT_DISPLAY };
 const REASONING_OFF = { reason_enabled: false, reason_locked: false, reasoning_display: null };
 

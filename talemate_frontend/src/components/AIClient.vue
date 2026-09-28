@@ -152,7 +152,7 @@
                 </template>
               </v-tooltip>
 
-              <v-tooltip :text="client.data?.meta?.reason_tokens_as_allowance ? 'Adjust extra completion tokens' : 'Adjust reasoning token budget'" v-if="client.reasoning_display?.show_token_slider">
+              <v-tooltip :text="client.data?.meta?.reason_tokens_as_allowance ? 'Adjust extra completion tokens' : 'Adjust reasoning token budget'" v-if="client.reasoning_display?.control === 'tokens'">
                 <template v-slot:activator="{ props }">
                   <TokenBudgetInput
                     v-bind="props"
@@ -171,7 +171,7 @@
                 </template>
               </v-tooltip>
 
-              <v-tooltip text="Adjust effort level" v-else-if="client.reasoning_display?.show_effort_selector">
+              <v-tooltip text="Adjust effort level" v-else-if="client.reasoning_display?.control === 'effort'">
                 <template v-slot:activator="{ props }">
                   <v-select
                     v-bind="props"

@@ -248,9 +248,8 @@ class ReasoningDisplay(pydantic.BaseModel):
     what's actually being used at runtime (e.g., budget vs adaptive thinking).
     """
 
-    show_token_slider: bool  # Whether to show the token budget input
-    show_effort_selector: bool = False  # Whether to show effort level selector
-    effort_choices: list[str] | None = None  # Available effort choices
+    control: Literal["tokens", "effort"]
+    effort_choices: list[str] | None = None
 
 
 class ParameterReroute(pydantic.BaseModel):
@@ -755,7 +754,7 @@ class ClientBase:
         """
         if not self.reason_enabled_configured:
             return None
-        return ReasoningDisplay(show_token_slider=True)
+        return ReasoningDisplay(control="tokens")
 
     @property
     def default_prompt_template(self) -> str:

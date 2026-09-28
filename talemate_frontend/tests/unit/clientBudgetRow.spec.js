@@ -9,8 +9,8 @@ const VUETIFY_TAGS = [
     'VAlert', 'VBtn', 'VChip', 'VDivider', 'VIcon', 'VList', 'VListItem', 'VListItemSubtitle',
     'VListItemTitle', 'VListSubheader', 'VMenu', 'VProgressCircular', 'VTextField', 'VTooltip',
 ];
-const EFFORT_DISPLAY = { show_token_slider: false, show_effort_selector: true, effort_choices: ['low', 'medium', 'high'] };
-const TOKEN_DISPLAY = { show_token_slider: true };
+const EFFORT_DISPLAY = { control: 'effort', effort_choices: ['low', 'medium', 'high'] };
+const TOKEN_DISPLAY = { control: 'tokens' };
 
 function stub(tag) {
     const className = tag.replace(/([A-Z])/g, (letter, _, index) => (index ? '-' : '') + letter.toLowerCase());

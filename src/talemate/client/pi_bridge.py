@@ -475,11 +475,7 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
     def reasoning_display(self) -> ReasoningDisplay | None:
         if not self.reason_enabled_configured:
             return None
-        return ReasoningDisplay(
-            show_token_slider=False,
-            show_effort_selector=True,
-            effort_choices=THINKING_LEVELS,
-        )
+        return ReasoningDisplay(control="effort", effort_choices=THINKING_LEVELS)
 
     def emit_status(self, processing: bool = None):
         error_message = None

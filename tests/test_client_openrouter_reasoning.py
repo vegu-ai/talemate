@@ -117,8 +117,7 @@ async def test_new_client_defaults_reason_at_the_model_default_effort(
 def test_status_offers_the_effort_selector_and_the_allowance(client):
     reasoning_client = client(reason_enabled=True, effort_level="low")
     status = reasoning_client._common_status_data()
-    assert status["reasoning_display"]["show_effort_selector"]
-    assert not status["reasoning_display"]["show_token_slider"]
+    assert status["reasoning_display"]["control"] == "effort"
     assert status["reasoning_display"]["effort_choices"] == EFFORT_LEVELS
     assert status["min_reason_tokens"] == 0
     meta = openrouter.OpenRouterClient.Meta()

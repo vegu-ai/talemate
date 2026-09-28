@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import time
 
+import pydantic
 import pytest
 from structlog.testing import capture_logs
 
@@ -483,11 +484,11 @@ class TestReasoningDisplay:
         client = _StubClient(name="rd")
         rd = client.reasoning_display
         assert isinstance(rd, ReasoningDisplay)
-        assert rd.model_dump() == {
-            "show_token_slider": True,
-            "show_effort_selector": False,
-            "effort_choices": None,
-        }
+        assert rd.model_dump() == {"control": "tokens", "effort_choices": None}
+
+    def test_rejects_unknown_control(self):
+        with pytest.raises(pydantic.ValidationError):
+            ReasoningDisplay(control="slider")
 
 
 # ---------------------------------------------------------------------------

@@ -72,9 +72,5 @@ class ReasoningEffortMixin:
         if not self.reason_enabled_configured:
             return None
         if self.reasoning_effort_format == "none":
-            return ReasoningDisplay(show_token_slider=True)
-        return ReasoningDisplay(
-            show_token_slider=False,
-            show_effort_selector=True,
-            effort_choices=EFFORT_LEVELS,
-        )
+            return ReasoningDisplay(control="tokens")
+        return ReasoningDisplay(control="effort", effort_choices=EFFORT_LEVELS)

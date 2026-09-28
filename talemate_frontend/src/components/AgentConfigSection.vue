@@ -33,6 +33,7 @@
           >{{ tool.label }}</v-btn>
         </div>
       </div>
+      <UxNote v-if="schema.note" :note="schema.note" class="mt-2 mb-8" />
     </div>
     <div class="mt-2">
       <div v-if="schema.container && schema.can_be_disabled">
@@ -65,6 +66,7 @@ import { getProperty } from 'dot-prop';
 import { agentActionConditionMet, conditionMet } from '@/utils/uxConditions';
 import { worldStatePinField } from '@/utils/worldStatePinWarning';
 import UxField from './UxField.vue';
+import UxNote from './UxNote.vue';
 
 // Renders one AgentAction on the Agents settings page.
 //
@@ -76,6 +78,7 @@ export default {
   name: 'AgentConfigSection',
   components: {
     UxField,
+    UxNote,
   },
   props: {
     // Stable action key (e.g. "generation_override").

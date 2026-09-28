@@ -672,16 +672,20 @@ export default {
             if (!section) {
                 return;
             }
-            // a link may name an action that has no section of its own (an
-            // inline action, or a container whose condition isn't met) —
-            // General holds the inline ones, and it beats an all-collapsed pane
-            this.openPanels = this.sections.some(s => s.key === section) ? [section] : ['_config'];
-            this.snapOpenPanels();
+            // after the selectedName watcher, which opens General for a newly
+            // selected agent
             this.$nextTick(() => {
-                const el = this.$el.querySelector(`[data-agent-section="${section}"]`);
-                if (el) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
+                // a link may name an action that has no section of its own (an
+                // inline action, or a container whose condition isn't met) —
+                // General holds the inline ones, and it beats an all-collapsed pane
+                this.openPanels = this.sections.some(s => s.key === section) ? [section] : ['_config'];
+                this.snapOpenPanels();
+                this.$nextTick(() => {
+                    const el = this.$el.querySelector(`[data-agent-section="${section}"]`);
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                });
             });
         },
 

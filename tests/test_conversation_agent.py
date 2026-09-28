@@ -3,8 +3,7 @@ Tests for ``talemate.agents.conversation`` (the ConversationAgent class).
 
 Targets:
 - Action registration (``init_actions``) and the property accessors
-  (``conversation_format``, ``conversation_format_label``,
-  ``content_use_*``, ``generation_settings_*``,
+  (``content_use_*``, ``generation_settings_*``,
   ``inject_character_names_into_stop``).
 - ``agent_details`` populated dictionary.
 - ``set_generation_overrides`` writing context attributes when enabled.
@@ -23,6 +22,7 @@ tests; here we patch ``build_prompt`` so converse can be tested end-to-end.
 import pytest
 
 import talemate.client.context as client_context_module
+import talemate.instance as instance
 from talemate.agents.conversation import (
     ConversationAgent,
 )
@@ -121,39 +121,17 @@ class TestActionRegistration:
         assert "content" in actions
         assert "prompt_caching" in actions
 
-    def test_default_format_is_movie_script(self, conversation_scene):
+    def test_generation_has_no_format(self, conversation_scene):
         _, conversation, _ = conversation_scene
-        assert conversation.conversation_format == "movie_script"
+        assert "format" not in conversation.actions["generation_override"].config
 
-    def test_format_ignores_a_disabled_flag_on_the_override(self, conversation_scene):
-        # `generation_override` is declared can_be_disabled=False, so nothing
-        # in the UI can switch it off and `resolve_enabled` reports it on
-        # regardless of a stored flag (issue #174). The configured format
-        # therefore still applies — the movie_script fallback in
-        # `conversation_format` is unreachable for a healthy config.
+    def test_generation_note_opens_scene_history(self, conversation_scene):
         _, conversation, _ = conversation_scene
-        assert conversation.actions["generation_override"].can_be_disabled is False
-        conversation.actions["generation_override"].config["format"].value = "chat"
-        conversation.actions["generation_override"].enabled = False
-        assert conversation.conversation_format == "chat"
-
-    def test_format_returns_value_when_override_enabled(self, conversation_scene):
-        _, conversation, _ = conversation_scene
-        conversation.actions["generation_override"].enabled = True
-        conversation.actions["generation_override"].config["format"].value = "chat"
-        assert conversation.conversation_format == "chat"
-
-    def test_format_label_resolves_known_value(self, conversation_scene):
-        _, conversation, _ = conversation_scene
-        conversation.actions["generation_override"].config["format"].value = "chat"
-        # The choices contain a label "Chat (legacy)" for value "chat".
-        assert conversation.conversation_format_label == "Chat (legacy)"
-
-    def test_format_label_falls_back_to_value_when_unknown(self, conversation_scene):
-        _, conversation, _ = conversation_scene
-        # Inject an unknown value and confirm the label is the raw value.
-        conversation.actions["generation_override"].config["format"].value = "weird"
-        assert conversation.conversation_format_label == "weird"
+        note = conversation.actions["generation_override"].note
+        assert "Scene History" in note.text
+        [action] = note.actions
+        assert action.action_name == "openAgentSettings"
+        assert action.arguments == ["summarizer", "manage_scene_history"]
 
     def test_generation_setting_properties(self, conversation_scene):
         _, conversation, _ = conversation_scene
@@ -190,20 +168,11 @@ class TestActionRegistration:
 
 
 class TestAgentDetails:
-    def test_includes_client_and_format(self, conversation_scene):
+    def test_includes_client_only(self, conversation_scene):
         _, conversation, _ = conversation_scene
         details = conversation.agent_details
-        assert "client" in details
-        assert "format" in details
         assert details["client"]["value"] == conversation.client.name
-        # Format default is movie_script -> label is "Screenplay".
-        assert details["format"]["value"] == "Screenplay"
-
-    def test_no_client_yields_none_value(self, conversation_scene):
-        _, conversation, _ = conversation_scene
-        conversation.client = None
-        details = conversation.agent_details
-        assert details["client"]["value"] is None
+        assert "format" not in details
 
 
 # ---------------------------------------------------------------------------
@@ -361,8 +330,7 @@ class TestInjectCharacterNamesIntoStop:
 class TestConverse:
     async def test_converse_movie_script_format(self, conversation_scene, alice):
         scene, conversation, alice_actor = conversation_scene
-        conversation.actions["generation_override"].enabled = True
-        conversation.actions["generation_override"].config[
+        instance.get_agent("summarizer").actions["manage_scene_history"].config[
             "format"
         ].value = "movie_script"
 
@@ -387,8 +355,9 @@ class TestConverse:
 
     async def test_converse_narrative_format(self, conversation_scene, alice):
         scene, conversation, alice_actor = conversation_scene
-        conversation.actions["generation_override"].enabled = True
-        conversation.actions["generation_override"].config["format"].value = "narrative"
+        instance.get_agent("summarizer").actions["manage_scene_history"].config[
+            "format"
+        ].value = "narrative"
 
         async def fake_build_prompt(character, char_message="", instruction=None):
             return _canned_prompt(
@@ -408,8 +377,7 @@ class TestConverse:
         self, conversation_scene, alice
     ):
         scene, conversation, alice_actor = conversation_scene
-        conversation.actions["generation_override"].enabled = True
-        conversation.actions["generation_override"].config[
+        instance.get_agent("summarizer").actions["manage_scene_history"].config[
             "format"
         ].value = "movie_script"
 

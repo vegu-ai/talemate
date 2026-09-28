@@ -251,6 +251,12 @@ def register_world_state_toggle(value: bool):
     return ws
 
 
+def set_scene_context_format(value: str):
+    """Set the registered Summarizer's scene context format (``scene.conversation_format``)."""
+    summarizer = instance.get_agent("summarizer")
+    summarizer.actions["manage_scene_history"].config["format"].value = value
+
+
 def seed_world_state_snapshot(scene):
     """Populate the scene's durable world-state snapshot with one of each entity kind.
 

@@ -1,0 +1,19 @@
+You find yourself in a quiet forest clearing.
+Rain drums on the lighthouse roof as the lamp turns overhead.
+
+
+HERO
+*shakes the water from his coat* "Anyone up here?"
+END-OF-LINE
+
+
+ELENA
+"Only the keeper." *She sets the logbook aside.* "And now you."
+END-OF-LINE
+
+10 minutes later
+
+
+HERO
+"The ferry left without me." *He glances at the stairs.*
+END-OF-LINE

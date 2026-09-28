@@ -459,6 +459,15 @@ class AgentConfigPlugin(Plugin):
                 agent_type=agent_type,
                 fields=stripped,
             )
+        undeclared = scene.agent_overrides.drop_undeclared_fields(
+            agent_type, agent.actions
+        )
+        if undeclared:
+            log.info(
+                "scene-overrides save dropped undeclared fields",
+                agent_type=agent_type,
+                fields=undeclared,
+            )
 
         try:
             await scene.agent_overrides.write_to_file()

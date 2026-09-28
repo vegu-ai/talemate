@@ -832,9 +832,7 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, Agent):
 
         # depending on conversation format in the context, stopping strings
         # for character names may change format
-        conversation_agent = get_agent("conversation")
-
-        if conversation_agent.conversation_format == "movie_script":
+        if self.scene.conversation_format == "movie_script":
             character_names = [
                 f"\n{c.name.upper()}\n" for c in self.scene.get_characters()
             ]

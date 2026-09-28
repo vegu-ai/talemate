@@ -203,6 +203,23 @@ In Character perspectives mode, a new player line, an earlier passage edit, a di
 
 Controls how scene history is split between actual dialogue and summarized content when generating context for AI prompts. The same controls apply to the reader-facing Scene view and to each character's stored views in Character perspectives mode. These settings can also be adjusted and previewed through the [Scene Context tab](/talemate/user-guide/prompts/context-history-review/) in the Prompt Manager.
 
+##### Format
+
+The format of the scene progression as the AI sees it. It applies to the scene context of every agent: character dialogue, narration, direction and the other prompts that include the scene history. It does not change how the scene looks to you.
+
+- `Screenplay` -- traditional screenplay-style dialogue formatting (default)
+- `Chat (legacy)` -- simple chat-style formatting
+- `Narrative` -- dialogue is woven into narrative prose
+- `AI Aware` -- characters are aware they are AI personas conversing with the user
+
+!!! info "AI Aware mode"
+    In the **AI Aware** mode, characters know they are AI personas. They acknowledge their artificial nature when they talk to you, which suits experimental scenarios or conversations about their own nature more than scene progression.
+
+Like every agent setting, the format can be set for one scene only with a [scene override](/talemate/user-guide/agents/scene-overrides/). The **Scene Context** tab in the Prompt Manager has the same selector.
+
+!!! note "Moved from the Conversation agent"
+    Earlier versions set the format in the Conversation agent's Generation section. A value set there is not carried over: set the format again here if you used a format other than Screenplay.
+
 ##### Max. Budget
 
 Cap the context budget for scene history in tokens. Set to 0 to use the full available budget dictated by prompt type and client context limits.

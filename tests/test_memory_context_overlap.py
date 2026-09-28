@@ -33,8 +33,9 @@ def cast(scene, monkeypatch, request):
     scene.knowledge_eligibility = request.param
     scene.rag_cache = {}
     conversation = get_agent("conversation")
-    conversation.actions["generation_override"].enabled = True
-    conversation.actions["generation_override"].config["format"].value = "chat"
+    get_agent("summarizer").actions["manage_scene_history"].config[
+        "format"
+    ].value = "chat"
     conversation.actions["character_knowledge"].enabled = True
     conversation.actions["character_knowledge"].config["memory_pass"].value = False
     for name in ("Alice", "Bob"):

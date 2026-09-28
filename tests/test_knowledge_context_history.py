@@ -41,10 +41,8 @@ def _count_tokens():
 def summarizer():
     scene = MockScene()
     agents = bootstrap_scene(scene)
-    conversation = agents["conversation"]
-    conversation.actions["generation_override"].enabled = True
-    conversation.actions["generation_override"].config["format"].value = "chat"
     summarizer = agents["summarizer"]
+    summarizer.actions["manage_scene_history"].config["format"].value = "chat"
     summarizer.actions["manage_scene_history"].config["best_fit"].value = False
     return summarizer
 

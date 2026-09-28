@@ -1056,7 +1056,12 @@ def test_read_agent_settings(settings_env):
     assert length["min"] == 32
     assert length["max"] == 4096
 
-    fmt = action["settings"]["format"]
+    assert "format" not in action["settings"]
+
+    scene_history = help_settings.read_agent_settings("summarizer")["actions"][
+        "manage_scene_history"
+    ]
+    fmt = scene_history["settings"]["format"]
     assert {"label": "Narrative", "value": "narrative"} in fmt["choices"]
 
     # other agents read fine too
@@ -1107,20 +1112,20 @@ async def test_large_choices_are_omitted_from_reads_and_errors(
     settings_env, count, label_size
 ):
     field = (
-        instance.get_agent("conversation")
-        .actions["generation_override"]
+        instance.get_agent("summarizer")
+        .actions["manage_scene_history"]
         .config["format"]
     )
     field.choices = [
         {"label": "x" * label_size, "value": f"catalogue-choice-{i}"}
         for i in range(count)
     ]
-    payload = help_settings.read_agent_settings("conversation")
+    payload = help_settings.read_agent_settings("summarizer")
     result = await help_settings.update_agent_setting(
-        "conversation", "generation_override", "format", "invalid"
+        "summarizer", "manage_scene_history", "format", "invalid"
     )
 
-    assert payload["actions"]["generation_override"]["settings"]["format"][
+    assert payload["actions"]["manage_scene_history"]["settings"]["format"][
         "choices_omitted"
     ]
     assert "catalogue-choice-" not in json.dumps(payload)
@@ -1215,13 +1220,13 @@ async def test_update_agent_setting_validation(settings_env):
 
     # invalid choice
     result = await help_settings.update_agent_setting(
-        "conversation", "generation_override", "format", "banana"
+        "summarizer", "manage_scene_history", "format", "banana"
     )
     assert "Invalid choice" in result
 
     # choice by label (case-insensitive) resolves to the value
     result = await help_settings.update_agent_setting(
-        "conversation", "generation_override", "format", "narrative"
+        "summarizer", "manage_scene_history", "format", "narrative"
     )
     assert result["new_value"] == "narrative"
 
@@ -1236,20 +1241,20 @@ async def test_update_agent_setting_validation(settings_env):
 async def test_update_agent_setting_combobox_keeps_a_value_outside_the_choices(
     settings_env,
 ):
-    agent = instance.get_agent("conversation")
-    agent.actions["generation_override"].config["format"].type = "combobox"
+    agent = instance.get_agent("summarizer")
+    agent.actions["manage_scene_history"].config["format"].type = "combobox"
 
-    payload = help_settings.read_agent_settings("conversation")
-    fmt = payload["actions"]["generation_override"]["settings"]["format"]
+    payload = help_settings.read_agent_settings("summarizer")
+    fmt = payload["actions"]["manage_scene_history"]["settings"]["format"]
     assert fmt["other_values"] == "accepted, the choices are suggestions"
     assert "read_only" not in fmt
 
     result = await help_settings.update_agent_setting(
-        "conversation", "generation_override", "format", "my-own-format"
+        "summarizer", "manage_scene_history", "format", "my-own-format"
     )
     assert result["new_value"] == "my-own-format"
     assert (
-        agent.actions["generation_override"].config["format"].value == "my-own-format"
+        agent.actions["manage_scene_history"].config["format"].value == "my-own-format"
     )
 
 

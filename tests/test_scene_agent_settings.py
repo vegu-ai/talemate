@@ -469,6 +469,32 @@ class TestSceneOverridesPayload:
         assert Agent._scene_overrides_payload(agent) == {}
 
 
+class TestDropUndeclaredFields:
+    def _overlay(self, tmp_path: Path) -> SceneAgentSettings:
+        overrides = SceneAgentSettings(filepath=tmp_path / "x.json")
+        overrides.set_value("resolver-test", "container", "fmt", "scene")
+        overrides.set_value("resolver-test", "container", "gone", "old")
+        overrides.set_value("resolver-test", "child", "key", "kept")
+        return overrides
+
+    def test_drops_only_keys_of_declared_actions(self, tmp_path: Path):
+        overrides = self._overlay(tmp_path)
+        agent = _ResolverAgent()
+
+        dropped = overrides.drop_undeclared_fields("resolver-test", agent.actions)
+
+        assert dropped == ["container.gone"]
+        assert overrides.get_value("resolver-test", "container", "fmt") == "scene"
+        assert overrides.get_value("resolver-test", "container", "gone") is UNSET
+        # an action missing from the agent may be a dynamic child of another config
+        assert overrides.get_value("resolver-test", "child", "key") == "kept"
+
+    def test_other_agents_are_untouched(self, tmp_path: Path):
+        overrides = self._overlay(tmp_path)
+        assert overrides.drop_undeclared_fields("someone-else", {}) == []
+        assert overrides.get_value("resolver-test", "container", "gone") == "old"
+
+
 # ---------------------------------------------------------------------------
 # Scene wiring helpers (resolve_link_on_load + apply_scene_settings_link)
 # ---------------------------------------------------------------------------

@@ -48,7 +48,7 @@ When the **Allow changes to settings** permission is on, it can also **change** 
 - Application settings in the game, appearance, and creator sections.
 - Inference parameters for one action preset or every preset in an existing inference group, including advanced sampling and stopping strings.
 
-So things like "switch the conversation format to Narrative", "lower the editor revision to only run on dialogue", "turn off auto save" or "override the visualizer style for this scene only" can be done right from the chat. Changes are applied immediately, the tool result records the applied values, and an open settings view picks them up live.
+So things like "switch the scene context format to Narrative", "lower the editor revision to only run on dialogue", "turn off auto save" or "override the visualizer style for this scene only" can be done right from the chat. Changes are applied immediately, the tool result records the applied values, and an open settings view picks them up live.
 
 If an agent cannot apply a saved change, Help reports that it was saved but is
 not yet applied. Settings shows **Apply pending — press Save to retry** and

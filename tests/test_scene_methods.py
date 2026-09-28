@@ -18,6 +18,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 import talemate.emit.async_signals as async_signals
+import talemate.instance as instance
 from conftest import MockScene, bootstrap_scene
 from talemate.character import Character
 from talemate.exceptions import GenerationCancelled
@@ -1733,12 +1734,11 @@ class TestSimpleProperties:
     def test_auto_backup_is_always_false(self, real_scene):
         assert real_scene.auto_backup is False
 
-    def test_conversation_format_property_resolves(self, real_scene):
-        # Pulls from instance.get_agent("conversation").conversation_format.
-        # We just need the access to succeed and return a non-empty string.
-        fmt = real_scene.conversation_format
-        assert fmt
-        assert isinstance(fmt, str)
+    def test_conversation_format_reads_the_summarizer(self, real_scene):
+        assert real_scene.conversation_format == "movie_script"
+        summarizer = instance.get_agent("summarizer")
+        summarizer.actions["manage_scene_history"].config["format"].value = "narrative"
+        assert real_scene.conversation_format == "narrative"
 
 
 # ---------------------------------------------------------------------------

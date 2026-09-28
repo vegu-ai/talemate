@@ -10,6 +10,7 @@ import { agentsAt } from './helpers/effortAgents';
 import { effortMode } from '@/utils/knowledgeEffort';
 import { sceneIdentityOf, SceneAgentOverridesCoordinator } from '@/utils/sceneAgentOverrides';
 import { perspectivesEnabled } from '@/utils/sceneSettings';
+import { replyAfterAll } from '@/utils/writeReply';
 
 const aiAgent = readSource(fileURLToPath(new URL('../../src/components/AIAgent.vue', import.meta.url)));
 const talemateApp = readSource(fileURLToPath(new URL('../../src/components/TalemateApp.vue', import.meta.url)));
@@ -95,18 +96,18 @@ describe('the drawer writes a batch in one save', () => {
         };
     }
     it('sets base values with one saveAgent and overridden keys through the override slice', () => {
-        const applyActionValues = lift(aiAgent, 'applyActionValues', 'AIAgent.vue');
+        const applyActionValues = lift(aiAgent, 'applyActionValues', 'AIAgent.vue', { replyAfterAll });
         const agent = standardAgents()[0];
         const self = drawer(agent);
         expect(applyActionValues.call(self, agent, 'character_knowledge', { config: { perspective_filter: false, memory_pass: true, unknown: true } })).toBe(true);
         expect(agent.actions.character_knowledge.config.perspective_filter.value).toBe(false);
         expect(self.saveAgent).toHaveBeenCalledTimes(1);
         expect(self.saveSceneOverrideSlice).toHaveBeenCalledWith(agent, 'character_knowledge',
-            expect.objectContaining({ config: expect.objectContaining({ memory_pass: { value: true } }) }));
+            expect.objectContaining({ config: expect.objectContaining({ memory_pass: { value: true } }) }), null);
         expect(applyActionValues.call(self, agent, 'missing', { enabled: false })).toBe(false);
     });
     it('saves nothing when every value already matches', () => {
-        const applyActionValues = lift(aiAgent, 'applyActionValues', 'AIAgent.vue');
+        const applyActionValues = lift(aiAgent, 'applyActionValues', 'AIAgent.vue', { replyAfterAll });
         const agent = standardAgents()[0];
         const self = drawer(agent);
         applyActionValues.call(self, agent, 'character_knowledge', { enabled: true, config: { perspective_filter: true } });
@@ -214,7 +215,7 @@ describe('the drawer writes a batch in one save', () => {
         expect(self.pendingEffort).toBeNull();
     });
     it('writes an overridden enable flag only when it changes', () => {
-        const applyActionValues = lift(aiAgent, 'applyActionValues', 'AIAgent.vue');
+        const applyActionValues = lift(aiAgent, 'applyActionValues', 'AIAgent.vue', { replyAfterAll });
         const agent = standardAgents()[0];
         const self = {
             saveAgent: vi.fn(), saveSceneOverrideSlice: vi.fn(),
@@ -224,7 +225,7 @@ describe('the drawer writes a batch in one save', () => {
         applyActionValues.call(self, agent, 'character_knowledge', { enabled: true });
         expect(self.saveSceneOverrideSlice).not.toHaveBeenCalled();
         applyActionValues.call(self, agent, 'character_knowledge', { enabled: false });
-        expect(self.saveSceneOverrideSlice).toHaveBeenCalledWith(agent, 'character_knowledge', expect.objectContaining({ enabled: false }));
+        expect(self.saveSceneOverrideSlice).toHaveBeenCalledWith(agent, 'character_knowledge', expect.objectContaining({ enabled: false }), null);
     });
 });
 
@@ -283,11 +284,11 @@ describe('the app delegates the batch write', () => {
         const drawerRef = { applyActionValues: vi.fn(() => true) };
         const self = { getAgents: () => [agent], $refs: { aiAgent: drawerRef } };
         expect(applyAgentValues.call(self, 'conversation', 'character_knowledge', { config: { memory_pass: true } })).toBe(true);
-        expect(drawerRef.applyActionValues).toHaveBeenCalledWith(agent, 'character_knowledge', { config: { memory_pass: true } });
+        expect(drawerRef.applyActionValues).toHaveBeenCalledWith(agent, 'character_knowledge', { config: { memory_pass: true } }, null);
         expect(applyAgentValues.call(self, 'narrator', 'character_knowledge', {})).toBe(false);
     });
     it('provides both entry points to the tree', () => {
-        expect(talemateApp).toContain('applyAgentValues: (agentName, actionName, values) => this.applyAgentValues(agentName, actionName, values),');
+        expect(talemateApp).toContain('applyAgentValues: (agentName, actionName, values, reply) => this.applyAgentValues(agentName, actionName, values, reply),');
         expect(talemateApp).toContain('queueKnowledgeEffort: (stop, mode, options) => this.$refs.aiAgent.queueEffort(stop, mode, options),');
     });
 });

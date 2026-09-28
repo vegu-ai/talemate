@@ -339,9 +339,18 @@ class TestSceneOverridesPayload:
         payload = type(agent)._scene_overrides_payload(agent)
         assert "enabled" not in payload["actions"]["locked"]
 
+    def test_drops_undeclared_config_entry_of_a_declared_action(self):
+        agent = _payload_agent(
+            {"container": {"config": {"fmt": {"value": "scene"}, "gone": {"value": 1}}}}
+        )
+        config = type(agent)._scene_overrides_payload(agent)["actions"]["container"][
+            "config"
+        ]
+        assert config == {"fmt": {"value": "scene"}}
+
     def test_undeclared_keys_pass_through(self):
-        """Dynamic children are installed per config, so an unknown key is not
-        proof the field is gone."""
+        """Dynamic children are installed per config, so an unknown action is
+        not proof the field is gone."""
         agent = _payload_agent(
             {"child": {"enabled": False, "config": {"api_key": {"value": "keep"}}}}
         )

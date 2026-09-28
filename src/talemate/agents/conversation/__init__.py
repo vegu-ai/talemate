@@ -22,6 +22,7 @@ from talemate.knowledge.backlog import cancel_stops_other_questions
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.scene_message import CharacterMessage
 from talemate.agents.utils import handle_empty_response_limit
+from talemate.ux.schema import Action
 
 from talemate.agents.base import (
     Agent,
@@ -92,35 +93,20 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
                 container=True,
                 icon="mdi-atom-variant",
                 label="Generation",
+                note=AgentActionNote(
+                    icon="mdi-information-outline",
+                    color="primary",
+                    text="The scene context format (Screenplay, Chat, Narrative, AI Aware) moved to the Summarizer agent's Scene History section. It applies to the scene context of every agent.",
+                    actions=[
+                        Action(
+                            action_name="openAgentSettings",
+                            arguments=["summarizer", "manage_scene_history"],
+                            label="Open Scene History",
+                            icon="mdi-arrow-split-vertical",
+                        )
+                    ],
+                ),
                 config={
-                    "format": AgentActionConfig(
-                        type="text",
-                        label="Format",
-                        description="The generation format of the scene progression, as seen by the AI. Has no direct effect on your view of the scene, but will affect the way the AI perceives the scene and its characters, leading to changes in the response, for better or worse.",
-                        choices=[
-                            {"label": "Screenplay", "value": "movie_script"},
-                            {"label": "Chat (legacy)", "value": "chat"},
-                            {
-                                "label": "Narrative",
-                                "value": "narrative",
-                            },
-                            {
-                                "label": "AI Aware",
-                                "value": "ai_aware",
-                            },
-                        ],
-                        value="movie_script",
-                        note_on_value={
-                            "narrative": AgentActionNote(
-                                color="primary",
-                                text="Will attempt to generate flowing, novel-like prose with scene intent awareness and character goal consideration. A reasoning model is STRONGLY recommended. Experimental and more prone to generate out of turn character actions and dialogue.",
-                            ),
-                            "ai_aware": AgentActionNote(
-                                color="primary",
-                                text="Characters are aware they are AI personas conversing with the user. Focused on having a conversation rather than progressing a scene.",
-                            ),
-                        },
-                    ),
                     "length": AgentActionConfig(
                         type="number",
                         label="Generation Length (tokens)",
@@ -216,35 +202,12 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
         self.actions = ConversationAgent.init_actions()
 
     @property
-    def conversation_format(self):
-        if self.resolve_enabled("generation_override"):
-            return self.resolve_config("generation_override", "format")
-        return "movie_script"
-
-    @property
-    def conversation_format_label(self):
-        value = self.conversation_format
-
-        choices = self.actions["generation_override"].config["format"].choices
-
-        for choice in choices:
-            if choice["value"] == value:
-                return choice["label"]
-
-        return value
-
-    @property
     def agent_details(self) -> dict:
         details = {
             "client": AgentDetail(
                 icon="mdi-network-outline",
                 value=self.client.name if self.client else None,
                 description="The client to use for prompt generation",
-            ).model_dump(),
-            "format": AgentDetail(
-                icon="mdi-format-float-none",
-                value=self.conversation_format_label,
-                description="Generation format of the scene context, as seen by the AI",
             ).model_dump(),
         }
 
@@ -332,7 +295,7 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
             inject_instructions_emission.dynamic_instructions
         )
 
-        conversation_format = self.conversation_format
+        conversation_format = scene.conversation_format
         prompt = Prompt.get(
             f"conversation.dialogue-{conversation_format}",
             vars={
@@ -465,9 +428,8 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
         if total_result.startswith(":\n") or total_result.startswith(": "):
             total_result = total_result[2:]
 
-        conversation_format = self.conversation_format
-
         scene = character.actor.scene
+        conversation_format = scene.conversation_format
         other_names = [n for n in scene.character_names if n != character.name]
 
         if conversation_format == "narrative":

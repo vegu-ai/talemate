@@ -226,6 +226,34 @@ class ContextHistoryMixin:
                 "For v0.35 behavior use: best fit off, both ratios 50, budget 0, enforce boundary on."
             ),
             config={
+                "format": AgentActionConfig(
+                    type="text",
+                    label="Format",
+                    description="The generation format of the scene progression, as seen by the AI. Has no direct effect on your view of the scene, but will affect the way the AI perceives the scene and its characters, leading to changes in the response, for better or worse.",
+                    choices=[
+                        {"label": "Screenplay", "value": "movie_script"},
+                        {"label": "Chat (legacy)", "value": "chat"},
+                        {
+                            "label": "Narrative",
+                            "value": "narrative",
+                        },
+                        {
+                            "label": "AI Aware",
+                            "value": "ai_aware",
+                        },
+                    ],
+                    value="movie_script",
+                    note_on_value={
+                        "narrative": AgentActionNote(
+                            color="primary",
+                            text="Will attempt to generate flowing, novel-like prose with scene intent awareness and character goal consideration. A reasoning model is STRONGLY recommended. Experimental and more prone to generate out of turn character actions and dialogue.",
+                        ),
+                        "ai_aware": AgentActionNote(
+                            color="primary",
+                            text="Characters are aware they are AI personas conversing with the user. Focused on having a conversation rather than progressing a scene.",
+                        ),
+                    },
+                ),
                 "max_budget": AgentActionConfig(
                     type="number",
                     label="Max. Budget",
@@ -380,6 +408,10 @@ class ContextHistoryMixin:
         )
 
     # --- Properties ---
+
+    @property
+    def scene_history_format(self) -> str:
+        return self.resolve_config("manage_scene_history", "format")
 
     @property
     def scene_history_enforce_boundary(self) -> bool:

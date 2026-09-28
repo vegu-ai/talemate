@@ -7,6 +7,7 @@
         {{ actionSchema.warning }}
       </p>
     </div>
+    <UxNote v-if="actionSchema.note" :note="actionSchema.note" class="mt-2 mb-8" />
 
     <!-- Container-level enabled override — only renders when the action
          opts in via enabled_scene_overridable AND can actually be disabled
@@ -62,6 +63,7 @@
         {{ actionSchema.warning }}
       </p>
     </div>
+    <UxNote v-if="actionSchema.note" :note="actionSchema.note" class="mt-2 mb-8" />
     <v-alert density="compact" variant="text" color="muted">
       <span class="text-body-small">This section has no scene-overridable fields.</span>
     </v-alert>
@@ -73,9 +75,10 @@ import { actionHasOverridable, effectiveConditionMet, hasEnabledOverride } from 
 import { worldStatePinField } from '@/utils/worldStatePinWarning';
 import UxField from './UxField.vue';
 import SceneOverrideToggle from './SceneOverrideToggle.vue';
+import UxNote from './UxNote.vue';
 
 export default {
-  components: { UxField, SceneOverrideToggle },
+  components: { UxField, SceneOverrideToggle, UxNote },
   props: {
     actionKey: { type: String, required: true },
     // Live mutable global action (deep clone owned by the modal). Read for

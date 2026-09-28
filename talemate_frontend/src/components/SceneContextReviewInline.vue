@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="d-flex align-center ga-3 mb-4 px-2 pt-2">
+    <div class="d-flex align-center ga-3 px-2 pt-2" :class="formatField ? 'mb-1' : 'mb-4'">
       <v-select
         v-model="selectedCharacter"
         :items="characterOptions"
@@ -10,8 +10,39 @@
         hide-details
         style="max-width: 320px"
       />
+      <v-select
+        v-if="formatField"
+        :model-value="shownFormat"
+        :items="formatChoices"
+        label="Format"
+        variant="outlined"
+        density="compact"
+        hide-details
+        :loading="formatPending !== null"
+        :disabled="formatPending !== null || !connected"
+        style="max-width: 220px"
+        data-testid="scene-context-format"
+        @update:model-value="setFormat"
+      />
       <v-btn variant="text" prepend-icon="mdi-refresh" :loading="loading" @click="fetchPreview">Refresh</v-btn>
     </div>
+    <div v-if="formatField" class="text-body-small text-muted px-2 mb-4" data-testid="scene-context-format-hint">
+      <v-icon size="x-small" class="mr-1">{{ formatOverridden ? 'mdi-movie-open-outline' : 'mdi-earth' }}</v-icon>
+      Format applies to the scene context of every agent. A change is saved at once to
+      <span class="text-primary">{{ formatOverridden ? "this scene's override" : 'the global value' }}</span>.
+    </div>
+    <v-alert
+      v-if="formatError"
+      type="error"
+      variant="outlined"
+      density="compact"
+      closable
+      class="mx-2 mb-3"
+      data-testid="scene-context-format-error"
+      @click:close="formatError = null"
+    >
+      {{ formatError }}
+    </v-alert>
     <v-alert
       v-if="perceptionStatus"
       :type="perceptionStatus.state === 'failed' ? 'warning' : 'info'"
@@ -297,6 +328,7 @@
 
 <script>
 import { SceneTextParser } from '../utils/sceneMessageRenderer.js';
+import { configOverrideActive, effectiveConfigValue } from '@/constants/sceneAgentSettings';
 import { v4 as uuidv4 } from 'uuid';
 
 const SECTION_COLORS = {
@@ -326,7 +358,7 @@ export default {
     sceneId: { type: [String, Number], default: null },
     connected: { type: Boolean, default: true },
   },
-  inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'appConfig'],
+  inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'appConfig', 'applyAgentValues'],
   data() {
     return {
       loading: false,
@@ -353,6 +385,11 @@ export default {
       },
       savedValues: null,
       overridesInitialized: false,
+      // the format a write was sent for, until the backend answers it
+      formatPending: null,
+      formatError: null,
+      // the format the shown preview was requested under
+      previewFormat: null,
     };
   },
   computed: {
@@ -375,6 +412,24 @@ export default {
     },
     configMeta() {
       return this.agentStatus?.summarizer?.actions?.manage_scene_history?.config || null;
+    },
+    formatField() {
+      return this.configMeta?.format || null;
+    },
+    formatChoices() {
+      return (this.formatField?.choices || []).map(choice => ({ title: choice.label, value: choice.value }));
+    },
+    formatOverridden() {
+      return configOverrideActive(this.agentStatus?.summarizer?.scene_overrides, 'manage_scene_history', 'format');
+    },
+    // what the loaded scene runs on: the scene override when one is set, else the global value
+    confirmedFormat() {
+      const summarizer = this.agentStatus?.summarizer;
+      if (!summarizer?.actions) return null;
+      return effectiveConfigValue(summarizer.actions, summarizer.scene_overrides, 'manage_scene_history.config.format') ?? null;
+    },
+    shownFormat() {
+      return this.formatPending ?? this.confirmedFormat;
     },
     bestFitNote() {
       const noteOnValue = this.configMeta?.best_fit?.note_on_value;
@@ -411,6 +466,11 @@ export default {
     },
   },
   watch: {
+    // a change made elsewhere (the Summarizer settings, another window)
+    confirmedFormat(value) {
+      if (this.formatPending !== null || value === this.previewFormat) return;
+      if (this.visible && this.connected && this.preview) this.fetchPreview();
+    },
     selectedCharacter() {
       if (this.visible) {
         this.resetRequestOwnership({ clearPreview: true });
@@ -423,6 +483,8 @@ export default {
       if (this.visible && this.connected) this.fetchPreview();
     },
     connected(value) {
+      // an answer cannot arrive on a new socket; the next status is the truth
+      if (!value) this.formatPending = null;
       this.resetRequestOwnership({ clearPreview: !value });
       if (value && this.visible) this.fetchPreview();
     },
@@ -511,6 +573,7 @@ export default {
       this.loading = true;
       this.error = null;
       this.perceptionStatus = null;
+      this.previewFormat = this.confirmedFormat;
       const requestId = uuidv4();
       const requestedCharacter = this.selectedCharacter;
       const requestedSceneId = this.sceneId;
@@ -578,6 +641,30 @@ export default {
         this.loading = false;
         this.clearPreviewHandler();
       }
+    },
+
+    setFormat(value) {
+      if (value === this.shownFormat || this.formatPending !== null) return;
+      this.formatPending = value;
+      this.formatError = null;
+      const done = (error, applyFailed = false) => {
+        if (this.formatPending !== value) return;
+        this.formatPending = null;
+        if (error) {
+          // a failed apply stored the value and its message says so
+          this.formatError = applyFailed ? error : `The format was not saved: ${error}`;
+          return;
+        }
+        if (this.visible && this.connected) {
+          this.fetchPreview();
+          this.previewFormat = value;
+        }
+      };
+      const sent = this.applyAgentValues('summarizer', 'manage_scene_history', { config: { format: value } }, {
+        onComplete: () => done(null),
+        onError: (message, applyFailed) => done(message || 'unknown error', applyFailed),
+      });
+      if (!sent) done('The Summarizer agent is not available.');
     },
 
     applyConfig() {

@@ -101,14 +101,12 @@ def agents():
     scene = MockScene()
     agents_dict = bootstrap_scene(scene)
 
-    # Set conversation format to "chat" for deterministic token counting
-    conversation = agents_dict["conversation"]
-    conversation.actions["generation_override"].enabled = True
-    conversation.actions["generation_override"].config["format"].value = "chat"
+    # Set the scene context format to "chat" for deterministic token counting
+    summarizer = agents_dict["summarizer"]
+    summarizer.actions["manage_scene_history"].config["format"].value = "chat"
 
     # Disable best-fit mode by default so standard-path tests are deterministic.
     # TestBestFit explicitly re-enables it via _enable_best_fit().
-    summarizer = agents_dict["summarizer"]
     summarizer.actions["manage_scene_history"].config["best_fit"].value = False
 
     return agents_dict

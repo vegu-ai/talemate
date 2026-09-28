@@ -135,6 +135,7 @@ class AgentAction(pydantic.BaseModel):
     label: str
     description: str = ""
     warning: str = ""
+    note: AgentActionNote | None = None
     config: dict[str, AgentActionConfig] | None = None
     condition: AgentActionConditional | None = None
     container: bool = False
@@ -492,7 +493,9 @@ class Agent(ABC):
         Entries the resolvers ignore are filtered out: shipping them would make
         the frontend seed its override buffer with values the following save
         strips, so the echo would come back smaller than what was sent and read
-        as a conflicting edit from elsewhere.
+        as a conflicting edit from elsewhere. That includes a config key its
+        declared action no longer has (a field removed since the file was
+        written): no control renders it, so it could never be cleared.
         """
         if not agent:
             return {}
@@ -518,7 +521,7 @@ class Agent(ABC):
             config_override = action_override.get("config") or {}
             for config_key in list(config_override.keys()):
                 field = declared.get(config_key)
-                if field is not None and not field.scene_overridable:
+                if field is None or not field.scene_overridable:
                     config_override.pop(config_key)
 
         return payload

@@ -137,9 +137,9 @@
     AI optionally selects and rewrites retrieved memories.
 - path: user-guide/agents/conversation/settings.md
   title: Settings
-  summary: Conversation settings for generation format, instructions, scene intent, writing style and long-term memory. Character
-    Knowledge offers effort presets, presence-filtered history and optional AI memory refinement; return bridges and Arrival
-    Notes add no request.
+  summary: 'Conversation settings: generation format moved to Summarizer; instructions, scene intent, writing style and long-term
+    memory. Character Knowledge offers effort presets, presence-filtered history and optional AI memory refinement; return
+    bridges and Arrival Notes add no request.'
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
   summary: Autocomplete partial text with Ctrl/Cmd+Enter in dialogue, message editing, attributes, details, descriptions,
@@ -257,10 +257,10 @@
     investigation. Deep analysis can retrieve additional historical context but may add many prompts.'
 - path: user-guide/agents/summarizer/settings.md
   title: Settings
-  summary: 'Summarization thresholds, methods and instructions; audience-view analysis; Character Perspectives settings: Analyze
-    player perspective, Automatically repair analysis, and Rewrite hidden acts as observable traces (off by default, same
-    request, possible token/time cost). Covers default sentence rewrite regions, layered history, scene analysis and caching,
-    character evidence, history budgets and best-fit selection.'
+  summary: 'Summarization threshold, method, instructions; audience-view analysis; Character Perspectives: Analyze player
+    perspective, Automatically repair analysis, Rewrite hidden acts: observable traces, same request, token/time cost; default
+    sentence rewrite regions; layered history; scene analysis caching; character evidence; history budgets; best-fit selection;
+    scene context format: Screenplay format, Chat format, Narrative format, AI Aware format; change dialogue format.'
 - path: user-guide/agents/visualizer/backends/a1111.md
   title: AUTOMATIC1111
   summary: Legacy AUTOMATIC1111 text-to-image backend setup with API URL, steps, sampler, schedule, CFG, keyword/descriptive
@@ -1042,7 +1042,8 @@
 - path: user-guide/prompts/context-history-review.md
   title: Scene Context History Review
   summary: Preview reader or character context without generation. Shows selected history, existing analysis evidence, presence/audience/budget
-    exclusions with capped samples, and pending perception status. Budget edits remain local until Apply.
+    exclusions with capped samples, and pending perception status. Budget edits remain local until Apply; the scene context
+    Format selector (Screenplay, Chat, Narrative, AI Aware) saves at once.
 - path: user-guide/prompts/deduplication.md
   title: Prompt Deduplication
   summary: Prompt deduplication removes near-duplicate long lines but is off by default because it can damage structured content

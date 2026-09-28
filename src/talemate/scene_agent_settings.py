@@ -23,7 +23,7 @@ The on-disk layout looks like:
                     "generation_override": {
                         "enabled": false,
                         "config": {
-                            "format": {"value": "narrative"},
+                            "jiggle": {"value": 0.2},
                             "length": {"value": 384}
                         }
                     }
@@ -47,6 +47,7 @@ import pydantic
 import structlog
 
 if TYPE_CHECKING:
+    from talemate.agents.base import AgentAction
     from talemate.tale_mate import Scene
 
 log = structlog.get_logger("talemate.scene_agent_settings")
@@ -224,6 +225,31 @@ class SceneAgentSettings(pydantic.BaseModel):
             self.agents.pop(agent_type, None)
             return
         self.agents[agent_type] = AgentOverride(**override)
+
+    def drop_undeclared_fields(
+        self, agent_type: str, actions: dict[str, AgentAction]
+    ) -> list[str]:
+        """Remove config values whose declared action no longer declares them,
+        returning ``action.config`` names of what was removed.
+
+        An action missing from ``actions`` is left alone: dynamic children are
+        only installed for the current config, so a missing action is not proof
+        that it is gone.
+        """
+        agent = self.agents.get(agent_type)
+        if not agent:
+            return []
+        dropped = []
+        for action_key, action_override in agent.actions.items():
+            action = actions.get(action_key)
+            if action is None:
+                continue
+            declared = action.config or {}
+            for config_key in list(action_override.config):
+                if config_key not in declared:
+                    action_override.config.pop(config_key)
+                    dropped.append(f"{action_key}.{config_key}")
+        return dropped
 
 
 # ----------------------------------------------------------------------

@@ -522,8 +522,8 @@ class Scene(Emitter):
         return EpisodesManager(self)
 
     @property
-    def conversation_format(self):
-        return get_agent("conversation").conversation_format
+    def conversation_format(self) -> str:
+        return get_agent("summarizer").scene_history_format
 
     @property
     def writing_style(self) -> world_state_templates.WritingStyle | None:

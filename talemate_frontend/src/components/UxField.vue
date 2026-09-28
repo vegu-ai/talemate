@@ -322,10 +322,7 @@
   <template v-if="field.note != null">
     <!-- mb-4: the next field's slider renders its thumb label always, which
          would otherwise overlap the note -->
-    <v-alert variant="outlined" density="compact" :color="field.note.color || 'muted'" class="mb-4" :icon="field.note.icon">
-      <div class="text-body-small text-mutedheader">{{ field.note.title || field.label }}</div>
-      <span class="text-muted text-body-small">{{ field.note.text }}</span>
-    </v-alert>
+    <UxNote :note="{ ...field.note, title: field.note.title || field.label }" class="mb-4" />
   </template>
   <template v-else-if="field.note_on_value != null">
     <template v-for="(note, noteKey) in field.note_on_value" :key="noteKey">
@@ -345,6 +342,7 @@ import ConfigWidgetTable from './ConfigWidgetTable.vue';
 import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
 import ConfigWidgetWeights from './ConfigWidgetWeights.vue';
 import GraduatedSlider from './GraduatedSlider.vue';
+import UxNote from './UxNote.vue';
 import { rowsFieldForTemplateType } from '@/utils/templateMappings';
 
 // Renders a single uniform UX field definition (talemate.ux.schema.Field)
@@ -354,7 +352,7 @@ import { rowsFieldForTemplateType } from '@/utils/templateMappings';
 // override is inactive) and the client extra-field renderer
 // ([[ClientConfigEditor.vue]]).
 export default {
-  components: { ConfigWidgetTable, ConfigWidgetUnifiedApiKey, ConfigWidgetWeights, GraduatedSlider },
+  components: { ConfigWidgetTable, ConfigWidgetUnifiedApiKey, ConfigWidgetWeights, GraduatedSlider, UxNote },
   props: {
     field: { type: Object, required: true },
     modelValue: { type: null, default: null },

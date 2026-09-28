@@ -10,8 +10,15 @@ The context review panel is available as the **Scene Context** tab within the [P
 2. Click the **Scene Context** tab
 3. The initial context preview loads automatically
 4. Choose **Scene (default)** or an active character under **View context for**
+5. Choose the scene context **Format** if you want to see the history in another format
 
 ![Character context preview with the exclusions sidebar](../../img/0.40.0/context-history-review-overview.png)
+
+## Format
+
+The **Format** selector next to **View context for** sets the [Summarizer's scene context format](/talemate/user-guide/agents/summarizer/settings/#format) (Screenplay, Chat, Narrative or AI Aware). Unlike the budget controls, a format change is saved at once and applies to the scene context of every agent. The line under the selector tells you where it is saved: to this scene's override when the scene overrides the format, otherwise to the global value. The preview refreshes after the change is saved. If the change cannot be saved, the selector goes back to the saved format and an error explains why.
+
+The selector and the Summarizer settings page always show the same value: a change in one shows in the other without a reload.
 
 ## Character previews
 

@@ -1105,7 +1105,7 @@ export default {
       getAgents: () => this.getAgents(),
       toggleAgentAction: (agentName, actionName) => this.toggleAgentAction(agentName, actionName),
       toggleAgentConfig: (agentName, actionName, configName) => this.toggleAgentConfig(agentName, actionName, configName),
-      applyAgentValues: (agentName, actionName, values) => this.applyAgentValues(agentName, actionName, values),
+      applyAgentValues: (agentName, actionName, values, reply) => this.applyAgentValues(agentName, actionName, values, reply),
       applySceneAgentValues: (entries, label) => this.applySceneAgentValues(entries, label),
       clearSceneAgentValues: (entries) => this.clearSceneAgentValues(entries),
       sceneOverridesState: () => this.$refs.aiAgent?.overridesState || { busy: false, error: null },
@@ -1767,8 +1767,8 @@ export default {
         config.clients = buildNameKeyedPayload(clients, (client) => ({ ...client }));
       }, { label: 'clients' });
     },
-    saveAgents(agents) {
-      this.saveAppConfig((config) => {
+    saveAgents(agents, reply = null) {
+      const requestId = this.saveAppConfig((config) => {
         config.agents = buildNameKeyedPayload(agents, (agent) => {
           const requiresLLM = agent.data?.requires_llm_client || false;
 
@@ -1797,7 +1797,8 @@ export default {
             client: client,
           }
         });
-      }, { label: 'agents' });
+      }, { label: 'agents', onComplete: reply?.onComplete, onError: reply?.onError });
+      if (!requestId) reply?.onError('The settings could not be sent.');
     },
     requestSceneAssets(asset_ids) {
       if (this._sceneAssetsRequester) {
@@ -1879,10 +1880,10 @@ export default {
       this.$refs.aiAgent.toggleAction(agent, actionName, action);
       return true;
     },
-    applyAgentValues(agentName, actionName, values) {
+    applyAgentValues(agentName, actionName, values, reply = null) {
       const agent = this.getAgents().find((candidate) => candidate.name === agentName);
       if (!agent?.actions?.[actionName]) return false;
-      return this.$refs.aiAgent.applyActionValues(agent, actionName, values);
+      return this.$refs.aiAgent.applyActionValues(agent, actionName, values, reply);
     },
     // The knowledge hub's scene-only writer: sparse patches against the scene
     // overlay, never the global agent values.

@@ -11,6 +11,7 @@ from talemate.decisions import (
     decision_service,
 )
 from talemate.util.dedupe import compile_text_to_sentences
+from talemate.util.dialogue import split_passages_dialogue_and_prose
 from talemate.world_state.templates.decision_checks import DecisionCheck
 from .findings import decision_findings_adapter
 from .revision import RevisionInformation, _strip_character_prefix, revision_context
@@ -46,22 +47,37 @@ class DecisionChecksMixin:
             and not self._revision_disabled_by_context()
         )
 
-    def decision_check_state(self, info: RevisionInformation) -> dict[str, object]:
+    def decision_check_state(
+        self, info: RevisionInformation, checks: list[DecisionCheck]
+    ) -> dict[str, object]:
         scene = self.scene
         text, _ = _strip_character_prefix(info.text, info.character)
         writing_style = scene.writing_style
         character_name = info.character.name if info.character else None
+        sentences = [sentence for sentence, _ in compile_text_to_sentences(text)]
+        passages = [
+            {"id": f"s{index}", "text": sentence}
+            for index, sentence in enumerate(sentences, 1)
+        ]
+        scopes = {check.scope for check in checks} - {"all"}
+        if scopes and text.count('"') % 2:
+            # an odd quote count flips dialogue and prose after the stray quote
+            for passage in passages:
+                passage["no_reliable_split"] = True
+        elif scopes:
+            for passage, parts in zip(
+                passages, split_passages_dialogue_and_prose(text, sentences)
+            ):
+                passage.update(
+                    {scope: getattr(parts, scope) for scope in sorted(scopes)}
+                )
         return {
             "text": info.text,
-            "passages": [
-                {"id": f"s{index}", "text": sentence}
-                for index, (sentence, _) in enumerate(
-                    compile_text_to_sentences(text), 1
-                )
-            ],
+            "speaker": character_name,
+            "passages": passages,
             "history": []
             if info.summarization_history is not None
-            else list(reversed(self.revision_repetition_history())),
+            else list(reversed(self.revision_repetition_history(with_speakers=True))),
             "writing_style": writing_style.render(scene, character_name)
             if writing_style
             else "",
@@ -153,7 +169,7 @@ class DecisionChecksMixin:
             service=decision_service,
             variables={
                 "info": info,
-                "decision_state": partial(self.decision_check_state, info),
+                "decision_state": partial(self.decision_check_state, info, checks),
                 "revision_method": method,
                 "decision_checks": checks,
             },

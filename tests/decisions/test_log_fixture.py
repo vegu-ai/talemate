@@ -148,7 +148,7 @@ async def per_check_thresholds(stage):
         default_writing_style_decision_checks,
     )
 
-    checks = default_writing_style_decision_checks()
+    checks = default_writing_style_decision_checks()[:2]
     checks[0].threshold = 0.91
     checks[1].threshold = 0.76
 
@@ -203,7 +203,7 @@ async def readable_checks(stage):
         default_writing_style_decision_checks,
     )
 
-    checks = default_writing_style_decision_checks()
+    checks = default_writing_style_decision_checks()[:2]
     checks[0].threshold = 0.91
     checks[1].threshold = 0.76
 
@@ -493,6 +493,108 @@ async def action_failed(stage):
     return route.frames
 
 
+EDITOR_POLICY = (
+    Path(__file__).parents[2]
+    / "src/talemate/prompts/templates/editor/decision-checks.jinja2"
+)
+
+
+def scoped_check(name, question_id, scope):
+    from talemate.world_state.templates.decision_checks import DecisionCheck
+
+    return DecisionCheck(
+        name=name,
+        scope=scope,
+        questions=[
+            {
+                "id": question_id,
+                "question": "Does passage {passage_id} pad the moment?",
+                "instructions": "Cut the padding.",
+            }
+        ],
+    )
+
+
+async def scoped_checks(stage):
+    """A prose-only check skips the passage that is only dialogue."""
+
+    async def answer(request):
+        return ProviderResponse(
+            answers={key: {"type": "noul", "p_true": 0.2} for key in request.questions},
+            response_body={},
+        )
+
+    stage.provider.handler = answer
+    service, route = stage.start()
+    await stage.create(
+        uid="editor.scoped-checks",
+        source=EDITOR_POLICY.read_text(),
+        service=service,
+        variables={
+            "decision_checks": [scoped_check("Filler prose", "filler", "prose")],
+            "decision_state": lambda: {
+                "text": '"Mind the third rung." The ladder shifted.',
+                "passages": [
+                    {"id": "s1", "text": '"Mind the third rung."', "prose": ""},
+                    {
+                        "id": "s2",
+                        "text": "The ladder shifted.",
+                        "prose": "The ladder shifted.",
+                    },
+                ],
+                "history": [],
+            },
+            "revision_method": "rewrite",
+            "info": SimpleNamespace(text='"Mind the third rung." The ladder shifted.'),
+        },
+    ).run()
+    stage.provider.handler = None
+    await route.send("snapshot")
+    return route.frames
+
+
+async def nothing_in_scope(stage):
+    """Every question is skipped, so the outcome is on the invocation."""
+    service, route = stage.start()
+    await stage.create(
+        uid="editor.nothing-in-scope",
+        source=EDITOR_POLICY.read_text(),
+        service=service,
+        variables={
+            "decision_checks": [scoped_check("Filler prose", "filler", "prose")],
+            "decision_state": lambda: {
+                "text": '"Mind the third rung."',
+                "passages": [
+                    {"id": "s1", "text": '"Mind the third rung."', "prose": ""}
+                ],
+                "history": [],
+            },
+            "revision_method": "rewrite",
+            "info": SimpleNamespace(text='"Mind the third rung."'),
+        },
+    ).run()
+    await route.send("snapshot")
+    return route.frames
+
+
+async def outcome_before_request(stage):
+    """A policy records an invocation outcome, then asks; the row keeps both."""
+    stage.answer(0.74)
+    service, route = stage.start()
+    await stage.create(
+        uid="editor.outcome-before-request",
+        source=(
+            '{{ decision_outcome(none, "note", reason="checked_first") }}'
+            + DECIDE
+            + '{{ decision_outcome(r, "no_action", reason="below_threshold", threshold=0.8) }}'
+            + "{{ decision_result(info.text) }}"
+        ),
+        service=service,
+    ).run()
+    await route.send("snapshot")
+    return route.frames
+
+
 SCENARIOS = (
     below_threshold,
     per_check_thresholds,
@@ -513,6 +615,9 @@ SCENARIOS = (
     no_request,
     action_denied,
     action_failed,
+    scoped_checks,
+    nothing_in_scope,
+    outcome_before_request,
 )
 
 

@@ -178,4 +178,36 @@ describe('writing style decision checks', () => {
         await click('Cancel');
         expect(model.value[0].questions).toEqual(defaults()[0].questions);
     });
+
+    it('sets the scope of a check and shows it in the list', async () => {
+        const { model } = setup(defaults());
+        expect(host.textContent).not.toContain('Prose only');
+        await click('Edit');
+        expect(host.querySelector('input[aria-label="Applies to"]').value).toBe('');
+        await fill('Applies to', 'prose');
+        await click('Apply check');
+        expect(model.value[0].scope).toBe('prose');
+        expect(model.value[1].scope).toBeUndefined();
+        expect(host.textContent).toContain('Prose only');
+        expect(host.textContent).not.toContain('Dialogue only');
+    });
+
+    it('starts a custom check on all text', async () => {
+        const { model } = setup();
+        await click('Add custom check');
+        expect(host.querySelector('input[aria-label="Applies to"]').value).toBe('all');
+        await fill('Check name', 'Concrete imagery');
+        await fill('Question', 'Is {passage_id} abstract?');
+        await fill('Rewrite instruction', 'Use a physical detail.');
+        await click('Apply check');
+        expect(model.value[0].scope).toBe('all');
+        expect(host.textContent).not.toContain('All text');
+    });
+
+    it('explains the More options fields at the top of the section', async () => {
+        setup(defaults());
+        await click('Edit');
+        const help = host.querySelector('[data-testid="more-options-help"]').textContent.replace(/\s+/g, ' ').trim();
+        expect(help).toBe('Optional refinements: say what counts as yes and as no when the question alone leaves room for doubt (fill in both). The short name labels this question in the Decision Log.');
+    });
 });

@@ -8,6 +8,8 @@ from uuid import uuid4
 import structlog
 from pydantic import BaseModel, ConfigDict, Field
 
+from talemate.util.dialogue import TextScope
+
 from .models import Probability
 from .provider import FailureCode
 
@@ -51,6 +53,7 @@ class QuestionPresentation(BaseModel):
     instructions: str
     passage_id: str
     passage_text: str
+    scope: TextScope = "all"
     threshold: Probability
 
 
@@ -89,6 +92,7 @@ class InvocationRecord(BaseModel):
     )
     actions: list[ActionRecord] = Field(default_factory=list)
     request_count: int = 0
+    outcomes: list[dict] = Field(default_factory=list)
 
 
 class DecisionLog:

@@ -204,7 +204,7 @@ source history. This does not generate additional context with an LLM.
 
 The writing style owns the list of checks, their questions, true/false criteria,
 correction instructions and probability thresholds. Open its template editor to
-change them. **Add default checks** adds two common checks in one click, including
+change them. **Add default checks** adds four common checks in one click, including
 to a new writing style:
 
 - **Repeated beats and description reuse** asks separately about a redundant story
@@ -212,8 +212,14 @@ to a new writing style:
   flag a reused description of a new event; its correction preserves the event.
 - **Writing style and unwanted prose** checks the style instructions and active
   prose rules.
+- **Repeated dialogue and behavioural tics** asks separately about a line or
+  catchphrase and about a gesture or mannerism that the same character keeps
+  repeating (from the third use on).
+- **Overdescription and filler prose** looks for padded description and filler
+  sentences. It judges only the prose, not the dialogue.
 
-Each default check starts at **0.80**. Values at or above a check's threshold
+Each default check starts at **0.80**, except **Overdescription and filler prose**
+at **0.50**. Values at or above a check's threshold
 select a finding; probability describes uncertainty, not severity. Edit each
 threshold separately in the writing style.
 

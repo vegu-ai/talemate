@@ -363,4 +363,43 @@ describe('a decision detail dialog', () => {
         expect(element.querySelector('.decision-question').textContent).toContain('She paid the clerk again.');
         expect(element.querySelector('.decision-question').textContent).not.toContain('Probability');
     });
+
+    it('shows the scope of a check and names the passages it skipped', async () => {
+        replay('scoped_checks');
+        const element = mount(DebugTools);
+        await openDecision(element);
+        const card = element.querySelector('.decision-check');
+        expect(card.textContent).toContain('Filler prose');
+        expect(card.textContent).toContain('Prose only');
+        expect(card.querySelectorAll('.decision-question')).toHaveLength(1);
+        expect(card.querySelector('[data-question-id="s2_filler"]').textContent).toContain('The ladder shifted.');
+        expect(card.querySelector('[data-testid="decision-skipped"] span').textContent.trim())
+            .toBe('Skipped s1: no prose in this passage.');
+    });
+
+    it('explains a row whose passages were all out of scope', async () => {
+        replay('nothing_in_scope');
+        const element = mount(DebugTools);
+        const row = element.querySelector('[data-entry-id]');
+        expect(row.querySelector('.decision-row-result').textContent).toBe('Nothing in scope · every passage skipped');
+        await openDecision(element, 'invocation-1');
+        const dialog = element.querySelector('[role=dialog]');
+        expect(dialog.textContent).toContain('No action (nothing in scope)');
+        expect(dialog.textContent).not.toContain('reason unspecified');
+        expect(dialog.textContent).not.toContain('The feature asked no questions');
+        expect(dialog.querySelector('.decision-check').textContent).toContain('Prose only');
+        expect(dialog.querySelector('[data-testid="decision-skipped"] span').textContent.trim())
+            .toBe('Skipped s1: no prose in this passage.');
+    });
+
+    it('shows an outcome recorded before the request on the request row', async () => {
+        replay('outcome_before_request');
+        const element = mount(DebugTools);
+        expect(element.querySelectorAll('[data-entry-id]')).toHaveLength(1);
+        await openDecision(element);
+        const lines = [...element.querySelectorAll('.decision-result > div')].map(node => node.textContent.trim());
+        expect(lines).toContain('Note (checked first)');
+        expect(lines).toContain('No action (below 0.80)');
+        expect(lines.indexOf('Note (checked first)')).toBeLessThan(lines.indexOf('No action (below 0.80)'));
+    });
 });

@@ -1118,9 +1118,11 @@
 - path: user-guide/templates/writing-style.md
   title: Writing Styles and Decision Checks
   summary: Writing styles define tone, unwanted phrase rules and decision checks. Add default checks to a new style in one
-    click, or edit custom questions, rewrite instructions, each probability threshold and, under More options, true/false
-    criteria and short names. Covers active checks, empty-style fallback, regex/semantic phrase detection, scene assignment,
-    Generation Settings and Alt-click rewrites. Lists the shipped Polished Prose and Adventure Game styles.
+    click (repeated beats, unwanted prose, repeated dialogue and behavioural tics, overdescription and filler prose), or edit
+    custom questions, rewrite instructions, each probability threshold, the Applies to scope (all text, dialogue only or
+    prose only) and, under More options, true/false criteria and short names. Covers active checks, empty-style fallback,
+    regex/semantic phrase detection, scene assignment, Generation Settings and Alt-click rewrites. Lists the shipped
+    Polished Prose and Adventure Game styles.
 - path: user-guide/time-passage.md
   title: Time Passage Management
   summary: Insert, edit or delete time-passage markers using Scene Tools presets/custom durations, scene messages or World

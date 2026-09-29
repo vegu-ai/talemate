@@ -50,7 +50,8 @@ def editor_case(monkeypatch):
     scene.active = True
     scene.test_writing_style = WritingStyle(
         name="Plain",
-        decision_checks=default_writing_style_decision_checks(),
+        # the repetition and style defaults; the fixture probabilities target them
+        decision_checks=default_writing_style_decision_checks()[:2],
         instructions=data["style"],
         phrases=[PhraseDetection(**data["rule"])],
     )
@@ -957,3 +958,151 @@ async def test_custom_check_optional_criteria_and_passage_binding(
     assert finding["instructions"] == "Show the feeling through an action."
     c.editor._revision_evaluate_semantic_similarity.assert_not_awaited()
     c.client.send_prompt.assert_awaited_once()
+
+
+def scoped_check(scope):
+    from talemate.world_state.templates.decision_checks import DecisionCheck
+
+    return DecisionCheck(
+        name="Filler",
+        scope=scope,
+        questions=[
+            {
+                "id": "filler",
+                "question": "Does {passage_id} pad the moment?",
+                "instructions": "Cut the padding.",
+            }
+        ],
+    )
+
+
+async def test_unscoped_checks_keep_the_passage_state(editor_case):
+    c = editor_case
+    await revise(c)
+    (request,) = c.provider.calls
+    assert all(set(p) == {"id", "text"} for p in request.state["passages"])
+
+
+async def test_prose_scope_judges_prose_and_skips_dialogue_only_passage(editor_case):
+    c = editor_case
+    c.current.message = '"Anyone here?" She scanned the empty platform once more.'
+    c.scene.test_writing_style.decision_checks = [scoped_check("prose")]
+    c.provider.probabilities = {"s2_filler": 0.9}
+    assert (await revise(c))[0] == c.data["revised"]
+    (request,) = c.provider.calls
+    assert request.state["passages"] == [
+        {"id": "s1", "text": '"Anyone here?"', "prose": ""},
+        {
+            "id": "s2",
+            "text": "She scanned the empty platform once more.",
+            "prose": "She scanned the empty platform once more.",
+        },
+    ]
+    assert list(request.questions) == ["s2_filler"]
+    record = next(iter(c.service.log.records.values()))
+    assert record.presentation["s2_filler"].scope == "prose"
+    assert record.outcomes[0]["details"]["skipped_passages"] == [
+        {
+            "group_id": "filler",
+            "label": "Filler",
+            "instructions": "Does shown below pad the moment?",
+            "passage_id": "s1",
+            "scope": "prose",
+        }
+    ]
+    (finding,) = record.actions[0].arguments["decision_findings"]
+    assert finding["text"] == "She scanned the empty platform once more."
+    assert finding["instructions"] == (
+        "Cut the padding. Change only the prose of this passage."
+    )
+
+
+async def test_nothing_in_scope_keeps_text_and_logs_on_invocation(editor_case):
+    c = editor_case
+    c.scene.test_writing_style.decision_checks = [scoped_check("dialogue")]
+    result, _ = await revise(c)
+    assert result == c.current.message
+    assert c.provider.calls == []
+    assert not c.service.log.records
+    (invocation,) = c.service.log.invocations.values()
+    assert invocation.template_uid == "editor.decision-checks"
+    (outcome,) = invocation.outcomes
+    assert outcome["action"] == "no_action"
+    assert outcome["reason"] == "nothing_in_scope"
+    assert [
+        entry["passage_id"] for entry in outcome["details"]["skipped_passages"]
+    ] == ["s1", "s2"]
+    c.client.send_prompt.assert_not_awaited()
+
+
+async def test_all_default_checks_share_one_request(editor_case):
+    c = editor_case
+    c.scene.test_writing_style.decision_checks = default_writing_style_decision_checks()
+    await revise(c)
+    (request,) = c.provider.calls
+    assert [set(p) for p in request.state["passages"]] == [{"id", "text", "prose"}] * 2
+    assert {key.split("_", 1)[1] for key in request.questions} == {
+        "repetition",
+        "description_reuse",
+        "style",
+        "dialogue_tic",
+        "mannerism_tic",
+        "overdescription",
+    }
+    assert len(request.questions) == 12
+    assert request.questions["s1_overdescription"].instructions.startswith(
+        "Judge only the prose of passage s1"
+    )
+
+
+async def test_check_input_names_speakers_but_revision_history_does_not(editor_case):
+    from talemate.agents.editor.revision import RevisionContext, RevisionInformation
+    from talemate.character import Character
+    from talemate.scene_message import CharacterMessage
+
+    c = editor_case
+    earlier = CharacterMessage('Bob: "Fair enough."')
+    message = CharacterMessage('Alice: "Fair enough." She left.')
+    c.scene.history = [c.previous, earlier, message]
+    with RevisionContext(message.id):
+        await c.editor.revision_revise(
+            RevisionInformation(text=message.message, character=Character(name="Alice"))
+        )
+        assert c.editor.revision_repetition_history() == [
+            ' "Fair enough."',
+            c.data["previous"],
+        ]
+    state = c.provider.calls[0].state
+    assert state["history"] == [c.data["previous"], 'Bob: "Fair enough."']
+    assert state["speaker"] == "Alice"
+
+
+async def test_narration_has_no_speaker(editor_case):
+    c = editor_case
+    await revise(c)
+    assert c.provider.calls[0].state["speaker"] is None
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        'The board was 6" wide. She measured it.',
+        '"First paragraph goes on. He stopped. She waited.',
+    ],
+)
+async def test_unbalanced_quotes_judge_scoped_checks_as_all(editor_case, text):
+    c = editor_case
+    c.current.message = text
+    c.scene.test_writing_style.decision_checks = [scoped_check("prose")]
+    await revise(c)
+    (request,) = c.provider.calls
+    passages = request.state["passages"]
+    assert all(set(p) == {"id", "text", "no_reliable_split"} for p in passages)
+    assert list(request.questions) == [f"{p['id']}_filler" for p in passages]
+    record = next(iter(c.service.log.records.values()))
+    for passage in passages:
+        item = record.presentation[f"{passage['id']}_filler"]
+        assert item.scope == "all"
+        assert item.passage_text == passage["text"]
+    assert not request.questions["s1_filler"].instructions.startswith("Judge only")
+    assert record.outcomes[0]["details"]["skipped_passages"] == []

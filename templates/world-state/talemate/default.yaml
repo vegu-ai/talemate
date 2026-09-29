@@ -38,6 +38,7 @@ templates:
         true_criteria: Substantially the same distinctive wording or image is reused,
           even if this describes a new occurrence of the action.
       requires_style: false
+      scope: all
       threshold: 0.8
     - active: true
       name: Writing style and unwanted prose
@@ -55,7 +56,67 @@ templates:
         true_criteria: The passage conflicts with an explicit writing-style instruction
           or exhibits unwanted prose described by an active rule.
       requires_style: true
+      scope: all
       threshold: 0.8
+    - active: true
+      name: Repeated dialogue and behavioural tics
+      questions:
+      - false_criteria: A first or second use; words that another character said; a
+          name or form of address, a common word, a deliberate callback or quotation,
+          or a story motif that the text repeats on purpose.
+        id: dialogue_tic
+        instructions: Rewrite this line so that the character does not repeat the habit;
+          keep what the character means.
+        kind: repetition
+        question: 'Does passage {passage_id} repeat a verbal habit of its speaker: a
+          statement, catchphrase or filler phrase (the same or nearly the same words)
+          that the same character keeps using in the preceding history or earlier in
+          the current text? The history names the speaker before each character line,
+          and `speaker` names the speaker of the current text.'
+        true_criteria: 'The same character comes back to the same words so often that
+          it reads as a tic: this passage is at least the third use by that character,
+          counting the history and the current text.'
+      - false_criteria: A first or second time; a gesture of another character; a common
+          action the moment needs (nodding, sitting down, walking); or a deliberate
+          callback.
+        id: mannerism_tic
+        instructions: Replace the repeated gesture with a different beat, or remove
+          it; keep the action the moment needs.
+        kind: repetition
+        question: 'Does passage {passage_id} repeat a gesture or mannerism of a character:
+          the same physical habit, expression or movement that the same character keeps
+          showing in the preceding history or earlier in the current text? The history
+          names the speaker before each character line, and `speaker` names the speaker
+          of the current text.'
+        true_criteria: 'The same character shows the same gesture or mannerism so often
+          that it reads as a tic: this passage is at least the third time for that character,
+          counting the history and the current text.'
+      requires_style: false
+      scope: all
+      threshold: 0.8
+    - active: true
+      name: Overdescription and filler prose
+      questions:
+      - false_criteria: 'No when every detail does work: it tells things apart, sets
+          the scene, moves the action or builds tension, even when vivid or stacked.
+          A short beat such as a silence or a pause that sets the rhythm is not filler.
+          A repeated gesture is a separate problem, not overdescription.'
+        id: overdescription
+        instructions: 'Cut the padding: keep the detail that serves the moment and remove
+          the modifiers and filler it does not need.'
+        kind: style
+        question: Is passage {passage_id} overwritten for its moment? Ask whether a
+          sentence, or several of its words, could be cut without losing any action,
+          fact, character detail or tension the moment needs, and whether the passage
+          would then read faster and better. Stacked adjectives, several images for
+          one thing and sentences that only restate a mood are common forms of this
+          excess, but only when they add nothing the moment needs.
+        true_criteria: Yes when the passage carries description or filler that could
+          be cut or shortened without losing anything the moment needs; one such cut
+          is enough.
+      requires_style: false
+      scope: prose
+      threshold: 0.5
     description: 'Mid-90s point-and-click adventure game: second-person narration, short
       look-at descriptions, wry humour, characterful dialogue.'
     favorite: false
@@ -182,6 +243,7 @@ templates:
         true_criteria: Substantially the same distinctive wording or image is reused,
           even if this describes a new occurrence of the action.
       requires_style: false
+      scope: all
       threshold: 0.8
     - active: true
       name: Writing style and unwanted prose
@@ -199,7 +261,67 @@ templates:
         true_criteria: The passage conflicts with an explicit writing-style instruction
           or exhibits unwanted prose described by an active rule.
       requires_style: true
+      scope: all
       threshold: 0.8
+    - active: true
+      name: Repeated dialogue and behavioural tics
+      questions:
+      - false_criteria: A first or second use; words that another character said; a
+          name or form of address, a common word, a deliberate callback or quotation,
+          or a story motif that the text repeats on purpose.
+        id: dialogue_tic
+        instructions: Rewrite this line so that the character does not repeat the habit;
+          keep what the character means.
+        kind: repetition
+        question: 'Does passage {passage_id} repeat a verbal habit of its speaker: a
+          statement, catchphrase or filler phrase (the same or nearly the same words)
+          that the same character keeps using in the preceding history or earlier in
+          the current text? The history names the speaker before each character line,
+          and `speaker` names the speaker of the current text.'
+        true_criteria: 'The same character comes back to the same words so often that
+          it reads as a tic: this passage is at least the third use by that character,
+          counting the history and the current text.'
+      - false_criteria: A first or second time; a gesture of another character; a common
+          action the moment needs (nodding, sitting down, walking); or a deliberate
+          callback.
+        id: mannerism_tic
+        instructions: Replace the repeated gesture with a different beat, or remove
+          it; keep the action the moment needs.
+        kind: repetition
+        question: 'Does passage {passage_id} repeat a gesture or mannerism of a character:
+          the same physical habit, expression or movement that the same character keeps
+          showing in the preceding history or earlier in the current text? The history
+          names the speaker before each character line, and `speaker` names the speaker
+          of the current text.'
+        true_criteria: 'The same character shows the same gesture or mannerism so often
+          that it reads as a tic: this passage is at least the third time for that character,
+          counting the history and the current text.'
+      requires_style: false
+      scope: all
+      threshold: 0.8
+    - active: true
+      name: Overdescription and filler prose
+      questions:
+      - false_criteria: 'No when every detail does work: it tells things apart, sets
+          the scene, moves the action or builds tension, even when vivid or stacked.
+          A short beat such as a silence or a pause that sets the rhythm is not filler.
+          A repeated gesture is a separate problem, not overdescription.'
+        id: overdescription
+        instructions: 'Cut the padding: keep the detail that serves the moment and remove
+          the modifiers and filler it does not need.'
+        kind: style
+        question: Is passage {passage_id} overwritten for its moment? Ask whether a
+          sentence, or several of its words, could be cut without losing any action,
+          fact, character detail or tension the moment needs, and whether the passage
+          would then read faster and better. Stacked adjectives, several images for
+          one thing and sentences that only restate a mood are common forms of this
+          excess, but only when they add nothing the moment needs.
+        true_criteria: Yes when the passage carries description or filler that could
+          be cut or shortened without losing anything the moment needs; one such cut
+          is enough.
+      requires_style: false
+      scope: prose
+      threshold: 0.5
     description: Neutral, clear and easy-to-read prose with no genre flavour.
     favorite: false
     group: talemate_default_467c7fe3

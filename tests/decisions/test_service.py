@@ -426,6 +426,7 @@ async def test_presentation_survives_request_lifecycle_without_reaching_provider
             "instructions": "Does this passage repeat?",
             "passage_id": "p_7",
             "passage_text": "complete text",
+            "scope": "dialogue",
             "threshold": 0.8,
         }
     }

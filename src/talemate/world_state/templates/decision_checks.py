@@ -4,6 +4,7 @@ from typing import Literal
 import structlog
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
+from talemate.util.dialogue import TextScope
 from talemate.world_state.templates.base import repairs_unknown_choices
 
 log = structlog.get_logger("world-state.templates.decision_checks")
@@ -53,7 +54,19 @@ class DecisionCheck(BaseModel):
     active: bool = True
     threshold: float = Field(default=DEFAULT_THRESHOLD, ge=0, le=1, allow_inf_nan=False)
     requires_style: bool = False
+    scope: TextScope = "all"
     questions: list[DecisionCheckQuestion] = Field(min_length=1)
+
+    @field_validator("scope", mode="wrap")
+    @classmethod
+    def repair_scope(cls, value, handler, info):
+        try:
+            return handler(value)
+        except ValidationError:
+            if not repairs_unknown_choices(info):
+                raise
+            log.warning("repairing decision check scope", fallback="all")
+            return "all"
 
     @field_validator("threshold", mode="wrap")
     @classmethod
@@ -151,6 +164,42 @@ def default_writing_style_decision_checks() -> list[DecisionCheck]:
                     false_criteria="The passage follows the applicable instructions. Vivid detail, atmosphere or dialogue is not a violation on its own.",
                     kind="style",
                     instructions="Follow the writing style and active prose rules; preserve factual content.",
+                ),
+            ],
+        ),
+        DecisionCheck(
+            name="Repeated dialogue and behavioural tics",
+            questions=[
+                DecisionCheckQuestion(
+                    id="dialogue_tic",
+                    question="Does passage {passage_id} repeat a verbal habit of its speaker: a statement, catchphrase or filler phrase (the same or nearly the same words) that the same character keeps using in the preceding history or earlier in the current text? The history names the speaker before each character line, and `speaker` names the speaker of the current text.",
+                    true_criteria="The same character comes back to the same words so often that it reads as a tic: this passage is at least the third use by that character, counting the history and the current text.",
+                    false_criteria="A first or second use; words that another character said; a name or form of address, a common word, a deliberate callback or quotation, or a story motif that the text repeats on purpose.",
+                    kind="repetition",
+                    instructions="Rewrite this line so that the character does not repeat the habit; keep what the character means.",
+                ),
+                DecisionCheckQuestion(
+                    id="mannerism_tic",
+                    question="Does passage {passage_id} repeat a gesture or mannerism of a character: the same physical habit, expression or movement that the same character keeps showing in the preceding history or earlier in the current text? The history names the speaker before each character line, and `speaker` names the speaker of the current text.",
+                    true_criteria="The same character shows the same gesture or mannerism so often that it reads as a tic: this passage is at least the third time for that character, counting the history and the current text.",
+                    false_criteria="A first or second time; a gesture of another character; a common action the moment needs (nodding, sitting down, walking); or a deliberate callback.",
+                    kind="repetition",
+                    instructions="Replace the repeated gesture with a different beat, or remove it; keep the action the moment needs.",
+                ),
+            ],
+        ),
+        DecisionCheck(
+            name="Overdescription and filler prose",
+            threshold=0.5,
+            scope="prose",
+            questions=[
+                DecisionCheckQuestion(
+                    id="overdescription",
+                    question="Is passage {passage_id} overwritten for its moment? Ask whether a sentence, or several of its words, could be cut without losing any action, fact, character detail or tension the moment needs, and whether the passage would then read faster and better. Stacked adjectives, several images for one thing and sentences that only restate a mood are common forms of this excess, but only when they add nothing the moment needs.",
+                    true_criteria="Yes when the passage carries description or filler that could be cut or shortened without losing anything the moment needs; one such cut is enough.",
+                    false_criteria="No when every detail does work: it tells things apart, sets the scene, moves the action or builds tension, even when vivid or stacked. A short beat such as a silence or a pause that sets the rhythm is not filler. A repeated gesture is a separate problem, not overdescription.",
+                    kind="style",
+                    instructions="Cut the padding: keep the detail that serves the moment and remove the modifiers and filler it does not need.",
                 ),
             ],
         ),

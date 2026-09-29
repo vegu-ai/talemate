@@ -721,6 +721,39 @@ async def test_explicit_outcome_requires_a_handle(policy_factory, association):
     assert policy.failure.code == FailureCode.TEMPLATE
 
 
+async def test_outcome_without_a_request_belongs_to_the_invocation(policy_factory):
+    p = policy_factory
+    source = (
+        '{{ decision_outcome(none, "no_action", reason="nothing_in_scope", skipped=2) }}'
+        "{{ decision_result(info.text) }}"
+    )
+    assert await p.create(source).run() == "original"
+    assert not p.service.log.records
+    (invocation,) = p.service.log.invocations.values()
+    assert invocation.status == "completed"
+    assert invocation.outcomes == [
+        {"action": "no_action", "reason": "nothing_in_scope", "details": {"skipped": 2}}
+    ]
+    emitted = [e["entry"] for e in p.events if e["event"] == "invocation"]
+    assert emitted[-1]["outcomes"] == invocation.outcomes
+    p.fallback.assert_not_awaited()
+
+
+async def test_invocation_outcome_stays_when_a_request_follows(policy_factory):
+    p = policy_factory
+    source = (
+        '{{ decision_outcome(none, "note", reason="checked_first") }}'
+        + DECIDE
+        + '{{ decision_outcome(r, "no_action") }}{{ decision_result(info.text) }}'
+    )
+    assert await p.create(source).run() == "original"
+    (invocation,) = p.service.log.invocations.values()
+    (record,) = p.service.log.records.values()
+    assert invocation.request_count == 1
+    assert [o["reason"] for o in invocation.outcomes] == ["checked_first"]
+    assert [o["action"] for o in record.outcomes] == ["no_action"]
+
+
 async def test_reused_action_map_has_fresh_shared_budget_per_invocation(policy_factory):
     p = policy_factory
     budget = ActionBudget(limit=1)

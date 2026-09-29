@@ -15,7 +15,7 @@
             <div v-if="request?.policy_failure" class="text-body-small text-error">
                 The feature could not use the answer — {{ reason(request.policy_failure) }}.
             </div>
-            <div v-for="(outcome, index) in request?.outcomes || []" :key="index" class="text-body-small">
+            <div v-for="(outcome, index) in outcomes" :key="index" class="text-body-small">
                 {{ describe(outcome) }}
             </div>
             <div v-for="action in row.actions" :key="action.id" class="text-body-small">
@@ -24,7 +24,7 @@
                     not linked to this request
                 </v-chip>
             </div>
-            <div v-if="!row.actions.length && !request?.outcomes.length" class="text-body-small">
+            <div v-if="!row.actions.length && !outcomes.length" class="text-body-small">
                 {{ emptyOutcome }}
             </div>
             <div v-if="row.actions.length" class="text-body-small text-muted mt-1">
@@ -37,6 +37,7 @@
             <div class="d-flex align-center ga-2 flex-wrap mb-2">
                 <v-icon size="18" color="primary">mdi-text-box-check-outline</v-icon>
                 <h3 class="text-body-medium font-weight-medium">{{ group.label }}</h3>
+                <v-chip v-if="group.scope !== 'all'" size="x-small" variant="tonal" label :prepend-icon="scope(group).icon">{{ scope(group).title }}</v-chip>
             </div>
             <p class="text-body-small decision-instruction mb-2">{{ group.instructions }}</p>
             </div>
@@ -65,6 +66,10 @@
                     </v-chip>
                 </div>
             </div>
+            <div v-if="group.skipped.length" class="decision-skipped d-flex align-center ga-2 text-body-small text-muted" data-testid="decision-skipped">
+                <v-icon size="16">mdi-debug-step-over</v-icon>
+                <span>Skipped {{ group.skipped.join(', ') }}: no {{ scope(group).part }} in {{ group.skipped.length === 1 ? 'this passage' : 'these passages' }}.</span>
+            </div>
         </v-card>
         <v-alert v-if="!groups.length" variant="tonal" color="muted" icon="mdi-text-box-outline" class="mb-4">The feature asked no questions this time.</v-alert>
 
@@ -83,6 +88,10 @@
                 <pre class="decision-json text-body-small">{{ pretty(request.raw) }}</pre>
                 <div class="text-body-medium font-weight-medium mt-3">Template outcomes</div>
                 <pre class="decision-json text-body-small">{{ pretty(request.outcomes) }}</pre>
+            </template>
+            <template v-else-if="outcomes.length">
+                <div class="text-body-medium font-weight-medium">Template outcomes</div>
+                <pre class="decision-json text-body-small">{{ pretty(outcomes) }}</pre>
             </template>
             <div class="text-body-medium font-weight-medium mt-3">Actions</div>
             <pre class="decision-json text-body-small">{{ pretty(row.actions) }}</pre>
@@ -104,7 +113,8 @@
 
 <script>
 import { failureReason } from '@/utils/decisionModelText';
-import { actionSummary, answerValue, outcomeSummary, questionGroups, questionName, decisionProbability, decisionOutcome, decisionResult } from '@/utils/decisionLog';
+import { decisionCheckScope } from '@/utils/decisionCheckScope';
+import { actionSummary, answerValue, outcomeSummary, questionGroups, questionName, decisionProbability, decisionOutcome, decisionResult, rowOutcomes } from '@/utils/decisionLog';
 
 export default {
     name: 'DecisionLogDetail',
@@ -123,8 +133,11 @@ export default {
         entry() {
             return this.request || this.row.invocation;
         },
+        outcomes() {
+            return rowOutcomes(this.row);
+        },
         groups() {
-            return questionGroups(this.request);
+            return questionGroups(this.request, this.outcomes);
         },
         emptyOutcome() {
             if (this.row.status === 'active') return 'Waiting for the result.';
@@ -142,6 +155,9 @@ export default {
         describe: outcomeSummary,
         describeAction: actionSummary,
         questionName,
+        scope(group) {
+            return decisionCheckScope(group.scope);
+        },
         reason(failure) {
             return failureReason(failure.code);
         },
@@ -170,6 +186,10 @@ export default {
 .decision-question-flagged {
     border-left-color: rgb(var(--v-theme-warning));
     background: rgba(var(--v-theme-warning), 0.08);
+}
+.decision-skipped {
+    padding: 10px 12px;
+    border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 .decision-answer {
     text-align: right;

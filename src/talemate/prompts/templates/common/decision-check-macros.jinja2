@@ -2,14 +2,38 @@
 {% set output.questions = {} %}
 {% set output.presentation = {} %}
 {% set output.evaluations = [] %}
+{% set output.skipped = [] %}
+{% set scope_notes = {
+    "dialogue": ("dialogue", "the words inside double quotes", "narration"),
+    "prose": ("prose", "everything outside double quotes", "dialogue")
+} %}
 {% for passage in passages %}
     {% for check in decision_checks %}
+        {# a caller marks passages whose dialogue/prose split is unreliable; a scoped check judges them as All #}
+        {% set scope = "all" if passage.get("no_reliable_split") else check.scope %}
+        {% set scoped_text = passage.text if scope == "all" else passage[scope] %}
         {% for question in check.questions %}
+            {% if not scoped_text %}
+                {% set _ = output.skipped.append({
+                    "group_id": question.id,
+                    "label": check.name,
+                    "instructions": question.question.replace("{passage_id}", "shown below"),
+                    "passage_id": passage.id,
+                    "scope": scope
+                }) %}
+            {% else %}
             {% set id = passage.id ~ "_" ~ question.id %}
             {% set has_criteria = question.true_criteria.strip() and question.false_criteria.strip() %}
+            {% set instructions = question.question.replace("{passage_id}", passage.id) if "{passage_id}" in question.question else "Passage " ~ passage.id ~ ": " ~ question.question %}
+            {% set evaluation_instructions = question.instructions %}
+            {% if scope != "all" %}
+                {% set part, meaning, other = scope_notes[scope] %}
+                {% set instructions = "Judge only the " ~ part ~ " of passage " ~ passage.id ~ " (its `" ~ part ~ "` text: " ~ meaning ~ "); ignore its " ~ other ~ ". " ~ instructions %}
+                {% set evaluation_instructions = evaluation_instructions ~ " Change only the " ~ part ~ " of this passage." %}
+            {% endif %}
             {% set _ = output.questions.update({id: {
                 "type": "noul",
-                "instructions": question.question.replace("{passage_id}", passage.id) if "{passage_id}" in question.question else "Passage " ~ passage.id ~ ": " ~ question.question,
+                "instructions": instructions,
                 "true_criteria": question.true_criteria.replace("{passage_id}", passage.id) if has_criteria else none,
                 "false_criteria": question.false_criteria.replace("{passage_id}", passage.id) if has_criteria else none
             }}) %}
@@ -18,10 +42,12 @@
                 "label": check.name,
                 "instructions": question.question.replace("{passage_id}", "shown below"),
                 "passage_id": passage.id,
-                "passage_text": passage.text,
+                "passage_text": scoped_text,
+                "scope": scope,
                 "threshold": check.threshold
             }}) %}
-            {% set _ = output.evaluations.append({"id": id, "passage": passage, "kind": question.kind, "instructions": question.instructions, "threshold": check.threshold}) %}
+            {% set _ = output.evaluations.append({"id": id, "passage": passage, "kind": question.kind, "instructions": evaluation_instructions, "threshold": check.threshold}) %}
+            {% endif %}
         {% endfor %}
     {% endfor %}
 {% endfor %}

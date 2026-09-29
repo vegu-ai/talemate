@@ -176,26 +176,42 @@ export function answerSummary(id, answer) {
     return `${words(id)} · ${answerValue(answer)}`;
 }
 
-export function questionGroups(request) {
+// An outcome recorded before the invocation's first request stays on the
+// invocation, so a request row shows it before its own outcomes.
+export function rowOutcomes(row) {
+    return [...(row.invocation?.outcomes || []), ...(row.request?.outcomes || [])];
+}
+
+function lastDetail(outcomes, name) {
+    return outcomes.findLast(outcome => Array.isArray(outcome.details?.[name]))?.details[name];
+}
+
+/**
+ * A group per check question. `skipped` names the passages a scoped check did not
+ * judge because they have no text in its scope; such a group can have no questions.
+ */
+export function questionGroups(request, outcomes = request?.outcomes || []) {
     const groups = new Map();
-    const flaggedIds = request?.outcomes.findLast(outcome =>
-        Array.isArray(outcome.details?.flagged_question_ids))?.details.flagged_question_ids;
+    const group = (key, fields) => {
+        if (!groups.has(key)) groups.set(key, { id: key, scope: 'all', questions: [], skipped: [], ...fields });
+        return groups.get(key);
+    };
+    const flaggedIds = lastDetail(outcomes, 'flagged_question_ids');
     for (const [id, question] of Object.entries(request?.questions || {})) {
         const presentation = request.presentation[id];
-        const key = presentation ? `group:${presentation.group_id}` : `question:${id}`;
-        if (!groups.has(key)) {
-            groups.set(key, {
-                id: key,
-                label: presentation?.label || words(id),
-                instructions: presentation?.instructions || question.instructions,
-                questions: [],
-            });
-        }
         const answer = request.answers?.[id];
-        groups.get(key).questions.push({
+        group(presentation ? `group:${presentation.group_id}` : `question:${id}`, {
+            label: presentation?.label || words(id),
+            instructions: presentation?.instructions || question.instructions,
+            scope: presentation?.scope || 'all',
+        }).questions.push({
             id, question, answer, presentation,
             flagged: presentation && answer && flaggedIds ? flaggedIds.includes(id) : null,
         });
+    }
+    for (const item of lastDetail(outcomes, 'skipped_passages') || []) {
+        group(`group:${item.group_id}`, { label: item.label, instructions: item.instructions, scope: item.scope })
+            .skipped.push(item.passage_id);
     }
     return [...groups.values()];
 }
@@ -210,7 +226,8 @@ export function decisionTime(timestamp) {
 }
 
 export function decisionResult(row) {
-    const questions = questionGroups(row.request).flatMap(group => group.questions);
+    const groups = questionGroups(row.request, rowOutcomes(row));
+    const questions = groups.flatMap(group => group.questions);
     const scored = questions.filter(item => item.presentation && item.answer?.type === 'noul');
     const flagged = scored.filter(item => item.flagged);
     const strongest = [...(flagged.length ? flagged : scored)]
@@ -228,6 +245,7 @@ export function decisionResult(row) {
     if (failure) return sentence(failureReason(failure.code));
     if (questions.length === 1 && questions[0].answer) return answerSummary(questions[0].id, questions[0].answer);
     if (questions.length) return `${questions.length} question${questions.length === 1 ? '' : 's'}${row.request?.status === 'pending' ? ' · waiting for the answer' : ''}`;
+    if (groups.some(group => group.skipped.length)) return 'Nothing in scope · every passage skipped';
     return 'No questions submitted';
 }
 
@@ -241,7 +259,7 @@ export function decisionOutcome(row) {
         label: `${actionName(lastAction.action)} ${lastAction.status}`,
         color: lastAction.status === 'completed' ? 'success' : 'muted', icon: 'mdi-check-circle-outline',
     };
-    const outcome = row.request?.outcomes.at(-1);
+    const outcome = rowOutcomes(row).at(-1);
     return { label: outcome ? sentence(words(outcome.action)) : 'No action', color: 'muted', icon: 'mdi-minus-circle-outline' };
 }
 

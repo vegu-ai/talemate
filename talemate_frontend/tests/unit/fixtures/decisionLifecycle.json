@@ -11,7 +11,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -24,7 +25,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -197,7 +199,8 @@
           "status": "completed",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -262,7 +265,8 @@
             "status": "completed",
             "timestamp": "2026-09-21T09:00:00+00:00",
             "actions": [],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           }
         ]
       }
@@ -278,7 +282,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -291,7 +296,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -371,6 +377,7 @@
               "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
               "passage_id": "s1",
               "passage_text": "Original.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_description_reuse": {
@@ -379,6 +386,7 @@
               "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
               "passage_id": "s1",
               "passage_text": "Original.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_style": {
@@ -387,6 +395,7 @@
               "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
               "passage_id": "s1",
               "passage_text": "Original.",
+              "scope": "all",
               "threshold": 0.76
             }
           },
@@ -452,6 +461,7 @@
               "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
               "passage_id": "s1",
               "passage_text": "Original.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_description_reuse": {
@@ -460,6 +470,7 @@
               "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
               "passage_id": "s1",
               "passage_text": "Original.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_style": {
@@ -468,6 +479,7 @@
               "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
               "passage_id": "s1",
               "passage_text": "Original.",
+              "scope": "all",
               "threshold": 0.76
             }
           },
@@ -546,6 +558,7 @@
               "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
               "passage_id": "s1",
               "passage_text": "Original.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_description_reuse": {
@@ -554,6 +567,7 @@
               "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
               "passage_id": "s1",
               "passage_text": "Original.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_style": {
@@ -562,6 +576,7 @@
               "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
               "passage_id": "s1",
               "passage_text": "Original.",
+              "scope": "all",
               "threshold": 0.76
             }
           },
@@ -596,7 +611,8 @@
                   "s1_description_reuse": 0.91,
                   "s1_style": 0.76
                 },
-                "flagged_question_ids": []
+                "flagged_question_ids": [],
+                "skipped_passages": []
               }
             }
           ]
@@ -612,7 +628,8 @@
           "status": "completed",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -667,6 +684,7 @@
                 "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
                 "passage_id": "s1",
                 "passage_text": "Original.",
+                "scope": "all",
                 "threshold": 0.91
               },
               "s1_description_reuse": {
@@ -675,6 +693,7 @@
                 "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
                 "passage_id": "s1",
                 "passage_text": "Original.",
+                "scope": "all",
                 "threshold": 0.91
               },
               "s1_style": {
@@ -683,6 +702,7 @@
                 "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
                 "passage_id": "s1",
                 "passage_text": "Original.",
+                "scope": "all",
                 "threshold": 0.76
               }
             },
@@ -717,7 +737,8 @@
                     "s1_description_reuse": 0.91,
                     "s1_style": 0.76
                   },
-                  "flagged_question_ids": []
+                  "flagged_question_ids": [],
+                  "skipped_passages": []
                 }
               }
             ]
@@ -731,7 +752,8 @@
             "status": "completed",
             "timestamp": "2026-09-21T09:00:00+00:00",
             "actions": [],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           }
         ]
       }
@@ -747,7 +769,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -760,7 +783,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -864,6 +888,7 @@
               "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
               "passage_id": "s1",
               "passage_text": "She paid the clerk again.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_description_reuse": {
@@ -872,6 +897,7 @@
               "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
               "passage_id": "s1",
               "passage_text": "She paid the clerk again.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_style": {
@@ -880,6 +906,7 @@
               "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
               "passage_id": "s1",
               "passage_text": "She paid the clerk again.",
+              "scope": "all",
               "threshold": 0.76
             },
             "s2_repetition": {
@@ -888,6 +915,7 @@
               "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
               "passage_id": "s2",
               "passage_text": "The clock showed eleven.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s2_description_reuse": {
@@ -896,6 +924,7 @@
               "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
               "passage_id": "s2",
               "passage_text": "The clock showed eleven.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s2_style": {
@@ -904,6 +933,7 @@
               "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
               "passage_id": "s2",
               "passage_text": "The clock showed eleven.",
+              "scope": "all",
               "threshold": 0.76
             }
           },
@@ -993,6 +1023,7 @@
               "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
               "passage_id": "s1",
               "passage_text": "She paid the clerk again.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_description_reuse": {
@@ -1001,6 +1032,7 @@
               "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
               "passage_id": "s1",
               "passage_text": "She paid the clerk again.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_style": {
@@ -1009,6 +1041,7 @@
               "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
               "passage_id": "s1",
               "passage_text": "She paid the clerk again.",
+              "scope": "all",
               "threshold": 0.76
             },
             "s2_repetition": {
@@ -1017,6 +1050,7 @@
               "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
               "passage_id": "s2",
               "passage_text": "The clock showed eleven.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s2_description_reuse": {
@@ -1025,6 +1059,7 @@
               "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
               "passage_id": "s2",
               "passage_text": "The clock showed eleven.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s2_style": {
@@ -1033,6 +1068,7 @@
               "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
               "passage_id": "s2",
               "passage_text": "The clock showed eleven.",
+              "scope": "all",
               "threshold": 0.76
             }
           },
@@ -1149,6 +1185,7 @@
               "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
               "passage_id": "s1",
               "passage_text": "She paid the clerk again.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_description_reuse": {
@@ -1157,6 +1194,7 @@
               "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
               "passage_id": "s1",
               "passage_text": "She paid the clerk again.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_style": {
@@ -1165,6 +1203,7 @@
               "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
               "passage_id": "s1",
               "passage_text": "She paid the clerk again.",
+              "scope": "all",
               "threshold": 0.76
             },
             "s2_repetition": {
@@ -1173,6 +1212,7 @@
               "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
               "passage_id": "s2",
               "passage_text": "The clock showed eleven.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s2_description_reuse": {
@@ -1181,6 +1221,7 @@
               "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
               "passage_id": "s2",
               "passage_text": "The clock showed eleven.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s2_style": {
@@ -1189,6 +1230,7 @@
               "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
               "passage_id": "s2",
               "passage_text": "The clock showed eleven.",
+              "scope": "all",
               "threshold": 0.76
             }
           },
@@ -1234,7 +1276,8 @@
               "details": {
                 "flagged_question_ids": [
                   "s1_repetition"
-                ]
+                ],
+                "skipped_passages": []
               }
             }
           ]
@@ -1274,7 +1317,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -1352,6 +1396,7 @@
               "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
               "passage_id": "s1",
               "passage_text": "She paid the clerk again.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_description_reuse": {
@@ -1360,6 +1405,7 @@
               "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
               "passage_id": "s1",
               "passage_text": "She paid the clerk again.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_style": {
@@ -1368,6 +1414,7 @@
               "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
               "passage_id": "s1",
               "passage_text": "She paid the clerk again.",
+              "scope": "all",
               "threshold": 0.76
             },
             "s2_repetition": {
@@ -1376,6 +1423,7 @@
               "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
               "passage_id": "s2",
               "passage_text": "The clock showed eleven.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s2_description_reuse": {
@@ -1384,6 +1432,7 @@
               "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
               "passage_id": "s2",
               "passage_text": "The clock showed eleven.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s2_style": {
@@ -1392,6 +1441,7 @@
               "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
               "passage_id": "s2",
               "passage_text": "The clock showed eleven.",
+              "scope": "all",
               "threshold": 0.76
             }
           },
@@ -1461,7 +1511,8 @@
               "details": {
                 "flagged_question_ids": [
                   "s1_repetition"
-                ]
+                ],
+                "skipped_passages": []
               }
             }
           ]
@@ -1501,7 +1552,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -1579,6 +1631,7 @@
               "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
               "passage_id": "s1",
               "passage_text": "She paid the clerk again.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_description_reuse": {
@@ -1587,6 +1640,7 @@
               "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
               "passage_id": "s1",
               "passage_text": "She paid the clerk again.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s1_style": {
@@ -1595,6 +1649,7 @@
               "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
               "passage_id": "s1",
               "passage_text": "She paid the clerk again.",
+              "scope": "all",
               "threshold": 0.76
             },
             "s2_repetition": {
@@ -1603,6 +1658,7 @@
               "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
               "passage_id": "s2",
               "passage_text": "The clock showed eleven.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s2_description_reuse": {
@@ -1611,6 +1667,7 @@
               "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
               "passage_id": "s2",
               "passage_text": "The clock showed eleven.",
+              "scope": "all",
               "threshold": 0.91
             },
             "s2_style": {
@@ -1619,6 +1676,7 @@
               "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
               "passage_id": "s2",
               "passage_text": "The clock showed eleven.",
+              "scope": "all",
               "threshold": 0.76
             }
           },
@@ -1688,7 +1746,8 @@
               "details": {
                 "flagged_question_ids": [
                   "s1_repetition"
-                ]
+                ],
+                "skipped_passages": []
               }
             }
           ]
@@ -1728,7 +1787,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -1807,6 +1867,7 @@
                 "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
                 "passage_id": "s1",
                 "passage_text": "She paid the clerk again.",
+                "scope": "all",
                 "threshold": 0.91
               },
               "s1_description_reuse": {
@@ -1815,6 +1876,7 @@
                 "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
                 "passage_id": "s1",
                 "passage_text": "She paid the clerk again.",
+                "scope": "all",
                 "threshold": 0.91
               },
               "s1_style": {
@@ -1823,6 +1885,7 @@
                 "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
                 "passage_id": "s1",
                 "passage_text": "She paid the clerk again.",
+                "scope": "all",
                 "threshold": 0.76
               },
               "s2_repetition": {
@@ -1831,6 +1894,7 @@
                 "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
                 "passage_id": "s2",
                 "passage_text": "The clock showed eleven.",
+                "scope": "all",
                 "threshold": 0.91
               },
               "s2_description_reuse": {
@@ -1839,6 +1903,7 @@
                 "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
                 "passage_id": "s2",
                 "passage_text": "The clock showed eleven.",
+                "scope": "all",
                 "threshold": 0.91
               },
               "s2_style": {
@@ -1847,6 +1912,7 @@
                 "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
                 "passage_id": "s2",
                 "passage_text": "The clock showed eleven.",
+                "scope": "all",
                 "threshold": 0.76
               }
             },
@@ -1916,7 +1982,8 @@
                 "details": {
                   "flagged_question_ids": [
                     "s1_repetition"
-                  ]
+                  ],
+                  "skipped_passages": []
                 }
               }
             ]
@@ -1954,7 +2021,8 @@
                 "reason": null
               }
             ],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           }
         ]
       }
@@ -1970,7 +2038,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -1983,7 +2052,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -2126,7 +2196,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -2230,7 +2301,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -2334,7 +2406,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -2437,7 +2510,8 @@
                 "reason": null
               }
             ],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           }
         ]
       }
@@ -2453,7 +2527,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -2466,7 +2541,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -2637,7 +2713,8 @@
           "status": "completed",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -2700,7 +2777,8 @@
             "status": "completed",
             "timestamp": "2026-09-21T09:00:00+00:00",
             "actions": [],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           }
         ]
       }
@@ -2716,7 +2794,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -2729,7 +2808,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -2854,7 +2934,8 @@
               "reason": "decision_unavailable"
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -2928,7 +3009,8 @@
               "reason": "decision_unavailable"
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -3002,7 +3084,8 @@
               "reason": "decision_unavailable"
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -3075,7 +3158,8 @@
                 "reason": "decision_unavailable"
               }
             ],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           }
         ]
       }
@@ -3091,7 +3175,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -3104,7 +3189,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -3193,7 +3279,8 @@
               "reason": "decision_unavailable"
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -3267,7 +3354,8 @@
               "reason": "decision_unavailable"
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -3341,7 +3429,8 @@
               "reason": "decision_unavailable"
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -3414,7 +3503,8 @@
                 "reason": "decision_unavailable"
               }
             ],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           }
         ]
       }
@@ -3430,7 +3520,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -3443,7 +3534,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -3518,7 +3610,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:02+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -3531,7 +3624,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:02+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -3674,7 +3768,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -3778,7 +3873,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -3882,7 +3978,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -3993,7 +4090,8 @@
           "status": "completed",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -4122,7 +4220,8 @@
             "status": "completed",
             "timestamp": "2026-09-21T09:00:00+00:00",
             "actions": [],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           },
           {
             "id": "invocation-2",
@@ -4154,7 +4253,8 @@
                 "reason": null
               }
             ],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           }
         ]
       }
@@ -4170,7 +4270,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -4183,7 +4284,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -4294,7 +4396,8 @@
           "status": "cancelled",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -4342,7 +4445,8 @@
             "status": "cancelled",
             "timestamp": "2026-09-21T09:00:00+00:00",
             "actions": [],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           }
         ]
       }
@@ -4358,7 +4462,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -4371,7 +4476,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -4491,7 +4597,8 @@
           "status": "cancelled",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -4548,7 +4655,8 @@
             "status": "cancelled",
             "timestamp": "2026-09-21T09:00:00+00:00",
             "actions": [],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           }
         ]
       }
@@ -4564,7 +4672,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -4577,7 +4686,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -4712,7 +4822,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -4740,7 +4851,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -4768,7 +4880,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -4840,7 +4953,8 @@
                 "reason": null
               }
             ],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           }
         ]
       }
@@ -4856,7 +4970,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -4869,7 +4984,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -5042,7 +5158,8 @@
           "status": "completed",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -5055,7 +5172,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:02+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -5068,7 +5186,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:02+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -5241,7 +5360,8 @@
           "status": "completed",
           "timestamp": "2026-09-21T09:00:02+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -5254,7 +5374,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:04+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -5267,7 +5388,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:04+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -5440,7 +5562,8 @@
           "status": "completed",
           "timestamp": "2026-09-21T09:00:04+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -5564,7 +5687,8 @@
             "status": "completed",
             "timestamp": "2026-09-21T09:00:02+00:00",
             "actions": [],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           },
           {
             "id": "invocation-3",
@@ -5573,7 +5697,8 @@
             "status": "completed",
             "timestamp": "2026-09-21T09:00:04+00:00",
             "actions": [],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           }
         ]
       }
@@ -5589,7 +5714,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -5602,7 +5728,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -5745,7 +5872,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -5849,7 +5977,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -5953,7 +6082,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -5966,7 +6096,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:03+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -5979,7 +6110,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:03+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -6122,7 +6254,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -6236,7 +6369,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -6340,7 +6474,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -6443,7 +6578,8 @@
                 "reason": null
               }
             ],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           }
         ]
       }
@@ -6459,7 +6595,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -6472,7 +6609,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -6739,7 +6877,8 @@
           "status": "completed",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -6844,7 +6983,8 @@
             "status": "completed",
             "timestamp": "2026-09-21T09:00:00+00:00",
             "actions": [],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           }
         ]
       }
@@ -6860,7 +7000,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -6873,7 +7014,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -6993,7 +7135,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 2
+          "request_count": 2,
+          "outcomes": []
         }
       },
       {
@@ -7122,7 +7265,8 @@
               "reason": null
             }
           ],
-          "request_count": 2
+          "request_count": 2,
+          "outcomes": []
         }
       },
       {
@@ -7210,7 +7354,8 @@
               "reason": null
             }
           ],
-          "request_count": 2
+          "request_count": 2,
+          "outcomes": []
         }
       },
       {
@@ -7298,7 +7443,8 @@
               "reason": null
             }
           ],
-          "request_count": 2
+          "request_count": 2,
+          "outcomes": []
         }
       },
       {
@@ -7423,7 +7569,8 @@
                 "reason": null
               }
             ],
-            "request_count": 2
+            "request_count": 2,
+            "outcomes": []
           }
         ]
       }
@@ -7439,7 +7586,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -7452,7 +7600,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -7572,7 +7721,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 2
+          "request_count": 2,
+          "outcomes": []
         }
       },
       {
@@ -7701,7 +7851,8 @@
               "reason": null
             }
           ],
-          "request_count": 2
+          "request_count": 2,
+          "outcomes": []
         }
       },
       {
@@ -7789,7 +7940,8 @@
               "reason": null
             }
           ],
-          "request_count": 2
+          "request_count": 2,
+          "outcomes": []
         }
       },
       {
@@ -7877,7 +8029,8 @@
               "reason": null
             }
           ],
-          "request_count": 2
+          "request_count": 2,
+          "outcomes": []
         }
       },
       {
@@ -7954,7 +8107,8 @@
                 "reason": null
               }
             ],
-            "request_count": 2
+            "request_count": 2,
+            "outcomes": []
           }
         ]
       }
@@ -7970,7 +8124,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -7983,7 +8138,8 @@
           "status": "completed",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -7998,7 +8154,8 @@
             "status": "completed",
             "timestamp": "2026-09-21T09:00:00+00:00",
             "actions": [],
-            "request_count": 0
+            "request_count": 0,
+            "outcomes": []
           }
         ]
       }
@@ -8014,7 +8171,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -8027,7 +8185,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -8161,7 +8320,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -8319,7 +8479,8 @@
               "reason": "decision_unavailable"
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -8428,7 +8589,8 @@
               "reason": "decision_unavailable"
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -8537,7 +8699,8 @@
               "reason": "decision_unavailable"
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -8645,7 +8808,8 @@
                 "reason": "decision_unavailable"
               }
             ],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
           }
         ]
       }
@@ -8661,7 +8825,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 0
+          "request_count": 0,
+          "outcomes": []
         }
       },
       {
@@ -8674,7 +8839,8 @@
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -8817,7 +8983,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -8924,7 +9091,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -9187,7 +9355,8 @@
               "reason": null
             }
           ],
-          "request_count": 1
+          "request_count": 1,
+          "outcomes": []
         }
       },
       {
@@ -9304,7 +9473,789 @@
                 "reason": null
               }
             ],
-            "request_count": 1
+            "request_count": 1,
+            "outcomes": []
+          }
+        ]
+      }
+    ],
+    "scoped_checks": [
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.scoped-checks",
+          "source_group": null,
+          "status": "running",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [],
+          "request_count": 0,
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.scoped-checks",
+          "source_group": "override",
+          "status": "running",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [],
+          "request_count": 1,
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "request",
+        "entry": {
+          "invocation_id": "invocation-1",
+          "template_uid": "editor.scoped-checks",
+          "source_group": "override",
+          "label": "editor-checks",
+          "provider": "fake",
+          "model": "any-model-name",
+          "id": "request-1",
+          "timestamp": "2026-09-21T09:00:01+00:00",
+          "state": null,
+          "questions": {},
+          "presentation": {},
+          "status": "pending",
+          "dispatched": false,
+          "elapsed_ms": null,
+          "answers": null,
+          "raw": null,
+          "failure": null,
+          "policy_failure": null,
+          "actions": [],
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "request",
+        "entry": {
+          "invocation_id": "invocation-1",
+          "template_uid": "editor.scoped-checks",
+          "source_group": "override",
+          "label": "editor-checks",
+          "provider": "fake",
+          "model": "any-model-name",
+          "id": "request-1",
+          "timestamp": "2026-09-21T09:00:01+00:00",
+          "state": {
+            "text": "\"Mind the third rung.\" The ladder shifted.",
+            "passages": [
+              {
+                "id": "s1",
+                "text": "\"Mind the third rung.\"",
+                "prose": ""
+              },
+              {
+                "id": "s2",
+                "text": "The ladder shifted.",
+                "prose": "The ladder shifted."
+              }
+            ],
+            "history": []
+          },
+          "questions": {
+            "s2_filler": {
+              "type": "noul",
+              "instructions": "Judge only the prose of passage s2 (its `prose` text: everything outside double quotes); ignore its dialogue. Does passage s2 pad the moment?"
+            }
+          },
+          "presentation": {
+            "s2_filler": {
+              "group_id": "filler",
+              "label": "Filler prose",
+              "instructions": "Does passage shown below pad the moment?",
+              "passage_id": "s2",
+              "passage_text": "The ladder shifted.",
+              "scope": "prose",
+              "threshold": 0.8
+            }
+          },
+          "status": "pending",
+          "dispatched": true,
+          "elapsed_ms": null,
+          "answers": null,
+          "raw": null,
+          "failure": null,
+          "policy_failure": null,
+          "actions": [],
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "request",
+        "entry": {
+          "invocation_id": "invocation-1",
+          "template_uid": "editor.scoped-checks",
+          "source_group": "override",
+          "label": "editor-checks",
+          "provider": "fake",
+          "model": "any-model-name",
+          "id": "request-1",
+          "timestamp": "2026-09-21T09:00:01+00:00",
+          "state": {
+            "text": "\"Mind the third rung.\" The ladder shifted.",
+            "passages": [
+              {
+                "id": "s1",
+                "text": "\"Mind the third rung.\"",
+                "prose": ""
+              },
+              {
+                "id": "s2",
+                "text": "The ladder shifted.",
+                "prose": "The ladder shifted."
+              }
+            ],
+            "history": []
+          },
+          "questions": {
+            "s2_filler": {
+              "type": "noul",
+              "instructions": "Judge only the prose of passage s2 (its `prose` text: everything outside double quotes); ignore its dialogue. Does passage s2 pad the moment?"
+            }
+          },
+          "presentation": {
+            "s2_filler": {
+              "group_id": "filler",
+              "label": "Filler prose",
+              "instructions": "Does passage shown below pad the moment?",
+              "passage_id": "s2",
+              "passage_text": "The ladder shifted.",
+              "scope": "prose",
+              "threshold": 0.8
+            }
+          },
+          "status": "completed",
+          "dispatched": true,
+          "elapsed_ms": 140.0,
+          "answers": {
+            "s2_filler": {
+              "type": "noul",
+              "p_true": 0.2
+            }
+          },
+          "raw": {},
+          "failure": null,
+          "policy_failure": null,
+          "actions": [],
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "request",
+        "entry": {
+          "invocation_id": "invocation-1",
+          "template_uid": "editor.scoped-checks",
+          "source_group": "override",
+          "label": "editor-checks",
+          "provider": "fake",
+          "model": "any-model-name",
+          "id": "request-1",
+          "timestamp": "2026-09-21T09:00:01+00:00",
+          "state": {
+            "text": "\"Mind the third rung.\" The ladder shifted.",
+            "passages": [
+              {
+                "id": "s1",
+                "text": "\"Mind the third rung.\"",
+                "prose": ""
+              },
+              {
+                "id": "s2",
+                "text": "The ladder shifted.",
+                "prose": "The ladder shifted."
+              }
+            ],
+            "history": []
+          },
+          "questions": {
+            "s2_filler": {
+              "type": "noul",
+              "instructions": "Judge only the prose of passage s2 (its `prose` text: everything outside double quotes); ignore its dialogue. Does passage s2 pad the moment?"
+            }
+          },
+          "presentation": {
+            "s2_filler": {
+              "group_id": "filler",
+              "label": "Filler prose",
+              "instructions": "Does passage shown below pad the moment?",
+              "passage_id": "s2",
+              "passage_text": "The ladder shifted.",
+              "scope": "prose",
+              "threshold": 0.8
+            }
+          },
+          "status": "completed",
+          "dispatched": true,
+          "elapsed_ms": 140.0,
+          "answers": {
+            "s2_filler": {
+              "type": "noul",
+              "p_true": 0.2
+            }
+          },
+          "raw": {},
+          "failure": null,
+          "policy_failure": null,
+          "actions": [],
+          "outcomes": [
+            {
+              "action": "no_action",
+              "reason": "below_thresholds",
+              "details": {
+                "thresholds": {
+                  "s2_filler": 0.8
+                },
+                "flagged_question_ids": [],
+                "skipped_passages": [
+                  {
+                    "group_id": "filler",
+                    "label": "Filler prose",
+                    "instructions": "Does passage shown below pad the moment?",
+                    "passage_id": "s1",
+                    "scope": "prose"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.scoped-checks",
+          "source_group": "override",
+          "status": "completed",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [],
+          "request_count": 1,
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "snapshot",
+        "requests": [
+          {
+            "invocation_id": "invocation-1",
+            "template_uid": "editor.scoped-checks",
+            "source_group": "override",
+            "label": "editor-checks",
+            "provider": "fake",
+            "model": "any-model-name",
+            "id": "request-1",
+            "timestamp": "2026-09-21T09:00:01+00:00",
+            "state": {
+              "text": "\"Mind the third rung.\" The ladder shifted.",
+              "passages": [
+                {
+                  "id": "s1",
+                  "text": "\"Mind the third rung.\"",
+                  "prose": ""
+                },
+                {
+                  "id": "s2",
+                  "text": "The ladder shifted.",
+                  "prose": "The ladder shifted."
+                }
+              ],
+              "history": []
+            },
+            "questions": {
+              "s2_filler": {
+                "type": "noul",
+                "instructions": "Judge only the prose of passage s2 (its `prose` text: everything outside double quotes); ignore its dialogue. Does passage s2 pad the moment?"
+              }
+            },
+            "presentation": {
+              "s2_filler": {
+                "group_id": "filler",
+                "label": "Filler prose",
+                "instructions": "Does passage shown below pad the moment?",
+                "passage_id": "s2",
+                "passage_text": "The ladder shifted.",
+                "scope": "prose",
+                "threshold": 0.8
+              }
+            },
+            "status": "completed",
+            "dispatched": true,
+            "elapsed_ms": 140.0,
+            "answers": {
+              "s2_filler": {
+                "type": "noul",
+                "p_true": 0.2
+              }
+            },
+            "raw": {},
+            "failure": null,
+            "policy_failure": null,
+            "actions": [],
+            "outcomes": [
+              {
+                "action": "no_action",
+                "reason": "below_thresholds",
+                "details": {
+                  "thresholds": {
+                    "s2_filler": 0.8
+                  },
+                  "flagged_question_ids": [],
+                  "skipped_passages": [
+                    {
+                      "group_id": "filler",
+                      "label": "Filler prose",
+                      "instructions": "Does passage shown below pad the moment?",
+                      "passage_id": "s1",
+                      "scope": "prose"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "invocations": [
+          {
+            "id": "invocation-1",
+            "template_uid": "editor.scoped-checks",
+            "source_group": "override",
+            "status": "completed",
+            "timestamp": "2026-09-21T09:00:00+00:00",
+            "actions": [],
+            "request_count": 1,
+            "outcomes": []
+          }
+        ]
+      }
+    ],
+    "nothing_in_scope": [
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.nothing-in-scope",
+          "source_group": null,
+          "status": "running",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [],
+          "request_count": 0,
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.nothing-in-scope",
+          "source_group": "override",
+          "status": "running",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [],
+          "request_count": 0,
+          "outcomes": [
+            {
+              "action": "no_action",
+              "reason": "nothing_in_scope",
+              "details": {
+                "skipped_passages": [
+                  {
+                    "group_id": "filler",
+                    "label": "Filler prose",
+                    "instructions": "Does passage shown below pad the moment?",
+                    "passage_id": "s1",
+                    "scope": "prose"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.nothing-in-scope",
+          "source_group": "override",
+          "status": "completed",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [],
+          "request_count": 0,
+          "outcomes": [
+            {
+              "action": "no_action",
+              "reason": "nothing_in_scope",
+              "details": {
+                "skipped_passages": [
+                  {
+                    "group_id": "filler",
+                    "label": "Filler prose",
+                    "instructions": "Does passage shown below pad the moment?",
+                    "passage_id": "s1",
+                    "scope": "prose"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "snapshot",
+        "requests": [],
+        "invocations": [
+          {
+            "id": "invocation-1",
+            "template_uid": "editor.nothing-in-scope",
+            "source_group": "override",
+            "status": "completed",
+            "timestamp": "2026-09-21T09:00:00+00:00",
+            "actions": [],
+            "request_count": 0,
+            "outcomes": [
+              {
+                "action": "no_action",
+                "reason": "nothing_in_scope",
+                "details": {
+                  "skipped_passages": [
+                    {
+                      "group_id": "filler",
+                      "label": "Filler prose",
+                      "instructions": "Does passage shown below pad the moment?",
+                      "passage_id": "s1",
+                      "scope": "prose"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "outcome_before_request": [
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.outcome-before-request",
+          "source_group": null,
+          "status": "running",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [],
+          "request_count": 0,
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.outcome-before-request",
+          "source_group": "override",
+          "status": "running",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [],
+          "request_count": 0,
+          "outcomes": [
+            {
+              "action": "note",
+              "reason": "checked_first",
+              "details": {}
+            }
+          ]
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.outcome-before-request",
+          "source_group": "override",
+          "status": "running",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [],
+          "request_count": 1,
+          "outcomes": [
+            {
+              "action": "note",
+              "reason": "checked_first",
+              "details": {}
+            }
+          ]
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "request",
+        "entry": {
+          "invocation_id": "invocation-1",
+          "template_uid": "editor.outcome-before-request",
+          "source_group": "override",
+          "label": "editor-repetition",
+          "provider": "fake",
+          "model": "any-model-name",
+          "id": "request-1",
+          "timestamp": "2026-09-21T09:00:01+00:00",
+          "state": null,
+          "questions": {},
+          "presentation": {},
+          "status": "pending",
+          "dispatched": false,
+          "elapsed_ms": null,
+          "answers": null,
+          "raw": null,
+          "failure": null,
+          "policy_failure": null,
+          "actions": [],
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "request",
+        "entry": {
+          "invocation_id": "invocation-1",
+          "template_uid": "editor.outcome-before-request",
+          "source_group": "override",
+          "label": "editor-repetition",
+          "provider": "fake",
+          "model": "any-model-name",
+          "id": "request-1",
+          "timestamp": "2026-09-21T09:00:01+00:00",
+          "state": {
+            "passage": "original",
+            "history": [
+              "earlier"
+            ]
+          },
+          "questions": {
+            "repeats": {
+              "type": "noul",
+              "instructions": "Does this passage repeat an earlier story beat?"
+            }
+          },
+          "presentation": {},
+          "status": "pending",
+          "dispatched": true,
+          "elapsed_ms": null,
+          "answers": null,
+          "raw": null,
+          "failure": null,
+          "policy_failure": null,
+          "actions": [],
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "request",
+        "entry": {
+          "invocation_id": "invocation-1",
+          "template_uid": "editor.outcome-before-request",
+          "source_group": "override",
+          "label": "editor-repetition",
+          "provider": "fake",
+          "model": "any-model-name",
+          "id": "request-1",
+          "timestamp": "2026-09-21T09:00:01+00:00",
+          "state": {
+            "passage": "original",
+            "history": [
+              "earlier"
+            ]
+          },
+          "questions": {
+            "repeats": {
+              "type": "noul",
+              "instructions": "Does this passage repeat an earlier story beat?"
+            }
+          },
+          "presentation": {},
+          "status": "completed",
+          "dispatched": true,
+          "elapsed_ms": 140.0,
+          "answers": {
+            "repeats": {
+              "type": "noul",
+              "p_true": 0.74
+            }
+          },
+          "raw": {
+            "repeats": {
+              "noul": 0.74
+            }
+          },
+          "failure": null,
+          "policy_failure": null,
+          "actions": [],
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "request",
+        "entry": {
+          "invocation_id": "invocation-1",
+          "template_uid": "editor.outcome-before-request",
+          "source_group": "override",
+          "label": "editor-repetition",
+          "provider": "fake",
+          "model": "any-model-name",
+          "id": "request-1",
+          "timestamp": "2026-09-21T09:00:01+00:00",
+          "state": {
+            "passage": "original",
+            "history": [
+              "earlier"
+            ]
+          },
+          "questions": {
+            "repeats": {
+              "type": "noul",
+              "instructions": "Does this passage repeat an earlier story beat?"
+            }
+          },
+          "presentation": {},
+          "status": "completed",
+          "dispatched": true,
+          "elapsed_ms": 140.0,
+          "answers": {
+            "repeats": {
+              "type": "noul",
+              "p_true": 0.74
+            }
+          },
+          "raw": {
+            "repeats": {
+              "noul": 0.74
+            }
+          },
+          "failure": null,
+          "policy_failure": null,
+          "actions": [],
+          "outcomes": [
+            {
+              "action": "no_action",
+              "reason": "below_threshold",
+              "details": {
+                "threshold": 0.8
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.outcome-before-request",
+          "source_group": "override",
+          "status": "completed",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [],
+          "request_count": 1,
+          "outcomes": [
+            {
+              "action": "note",
+              "reason": "checked_first",
+              "details": {}
+            }
+          ]
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "snapshot",
+        "requests": [
+          {
+            "invocation_id": "invocation-1",
+            "template_uid": "editor.outcome-before-request",
+            "source_group": "override",
+            "label": "editor-repetition",
+            "provider": "fake",
+            "model": "any-model-name",
+            "id": "request-1",
+            "timestamp": "2026-09-21T09:00:01+00:00",
+            "state": {
+              "passage": "original",
+              "history": [
+                "earlier"
+              ]
+            },
+            "questions": {
+              "repeats": {
+                "type": "noul",
+                "instructions": "Does this passage repeat an earlier story beat?"
+              }
+            },
+            "presentation": {},
+            "status": "completed",
+            "dispatched": true,
+            "elapsed_ms": 140.0,
+            "answers": {
+              "repeats": {
+                "type": "noul",
+                "p_true": 0.74
+              }
+            },
+            "raw": {
+              "repeats": {
+                "noul": 0.74
+              }
+            },
+            "failure": null,
+            "policy_failure": null,
+            "actions": [],
+            "outcomes": [
+              {
+                "action": "no_action",
+                "reason": "below_threshold",
+                "details": {
+                  "threshold": 0.8
+                }
+              }
+            ]
+          }
+        ],
+        "invocations": [
+          {
+            "id": "invocation-1",
+            "template_uid": "editor.outcome-before-request",
+            "source_group": "override",
+            "status": "completed",
+            "timestamp": "2026-09-21T09:00:00+00:00",
+            "actions": [],
+            "request_count": 1,
+            "outcomes": [
+              {
+                "action": "note",
+                "reason": "checked_first",
+                "details": {}
+              }
+            ]
           }
         ]
       }

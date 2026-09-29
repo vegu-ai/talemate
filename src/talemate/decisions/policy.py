@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import random
 from collections.abc import Callable, Mapping
 from pathlib import Path
@@ -408,6 +409,9 @@ class PolicyInvocation(Generic[T]):
             self._action_update(action, records)
 
     def decision_outcome(self, handle, action, *, reason=None, **details):
+        """
+        With no handle, the outcome belongs to an invocation that made no request.
+        """
         self._check_running()
         if (
             not isinstance(action, str)
@@ -415,14 +419,20 @@ class PolicyInvocation(Generic[T]):
             or (reason is not None and not isinstance(reason, str))
         ):
             raise DecisionError(FailureCode.TEMPLATE)
+        outcome = {
+            "action": action,
+            "reason": reason or "reason unspecified",
+            "details": serialize_log_value(details),
+        }
+        if handle is None:
+            invocation = self.service.log.invocations[self.id]
+            if invocation.request_count:
+                raise DecisionError(FailureCode.TEMPLATE)
+            invocation.outcomes.append(outcome)
+            self.service.log.update_invocation(self.id)
+            return ""
         for record in self._associated(handle):
-            record.outcomes.append(
-                {
-                    "action": action,
-                    "reason": reason or "reason unspecified",
-                    "details": serialize_log_value(details),
-                }
-            )
+            record.outcomes.append(copy.deepcopy(outcome))
             self.service.log.update(record)
         return ""
 

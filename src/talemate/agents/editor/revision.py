@@ -821,7 +821,7 @@ class RevisionMixin:
             status="idle",
         )
 
-    def revision_repetition_history(self) -> list[str]:
+    def revision_repetition_history(self, with_speakers: bool = False) -> list[str]:
         # Repetition detection is author output: compare exact reader prose in every
         # mode, because perception paraphrases cannot establish lexical repetition.
         scene: "Scene" = self.scene
@@ -838,7 +838,7 @@ class RevisionMixin:
         return_messages = []
 
         for message in messages:
-            if isinstance(message, CharacterMessage):
+            if isinstance(message, CharacterMessage) and not with_speakers:
                 return_messages.append(message.without_name)
             else:
                 return_messages.append(message.message)

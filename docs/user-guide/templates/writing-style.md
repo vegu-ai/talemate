@@ -119,24 +119,52 @@ while creating a new writing style. It adds:
   and changes its description.
 - **Writing style and unwanted prose**, which checks the style instructions and
   active phrase rules.
+- **Repeated dialogue and behavioural tics**, with separate questions for a line or
+  catchphrase a character keeps saying and a gesture or mannerism a character keeps
+  making. It flags a habit the same character keeps coming back to, from the third
+  use on: a keeper who says "Curious weather for it" once or twice has a voice; the
+  fourth time, it is a tic. The same line from another character is not a finding.
+- **Overdescription and filler prose**, which looks for description and filler that the
+  moment does not need, such as stacked adjectives or sentences that only restate a
+  mood ("Time itself seemed to slow"). Detail that serves the moment and a short beat
+  such as "Nobody spoke." are not findings. It applies to **Prose only**, so a
+  character who talks in long, ornate sentences is not flagged for it.
 
-Each check starts at a probability threshold of **0.80**, shown as **Flags at 0.80** in the list. The button adds missing
+Each check starts at a probability threshold of **0.80**, shown as **Flags at 0.80** in
+the list; **Overdescription and filler prose** starts at **0.50**. The button adds missing
 default questions without replacing your edits or adding duplicate questions.
 If a check with the same name already exists, the added check gets a numbered
 name, such as **Repeated beats and description reuse (2)**.
 
-Click **Edit** to change a check's name, threshold and questions. Each question has a
+Click **Edit** to change a check's name, **Applies to** scope, threshold and questions. Each question has a
 **Question**, a **Rewrite instruction** and a **Finding type**. Use `{passage_id}` in a
 question or its criteria to refer to the passage being evaluated. The model also receives
 the full current text, preceding history, style instructions and active prose rules.
 The token is optional: without it, the Editor names the passage before your question.
 
-**More options** under each question holds the optional settings:
+**Applies to** chooses what the check judges in each passage:
 
-- **What counts as yes** and **What counts as no** are optional guidance (the true and
-  false criteria). Fill both to use them; if either is blank, the check uses its
-  question without either criterion.
-- **Short name** (the question ID) identifies the answer in the Decision Log. It must be
+- **All text** (the default) judges the whole passage.
+- **Dialogue only** judges only the text inside double quotes.
+- **Prose only** judges everything outside double quotes: narration and actions.
+
+For example, a check "Does the dialogue sound modern?" on **Dialogue only** does not
+flag narration that describes a modern city. A passage with nothing in the chosen part
+is skipped for that check, and the Decision Log names the skipped passages. The list
+shows **Dialogue only** or **Prose only** next to the threshold of a check.
+
+A message with an odd number of double quotes (a quote that is never closed, or a
+measurement such as `6"`) has no reliable split between dialogue and prose. A
+**Dialogue only** or **Prose only** check then judges all the text of that message,
+as **All text** would.
+
+**More options** under each question holds optional refinements of the question. A
+short note at the top of the section explains them:
+
+- **What counts as yes** and **What counts as no** (the true and false criteria) help
+  when the question alone leaves room for doubt. Fill in both to use them; if either
+  is blank, the check uses its question without either criterion.
+- **Short name** (the question ID) labels the question in the Decision Log. It must be
   unique within the style.
 
 Click **Apply check** to keep the edit, or **Cancel** to discard it.

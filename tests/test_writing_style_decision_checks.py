@@ -15,10 +15,37 @@ def test_missing_and_empty_checks_remain_empty():
     assert WritingStyle(name="Empty style", decision_checks=[]).decision_checks == []
 
 
+def test_stored_check_without_scope_loads_as_all():
+    stored = default_writing_style_decision_checks()[0].model_dump(mode="json")
+    del stored["scope"]
+    style = WritingStyle(name="Stored", decision_checks=[stored])
+    assert style.decision_checks[0].scope == "all"
+
+
+@pytest.mark.parametrize("scope", ["all", "dialogue", "prose"])
+def test_scope_roundtrips(scope):
+    stored = default_writing_style_decision_checks()[0].model_dump(mode="json")
+    stored["scope"] = scope
+    style = WritingStyle(name="Stored", decision_checks=[stored])
+    assert style.model_dump(mode="json")["decision_checks"][0]["scope"] == scope
+
+
 def test_default_checks_are_independent_and_preserve_tuned_wording():
     checks = default_writing_style_decision_checks()
-    assert [check.threshold for check in checks] == [0.8, 0.8]
-    assert [len(check.questions) for check in checks] == [2, 1]
+    assert [check.name for check in checks] == [
+        "Repeated beats and description reuse",
+        "Writing style and unwanted prose",
+        "Repeated dialogue and behavioural tics",
+        "Overdescription and filler prose",
+    ]
+    assert [check.threshold for check in checks] == [0.8, 0.8, 0.8, 0.5]
+    assert [check.scope for check in checks] == ["all", "all", "all", "prose"]
+    assert [len(check.questions) for check in checks] == [2, 1, 2, 1]
+    assert [q.id for q in checks[2].questions + checks[3].questions] == [
+        "dialogue_tic",
+        "mannerism_tic",
+        "overdescription",
+    ]
     beat, reuse = checks[0].questions
     assert beat.id == "repetition"
     assert "Judge meaning, not shared words." in beat.question
@@ -153,6 +180,7 @@ def test_whitespace_only_question_content_is_rejected(field):
         "threshold_nan",
         "empty_question",
         "malformed_list",
+        "scope",
     ],
 )
 def test_disk_load_repairs_checks_and_group_save_preserves_style(tmp_path, invalid):
@@ -197,6 +225,8 @@ def test_disk_load_repairs_checks_and_group_save_preserves_style(tmp_path, inval
         }[invalid]
     elif invalid == "empty_question":
         checks[0]["questions"][0]["question"] = "   "
+    elif invalid == "scope":
+        checks[0]["scope"] = "speech"
     else:
         data["templates"][style.uid]["decision_checks"] = "not a list"
     with pytest.raises(ValidationError):
@@ -209,7 +239,7 @@ def test_disk_load_repairs_checks_and_group_save_preserves_style(tmp_path, inval
     assert repaired.description == style.description
     assert repaired.phrases == style.phrases
     assert len(repaired.decision_checks) == (
-        0 if invalid == "malformed_list" else 1 if invalid == "empty_question" else 2
+        0 if invalid == "malformed_list" else 3 if invalid == "empty_question" else 4
     )
     questions = [q for c in repaired.decision_checks for q in c.questions]
     assert len({q.id for q in questions}) == len(questions)
@@ -220,7 +250,7 @@ def test_disk_load_repairs_checks_and_group_save_preserves_style(tmp_path, inval
     if invalid.startswith("null_"):
         assert getattr(questions[0], invalid.removeprefix("null_")) == ""
     if invalid == "authored_id_collision":
-        assert [q.id for q in questions] == ["question_2", "question_3", "question"]
+        assert [q.id for q in questions][:3] == ["question_2", "question_3", "question"]
     if invalid.startswith("threshold"):
         assert (
             repaired.decision_checks[0].threshold
@@ -228,5 +258,7 @@ def test_disk_load_repairs_checks_and_group_save_preserves_style(tmp_path, inval
                 invalid
             ]
         )
+    if invalid == "scope":
+        assert repaired.decision_checks[0].scope == "all"
     loaded.update_template(sibling.model_copy(update={"description": "Edited sibling"}))
     assert Group.load(str(path)).templates[style.uid] == repaired

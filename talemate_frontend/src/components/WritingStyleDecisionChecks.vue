@@ -23,6 +23,7 @@
                     <v-checkbox :model-value="check.active" :label="check.name" hide-details density="compact"
                         :disabled="!!draft" @update:model-value="setActive(index, $event)" />
                     <v-chip size="small" label>Flags at {{ Number(check.threshold).toFixed(2) }}</v-chip>
+                    <v-chip v-if="scopeOf(check).value !== 'all'" size="small" label :prepend-icon="scopeOf(check).icon">{{ scopeOf(check).title }}</v-chip>
                     <span class="text-body-small text-medium-emphasis">{{ check.questions.length }} {{ check.questions.length === 1 ? 'question' : 'questions' }}</span>
                     <v-spacer />
                     <v-btn variant="text" size="small" prepend-icon="mdi-pencil" :disabled="!!draft" :aria-label="`Edit ${check.name}`"
@@ -44,8 +45,17 @@
                                 hint="Flag a passage when the answer's probability is at least this value (0 to 1)." persistent-hint />
                         </v-col>
                     </v-row>
-                    <v-checkbox v-model="draft.requires_style" density="compact" hide-details class="mb-3"
-                        label="Only run when this writing style has instructions or active prose rules" />
+                    <v-row density="compact" class="align-start mb-2">
+                        <v-col cols="12" md="4">
+                            <v-select v-model="draft.scope" label="Applies to" :items="scopes" density="compact"
+                                :prepend-inner-icon="scopeOf(draft).icon"
+                                hint="Dialogue is text in double quotes; prose is the rest." persistent-hint />
+                        </v-col>
+                        <v-col cols="12" md="8">
+                            <v-checkbox v-model="draft.requires_style" density="compact" hide-details
+                                label="Only run when this writing style has instructions or active prose rules" />
+                        </v-col>
+                    </v-row>
                     <v-card v-for="(question, index) in draft.questions" :key="index" variant="tonal" class="mb-3">
                         <v-card-text>
                             <div class="d-flex align-center mb-2">
@@ -65,12 +75,14 @@
                                 <v-expansion-panel value="more" eager>
                                     <v-expansion-panel-title class="text-body-medium">More options</v-expansion-panel-title>
                                     <v-expansion-panel-text>
-                                        <v-textarea v-model="question.true_criteria" label="What counts as yes" rows="1" auto-grow density="compact"
-                                            hint="Optional. Fill in both to use them." persistent-hint />
-                                        <v-textarea v-model="question.false_criteria" label="What counts as no" rows="1" auto-grow density="compact"
-                                            hint="Optional. Fill in both to use them." persistent-hint class="mt-3" />
+                                        <p class="text-body-small text-medium-emphasis mb-3" data-testid="more-options-help">
+                                            Optional refinements: say what counts as yes and as no when the question alone leaves room for doubt (fill in both).
+                                            The short name labels this question in the Decision Log.
+                                        </p>
+                                        <v-textarea v-model="question.true_criteria" label="What counts as yes" rows="1" auto-grow density="compact" hide-details />
+                                        <v-textarea v-model="question.false_criteria" label="What counts as no" rows="1" auto-grow density="compact" hide-details class="mt-3" />
                                         <v-text-field v-model="question.id" label="Short name" density="compact" :rules="[validId]" class="mt-3"
-                                            hint="Names this question in the Decision Log. Letters, numbers and underscores; start with a letter." persistent-hint />
+                                            hint="Letters, numbers and underscores; start with a letter." persistent-hint />
                                     </v-expansion-panel-text>
                                 </v-expansion-panel>
                             </v-expansion-panels>
@@ -89,6 +101,8 @@
 </template>
 
 <script>
+import { DECISION_CHECK_SCOPES, decisionCheckScope } from '@/utils/decisionCheckScope';
+
 const clone = value => JSON.parse(JSON.stringify(value));
 const questionIds = checks => checks.flatMap(check => check.questions.map(question => question.id));
 
@@ -109,6 +123,7 @@ export default {
                 { title: 'Repetition', value: 'repetition' },
                 { title: 'Writing style or unwanted prose', value: 'style' },
             ],
+            scopes: DECISION_CHECK_SCOPES.map(scope => ({ title: scope.title, value: scope.value, props: { prependIcon: scope.icon } })),
         };
     },
     computed: {
@@ -154,6 +169,7 @@ export default {
         },
     },
     methods: {
+        scopeOf(check) { return decisionCheckScope(check.scope); },
         required(value) { return !!String(value || '').trim() || 'Required'; },
         validThreshold(value) {
             return (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1) || 'Enter a number from 0 to 1';
@@ -174,7 +190,7 @@ export default {
         },
         addCheck() {
             this.editIndex = -1;
-            this.draft = { name: '', active: true, threshold: 0.8, requires_style: false, questions: [] };
+            this.draft = { name: '', active: true, threshold: 0.8, requires_style: false, scope: 'all', questions: [] };
             this.addQuestion();
             this.$emit('editing', true);
         },

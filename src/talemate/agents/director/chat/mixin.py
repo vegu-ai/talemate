@@ -604,6 +604,18 @@ class DirectorChatMixin:
             else:
                 extra_vars.pop("scene_plan", None)
 
+        batch_intro: str | None = None
+
+        async def append_director_message(text: str | None):
+            nonlocal batch_intro
+            batch_intro = " ".join(text.split()) if text else None
+            if text:
+                await self.chat_append_message(
+                    chat_id,
+                    DirectorChatMessage(message=text, source="director"),
+                    on_update=on_update,
+                )
+
         while True:
             _sync_plan_to_context()
 
@@ -650,12 +662,7 @@ class DirectorChatMixin:
                     actions_selected=actions_selected,
                 )
 
-                if parsed_response:
-                    await self.chat_append_message(
-                        chat_id,
-                        DirectorChatMessage(message=parsed_response, source="director"),
-                        on_update=on_update,
-                    )
+                await append_director_message(parsed_response)
             else:
                 actions_selected = pending_actions
                 pending_actions = None
@@ -753,12 +760,17 @@ class DirectorChatMixin:
                 log.error("director.chat.followup.unhandled_error", error=e)
                 follow_parsed, follow_actions = None, None
 
-            if follow_parsed:
-                await self.chat_append_message(
-                    chat_id,
-                    DirectorChatMessage(message=follow_parsed, source="director"),
-                    on_update=on_update,
-                )
+            # A closing follow-up can restate the text that introduced the batch verbatim;
+            # one that answers corrections or opens the next batch is always kept.
+            if (
+                follow_parsed
+                and not rejections
+                and not follow_actions
+                and " ".join(follow_parsed.split()) == batch_intro
+            ):
+                log.info("director.chat.repeated_message_skipped", chat_id=chat_id)
+            else:
+                await append_director_message(follow_parsed)
 
             iterations_done += 1
 

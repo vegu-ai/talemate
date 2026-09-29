@@ -1,0 +1,2 @@
+fixed:
+- "Director Chat: the director's reply no longer shows twice after an action (such as create image) when its follow-up repeats the reply word for word."

@@ -21,6 +21,9 @@ from talemate.game.engine.nodes.core import GraphState
 from talemate.game.focal import Focal, FocalContext
 from talemate.game.focal.schema import Callback, State
 
+ACTION = [{"name": "update_context", "instructions": "change"}]
+CORRECTION = {"function": "write", "arguments": {}, "instructions": "Use blue"}
+
 
 @pytest.fixture
 def handler(scene):
@@ -238,6 +241,90 @@ async def test_user_corrections_get_one_followup_per_round_even_with_iteration_l
     assert calls[1]["rejected_calls"] == [correction]
     assert calls[2]["rejected_calls"] == [correction]
     assert calls[3]["rejected_calls"] == []
+
+
+@pytest.mark.parametrize(
+    "responses, rejections, expected",
+    [
+        pytest.param(
+            [
+                ("On it: rendering the harbour.", ACTION),
+                ("On it: rendering\n the harbour.  ", []),
+            ],
+            [[]],
+            ["On it: rendering the harbour."],
+            id="closing_follow_up_repeats_batch_intro",
+        ),
+        pytest.param(
+            [
+                ("On it: rendering the harbour.", ACTION),
+                ("The image is rendering.", []),
+            ],
+            [[]],
+            ["On it: rendering the harbour.", "The image is rendering."],
+            id="different_follow_up",
+        ),
+        pytest.param(
+            [("Working.", ACTION), ("Next step.", ACTION), ("Working.", [])],
+            [[], []],
+            ["Working.", "Next step.", "Working."],
+            id="repeat_of_an_earlier_round",
+        ),
+        pytest.param(
+            [("Working.", ACTION), ("Working.", ACTION), ("Done.", [])],
+            [[], []],
+            ["Working.", "Working.", "Done."],
+            id="repeat_that_opens_its_own_batch",
+        ),
+        pytest.param(
+            [("Working.", ACTION), (None, ACTION), ("Working.", [])],
+            [[], []],
+            ["Working.", "Working."],
+            id="action_only_second_batch",
+        ),
+        pytest.param(
+            [("Working.", ACTION), ("Applying it.", ACTION), ("Applying it.", [])],
+            [[CORRECTION], [CORRECTION]],
+            ["Working.", "Applying it.", "Applying it."],
+            id="reply_to_second_correction",
+        ),
+    ],
+)
+async def test_follow_up_is_skipped_only_when_it_restates_its_batch_intro(
+    scene, director, monkeypatch, responses, rejections, expected
+):
+    scene.active = True
+    chat = director.chat_create()
+    director.chat_update_title(chat.id, "Test")
+    history_before = len(chat.messages)
+    monkeypatch.setattr(
+        director, "_chat_execute_actions", AsyncMock(side_effect=rejections)
+    )
+    monkeypatch.setattr(
+        director, "_chat_compact_if_needed", AsyncMock(return_value=False)
+    )
+    monkeypatch.setattr(
+        type(director), "chat_auto_iterations_limit", property(lambda _: 5)
+    )
+    replies = iter(responses)
+
+    async def build(**kwargs):
+        return {}
+
+    async def request(**kwargs):
+        text, actions = next(replies)
+        return text, actions, ""
+
+    monkeypatch.setattr(utils, "build_prompt_vars", build)
+    monkeypatch.setattr(utils, "request_and_parse", request)
+    on_update = AsyncMock()
+    await director.chat_generate_next(chat.id, on_update=on_update)
+
+    sent = [m.message for call in on_update.await_args_list for m in call.args[1]]
+    stored = [m.message for m in director.chat_get(chat.id).messages[history_before:]]
+    assert sent == expected
+    assert stored == expected
+    assert next(replies, None) is None
 
 
 async def test_real_chat_action_graph_preserves_applied_changes_and_reports_rejection(

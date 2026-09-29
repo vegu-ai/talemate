@@ -3,11 +3,88 @@ description: Default world state templates.
 name: default
 templates:
   0802e774-74d5-4d41-9e7a-78744e66f09e:
-    description: 90s point and click adventure game.
+    decision_checks:
+    - active: true
+      name: Repeated beats and description reuse
+      questions:
+      - false_criteria: The passage adds a new action, fact or development; necessary
+          continuity or recurring subjects alone are not repetition.
+        id: repetition
+        instructions: Remove this repeated beat, or replace it with genuinely different
+          content if repetition handling is set to rewrite.
+        kind: repetition
+        question: Does passage {passage_id} repeat information, an action, observation
+          or story beat already conveyed in preceding history or earlier passages of
+          the current text? Judge meaning, not shared words. For summarization or contextual
+          generation, overlap with source_context or summarization_history is expected
+          evidence, not itself repetition; flag only redundant retelling within the
+          draft.
+        true_criteria: The passage restates an already conveyed beat without a meaningful
+          new development.
+      - false_criteria: No reuse of distinctive phrasing or imagery; shared names, common
+          words, or necessary factual continuity alone do not count.
+        id: description_reuse
+        instructions: Replace the reused description with fresh wording or a different
+          image. Preserve the event and factual content; do not remove the event merely
+          because its description was reused.
+        kind: repetition
+        question: Does passage {passage_id} reuse a distinctive phrase, image, or description
+          already used in the history or an earlier current passage? Reuse may be near-verbatim,
+          paraphrased, or applied to a new occurrence; shared names, ordinary words,
+          and factual continuity alone do not count. For summarization or contextual
+          generation, overlap with source_context or summarization_history is expected
+          evidence, not itself description reuse; flag only redundant reuse within the
+          draft.
+        true_criteria: Substantially the same distinctive wording or image is reused,
+          even if this describes a new occurrence of the action.
+      requires_style: false
+      threshold: 0.8
+    - active: true
+      name: Writing style and unwanted prose
+      questions:
+      - false_criteria: The passage follows the applicable instructions. Vivid detail,
+          atmosphere or dialogue is not a violation on its own.
+        id: style
+        instructions: Follow the writing style and active prose rules; preserve factual
+          content.
+        kind: style
+        question: Does passage {passage_id} violate the supplied writing_style or an
+          active prose_rule? Evaluate the passage in its complete current text and task
+          context. The prose rules include the director's intended corrections; judge
+          their meaning, not just matching words.
+        true_criteria: The passage conflicts with an explicit writing-style instruction
+          or exhibits unwanted prose described by an active rule.
+      requires_style: true
+      threshold: 0.8
+    description: 'Mid-90s point-and-click adventure game: second-person narration, short
+      look-at descriptions, wry humour, characterful dialogue.'
     favorite: false
     group: talemate_default_467c7fe3
-    instructions: Use a narrative writing style that reminds of mid 90s point and
-      click adventure games.
+    instructions: 'Write like the text of a mid-90s point-and-click adventure game.
+
+      When you narrate:
+
+      - Address the protagonist as "you", in the present tense.
+
+      - Describe a place or an object the way a look-at description does: a few short,
+      concrete sentences, not a paragraph of atmosphere.
+
+      - Name the things that can be used, taken, opened, combined or talked to, and
+      give an odd object one specific detail that hints at what it is for.
+
+      - Add at most one wry aside per passage: dry understatement, an absurd detail
+      treated as normal, or a joke at your expense. The facts and the danger stay real.
+
+      In dialogue:
+
+      - Give every character a distinct, exaggerated voice with their own attitude,
+      habits and running gags. Keep exchanges quick, with comic timing.
+
+      - Characters hint at solutions and answer in character; they do not explain the
+      puzzle.
+
+      Avoid purple prose, long atmospheric paragraphs, modern slang, and any mention
+      of game mechanics, verbs, menus, inventory screens or a player.'
     name: Adventure Game
     phrases: []
     priority: 1
@@ -69,6 +146,89 @@ templates:
     priority: 1
     template_type: agent_persona
     uid: e121080a-f7a4-4931-8004-1b31b0747f73
+  ffecb67e-34fe-4aa7-818b-d3270c8e2610:
+    decision_checks:
+    - active: true
+      name: Repeated beats and description reuse
+      questions:
+      - false_criteria: The passage adds a new action, fact or development; necessary
+          continuity or recurring subjects alone are not repetition.
+        id: repetition
+        instructions: Remove this repeated beat, or replace it with genuinely different
+          content if repetition handling is set to rewrite.
+        kind: repetition
+        question: Does passage {passage_id} repeat information, an action, observation
+          or story beat already conveyed in preceding history or earlier passages of
+          the current text? Judge meaning, not shared words. For summarization or contextual
+          generation, overlap with source_context or summarization_history is expected
+          evidence, not itself repetition; flag only redundant retelling within the
+          draft.
+        true_criteria: The passage restates an already conveyed beat without a meaningful
+          new development.
+      - false_criteria: No reuse of distinctive phrasing or imagery; shared names, common
+          words, or necessary factual continuity alone do not count.
+        id: description_reuse
+        instructions: Replace the reused description with fresh wording or a different
+          image. Preserve the event and factual content; do not remove the event merely
+          because its description was reused.
+        kind: repetition
+        question: Does passage {passage_id} reuse a distinctive phrase, image, or description
+          already used in the history or an earlier current passage? Reuse may be near-verbatim,
+          paraphrased, or applied to a new occurrence; shared names, ordinary words,
+          and factual continuity alone do not count. For summarization or contextual
+          generation, overlap with source_context or summarization_history is expected
+          evidence, not itself description reuse; flag only redundant reuse within the
+          draft.
+        true_criteria: Substantially the same distinctive wording or image is reused,
+          even if this describes a new occurrence of the action.
+      requires_style: false
+      threshold: 0.8
+    - active: true
+      name: Writing style and unwanted prose
+      questions:
+      - false_criteria: The passage follows the applicable instructions. Vivid detail,
+          atmosphere or dialogue is not a violation on its own.
+        id: style
+        instructions: Follow the writing style and active prose rules; preserve factual
+          content.
+        kind: style
+        question: Does passage {passage_id} violate the supplied writing_style or an
+          active prose_rule? Evaluate the passage in its complete current text and task
+          context. The prose rules include the director's intended corrections; judge
+          their meaning, not just matching words.
+        true_criteria: The passage conflicts with an explicit writing-style instruction
+          or exhibits unwanted prose described by an active rule.
+      requires_style: true
+      threshold: 0.8
+    description: Neutral, clear and easy-to-read prose with no genre flavour.
+    favorite: false
+    group: talemate_default_467c7fe3
+    instructions: 'Write clear, natural prose that is easy to read.
+
+      - Keep the point of view, tense and tone the story already uses. Add no genre,
+      period or narrator flavour of your own.
+
+      - Use plain, exact words. Vary sentence length and structure; do not open sentence
+      after sentence the same way.
+
+      - Choose the one concrete detail that matters in this moment over general description.
+      Do not stack adjectives, similes or metaphors.
+
+      - In narration and dialogue you write, cut filler: do not restate what just happened,
+      do not explain a feeling the action already shows, and do not close on a line
+      that reflects on the moment or hints at what is to come.
+
+      - In narration and dialogue you write, do not reuse a gesture, image, phrase or
+      sentence pattern from the recent text.
+
+      - Dialogue sounds like people talk: contractions, short replies, interruptions,
+      words that fit the speaker. Characters do not explain the plot to each other or
+      describe their own feelings at length.'
+    name: Polished Prose
+    phrases: []
+    priority: 1
+    template_type: writing_style
+    uid: ffecb67e-34fe-4aa7-818b-d3270c8e2610
   goals:
     auto_create: false
     description: Long term and short term goals

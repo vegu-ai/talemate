@@ -2,6 +2,15 @@
 
 Writing style templates are used to define a writing style that can be applied to the generated content. They can be used to add a specific flavor or tone. A template must explicitly support writing styles to be able to use a writing style template.
 
+## Shipped writing styles
+
+Talemate comes with two writing styles in the **default** template group. Both include the default decision checks.
+
+- **Polished Prose**: neutral, clear and easy-to-read prose with no genre flavour. It keeps the point of view, tense and tone your story already uses, and asks for plain words, varied sentences, the one detail that matters, no filler and dialogue that sounds like people talk. The Infinity Quest and Simulation Suite example scenes use it.
+- **Adventure Game**: reads like a mid-90s point-and-click adventure. The narrator talks to you in the second person, describes a room or an object in a few short lines, points out what you can use and adds a dry joke now and then. Characters get big, distinct voices and give hints instead of solutions.
+
+Select one in the [Scene Settings](/talemate/user-guide/world-editor/scene/settings), or use one as the starting point for your own style.
+
 ## Creating a writing style
 
 --8<-- "docs/snippets/common.md:world-editor-create-group"
@@ -34,7 +43,9 @@ This should be the actual writing style instructions. It will be passed to the A
 
 or
 
-> Use a narrative writing style that reminds of mid 90s point and click adventure games.
+> Write like a 1940s hard-boiled detective novel. When you narrate, use short sentences and dry similes.
+
+The instructions also reach summaries, world state updates and character sheets. Start a rule that only fits the story, such as a rule against repetition, with "When you narrate" or "In dialogue".
 
 ### Favorite
 

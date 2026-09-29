@@ -1,0 +1,4 @@
+added:
+- "Writing styles: New shipped Polished Prose style for neutral, clear and easy-to-read prose with no genre flavour. The Infinity Quest and Simulation Suite example scenes use it."
+changed:
+- "Writing styles: The shipped Adventure Game style now gives full instructions for a mid-90s point-and-click adventure voice: second-person narration, short look-at descriptions, dry humour and characterful dialogue. Both shipped styles include the default decision checks."

@@ -3,6 +3,7 @@
     "title": "Simulation Suite",
     "environment": "scene",
     "immutable_save": true,
+    "writing_style_template": "talemate_default_467c7fe3__ffecb67e-34fe-4aa7-818b-d3270c8e2610",
     "hidden": true,
     "deprecated": true,
     "restore_from": "simulation-suite.json",

@@ -7,7 +7,7 @@ from talemate.changelog import (
 )
 from talemate.storage.blobs import BlobCorruptedError
 from talemate.storage.changelog import SnapshotStore
-from _changelog_test_helpers import make_changelog_scene
+from _changelog_test_helpers import make_changelog_scene, revision_entries
 
 
 async def test_chunks_share_full_prefix_and_keep_manifests_small(tmp_path):
@@ -29,7 +29,7 @@ async def test_chunks_share_full_prefix_and_keep_manifests_small(tmp_path):
         "scene.json", second.manifest, second.changed, expected_head=head.id
     )
     await store.fork("scene.json", 0, "branch.json")
-    assert (await store.entries("scene.json"))[-1].message_count == 513
+    assert (await revision_entries(store, "scene.json"))[-1].message_count == 513
     assert await store.assemble("scene.json") == data
     await store.delete("scene.json")
     assert len((await store.assemble("branch.json"))["history"]) == 512
@@ -78,7 +78,7 @@ async def test_import_origins_use_save_identity_even_when_archive_name_matches_a
     )
     await import_scene_revisions(archive, imported)
     target = SnapshotStore(imported.save_dir)
-    entries = await target.entries(imported.filename)
+    entries = await revision_entries(target, imported.filename)
     assert entries[0].inherited is fork
     assert entries[0].is_fork is fork
     assert entries[0].origin == ("scene.json" if fork else "imported.json")
@@ -89,5 +89,5 @@ async def test_import_origins_use_save_identity_even_when_archive_name_matches_a
     await target.append(
         imported.filename, capture.manifest, capture.changed, expected_head=head.id
     )
-    assert not (await target.entries(imported.filename))[-1].inherited
-    assert (await target.entries(imported.filename))[0].is_fork is fork
+    assert not (await revision_entries(target, imported.filename))[-1].inherited
+    assert (await revision_entries(target, imported.filename))[0].is_fork is fork

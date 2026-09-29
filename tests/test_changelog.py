@@ -4,7 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from _changelog_test_helpers import make_changelog_scene, persist_test_mutation
+from _changelog_test_helpers import (
+    make_changelog_scene,
+    persist_test_mutation,
+    revision_entries,
+)
 from talemate.changelog import (
     capture_snapshot,
     save_changelog,
@@ -85,7 +89,7 @@ async def test_fork_keeps_parent_revisions_without_blob_copies(tmp_path, saved_d
         == count
     )
     fork = scene_ref_from_path(path)
-    entries = await store.entries(fork.filename)
+    entries = await revision_entries(store, fork.filename)
     assert [r.rev for r in entries] == [0, 1, 2]
     assert entries[-1].is_fork
     assert all(r.inherited for r in entries)
@@ -144,7 +148,7 @@ async def test_damaged_blob_only_blocks_revisions_that_use_it(tmp_path, saved_da
     with pytest.raises(BlobCorruptedError, match=digest):
         await fork_scene_at_revision(scene, 0, "broken")
     assert not (tmp_path / "broken.json").exists()
-    assert len(await store.entries("scene.json")) == 2
+    assert len(await revision_entries(store, "scene.json")) == 2
 
 
 async def test_missing_revision_and_message_refuse_fork(tmp_path, saved_data):
@@ -212,7 +216,7 @@ async def test_nested_fork_lists_each_ancestor_fork_point(tmp_path):
     scene.serialize["intro"] = "branch turn"
     await persist_test_mutation(scene)
     await store.fork(scene.filename, 2, "nested.json")
-    entries = await store.entries("nested.json")
+    entries = await revision_entries(store, "nested.json")
     assert [entry.rev for entry in entries if entry.is_fork] == [1, 2]
     assert entries[-1].origin == "branch.json"
 

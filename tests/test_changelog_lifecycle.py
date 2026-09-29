@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from _changelog_test_helpers import revision_entries
 from talemate.changelog import (
     SceneChangelog,
     capture_snapshot,
@@ -80,7 +81,7 @@ async def test_upgrade_load_uses_recorded_revs_and_forks_without_later_turns(
         "Early passage"
     ]
     await load_scene(scene, str(path))
-    assert len(await store.entries(path.name)) == 2
+    assert len(await revision_entries(store, path.name)) == 2
 
 
 @pytest.mark.parametrize(
@@ -161,7 +162,7 @@ async def test_save_as_replaces_destination_ancestry_and_keeps_source(persisted_
     source = Path(scene.full_path).read_bytes()
     await scene.save(save_as=True, copy_name="b.json")
     store = SnapshotStore(scene.save_dir)
-    entries = await store.entries("b.json")
+    entries = await revision_entries(store, "b.json")
     assert [e.rev for e in entries] == [0, 1, 2]
     assert [e.inherited for e in entries] == [True, True, False]
     assert [m.rev for m in scene.history] == [0, 1]
@@ -222,7 +223,7 @@ async def test_failed_save_as_preserves_destination_and_can_retry(
     assert destination.read_bytes() == original_file
     assert await store.head("b.json") == original_head
     await scene.save(save_as=True, copy_name="b.json")
-    assert [entry.inherited for entry in await store.entries("b.json")] == [
+    assert [entry.inherited for entry in await revision_entries(store, "b.json")] == [
         True,
         True,
         False,
@@ -342,7 +343,9 @@ async def test_stale_writer_can_keep_local_turns_in_save_as(persisted_scene):
         "My unsaved turn",
     ]
     assert (await store.head(scene.filename)).parent_id == original.id
-    assert [entry.inherited for entry in await store.entries(scene.filename)] == [
+    assert [
+        entry.inherited for entry in await revision_entries(store, scene.filename)
+    ] == [
         True,
         False,
     ]
@@ -399,13 +402,13 @@ async def test_restore_then_save_starts_fresh_without_played_ancestry(
         assert scene.filename is None
         await scene.save()
     store = SnapshotStore(scene.save_dir)
-    entries = await store.entries(scene.filename)
+    entries = await revision_entries(store, scene.filename)
     assert len(entries) == 1
     assert entries[0].rev == 0 and not entries[0].inherited and not entries[0].is_fork
     assert [m.message for m in scene.history] == ["Restore point"]
     assert scene.history[0].rev == 0
     assert await store.head("initial.json") is None
-    assert len(await store.entries("scene.json")) == 2
+    assert len(await revision_entries(store, "scene.json")) == 2
 
 
 async def test_imported_revision_fork_load_save_stays_in_import_project(
@@ -440,7 +443,7 @@ async def test_imported_revision_fork_load_save_stays_in_import_project(
         json.loads((imported_dir / "branch.json").read_text())["history"][-1]["message"]
         == "Imported fork progress"
     )
-    assert len(await SnapshotStore(imported_dir).entries("branch.json")) == 2
+    assert len(await revision_entries(SnapshotStore(imported_dir), "branch.json")) == 2
 
 
 async def test_fork_can_reuse_filename_whose_file_was_deleted(persisted_scene):
@@ -454,7 +457,8 @@ async def test_fork_can_reuse_filename_whose_file_was_deleted(persisted_scene):
     second = await fork_scene_at_revision(scene, 1, "reused")
     assert len(json.loads(Path(second).read_text())["history"]) == 2
     assert [
-        e.rev for e in await SnapshotStore(scene.save_dir).entries("reused.json")
+        e.rev
+        for e in await revision_entries(SnapshotStore(scene.save_dir), "reused.json")
     ] == [0, 1]
 
 
@@ -479,7 +483,7 @@ async def test_copy_fork_replaces_stale_chain_before_load(persisted_scene):
     assert scene.rev == 0
     assert [m.rev for m in scene.history] == [0]
     assert [m.message for m in scene.history] == ["New copy"]
-    entries = await store.entries("branch.json")
+    entries = await revision_entries(store, "branch.json")
     assert len(entries) == 1 and entries[0].is_base and not entries[0].inherited
     fork = await get_agent("creator").fork_scene(old_ids[0], save_name="verified")
     assert [m["message"] for m in json.loads(Path(fork).read_text())["history"]] == [

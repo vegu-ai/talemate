@@ -4,7 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from _changelog_test_helpers import make_changelog_scene, persist_test_mutation
+from _changelog_test_helpers import (
+    make_changelog_scene,
+    persist_test_mutation,
+    revision_entries,
+)
 from talemate.changelog import (
     SceneChangelog,
     save_changelog,
@@ -41,14 +45,14 @@ async def test_export_import_copies_only_selected_ancestry(tmp_path):
     assert b"private sibling content" not in raw
     assert b"unrelated private" not in raw
     incoming = SnapshotStore(destination.parent)
-    assert len(await incoming.entries("scene.json")) == 2
+    assert len(await revision_entries(incoming, "scene.json")) == 2
     assert await incoming.head("unrelated.json") is None
     imported = make_changelog_scene(str(tmp_path / "import"), filename="renamed.json")
     await import_scene_revisions(destination, imported)
     restored = SnapshotStore(imported.save_dir)
     assert (await restored.assemble("renamed.json", 0))["intro"] == "shared"
     assert (await restored.assemble("renamed.json", 1))["intro"] == "fork point"
-    assert [r.rev for r in await restored.entries("renamed.json")] == [0, 1]
+    assert [r.rev for r in await revision_entries(restored, "renamed.json")] == [0, 1]
 
 
 async def test_normal_save_records_current_file_and_stamps_new_messages(
@@ -107,8 +111,8 @@ async def test_save_as_binds_destination_and_preserves_source(
     await scene.save(save_as=True, copy_name="copy.json")
     store = SnapshotStore(scene.save_dir)
     assert (Path(scene.save_dir) / "source.json").read_bytes() == source
-    assert len(await store.entries("copy.json")) == 2
-    assert (await store.entries("copy.json"))[0].is_fork
+    assert len(await revision_entries(store, "copy.json")) == 2
+    assert (await revision_entries(store, "copy.json"))[0].is_fork
     assert (await store.assemble("source.json"))["history"] == []
     assert (await store.assemble("copy.json"))["history"][-1][
         "message"
@@ -119,7 +123,7 @@ async def test_two_simultaneous_saves_serialize_per_scene(persistence_scene_fact
     scene = persistence_scene_factory()
     scene.name, scene.filename = "Snapshot", "scene.json"
     await asyncio.gather(scene.save(force=True), scene.save(force=True))
-    entries = await SnapshotStore(scene.save_dir).entries(scene.filename)
+    entries = await revision_entries(SnapshotStore(scene.save_dir), scene.filename)
     assert [entry.rev for entry in entries] == [0, 1]
     assert json.loads(Path(scene.full_path).read_text()) == await SnapshotStore(
         scene.save_dir
@@ -167,7 +171,7 @@ async def test_recorded_revision_zero_fork_uses_saved_world_state(
     monkeypatch.setattr(creator, "scene", scene, raising=False)
     path = await creator.fork_scene(scene.history[0].id, save_name="from-zero")
     assert json.loads(Path(path).read_text())["intro"] == "Original introduction"
-    entries = await SnapshotStore(scene.save_dir).entries("from-zero.json")
+    entries = await revision_entries(SnapshotStore(scene.save_dir), "from-zero.json")
     assert len(entries) == 1 and entries[0].is_fork and entries[0].inherited
 
 

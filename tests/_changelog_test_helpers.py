@@ -1,5 +1,5 @@
 """
-Shared helpers for changelog tests (test_changelog.py, test_changelog_extras.py).
+Shared helpers for changelog tests.
 
 The changelog module reads four scene-shaped attributes — ``filename``,
 ``save_dir``, ``changelog_dir`` (cascades off ``save_dir``) and
@@ -15,8 +15,9 @@ from __future__ import annotations
 
 import os
 
-from talemate.changelog import capture_snapshot, save_changelog
-from talemate.storage.changelog import SnapshotStore
+from talemate.changelog import capture_snapshot, counts_for_span, save_changelog
+from talemate.storage.changelog import RevisionEntry, SnapshotStore
+from talemate.storage.revision_groups import RevisionGroupQuery, revision_groups
 from talemate.tale_mate import Scene
 
 
@@ -98,3 +99,20 @@ async def persist_test_mutation(scene: ChangelogScene):
     )
     scene.rev = revision.rev
     return revision.rev
+
+
+async def revision_entries(store: SnapshotStore, filename: str) -> list[RevisionEntry]:
+    """Every revision in the save's ancestry, oldest first, as the revision list shows it."""
+    entries: list[RevisionEntry] = []
+    before = None
+    while True:
+        page = await revision_groups(
+            store,
+            filename,
+            RevisionGroupQuery(limit=200, before_rev=before),
+            counts_for_span,
+        )
+        entries.extend(e for group in page.groups for e in group.revisions)
+        if page.next_before_rev is None:
+            return entries[::-1]
+        before = page.next_before_rev

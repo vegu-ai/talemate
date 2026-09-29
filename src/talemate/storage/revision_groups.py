@@ -11,6 +11,7 @@ from .changelog import (
     RevisionEntry,
     RevisionMissingError,
     SnapshotStore,
+    _ancestry_cte,
     _at_revision,
     _revision,
     _save,
@@ -237,11 +238,7 @@ def _read_groups(
     save = _save(connection, filename)
     if save is None:
         return RevisionGroupPage(groups=[], next_before_rev=None, total_revisions=0)
-    ancestry = (
-        "WITH RECURSIVE ancestry(id) AS (SELECT :head UNION "
-        "SELECT r.parent_id FROM changelog_revisions r JOIN ancestry a ON r.id=a.id "
-        "WHERE r.parent_id IS NOT NULL) "
-    )
+    ancestry = _ancestry_cte()
     total = connection.execute(
         ancestry + "SELECT COUNT(*) FROM ancestry", {"head": save.head_id}
     ).fetchone()[0]

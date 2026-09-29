@@ -56,16 +56,13 @@ class MessageChunk(BaseModel):
     messages: list[Digest] = Field(max_length=MESSAGE_CHUNK_SIZE)
 
 
-class RevisionInfo(BaseModel):
+class Revision(BaseModel):
     id: str
     parent_id: str | None
     rev: int = Field(ge=0)
     ts: int
     origin: str
     origin_id: str
-
-
-class Revision(RevisionInfo):
     manifest: Manifest
 
     @field_validator("manifest", mode="before")
@@ -79,10 +76,6 @@ class Save(BaseModel):
     filename: str
     head_id: str
     fork_id: str | None = None
-
-
-class RevisionSummary(RevisionInfo):
-    message_count: int
 
 
 class RevisionEntry(BaseModel):
@@ -117,14 +110,20 @@ def _revision(connection, revision_id: str) -> Revision:
     return Revision(**dict(row))
 
 
-def _ancestry(connection, filename: str) -> list[Revision]:
+def _ancestry_cte(seed: str = "SELECT :head") -> str:
+    """`ancestry(id)`: the revisions `seed` selects and all of their ancestors."""
+    return (
+        f"WITH RECURSIVE ancestry(id) AS ({seed} UNION "
+        "SELECT r.parent_id FROM changelog_revisions r JOIN ancestry a ON r.id=a.id "
+        "WHERE r.parent_id IS NOT NULL) "
+    )
+
+
+def _ancestry(connection, head_id: str) -> list[Revision]:
     rows = connection.execute(
-        "WITH RECURSIVE ancestry(id) AS ("
-        " SELECT head_id FROM changelog_saves WHERE filename = ? UNION "
-        " SELECT r.parent_id FROM changelog_revisions r JOIN ancestry a ON r.id = a.id "
-        " WHERE r.parent_id IS NOT NULL) "
-        "SELECT r.* FROM changelog_revisions r JOIN ancestry a ON r.id = a.id ORDER BY rev",
-        (filename,),
+        _ancestry_cte()
+        + "SELECT r.* FROM changelog_revisions r JOIN ancestry a ON r.id=a.id ORDER BY r.rev",
+        {"head": head_id},
     ).fetchall()
     return [Revision(**dict(row)) for row in rows]
 
@@ -136,11 +135,9 @@ def _at_revision(connection, filename: str, rev: int | None) -> Revision:
     if rev is None:
         return _revision(connection, save.head_id)
     row = connection.execute(
-        "WITH RECURSIVE ancestry(id) AS (SELECT ? UNION "
-        "SELECT r.parent_id FROM changelog_revisions r JOIN ancestry a ON r.id=a.id "
-        "WHERE r.parent_id IS NOT NULL) "
-        "SELECT r.* FROM changelog_revisions r JOIN ancestry a ON r.id=a.id WHERE r.rev=?",
-        (save.head_id, rev),
+        _ancestry_cte()
+        + "SELECT r.* FROM changelog_revisions r JOIN ancestry a ON r.id=a.id WHERE r.rev=:rev",
+        {"head": save.head_id, "rev": rev},
     ).fetchone()
     if row:
         return Revision(**dict(row))
@@ -209,9 +206,7 @@ def _assemble(connection, revision: Revision) -> dict:
 
 def _collect(connection) -> dict[str, int]:
     live = (
-        "WITH RECURSIVE live(id) AS (SELECT head_id FROM changelog_saves UNION "
-        "SELECT r.parent_id FROM changelog_revisions r JOIN live ON live.id=r.id "
-        "WHERE r.parent_id IS NOT NULL) SELECT id FROM live"
+        _ancestry_cte("SELECT head_id FROM changelog_saves") + "SELECT id FROM ancestry"
     )
     removed = connection.execute(
         "DELETE FROM changelog_revisions WHERE id NOT IN (" + live + ")"
@@ -274,11 +269,8 @@ class SnapshotStore:
                     save is not None
                     and expected_head is not None
                     and connection.execute(
-                        "WITH RECURSIVE ancestry(id) AS (SELECT ? UNION "
-                        "SELECT r.parent_id FROM changelog_revisions r "
-                        "JOIN ancestry a ON r.id=a.id WHERE r.parent_id IS NOT NULL) "
-                        "SELECT 1 FROM ancestry WHERE id=?",
-                        (save.head_id, expected_head),
+                        _ancestry_cte() + "SELECT 1 FROM ancestry WHERE id=:expected",
+                        {"head": save.head_id, "expected": expected_head},
                     ).fetchone()
                     is not None
                 )
@@ -344,43 +336,6 @@ class SnapshotStore:
             lambda c: _assemble(c, _at_revision(c, filename, rev))
         )
 
-    async def entries(self, filename: str) -> list[RevisionEntry]:
-        if not self.db.path.exists():
-            return []
-
-        def read(connection):
-            save = _save(connection, filename)
-            if not save:
-                return []
-            rows = connection.execute(
-                "WITH RECURSIVE ancestry(id) AS (SELECT ? UNION "
-                "SELECT r.parent_id FROM changelog_revisions r JOIN ancestry a ON r.id=a.id "
-                "WHERE r.parent_id IS NOT NULL) "
-                "SELECT r.id, r.parent_id, r.rev, r.ts, r.origin, r.origin_id, json_extract(r.manifest, '$.message_count') AS message_count FROM changelog_revisions r "
-                "JOIN ancestry a ON r.id=a.id ORDER BY r.rev",
-                (save.head_id,),
-            ).fetchall()
-            revisions = [RevisionSummary(**dict(row)) for row in rows]
-            fork_points = {
-                current.id
-                for current, following in zip(revisions, revisions[1:])
-                if current.origin_id != following.origin_id
-            }
-            return [
-                RevisionEntry(
-                    message_count=r.message_count,
-                    rev=r.rev,
-                    ts=r.ts,
-                    origin=r.origin,
-                    inherited=r.origin_id != save.id,
-                    is_base=r.parent_id is None,
-                    is_fork=r.id == save.fork_id or r.id in fork_points,
-                )
-                for r in revisions
-            ]
-
-        return await self.db.read(read)
-
     async def fork(
         self, filename: str, rev: int, destination: str, *, replace: bool = False
     ) -> Revision:
@@ -424,7 +379,7 @@ class SnapshotStore:
             save = _save(connection, filename)
             if not save:
                 return None
-            revisions = _ancestry(connection, filename)
+            revisions = _ancestry(connection, save.head_id)
             content, chunks = {}, set()
             for revision in revisions:
                 try:

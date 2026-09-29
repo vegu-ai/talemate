@@ -372,7 +372,7 @@ async def test_include_rev_outside_the_date_range_does_not_extend_the_page(tmp_p
     ]
 
 
-async def test_fork_rows_match_the_flat_entries(tmp_path):
+async def test_fork_rows_mark_inherited_base_and_fork(tmp_path):
     store = await record(tmp_path, grow(narrator(1), narrator(2)))
     await store.fork("scene.json", 1, "branch.json")
     snapshot = capture_snapshot(
@@ -383,13 +383,33 @@ async def test_fork_rows_match_the_flat_entries(tmp_path):
         "branch.json", snapshot.manifest, snapshot.changed, expected_head=head.id
     )
     result = await page(store, filename="branch.json")
-    flat = {entry.rev: entry for entry in await store.entries("branch.json")}
 
     assert revs(result) == [[2], [1], [0]]
-    for group in result.groups:
-        for entry in group.revisions:
-            assert entry == flat[entry.rev]
-    assert result.groups[1].revisions[0].is_fork
+    assert [
+        (e.origin, e.message_count, e.inherited, e.is_base, e.is_fork)
+        for group in result.groups
+        for e in group.revisions
+    ] == [
+        ("branch.json", 2, False, False, False),
+        ("scene.json", 2, True, False, True),
+        ("scene.json", 1, True, True, False),
+    ]
+
+    source = capture_snapshot(
+        {
+            "intro": "At the lighthouse",
+            "turn": 10,
+            "history": [narrator(1), narrator(2), narrator(3)],
+        }
+    )
+    head = await store.head("scene.json")
+    await store.append(
+        "scene.json", source.manifest, source.changed, expected_head=head.id
+    )
+    result = await page(store)
+
+    assert revs(result) == [[2], [1], [0]]
+    assert not any(e.is_fork for group in result.groups for e in group.revisions)
 
 
 async def test_missing_database_and_unknown_save_are_empty(tmp_path):

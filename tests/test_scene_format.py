@@ -9,7 +9,7 @@ import pytest
 
 import talemate.instance as instance
 import talemate.knowledge.mode as knowledge_mode
-from _changelog_test_helpers import make_changelog_scene
+from _changelog_test_helpers import make_changelog_scene, revision_entries
 from conftest import MockScene, bootstrap_scene
 from talemate.changelog import (
     fork_scene_at_revision,
@@ -521,9 +521,9 @@ async def test_complete_zip_preserves_only_nonreset_revisions(
     assert load_env.save_dir != original_dir
     store = SnapshotStore(load_env.save_dir)
     if reset:
-        assert len(await store.entries(load_env.filename)) == 1
+        assert len(await revision_entries(store, load_env.filename)) == 1
         assert load_env.history == []
     else:
         assert await store.assemble(load_env.filename, 0) == original_revision
-        assert len(await store.entries(load_env.filename)) == 3
+        assert len(await revision_entries(store, load_env.filename)) == 3
         assert load_env.intro == "Second saved introduction"

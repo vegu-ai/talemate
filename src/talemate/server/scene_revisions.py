@@ -3,12 +3,13 @@ import pydantic
 from talemate.changelog import (
     ForkSaveNameError,
     fork_scene_at_revision,
-    list_revision_entries,
+    list_revision_groups,
     reconstruct_scene_data,
     scene_ref_from_path,
 )
 from talemate.storage.blobs import BlobCorruptedError
 from talemate.storage.changelog import RevisionMissingError
+from talemate.storage.revision_groups import RevisionGroupQuery
 from talemate.server.websocket_plugin import Plugin
 
 MAX_PREVIEW_MESSAGES = 100
@@ -17,6 +18,10 @@ MAX_PREVIEW_MESSAGES = 100
 class ListRevisionsPayload(pydantic.BaseModel):
     scene_path: str | None = None
     request_id: str | None = None
+
+
+class ListGroupsPayload(ListRevisionsPayload):
+    query: RevisionGroupQuery = pydantic.Field(default_factory=RevisionGroupQuery)
 
 
 class PreviewPayload(ListRevisionsPayload):
@@ -41,9 +46,9 @@ class SceneRevisionsPlugin(Plugin):
         return self.scene
 
     async def handle_list_revisions(self, data):
-        payload = ListRevisionsPayload(**data)
+        payload = ListGroupsPayload(**data)
         scene = self._target_scene(payload.scene_path)
-        revisions = await list_revision_entries(scene)
+        page = await list_revision_groups(scene, payload.query)
         self.websocket_handler.queue_put(
             {
                 "type": self.router,
@@ -51,7 +56,8 @@ class SceneRevisionsPlugin(Plugin):
                 "data": {
                     "scene_path": payload.scene_path,
                     "request_id": payload.request_id,
-                    "revisions": revisions,
+                    "before_rev": payload.query.before_rev,
+                    **page,
                 },
             }
         )

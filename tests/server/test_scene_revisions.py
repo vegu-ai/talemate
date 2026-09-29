@@ -3,7 +3,7 @@ Unit tests for Scene revisions websocket plugin.
 
 The plugin exposes the scene revisions UX:
 
-- ``list_revisions`` → changelog revision entries (plus the base snapshot)
+- ``list_revisions`` → a page of revision groups (one per message span)
 - ``preview`` → message-history tail of the scene reconstructed at a revision
 - ``fork`` → new scene file written from a revision
 
@@ -95,9 +95,38 @@ async def test_list_revisions_active(plugin):
     data = response["data"]
 
     assert data["scene_path"] is None
-    assert [entry["rev"] for entry in data["revisions"]] == [0, 1, 2, 3]
-    assert data["revisions"][0]["is_base"] is True
-    assert all("ts" in entry for entry in data["revisions"])
+    assert [group["revisions"][0]["rev"] for group in data["groups"]] == [3, 2, 1, 0]
+    assert data["groups"][0]["message"]["text"] == "Narrator line 3"
+    assert data["groups"][-1]["revisions"][0]["is_base"] is True
+    assert data["total_revisions"] == 4
+    assert data["next_before_rev"] is None
+
+
+async def test_list_revisions_passes_the_query(plugin):
+    await plugin.handle_list_revisions(
+        {
+            "request_id": "page-2",
+            "query": {"span": 2, "limit": 1, "before_rev": 3, "search": "LINE 2"},
+        }
+    )
+
+    (response,) = plugin.websocket_handler.by_action("revisions")
+    data = response["data"]
+
+    assert data["request_id"] == "page-2"
+    assert data["before_rev"] == 3
+    assert [
+        [entry["rev"] for entry in group["revisions"]] for group in data["groups"]
+    ] == [[2, 1]]
+    assert (data["groups"][0]["first_message"], data["groups"][0]["last_message"]) == (
+        1,
+        2,
+    )
+
+
+async def test_list_revisions_rejects_an_invalid_span(plugin):
+    with pytest.raises(ValueError):
+        await plugin.handle_list_revisions({"query": {"span": 0}})
 
 
 async def test_list_revisions_headless(scene, temp_dir):
@@ -111,7 +140,7 @@ async def test_list_revisions_headless(scene, temp_dir):
     data = response["data"]
 
     assert data["scene_path"] == scene_path
-    assert [entry["rev"] for entry in data["revisions"]] == [0, 1, 2, 3]
+    assert data["total_revisions"] == 4
 
 
 async def test_list_revisions_requires_scene(plugin):
@@ -284,12 +313,14 @@ async def test_revisions_show_inherited_origins_and_fork_point(plugin, scene):
         {"scene_path": os.path.join(scene.save_dir, "branch.json")}
     )
     (response,) = plugin.websocket_handler.by_action("revisions")
-    entries = response["data"]["revisions"]
-    assert [entry["rev"] for entry in entries] == [0, 1, 2]
+    entries = [
+        entry for group in response["data"]["groups"] for entry in group["revisions"]
+    ]
+    assert [entry["rev"] for entry in entries] == [2, 1, 0]
     assert all(
         entry["origin"] == scene.filename and entry["inherited"] for entry in entries
     )
-    assert entries[-1]["is_fork"]
+    assert entries[0]["is_fork"]
 
 
 async def test_missing_revision_cannot_create_a_fork(plugin, scene):
@@ -305,4 +336,5 @@ async def test_save_without_revisions_has_an_empty_list(scene):
         {"scene_path": os.path.join(scene.save_dir, "new.json")}
     )
     (response,) = plugin.websocket_handler.by_action("revisions")
-    assert response["data"]["revisions"] == []
+    assert response["data"]["groups"] == []
+    assert response["data"]["total_revisions"] == 0

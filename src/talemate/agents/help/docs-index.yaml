@@ -1031,9 +1031,10 @@
     behavior and model suitability.
 - path: user-guide/restoring-scenes.md
   title: Scene revisions and restore points
-  summary: 'Scene revisions (formerly Timeline): revision previews, Fork to new save, inherited revisions and playthrough fork
-    points; configured restore-point saves. Access through messages, Quick load or Scene Library. Damaged revision recovery,
-    exact world-state reconstruction, current shared context and the 0.39.0 changelog upgrade.'
+  summary: 'Scene revisions (formerly Timeline): message rows, Span, date range, search; revision previews, Fork to new save,
+    inherited revisions and playthrough fork points; configured restore-point saves. Access through messages, Quick load or
+    Scene Library. Damaged revision recovery, exact world-state reconstruction, current shared context and the 0.39.0 changelog
+    upgrade.'
 - path: user-guide/saving.md
   title: Saving
   summary: Scene JSON saves, Auto Save, locked starting saves, Save As checkpoints, restore points, Scene revisions (formerly

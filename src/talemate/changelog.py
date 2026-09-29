@@ -19,6 +19,7 @@ from talemate.storage.changelog import (
     RevisionMissingError,
     SnapshotStore,
 )
+from talemate.storage.revision_groups import RevisionGroupQuery, revision_groups
 from talemate.util.path import is_safe_relative_filename
 
 async_signals.register(
@@ -353,11 +354,18 @@ class SceneChangelog:
             return snapshot.data
 
 
-async def list_revision_entries(scene) -> list[dict]:
-    return [
-        entry.model_dump()
-        for entry in await SnapshotStore(scene.save_dir).entries(scene.filename)
-    ]
+SPAN_MESSAGE_TYPES = frozenset({"character", "narrator"})
+
+
+def counts_for_span(message: dict) -> bool:
+    return message.get("typ") in SPAN_MESSAGE_TYPES
+
+
+async def list_revision_groups(scene, query: RevisionGroupQuery) -> dict:
+    page = await revision_groups(
+        SnapshotStore(scene.save_dir), scene.filename, query, counts_for_span
+    )
+    return page.model_dump()
 
 
 async def reconstruct_scene_data(scene, to_rev: int | None = None) -> dict:

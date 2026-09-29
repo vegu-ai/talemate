@@ -11,7 +11,6 @@ from talemate.changelog import (
     reconstruct_scene_data,
     fork_scene_at_revision,
     scene_ref_from_path,
-    list_revision_entries,
     resolve_fork_save_name,
     ForkSaveNameError,
     ForkTargetMissingError,
@@ -86,9 +85,10 @@ async def test_fork_keeps_parent_revisions_without_blob_copies(tmp_path, saved_d
         == count
     )
     fork = scene_ref_from_path(path)
-    assert [r["rev"] for r in await list_revision_entries(fork)] == [0, 1, 2]
-    assert (await list_revision_entries(fork))[-1]["is_fork"]
-    assert all(r["inherited"] for r in await list_revision_entries(fork))
+    entries = await store.entries(fork.filename)
+    assert [r.rev for r in entries] == [0, 1, 2]
+    assert entries[-1].is_fork
+    assert all(r.inherited for r in entries)
     assert [m["rev"] for m in json.loads(Path(path).read_text())["history"]] == [1, 2]
     state = await store.assemble("branch.json")
     state["history"].append({"id": 9, "message": "new branch", "rev": 3})

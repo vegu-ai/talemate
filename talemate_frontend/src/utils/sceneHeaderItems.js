@@ -182,13 +182,13 @@ function unavailable(item, label, tooltip) {
 // settings page; both read as the unset option.
 function templateSelect({ setting, label, icon, title, templates, options, current, unset, tooltip }) {
     const selected = current || null;
-    const base = { widget: 'template_select', setting, title, options, selected, label, icon, muted: false };
+    const base = { widget: 'template_select', setting, title, options, selected, selectedOption: null, label, icon, muted: false };
     if (selected === null) {
         return { ...base, value: unset.value, tooltip: unset.tooltip, muted: unset.muted };
     }
     const option = options.find((candidate) => candidate.value === selected);
     if (option) {
-        return { ...base, value: option.title, tooltip: tooltip(option.title) };
+        return { ...base, selectedOption: option, value: option.title, tooltip: tooltip(option.title) };
     }
     if (!templates?.by_type) {
         return { ...base, value: null, tooltip: `${label}: waiting for the template list.`, muted: true };

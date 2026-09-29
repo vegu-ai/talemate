@@ -34,6 +34,15 @@
                     <v-icon v-if="option.value === item.selected" size="small" color="primary">mdi-check</v-icon>
                 </template>
             </v-list-item>
+            <div v-if="item.selectedOption" class="scene-header-select__edit">
+                <v-divider class="mb-1" />
+                <v-list-item
+                    :title="`Edit ${item.selectedOption.title}`"
+                    prepend-icon="mdi-pencil-outline"
+                    role="menuitem"
+                    @click="edit"
+                />
+            </div>
         </v-list>
     </v-menu>
 </template>
@@ -44,12 +53,15 @@ import { sceneSettingPayload } from '@/utils/sceneSettings';
 
 export default {
     name: 'SceneHeaderTemplateSelect',
-    inject: ['getWebsocket'],
+    inject: ['getWebsocket', 'openWorldStateManager'],
     props: {
         item: { type: Object, required: true },
     },
     methods: {
         mergeProps,
+        edit() {
+            this.openWorldStateManager('templates', this.item.selected);
+        },
         choose(value) {
             if (value === this.item.selected) return;
             this.getWebsocket().send(JSON.stringify(sceneSettingPayload(this.item.setting, value)));
@@ -77,6 +89,15 @@ export default {
 .scene-header-select:focus-visible {
     outline: 2px solid rgb(var(--v-theme-primary));
     outline-offset: 2px;
+}
+
+/* offsets of -8px: the list pads 8px at its bottom, and items scroll into it */
+.scene-header-select__edit {
+    position: sticky;
+    bottom: -8px;
+    margin-bottom: -8px;
+    padding: 4px 0 8px;
+    background: rgb(var(--v-theme-surface));
 }
 
 /* the same type as the text items of the header */

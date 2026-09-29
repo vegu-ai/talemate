@@ -64,15 +64,19 @@ The story's character knowledge mode: **Standard** or **Perspectives** (Characte
 
 ##### :material-script-text-outline: Writing style
 
-![Scene header with the knowledge mode, writing style and visual style items, and the writing style menu open](/talemate/img/0.40.0/scene-header-styles.png)
+![Scene header with the knowledge mode, writing style and visual style items, and the writing style menu open with its Edit entry](/talemate/img/0.40.0/scene-header-styles.png)
 
 The scene's writing style template by name, followed by the :material-script-text-outline: icon, for example **Adventure Game** :material-script-text-outline:. Click it for a menu of your writing style templates and pick another one, or **None** for no template. It is the same setting as **Writing Style** in **World Editor > Scene > Settings**, so a change in one place shows in the other. Like any change in the scene settings, it marks the scene as unsaved.
+
+When a template is selected, the menu ends with **Edit {name}** :material-pencil-outline: below a divider, for example **Edit Adventure Game**. It is not one of the choices: it opens that template in the **Templates** tab, ready to edit. With **None** selected, or with a **Missing template**, the menu has no such entry.
 
 A scene without a writing style reads **None**, dimmed. When the scene names a template that is no longer in your template list, the item reads **Missing template** at full strength, not dimmed; pick another one from the menu.
 
 ##### :material-palette-outline: Visual style
 
 The scene's visual art style template by name, followed by the :material-palette-outline: icon: the style new images of this scene are made in. Click it to pick another one from your visual style templates, or **Use Agent Default** to follow the Visualizer's own art style; the item then reads **Agent default**. It is the same setting as **Visual Art Style** in **World Editor > Scene > Settings**.
+
+The menu ends with **Edit {name}** :material-pencil-outline: for the selected style, the same entry as in the writing style menu. With **Use Agent Default** selected, it is absent.
 
 For example, when a noir story moves to a sunny coast, pick a watercolour style from the header before you generate the next scene image.
 

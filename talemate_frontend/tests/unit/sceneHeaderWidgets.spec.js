@@ -83,6 +83,7 @@ const Menu = defineComponent({
         ]);
     },
 });
+const Divider = defineComponent({ setup: () => () => h('hr', { class: 'divider' }) });
 const ListItem = defineComponent({
     props: { title: String },
     emits: ['click'],
@@ -133,6 +134,7 @@ function mountApp(root, injections = {}, vuetify = DARK) {
     for (const [key, value] of Object.entries(provided)) app.provide(key, value);
     for (const name of ['VList', 'VListSubheader', 'VCard', 'VCardText', 'VChip', 'VIcon', 'VCheckbox', 'VCheckboxBtn']) app.component(name, Container);
     app.component('VTooltip', Tooltip);
+    app.component('VDivider', Divider);
     app.component('VMenu', Menu);
     app.component('VListItem', ListItem);
     app.component('VBtn', Button);
@@ -501,11 +503,12 @@ describe('the header style select', () => {
         },
     };
 
-    function mountSelect(current) {
+    function mountSelect(current, { id = 'writing_style', data = 'writing_style_template', source = templates, opened = vi.fn() } = {}) {
         const sent = [];
-        const entry = resolveSlotItems(['writing_style'], { scene: { name: 'x', data: { writing_style_template: current } }, templates })[0];
+        const entry = resolveSlotItems([id], { scene: { name: 'x', data: { [data]: current } }, templates: source })[0];
         mountApp(defineComponent({ setup: () => () => h(HeaderTemplateSelect, { item: entry }) }), {
             getWebsocket: () => ({ send: (frame) => sent.push(JSON.parse(frame)) }),
+            openWorldStateManager: opened,
         });
         return sent;
     }
@@ -543,9 +546,9 @@ describe('the header style select', () => {
     it('lists the templates of the settings page and marks the current one', async () => {
         mountSelect('g__cozy');
         const items = await open();
-        expect(items.map((item) => item.textContent.trim())).toEqual(['None', 'Noir', 'Cozy']);
-        expect(items.map((item) => [item.getAttribute('role'), item.getAttribute('aria-checked')]))
-            .toEqual([['menuitemradio', 'false'], ['menuitemradio', 'false'], ['menuitemradio', 'true']]);
+        const choices = items.filter((item) => item.getAttribute('role') === 'menuitemradio');
+        expect(choices.map((item) => item.textContent.trim())).toEqual(['None', 'Noir', 'Cozy']);
+        expect(choices.map((item) => item.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true']);
     });
 
     it('sends only the style setting for a new pick, and nothing for the current one', async () => {
@@ -559,5 +562,71 @@ describe('the header style select', () => {
             { type: 'world_state_manager', action: 'update_scene_settings', writing_style_template: 'g__cozy' },
             { type: 'world_state_manager', action: 'update_scene_settings', writing_style_template: null },
         ]);
+    });
+
+    describe('the edit entry', () => {
+        const visualTemplates = {
+            by_type: {
+                visual_style: {
+                    ink: { group: 'g', uid: 'ink', name: 'Ink Wash', description: 'Brush.', visual_type: 'STYLE' },
+                },
+            },
+        };
+        const visual = { id: 'visual_style', data: 'visual_style_template', source: visualTemplates };
+
+        it('follows the choices behind a divider, named for the selected template, and is not a radio item', async () => {
+            mountSelect('g__noir');
+            const items = await open();
+            const entry = items[items.length - 1];
+            expect(entry.textContent.trim()).toBe('Edit Noir');
+            expect(entry.getAttribute('role')).toBe('menuitem');
+            expect(entry.hasAttribute('aria-checked')).toBe(false);
+            expect(entry.getAttribute('prepend-icon')).toBe('mdi-pencil-outline');
+            expect(entry.previousElementSibling.classList.contains('divider')).toBe(true);
+            expect(entry.closest('.scene-header-select__edit')).not.toBeNull();
+            expect(host.querySelectorAll('.menu-content [role="menuitemradio"]')).toHaveLength(3);
+        });
+
+        it('is the last entry of a menu with a long list, once', async () => {
+            const many = Object.fromEntries(Array.from({ length: 30 }, (_, i) => {
+                const uid = `s${String(i).padStart(2, '0')}`;
+                return [uid, { group: 'g', uid, name: `Style ${i}`, description: '', visual_type: 'STYLE' }];
+            }));
+            mountSelect('g__s29', { ...visual, source: { by_type: { visual_style: many } } });
+            const items = await open();
+            expect(items.filter((item) => item.getAttribute('role') === 'menuitemradio')).toHaveLength(31);
+            expect(items.filter((item) => item.getAttribute('role') === 'menuitem').map((item) => item.textContent.trim())).toEqual(['Edit Style 29']);
+            expect(items[items.length - 1].getAttribute('role')).toBe('menuitem');
+        });
+
+        it('opens the selected template in the Templates tab and sends no setting', async () => {
+            const opened = vi.fn();
+            const sent = mountSelect('g__cozy', { opened });
+            const items = await open();
+            items[items.length - 1].click();
+            expect(opened).toHaveBeenCalledExactlyOnceWith('templates', 'g__cozy');
+            expect(sent).toEqual([]);
+        });
+
+        it('does the same for the visual style', async () => {
+            const opened = vi.fn();
+            mountSelect('g__ink', { ...visual, opened });
+            const items = await open();
+            expect(items[items.length - 1].textContent.trim()).toBe('Edit Ink Wash');
+            items[items.length - 1].click();
+            expect(opened).toHaveBeenCalledExactlyOnceWith('templates', 'g__ink');
+        });
+
+        it.each([
+            ['no style is selected', null, {}],
+            ['the selected template is missing from the list', 'g__gone', {}],
+            ['the template list has not arrived', 'g__noir', { source: {} }],
+            ['no visual style is selected', null, visual],
+            ['the selected visual template is not a style', 'g__ink', { ...visual, source: { by_type: { visual_style: { ink: { group: 'g', uid: 'ink', name: 'Ink', visual_type: 'PROMPT' } } } } }],
+        ])('is absent when %s', async (_, current, options) => {
+            mountSelect(current, options);
+            const items = await open();
+            expect(items.map((item) => item.textContent.trim()).some((text) => text.startsWith('Edit '))).toBe(false);
+        });
     });
 });

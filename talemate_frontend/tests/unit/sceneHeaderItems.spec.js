@@ -302,6 +302,14 @@ describe("writing style and visual style items", () => {
         expect(read("visual_style", { visual_style_template: "g__ink" }).tooltip).toMatch(/^Visual style: Ink wash\./);
     });
 
+    it("resolves the selected option once, and only for a template that is in the list", () => {
+        const noir = read("writing_style", { writing_style_template: "g__noir" });
+        expect(noir.selectedOption).toBe(noir.options.find((option) => option.value === "g__noir"));
+        expect(read("writing_style", { writing_style_template: null }).selectedOption).toBeNull();
+        expect(read("writing_style", { writing_style_template: "g__gone" }).selectedOption).toBeNull();
+        expect(read("writing_style", { writing_style_template: "g__gone" }, {}).selectedOption).toBeNull();
+    });
+
     it("takes its icon and name from the item definition, the ones the item menu shows", () => {
         for (const id of ["writing_style", "visual_style"]) {
             const item = findSceneHeaderItem(id);

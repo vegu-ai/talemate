@@ -4,6 +4,7 @@ import pytest
 
 from talemate.agents.memory.schema import MemoryDocument
 from talemate.character import Character
+from talemate.exceptions import GenerationCancelled
 from talemate.tale_mate import Actor
 
 
@@ -54,6 +55,20 @@ async def test_semantic_references_and_no_will_false_positive(
         else "world_state.decision-snapshot-references"
     )
     assert record.actions[0].result["fallback_ran"] is False
+
+
+@pytest.mark.parametrize("consumer", ["memory", "snapshot"])
+async def test_no_result_after_the_scene_changed(cast, monkeypatch, consumer):
+    c = cast
+    respond = c.provider.respond
+
+    def change_scene(request):
+        monkeypatch.setattr(c.agent, "scene", object())
+        return respond(request)
+
+    monkeypatch.setattr(c.provider, "respond", change_scene)
+    with pytest.raises(GenerationCancelled):
+        await reference_names(c, monkeypatch, consumer, "Red laughs.")
 
 
 async def reference_names(c, monkeypatch, consumer, text):

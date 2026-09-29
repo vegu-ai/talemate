@@ -1,16 +1,18 @@
 from enum import StrEnum
-from typing import Protocol
+from typing import Literal, Protocol
 
 from pydantic import Field, JsonValue
 
-from .models import DecisionRequest, Model, ProviderResponse, Question, QuestionType
+from .models import DecisionRequest, Model, ProviderResponse, Question
+
+
+DecisionModelSetting = Literal["model", "base_url", "api_key"]
 
 
 class FailureCode(StrEnum):
     DISABLED = "disabled"
     UNAVAILABLE = "unavailable"
     INVALID_REQUEST = "invalid_request"
-    UNSUPPORTED = "unsupported"
     OVERSIZE = "oversize"
     TIMEOUT = "timeout"
     TRANSPORT = "transport"
@@ -33,13 +35,9 @@ class DecisionError(Exception):
 
 
 class ProviderCapabilities(Model):
-    question_types: frozenset[QuestionType] = Field(
-        default=frozenset({"noul", "choice", "score"}), min_length=1
-    )
     max_input_tokens: int | None = Field(default=None, gt=0)
     max_question_input_tokens: int | None = Field(default=None, gt=0)
     input_token_multiplier: float = Field(default=1.0, ge=1, allow_inf_nan=False)
-    max_questions: int | None = Field(default=None, gt=0)
 
 
 class DecisionProvider(Protocol):

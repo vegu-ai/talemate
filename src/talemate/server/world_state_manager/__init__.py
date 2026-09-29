@@ -10,6 +10,7 @@ import structlog
 
 import talemate.world_state.templates as world_state_templates
 from talemate.world_state.templates.decision_checks import (
+    DEFAULT_THRESHOLD,
     default_writing_style_decision_checks,
 )
 from talemate.game.schema import ConditionGroup
@@ -255,7 +256,8 @@ async def templates_message(world_state_manager: WorldStateManager) -> dict:
                     "decision_checks": [
                         check.model_dump(mode="json")
                         for check in default_writing_style_decision_checks()
-                    ]
+                    ],
+                    "decision_check_threshold": DEFAULT_THRESHOLD,
                 }
             },
         },

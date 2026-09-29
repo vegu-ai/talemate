@@ -143,7 +143,7 @@ async def test_push_carries_the_resolved_theme(
 async def test_push_carries_the_system_prompt_defaults(
     emitter, plugin, app_config, scenes_root
 ):
-    """Both extras ride along, in the order the other two emitters use.
+    """The extras ride along, in the order the other emitters use.
 
     A payload without the prompt defaults blanks them app-wide, since
     `TalemateApp` assigns the payload wholesale with no carry-forward of its
@@ -155,7 +155,11 @@ async def test_push_carries_the_system_prompt_defaults(
     assert pushes
     for pushed in pushes:
         assert pushed["data"]["system_prompt_defaults"] is SYSTEM_PROMPTS_CACHE
-        assert list(pushed["data"])[-2:] == ["system_prompt_defaults", "theme"]
+        assert list(pushed["data"])[-3:] == [
+            "system_prompt_defaults",
+            "theme",
+            "decision_model_defaults",
+        ]
 
 
 @pytest.mark.parametrize("emitter", EMITTERS, ids=lambda fn: fn.__name__)

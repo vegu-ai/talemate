@@ -36,11 +36,11 @@ function mount(component, props) {
     return app.mount(host);
 }
 
-function setup(checks = [], supplied = defaults()) {
+function setup(checks = [], supplied = defaults(), defaultThreshold = 0.8) {
     const model = ref(checks);
     const changes = vi.fn(value => { model.value = value; });
     const editing = vi.fn();
-    mount(defineComponent({ setup: () => () => h(Editor, { modelValue: model.value, defaults: supplied, 'onUpdate:modelValue': changes, onEditing: editing }) }));
+    mount(defineComponent({ setup: () => () => h(Editor, { modelValue: model.value, defaults: supplied, defaultThreshold, 'onUpdate:modelValue': changes, onEditing: editing }) }));
     return { model, changes, editing };
 }
 function button(text) { return [...host.querySelectorAll('button')].find(node => node.textContent.trim() === text); }
@@ -202,6 +202,17 @@ describe('writing style decision checks', () => {
         await click('Apply check');
         expect(model.value[0].scope).toBe('all');
         expect(host.textContent).not.toContain('All text');
+    });
+
+    it('starts a custom check at the threshold the backend sends', async () => {
+        const { model } = setup([], defaults(), 0.65);
+        await click('Add custom check');
+        expect(host.querySelector('input[aria-label="Probability threshold"]').value).toBe('0.65');
+        await fill('Check name', 'Concrete imagery');
+        await fill('Question', 'Is {passage_id} abstract?');
+        await fill('Rewrite instruction', 'Use a physical detail.');
+        await click('Apply check');
+        expect(model.value[0].threshold).toBe(0.65);
     });
 
     it('explains the More options fields at the top of the section', async () => {

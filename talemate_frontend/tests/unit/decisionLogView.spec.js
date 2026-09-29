@@ -227,7 +227,7 @@ describe('a decision detail dialog', () => {
         expect(flagged.classList.contains('decision-question-flagged')).toBe(true);
         const below = element.querySelector('[data-question-id="s2_style"]');
         expect(below.textContent).toContain('The clock showed eleven.');
-        expect(below.textContent).toContain('Probability 0.7599999');
+        expect(below.textContent).toContain('Probability 0.76');
         expect(below.textContent).toContain('Threshold 0.76');
         expect(below.textContent).toContain('Not flagged');
         expect(element.querySelector('[data-question-id="s2_repetition"]').textContent).toContain('Probability 0.00');

@@ -147,11 +147,10 @@ Other compatible servers include **Von**, **Kev**, **Decider**, **litjev** and
 not download or start a model for you. There is no separate adapter or model-name check
 for each server. An ordinary chat-completions server is not enough.
 
-Treat decision answers as estimates. Earlier tests on task families the models had
-not trained on found **65 to 72 percent accuracy**, and calibration — whether a reported
-80 percent probability is right about 80 percent of the time — is mostly unmeasured.
-Those figures do not establish accuracy on your fiction. Check the results on your own
-scenes; a high reported probability can still be wrong.
+Treat decision answers as estimates. Talemate does not measure how accurate they are on
+your fiction, and calibration — whether a reported 80 percent probability is right about
+80 percent of the time — is mostly unmeasured. Check the results on your own scenes; a
+high reported probability can still be wrong.
 
 ## What the state means
 

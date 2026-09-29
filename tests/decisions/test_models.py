@@ -283,21 +283,8 @@ def test_rejects_invalid_entries_and_sums_outside_rounding_tolerance(
 
 
 @pytest.mark.parametrize(
-    "types",
-    [
-        frozenset(),
-        frozenset({"Noul"}),
-        frozenset({"boolean"}),
-        frozenset({"noul", "typo"}),
-    ],
+    "field", [{"question_types": frozenset({"noul"})}, {"max_questions": 1}]
 )
-def test_capabilities_require_known_nonempty_question_types(types):
+def test_capabilities_declare_only_input_limits(field):
     with pytest.raises(ValidationError):
-        ProviderCapabilities(question_types=types)
-
-
-@pytest.mark.parametrize("kind", ["noul", "choice", "score"])
-def test_capabilities_accept_each_contract_question_type(kind):
-    assert ProviderCapabilities(question_types=frozenset({kind})).question_types == {
-        kind
-    }
+        ProviderCapabilities(**field)

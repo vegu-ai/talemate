@@ -4,19 +4,40 @@ Nothing here makes a request: the reported state is what the configuration says
 plus what the last request a feature asked for recorded.
 """
 
+from typing import Literal
+
+from pydantic import BaseModel
+
 from talemate.config import get_config
+from talemate.config.schema import DecisionProviderName
 from talemate.emit import emit
 
 from . import decision_service
-from .provider import FailureCode, ProviderCapabilities
+from .provider import DecisionModelSetting, FailureCode, ProviderCapabilities
 from .providers import OpenRouterDecisionProvider, SystemOneDecisionProvider
 from .service import DecisionService
+
+
+class DecisionModelFailure(BaseModel):
+    code: FailureCode
+    dispatched: bool
+    timestamp: str
+
+
+class DecisionModelSlotStatus(BaseModel):
+    enabled: bool
+    provider: DecisionProviderName | None
+    model: str
+    timeout_seconds: float
+    state: Literal["disabled", "incomplete", "ready"]
+    missing: list[DecisionModelSetting]
+    last_failure: DecisionModelFailure | None
 
 
 class DecisionModelSlot:
     def __init__(self, service: DecisionService):
         self.service = service
-        self.last_failure: dict | None = None
+        self.last_failure: DecisionModelFailure | None = None
         service.log.subscribe(self.on_request_record)
 
     def on_request_record(self, event: dict):
@@ -29,11 +50,11 @@ class DecisionModelSlot:
             if entry["failure"]["code"] == FailureCode.DISABLED:
                 # the slot being off is its state, not an error it made
                 return
-            self.last_failure = {
-                "code": str(entry["failure"]["code"]),
-                "dispatched": entry["dispatched"],
-                "timestamp": entry["timestamp"],
-            }
+            self.last_failure = DecisionModelFailure(
+                code=entry["failure"]["code"],
+                dispatched=entry["dispatched"],
+                timestamp=entry["timestamp"],
+            )
         else:
             return
         emit_decision_model_status()
@@ -65,24 +86,22 @@ class DecisionModelSlot:
         self.service.enabled = settings.enabled
         self.service.timeout_seconds = settings.timeout_seconds
 
-    def status(self) -> dict:
+    def status(self) -> DecisionModelSlotStatus:
         # read from the running service rather than the stored configuration:
         # a save whose apply failed leaves the two apart, and what a feature
         # would reach is the running one
         provider = self.service.provider
         enabled = self.service.enabled
         missing = provider.missing_settings if provider else ["model"]
-        return {
-            "enabled": enabled,
-            "provider": provider.name if provider else None,
-            "model": provider.model if provider else "",
-            "timeout_seconds": self.service.timeout_seconds,
-            "state": "disabled"
-            if not enabled
-            else ("incomplete" if missing else "ready"),
-            "missing": missing,
-            "last_failure": self.last_failure,
-        }
+        return DecisionModelSlotStatus(
+            enabled=enabled,
+            provider=provider.name if provider else None,
+            model=provider.model if provider else "",
+            timeout_seconds=self.service.timeout_seconds,
+            state="disabled" if not enabled else ("incomplete" if missing else "ready"),
+            missing=missing,
+            last_failure=self.last_failure,
+        )
 
 
 decision_model_slot = DecisionModelSlot(decision_service)
@@ -93,9 +112,9 @@ def configure_decision_service():
     emit_decision_model_status()
 
 
-def decision_model_status() -> dict:
+def decision_model_status() -> DecisionModelSlotStatus:
     return decision_model_slot.status()
 
 
 def emit_decision_model_status():
-    emit("decision_model_status", data=decision_model_status())
+    emit("decision_model_status", data=decision_model_status().model_dump(mode="json"))

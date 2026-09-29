@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from talemate.world_state.templates.base import Group
 from talemate.world_state.templates.content import WritingStyle
 from talemate.world_state.templates.decision_checks import (
+    DEFAULT_THRESHOLD,
     default_writing_style_decision_checks,
 )
 
@@ -149,6 +150,11 @@ async def test_template_catalog_supplies_default_checks_without_changing_styles(
         check.model_dump(mode="json")
         for check in default_writing_style_decision_checks()
     ]
+    assert (
+        message["data"]["defaults"]["writing_style"]["decision_check_threshold"]
+        == DEFAULT_THRESHOLD
+        == 0.8
+    )
     assert (
         message["data"]["by_type"]["writing_style"][f"{group.uid}__{style.uid}"][
             "decision_checks"

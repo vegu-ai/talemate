@@ -215,3 +215,12 @@ async def test_payload_is_the_config_plus_the_theme(app_config, active_theme):
     assert message["type"] == "app_config"
     assert message["data"]["theme"] == resolve_theme(app_config)
     assert message["data"]["appearance"] == app_config.model_dump()["appearance"]
+
+
+def test_payload_carries_the_decision_model_defaults(app_config, active_theme):
+    app_config.decision_model.model = "vendor/chosen-model"
+
+    message = server_config.app_config_message(app_config)
+
+    assert message["data"]["decision_model"]["model"] == "vendor/chosen-model"
+    assert message["data"]["decision_model_defaults"] == {"model": "typesafe/jev-1.13"}

@@ -246,6 +246,7 @@ class ReferencedCharacters(AgentNode):
                 uid="memory.decision-entity-references",
                 enabled=self.agent.retrieval_entity_decision_model,
                 match=lambda name: character_named(scene, name, text),
+                is_current=lambda: self.agent.scene is scene,
             )
             if text.strip() and candidates
             else []

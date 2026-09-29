@@ -20,10 +20,13 @@ from talemate.decisions import (
     Unavailable,
     decision_service,
 )
+from talemate.decisions import slot as slot_module
 from talemate.decisions.slot import (
+    DecisionModelSlotStatus,
     configure_decision_service,
     decision_model_slot,
     decision_model_status,
+    emit_decision_model_status,
 )
 from talemate.prompts.base import PrependTemplateDirectories
 from talemate.server.config import ConfigApplyPipeline, DecisionModelApplySection
@@ -242,7 +245,6 @@ class TestSlotSettings:
         assert caps.max_input_tokens == 12000
         assert caps.max_question_input_tokens == 6000
         assert caps.input_token_multiplier == 1.75
-        assert caps.max_questions is None
 
     def test_config_can_explicitly_leave_bounds_undeclared(self, slot):
         slot.decision_model = DecisionModelConfig(
@@ -286,10 +288,10 @@ class TestStatus:
             model="server-model",
         )
         status = decision_model_status()
-        assert status["state"] == state
-        assert status["missing"] == missing
-        assert status["provider"] == "systemone"
-        assert status["model"] == "server-model"
+        assert status.state == state
+        assert status.missing == missing
+        assert status.provider == "systemone"
+        assert status.model == "server-model"
         assert decision_service.provider.ready is bool(base_url)
         assert calls.sent == []
 
@@ -326,15 +328,15 @@ class TestStatus:
         slot.openrouter.api_key = API_KEY
         configure_decision_service()
 
-        assert decision_model_status()["state"] == "disabled"
+        assert decision_model_status().state == "disabled"
 
     def test_an_enabled_slot_without_a_key_is_incomplete(self, slot):
         slot.decision_model = DecisionModelConfig(enabled=True)
         configure_decision_service()
 
         status = decision_model_status()
-        assert status["state"] == "incomplete"
-        assert status["missing"] == ["api_key"]
+        assert status.state == "incomplete"
+        assert status.missing == ["api_key"]
 
     def test_an_enabled_slot_with_the_shared_key_is_ready(self, slot):
         slot.openrouter.api_key = API_KEY
@@ -342,23 +344,23 @@ class TestStatus:
         configure_decision_service()
 
         status = decision_model_status()
-        assert status["state"] == "ready"
-        assert status["missing"] == []
-        assert status["model"] == "typesafe/jev-1.13"
-        assert status["timeout_seconds"] == 1.5
+        assert status.state == "ready"
+        assert status.missing == []
+        assert status.model == "typesafe/jev-1.13"
+        assert status.timeout_seconds == 1.5
         assert API_KEY not in str(status)
 
     async def test_changing_the_configuration_retires_the_recorded_failure(self, slot):
         slot.openrouter.api_key = API_KEY
         use(answers({"error": {"code": 401}}, status=401), enabled=True)
         await evaluate()
-        assert decision_model_status()["last_failure"]
+        assert decision_model_status().last_failure
 
         use(answers(), enabled=False)
 
         reported = decision_model_status()
-        assert reported["state"] == "disabled"
-        assert reported["last_failure"] is None
+        assert reported.state == "disabled"
+        assert reported.last_failure is None
 
     async def test_the_status_reports_a_failure_and_clears_it_on_success(self, slot):
         slot.openrouter.api_key = API_KEY
@@ -367,14 +369,57 @@ class TestStatus:
 
         await evaluate()
 
-        failure = decision_model_status()["last_failure"]
-        assert failure["code"] == FailureCode.AUTHENTICATION
-        assert failure["dispatched"] is True
+        failure = decision_model_status().last_failure
+        assert failure.code == FailureCode.AUTHENTICATION
+        assert failure.dispatched is True
 
         decision_service.provider.transport = answers().transport
         await evaluate()
 
-        assert decision_model_status()["last_failure"] is None
+        assert decision_model_status().last_failure is None
+
+    async def test_the_emitted_status_keeps_its_wire_shape(self, slot, monkeypatch):
+        slot.openrouter.api_key = API_KEY
+        use(answers({"error": {"code": 401}}, status=401), enabled=True)
+        await evaluate()
+        emitted = []
+        monkeypatch.setattr(
+            slot_module, "emit", lambda typ, data: emitted.append((typ, data))
+        )
+
+        emit_decision_model_status()
+
+        ((typ, data),) = emitted
+        assert typ == "decision_model_status"
+        timestamp = data["last_failure"].pop("timestamp")
+        assert isinstance(timestamp, str) and timestamp
+        assert data == {
+            "enabled": True,
+            "provider": "openrouter",
+            "model": "typesafe/jev-1.13",
+            "timeout_seconds": 1.5,
+            "state": "ready",
+            "missing": [],
+            "last_failure": {"code": "authentication", "dispatched": True},
+        }
+
+    @pytest.mark.parametrize(
+        "field",
+        [{"state": "unknown"}, {"provider": "fake"}, {"missing": ["password"]}],
+    )
+    def test_the_status_fields_take_only_known_values(self, field):
+        status = {
+            "enabled": True,
+            "provider": None,
+            "model": "",
+            "timeout_seconds": 1.5,
+            "state": "incomplete",
+            "missing": ["model", "base_url", "api_key"],
+            "last_failure": None,
+        }
+        DecisionModelSlotStatus(**status)
+        with pytest.raises(pydantic.ValidationError):
+            DecisionModelSlotStatus(**{**status, **field})
 
 
 class TestOptIn:
@@ -485,7 +530,7 @@ class TestDeadline:
         assert record.status == "failed"
         assert record.answers is None
         assert record.raw is None
-        assert decision_model_slot.last_failure["code"] == FailureCode.TIMEOUT
+        assert decision_model_slot.last_failure.code == FailureCode.TIMEOUT
 
     async def test_the_configured_timeout_is_the_deadline(self, slot):
         slot.openrouter.api_key = API_KEY
@@ -549,7 +594,7 @@ class TestContinuation:
         fallback.assert_awaited_once()
         assert len(calls.sent) == 1
         assert (
-            decision_model_status()["last_failure"]["code"]
+            decision_model_status().last_failure.code
             == {
                 "timeout": FailureCode.TIMEOUT,
                 "transport": FailureCode.TRANSPORT,
@@ -642,7 +687,7 @@ class TestApplySection:
         assert outcome.applied == {"decision_model"}
         assert slot.decision_model.enabled is False
         assert decision_service.enabled is False
-        assert decision_model_status()["state"] == "disabled"
+        assert decision_model_status().state == "disabled"
 
         decision_service.provider.transport = calls.transport
         result = await evaluate()

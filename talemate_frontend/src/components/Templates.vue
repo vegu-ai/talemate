@@ -183,6 +183,7 @@
                         ref="templateEditor"
                         :immutableTemplate="template"
                         :default-decision-checks="templates?.defaults?.writing_style?.decision_checks || []"
+                        :default-decision-check-threshold="templates?.defaults?.writing_style?.decision_check_threshold"
                         :scene-active="sceneActive"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />

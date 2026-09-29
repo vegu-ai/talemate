@@ -48,6 +48,7 @@ async def referenced_characters(
     uid: str,
     enabled: bool,
     match: Callable[[str], bool],
+    is_current: Callable[[], bool],
 ) -> list[str]:
     async def fallback(names):
         return {name: match(name) for name in names}
@@ -73,5 +74,6 @@ async def referenced_characters(
         candidates={name: [True, False] for name in candidates},
         variables=variables,
         fallback=fallback,
+        is_current=is_current,
     )
     return [name for name in candidates if answers.get(name)]

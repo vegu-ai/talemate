@@ -836,6 +836,7 @@ class MemoryRAGMixin:
             uid="memory.decision-entity-references",
             enabled=memory.retrieval_entity_decision_model,
             match=lambda name: character_named(scene, name, text),
+            is_current=lambda: self.scene is scene,
         )
         if not named:
             return []

@@ -8,7 +8,6 @@ const FAILURE_REASONS = {
     disabled: 'the decision model is off',
     unavailable: 'the setup is not finished',
     invalid_request: 'the request was not valid',
-    unsupported: 'the model cannot answer this kind of question',
     oversize: 'the text was too long for the model',
     timeout: 'no answer came within the time limit',
     transport: 'Talemate could not reach the provider',

@@ -368,10 +368,9 @@ class WorldStateSnapshotMixin:
             match=lambda name: bool(
                 re.search(rf"(?<!\w){re.escape(name)}(?!\w)", focus_text, re.IGNORECASE)
             ),
+            is_current=lambda: self.scene is scene,
         )
-        return snapshot_audience_context(
-            scene, budget, focus_text, referenced_names=names
-        )
+        return snapshot_audience_context(scene, budget, referenced_names=names)
 
     # config property helpers
 

@@ -11,7 +11,12 @@ from ..models import (
     ProviderResponse,
     Question,
 )
-from ..provider import DecisionError, FailureCode, ProviderCapabilities
+from ..provider import (
+    DecisionError,
+    DecisionModelSetting,
+    FailureCode,
+    ProviderCapabilities,
+)
 
 
 PROVIDER_BAD_REQUEST_PREFIX = "HTTP 400: "
@@ -125,7 +130,7 @@ class TypeSafeDecisionProvider:
         self.capabilities = capabilities or ProviderCapabilities()
 
     @property
-    def missing_settings(self) -> list[str]:
+    def missing_settings(self) -> list[DecisionModelSetting]:
         return [
             name
             for name, present in (

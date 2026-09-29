@@ -1,5 +1,7 @@
 import { reactive } from "vue";
 import { failureReason } from "./decisionModelText";
+import { formatProbability } from "./probability";
+import { PROMPT_STATUSES } from "./promptLog";
 
 // The backend owns retention and clearing, so this store only applies its frames.
 export function createDecisionLog() {
@@ -114,15 +116,27 @@ function newestFirst(first, second) {
     return second.num - first.num;
 }
 
-function formatProbability(value) {
-    return value.toFixed(2);
+// outcome details the shipped policies record as probabilities; a whole number
+// in any other detail is a count
+const PROBABILITY_DETAILS = new Set(["threshold", "thresholds", "probability", "p_true", "confidence", "choice_confidence"]);
+
+// a score recorded beside its threshold widens against it, and the threshold
+// against every such score, keeping the widest reading
+const SCORE_DETAILS = ["p_true", "confidence", "choice_confidence"];
+
+function compareDetails(key, details) {
+    const compares = key === "threshold" ? SCORE_DETAILS.map(name => details[name])
+        : SCORE_DETAILS.includes(key) ? [details.threshold] : [];
+    return compares.filter(compare => typeof compare === "number");
 }
 
-function formatDetail(value) {
+function formatDetail(key, value, compares = []) {
     if (isNumericMap(value)) return [...new Set(Object.values(value))]
-        .sort((first, second) => first - second).map(formatDetail).join(", ");
+        .sort((first, second) => first - second).map(item => formatDetail(key, item)).join(", ");
     if (typeof value !== "number") return String(value);
-    return Number.isInteger(value) ? String(value) : value.toFixed(2);
+    if (!PROBABILITY_DETAILS.has(key) && Number.isInteger(value)) return String(value);
+    return [formatProbability(value), ...compares.map(compare => formatProbability(value, compare))]
+        .reduce((widest, text) => (text.length > widest.length ? text : widest));
 }
 
 function isSimple(value) {
@@ -216,11 +230,6 @@ export function questionGroups(request, outcomes = request?.outcomes || []) {
     return [...groups.values()];
 }
 
-export function decisionProbability(value) {
-    const rounded = value.toFixed(2);
-    return Number(rounded) === value ? rounded : String(value);
-}
-
 export function decisionTime(timestamp) {
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
@@ -234,7 +243,7 @@ export function decisionResult(row) {
         .sort((a, b) => b.answer.p_true - a.answer.p_true)[0];
     if (strongest) {
         const { presentation, answer } = strongest;
-        const score = `${presentation.passage_id} · ${decisionProbability(answer.p_true)} (threshold ${decisionProbability(presentation.threshold)})`;
+        const score = `${presentation.passage_id} · ${formatProbability(answer.p_true, presentation.threshold)} (threshold ${formatProbability(presentation.threshold, answer.p_true)})`;
         if (flagged.length) {
             return `Flagged ${score}` + (flagged.length > 1 ? ` · ${flagged.length - 1} more flagged` : '');
         }
@@ -250,14 +259,15 @@ export function decisionResult(row) {
 }
 
 export function decisionOutcome(row) {
-    if (row.status === 'active') return { label: 'In progress', color: 'primary', icon: 'mdi-progress-clock' };
-    if (row.status === 'failed') return { label: row.request?.dispatched === false ? 'Not sent' : 'Failed', color: 'error', icon: 'mdi-alert-circle-outline' };
-    if (row.status === 'cancelled') return { label: 'Cancelled', color: 'muted', icon: 'mdi-cancel' };
+    const { active, completed, failed, cancelled } = PROMPT_STATUSES;
+    if (row.status === 'active') return { label: 'In progress', color: active.color, icon: active.icon };
+    if (row.status === 'failed') return { label: row.request?.dispatched === false ? 'Not sent' : 'Failed', color: failed.color, icon: failed.icon };
+    if (row.status === 'cancelled') return { label: 'Cancelled', color: cancelled.color, icon: cancelled.icon };
     const actions = row.actions.filter(action => !action.unassociated);
     const lastAction = actions.at(-1);
     if (lastAction) return {
         label: `${actionName(lastAction.action)} ${lastAction.status}`,
-        color: lastAction.status === 'completed' ? 'success' : 'muted', icon: 'mdi-check-circle-outline',
+        color: lastAction.status === 'completed' ? completed.color : 'muted', icon: completed.icon,
     };
     const outcome = rowOutcomes(row).at(-1);
     return { label: outcome ? sentence(words(outcome.action)) : 'No action', color: 'muted', icon: 'mdi-minus-circle-outline' };
@@ -276,7 +286,7 @@ function spokenReason(reason, details) {
     if (!suffix) return { text: words(reason), used: null };
     const head = words(reason.slice(0, -(suffix.length + 1)));
     const name = isNumericMap(details[suffix]) ? `${words(suffix)} ` : "";
-    return { text: `${head} ${name}${formatDetail(details[suffix])}`, used: suffix };
+    return { text: `${head} ${name}${formatDetail(suffix, details[suffix], compareDetails(suffix, details))}`, used: suffix };
 }
 
 export function outcomeSummary(outcome) {
@@ -286,7 +296,7 @@ export function outcomeSummary(outcome) {
     const { text, used } = spokenReason(outcome.reason, details);
     const rest = Object.entries(details)
         .filter(([key, value]) => key !== used && (isSimple(value) || isNumericMap(value)))
-        .map(([key, value]) => `${words(key)}=${formatDetail(value)}`);
+        .map(([key, value]) => `${words(key)}=${formatDetail(key, value, compareDetails(key, details))}`);
     return `${label} (${[text, ...rest].join(", ")})`;
 }
 

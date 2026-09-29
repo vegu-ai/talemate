@@ -108,11 +108,18 @@ def test_runtime_objects_are_not_dumped_or_formatted():
     )
     assert data == {
         "scene": "[runtime object omitted]",
-        "api_key": "[redacted]",
-        "nested": [{"override_api_key": "[redacted]"}],
+        "api_key": "(hidden)",
+        "nested": [{"override_api_key": "(hidden)"}],
         "number": 42,
         "finite": 0.7,
         "not_finite": None,
+    }
+
+
+def test_unset_secret_is_logged_as_none():
+    assert serialize_log_value({"api_key": "", "nested": {"API_KEY": None}}) == {
+        "api_key": None,
+        "nested": {"API_KEY": None},
     }
 
 

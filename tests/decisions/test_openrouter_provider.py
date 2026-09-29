@@ -622,6 +622,4 @@ async def test_a_blank_model_is_not_ready(model):
 @pytest.mark.parametrize("model", ["typesafe/jev-1.13", "some/other-decision-model"])
 def test_capabilities_never_depend_on_the_model_name(model):
     capabilities = OpenRouterDecisionProvider(model, lambda: API_KEY).capabilities
-    assert capabilities.question_types == frozenset({"noul", "choice", "score"})
     assert capabilities.max_input_tokens is None
-    assert capabilities.max_questions is None

@@ -22,7 +22,7 @@
                 <v-card-text class="d-flex flex-wrap align-center ga-3 py-1">
                     <v-checkbox :model-value="check.active" :label="check.name" hide-details density="compact"
                         :disabled="!!draft" @update:model-value="setActive(index, $event)" />
-                    <v-chip size="small" label>Flags at {{ Number(check.threshold).toFixed(2) }}</v-chip>
+                    <v-chip size="small" label>Flags at {{ formatProbability(Number(check.threshold)) }}</v-chip>
                     <v-chip v-if="scopeOf(check).value !== 'all'" size="small" label :prepend-icon="scopeOf(check).icon">{{ scopeOf(check).title }}</v-chip>
                     <span class="text-body-small text-medium-emphasis">{{ check.questions.length }} {{ check.questions.length === 1 ? 'question' : 'questions' }}</span>
                     <v-spacer />
@@ -102,6 +102,7 @@
 
 <script>
 import { DECISION_CHECK_SCOPES, decisionCheckScope } from '@/utils/decisionCheckScope';
+import { formatProbability } from '@/utils/probability';
 
 const clone = value => JSON.parse(JSON.stringify(value));
 const questionIds = checks => checks.flatMap(check => check.questions.map(question => question.id));
@@ -111,6 +112,7 @@ export default {
     props: {
         modelValue: { type: Array, default: () => [] },
         defaults: { type: Array, default: () => [] },
+        defaultThreshold: Number,
     },
     emits: ['update:modelValue', 'editing'],
     data() {
@@ -169,6 +171,7 @@ export default {
         },
     },
     methods: {
+        formatProbability,
         scopeOf(check) { return decisionCheckScope(check.scope); },
         required(value) { return !!String(value || '').trim() || 'Required'; },
         validThreshold(value) {
@@ -190,7 +193,7 @@ export default {
         },
         addCheck() {
             this.editIndex = -1;
-            this.draft = { name: '', active: true, threshold: 0.8, requires_style: false, scope: 'all', questions: [] };
+            this.draft = { name: '', active: true, threshold: this.defaultThreshold, requires_style: false, scope: 'all', questions: [] };
             this.addQuestion();
             this.$emit('editing', true);
         },

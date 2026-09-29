@@ -326,16 +326,16 @@ export default {
             setTimeout(() => el.classList.remove('setting-flash'), 2500);
         },
 
-        // `system_prompt_defaults` and the resolved `theme` are server-derived
-        // extras rather than config. Both the baseline and an incoming payload
-        // go through here so the raw-JSON compare below never sees the two keys
-        // in different positions — a carried-forward key lands wherever it was
-        // spread on, and that alone would read as an outside change. The
-        // carry-forward itself is a safety net at the websocket boundary: every
-        // emitter sends both today.
+        // `system_prompt_defaults`, `decision_model_defaults` and the resolved
+        // `theme` are server-derived extras rather than config. Both the baseline
+        // and an incoming payload go through here so the raw-JSON compare below
+        // never sees these keys in different positions — a carried-forward key
+        // lands wherever it was spread on, and that alone would read as an
+        // outside change. The carry-forward itself is a safety net at the
+        // websocket boundary: every emitter sends all three today.
         normalizedPayload(config, carryFrom = null) {
             const normalized = { ...config };
-            const extras = ['system_prompt_defaults', 'theme'];
+            const extras = ['system_prompt_defaults', 'decision_model_defaults', 'theme'];
             const values = extras.map((key) => (
                 normalized[key] !== undefined ? normalized[key] : carryFrom?.[key]
             ));

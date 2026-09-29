@@ -49,14 +49,14 @@
                 </div>
                 <div class="decision-answer text-body-small">
                     <div class="font-weight-medium">
-                        <template v-if="item.answer?.type === 'noul'">Probability {{ probability(item.answer.p_true) }}</template>
+                        <template v-if="item.answer?.type === 'noul'">Probability {{ probability(item.answer.p_true, item.presentation?.threshold) }}</template>
                         <template v-else-if="item.answer">{{ answerValue(item.answer) }}</template>
                         <template v-else>{{ request.status === 'pending' ? 'Pending' : 'No answer returned' }}</template>
                     </div>
-                    <div v-if="item.presentation" class="text-muted">Threshold {{ probability(item.presentation.threshold) }}</div>
+                    <div v-if="item.presentation" class="text-muted">Threshold {{ probability(item.presentation.threshold, item.answer?.p_true) }}</div>
                     <div v-if="item.presentation && item.answer?.type === 'noul'" class="decision-meter mt-2"
                         role="meter" aria-label="Probability" :aria-valuenow="item.answer.p_true" aria-valuemin="0" aria-valuemax="1"
-                        :aria-valuetext="`${probability(item.answer.p_true)}, threshold ${probability(item.presentation.threshold)}, ${item.flagged ? 'flagged' : item.flagged === false ? 'not flagged' : 'verdict not recorded'}`">
+                        :aria-valuetext="`${probability(item.answer.p_true, item.presentation.threshold)}, threshold ${probability(item.presentation.threshold, item.answer.p_true)}, ${item.flagged ? 'flagged' : item.flagged === false ? 'not flagged' : 'verdict not recorded'}`">
                         <span class="decision-meter-fill" :class="item.flagged ? 'bg-warning' : 'bg-primary'" :style="{ width: `${item.answer.p_true * 100}%` }"></span>
                         <span class="decision-meter-threshold" :style="{ left: `${item.presentation.threshold * 100}%` }"></span>
                     </div>
@@ -113,8 +113,9 @@
 
 <script>
 import { failureReason } from '@/utils/decisionModelText';
+import { formatProbability } from '@/utils/probability';
 import { decisionCheckScope } from '@/utils/decisionCheckScope';
-import { actionSummary, answerValue, outcomeSummary, questionGroups, questionName, decisionProbability, decisionOutcome, decisionResult, rowOutcomes } from '@/utils/decisionLog';
+import { actionSummary, answerValue, outcomeSummary, questionGroups, questionName, decisionOutcome, decisionResult, rowOutcomes } from '@/utils/decisionLog';
 
 export default {
     name: 'DecisionLogDetail',
@@ -150,7 +151,7 @@ export default {
         pretty(value) {
             return JSON.stringify(value, null, 2);
         },
-        probability: decisionProbability,
+        probability: formatProbability,
         answerValue,
         describe: outcomeSummary,
         describeAction: actionSummary,

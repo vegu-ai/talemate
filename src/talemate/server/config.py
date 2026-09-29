@@ -20,6 +20,7 @@ from talemate.client.base import (
 from talemate.config import Config as AppConfigData
 from talemate.config.schema import (
     AgentActionOverride,
+    DecisionModelConfig,
     GamePlayerCharacter,
     resolve_config_cls,
 )
@@ -294,6 +295,9 @@ def app_config_message(config: Config) -> dict:
     data = config.model_dump()
     data.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
     data.update(theme=resolve_theme(config))
+    data.update(
+        decision_model_defaults=DecisionModelConfig().model_dump(include={"model"})
+    )
 
     return {
         "type": "app_config",

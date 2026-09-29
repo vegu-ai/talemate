@@ -12,6 +12,7 @@ from talemate.decisions import (
     ProviderResponse,
     Unavailable,
 )
+from talemate.util.encryption import REDACTED
 
 
 QUESTIONS = {
@@ -75,11 +76,6 @@ async def test_readiness_and_capabilities_never_depend_on_model_name(provider, m
     [
         (ProviderCapabilities(max_input_tokens=1), FailureCode.OVERSIZE),
         (ProviderCapabilities(max_question_input_tokens=1), FailureCode.OVERSIZE),
-        (ProviderCapabilities(max_questions=1), FailureCode.OVERSIZE),
-        (
-            ProviderCapabilities(question_types=frozenset({"score"})),
-            FailureCode.UNSUPPORTED,
-        ),
     ],
 )
 async def test_preflight_preserves_full_input_without_splitting(provider, caps, code):
@@ -305,7 +301,7 @@ async def test_invalid_answers_retain_selected_response_body(provider, answers):
     result = await evaluate(service)
     entry = service.log.records[result.request_id]
     assert result.failure.code == FailureCode.INVALID_RESPONSE
-    assert entry.raw == {"data": answers, "api_key": "[redacted]"}
+    assert entry.raw == {"data": answers, "api_key": REDACTED}
     assert entry.answers is None
     assert not entry.actions
 

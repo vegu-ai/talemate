@@ -32,7 +32,7 @@ from talemate.scene_agent_settings import (
     UNSET,
     agent_settings_dir,
 )
-from talemate.util.encryption import SENSITIVE_FIELD_NAMES
+from talemate.util.encryption import REDACTED, is_sensitive_field, redact_sensitive
 from talemate.ux.schema import SECRET_FIELD_TYPES
 
 from .config_read import read_value
@@ -51,7 +51,6 @@ __all__ = [
 
 log = structlog.get_logger("talemate.agents.help.settings")
 
-REDACTED = "(hidden)"
 MAX_INLINE_CHOICES = 20
 MAX_INLINE_CHOICES_BYTES = 2048
 
@@ -94,22 +93,6 @@ def _unknown_agent(agent_type: str) -> str:
 
 def _is_secret_field(field: "AgentActionConfig") -> bool:
     return field.type in SECRET_FIELD_TYPES
-
-
-def _redact_sensitive(data: Any) -> Any:
-    """Recursively replace values of sensitive keys (api_key etc.)."""
-    if isinstance(data, dict):
-        return {
-            key: (
-                (REDACTED if value else None)
-                if key in SENSITIVE_FIELD_NAMES
-                else _redact_sensitive(value)
-            )
-            for key, value in data.items()
-        }
-    if isinstance(data, list):
-        return [_redact_sensitive(item) for item in data]
-    return data
 
 
 def _coerce_bool(value: Any) -> bool:
@@ -669,7 +652,7 @@ def read_app_config(
     data = getattr(config, section).model_dump()
 
     return read_value(
-        _redact_sensitive(data),
+        redact_sensitive(data),
         path=path,
         fields=fields,
         mode=mode,
@@ -755,7 +738,7 @@ async def update_app_config(
             f"Config section '{section}' is not writable here. "
             f"Writable sections: {', '.join(WRITABLE_CONFIG_SECTIONS)}."
         )
-    if any(key in SENSITIVE_FIELD_NAMES for key in keys):
+    if any(is_sensitive_field(key) for key in keys):
         return "API keys and passwords cannot be read or changed through the help chat."
 
     config = get_config()

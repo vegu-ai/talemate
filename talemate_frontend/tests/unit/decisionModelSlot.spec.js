@@ -57,12 +57,13 @@ const VSwitchStub = defineComponent({
 });
 
 const VTextFieldStub = defineComponent({
-    props: ['modelValue', 'label'],
+    props: ['modelValue', 'label', 'hint'],
     emits: ['update:modelValue'],
     setup: (props, { emit }) => () =>
         h('input', {
             class: 'field',
             'aria-label': props.label,
+            'data-hint': props.hint,
             value: props.modelValue,
             onInput: (event) => emit('update:modelValue', event.target.value),
         }),
@@ -113,6 +114,7 @@ function status(overrides = {}) {
 
 function config(overrides = {}) {
     return {
+        decision_model_defaults: { model: 'vendor/shipped-default' },
         decision_model: {
             enabled: false,
             provider: 'openrouter',
@@ -235,6 +237,12 @@ describe('settings pane', () => {
         expect(element.querySelector('[data-setting-anchor=decision_model_base_url]')).toBeNull();
         expect(element.querySelector('[data-setting-anchor=decision_model_credential] input').value).toBe('shared-test-key');
         expect(app_config.decision_model.api_key).toBe('systemone-test-key');
+    });
+
+    it('names the default model the backend sends', () => {
+        const element = mount(Pane, { config: config(), status: status() });
+        const model = element.querySelector('[data-setting-anchor=decision_model_model] input');
+        expect(model.dataset.hint).toBe('The model name on OpenRouter. The default is vendor/shipped-default.');
     });
 
     it('names a missing SystemOne URL without requiring an API key', () => {

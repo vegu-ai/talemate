@@ -59,6 +59,7 @@
             :key="template.uid || 'new'"
             :model-value="template.decision_checks"
             :defaults="defaultDecisionChecks"
+            :default-threshold="defaultDecisionCheckThreshold"
             @update:model-value="updateDecisionChecks"
             @editing="checksEditing = $event"
         />
@@ -221,6 +222,7 @@ export default {
             type: Array,
             default: () => []
         },
+        defaultDecisionCheckThreshold: Number,
         immutableTemplate: {
             type: Object,
             required: true

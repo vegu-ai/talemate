@@ -387,13 +387,11 @@ class DecisionModelStatus(Node):
         self.set_output_values(
             {
                 "ready": bool(
-                    status["state"] == "ready"
-                    and provider is not None
-                    and provider.ready
+                    status.state == "ready" and provider is not None and provider.ready
                 ),
-                "enabled": status["enabled"],
-                "status": status["state"],
-                "provider": status["provider"],
-                "model": status["model"],
+                "enabled": status.enabled,
+                "status": status.state,
+                "provider": status.provider,
+                "model": status.model,
             }
         )

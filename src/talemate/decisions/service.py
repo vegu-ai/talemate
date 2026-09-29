@@ -177,17 +177,6 @@ class DecisionService:
         provider = self.provider
         if provider is None or not provider.ready:
             raise DecisionError(FailureCode.UNAVAILABLE)
-        caps = provider.capabilities
-        if any(
-            question.type not in caps.question_types
-            for question in request.questions.values()
-        ):
-            raise DecisionError(FailureCode.UNSUPPORTED)
-        if (
-            caps.max_questions is not None
-            and len(request.questions) > caps.max_questions
-        ):
-            raise DecisionError(FailureCode.OVERSIZE)
         _check_input_size(request, provider)
         record.dispatched = True
         self.log.update(record)

@@ -38,6 +38,31 @@ SENSITIVE_FIELD_NAMES = frozenset({"api_key", "override_api_key"})
 # store passed to pi subprocesses)
 SENSITIVE_MAP_SECTIONS = ("env",)
 
+REDACTED = "(hidden)"
+
+
+def is_sensitive_field(key) -> bool:
+    return isinstance(key, str) and key.lower() in SENSITIVE_FIELD_NAMES
+
+
+def redact_sensitive(data):
+    """
+    Copy of nested dicts and lists with every sensitive field's value replaced
+    by REDACTED. An unset secret reads as None, so a reader can still tell it
+    is missing.
+    """
+    if isinstance(data, dict):
+        return {
+            key: (REDACTED if value else None)
+            if is_sensitive_field(key)
+            else redact_sensitive(value)
+            for key, value in data.items()
+        }
+    if isinstance(data, (list, tuple)):
+        return [redact_sensitive(item) for item in data]
+    return data
+
+
 # Keyring identifiers for OS credential storage
 _KEYRING_SERVICE = "talemate"
 _KEYRING_USERNAME = "encryption_key"

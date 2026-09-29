@@ -9,6 +9,7 @@ import pytest
 from _decision_test_helpers import FakeDecisionProvider
 from _node_test_helpers import run_node
 from talemate.decisions import DecisionService, ProviderResponse
+from talemate.decisions.slot import DecisionModelSlotStatus
 from talemate.game.engine.nodes import decisions as decision_nodes
 from talemate.game.engine.nodes.core import Graph, GraphContext, InputValueError
 from talemate.game.engine.nodes.decisions import (
@@ -255,11 +256,18 @@ class TestDecisionModelStatus:
         monkeypatch.setattr(
             decision_nodes,
             "decision_model_status",
-            lambda: {**status, "provider": "fake", "model": "any-model-name"},
+            lambda: DecisionModelSlotStatus(
+                **status,
+                provider="openrouter",
+                model="any-model-name",
+                timeout_seconds=1.5,
+                missing=[],
+                last_failure=None,
+            ),
         )
         out = await run_node(DecisionModelStatus())
         assert out["ready"] is ready
         assert out["enabled"] is status["enabled"]
         assert out["status"] == status["state"]
-        assert out["provider"] == "fake"
+        assert out["provider"] == "openrouter"
         assert out["model"] == "any-model-name"

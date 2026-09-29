@@ -1,2 +1,3 @@
 added:
 - "Added a Decision Log tab to Debug Tools and the Prompt Manager with compact rows for the feature, time, outcome and result. Open a row for a report with shared check instructions, passage text, probabilities, thresholds and recorded actions; technical details stay collapsed. Loading a scene clears finished entries."
+- "Decision Log probabilities and thresholds show two decimals, with more only where a score and its threshold would otherwise read the same. API keys in logged requests read (hidden)."

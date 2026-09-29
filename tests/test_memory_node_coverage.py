@@ -146,6 +146,25 @@ class TestReferencedCharacters:
         assert calls[0]["enabled"] is True
 
     @pytest.mark.asyncio
+    async def test_the_answer_is_current_only_for_the_agent_scene(
+        self, scene, monkeypatch
+    ):
+        calls = []
+
+        async def referenced(scene, text, candidates, **kwargs):
+            calls.append(kwargs)
+            return []
+
+        monkeypatch.setattr(memory_nodes, "referenced_characters", referenced)
+        memory = get_agent("memory")
+        monkeypatch.setattr(memory, "scene", scene, raising=False)
+        await run_node(ReferencedCharacters(), scene=scene, inputs={"text": "x"})
+        is_current = calls[0]["is_current"]
+        assert is_current() is True
+        monkeypatch.setattr(memory, "scene", object())
+        assert is_current() is False
+
+    @pytest.mark.asyncio
     async def test_unknown_candidate_is_refused(self, scene):
         with pytest.raises(InputValueError):
             await run_node(

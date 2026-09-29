@@ -779,9 +779,12 @@ class ShortcutsConfig(pydantic.BaseModel):
         return self
 
 
+DecisionProviderName = Literal["openrouter", "systemone"]
+
+
 class DecisionModelConfig(pydantic.BaseModel):
     enabled: bool = False
-    provider: Literal["openrouter", "systemone"] = "openrouter"
+    provider: DecisionProviderName = "openrouter"
     base_url: str = ""
     api_key: str | None = None
     model: str = "typesafe/jev-1.13"

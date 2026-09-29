@@ -145,7 +145,7 @@ export default {
         modelHint() {
             return this.isSystemOne
                 ? 'The model name your server expects.'
-                : 'The model name on OpenRouter. The default is typesafe/jev-1.13.';
+                : `The model name on OpenRouter. The default is ${this.config.decision_model_defaults.model}.`;
         },
         stateAlert() {
             const alert = STATE_ALERTS[this.status?.state] || STATE_ALERTS.unknown;

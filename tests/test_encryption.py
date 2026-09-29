@@ -11,6 +11,7 @@ from cryptography.fernet import Fernet
 from talemate.util import encryption as encryption_mod
 from talemate.util.encryption import (
     ENC_PREFIX,
+    REDACTED,
     _key_file_path,
     _keyring_available,
     decrypt_sensitive_values,
@@ -18,6 +19,7 @@ from talemate.util.encryption import (
     encrypt_sensitive_values,
     encrypt_value,
     get_fernet,
+    redact_sensitive,
     reset_fernet,
 )
 
@@ -617,3 +619,29 @@ class TestDisableKeyringEnvVar:
         """TALEMATE_DISABLE_KEYRING=1 forces file-based storage."""
         with patch.dict(os.environ, {"TALEMATE_DISABLE_KEYRING": "1"}):
             assert _keyring_available() is False
+
+
+# ---------------------------------------------------------------------------
+# redact_sensitive
+# ---------------------------------------------------------------------------
+
+
+def test_redact_sensitive_hides_set_secrets_at_any_depth():
+    data = {
+        "api_key": "sk-1",
+        "nested": [{"override_api_key": "sk-2", "safe": "kept"}],
+        "pair": ({"API_Key": "sk-3"},),
+        1: "integer key",
+    }
+    assert redact_sensitive(data) == {
+        "api_key": REDACTED,
+        "nested": [{"override_api_key": REDACTED, "safe": "kept"}],
+        "pair": [{"API_Key": REDACTED}],
+        1: "integer key",
+    }
+    assert data["api_key"] == "sk-1"
+
+
+@pytest.mark.parametrize("value", [None, ""])
+def test_redact_sensitive_keeps_an_unset_secret_as_none(value):
+    assert redact_sensitive({"api_key": value}) == {"api_key": None}

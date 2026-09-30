@@ -236,6 +236,42 @@ class TestListTemplatesUserOverride:
         assert info.is_outdated is True
         assert info.default_mtime > info.override_mtime
 
+    def test_override_missing_include_is_incomplete(
+        self, isolated_groups_dirs, patched_config
+    ):
+        d = isolated_groups_dirs["default"]
+        u = isolated_groups_dirs["user"]
+
+        # A newer file can still miss what the default needs.
+        _write_template(
+            d / "narrator" / "z.jinja2", '{% include "x.jinja2" %}', 1_000_000.0
+        )
+        _write_template(u / "narrator" / "z.jinja2", "plain", 2_000_000.0)
+
+        result = groups.list_templates()
+        info = next(t for t in result if t.uid == "narrator.z")
+
+        assert info.is_outdated is False
+        assert info.compatibility == "incomplete"
+        assert [(m.kind, m.name) for m in info.missing_markers] == [
+            ("include", "x.jinja2")
+        ]
+
+    def test_default_template_is_not_checked(
+        self, isolated_groups_dirs, patched_config
+    ):
+        _write_template(
+            isolated_groups_dirs["default"] / "narrator" / "d.jinja2",
+            '{% include "x.jinja2" %}',
+        )
+
+        result = groups.list_templates()
+        info = next(t for t in result if t.uid == "narrator.d")
+
+        assert info.source_group == "default"
+        assert info.compatibility == "compatible"
+        assert info.missing_markers == []
+
 
 class TestListTemplatesUnresolvable:
     """Template only in an inactive custom group is marked unresolvable."""
@@ -478,3 +514,45 @@ class TestDeleteTemplateSceneFlatFallback:
         result = groups.delete_template("scene", "narrator", "missing", scene=scene)
 
         assert result is False
+
+
+class TestIdentifyTemplateFile:
+    def test_group_directories(self, isolated_groups_dirs):
+        d = isolated_groups_dirs
+        assert groups.identify_template_file(
+            d["default"] / "narrator" / "a.jinja2"
+        ) == (
+            "default",
+            "narrator",
+            "a",
+        )
+        assert groups.identify_template_file(d["user"] / "common" / "b.jinja2") == (
+            "user",
+            "common",
+            "b",
+        )
+        assert groups.identify_template_file(
+            d["custom"] / "mine" / "creator" / "sub" / "c.jinja2"
+        ) == ("mine", "creator", "sub/c")
+
+    def test_scene_directory(self, isolated_groups_dirs):
+        scene = make_template_dir_scene(str(isolated_groups_dirs["scene"]))
+        path = isolated_groups_dirs["scene"] / "narrator" / "d.jinja2"
+        assert groups.identify_template_file(path, scene) == ("scene", "narrator", "d")
+
+    def test_flat_scene_file_takes_the_rendered_agent(self, isolated_groups_dirs):
+        scene = make_template_dir_scene(str(isolated_groups_dirs["scene"]))
+        path = isolated_groups_dirs["scene"] / "e.jinja2"
+        assert groups.identify_template_file(path, scene) is None
+        assert groups.identify_template_file(path, scene, flat_agent="director") == (
+            "scene",
+            "director",
+            "e",
+        )
+
+    def test_unknown_or_flat_files(self, isolated_groups_dirs, tmp_path):
+        assert groups.identify_template_file(tmp_path / "elsewhere.jinja2") is None
+        assert (
+            groups.identify_template_file(isolated_groups_dirs["user"] / "flat.jinja2")
+            is None
+        )

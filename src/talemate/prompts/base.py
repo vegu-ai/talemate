@@ -54,6 +54,7 @@ from talemate.agents.context import active_agent
 from talemate.prompts.extensions import CaptureContextExtension
 from talemate.prompts.groups import get_group_template_path, resolve_template
 from talemate.prompts.response import (
+    ExtractionError,
     ResponseSpec,
     AsIsExtractor,
     AnchorExtractor,
@@ -76,6 +77,17 @@ log = structlog.get_logger("talemate")
 
 prepended_template_dirs = ContextVar("prepended_template_dirs", default=[])
 active_template_uid = ContextVar("active_template_uid", default=None)
+
+TEMPLATE_EXTRACTOR_SETTERS = (
+    "set_anchor_extractor",
+    "set_as_is_extractor",
+    "set_after_anchor_extractor",
+    "set_code_block_extractor",
+    "set_block_list_extractor",
+)
+
+# (template uid, source group, response key) already reported this process
+_reported_override_misses: set[tuple[str, str, str]] = set()
 
 
 class _HeldSignals(list):
@@ -175,6 +187,8 @@ class GroupAwareLoader(jinja2.FileSystemLoader):
         super().__init__(searchpath)
         self.agent_type = agent_type
         self._config = config
+        # files served to renders through this loader, includes too
+        self.loaded: list[str] = []
 
     def get_source(self, environment, template):
         """
@@ -201,6 +215,7 @@ class GroupAwareLoader(jinja2.FileSystemLoader):
                 path = get_group_template_path(group, self.agent_type, template_name)
                 if path.exists():
                     source = path.read_text(encoding="utf-8")
+                    self.loaded.append(str(path))
                     return source, str(path), lambda: path.stat().st_mtime
 
                 # If explicit source not found, log warning and fall through to normal resolution
@@ -211,7 +226,9 @@ class GroupAwareLoader(jinja2.FileSystemLoader):
                 )
 
         # Fall back to normal FileSystemLoader behavior
-        return super().get_source(environment, template)
+        source, filename, uptodate = super().get_source(environment, template)
+        self.loaded.append(filename)
+        return source, filename, uptodate
 
 
 nest_asyncio.apply()
@@ -341,6 +358,7 @@ class Prompt(pydantic.BaseModel):
 
     # Track which source group the template was loaded from
     _source_group: str | None = pydantic.PrivateAttr(default=None)
+    _loaded_template_files: list[str] = pydantic.PrivateAttr(default_factory=list)
 
     @classmethod
     def get(cls, uid: str, vars: dict = None):
@@ -609,6 +627,54 @@ class Prompt(pydantic.BaseModel):
             else {},
         }
 
+        self.register_template_globals(env)
+        ctx.update(self.vars)
+
+        if "decensor" not in ctx:
+            ctx["decensor"] = False
+
+        # Load the template corresponding to the prompt name
+        if not self.template:
+            # no template text specified, load from file
+            template = env.get_template("{}.jinja2".format(self.name))
+        else:
+            template = env.from_string(self.template)
+
+        # Track source group for recently rendered templates feature
+        if self.agent_type and self.name and not self.template:
+            _, self._source_group = resolve_template(
+                self.agent_type, self.name, active_scene.get()
+            )
+
+        sectioning_handler = SECTIONING_HANDLERS.get(self.sectioning_handler)
+
+        try:
+            self.prompt = template.render(ctx)
+            if isinstance(env.loader, GroupAwareLoader):
+                self._loaded_template_files = list(dict.fromkeys(env.loader.loaded))
+            if apply_sectioning:
+                if not sectioning_handler:
+                    log.warning(
+                        "prompt.render",
+                        prompt=self.name,
+                        warning=f"Sectioning handler `{self.sectioning_handler}` not found",
+                    )
+                else:
+                    self.prompt = sectioning_handler(self)
+        except jinja2.exceptions.TemplateError as e:
+            log.error("prompt.render", prompt=self.name, error=traceback.format_exc())
+            emit(
+                "system",
+                status="error",
+                message=f"Error rendering prompt `{self.name}`: {e}",
+            )
+            raise RenderPromptError(f"Error rendering prompt: {e}")
+
+        self.prompt = self.render_cleanup(self.prompt)
+
+        return self.prompt
+
+    def register_template_globals(self, env: jinja2.Environment) -> None:
         env.globals["render_template"] = self.render_template
         env.globals["render_game_state"] = self.render_game_state
         env.globals["render_and_request"] = self.render_and_request
@@ -675,57 +741,10 @@ class Prompt(pydantic.BaseModel):
         )
         env.globals["text_to_chunks"] = self.text_to_chunks
         env.globals["emit_narrator"] = lambda message: emit("system", message=message)
-        # Template-defined extractors
-        env.globals["set_anchor_extractor"] = self.set_anchor_extractor
-        env.globals["set_as_is_extractor"] = self.set_as_is_extractor
-        env.globals["set_after_anchor_extractor"] = self.set_after_anchor_extractor
-        env.globals["set_code_block_extractor"] = self.set_code_block_extractor
-        env.globals["set_block_list_extractor"] = self.set_block_list_extractor
+        for name in TEMPLATE_EXTRACTOR_SETTERS:
+            env.globals[name] = getattr(self, name)
         env.filters["condensed"] = condensed_for_dedupe
         env.filters["no_chapters"] = no_chapters
-        ctx.update(self.vars)
-
-        if "decensor" not in ctx:
-            ctx["decensor"] = False
-
-        # Load the template corresponding to the prompt name
-        if not self.template:
-            # no template text specified, load from file
-            template = env.get_template("{}.jinja2".format(self.name))
-        else:
-            template = env.from_string(self.template)
-
-        # Track source group for recently rendered templates feature
-        if self.agent_type and self.name and not self.template:
-            _, self._source_group = resolve_template(
-                self.agent_type, self.name, active_scene.get()
-            )
-
-        sectioning_handler = SECTIONING_HANDLERS.get(self.sectioning_handler)
-
-        try:
-            self.prompt = template.render(ctx)
-            if apply_sectioning:
-                if not sectioning_handler:
-                    log.warning(
-                        "prompt.render",
-                        prompt=self.name,
-                        warning=f"Sectioning handler `{self.sectioning_handler}` not found",
-                    )
-                else:
-                    self.prompt = sectioning_handler(self)
-        except jinja2.exceptions.TemplateError as e:
-            log.error("prompt.render", prompt=self.name, error=traceback.format_exc())
-            emit(
-                "system",
-                status="error",
-                message=f"Error rendering prompt `{self.name}`: {e}",
-            )
-            raise RenderPromptError(f"Error rendering prompt: {e}")
-
-        self.prompt = self.render_cleanup(self.prompt)
-
-        return self.prompt
 
     def render_cleanup(self, prompt_text: str):
         """
@@ -1729,7 +1748,12 @@ class Prompt(pydantic.BaseModel):
             extractors=merged_extractors, required=response_spec.required
         )
 
-        extracted = effective_spec.extract_all(response)
+        try:
+            extracted = effective_spec.extract_all(response)
+        except ExtractionError:
+            self.report_override_misses(effective_spec, response)
+            raise
+        self.report_override_misses(effective_spec, response, extracted)
 
         # Post-process parse_data fields using extract_data_auto
         if any(ext.parse_data for ext in effective_spec.extractors.values()):
@@ -1747,6 +1771,92 @@ class Prompt(pydantic.BaseModel):
             )
 
         return response, extracted
+
+    def report_override_misses(
+        self,
+        spec: ResponseSpec,
+        response: str,
+        extracted: dict | None = None,
+    ) -> None:
+        """
+        Warn when a template override used by this render (the template itself
+        or one of its partials) lost the extractor or anchor of a response field
+        that came back empty: a required field, or one whose anchor the rendered
+        prompt never asks for.
+        """
+        rendered = (self.prompt or "").lower()
+        empty = []
+        for key, extractor in spec.extractors.items():
+            value = (
+                extracted[key]
+                if extracted is not None and key in extracted
+                else extractor.extract(response)
+            )
+            if value in (None, "", []):
+                empty.append((key, extractor.anchors()))
+        if not empty:
+            return
+
+        # compatibility imports this module
+        from talemate.prompts.compatibility import rendered_overrides
+
+        overrides = rendered_overrides(
+            self._loaded_template_files, active_scene.get(), self.agent_type
+        )
+        if not overrides:
+            return
+
+        for key, anchors in empty:
+            if key in spec.required:
+                reason = "required field missing"
+            elif anchors and not any(a.lower() in rendered for a in anchors):
+                reason = f"prompt never asks for {anchors[0]}"
+            else:
+                continue
+
+            # only an override that lost this field's extractor or anchor is to blame;
+            # otherwise the model did not answer what the prompt asked for
+            wanted = {a.lower() for a in anchors}
+            culprits = [
+                o
+                for o in overrides
+                if any(
+                    (m.kind == "extractor" and m.name == key)
+                    or (m.kind == "anchor" and m.name.lower() in wanted)
+                    for m in o.missing_markers
+                )
+            ]
+
+            for override in culprits:
+                report_key = (override.uid, override.group, key)
+                if report_key in _reported_override_misses:
+                    continue
+                _reported_override_misses.add(report_key)
+
+                log.warning(
+                    "Template override left a response field empty",
+                    template=override.uid,
+                    group=override.group,
+                    prompt=self.uid,
+                    key=key,
+                    reason=reason,
+                )
+                emit(
+                    "status",
+                    status="warning",
+                    message=(
+                        f"Template override `{override.uid}` ({override.group} group) "
+                        f"left `{key}` empty ({reason}). Compare it with the default "
+                        "in the Prompts tab."
+                    ),
+                    data={
+                        "template": override.uid,
+                        "group": override.group,
+                        "prompt": self.uid,
+                        "key": key,
+                        "reason": reason,
+                    },
+                )
 
     def poplines(self, num):
         """

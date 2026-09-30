@@ -5,8 +5,10 @@ Tests the PromptsPlugin handlers for template management API.
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
+from unittest.mock import ANY, Mock, patch, MagicMock, AsyncMock
 
+from talemate.prompts.compatibility import OverrideStatus
+from talemate.prompts.groups import MissingMarker
 from talemate.server.prompts import (
     PromptsPlugin,
     parse_template_uid,
@@ -355,6 +357,7 @@ class TestPromptsPluginListGroupTemplates:
         mock_templates = [
             Mock(
                 uid="narrator.narrate-scene",
+                agent="narrator",
                 available_in=["default", "user"],
                 model_dump=lambda: {
                     "uid": "narrator.narrate-scene",
@@ -363,6 +366,7 @@ class TestPromptsPluginListGroupTemplates:
             ),
             Mock(
                 uid="narrator.other-template",
+                agent="narrator",
                 available_in=["default"],
                 model_dump=lambda: {
                     "uid": "narrator.other-template",
@@ -371,11 +375,26 @@ class TestPromptsPluginListGroupTemplates:
             ),
         ]
 
-        with patch(
-            "talemate.server.prompts.list_templates", return_value=mock_templates
+        mock_templates[0].name = "narrate-scene"
+        status = OverrideStatus(
+            has_default=True,
+            compatibility="incomplete",
+            missing_markers=[MissingMarker(kind="flag", name="perspective")],
+        )
+
+        with (
+            patch(
+                "talemate.server.prompts.list_templates", return_value=mock_templates
+            ),
+            patch(
+                "talemate.server.prompts.override_status", return_value=status
+            ) as mock_status,
         ):
             await plugin.handle_list_group_templates({"group": "user"})
 
+        mock_status.assert_called_once_with(
+            "user", "narrator", "narrate-scene", None, ANY
+        )
         response = plugin.websocket_handler.messages[0]
         templates = response["data"]["templates"]
         assert len(templates) == 2
@@ -389,6 +408,12 @@ class TestPromptsPluginListGroupTemplates:
 
         assert narrate_scene["exists"] is True  # exists in user
         assert other_template["exists"] is False  # doesn't exist in user
+        # status of the user copy, not of whichever copy resolves
+        assert narrate_scene["compatibility"] == "incomplete"
+        assert narrate_scene["missing_markers"] == [
+            {"kind": "flag", "name": "perspective", "detail": None}
+        ]
+        assert "compatibility" not in other_template
 
 
 class TestPromptsPluginGetTemplate:
@@ -444,6 +469,30 @@ class TestPromptsPluginGetTemplate:
         assert response["data"]["readonly"] is True
 
     @pytest.mark.asyncio
+    async def test_includes_override_status(self, plugin):
+        """The reply carries the group copy's status against the default."""
+        status = OverrideStatus(
+            has_default=True,
+            is_outdated=True,
+            compatibility="incomplete",
+            missing_markers=[MissingMarker(kind="include", name="x.jinja2")],
+        )
+        with (
+            patch(
+                "talemate.server.prompts.get_template_content",
+                return_value="template content",
+            ),
+            patch(
+                "talemate.server.prompts.override_status", return_value=status
+            ) as mock_status,
+        ):
+            await plugin.handle_get_template({"uid": "narrator.test", "group": "user"})
+
+        mock_status.assert_called_once_with("user", "narrator", "test", None)
+        response = plugin.websocket_handler.messages[0]
+        assert response["data"]["status"] == status.model_dump()
+
+    @pytest.mark.asyncio
     async def test_handles_not_found(self, plugin):
         """Handles template not found."""
         with patch("talemate.server.prompts.get_template_content", return_value=None):
@@ -453,6 +502,8 @@ class TestPromptsPluginGetTemplate:
 
         response = plugin.websocket_handler.messages[0]
         assert "error" in response["data"]
+        assert response["data"]["uid"] == "narrator.nonexistent"
+        assert response["data"]["group"] == "user"
 
 
 class TestPromptsPluginSaveTemplate:
@@ -479,6 +530,9 @@ class TestPromptsPluginSaveTemplate:
         response = plugin.websocket_handler.messages[0]
         assert response["data"]["success"] is True
         assert response["data"]["syntax_valid"] is True
+        assert response["data"]["uid"] == "narrator.test"
+        assert response["data"]["group"] == "user"
+        assert response["data"]["status"]["has_default"] is False
 
     @pytest.mark.asyncio
     async def test_reports_syntax_errors(self, plugin):
@@ -528,6 +582,8 @@ class TestPromptsPluginDeleteTemplate:
 
         response = plugin.websocket_handler.messages[0]
         assert response["data"]["success"] is True
+        assert response["data"]["uid"] == "narrator.test"
+        assert response["data"]["group"] == "user"
 
     @pytest.mark.asyncio
     async def test_handles_not_found(self, plugin):
@@ -540,6 +596,7 @@ class TestPromptsPluginDeleteTemplate:
         response = plugin.websocket_handler.messages[0]
         assert response["data"]["success"] is False
         assert response["data"]["error"] == "Template not found"
+        assert response["data"]["uid"] == "narrator.nonexistent"
 
 
 class TestPromptsPluginCreateTemplate:

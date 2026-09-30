@@ -68,6 +68,10 @@ class Extractor(BaseModel, ABC):
         """
         pass
 
+    def anchors(self) -> list[str]:
+        """Literal markers the response must contain for this extractor to find its content."""
+        return []
+
     def _apply_trim(self, content: str | None) -> str | None:
         """Apply trimming if enabled."""
         if content is None:
@@ -90,6 +94,9 @@ class AnchorExtractorBase(Extractor):
     left: str
     right: str
     fallback_to_full: bool = False
+
+    def anchors(self) -> list[str]:
+        return [self.left]
 
     def _find_marker(self, text: str, marker: str) -> int | None:
         """
@@ -570,6 +577,9 @@ class AfterAnchorExtractor(Extractor):
     start: str
     stop_at: str | None = None
     fallback_to_full: bool = False
+
+    def anchors(self) -> list[str]:
+        return [self.start]
 
     def extract(self, text: str) -> str | None:
         """

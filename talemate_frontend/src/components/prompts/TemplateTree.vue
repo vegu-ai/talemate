@@ -32,29 +32,13 @@
             >
                 overrides
             </v-chip>
-            <v-chip
-                v-if="item.isDirectory && item.hasOutdated"
-                size="x-small"
-                label
-                color="warning"
-                variant="tonal"
+            <TemplateStateChip
+                v-if="item.state"
+                :state="item.state"
+                :markers="item.missingMarkers"
+                :show-tooltip="!item.isDirectory"
                 class="ml-1"
-            >
-                outdated
-            </v-chip>
-            <v-chip
-                v-if="item.isOutdated && !item.isDirectory"
-                size="x-small"
-                label
-                color="warning"
-                variant="tonal"
-                class="ml-1"
-            >
-                outdated
-                <v-tooltip activator="parent" location="top">
-                    This override is older than the default template and may need updating.
-                </v-tooltip>
-            </v-chip>
+            />
             <v-chip
                 v-if="item.isUnresolvable && !item.isDirectory"
                 size="x-small"
@@ -86,8 +70,14 @@
 </template>
 
 <script>
+import TemplateStateChip from './TemplateStateChip.vue';
+import { overrideState, worstState } from '@/utils/templateCompatibility.js';
+
 export default {
     name: 'TemplateTree',
+    components: {
+        TemplateStateChip
+    },
     props: {
         templates: {
             type: Array,
@@ -176,7 +166,8 @@ export default {
                         availableIn: template.available_in || [],
                         existsInGroup: template.exists_in_group,
                         isOverride: isOverride,
-                        isOutdated: template.is_outdated || false,
+                        state: overrideState(template),
+                        missingMarkers: template.missing_markers || [],
                         isUnresolvable: template.is_unresolvable || false
                     });
                 } else {
@@ -190,7 +181,8 @@ export default {
                         availableIn: template.available_in || [],
                         existsInGroup: template.exists_in_group,
                         isOverride: isOverride,
-                        isOutdated: template.is_outdated || false,
+                        state: overrideState(template),
+                        missingMarkers: template.missing_markers || [],
                         isUnresolvable: template.is_unresolvable || false
                     });
                 }
@@ -208,7 +200,7 @@ export default {
                 });
 
                 let hasOverride = false;
-                let hasOutdated = false;
+                const states = [];
                 for (const item of items) {
                     if (item.children) {
                         // Recurse into children first (bottom-up)
@@ -218,20 +210,13 @@ export default {
                             item.hasOverride = true;
                             foldersWithOverrides.push(item.path);
                         }
-                        if (result.hasOutdated) {
-                            hasOutdated = true;
-                            item.hasOutdated = true;
-                        }
-                    } else {
-                        if (item.isOverride) {
-                            hasOverride = true;
-                        }
-                        if (item.isOutdated) {
-                            hasOutdated = true;
-                        }
+                        item.state = result.state;
+                    } else if (item.isOverride) {
+                        hasOverride = true;
                     }
+                    states.push(item.state);
                 }
-                return { hasOverride, hasOutdated };
+                return { hasOverride, state: worstState(states) };
             };
 
             const items = Object.values(agentMap).sort((a, b) => {
@@ -250,9 +235,7 @@ export default {
                     item.hasOverride = true;
                     foldersWithOverrides.push(item.path);
                 }
-                if (result.hasOutdated) {
-                    item.hasOutdated = true;
-                }
+                item.state = result.state;
             }
 
             return { items, foldersWithOverrides };

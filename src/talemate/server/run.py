@@ -153,9 +153,9 @@ def run_server(args):
     import talemate.agents.custom
     import talemate.client.custom
     import talemate.agents
-    from talemate.agents.registry import get_agent_types
     from talemate.world_state.templates import Collection
-    from talemate.prompts.overrides import get_template_overrides
+    from talemate.prompts.compatibility import log_override_status
+    from talemate.prompts.groups import list_templates
     import talemate.client.system_prompts as system_prompts
     from talemate.emit.base import emit
     import talemate.agents.tts.voice_library as voice_library
@@ -177,17 +177,7 @@ def run_server(args):
     # pre-cache system prompts
     system_prompts.cache_all()
 
-    for agent_type in get_agent_types():
-        template_overrides = get_template_overrides(agent_type)
-        for template_override in template_overrides:
-            if not template_override.override_newer:
-                continue
-            log.warning(
-                "Outdated Template Override",
-                agent_type=agent_type,
-                template=template_override.template_name,
-                age=template_override.age_difference,
-            )
+    log_override_status(list_templates())
 
     # Get (or create) the asyncio event loop
     loop = asyncio.get_event_loop()

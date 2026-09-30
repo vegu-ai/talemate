@@ -1006,9 +1006,9 @@
 - path: user-guide/prompts/index.md
   title: Prompt Manager
   summary: Prompt Manager tabs for prompt inspection, Template Files, LLM Prompt Templates and Scene Context; Jinja2 template
-    groups, priority, resolved override indicators and outdated override warnings. Covers immediate Active entries, Completed/Failed/Cancelled
-    outcomes, grouped retries, Clear retaining active requests, live details preserving edits, Test Changes after completion
-    and the Recent sidebar's shared Decisions panel.
+    groups, priority, resolved override indicators and outdated override warnings showing the worst override state. Covers
+    immediate Active entries, Completed/Failed/Cancelled outcomes, grouped retries, Clear retaining active requests, live details
+    preserving edits, Test Changes after completion and the Recent sidebar's shared Decisions panel.
 - path: user-guide/prompts/llm-prompt-templates.md
   title: LLM Prompt Templates
   summary: 'Manage local-model chat-format wrappers such as ChatML, Llama3, Mistral and Gemma4 in LLM Prompt Templates: create
@@ -1022,8 +1022,9 @@
 - path: user-guide/prompts/template-overrides.md
   title: Template Overrides
   summary: Override a default prompt template by copying it into the user, scene or a custom group with the same agent directory
-    and filename; delete the copy to restore the default. Keep outdated overrides current after an update. World snapshot overrides
-    follow the snapshot input contract, the snapshot_request.context_history call; incompatible snapshot prompt notices.
+    and filename; delete the copy to restore the default. Keep outdated, incomplete and incompatible overrides current after
+    an update; Compare with default diff. World snapshot overrides follow the snapshot input contract, the snapshot_request.context_history
+    call; incompatible snapshot prompt notices.
 - path: user-guide/prompts/volatile-context-placement.md
   title: Volatile Context Placement
   summary: Optimize for Prompt Caching moves volatile RAG, dynamic notes and other changing context after scene history to

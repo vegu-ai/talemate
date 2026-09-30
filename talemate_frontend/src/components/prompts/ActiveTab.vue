@@ -9,15 +9,22 @@
         />
 
         <v-alert
-            v-if="outdatedCount > 0"
-            type="warning"
+            v-if="attentionState"
+            :color="stateConfig(attentionState).color"
+            :icon="stateConfig(attentionState).icon"
             variant="tonal"
             density="compact"
             class="my-2"
         >
-            <strong>{{ outdatedCount }}</strong> template override{{ outdatedCount > 1 ? 's are' : ' is' }} outdated.
-            The default template has been updated since the override was created and may contain improvements or fixes.
-            Review outdated overrides in their respective group tabs.
+            <div class="d-flex align-center flex-wrap ga-2">
+                <span>Some template overrides differ from the current defaults.</span>
+                <template v-for="(count, state) in stateCounts" :key="state">
+                    <TemplateStateChip v-if="count > 0" :state="state" :count="count" size="small" />
+                </template>
+            </div>
+            <div class="text-body-small text-medium-emphasis mt-1">
+                Open an override in its group tab to compare it with the default or reset it.
+            </div>
         </v-alert>
 
         <v-divider class="my-2"></v-divider>
@@ -103,6 +110,12 @@
                         <v-chip size="small" label class="ml-1" :color="getSourceColor(selectedTemplate.sourceGroup)" variant="tonal">
                             from: {{ selectedTemplate.sourceGroup }}
                         </v-chip>
+                        <TemplateStateChip
+                            :state="selectedTemplate.state"
+                            :markers="selectedTemplate.missingMarkers"
+                            size="small"
+                            class="ml-1"
+                        />
                         <v-spacer></v-spacer>
                         <v-btn
                             v-if="canGoToSource"
@@ -187,6 +200,8 @@ import { EditorView } from '@codemirror/view';
 import GroupManagement from './GroupManagement.vue';
 import TemplateTree from './TemplateTree.vue';
 import TemplateSourceSelect from './TemplateSourceSelect.vue';
+import TemplateStateChip from './TemplateStateChip.vue';
+import { OVERRIDE_STATES, stateCounts, worstState } from '@/utils/templateCompatibility.js';
 
 export default {
     name: 'ActiveTab',
@@ -194,7 +209,8 @@ export default {
         Codemirror,
         GroupManagement,
         TemplateTree,
-        TemplateSourceSelect
+        TemplateSourceSelect,
+        TemplateStateChip
     },
     props: {
         groups: {
@@ -235,8 +251,11 @@ export default {
         resolvedTemplates() {
             return this.templates;
         },
-        outdatedCount() {
-            return this.templates.filter(t => t.is_outdated).length;
+        stateCounts() {
+            return stateCounts(this.templates);
+        },
+        attentionState() {
+            return worstState(Object.keys(this.stateCounts).filter(state => this.stateCounts[state] > 0));
         },
         overrideTargets() {
             if (!this.selectedTemplate) return [];
@@ -282,6 +301,9 @@ export default {
         }
     },
     methods: {
+        stateConfig(state) {
+            return OVERRIDE_STATES[state];
+        },
         overrideInGroup(group) {
             if (!this.selectedTemplate) return;
             this.$emit('override-in-group', { uid: this.selectedTemplate.uid, group });

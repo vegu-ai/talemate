@@ -24,7 +24,7 @@
                 <v-tab value="templates">
                     <v-icon start>mdi-file-document-multiple-outline</v-icon>
                     Template Files
-                    <v-icon v-if="outdatedCount > 0" size="x-small" color="warning" class="ml-1">mdi-alert</v-icon>
+                    <v-icon v-if="attentionState" size="x-small" :color="attentionConfig.color" class="ml-1">{{ attentionConfig.icon }}</v-icon>
                 </v-tab>
                 <v-tab value="llm-templates">
                     <v-icon start>mdi-code-braces</v-icon>
@@ -240,6 +240,7 @@ import GroupTab from './GroupTab.vue';
 import LLMTemplatesTab from './LLMTemplatesTab.vue';
 import PromptDetailView from './PromptDetailView.vue';
 import SceneContextReviewInline from '../SceneContextReviewInline.vue';
+import { OVERRIDE_STATES, overrideState, worstState } from '@/utils/templateCompatibility.js';
 
 export default {
     name: 'PromptsView',
@@ -287,6 +288,7 @@ export default {
         return {
             // Local-only tab (for context-review which isn't synced to the menu)
             internalMainTab: null,
+            pendingPreview: null,
             // Open prompts state
             openPrompts: [],
             activePromptIndex: 0,
@@ -328,8 +330,11 @@ export default {
                 g.name !== 'scene' && g.name !== 'default'
             );
         },
-        outdatedCount() {
-            return this.templates.filter(t => t.is_outdated).length;
+        attentionState() {
+            return worstState(this.templates.map(overrideState));
+        },
+        attentionConfig() {
+            return OVERRIDE_STATES[this.attentionState] || null;
         }
     },
     watch: {
@@ -519,6 +524,8 @@ export default {
             }));
         },
         requestTemplate({ uid, group }) {
+            // group tabs request templates too; the preview applies only its own reply
+            this.pendingPreview = { uid, group: group || null };
             this.getWebsocket().send(JSON.stringify({
                 type: 'prompts',
                 action: 'get_template',
@@ -595,7 +602,10 @@ export default {
                     this.templates = data.data.templates || [];
                     break;
 
-                case 'get_template':
+                case 'get_template': {
+                    const pending = this.pendingPreview;
+                    if (!pending || data.data.uid !== pending.uid || (pending.group && data.data.group !== pending.group)) break;
+                    this.pendingPreview = null;
                     if (data.data.error) {
                         console.error('Error getting template:', data.data.error);
                         this.showNotification(`Failed to load template: ${data.data.error}`);
@@ -603,6 +613,7 @@ export default {
                         this.$refs.activeTabRef.setTemplateContent(data.data.content || '');
                     }
                     break;
+                }
 
                 case 'set_group_priority':
                     if (data.data.success) {

@@ -78,6 +78,12 @@
                         <v-chip size="small" label color="primary" variant="tonal">
                             {{ selectedTemplate.uid }}
                         </v-chip>
+                        <TemplateStateChip
+                            :state="selectedState"
+                            :markers="missingMarkers"
+                            size="small"
+                            class="ml-2"
+                        />
                         <v-chip
                             v-if="!templateExistsInGroup"
                             size="small"
@@ -101,6 +107,16 @@
                         <v-spacer></v-spacer>
                         <div class="actions d-flex ga-2">
                             <v-btn
+                                v-if="hasDefault && !selectedState"
+                                size="small"
+                                variant="text"
+                                prepend-icon="mdi-compare-horizontal"
+                                :loading="diffLoading"
+                                @click="openDiff"
+                            >
+                                Compare with default
+                            </v-btn>
+                            <v-btn
                                 size="small"
                                 variant="tonal"
                                 color="primary"
@@ -116,13 +132,53 @@
                                 size="small"
                                 variant="tonal"
                                 color="error"
-                                prepend-icon="mdi-delete"
+                                :prepend-icon="hasDefault ? 'mdi-restore' : 'mdi-delete'"
                                 @click="confirmDelete"
                             >
-                                Delete
+                                {{ hasDefault ? 'Reset to default' : 'Delete' }}
+                                <v-tooltip v-if="hasDefault" activator="parent" location="top">
+                                    Remove this override so the template comes from {{ fallbackGroup }} again
+                                </v-tooltip>
                             </v-btn>
                         </div>
                     </v-card-subtitle>
+                    <v-alert
+                        v-if="selectedState"
+                        :color="stateConfig.color"
+                        :icon="stateConfig.icon"
+                        variant="tonal"
+                        density="compact"
+                        class="mx-2 mb-2 override-notice"
+                    >
+                        <div class="text-body-medium">{{ stateConfig.summary }}</div>
+                        <div v-if="missingMarkers.length" class="d-flex flex-wrap ga-1 mt-2">
+                            <v-chip
+                                v-for="marker in missingMarkers"
+                                :key="`${marker.kind}:${marker.name}`"
+                                size="x-small"
+                                label
+                                variant="outlined"
+                            >
+                                <span class="text-medium-emphasis mr-1">{{ markerKindLabel(marker.kind) }}</span>
+                                <code>{{ marker.name }}</code>
+                                <v-tooltip v-if="marker.detail" activator="parent" location="top" max-width="380">
+                                    {{ marker.detail }}
+                                </v-tooltip>
+                            </v-chip>
+                        </div>
+                        <template #append>
+                            <v-btn
+                                size="small"
+                                variant="tonal"
+                                :color="stateConfig.color === 'muted' ? undefined : stateConfig.color"
+                                prepend-icon="mdi-compare-horizontal"
+                                :loading="diffLoading"
+                                @click="openDiff"
+                            >
+                                Compare with default
+                            </v-btn>
+                        </template>
+                    </v-alert>
                     <v-card-text class="pa-0">
                         <div v-if="loadingTemplate" class="d-flex justify-center align-center" style="height: 200px;">
                             <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
@@ -161,14 +217,25 @@
             </v-col>
         </v-row>
 
-        <!-- Delete Confirmation Dialog -->
+        <!-- Delete / Reset Confirmation Dialog -->
         <ConfirmActionPrompt
             ref="deletePrompt"
-            actionLabel="Delete Override"
-            :description="`Remove ${selectedTemplate?.uid || ''} from ${group}? The template will fall back to the next available source.`"
-            icon="mdi-delete"
+            :actionLabel="hasDefault ? 'Reset to Default' : 'Delete Override'"
+            :description="deleteDescription"
+            :icon="hasDefault ? 'mdi-restore' : 'mdi-delete'"
             color="error"
             @confirm="deleteTemplate"
+        />
+
+        <TemplateDiffView
+            v-model="diffOpen"
+            :uid="selectedTemplate?.uid || ''"
+            :group="group"
+            :override-content="templateContent"
+            :default-content="diffDefaultContent"
+            :state="selectedState"
+            :markers="missingMarkers"
+            @apply="applyDiff"
         />
 
         <!-- Delete Group Confirmation Dialog -->
@@ -265,13 +332,18 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { codeEditorExtensions } from '@/utils/codeEditorTheme.js';
 import TemplateTree from './TemplateTree.vue';
+import TemplateStateChip from './TemplateStateChip.vue';
+import TemplateDiffView from './TemplateDiffView.vue';
 import ConfirmActionPrompt from '../ConfirmActionPrompt.vue';
+import { OVERRIDE_STATES, markerKindLabel, overrideState } from '@/utils/templateCompatibility.js';
 
 export default {
     name: 'GroupTab',
     components: {
         Codemirror,
         TemplateTree,
+        TemplateStateChip,
+        TemplateDiffView,
         ConfirmActionPrompt
     },
     props: {
@@ -301,7 +373,21 @@ export default {
             originalContent: '',
             isDirty: false,
             saving: false,
+            deleting: false,
+            // uid/group of the save or delete this tab sent; replies reach every group tab
+            pendingSave: null,
+            pendingDelete: null,
             syntaxErrors: [],
+
+            overrideStatus: null,
+
+            // get_template replies reach every group tab; only the one this tab asked for applies
+            pendingContent: null,
+
+            // Compare with default
+            diffOpen: false,
+            diffLoading: false,
+            diffDefaultContent: '',
 
             // New file dialog
             showNewFileDialog: false,
@@ -332,9 +418,9 @@ export default {
         },
         // Build template list with exists_in_group flag for the tree
         groupTemplates() {
-            const existsMap = {};
+            const infoMap = {};
             for (const info of this.groupTemplateInfo) {
-                existsMap[info.uid] = info.exists;
+                infoMap[info.uid] = info;
             }
 
             // Filter out scene templates when not editing the scene group
@@ -352,10 +438,17 @@ export default {
                 });
             }
 
-            return templates.map(t => ({
-                ...t,
-                exists_in_group: existsMap[t.uid] || false
-            }));
+            // list_templates grades the copy that resolves; this tab shows its own copy
+            return templates.map(t => {
+                const info = infoMap[t.uid];
+                return {
+                    ...t,
+                    exists_in_group: info?.exists || false,
+                    is_outdated: info?.is_outdated || false,
+                    compatibility: info?.compatibility || 'compatible',
+                    missing_markers: info?.missing_markers || []
+                };
+            });
         },
         // UIDs of templates that don't exist in this group (shown muted)
         nonOverriddenTemplates() {
@@ -368,6 +461,31 @@ export default {
             if (!this.selectedTemplate) return false;
             const info = this.groupTemplateInfo.find(t => t.uid === this.selectedTemplate.uid);
             return info?.exists || false;
+        },
+        hasDefault() {
+            return this.templateExistsInGroup && !!this.overrideStatus?.has_default;
+        },
+        selectedState() {
+            return this.templateExistsInGroup ? overrideState(this.overrideStatus) : null;
+        },
+        stateConfig() {
+            return OVERRIDE_STATES[this.selectedState] || null;
+        },
+        missingMarkers() {
+            return this.overrideStatus?.missing_markers || [];
+        },
+        fallbackGroup() {
+            return this.overrideStatus?.fallback_group || 'default';
+        },
+        deleteDescription() {
+            const uid = this.selectedTemplate?.uid || '';
+            if (!this.hasDefault) {
+                return `Remove ${uid} from ${this.group}? The template will fall back to the next available source.`;
+            }
+            if (this.fallbackGroup === 'default') {
+                return `Remove the ${this.group} copy of ${uid}? Talemate will use the default that ships with this version.`;
+            }
+            return `Remove the ${this.group} copy of ${uid}? Talemate will use the copy in the ${this.fallbackGroup} group, not the shipped default.`;
         },
         // Extract unique agents/categories from templates for the new file dialog
         availableAgents() {
@@ -440,7 +558,8 @@ export default {
             }));
         },
 
-        requestTemplateContent(uid, group) {
+        requestTemplateContent(uid, group, purpose = 'edit') {
+            this.pendingContent = { uid, group, purpose };
             this.getWebsocket().send(JSON.stringify({
                 type: 'prompts',
                 action: 'get_template',
@@ -509,6 +628,23 @@ export default {
             });
         },
 
+        markerKindLabel,
+
+        // a null group asks for whichever copy resolves, so only the uid can match
+        isReplyTo(request, reply) {
+            return reply.uid === request.uid && (!request.group || reply.group === request.group);
+        },
+
+        openDiff() {
+            if (!this.selectedTemplate) return;
+            this.diffLoading = true;
+            this.requestTemplateContent(this.selectedTemplate.uid, 'default', 'diff');
+        },
+
+        applyDiff(content) {
+            this.templateContent = content;
+        },
+
         // Load template content
         loadTemplate(template) {
             this.selectedTemplate = template;
@@ -516,6 +652,9 @@ export default {
             this.originalContent = '';
             this.isDirty = false;
             this.syntaxErrors = [];
+            this.overrideStatus = null;
+            this.diffOpen = false;
+            this.diffLoading = false;
             this.loadingTemplate = true;
 
             // Check if template exists in this group
@@ -542,6 +681,7 @@ export default {
             if (!this.selectedTemplate || !this.isDirty) return;
 
             this.saving = true;
+            this.pendingSave = { uid: this.selectedTemplate.uid, group: this.group, content: this.templateContent };
             this.getWebsocket().send(JSON.stringify({
                 type: 'prompts',
                 action: 'save_template',
@@ -560,6 +700,8 @@ export default {
 
         deleteTemplate() {
             if (!this.selectedTemplate) return;
+            this.deleting = true;
+            this.pendingDelete = { uid: this.selectedTemplate.uid, group: this.group };
 
             this.getWebsocket().send(JSON.stringify({
                 type: 'prompts',
@@ -629,25 +771,46 @@ export default {
                     }
                     break;
 
-                case 'get_template':
-                    this.loadingTemplate = false;
+                case 'get_template': {
+                    const pending = this.pendingContent;
+                    if (!pending || !this.isReplyTo(pending, data.data)) break;
+                    this.pendingContent = null;
                     if (data.data.error) {
+                        this.loadingTemplate = false;
+                        this.diffLoading = false;
                         console.error('Error getting template:', data.data.error);
                         this.showNotification(`Failed to load template: ${data.data.error}`);
-                    } else if (this.selectedTemplate && data.data.uid === this.selectedTemplate.uid) {
-                        this.templateContent = data.data.content || '';
-                        this.originalContent = this.templateContent;
-                        this.isDirty = false;
+                        break;
                     }
+                    if (pending.purpose === 'diff') {
+                        this.diffLoading = false;
+                        this.diffDefaultContent = data.data.content || '';
+                        this.diffOpen = true;
+                        break;
+                    }
+                    this.loadingTemplate = false;
+                    this.templateContent = data.data.content || '';
+                    this.originalContent = this.templateContent;
+                    this.isDirty = false;
+                    this.overrideStatus = data.data.group === this.group ? data.data.status : null;
                     break;
+                }
 
-                case 'save_template':
+                case 'save_template': {
+                    const saved = this.pendingSave;
+                    if (!saved || !this.isReplyTo(saved, data.data)) break;
+                    this.pendingSave = null;
                     this.saving = false;
                     if (data.data.success) {
-                        this.originalContent = this.templateContent;
-                        this.isDirty = false;
-                        this.syntaxErrors = data.data.syntax_errors || [];
-                        // Refresh group templates to update exists flag
+                        // the user may have moved on to another template, or kept typing
+                        if (this.selectedTemplate?.uid === saved.uid) {
+                            this.originalContent = saved.content;
+                            this.isDirty = this.templateContent !== saved.content;
+                            this.syntaxErrors = data.data.syntax_errors || [];
+                            this.overrideStatus = data.data.status;
+                        }
+                        // Refresh the lists to update the exists flag and override states
+                        this.requestAllTemplates();
                         this.requestGroupTemplates();
                         this.showNotification('Template saved successfully', 'success');
                     } else if (data.data.error) {
@@ -655,25 +818,34 @@ export default {
                         this.showNotification(`Failed to save template: ${data.data.error}`);
                     }
                     break;
+                }
 
-                case 'delete_template':
+                case 'delete_template': {
+                    const deleted = this.pendingDelete;
+                    if (!deleted || !this.isReplyTo(deleted, data.data)) break;
+                    this.pendingDelete = null;
+                    this.deleting = false;
                     if (data.data.success) {
-                        // Clear selection and refresh
-                        this.selectedTemplate = null;
-                        this.selectedTemplatePath = null;
-                        this.templateContent = '';
-                        this.originalContent = '';
-                        this.isDirty = false;
+                        const wasReset = this.hasDefault;
+                        if (this.selectedTemplate?.uid === deleted.uid) {
+                            this.selectedTemplate = null;
+                            this.selectedTemplatePath = null;
+                            this.templateContent = '';
+                            this.originalContent = '';
+                            this.isDirty = false;
+                            this.overrideStatus = null;
+                        }
                         // Refresh both lists to update muted state and remove files
                         // that were newly created (don't exist in default)
                         this.requestAllTemplates();
                         this.requestGroupTemplates();
-                        this.showNotification('Template deleted successfully', 'success');
+                        this.showNotification(wasReset ? 'Override removed; the template is back to its default source' : 'Template deleted successfully', 'success');
                     } else if (data.data.error) {
                         console.error('Error deleting template:', data.data.error);
                         this.showNotification(`Failed to delete template: ${data.data.error}`);
                     }
                     break;
+                }
 
                 case 'delete_group':
                     if (data.data.success && data.data.name === this.group) {
@@ -749,6 +921,10 @@ export default {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+}
+
+.override-notice {
+    flex: 0 0 auto;
 }
 
 .editor-container .v-card-text {

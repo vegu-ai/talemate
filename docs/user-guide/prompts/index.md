@@ -19,8 +19,8 @@ The Prompt Manager is organized into four main tabs:
 
 The sidebar also provides quick-access panels for recent prompts, recent decision requests and recently rendered templates. Its three tabs carry icons only, so hover a tab to read its name. The Decisions panel is the same log the Debug Tools show -- see [Debug Tools](../debug-tools.md#decisions).
 
-!!! tip "Outdated override warning"
-    When one or more of your active template overrides is older than the built-in default it overrides, the top-level **Prompts** tab in the main navigation shows a warning icon. Open the **Active** tab (see below) to see which templates are flagged and review or remove them.
+!!! tip "Override warnings"
+    When one of your active template overrides differs from the built-in default in a way that matters, the top-level **Prompts** tab in the main navigation shows an icon for the worst case: **outdated**, **incomplete** or **incompatible**. Open the **Active** tab (see below) to see which templates are flagged. [Keep overrides current](template-overrides.md#keep-overrides-current) explains the states.
 
 ## Template Groups
 
@@ -67,6 +67,7 @@ The Active tab provides visual indicators to help manage overrides:
 
 - **Override badge** -- directories or templates that have overrides from non-default groups are marked with a visual indicator
 - **Outdated indicator** -- if a default template has been updated more recently than your override, it is flagged as potentially outdated. This is especially important after upgrading Talemate, as default templates may have changed
+- **Incomplete and incompatible indicators** -- an override that lacks a section of the current default is flagged **incomplete**; one that lacks a response marker Talemate reads is flagged **incompatible**. See [Keep overrides current](template-overrides.md#keep-overrides-current)
 
 ### Setting Per-Template Sources
 
@@ -130,9 +131,9 @@ The sidebar's **Templates** panel shows templates that were recently rendered by
 After upgrading to 0.36.0:
 
 1. Open the Prompt Manager and go to the **Active** tab
-2. Look for templates marked with the **outdated** indicator
-3. Review each outdated override and compare it with the updated default version
-4. Update your overrides as needed, or delete them to fall back to the improved defaults
+2. Look for templates marked **incompatible**, **incomplete** or **outdated**
+3. Open each one in its group tab and use **Compare with default** to see what changed
+4. Update your overrides as needed, or use **Reset to default** to fall back to the improved defaults
 
 ### Removed Templates
 

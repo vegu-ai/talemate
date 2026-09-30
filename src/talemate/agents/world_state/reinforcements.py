@@ -14,7 +14,7 @@ from talemate.knowledge.reinforcements import (
 )
 from talemate.instance import get_agent
 from talemate.prompts import Prompt
-from talemate.prompts.response import AnchorExtractor, ResponseSpec
+from talemate.agents.world_state.response_specs import REINFORCEMENT_ANSWER_SPEC
 from talemate.scene_message import ReinforcementMessage
 from talemate.util.async_tools import bounded_gather_apply
 
@@ -277,15 +277,7 @@ class WorldStateReinforcementsMixin:
             "answer": (reinforcement.answer if not reset else None) or "",
             "reinforcement": reinforcement,
         }
-        response_spec = ResponseSpec(
-            extractors={
-                "response": AnchorExtractor(
-                    left="<ANSWER>",
-                    right="</ANSWER>",
-                    fallback_to_full=True,
-                ),
-            },
-        )
+        response_spec = REINFORCEMENT_ANSWER_SPEC
         if not decision_gate_enabled(decision_model) or not reinforcement.answer:
             _, extracted = await Prompt.request(
                 "world_state.update-reinforcements",

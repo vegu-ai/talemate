@@ -11,6 +11,7 @@ from jinja2 import TemplateSyntaxError, Environment
 from talemate.emit.signals import handlers
 
 from talemate.config import get_config
+from talemate.prompts.compatibility import override_status, response_anchors
 from talemate.prompts.groups import (
     create_group,
     delete_group,
@@ -337,7 +338,10 @@ class PromptsPlugin(Plugin):
         Request: {"group": "user"}
         Response: {
             "templates": [
-                {"uid": "narrator.narrate-scene", "exists": true},
+                {"uid": "narrator.narrate-scene", "exists": true,
+                 "is_outdated": false, "compatibility": "compatible",
+                 "missing_markers": []},
+                {"uid": "narrator.other", "exists": false},
                 ...
             ]
         }
@@ -348,16 +352,25 @@ class PromptsPlugin(Plugin):
         # Get all templates to know what UIDs exist
         all_templates = list_templates(scene, include_sources=True)
 
-        # Build response with exists flag for each template
+        # Build response with exists flag for each template; the status is that
+        # of this group's copy, which is not always the copy that resolves
         templates_response = []
+        anchors = None
         for template in all_templates:
             exists = payload.group in template.available_in
-            templates_response.append(
-                {
-                    "uid": template.uid,
-                    "exists": exists,
-                }
-            )
+            entry = {"uid": template.uid, "exists": exists}
+            if exists and template.agent:
+                if anchors is None:
+                    anchors = response_anchors()
+                status = override_status(
+                    payload.group, template.agent, template.name, scene, anchors
+                )
+                entry.update(
+                    is_outdated=status.is_outdated,
+                    compatibility=status.compatibility,
+                    missing_markers=[m.model_dump() for m in status.missing_markers],
+                )
+            templates_response.append(entry)
 
         self.websocket_handler.queue_put(
             {
@@ -389,6 +402,8 @@ class PromptsPlugin(Plugin):
                     "type": self.router,
                     "action": "get_template",
                     "data": {
+                        "uid": payload.uid,
+                        "group": payload.group,
                         "error": str(e),
                     },
                 }
@@ -417,6 +432,8 @@ class PromptsPlugin(Plugin):
                     "type": self.router,
                     "action": "get_template",
                     "data": {
+                        "uid": payload.uid,
+                        "group": payload.group,
                         "error": f"Template not found: {payload.uid}",
                     },
                 }
@@ -432,6 +449,9 @@ class PromptsPlugin(Plugin):
                     "content": content,
                     "group": source_group,
                     "readonly": readonly,
+                    "status": override_status(
+                        source_group, agent, template_name, scene
+                    ).model_dump(),
                 },
             }
         )
@@ -458,6 +478,8 @@ class PromptsPlugin(Plugin):
                     "action": "save_template",
                     "data": {
                         "success": False,
+                        "uid": payload.uid,
+                        "group": payload.group,
                         "error": str(e),
                     },
                 }
@@ -477,8 +499,13 @@ class PromptsPlugin(Plugin):
                     "action": "save_template",
                     "data": {
                         "success": True,
+                        "uid": payload.uid,
+                        "group": payload.group,
                         "syntax_valid": syntax_valid,
                         "syntax_errors": syntax_errors,
+                        "status": override_status(
+                            payload.group, agent, template_name, scene
+                        ).model_dump(),
                     },
                 }
             )
@@ -489,6 +516,8 @@ class PromptsPlugin(Plugin):
                     "action": "save_template",
                     "data": {
                         "success": False,
+                        "uid": payload.uid,
+                        "group": payload.group,
                         "error": str(e),
                     },
                 }
@@ -512,6 +541,8 @@ class PromptsPlugin(Plugin):
                     "action": "delete_template",
                     "data": {
                         "success": False,
+                        "uid": payload.uid,
+                        "group": payload.group,
                         "error": str(e),
                     },
                 }
@@ -528,6 +559,8 @@ class PromptsPlugin(Plugin):
                     "action": "delete_template",
                     "data": {
                         "success": deleted,
+                        "uid": payload.uid,
+                        "group": payload.group,
                         "error": None if deleted else "Template not found",
                     },
                 }
@@ -539,6 +572,8 @@ class PromptsPlugin(Plugin):
                     "action": "delete_template",
                     "data": {
                         "success": False,
+                        "uid": payload.uid,
+                        "group": payload.group,
                         "error": str(e),
                     },
                 }

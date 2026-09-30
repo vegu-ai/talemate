@@ -25,7 +25,7 @@ from talemate.knowledge.snapshots import (
     snapshot_views_example,
 )
 from talemate.prompts import Prompt
-from talemate.prompts.response import AnchorExtractor, ResponseSpec
+from talemate.agents.world_state.response_specs import EXAMINE_SPEC
 from talemate.scene_message import SceneMessage, TimePassageMessage
 from talemate.knowledge.processing import evidence_writer, track_evidence_task
 from talemate.world_state import INTRO_ANCHOR_ID, WorldStateResponse
@@ -1291,15 +1291,7 @@ class WorldStateSnapshotMixin:
                 "include_scene_intent": True,
                 "include_scenario_premise": True,
             },
-            response_spec=ResponseSpec(
-                extractors={
-                    "response": AnchorExtractor(
-                        left="<EXAMINE>",
-                        right="</EXAMINE>",
-                        fallback_to_full=True,
-                    ),
-                },
-            ),
+            response_spec=EXAMINE_SPEC,
         )
 
         return extracted["response"].strip()

@@ -75,7 +75,7 @@
           {{ tab.title() }}
           <span v-if="tab.alert && tab.alert()" class="ml-1 d-inline-flex">
             <v-tooltip v-if="tab.alertTooltip" activator="parent" location="top">{{ tab.alertTooltip() }}</v-tooltip>
-            <v-icon size="x-small" color="warning">mdi-alert</v-icon>
+            <v-icon size="x-small" :color="tab.alertColor ? tab.alertColor() : 'warning'">{{ tab.alertIcon ? tab.alertIcon() : 'mdi-alert' }}</v-icon>
           </span>
         </v-tab>
       </v-tabs>
@@ -552,6 +552,7 @@ import PromptsView from './prompts/PromptsView.vue';
 import { capturePrompt, clearFinishedPrompts } from '@/utils/promptLog';
 import { applyDecisionFrame, decisionLog } from '@/utils/decisionLog';
 import { perspectiveCharacterValid } from '@/utils/messagePerspective';
+import { OVERRIDE_STATES, overrideState, worstState } from '@/utils/templateCompatibility';
 import PromptsMenu from './prompts/PromptsMenu.vue';
 import ThemeSwitcher from './ThemeSwitcher.vue';
 // import debounce
@@ -676,7 +677,10 @@ export default {
           title: () => { return 'Prompts' },
           condition: () => { return true },
           icon: () => { return 'mdi-file-code-outline' },
-          alert: () => { return this.promptsOutdatedCount > 0 },
+          alert: () => { return !!this.promptsOverrideState },
+          alertColor: () => { return OVERRIDE_STATES[this.promptsOverrideState].color },
+          alertIcon: () => { return OVERRIDE_STATES[this.promptsOverrideState].icon },
+          alertTooltip: () => { return `Template overrides ${this.promptsOverrideState === 'outdated' ? 'are older than' : 'are missing parts of'} the current defaults` },
           click: () => {
             // Prompts tab clicked
           },
@@ -792,8 +796,8 @@ export default {
       // The tab the view is actually on — `tab` transiently holds a target
       // the unsaved settings guard vetoes
       committedTab: 'home',
-      // Count of outdated prompt template overrides
-      promptsOutdatedCount: 0,
+      // Worst state among active prompt template overrides
+      promptsOverrideState: null,
       // Flag to ensure new-scene navigation only happens once per scene load
       newSceneNavigationPending: false,
     }
@@ -1269,7 +1273,7 @@ export default {
         this.connecting = false;
         this.requestAppConfig();
         this.requestWorldStateTemplates();
-        this.requestPromptOutdatedCheck();
+        this.requestPromptOverrideCheck();
         this.requestAgentActions();
         this.requestDecisionLog();
       };
@@ -1351,10 +1355,9 @@ export default {
         return;
       }
 
-      // Track outdated prompt template overrides
       if (data.type === 'prompts' && data.action === 'list_templates') {
         const templates = data.data?.templates || [];
-        this.promptsOutdatedCount = templates.filter(t => t.is_outdated).length;
+        this.promptsOverrideState = worstState(templates.map(overrideState));
       }
 
       // Scene loaded
@@ -1382,7 +1385,7 @@ export default {
           this.$refs.perceptionBacklogDialog.closeAll();
           this.requestAppConfig();
           this.requestWorldStateTemplates();
-          this.requestPromptOutdatedCheck();
+          this.requestPromptOverrideCheck();
           this.$nextTick(() => {
             this.tab = 'main';
             debounce(this.onNodeEditorContainerResize, 500)();
@@ -1706,7 +1709,7 @@ export default {
         action: 'get_templates'
       }));
     },
-    requestPromptOutdatedCheck() {
+    requestPromptOverrideCheck() {
       this.websocket.send(JSON.stringify({
         type: 'prompts',
         action: 'list_templates'

@@ -9,7 +9,14 @@ from talemate.emit import emit
 from talemate.exceptions import GenerationCancelled, TalemateError
 from talemate.knowledge.perspective_models import content_digest
 from talemate.knowledge.snapshot_models import SnapshotPerspectives
+from talemate.prompts.contracts import require_template_call
 from talemate.world_state.schema import CharacterState, ObjectState, PlaceState
+
+# SnapshotRequest.verified_provenance() rejects a snapshot whose template did not make this call
+require_template_call(
+    "snapshot_request.context_history",
+    reason="Talemate discards the world snapshot unless the template reads the story history through this call.",
+)
 
 
 def history_digest(scene, history):

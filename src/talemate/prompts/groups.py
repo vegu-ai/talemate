@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import structlog
 from pydantic import BaseModel
@@ -43,6 +43,22 @@ _USER_TEMPLATES_DIR = Path("./templates/prompts")
 _CUSTOM_GROUPS_DIR = Path("./templates/prompt_groups")
 
 
+MarkerKind = Literal["extractor", "anchor", "contract", "include", "flag"]
+Compatibility = Literal["compatible", "incomplete", "incompatible"]
+
+
+class MissingMarker(BaseModel):
+    kind: MarkerKind
+    name: str
+    # why the code needs it, for markers that carry a reason
+    detail: str | None = None
+
+
+class CompatibilityReport(BaseModel):
+    compatibility: Compatibility = "compatible"
+    missing_markers: list[MissingMarker] = []
+
+
 class TemplateInfo(BaseModel):
     """Information about a single template."""
 
@@ -55,6 +71,8 @@ class TemplateInfo(BaseModel):
     is_unresolvable: bool = False  # True when template only exists in inactive groups
     default_mtime: float | None = None
     override_mtime: float | None = None
+    compatibility: Compatibility = "compatible"
+    missing_markers: list[MissingMarker] = []
 
 
 class GroupInfo(BaseModel):
@@ -154,8 +172,47 @@ def get_scene_template_path(
     return flat_path
 
 
+def identify_template_file(
+    path: str | Path, scene: "Scene | None" = None, flat_agent: str | None = None
+) -> tuple[str, str, str] | None:
+    """
+    (group, agent, template name) of a template file in a known group
+    directory, or None for anything else (modules). A flat scene template has
+    no agent directory; `flat_agent` names the agent it was rendered for.
+    """
+    path = Path(path).resolve()
+    roots: list[tuple[Path, str | None]] = [
+        (_PROMPTS_DIR, "default"),
+        (_USER_TEMPLATES_DIR, "user"),
+        (_CUSTOM_GROUPS_DIR, None),
+    ]
+    template_dir = getattr(scene, "template_dir", None) if scene else None
+    if isinstance(template_dir, str):
+        roots.insert(0, (Path(template_dir), "scene"))
+
+    for root, group in roots:
+        try:
+            parts = path.relative_to(root.resolve()).parts
+        except ValueError:
+            continue
+        if group is None:
+            if len(parts) < 2:
+                return None
+            group, parts = parts[0], parts[1:]
+        if group == "scene" and len(parts) == 1 and flat_agent:
+            parts = (flat_agent, *parts)
+        if len(parts) < 2 or not parts[-1].endswith(".jinja2"):
+            return None
+        name = "/".join(parts[1:])[: -len(".jinja2")]
+        return group, parts[0], name
+    return None
+
+
 def resolve_template(
-    agent: str, template_name: str, scene: "Scene | None" = None
+    agent: str,
+    template_name: str,
+    scene: "Scene | None" = None,
+    exclude_group: str | None = None,
 ) -> tuple[Path | None, str | None]:
     """
     Resolve template path using priority order.
@@ -164,6 +221,7 @@ def resolve_template(
         agent: The agent type (e.g., "narrator", "director")
         template_name: The template name without .jinja2 extension
         scene: The active scene (optional)
+        exclude_group: Resolve as if this group had no copy of the template
 
     Returns:
         Tuple of (path, source_group) or (None, None) if not found
@@ -181,7 +239,7 @@ def resolve_template(
     prompts_config = getattr(config, "prompts", None)
 
     # 1. Scene templates (highest priority)
-    if scene:
+    if scene and exclude_group != "scene":
         path = get_scene_template_path(scene, agent, template_name)
         if path is not None and path.exists():
             return path, "scene"
@@ -189,7 +247,7 @@ def resolve_template(
     # 2. Explicit override in template_sources?
     if prompts_config:
         template_sources = getattr(prompts_config, "template_sources", {}) or {}
-        if uid in template_sources:
+        if uid in template_sources and template_sources[uid] != exclude_group:
             group = template_sources[uid]
             path = get_group_template_path(group, agent, template_name)
             if path.exists():
@@ -205,6 +263,8 @@ def resolve_template(
     if prompts_config:
         group_priority = getattr(prompts_config, "group_priority", []) or []
         for group in group_priority:
+            if group == exclude_group:
+                continue
             path = get_group_template_path(group, agent, template_name)
             if path.exists():
                 return path, group
@@ -427,8 +487,12 @@ def list_templates(
                     elif "scene" not in template_map[uid].get("available_in", []):
                         template_map[uid]["available_in"].append("scene")
 
+    # compatibility imports the prompt renderer, which imports this module
+    from talemate.prompts.compatibility import check_override, response_anchors
+
     # Build result list with resolved source groups
     templates = []
+    anchors = None
     for uid, info in sorted(template_map.items()):
         agent = info["agent"]
         template_name = info["name"]
@@ -450,6 +514,7 @@ def list_templates(
         is_outdated = False
         default_mtime = None
         override_mtime = None
+        report = CompatibilityReport()
 
         # Only calculate mtimes for templates that have overrides
         # (where source_group != "default" and "default" is in available_in)
@@ -471,6 +536,9 @@ def list_templates(
             # Determine if outdated: override is older than default
             if default_mtime is not None and override_mtime is not None:
                 is_outdated = override_mtime < default_mtime
+                if anchors is None:
+                    anchors = response_anchors()
+                report = check_override(agent, override_path, default_path, anchors)
 
         templates.append(
             TemplateInfo(
@@ -483,6 +551,8 @@ def list_templates(
                 is_unresolvable=is_unresolvable,
                 default_mtime=default_mtime,
                 override_mtime=override_mtime,
+                compatibility=report.compatibility,
+                missing_markers=report.missing_markers,
             )
         )
 

@@ -88,12 +88,12 @@ Adding or editing a template here only makes it available -- it does not automat
 
 See [Prompt Templates](../clients/prompt-templates.md) for how clients resolve templates from a model name and [Template Locking](../clients/template-locking.md) for locking a client to a specific template.
 
-## Outdated Override Warning on the Prompts Tab
+## Override Warning on the Prompts Tab
 
-The top-level **Prompts** tab in the main navigation shows a small warning icon when any of your active Jinja2 template overrides (managed from the [Prompt Manager](index.md#active-tab-resolved-template-tree)) are older than the built-in default they override. This happens most often after an update that ships improvements to default templates.
+The top-level **Prompts** tab in the main navigation shows a small icon when one of your active Jinja2 template overrides (managed from the [Prompt Manager](index.md#active-tab-resolved-template-tree)) differs from the built-in default in a way that matters. The icon shows the worst case among your overrides: a grey clock for **outdated**, an orange puzzle piece for **incomplete** or a red octagon for **incompatible**. Hover it to read what it means. This happens most often after an update that ships changes to default templates.
 
-![Outdated override warning on the Prompts tab](../../img/0.37.0/prompts-tab-outdated-warning.png)
+![Override warning on the Prompts tab](../../img/0.40.0/prompts-tab-override-warning.png)
 
-The icon is an alert, not a tab count. Open the Prompt Manager and check the **Active** tab to see which templates are flagged as outdated, then review or delete those overrides as needed.
+The icon is an alert, not a tab count. Open the Prompt Manager and check the **Active** tab to see which templates are flagged. [Keep overrides current](template-overrides.md#keep-overrides-current) explains the three states and how to compare an override with the default or reset it.
 
-This warning tracks Jinja2 agent template overrides only. It is not related to the LLM prompt templates described on this page -- user LLM prompt templates are not compared against built-ins and therefore never show as outdated.
+This warning tracks Jinja2 agent template overrides only. It is not related to the LLM prompt templates described on this page -- user LLM prompt templates are not compared against built-ins and therefore never show a warning.

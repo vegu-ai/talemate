@@ -30,10 +30,12 @@ or pin cleanup to repair a missing mock method.
 `MockMemoryAgent` has empty, non-persistent storage: writes/drop/close/setup are
 no-ops, and document lookup returns an empty mapping. The persistence factory also
 stubs audience-index rebuilding on its memory instance; general memory tests still
-exercise the real audience index. Missing-memory pins therefore
-disappear on real cleanup. This fixture proves scene **file** persistence, not
-embedding/database persistence or retention of populated memory pins. For those,
-use a focused memory-agent fixture such as [test_memory_set_db_race.py](test_memory_set_db_race.py).
+exercise the real audience index. Loading prunes pins whose scene sources are
+missing or empty, independently of the memory cache. This fixture proves scene
+**file** persistence, not embedding/database persistence or retention of populated
+memory pins. For those, use a focused memory-agent fixture such as
+[test_load_pins.py](test_load_pins.py) or
+[test_memory_set_db_race.py](test_memory_set_db_race.py).
 
 ## Shared client lifecycle changes
 

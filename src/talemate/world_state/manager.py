@@ -1139,16 +1139,23 @@ class WorldStateManager:
 
         self.world_state.pins[entry_id] = pin
 
-    async def remove_all_empty_pins(self):
-        """
-        Removes all pins that come back with empty `text` attributes from get_pins.
-        """
-
-        pins = await self.get_pins()
-
-        for pin in pins.pins.values():
-            if not pin.text:
-                await self.remove_pin(pin.pin.entry_id)
+    async def remove_pins_without_source(self):
+        source_text = {
+            entry["id"]: entry["text"]
+            for entry in self.scene.archived_history
+            if entry.get("text")
+        }
+        for character in self.scene.all_characters:
+            source_text.update(
+                (document["id"], document["text"])
+                for document in character.memory_documents()
+            )
+        source_text.update(
+            (entry.id, entry.text) for entry in self.world_state.manual_context.values()
+        )
+        for pin in list(self.world_state.pins.values()):
+            if not source_text.get(pin.entry_id):
+                await self.remove_pin(pin.entry_id)
 
     async def remove_pin(self, entry_id: str | ContextIDItem):
         """

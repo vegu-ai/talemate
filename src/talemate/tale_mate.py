@@ -1964,7 +1964,7 @@ class Scene(Emitter):
         """
 
         _active_pins = await self.world_state_manager.get_pins(active=True)
-        self.active_pins = list(_active_pins.pins.values())
+        self.active_pins = [pin for pin in _active_pins.pins.values() if pin.text]
 
     async def ensure_memory_db(self):
         memory = get_agent("memory")

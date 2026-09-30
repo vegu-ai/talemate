@@ -562,8 +562,6 @@ async def load_scene_from_data(
     await memory.set_db()
     # await memory.remove_unsaved_memory()
 
-    await scene.world_state_manager.remove_all_empty_pins()
-
     if not scene.memory_session_id:
         scene.set_new_memory_session_id()
 
@@ -613,6 +611,8 @@ async def load_scene_from_data(
     await _initialize_scene_intro(scene, scene_data, empty)
 
     initialize_intro_audience(scene, {} if reset else scene_data, shift=late_shift)
+
+    await scene.world_state_manager.remove_pins_without_source()
 
     return scene
 

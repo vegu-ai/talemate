@@ -1,0 +1,47 @@
+{
+  "format_version": 1,
+  "knowledge_eligibility": "legacy",
+  "name": "Pinned scene",
+  "project_name": "pin-load-test",
+  "environment": "creative",
+  "memory_id": "pin-load-test",
+  "memory_session_id": "saved-session",
+  "saved_memory_session_id": "saved-session",
+  "history": [],
+  "archived_history": [
+    {"id": "archive", "text": "The harbor closes at sunset.", "ts": 0},
+    {"id": "empty-archive", "text": "", "ts": 0}
+  ],
+  "character_data": {
+    "Mira": {
+      "name": "Mira",
+      "is_player": true,
+      "description": "Mira is the harbormaster.",
+      "base_attributes": {"occupation": "Harbormaster"},
+      "details": {"key": "Mira holds the harbor key."}
+    },
+    "Bob": {
+      "name": "Bob",
+      "description": "Bob is a ferry pilot.",
+      "details": {"secret": "Bob hides a spare harbor key."}
+    }
+  },
+  "active_characters": ["Mira"],
+  "world_state": {
+    "manual_context": {
+      "world": {"id": "world", "text": "The harbor gate is locked.", "meta": {"source": "manual", "typ": "world_state"}},
+      "empty-world": {"id": "empty-world", "text": "", "meta": {"source": "manual", "typ": "world_state"}}
+    },
+    "pins": {
+      "archive": {"entry_id": "archive", "active": true},
+      "Mira.description": {"entry_id": "Mira.description", "active": false},
+      "Mira.occupation": {"entry_id": "Mira.occupation", "active": true},
+      "Mira.detail.key": {"entry_id": "Mira.detail.key", "active": true},
+      "Bob.detail.secret": {"entry_id": "Bob.detail.secret", "active": true, "condition": "When Bob returns", "condition_state": true, "gamestate_condition": [{"operator": "and", "conditions": [{"path": "weather", "operator": "==", "value": "sunny"}]}], "decay": 5, "decay_due": 3},
+      "world": {"entry_id": "world", "active": true},
+      "empty-archive": {"entry_id": "empty-archive", "active": true},
+      "empty-world": {"entry_id": "empty-world", "active": true},
+      "missing": {"entry_id": "missing", "active": true}
+    }
+  }
+}

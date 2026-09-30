@@ -688,26 +688,6 @@ class TestGetPins:
         assert result.pins["a"].text == ""
 
     @pytest.mark.asyncio
-    async def test_remove_all_empty_pins_removes_only_those_without_text(
-        self, scene, manager_with_memory
-    ):
-        manager, tracking = manager_with_memory
-        scene.world_state.pins["a"] = ContextPin(entry_id="a", active=True)
-        scene.world_state.pins["b"] = ContextPin(entry_id="b", active=True)
-
-        from _world_state_helpers import _StubDocument
-
-        tracking.documents = {
-            "a": _StubDocument(raw=""),  # empty -> should be removed
-            "b": _StubDocument(raw="present"),
-        }
-
-        await manager.remove_all_empty_pins()
-
-        assert "a" not in scene.world_state.pins
-        assert "b" in scene.world_state.pins
-
-    @pytest.mark.asyncio
     async def test_get_pins_evaluates_gamestate_condition(
         self, scene, manager_with_memory
     ):

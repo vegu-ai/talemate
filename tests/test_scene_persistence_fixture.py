@@ -60,7 +60,7 @@ async def test_real_save_as_and_reload(
     assert [message.message for message in reloaded.history] == (
         [] if reset else ["Saved history"]
     )
-    lookup.assert_called_once_with([] if reset else ["missing"])
+    lookup.assert_not_called()
     assert reloaded.world_state.pins == {}
 
     reloaded.intro = "Second saved intro"

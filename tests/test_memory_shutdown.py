@@ -9,6 +9,7 @@ import pytest
 from talemate.agents.memory import MemoryAgent
 from talemate.agents.memory.exceptions import MemoryShutdownRefused
 from talemate.prompts.base import Prompt
+from talemate.load import load_scene_from_data
 import talemate.instance as instance
 from talemate.world_state import ContextPin
 
@@ -201,20 +202,24 @@ async def test_prompt_memory_refusal_stays_quiet(memory, scene, monkeypatch, ite
     completed.assert_not_called()
 
 
-async def test_refused_pin_read_does_not_remove_pins(memory, scene, monkeypatch):
+async def test_shutdown_does_not_prune_valid_pins_during_scene_load(
+    memory, scene, monkeypatch
+):
     memory.scene = scene
     monkeypatch.setitem(instance.AGENTS, "memory", memory)
-    pin = ContextPin(entry_id="lore", active=True)
-    scene.world_state.pins["lore"] = pin
+    pin = ContextPin(entry_id="lore", active=True, condition="At dusk", decay=4)
+    data = {
+        "format_version": 1,
+        "history": [],
+        "archived_history": [{"id": "lore", "text": "The lantern glows.", "ts": 0}],
+        "world_state": {
+            "pins": {"lore": pin.model_dump(), "missing": {"entry_id": "missing"}}
+        },
+    }
     memory.refuse_new_memory_work()
     memory._set_db = Mock()
 
-    async def initialize_scene_memory():
-        assert await memory.set_db() is False
-        await scene.world_state_manager.remove_all_empty_pins()
+    await load_scene_from_data(scene, data)
 
-    task = asyncio.create_task(initialize_scene_memory())
-    with pytest.raises(asyncio.CancelledError):
-        await task
-    assert task.cancelled()
-    assert scene.world_state.pins["lore"] is pin
+    memory._set_db.assert_not_called()
+    assert scene.world_state.pins == {"lore": pin}

@@ -1,0 +1,3 @@
+fixed:
+- "Pinned context survives loading a scene file from someone else, moving to a new installation, or clearing the local memory cache."
+- "Pins on inactive characters no longer add empty entries to prompts."

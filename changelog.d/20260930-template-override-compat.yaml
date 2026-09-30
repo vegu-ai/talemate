@@ -1,7 +1,0 @@
-added:
-- "Prompt Manager: Template overrides that miss part of the current default are now flagged. An override is **incomplete** when it lacks a section or setting the default uses, and **incompatible** when it lacks a response marker Talemate reads or a call Talemate requires (such as the world snapshot history call), so its results can come back empty or be rejected. The tree, the Active tab and the Prompts tab icon show the worst state, and hovering a state lists what is missing."
-- "Prompt Manager: Compare with default shows an override beside the current default template, with the differences highlighted. Arrows copy a change from the default into your copy."
-- "Prompt Manager: Reset to default removes an override. The confirmation names the source Talemate uses next."
-- "Talemate warns once per session when a template override leaves a response empty because it never asks for the marker the answer is read from."
-fixed:
-- "The startup log warned about overrides that were newer than the default instead of older. It now lists outdated, incomplete and incompatible overrides with what they miss."

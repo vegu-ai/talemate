@@ -1,7 +1,0 @@
-added:
-- "Scene Header: Writing style and Visual style items show the scene's style templates and open a menu to pick another one; the pick is the same setting as in the World Editor's scene settings. A Knowledge mode item shows whether the story uses Standard knowledge or Character perspectives. Each side of the header has its own item menu, opened from a button on that side."
-- "Agent Settings: Each section that holds scene overrides shows how many, in both the Global and the Scene view, so you can find them without opening every section. In the Scene view the section numbers add up to the Scene count."
-changed:
-- "Agent Settings: In the Scene view, a section that holds a scene override stays listed even while the setting that normally shows it is off, so the override can be found and cleared."
-- "Templates: The Template type list is sorted and shows each type with its icon and color. The overview on the Templates page uses the same names, for example Spice collection and Visual prompt finalizer."
-- "Debug Tools: The Debug Tools panel is slightly wider."

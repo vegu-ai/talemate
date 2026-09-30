@@ -6,13 +6,17 @@ _Auto-generated. Do not edit by hand._
 
 ### Upgrade Notes
 
+#### Scene Revisions (breaking change)
+
+Upgrading from 0.39.0 starts revisions from a current save when you first load or save it, in `<project>/data.db`. The new system ignores `<project>/changelog/` and leaves it untouched; you can delete that old directory by hand. Earlier revisions are not converted.
+
 #### OpenAI Clients
 
 Review saved OpenAI settings after upgrading. GPT-5 and GPT-6 models keep Reasoning on; enable it for o-series models if needed. Sampling controls start off. For o1-mini or o1-preview, turn Send System Message off; turn Stream off if unavailable, and choose max_tokens for servers requiring it. Save your settings.
 
 #### OpenRouter Reasoning
 
-Reasoning off now omits the reasoning budget. Enable Reasoning to request thinking on models that make it optional; models that always think use their provider's default budget while it is off.
+The client no longer sends a reasoning budget. With Reasoning on it sends your Reasoning Effort, or asks the model to think at its own default effort; with Reasoning off it sends nothing, and models that always think use their provider's default. A saved Reasoning Tokens number from 0.39.0 no longer controls how much the model thinks: it now means Extra Completion Tokens. If you used it to control thinking, choose a Reasoning Effort instead.
 
 #### Compatible Voice Servers
 
@@ -20,11 +24,19 @@ OpenAI-compatible voice backends now request MP3 by default. Select WAV under Re
 
 #### Shared Worlds
 
-Back up older shared worlds before upgrading. Missing shared entries can be recovered from a linked scene only until 0.40 first writes that world, so load the scene holding them first. Entries intentionally removed in an older version may also return; overwritten text must be recovered from older scene revisions.
+Back up older shared worlds before upgrading. Missing shared entries can be recovered from a linked scene only until 0.40 first writes that world, so load the scene holding them first. Entries intentionally removed in an older version may also return. Recover overwritten text from older revisions in 0.39.0 before upgrading, or from a backup of `<project>/changelog/`.
+
+#### Scene Context Format
+
+The scene context format (Screenplay, Chat, Narrative, AI Aware) moved from the Conversation agent's Generation settings to the Summarizer agent's Scene History settings. A format set on the Conversation agent in an earlier version is not carried over: the format starts at Screenplay, so set it again in Scene History if you used another one.
 
 #### Visual Styles
 
 Shipped visual styles moved into Talemate's template group. Back up edits to templates/world-state/visual-styles.yaml before updating; if they block the update, stash them or restore the tracked file.
+
+### Scene Revisions
+
+Browse a story's saved states with one row per message, filter them by date or search their text, and fork a new save from any past revision. The new save keeps the inherited revisions and the fork point.
 
 ### Character Knowledge
 
@@ -32,7 +44,11 @@ Characters can remember only the passages they witnessed and the information sha
 
 ### Character Perspectives
 
-New stories can give each character their own account of events, carried into their memories and summaries. Read and edit those accounts beside the full story, and share selected information as disclosures. This optional mode needs a strong model and adds analysis requests; choose it before the story has history.
+New stories can give each character their own account of events, carried into their memories and summaries. Read and edit those accounts beside the full story, and share selected information as disclosures. This optional mode needs a strong model and adds analysis requests; choose it before the story has history. Views keep the passage's tense and style, and a character who sees a whisper but cannot hear it keeps the visible exchange without its words. Analyze player perspective is off by default; enable it in Settings → Agents → Summarizer → Character Perspectives to limit the player's view independently of effort.
+
+### Decision Model
+
+An optional decision model answers quick questions about your story with a probability instead of prose, through OpenRouter or a SystemOne-compatible server. It can answer pin conditions and queries, skip unchanged tracked states, choose existing portraits, recognize characters named by pronoun or nickname, and run the Editor decision checks. A Decision Log shows every answer, and nothing is sent while the model is off.
 
 ### Themes
 
@@ -44,7 +60,7 @@ Replay a story one passage at a time with optional narration, automatic advance 
 
 ### Scene Controls
 
-Customize the scene header with story statistics, character portraits and knowledge effort. Add reusable shortcuts to scene tools and pin game variables as labelled sliders, choices or toggles for use during play.
+Customize the scene header with story statistics, character portraits, knowledge mode and effort, and quick access to the scene's writing and visual styles. Add reusable shortcuts to scene tools and pin game variables as labelled sliders, choices or toggles for use during play.
 
 ### Help Chat
 
@@ -55,6 +71,10 @@ Ask the Help agent to create or change themes and templates, adjust settings and
 Chatterbox Turbo adds an optional voice backend with voice cloning and expressive sound tags.
 
 ### Improvements
+
+**Scene Revisions**
+
+- Forks keep their shared world connection at its current state; shared worlds are not rewound with a revision.
 
 **Story and World**
 
@@ -76,10 +96,16 @@ Chatterbox Turbo adds an optional voice backend with voice cloning and expressiv
 
 - Client and agent settings share the Settings tab's Save and Discard controls, including scene overrides and assigning one client to all agents.
 - Pin inference parameters beside the client list and enter exact sampling, context and reasoning values.
-- OpenAI and compatible clients offer reasoning effort and completion-token options; OpenAI also offers sampling, system-message and streaming controls.
+- OpenAI, OpenRouter and compatible clients offer reasoning effort and completion-token options; OpenAI also offers sampling, system-message and streaming controls.
 - llama.cpp Router mode lets each client choose its model, including for vision and server prompt templates.
 - New clients default to at least 16k context; supported hosted clients enable concurrent requests by default, while saved configurations retain their values.
 - Muse Glimmer prompt formatting and newer Hugging Face template files are supported.
+
+**Editor and Writing Styles**
+
+- Optional Editor decision checks find repeated beats, reused descriptions and unwanted prose, then correct them in one Targeted Rewrite or Unslop call.
+- Writing styles define the checks, their questions and thresholds; Add default checks covers common cases, and each check can judge all text, only dialogue or only prose.
+- Writing styles include a new Polished Prose style, used by Infinity Quest and Simulation Suite, and a rewritten Adventure Game style with a mid-90s point-and-click voice.
 
 **Images**
 
@@ -93,11 +119,14 @@ Chatterbox Turbo adds an optional voice backend with voice cloning and expressiv
 **Prompt Tools**
 
 - Follow active, completed, failed and cancelled requests in the prompt viewers, with clearer action names.
+- Prompt Manager flags template overrides that are incomplete or incompatible with the current default, compares them with it, and resets them to default.
+- Prompts → Scene Context has its view controls in a toolbar, and the scene context format now lives in the Summarizer's Scene History settings, with global or scene override markers.
 
 **Node Editor**
 
 - Rewrite spoken text without changing the story, and use newline and tab escapes in String Join and Split delimiters.
 - Added or edited command and agent modules become available automatically without a manual sync.
+- New nodes and events cover the decision model, character knowledge and disclosures, game state, arrivals and departures, the world snapshot and reasoning effort per request.
 
 **Interface**
 
@@ -113,10 +142,11 @@ Chatterbox Turbo adds an optional voice backend with voice cloning and expressiv
 
 - Save As protects read-only destinations, keeps errors open for correction, and preserves pending scene-settings edits when saving is cancelled.
 - Unsaved changes trigger a warning before leaving; read-only stories keep their save identity and correctly mark changes autosave cannot write.
-- Timeline forks preserve recorded scene state and warn about damaged history; repair starts fresh history while retaining the old files.
+- Revision forks preserve all recorded scene sections, including world state. A damaged snapshot reports an error without substituting another state.
 - Failed revision-history writes stop the save with an error instead of leaving a save with incomplete history.
 - Static history and shared entries keep their timing across reloads and time changes; deleting messages preserves summary positions.
 - Shared world entries survive linked-scene loads and new episodes; sequential tracked-state answers accumulate over the story.
+- Pinned context survives loading a scene file from someone else, moving to a new installation, or clearing the local memory cache.
 
 **Characters and World**
 
@@ -128,6 +158,11 @@ Chatterbox Turbo adds an optional voice backend with voice cloning and expressiv
 
 - Director requests can update several fields, empty action results explain the outcome, and result summaries display proper line breaks.
 - Cancelled actions stop the remaining calls, and failed settings application can be retried with Save.
+- Director Chat no longer shows the director's reply twice after an action whose follow-up repeats it.
+
+**Editor**
+
+- A running revision no longer applies stale results after the scene, message text or selected version changes.
 
 **Clients and Images**
 
@@ -138,11 +173,13 @@ Chatterbox Turbo adds an optional voice backend with voice cloning and expressiv
 **Voice and Startup**
 
 - Failed voice chunks no longer stop the playback queue, and compatible servers can return playable audio and complete voice listings.
+- Ctrl+C handles cancelled image-backend probes quietly and bounds shutdown to five seconds when background work stalls.
 - Windows installation and frontend startup are repaired; fresh source installs start without configuration, and installed tokenizers need no startup download.
 
 **Node Editor**
 
 - Time nodes have valid defaults, inactive characters have no actor output, and test runs stop when switching scenes.
+- Request World State outputs the world snapshot after its update.
 
 **Security**
 

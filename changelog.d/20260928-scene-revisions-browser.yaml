@@ -1,4 +1,0 @@
-changed:
-- "Scene revisions: the list shows one row per story message (character and narrator messages) with the speaker and the start of the message. Saves that add no new message fold under the row and open with a click. A Span setting groups several messages into one row, and the list loads 50 rows at a time with Load more."
-added:
-- "Scene revisions: filter the list by a From and To date and time, and search the story messages for a text."

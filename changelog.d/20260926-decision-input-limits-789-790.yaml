@@ -1,3 +1,0 @@
-added:
-  - "Decision Model requests check configurable 64,000-token batch and 32,000-token state-plus-question limits with a 1.5x estimate margin, and treat provider token-limit rejections as oversized requests. The conservative estimate can refuse requests the provider would accept; change the limits and the margin under App Settings → Decision Model → Advanced, and set either limit to 0 to leave that bound undeclared."
-  - "Decision Model score and choice responses accept and normalize rounded probability sums within min(0.005 × number of entries, 0.05) of 1, including 0.68 + 0.28 + 0.03 = 0.99."

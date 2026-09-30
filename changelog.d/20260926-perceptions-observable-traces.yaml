@@ -1,4 +1,0 @@
-added:
-- "Added an optional Character Perspectives setting to keep ambiguous sensory effects of hidden actions without revealing their source."
-changed:
-- "Character perspectives can rewrite sentences around a removed secret for smoother prose, while checking unchanged text outside that region and declared secrets within it."

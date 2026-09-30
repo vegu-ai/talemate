@@ -1,3 +1,0 @@
-changed:
-- "Character Perspectives: Speakers keep their own messages verbatim, including narrator asides. With Analyze player perspective off (the default), the player also receives full passages; a scene with one player and one NPC needs no perception request for an NPC line. Enable the setting under Settings → Agents → Summarizer → Character Perspectives for player analysis, independently of effort."
-- "Character Perspectives: Generated view text no longer contains host speaker labels or note wrappers. The host removes them before analysis and restores speaker and tracker-subject attribution for history, memories and other consumers; world tracker notes have no character subject."

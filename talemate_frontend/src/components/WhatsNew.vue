@@ -101,12 +101,20 @@ export default {
                     "version": "0.40.0",
                     "items": [
                         {
+                            "title": "Scene Revisions",
+                            "description": "Browse a story's saved states with one row per message, filter them by date or search their text, and fork a new save from any past revision. The new save keeps the inherited revisions and the fork point."
+                        },
+                        {
                             "title": "Character Knowledge",
                             "description": "Characters can remember only the passages they witnessed and the information shared with them. Known by, Learn and Never Learn controls let you shape their knowledge, including through the Director. Standard mode adds no requests at its default effort; older scenes keep their existing history behavior."
                         },
                         {
                             "title": "Character Perspectives",
-                            "description": "New stories can give each character their own account of events, carried into their memories and summaries. Read and edit those accounts beside the full story, and share selected information as disclosures. This optional mode needs a strong model and adds analysis requests; choose it before the story has history."
+                            "description": "New stories can give each character their own account of events, carried into their memories and summaries. Read and edit those accounts beside the full story, and share selected information as disclosures. This optional mode needs a strong model and adds analysis requests; choose it before the story has history. Views keep the passage's tense and style, and a character who sees a whisper but cannot hear it keeps the visible exchange without its words. Analyze player perspective is off by default; enable it in Settings → Agents → Summarizer → Character Perspectives to limit the player's view independently of effort."
+                        },
+                        {
+                            "title": "Decision Model",
+                            "description": "An optional decision model answers quick questions about your story with a probability instead of prose, through OpenRouter or a SystemOne-compatible server. It can answer pin conditions and queries, skip unchanged tracked states, choose existing portraits, recognize characters named by pronoun or nickname, and run the Editor decision checks. A Decision Log shows every answer, and nothing is sent while the model is off."
                         },
                         {
                             "title": "Themes",
@@ -118,7 +126,7 @@ export default {
                         },
                         {
                             "title": "Scene Controls",
-                            "description": "Customize the scene header with story statistics, character portraits and knowledge effort. Add reusable shortcuts to scene tools and pin game variables as labelled sliders, choices or toggles for use during play."
+                            "description": "Customize the scene header with story statistics, character portraits, knowledge mode and effort, and quick access to the scene's writing and visual styles. Add reusable shortcuts to scene tools and pin game variables as labelled sliders, choices or toggles for use during play."
                         },
                         {
                             "title": "Help Chat",
@@ -131,6 +139,12 @@ export default {
                         {
                             "title": "Notable Improvements",
                             "groups": [
+                                {
+                                    "title": "Scene Revisions",
+                                    "items": [
+                                        "Forks keep their shared world connection at its current state; shared worlds are not rewound with a revision."
+                                    ]
+                                },
                                 {
                                     "title": "Story and World",
                                     "items": [
@@ -158,10 +172,18 @@ export default {
                                     "items": [
                                         "Client and agent settings share the Settings tab's Save and Discard controls, including scene overrides and assigning one client to all agents.",
                                         "Pin inference parameters beside the client list and enter exact sampling, context and reasoning values.",
-                                        "OpenAI and compatible clients offer reasoning effort and completion-token options; OpenAI also offers sampling, system-message and streaming controls.",
+                                        "OpenAI, OpenRouter and compatible clients offer reasoning effort and completion-token options; OpenAI also offers sampling, system-message and streaming controls.",
                                         "llama.cpp Router mode lets each client choose its model, including for vision and server prompt templates.",
                                         "New clients default to at least 16k context; supported hosted clients enable concurrent requests by default, while saved configurations retain their values.",
                                         "Muse Glimmer prompt formatting and newer Hugging Face template files are supported."
+                                    ]
+                                },
+                                {
+                                    "title": "Editor and Writing Styles",
+                                    "items": [
+                                        "Optional Editor decision checks find repeated beats, reused descriptions and unwanted prose, then correct them in one Targeted Rewrite or Unslop call.",
+                                        "Writing styles define the checks, their questions and thresholds; Add default checks covers common cases, and each check can judge all text, only dialogue or only prose.",
+                                        "Writing styles include a new Polished Prose style, used by Infinity Quest and Simulation Suite, and a rewritten Adventure Game style with a mid-90s point-and-click voice."
                                     ]
                                 },
                                 {
@@ -180,14 +202,17 @@ export default {
                                 {
                                     "title": "Prompt Tools",
                                     "items": [
-                                        "Follow active, completed, failed and cancelled requests in the prompt viewers, with clearer action names."
+                                        "Follow active, completed, failed and cancelled requests in the prompt viewers, with clearer action names.",
+                                        "Prompt Manager flags template overrides that are incomplete or incompatible with the current default, compares them with it, and resets them to default.",
+                                        "Prompts → Scene Context has its view controls in a toolbar, and the scene context format now lives in the Summarizer's Scene History settings, with global or scene override markers."
                                     ]
                                 },
                                 {
                                     "title": "Node Editor",
                                     "items": [
                                         "Rewrite spoken text without changing the story, and use newline and tab escapes in String Join and Split delimiters.",
-                                        "Added or edited command and agent modules become available automatically without a manual sync."
+                                        "Added or edited command and agent modules become available automatically without a manual sync.",
+                                        "New nodes and events cover the decision model, character knowledge and disclosures, game state, arrivals and departures, the world snapshot and reasoning effort per request."
                                     ]
                                 },
                                 {
@@ -212,10 +237,11 @@ export default {
                                     "items": [
                                         "Save As protects read-only destinations, keeps errors open for correction, and preserves pending scene-settings edits when saving is cancelled.",
                                         "Unsaved changes trigger a warning before leaving; read-only stories keep their save identity and correctly mark changes autosave cannot write.",
-                                        "Timeline forks preserve recorded scene state and warn about damaged history; repair starts fresh history while retaining the old files.",
+                                        "Revision forks preserve all recorded scene sections, including world state. A damaged snapshot reports an error without substituting another state.",
                                         "Failed revision-history writes stop the save with an error instead of leaving a save with incomplete history.",
                                         "Static history and shared entries keep their timing across reloads and time changes; deleting messages preserves summary positions.",
-                                        "Shared world entries survive linked-scene loads and new episodes; sequential tracked-state answers accumulate over the story."
+                                        "Shared world entries survive linked-scene loads and new episodes; sequential tracked-state answers accumulate over the story.",
+                                        "Pinned context survives loading a scene file from someone else, moving to a new installation, or clearing the local memory cache."
                                     ]
                                 },
                                 {
@@ -230,7 +256,14 @@ export default {
                                     "title": "Director and Help",
                                     "items": [
                                         "Director requests can update several fields, empty action results explain the outcome, and result summaries display proper line breaks.",
-                                        "Cancelled actions stop the remaining calls, and failed settings application can be retried with Save."
+                                        "Cancelled actions stop the remaining calls, and failed settings application can be retried with Save.",
+                                        "Director Chat no longer shows the director's reply twice after an action whose follow-up repeats it."
+                                    ]
+                                },
+                                {
+                                    "title": "Editor",
+                                    "items": [
+                                        "A running revision no longer applies stale results after the scene, message text or selected version changes."
                                     ]
                                 },
                                 {
@@ -245,13 +278,15 @@ export default {
                                     "title": "Voice and Startup",
                                     "items": [
                                         "Failed voice chunks no longer stop the playback queue, and compatible servers can return playable audio and complete voice listings.",
+                                        "Ctrl+C handles cancelled image-backend probes quietly and bounds shutdown to five seconds when background work stalls.",
                                         "Windows installation and frontend startup are repaired; fresh source installs start without configuration, and installed tokenizers need no startup download."
                                     ]
                                 },
                                 {
                                     "title": "Node Editor",
                                     "items": [
-                                        "Time nodes have valid defaults, inactive characters have no actor output, and test runs stop when switching scenes."
+                                        "Time nodes have valid defaults, inactive characters have no actor output, and test runs stop when switching scenes.",
+                                        "Request World State outputs the world snapshot after its update."
                                     ]
                                 },
                                 {

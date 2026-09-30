@@ -1,7 +1,0 @@
-added:
-- "Added optional Editor Decision Checks for repeated beats, reused descriptions and unwanted prose. Successful checks replace the usual detection and collect findings for one Targeted Rewrite or Unslop call. Description reuse gets fresh wording while preserving the event; results and skip reasons are visible in the Decision Log."
-- "Writing styles own the decision checks, their questions, correction instructions and individual probability thresholds. Add the common defaults to a new style with one click, and turn the checks on with one setting under Editor Revision. Without a scene writing style or active checks, Revision uses its usual detection."
-- "Custom checks accept optional answer criteria and ordinary questions without a passage token. Incomplete criteria pairs are left out of decision requests, and invalid check settings in a shared template file do not discard the writing style."
-- "Decision Checks use the Editor's Repetition Range (default 15) for preceding story context."
-fixed:
-- "Editor revisions no longer apply stale results after the scene, message text or selected version changes while a revision is running."

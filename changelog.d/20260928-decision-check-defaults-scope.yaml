@@ -1,5 +1,0 @@
-added:
-- "Writing styles: two more default decision checks, Repeated dialogue and behavioural tics, and Overdescription and filler prose. Add default checks adds them; styles keep the checks they already have."
-- "Decision checks: Applies to selects whether a check judges all text, only the dialogue (text in double quotes) or only the prose. A passage with nothing in that part is skipped, and the Decision Log names it."
-changed:
-- "Decision checks: the More options section explains what its fields are for."

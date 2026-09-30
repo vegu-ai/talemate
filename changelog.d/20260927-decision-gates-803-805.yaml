@@ -1,3 +1,0 @@
-added:
-  - "Configured decision models can answer conditional pins and yes/no queries, skip unchanged tracked states, and keep or select existing portraits. Each setting defaults on and falls back to the usual request when uncertain or unavailable."
-  - "Memory entity lookup and snapshot audiences can recognize off-stage characters by pronoun, title or nickname, with name matching as the fallback. Each use has an editable decision policy and Decision Log entries."

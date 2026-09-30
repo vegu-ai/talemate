@@ -1,2 +1,0 @@
-changed:
-- "The scene context format (Screenplay, Chat, Narrative, AI Aware) moved from the Conversation agent's Generation settings to the Summarizer agent's Scene History settings, because it shapes the scene context of every agent. A format set on the Conversation agent in an earlier version is not carried over: the format starts at Screenplay, so set it again in Scene History if you used another one. It can be overridden per scene like any other agent setting."

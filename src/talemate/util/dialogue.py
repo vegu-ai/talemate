@@ -327,9 +327,6 @@ def ensure_dialog_line_format(line: str, default_wrap: str = None) -> str:
     for i in range(len(line)):
         c = line[i]
 
-        # print("segment_open", segment_open)
-        # print("segment", segment)
-
         if c in ['"', "*"]:
             if segment_open == c:
                 # open segment is the same as the current character

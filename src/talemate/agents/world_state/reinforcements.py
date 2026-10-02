@@ -12,7 +12,6 @@ from talemate.knowledge.reinforcements import (
     prepare_reinforcement_source,
     write_reinforcement_entry,
 )
-from talemate.instance import get_agent
 from talemate.prompts import Prompt
 from talemate.agents.world_state.response_specs import REINFORCEMENT_ANSWER_SPEC
 from talemate.scene_message import ReinforcementMessage
@@ -373,8 +372,6 @@ class WorldStateReinforcementsMixin:
         self.scene.world_state.emit()
         if reinforcement.insert == "sequential":
             await self.scene.push_history(message)
-        elif perception:
-            await get_agent("summarizer").finalize_perceptions(self.scene, [])
 
         if not perception:
             if reinforcement.character:

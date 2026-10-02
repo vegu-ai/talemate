@@ -82,7 +82,6 @@ async def indexed_scene(scene, monkeypatch, tmp_path, chroma_clients):
     monkeypatch.setitem(instance.AGENTS, "memory", memory)
     summarizer = instance.get_agent("summarizer")
     summarizer.connect(scene)
-    monkeypatch.setattr(summarizer, "schedule_audience_summaries", AsyncMock())
     scene.world_state.manual_context["lore"] = ManualContext(
         id="lore",
         text="Common rain lore.",
@@ -112,9 +111,6 @@ async def indexed_scene(scene, monkeypatch, tmp_path, chroma_clients):
         )
         await memory.add(message.message, uid="reader", typ="history")
         yield scene, memory, message
-        state = memory._audience_state(scene)
-        if state.task is not None:
-            await asyncio.gather(state.task, return_exceptions=True)
 
 
 async def contents(memory, viewer="Elmer", **where):
@@ -306,9 +302,7 @@ async def test_failed_index_write_blocks_query_and_retries(indexed_scene, monkey
 
 async def test_legacy_viewer_is_rejected_without_backfill(indexed_scene):
     scene, memory, _ = indexed_scene
-    state = memory._audience_state(scene)
-    if state.task:
-        await state.task
+    await memory.ensure_audience_index(scene)
     await memory.purge_audience_index(scene)
     scene.knowledge_eligibility = "legacy"
     before = memory.db.count()
@@ -396,8 +390,7 @@ async def test_cancelled_write_finishes_before_a_retry_can_publish(
     scene, memory, _ = indexed_scene
     await contents(memory)
     state = memory._audience_state(scene)
-    if state.task:
-        await state.task
+    await memory.ensure_audience_index(scene)
     started, release = threading.Event(), threading.Event()
     original = memory._sync_audience_documents
     first = True
@@ -413,7 +406,6 @@ async def test_cancelled_write_finishes_before_a_retry_can_publish(
     monkeypatch.setattr(memory, "_sync_audience_documents", blocked)
     state.revision += 1
     writer = asyncio.create_task(memory.ensure_audience_index(scene))
-    state.task = writer
     await asyncio.to_thread(started.wait, 5)
     writer.cancel()
     await scene.world_state_manager.set_world_entry_visibility(
@@ -436,8 +428,7 @@ async def test_audience_cancel_then_refusal_preserves_cancellation(
     scene, memory, _ = indexed_scene
     await contents(memory)
     state = memory._audience_state(scene)
-    if state.task:
-        await state.task
+    await memory.ensure_audience_index(scene)
     state.revision += 1
     started, release = asyncio.Event(), asyncio.Event()
 
@@ -469,9 +460,7 @@ async def test_audience_read_refusal_cancels_without_result(
 ):
     scene, memory, _ = indexed_scene
     await contents(memory)
-    state = memory._audience_state(scene)
-    if state.task:
-        await state.task
+    await memory.ensure_audience_index(scene)
     started, release = asyncio.Event(), asyncio.Event()
     applied = Mock()
 
@@ -507,8 +496,7 @@ async def test_shutdown_while_waiting_for_audience_lock_cancels_read(
     scene, memory, _ = indexed_scene
     await contents(memory)
     state = memory._audience_state(scene)
-    if state.task:
-        await state.task
+    await memory.ensure_audience_index(scene)
     warning = Mock()
     monkeypatch.setattr("talemate.agents.memory.audiences.log.warning", warning)
     async with state.lock:
@@ -576,9 +564,7 @@ async def test_author_queries_survive_audience_write_failure(
 async def test_author_query_without_collection_degrades(indexed_scene):
     scene, memory, _ = indexed_scene
     await contents(memory)
-    state = memory._audience_state(scene)
-    if state.task:
-        await state.task
+    await memory.ensure_audience_index(scene)
     memory.db = None
     memory._ready_to_add = False
     assert await contents(memory, viewer=None) == set()
@@ -625,9 +611,7 @@ async def test_direct_index_call_does_not_write_unavailable_collection(
 ):
     scene, memory, _ = indexed_scene
     await contents(memory)
-    state = memory._audience_state(scene)
-    if state.task:
-        await state.task
+    await memory.ensure_audience_index(scene)
     scene._memory_never_persisted = False
     scene.immutable_save = False
     before = memory.db.get(include=["metadatas", "documents"])
@@ -648,9 +632,7 @@ async def test_reconcile_marks_preexisting_rows_without_losing_metadata(
 ):
     scene, memory, _ = indexed_scene
     await contents(memory)
-    state = memory._audience_state(scene)
-    if state.task:
-        await state.task
+    await memory.ensure_audience_index(scene)
     scene.knowledge_eligibility = "legacy"
     metadata = {
         "character": "Marie",
@@ -769,8 +751,8 @@ async def test_failed_partial_sync_rebuilds_latest_sources(indexed_scene, monkey
             }
         ],
     )
-    state = memory._audience_state(scene)
-    await asyncio.gather(state.task, return_exceptions=True)
+    with pytest.raises(RuntimeError, match="Partial update failed"):
+        await memory.ensure_audience_index(scene)
     result = await contents(memory)
     assert "Marie put the lantern down." in result
     assert not any("Marie carries" in text for text in result)
@@ -797,8 +779,7 @@ async def test_removed_source_without_notification_drops_cached_rows(
         removed_text = "Marie carries a lantern."
     assert removed_text in await contents(memory, typ="history")
     state = memory._audience_state(scene)
-    if state.task:
-        await state.task
+    await memory.ensure_audience_index(scene)
     assert state.dirty == set()
     if kind == "summary":
         scene.layered_history = []
@@ -843,9 +824,7 @@ async def test_author_reads_unmarked_rows_when_first_reconcile_fails(
 ):
     scene, memory, _ = indexed_scene
     await contents(memory)
-    state = memory._audience_state(scene)
-    if state.task:
-        await state.task
+    await memory.ensure_audience_index(scene)
     memory.db = chroma_clients(path=str(tmp_path / "pre-gate")).create_collection(
         "pre-gate-memory", embedding_function=FixedEmbedding()
     )
@@ -917,8 +896,7 @@ async def test_switch_off_purges_audience_rows_and_cached_state(
     assert memory.db.get(where={"knowledge_index": True})["ids"] == []
     assert memory.db.get(where={"knowledge_index": False})["ids"] == canonical
     assert scene not in memory._audience_states
-    if state.task:
-        await state.task
+    await memory.ensure_audience_index(scene)
     assert memory.db.get(where={"knowledge_index": True})["ids"] == []
     results = await memory.get("lighthouse", limit=100)
     assert all(not doc.meta.get("knowledge_index") for doc in results)
@@ -930,8 +908,7 @@ async def test_empty_world_state_commit_refreshes_authored_audiences(
     scene, memory, _ = indexed_scene
     assert "Common rain lore." in await contents(memory)
     state = memory._audience_state(scene)
-    if state.task:
-        await state.task
+    await memory.ensure_audience_index(scene)
     audience_revision = state.revision
     memory_revision = scene.memory_revision
     scene.world_state.manual_context.clear()
@@ -952,9 +929,7 @@ async def test_cancelled_direct_delete_removes_stale_audience_projection(
     scene, memory, _ = indexed_scene
     await scene.world_state.commit_to_memory(memory)
     assert "Common rain lore." in await contents(memory)
-    state = memory._audience_state(scene)
-    if state.task:
-        await state.task
+    await memory.ensure_audience_index(scene)
     assert memory.db.get(ids=["lore"])["ids"] == ["lore"]
     scene.world_state.manual_context.pop("lore")
     loop = asyncio.get_running_loop()
@@ -989,44 +964,6 @@ async def test_cancelled_direct_delete_removes_stale_audience_projection(
     assert "Common rain lore." not in await contents(memory)
     stored = memory.db.get(where={"knowledge_index": True}, include=["documents"])
     assert "Common rain lore." not in stored["documents"]
-
-
-async def test_scheduled_audience_index_is_an_evidence_writer(
-    indexed_scene, monkeypatch
-):
-    from talemate.knowledge.processing import wait_for_evidence_writers
-
-    scene, memory, _ = indexed_scene
-    state = memory._audience_state(scene)
-    if state.task is not None:
-        await state.task
-    entered, release, waiting = asyncio.Event(), asyncio.Event(), asyncio.Event()
-
-    async def update(scene):
-        entered.set()
-        await release.wait()
-        state.revision += 1
-
-    def status(typ, **data):
-        if data.get("message") == "Waiting for knowledge updates before scene analysis":
-            waiting.set()
-
-    monkeypatch.setattr(memory, "ensure_audience_index", AsyncMock(side_effect=update))
-    monkeypatch.setattr("talemate.status.emit", status)
-    memory.invalidate_audience_index(scene)
-    initial_revision = state.revision
-    waiter = asyncio.create_task(wait_for_evidence_writers(scene, agent=memory))
-    try:
-        await asyncio.wait_for(entered.wait(), 2)
-        await asyncio.wait_for(waiting.wait(), 2)
-        assert not waiter.done()
-        release.set()
-        await asyncio.wait_for(waiter, 2)
-        assert state.revision == initial_revision + 1
-        memory.ensure_audience_index.assert_awaited_once_with(scene)
-    finally:
-        release.set()
-        await asyncio.gather(waiter, state.task, return_exceptions=True)
 
 
 async def test_keep_returns_the_kept_views_to_the_audience_index(indexed_scene):

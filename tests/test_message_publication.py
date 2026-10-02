@@ -1,3 +1,5 @@
+from _knowledge_step_helpers import push_and_step
+from talemate.knowledge.step import knowledge_step
 import asyncio
 from copy import deepcopy
 from time import monotonic_ns
@@ -119,7 +121,7 @@ def publication_scene(scene, isolate_signals, monkeypatch):
     for actor in scene.actors:
         actor.scene = scene
     monkeypatch.setattr(scene, "emit_status", Mock())
-    monkeypatch.setattr(get_agent("summarizer"), "finalize_perceptions", AsyncMock())
+    monkeypatch.setattr(get_agent("summarizer"), "ensure_perceptions", AsyncMock())
     with ActiveScene(scene):
         yield scene
 
@@ -135,17 +137,17 @@ async def test_player_is_visible_while_analysis_blocks_reply(
     message = CharacterMessage(message="Alice: Hello.", source="player")
     reply = AsyncMock()
 
-    async def analyze(*args):
+    async def analyze(*args, **kwargs):
         ordering.append(monotonic_ns())
         started.set()
         await release.wait()
         if cancel:
             raise GenerationCancelled("Stopped perception analysis")
 
-    monkeypatch.setattr(get_agent("summarizer"), "finalize_perceptions", analyze)
+    monkeypatch.setattr(get_agent("summarizer"), "ensure_perceptions", analyze)
 
     async def turn():
-        await scene.push_history(message, emit_message=True)
+        await push_and_step(scene, message, emit_message=True)
         await reply()
 
     task = asyncio.create_task(turn())
@@ -195,7 +197,7 @@ async def test_every_visible_type_publishes_after_edit_before_hooks(
             "Alice: Final." if kind is CharacterMessage else "Final."
         )
 
-    async def analyze(*args):
+    async def analyze(*args, **kwargs):
         calls.append("perceptions")
         assert published[0][2].message == message.message
 
@@ -210,9 +212,10 @@ async def test_every_visible_type_publishes_after_edit_before_hooks(
     scene.signals["push_history"].connect(edit)
     scene.signals["game_loop_new_message"].connect(hook)
     scene.signals["push_history.after"].connect(archive)
-    monkeypatch.setattr(get_agent("summarizer"), "finalize_perceptions", analyze)
-    await scene.push_history(message, emit_message=True)
-    assert calls == ["edit", "perceptions", "tts", "archive"]
+    monkeypatch.setattr(get_agent("summarizer"), "ensure_perceptions", analyze)
+    monkeypatch.setattr("talemate.knowledge.step.catch_up_revisions", AsyncMock())
+    await push_and_step(scene, message, emit_message=True)
+    assert calls == ["edit", "tts", "archive", "perceptions"]
     assert len(published) == 1
     assert published[0][0] == message.typ
     assert published[0][2].id == message.id
@@ -226,14 +229,14 @@ async def test_silent_push_stays_silent_even_on_cancellation(
     publication_scene, published, cancel
 ):
     message = CharacterMessage(message="Alice: Hidden from display.")
-    get_agent("summarizer").finalize_perceptions.side_effect = (
+    get_agent("summarizer").ensure_perceptions.side_effect = (
         GenerationCancelled("Stopped") if cancel else None
     )
     if cancel:
         with pytest.raises(GenerationCancelled):
-            await publication_scene.push_history(message)
+            await push_and_step(publication_scene, message)
     else:
-        await publication_scene.push_history(message)
+        await push_and_step(publication_scene, message)
     assert publication_scene.history == [message]
     assert published == []
 
@@ -247,7 +250,7 @@ async def test_batch_filters_empty_director_and_emits_each_line_once(
         DirectorMessage(message="  "),
         CharacterMessage(message="Alice: Second."),
     ]
-    await publication_scene.push_history(messages, emit_message=True)
+    await push_and_step(publication_scene, messages, emit_message=True)
     assert [r[2].id for r in published] == [messages[0].id, messages[2].id]
 
 
@@ -260,25 +263,26 @@ async def test_track_state_answer_precedes_analysis(
     scene = publication_scene
     question = "Where is the key?"
 
-    async def analyze(*args):
+    async def analyze(*args, **kwargs):
         updates = [r[2].data for r in published if r[0] == "world_state"]
         assert updates[-1]["reinforce"][0]["answer"] == "Under the lantern."
         raise GenerationCancelled("Stopped")
 
-    monkeypatch.setattr(get_agent("summarizer"), "finalize_perceptions", analyze)
+    monkeypatch.setattr(get_agent("summarizer"), "ensure_perceptions", analyze)
+    if manual:
+        await scene.world_state.add_reinforcement(
+            question, insert=insert, answer="Under the lantern."
+        )
+    else:
+        reinforcement = Reinforcement(question=question, insert=insert)
+        scene.world_state.reinforce.append(reinforcement)
+        agent = get_agent("world_state")
+        message = agent._prepare_reinforcement(reinforcement, False)
+        await agent._apply_reinforcement(
+            reinforcement, message, "Under the lantern.", False
+        )
     with pytest.raises(GenerationCancelled):
-        if manual:
-            await scene.world_state.add_reinforcement(
-                question, insert=insert, answer="Under the lantern."
-            )
-        else:
-            reinforcement = Reinforcement(question=question, insert=insert)
-            scene.world_state.reinforce.append(reinforcement)
-            agent = get_agent("world_state")
-            message = agent._prepare_reinforcement(reinforcement, False)
-            await agent._apply_reinforcement(
-                reinforcement, message, "Under the lantern.", False
-            )
+        await knowledge_step(scene)
     assert scene.world_state.reinforce[0].answer == "Under the lantern."
 
 
@@ -306,7 +310,7 @@ async def test_avatar_runs_after_line_and_updates_its_saved_id(
         "get_asset",
         lambda _: SimpleNamespace(meta=SimpleNamespace(vis_type="CHARACTER_PORTRAIT")),
     )
-    await scene.push_history(message, emit_message=True)
+    await push_and_step(scene, message, emit_message=True)
     assert snapshots == [["character"]]
     assert message.asset_id == avatar
     assert [r[0] for r in published] == ["character", "message_asset_update"]
@@ -441,7 +445,7 @@ async def test_shipped_avatar_listener_binds_the_published_message(
     monkeypatch.setattr(type(determine), "run", choose)
     with GraphContext() as state:
         connect_listeners(graph, state)
-        await scene.push_history(message, emit_message=True)
+        await push_and_step(scene, message, emit_message=True)
     assert len(calls) == 1
     assert calls[0]["content"] == message.message
     assert calls[0]["character"] is scene.get_character("Alice")
@@ -472,7 +476,7 @@ async def test_portrait_failure_does_not_skip_new_message_or_archive_hooks(
     isolate_signals("agent.conversation.finalized").connect(choose)
     scene.signals["game_loop_new_message"].connect(new_message)
     scene.signals["push_history.after"].connect(archive)
-    await scene.push_history(message, emit_message=True)
+    await push_and_step(scene, message, emit_message=True)
     assert order == ["tts", "archive"]
     assert [item[0] for item in published] == ["character"]
 

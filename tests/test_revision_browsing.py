@@ -1,3 +1,5 @@
+from _knowledge_step_helpers import push_and_step
+from talemate.knowledge.step import knowledge_step
 import asyncio
 import json
 from pathlib import Path
@@ -44,7 +46,7 @@ async def browsing(setup, monkeypatch):
     message = NarratorMessage(message="The bell rings.")
     for index in range(5):
         message.append_version(f"The bell rings {index + 2} times.", "regenerate")
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     request.reset_mock()
     frames = []
     monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
@@ -77,10 +79,10 @@ async def test_five_swaps_analyze_only_kept_text(browsing, commit):
         assert any(f.get("action") == "revision_committed" for f in frames)
         # Duplicate keep requests and later catch-up reuse the valid analysis.
         await (await plugin.handle_commit_revision({"id": message.id, "index": 0}))
-        await summarizer.ensure_perceptions(scene)
+        await knowledge_step(scene)
         assert analyzed == ["The bell rings."]
     else:
-        await scene.push_history(NarratorMessage(message="Alice opens the window."))
+        await push_and_step(scene, NarratorMessage(message="Alice opens the window."))
         # One request for the kept passage, one for the new passage.
         assert analyzed == ["The bell rings.", "Alice opens the window."]
         assert request.await_count == 2
@@ -265,7 +267,7 @@ async def test_new_history_message_emits_scene_aware_revision_refresh(browsing):
     scene.knowledge_eligibility = "legacy"
     message = NarratorMessage(message="A new bell rings.")
 
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     message.append_version("A new silver bell rings.", "regenerate")
 
     assert message._knowledge_scene() is scene
@@ -561,9 +563,7 @@ async def test_direct_narration_waits_for_revision_refresh_before_generation(
     narrator.scene = scene
     generated = AsyncMock()
     catch_up = AsyncMock(side_effect=GenerationCancelled("refresh failed"))
-    monkeypatch.setattr(
-        "talemate.knowledge.revision_refresh.catch_up_revisions", catch_up
-    )
+    monkeypatch.setattr("talemate.knowledge.step.catch_up_revisions", catch_up)
 
     with pytest.raises(GenerationCancelled, match="refresh failed"):
         await _narration(narrator, generated, (), {})
@@ -648,7 +648,7 @@ async def test_failed_repair_does_not_block_successive_sends(
 
     for text in ("The keeper waves.", "A ship passes."):
         next_message = NarratorMessage(message=text)
-        await scene.push_history(next_message)
+        await push_and_step(scene, next_message)
         assert next_message in scene.history
         assert message.revision_state.pending_index_repair is not None
 
@@ -723,7 +723,7 @@ async def test_send_deletes_empty_archive_vector_and_finishes_repair(
     monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
     next_message = NarratorMessage(message="The keeper waves.")
 
-    await scene.push_history(next_message)
+    await push_and_step(scene, next_message)
 
     memory.add.assert_not_awaited()
     memory.delete.assert_awaited_once_with({"ids": ["A1"]})
@@ -757,9 +757,7 @@ async def test_pending_index_repair_survives_scene_file_reload(
     assert reloaded.history[0].revision_state.pending_index_repair is None
 
 
-async def test_pending_index_repair_is_shared_and_rejects_selection_changes(
-    scene, monkeypatch
-):
+async def test_pending_index_repair_rejects_selection_changes(scene, monkeypatch):
     message = NarratorMessage(message="The bell rings.")
     message.append_version("The bell rings twice.", "regenerate")
     message._knowledge_scene = weakref.ref(scene)
@@ -778,17 +776,15 @@ async def test_pending_index_repair_is_shared_and_rejects_selection_changes(
     memory = get_agent("memory")
     monkeypatch.setattr(memory, "delete", AsyncMock(side_effect=delete))
     monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
-    first = asyncio.create_task(refresh_revision(scene, message))
-    second = asyncio.create_task(refresh_revision(scene, message))
+    step = asyncio.create_task(knowledge_step(scene))
     await asyncio.wait_for(started.wait(), timeout=5)
     try:
         with defer_revision_work():
             message.set_active_version(0)
     finally:
         release.set()
-    results = await asyncio.gather(first, second, return_exceptions=True)
-
-    assert all(isinstance(result, GenerationCancelled) for result in results)
+    with pytest.raises(GenerationCancelled):
+        await step
     memory.delete.assert_awaited_once()
     assert message.revision_state.pending_index_repair is not None
     await refresh_revision(scene, message)

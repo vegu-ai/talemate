@@ -1,3 +1,5 @@
+from _knowledge_step_helpers import push_and_step
+from talemate.knowledge.step import knowledge_step
 import asyncio
 
 import pytest
@@ -45,7 +47,7 @@ async def test_own_analysis_progress_does_not_warn(retry_flow, backlog):
             )
             for index in range(2)
         )
-        summarizer._register_perception_sources(scene, scene.history)
+        summarizer.register_perception_sources(scene, scene.history)
     else:
         scene.world_state.reinforce.append(
             Reinforcement(
@@ -54,7 +56,7 @@ async def test_own_analysis_progress_does_not_warn(retry_flow, backlog):
         )
     message = CharacterMessage(message="Alice: Draft.")
 
-    await asyncio.wait_for(scene.push_history(message), 5)
+    await asyncio.wait_for(push_and_step(scene, message), 5)
 
     assert request.await_count == (3 if backlog == "passages" else 2)
     assert warnings == []
@@ -83,7 +85,7 @@ async def test_input_changes_retry_until_stable_without_extra_stable_request(
 
     request.side_effect = analyze
     message = CharacterMessage(message="Alice: Draft.")
-    await asyncio.wait_for(scene.push_history(message), 5)
+    await asyncio.wait_for(push_and_step(scene, message), 5)
 
     assert request.await_count == changes + 1
     assert len(warnings) == changes
@@ -97,7 +99,7 @@ async def test_input_changes_retry_until_stable_without_extra_stable_request(
     assert message.revision_state.status == "clean"
     assert message.revision_matches_baseline
     assert seen == ["", *(f"Description {index}" for index in range(1, changes + 1))]
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     assert request.await_count == changes + 1
 
 
@@ -119,9 +121,11 @@ async def test_inputs_changed_during_summary_repair_reanalyze_ready_source(
     monkeypatch.setattr(summarizer, "repair_summary_views", repair)
     request.side_effect = [result(answer("Old.", "Old.")), result(answer(bob=None))]
     message = CharacterMessage(message="Alice: Draft.")
-    await asyncio.wait_for(scene.push_history(message), 5)
+    await asyncio.wait_for(push_and_step(scene, message), 5)
 
-    assert request.await_count == repairs == 2
+    # the refresh repairs twice; the step's own repair runs once after it
+    assert request.await_count == 2
+    assert repairs == 3
     assert message.knowledge.views[1].status == "omitted"
     assert len(warnings) == 1
     assert message.revision_state.status == "clean"
@@ -147,7 +151,7 @@ async def test_user_cancel_during_stale_response_stops_retry(
     request.side_effect = analyze
     with pytest.raises(GenerationCancelled) as cancelled:
         await asyncio.wait_for(
-            scene.push_history(CharacterMessage(message="Alice: Draft.")), 5
+            push_and_step(scene, CharacterMessage(message="Alice: Draft.")), 5
         )
     assert cancelled.value.by_user
     assert request.await_count == 1
@@ -173,7 +177,7 @@ async def test_ownership_changes_do_not_retry_or_warn(retry_flow, change):
 
     request.side_effect = analyze
     with pytest.raises(GenerationCancelled):
-        await asyncio.wait_for(scene.push_history(message), 5)
+        await asyncio.wait_for(push_and_step(scene, message), 5)
     assert request.await_count == 1
     assert warnings == []
     if change == "selection":
@@ -191,7 +195,7 @@ async def test_provider_cancellation_is_never_retried(retry_flow, error):
     request.side_effect = error
     with pytest.raises(type(error)):
         await asyncio.wait_for(
-            scene.push_history(CharacterMessage(message="Alice: Draft.")), 5
+            push_and_step(scene, CharacterMessage(message="Alice: Draft.")), 5
         )
     assert request.await_count == 1
     assert warnings == []
@@ -211,12 +215,12 @@ async def test_cancel_after_stale_attempt_stops_existing_waiter(retry_flow):
 
     request.side_effect = analyze
     task = asyncio.create_task(
-        scene.push_history(CharacterMessage(message="Alice: Hello."))
+        push_and_step(scene, CharacterMessage(message="Alice: Hello."))
     )
     waiter = None
     try:
         await asyncio.wait_for(started.wait(), 3)
-        waiter = asyncio.create_task(summarizer.ensure_perceptions(scene))
+        waiter = asyncio.create_task(knowledge_step(scene))
         await asyncio.sleep(0)
         release.set()
         results = await asyncio.wait_for(

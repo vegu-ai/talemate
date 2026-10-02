@@ -1,3 +1,5 @@
+from _knowledge_step_helpers import push_and_step
+from talemate.knowledge.step import knowledge_step
 import asyncio
 import json
 from pathlib import Path
@@ -87,7 +89,7 @@ async def test_speaker_verbatim_and_player_opt_in(
     message = CharacterMessage(
         message='Alice: *I smile.* "Good morning."', source=source
     )
-    await scene.push_history(message)
+    await push_and_step(scene, message)
 
     assert request.await_count == int(player_analysis)
     if player_analysis:
@@ -112,7 +114,7 @@ async def test_default_and_narrator_audience_toggle(audience_scene):
     for enabled, names in ((False, ["Alice"]), (True, ["Alice", "Bob"])):
         summarizer.actions["perceptions"].config["analyze_player"].value = enabled
         message = NarratorMessage(message="The bell rings.")
-        await scene.push_history(message)
+        await push_and_step(scene, message)
         context = request.await_args.kwargs["vars"]["context"]
         assert [entry["name"] for entry in context["cast"]] == names
         assert {view.status for view in message.knowledge.views} == {"ready"}
@@ -126,7 +128,7 @@ async def test_player_own_turn_is_verbatim_even_with_analysis_enabled(audience_s
     message = CharacterMessage(
         message="Bob: I remember the hidden key.", source="player"
     )
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     assert [
         entry["name"] for entry in request.await_args.kwargs["vars"]["context"]["cast"]
     ] == ["Alice"]
@@ -140,7 +142,7 @@ async def test_verb_secret_speaker_keeps_unseen_aside(audience_scene):
         (Path(__file__).parent / "data/perceptions/verb_secret.json").read_text()
     )
     message = CharacterMessage(message=case["source"])
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     view = selected(scene, message, "Alice")
     assert format_message_view(message, view.text, "chat") == case["source"]
     assert "Bob set the blue vase on the sill." in view.text
@@ -152,9 +154,9 @@ async def test_verb_secret_speaker_keeps_unseen_aside(audience_scene):
 async def test_passthrough_backlog_needs_no_confirmation(audience_scene, monkeypatch):
     scene, summarizer, request = audience_scene
     ask = AsyncMock(side_effect=AssertionError("No analysis needs approval"))
-    monkeypatch.setattr(summarizer, "_ask_perception_backlog", ask)
+    monkeypatch.setattr(summarizer, "_ask_backlog", ask)
     messages = [CharacterMessage(message=f"Alice: Bell {index}.") for index in range(5)]
-    await asyncio.wait_for(scene.push_history(messages), 3)
+    await asyncio.wait_for(push_and_step(scene, messages), 3)
     assert all(perception_results_current(scene, message) for message in messages)
     assert perception_backlog(scene, messages).total == 0
     request.assert_not_awaited()
@@ -170,7 +172,7 @@ async def test_skipped_views_survive_other_audience_failure(audience_scene):
     request.side_effect = RuntimeError("Provider unavailable")
     message = CharacterMessage(message="Alice: The bell rings.")
     with pytest.raises(GenerationCancelled):
-        await scene.push_history(message)
+        await push_and_step(scene, message)
     assert selected(scene, message, "Alice").status == "ready"
     assert selected(scene, message, "Bob").status == "ready"
     assert selected(scene, message, "Cora").status == "failed"
@@ -182,10 +184,10 @@ async def test_current_prompt_and_both_context_paths_are_body_only(audience_scen
     first = CharacterMessage(
         message='Alice: I point at a sign reading "Alice: welcome".'
     )
-    await scene.push_history(first)
+    await push_and_step(scene, first)
     summarizer.actions["perceptions"].config["analyze_player"].value = True
     message = CharacterMessage(message="Alice: *I ring the bell.*")
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     context = request.await_args.kwargs["vars"]["context"]
     assert context["passage"]["text"] == "*I ring the bell.*"
     assert context["passage"]["speaker"] == "Alice"
@@ -206,11 +208,11 @@ async def test_current_prompt_and_both_context_paths_are_body_only(audience_scen
 @pytest.mark.asyncio
 async def test_body_starting_with_speaker_name_is_not_stripped_twice(audience_scene):
     scene, summarizer, request = audience_scene
-    await scene.push_history(
-        CharacterMessage(message="Alice: Alice: welcome is what my sign says.")
+    await push_and_step(
+        scene, CharacterMessage(message="Alice: Alice: welcome is what my sign says.")
     )
     summarizer.actions["perceptions"].config["analyze_player"].value = True
-    await scene.push_history(CharacterMessage(message="Alice: I point to the sign."))
+    await push_and_step(scene, CharacterMessage(message="Alice: I point to the sign."))
     context = request.await_args.kwargs["vars"]["context"]
     assert (
         context["prior_physical_context"][0]["text"]
@@ -263,7 +265,7 @@ async def test_player_passthrough_consumers_and_save_reload(
 ):
     scene, _, request = audience_scene
     message = CharacterMessage(message="Alice: I hide the key. A bell rings.")
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     scene.history[0] = message = CharacterMessage.model_validate(message.model_dump())
     assert perception_results_current(scene, message)
     assert selected(scene, message, "Bob").text == "I hide the key. A bell rings."
@@ -307,7 +309,7 @@ async def test_setting_change_during_request_retries_new_audiences(audience_scen
 
     request.side_effect = toggle
     message = NarratorMessage(message="A bell rings.")
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     assert [[item["name"] for item in context["cast"]] for context in contexts] == [
         ["Alice"],
         ["Alice", "Bob"],
@@ -328,7 +330,7 @@ async def test_setting_change_during_request_retries_new_audiences(audience_scen
 async def test_empty_body_has_omitted_records_without_analysis(audience_scene, message):
     scene, summarizer, request = audience_scene
     summarizer.actions["perceptions"].config["analyze_player"].value = True
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     assert perception_results_current(scene, message)
     assert all(
         view.status == "omitted" and view.text is None
@@ -360,7 +362,7 @@ async def test_audience_retry_preserves_manual_view_unless_context_changes(
     message = NarratorMessage(message="The bell rings.")
     if refresh:
         message.append_version("The bell rings twice.", "regenerate")
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     edit_message_view(scene, message.id, "Alice", "My hand-edited account.")
     outputs = [v.model_dump(exclude={"revision"}) for v in message.knowledge.views]
     for output in outputs:
@@ -391,7 +393,7 @@ async def test_audience_retry_preserves_manual_view_unless_context_changes(
         await refresh_revision(scene, message)
         assert message.revision_state.status == "clean"
     else:
-        await summarizer.ensure_perceptions(scene)
+        await knowledge_step(scene)
     expected = [["Bob", "Cora"], ["Cora"]] if enabled else [["Cora"], ["Bob", "Cora"]]
     if change_context:
         expected[1].insert(0, "Alice")
@@ -436,7 +438,7 @@ async def test_note_subject_and_framing_reach_every_message_consumer(
             meta={"arguments": {"character": "Alice"}},
         )
         expected = "# Visual description of Alice in the current moment: A green coat."
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     assert selected(scene, message, "Bob").text == perception_body(message)
     assert expected in "\n".join(project_character_history(scene, "Bob"))
     assert summary_inputs(scene, {"start": 0, "end": 0}, 0)["Bob"].texts == (expected,)

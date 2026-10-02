@@ -1,3 +1,4 @@
+from _knowledge_step_helpers import push_and_step
 import json
 from unittest.mock import AsyncMock
 
@@ -520,7 +521,7 @@ async def test_forbidden_content_repairs_in_both_trace_modes(analysis, enabled):
     good = payload(view("Bob", REWRITTEN, edits))
     request.side_effect = [(bad, {"response": bad}), (good, {"response": good})]
     message = CharacterMessage(message="Alice: " + SOURCE)
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     assert request.await_count == 2
     for call in request.await_args_list:
         assert call.kwargs["vars"]["rewrite_hidden_traces"] is enabled

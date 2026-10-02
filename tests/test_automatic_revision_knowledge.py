@@ -40,10 +40,8 @@ async def automatic_revision(cast, monkeypatch, request, isolate_signals):
             side_effect=AssertionError("Revision must not repair optional history")
         ),
     )
-    monkeypatch.setattr(get_agent("summarizer"), "finalize_perceptions", AsyncMock())
-    monkeypatch.setattr(
-        get_agent("summarizer"), "confirm_perception_backlog", AsyncMock()
-    )
+    # the knowledge step of a regeneration is covered elsewhere
+    monkeypatch.setattr("talemate.regenerate.knowledge_step", AsyncMock())
     conversation = get_agent("conversation")
     monkeypatch.setattr(conversation, "finalize_message_avatar", AsyncMock())
     monkeypatch.setattr(

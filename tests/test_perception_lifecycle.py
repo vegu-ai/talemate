@@ -1,3 +1,4 @@
+from _knowledge_step_helpers import push_and_step
 import asyncio
 import json
 from pathlib import Path
@@ -24,6 +25,7 @@ from talemate.knowledge.perspectives import (
 )
 from talemate.knowledge.revision_browsing import defer_revision_work
 from talemate.knowledge.revision_refresh import catch_up_revisions
+from talemate.knowledge.step import knowledge_step
 from talemate.scene_message import CharacterMessage, DirectorMessage, NarratorMessage
 
 CASES = json.loads(
@@ -96,11 +98,11 @@ async def test_finalized_source_kinds_and_no_duplicate_processing(setup, kind, s
     message = kind(message="Alice: Hello.", source=source)
     before = message.message
     active = scene.active_characters.copy()
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     acquired = message.knowledge.acquired
     views = message.knowledge.views
-    await summarizer.finalize_perceptions(scene, [message])
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
+    await knowledge_step(scene)
     assert request.await_count == 1
     assert scene.history == [message]
     assert message.message == before
@@ -124,12 +126,12 @@ async def test_perception_job_emits_running_then_ready(setup, monkeypatch):
         lambda _, message, state: statuses.append((message.id, state)),
     )
     message = CharacterMessage(message="Alice: Hello.")
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     assert statuses == [(message.id, "running"), (message.id, "ready")]
 
 
 @pytest.mark.asyncio
-async def test_editor_finalization_precedes_analysis_and_archive(setup):
+async def test_editor_finalization_precedes_analysis_after_the_push(setup):
     scene, summarizer, request = setup
     summarizer.actions["archive"].enabled = False
     order = []
@@ -145,13 +147,13 @@ async def test_editor_finalization_precedes_analysis_and_archive(setup):
 
     async def after(event):
         order.append("after")
-        assert event.messages[0].knowledge.views[0].status == "ready"
+        assert event.messages[0].knowledge is None
 
     scene.signals["push_history"].connect(edit)
     scene.signals["push_history.after"].connect(after)
     request.side_effect = analyze
-    await scene.push_history(CharacterMessage(message="Alice: Draft."))
-    assert order == ["edit", "perception", "after"]
+    await push_and_step(scene, CharacterMessage(message="Alice: Draft."))
+    assert order == ["edit", "after", "perception"]
 
 
 @pytest.mark.asyncio
@@ -159,8 +161,8 @@ async def test_no_new_requests_in_legacy_mode(setup):
     scene, summarizer, request = setup
     scene.knowledge_eligibility = "legacy"
     message = CharacterMessage(message="Alice: Hello.")
-    await scene.push_history(message)
-    await summarizer.ensure_perceptions(scene)
+    await push_and_step(scene, message)
+    await knowledge_step(scene)
     request.assert_not_awaited()
     assert message.knowledge is None
 
@@ -170,10 +172,10 @@ async def test_no_historical_or_director_backfill(setup):
     scene, summarizer, request = setup
     old = CharacterMessage(message="Alice: Old untracked history.")
     scene.history.append(old)
-    await scene.push_history(
-        DirectorMessage(message="Alice should speak next.", source="Alice")
+    await push_and_step(
+        scene, DirectorMessage(message="Alice should speak next.", source="Alice")
     )
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     request.assert_not_awaited()
     assert old.knowledge is None
 
@@ -190,9 +192,9 @@ async def test_concurrent_waiters_share_source_analysis(setup):
 
     request.side_effect = analyze
     message = CharacterMessage(message="Alice: Hello.")
-    task = asyncio.create_task(scene.push_history(message))
+    task = asyncio.create_task(push_and_step(scene, message))
     await started.wait()
-    waiting = asyncio.create_task(summarizer.ensure_perceptions(scene))
+    waiting = asyncio.create_task(knowledge_step(scene))
     await asyncio.sleep(0)
     assert not waiting.done()
     release.set()
@@ -208,7 +210,7 @@ async def test_batch_analysis_is_ordered_and_every_passage_registered(setup):
         CharacterMessage(message="Alice: First."),
         NarratorMessage(message="Then a bell rings."),
     ]
-    await scene.push_history(messages)
+    await push_and_step(scene, messages)
     assert request.await_count == 2
     context = request.await_args_list[1].kwargs["vars"]["context"]
     assert (
@@ -264,7 +266,7 @@ async def test_visible_retry_blocks_then_resumes_without_duplicate(setup, failur
     message = CharacterMessage(message="Alice: Hello.")
     downstream = AsyncMock()
     scene.signals["push_history.after"].connect(downstream)
-    task = asyncio.create_task(scene.push_history(message))
+    task = asyncio.create_task(push_and_step(scene, message))
     try:
         rid = await wait_for_dialog()
         assert not task.done()
@@ -272,7 +274,7 @@ async def test_visible_retry_blocks_then_resumes_without_duplicate(setup, failur
             ("Alice",): "ready",
             ("Bob",): "failed",
         }
-        downstream.assert_not_awaited()
+        downstream.assert_awaited_once()
         acquisition = message.knowledge.acquired
         identities = {view.audience: view.id for view in message.knowledge.views}
         resolve_generation_error(rid, "retry")
@@ -295,7 +297,7 @@ async def test_dialog_cannot_bypass_failed_analysis(setup, action):
     scene, summarizer, request = setup
     request.return_value = result("malformed")
     message = CharacterMessage(message="Alice: Hello.")
-    task = asyncio.create_task(scene.push_history(message))
+    task = asyncio.create_task(push_and_step(scene, message))
     try:
         rid = await wait_for_dialog()
         resolve_generation_error(rid, action)
@@ -325,15 +327,14 @@ async def test_manual_edit_discards_inflight_response_until_next_send(setup):
 
     request.side_effect = analyze
     message = CharacterMessage(message="Alice: Original.")
-    task = asyncio.create_task(scene.push_history(message))
+    task = asyncio.create_task(push_and_step(scene, message))
     await started.wait()
     acquired = message.knowledge.acquired
     revision = message.knowledge.revision
     with defer_revision_work():
         scene.edit_message(message.id, "Alice: Revised.")
     release.set()
-    with pytest.raises(GenerationCancelled):
-        await asyncio.wait_for(task, 3)
+    await asyncio.wait_for(task, 3)
     assert request.await_count == 1
     await catch_up_revisions(scene)
     assert request.await_count == 2
@@ -354,12 +355,11 @@ async def test_deleted_source_discards_inflight_result(setup):
 
     request.side_effect = analyze
     message = CharacterMessage(message="Alice: Hello.")
-    task = asyncio.create_task(scene.push_history(message))
+    task = asyncio.create_task(push_and_step(scene, message))
     await started.wait()
     scene.delete_message(message.id)
     release.set()
-    with pytest.raises(GenerationCancelled, match="removed or reset"):
-        await asyncio.wait_for(task, 3)
+    await asyncio.wait_for(task, 3)
     assert request.await_count == 1
     assert scene.history == []
 
@@ -413,9 +413,7 @@ def test_prompt_context_separates_reader_from_prior_knowledge(setup):
 
 
 @pytest.mark.asyncio
-async def test_cancelled_passage_is_emitted_without_releasing_dependents(
-    setup, monkeypatch
-):
+async def test_cancelled_analysis_keeps_the_emitted_passage(setup, monkeypatch):
     scene, summarizer, request = setup
     emitted = []
     monkeypatch.setattr(
@@ -427,12 +425,12 @@ async def test_cancelled_passage_is_emitted_without_releasing_dependents(
     scene.signals["push_history.after"].connect(after)
     message = CharacterMessage(message="Alice: Preserved reader prose.")
     with pytest.raises(GenerationCancelled):
-        await scene.push_history(message, emit_message=True)
+        await push_and_step(scene, message, emit_message=True)
     assert any(
         args[0] == "character" and args[1] is message for args, kwargs in emitted
     )
     assert message.message == "Alice: Preserved reader prose."
-    after.assert_not_awaited()
+    after.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -450,7 +448,7 @@ async def test_saved_incomplete_source_resumes_without_backfill(setup, status):
     )
     saved = message.model_dump()
     scene.history[1] = CharacterMessage.model_validate(saved)
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     assert old.knowledge is None
     assert request.await_count == 1
     assert scene.history[1].knowledge.acquired == message.knowledge.acquired
@@ -461,14 +459,13 @@ async def test_manual_edit_while_retry_dialog_is_open_defers_new_source(setup):
     scene, summarizer, request = setup
     request.side_effect = [result("malformed"), result(answer("Revised.", "Revised."))]
     message = CharacterMessage(message="Alice: Original.")
-    task = asyncio.create_task(scene.push_history(message))
+    task = asyncio.create_task(push_and_step(scene, message))
     try:
         rid = await wait_for_dialog()
         with defer_revision_work():
             scene.edit_message(message.id, "Alice: Revised.")
         resolve_generation_error(rid, "retry")
-        with pytest.raises(GenerationCancelled):
-            await asyncio.wait_for(task, 3)
+        await asyncio.wait_for(task, 3)
         assert request.await_count == 1
         await catch_up_revisions(scene)
         assert (
@@ -487,7 +484,7 @@ async def test_regeneration_analyzes_only_final_version_in_original_slot(
     scene, summarizer, request = setup
     scene.actors.append(Actor(scene.character_data["Alice"], get_agent("conversation")))
     message = CharacterMessage(message="Alice: Original.")
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     identity = (message.id, message.knowledge.acquired)
     monkeypatch.setattr(
         "talemate.regenerate._regenerate_inplace",
@@ -499,6 +496,7 @@ async def test_regeneration_analyzes_only_final_version_in_original_slot(
         ),
     )
     await regenerate(scene)
+    await knowledge_step(scene)
     assert len(scene.history) == 1
     assert (message.id, message.knowledge.acquired) == identity
     assert request.await_count == 2
@@ -524,7 +522,7 @@ async def test_analytical_fixtures_persist_supported_views(setup, case):
     request.return_value = result(
         json.dumps({"views": [v for v in case["views"] if v["audience"][0] != "Dan"]})
     )
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     reference = source_reference(scene, "message", message.id)
     for expected in case["views"]:
         if expected["audience"] == ["Dan"]:
@@ -547,7 +545,7 @@ async def test_shared_prompt_renders_without_additional_requests(scene, monkeypa
     send = AsyncMock(return_value=answer(bob=None, passage=passage))
     monkeypatch.setattr(client, "send_prompt", send)
     with ActiveScene(scene):
-        await scene.push_history(CharacterMessage(message=passage))
+        await push_and_step(scene, CharacterMessage(message=passage))
     send.assert_awaited_once()
     prompt = str(send.await_args.args[0])
     assert "Do not continue the story" in prompt
@@ -562,12 +560,12 @@ async def test_prior_view_invalidation_rebuilds_only_affected_sibling(setup):
     scene, summarizer, request = setup
     first = NarratorMessage(message="First bell.")
     second = NarratorMessage(message="Second bell.")
-    await scene.push_history(first)
+    await push_and_step(scene, first)
     used = json.loads(answer())
     used["views"][0]["knowledge_ids"] = ["K0-0"]
     used["views"][1]["knowledge_ids"] = ["K1-0"]
     request.return_value = result(json.dumps(used))
-    await scene.push_history(second)
+    await push_and_step(scene, second)
     bob = second.knowledge.views[1]
     assert bob.sources[0].view_id == first.knowledge.views[1].id
     set_source_perspectives(
@@ -588,7 +586,7 @@ async def test_prior_view_invalidation_rebuilds_only_affected_sibling(setup):
     request.return_value = result(
         answer("Alice's rebuilt view.", "Discard this unrelated rewrite.")
     )
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     assert request.await_count == 3
     assert (
         next(view for view in second.knowledge.views if view.audience == ("Bob",))
@@ -614,12 +612,11 @@ async def test_reset_discards_inflight_result_without_recreating_records(setup):
 
     request.side_effect = analyze
     message = NarratorMessage(message="The bell rings.")
-    task = asyncio.create_task(scene.push_history(message))
+    task = asyncio.create_task(push_and_step(scene, message))
     await started.wait()
     scene.reset()
     release.set()
-    with pytest.raises(GenerationCancelled, match="removed or reset"):
-        await asyncio.wait_for(task, 3)
+    await asyncio.wait_for(task, 3)
     assert scene.history == []
     assert message.knowledge.views[0].status == "pending"
     assert request.await_count == 1
@@ -629,7 +626,7 @@ async def test_reset_discards_inflight_result_without_recreating_records(setup):
 async def test_websocket_edit_defers_rebuild_and_saves(setup, monkeypatch):
     scene, summarizer, request = setup
     message = NarratorMessage(message="The bell rings.")
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     saved = AsyncMock()
     monkeypatch.setattr(scene, "attempt_auto_save", saved)
     handler = SimpleNamespace(scene=scene, queue_put=lambda data: None)
@@ -670,8 +667,11 @@ async def test_long_history_edit_reanalyzes_only_its_own_passage(setup):
     ]
     frames = []
     with answering("analyze", frames):
-        await scene.push_history(messages)
-    assert [(frame["needed"], frame["new"]) for frame in frames] == [(200, 200)]
+        await push_and_step(scene, messages)
+    assert [
+        (frame["perceptions"]["needed"], frame["perceptions"]["new"])
+        for frame in frames
+    ] == [(200, 200)]
     assert request.await_count == 200
     assert all(
         not view.sources for message in messages for view in message.knowledge.views
@@ -681,7 +681,7 @@ async def test_long_history_edit_reanalyzes_only_its_own_passage(setup):
     assert (
         sum(summarizer._perception_needed(scene, message) for message in messages) == 1
     )
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     assert request.await_count == 201
     assert messages[-1].knowledge == untouched
 
@@ -739,7 +739,7 @@ async def test_omission_tracks_unperceived_physical_passage(setup):
     output = json.loads(answer(bob=None))
     output["views"][1]["passage_ids"] = [prior.id]
     request.return_value = result(json.dumps(output))
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     alice = message.knowledge.views[0]
     assert [
         item.message_id for item in message.knowledge.views[1].passage_provenance
@@ -753,7 +753,7 @@ async def test_omission_tracks_unperceived_physical_passage(setup):
         == "pending"
     )
     request.return_value = result(answer(bob="Bob hears the password swordfish."))
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     assert (
         select_character_view(
             scene, source_reference(scene, "message", message.id), "Bob"
@@ -770,7 +770,7 @@ async def test_dispatcher_remains_free_to_answer_explicit_analysis_retry(
 ):
     scene, summarizer, request = setup
     message = NarratorMessage(message="The bell rings.")
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
     request.side_effect = [result("malformed"), result()]
     plugin = SceneMessagePlugin(
@@ -815,36 +815,12 @@ async def test_dispatcher_remains_free_to_answer_explicit_analysis_retry(
             while rid in _generation_error_futures:
                 await asyncio.sleep(0.01)
         if action == "retry":
-            await summarizer.ensure_perceptions(scene)
+            await knowledge_step(scene)
             assert message.knowledge.views[0].status == "ready"
         else:
             assert message.knowledge.views[0].status == "failed"
     finally:
         loop.cancel()
-
-
-@pytest.mark.asyncio
-async def test_cancelled_regeneration_restores_reinforcement_tail(setup, monkeypatch):
-    from talemate.scene_message import ReinforcementMessage
-
-    scene, _, request = setup
-    scene.actors.append(Actor(scene.character_data["Alice"], get_agent("conversation")))
-    message = CharacterMessage(message="Alice: Original.")
-    await scene.push_history(message)
-    tail = [
-        ReinforcementMessage(message="First state.", source="a"),
-        ReinforcementMessage(message="Second state.", source="b"),
-    ]
-    scene.history.extend(tail)
-    monkeypatch.setattr(
-        "talemate.regenerate._regenerate_inplace",
-        AsyncMock(return_value=[("Alice: Revised.", "regenerate")]),
-    )
-    request.side_effect = GenerationCancelled("Cancelled analysis")
-    with pytest.raises(GenerationCancelled):
-        await regenerate(scene)
-    assert scene.history == [message, *tail]
-    assert message.message == "Alice: Revised."
 
 
 @pytest.mark.asyncio
@@ -874,7 +850,7 @@ async def test_relevant_cast_and_scaled_answer_budget(setup):
             }
         )
     )
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     context = request.await_args.kwargs["vars"]["context"]
     assert {character["name"] for character in context["cast"]} == set(names)
     assert max_tokens_for_kind(request.await_args.args[2], 32768) > 2048
@@ -892,11 +868,11 @@ async def test_empty_presence_is_not_backfilled_when_a_cast_activates(setup):
     scene, summarizer, request = setup
     scene.active_characters = []
     message = NarratorMessage(message="The room is quiet.")
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     assert message.knowledge is None
     request.assert_not_awaited()
     scene.active_characters = ["Alice", "Bob"]
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     assert message.knowledge is None
     request.assert_not_awaited()
 
@@ -906,10 +882,10 @@ async def test_cancellation_stops_existing_dependent_waiters(setup):
     scene, summarizer, request = setup
     request.return_value = result("malformed")
     producer = asyncio.create_task(
-        scene.push_history(CharacterMessage(message="Alice: Hello."))
+        push_and_step(scene, CharacterMessage(message="Alice: Hello."))
     )
     rid = await wait_for_dialog()
-    dependent = asyncio.create_task(summarizer.ensure_perceptions(scene))
+    dependent = asyncio.create_task(knowledge_step(scene))
     await asyncio.sleep(0)
     resolve_generation_error(rid, "cancel")
     outcomes = await asyncio.wait_for(
@@ -931,7 +907,7 @@ async def test_provenance_survives_save_and_detects_unbound_physical_edit(setup)
     payload = json.loads(answer(bob=None))
     payload["views"][1]["passage_ids"] = [prior.id]
     request.return_value = result(json.dumps(payload))
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     saved = [entry.model_dump() for entry in scene.history]
     scene.history = [
         NarratorMessage.model_validate(saved[0]),
@@ -1003,7 +979,7 @@ async def test_cited_history_has_bounded_rebuild_and_one_index_per_scan(
     request.side_effect = cite_previous
     messages = [CharacterMessage(message=f"Alice: Report {i}.") for i in range(200)]
     with answering("analyze", []):
-        await scene.push_history(messages)
+        await push_and_step(scene, messages)
     assert request.await_count == 200
     assert sum(bool(message.knowledge.views[1].sources) for message in messages) > 150
     original_sources = perspectives._sources
@@ -1027,8 +1003,8 @@ async def test_cited_history_has_bounded_rebuild_and_one_index_per_scan(
     assert 1 < pending <= perspectives.MAX_DEPENDENCY_DEPTH + CONTEXT_PASSAGES + 1
     frames = []
     with answering("analyze", frames):
-        await summarizer.ensure_perceptions(scene)
-    assert [frame["needed"] for frame in frames] == [pending]
+        await knowledge_step(scene)
+    assert [frame["perceptions"]["needed"] for frame in frames] == [pending]
     assert request.await_count == 200 + pending
     assert messages[-1].knowledge == untouched
 
@@ -1213,12 +1189,12 @@ async def test_consumed_background_cancel_does_not_warn_for_dependent_perception
 
     request.side_effect = cancelled
     producer = asyncio.create_task(
-        set_loading("Perception")(scene.push_history)(message)
+        set_loading("Perception")(push_and_step)(scene, message)
     )
     dependent = None
     try:
         await asyncio.wait_for(entered.wait(), 2)
-        dependent = asyncio.create_task(summarizer.ensure_perceptions(scene))
+        dependent = asyncio.create_task(knowledge_step(scene))
         await asyncio.sleep(0)
         with capture_logs() as logs:
             release.set()

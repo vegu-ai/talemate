@@ -9,6 +9,7 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 from talemate.emit import async_signals, emit
+from talemate.knowledge.revision_scope import hold_for_step
 from talemate.save import SceneEncoder, scene_data_dumps
 from talemate.storage.blobs import Blob, BlobCorruptedError
 from talemate.storage.changelog import (
@@ -66,7 +67,8 @@ async def emit_revision_event(
         parent_id=revision.parent_id if revision else None,
         **details,
     )
-    await signal.send(event)
+    if not hold_for_step(name, event):
+        await signal.send(event)
 
 
 class ForkTargetMissingError(RevisionMissingError):

@@ -14,7 +14,8 @@ from talemate.knowledge.advice import (
     advice_context,
     advice_fingerprint,
     emission_character,
-    require_current_advice,
+    require_advice_scene,
+    warn_stale_advice,
 )
 from talemate.agents.base import (
     set_processing as _set_processing,
@@ -78,12 +79,13 @@ def set_processing(*, analysis_type: KnowledgeAnalysisType):
             agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
 
             response = await fn(self, *args, **kwargs)
+            if character_knowledge_enabled(scene):
+                require_advice_scene(self, scene)
+                warn_stale_advice(self, scene, character, fingerprint)
             emission.response = response
             await talemate.emit.async_signals.get(
                 "agent.director.guide.generated"
             ).send(emission)
-            if character_knowledge_enabled(scene):
-                require_current_advice(self, scene, character, fingerprint)
             return emission.response
 
         return wrapper

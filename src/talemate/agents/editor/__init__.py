@@ -7,7 +7,6 @@ import structlog
 import talemate.emit.async_signals
 import talemate.util as util
 from talemate.client import ClientBase
-from talemate.instance import get_agent
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.prompts import Prompt
 
@@ -311,7 +310,10 @@ class EditorAgent(
 
         history_perspective = None
         if character_knowledge_enabled(self.scene):
-            await get_agent("summarizer").ensure_perceptions(self.scene)
+            # knowledge.step -> revision_refresh -> summarizer perceptions -> agents
+            from talemate.knowledge.step import knowledge_step
+
+            await knowledge_step(self.scene)
             history_perspective = character.name
 
         response, extracted = await Prompt.request(

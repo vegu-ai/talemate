@@ -1,3 +1,5 @@
+from _knowledge_step_helpers import push_and_step
+from talemate.knowledge.step import knowledge_step
 import asyncio
 import json
 from unittest.mock import AsyncMock
@@ -17,7 +19,6 @@ from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
 from talemate.knowledge.perspectives import set_source_perspectives
 from talemate.knowledge.revision_browsing import defer_revision_work
-from talemate.knowledge.revision_refresh import catch_up_revisions
 from talemate.scene_message import CharacterMessage, NarratorMessage
 
 PASSAGE = "A bell rings."
@@ -118,14 +119,14 @@ async def test_wrongly_typed_offered_id_repairs_dependency_and_edit_invalidates(
 ):
     scene, _, request, dialog = analysis
     prior = NarratorMessage(message="A bell rings.")
-    await scene.push_history(prior)
+    await push_and_step(scene, prior)
     message = NarratorMessage(message="Alice remembers the bell.")
     broken, repaired = response(), response(("Alice",))
     broken["views"][0]["passage_ids"] = [str(prior.id)]
     repaired["views"][0]["passage_ids"] = [prior.id]
     request.reset_mock()
     request.side_effect = [result(broken), result(repaired)]
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     assert request.await_count == 2
     assert [
         entry["name"] for entry in request.call_args.kwargs["vars"]["context"]["cast"]
@@ -204,7 +205,7 @@ async def test_self_citation_is_silent_and_releases_dependents(analysis):
     downstream = AsyncMock()
     scene.signals["push_history.after"].connect(downstream)
     with capture_logs() as logs:
-        await scene.push_history(message)
+        await push_and_step(scene, message)
     downstream.assert_awaited_once()
     request.assert_awaited_once()
     dialog.assert_not_awaited()
@@ -217,7 +218,7 @@ async def test_self_citation_is_silent_and_releases_dependents(analysis):
 async def test_mixed_citations_resolve_only_audiences_offered_sources(analysis):
     scene, _, request, dialog = analysis
     prior = CharacterMessage(message="Alice: Earlier.")
-    await scene.push_history(prior)
+    await push_and_step(scene, prior)
     message = NarratorMessage(message="A bell rings.")
     payload = response()
     payload["views"][0]["knowledge_ids"] = ["K0-0", "K1-0", "K0-0", "invented"]
@@ -227,7 +228,7 @@ async def test_mixed_citations_resolve_only_audiences_offered_sources(analysis):
     )
     request.return_value = result(payload)
     with capture_logs() as logs:
-        await scene.push_history(message)
+        await push_and_step(scene, message)
     alice, bob = message.knowledge.views
     assert len(alice.sources) == 1
     assert alice.sources[0].view_id == prior.knowledge.views[0].id
@@ -262,7 +263,7 @@ async def test_repair_requests_only_missing_audience_and_preserves_valid_prose(
     broken = response(("Alice",))
     request.side_effect = [result(broken), result(repaired)]
     message = NarratorMessage(message="A bell rings.")
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     assert request.await_count == 2
     repair_vars = request.await_args.kwargs["vars"]
     assert "Bob" in repair_vars["validation_error"]
@@ -285,7 +286,7 @@ async def test_failed_repair_is_bounded_and_dialog_preserves_valid_views(
     downstream = AsyncMock()
     scene.signals["push_history.after"].connect(downstream)
     with pytest.raises(GenerationCancelled):
-        await scene.push_history(message)
+        await push_and_step(scene, message)
     assert request.await_count == count
     dialog.assert_awaited_once()
     assert "Missing valid perceptions for: Bob" in dialog.await_args.args[0]
@@ -293,14 +294,14 @@ async def test_failed_repair_is_bounded_and_dialog_preserves_valid_views(
         "Alice": "ready",
         "Bob": "failed",
     }
-    downstream.assert_not_awaited()
+    downstream.assert_awaited_once()
 
 
 async def test_transport_error_is_shown_without_validation_repair(analysis):
     scene, _, request, dialog = analysis
     request.side_effect = RuntimeError("Model unavailable")
     with pytest.raises(GenerationCancelled):
-        await scene.push_history(NarratorMessage(message="A bell rings."))
+        await push_and_step(scene, NarratorMessage(message="A bell rings."))
     request.assert_awaited_once()
     assert "Reason: Model unavailable" in dialog.await_args.args[0]
 
@@ -313,7 +314,7 @@ async def test_cancelled_repair_preserves_valid_views_and_propagates(analysis):
     ]
     message = NarratorMessage(message="A bell rings.")
     with pytest.raises(GenerationCancelled):
-        await scene.push_history(message)
+        await push_and_step(scene, message)
     assert {view.audience[0]: view.status for view in message.knowledge.views} == {
         "Alice": "ready",
         "Bob": "failed",
@@ -340,11 +341,10 @@ async def test_manual_edit_during_repair_defers_new_source_and_discards_old_view
         return result(payload)
 
     request.side_effect = respond
-    with pytest.raises(GenerationCancelled):
-        await asyncio.wait_for(scene.push_history(message), 3)
+    await asyncio.wait_for(push_and_step(scene, message), 3)
     assert request.await_count == 2
     assert all(view.status != "ready" for view in message.knowledge.views)
-    await catch_up_revisions(scene)
+    await knowledge_step(scene)
     assert request.await_count == 3
     assert {view.text for view in message.knowledge.views} == {"New bell."}
     dialog.assert_not_awaited()
@@ -373,7 +373,7 @@ async def test_repair_preserves_existing_shared_audience_view(analysis):
     )
     shared = message.knowledge.views[0]
     request.return_value = result(response(("Carol",)))
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     request.assert_awaited_once()
     assert message.knowledge.views[0] == shared
     assert message.knowledge.views[1].audience == ("Carol",)

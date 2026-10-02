@@ -17,11 +17,10 @@ import talemate.events as events
 import talemate.save as save
 import talemate.util as util
 import talemate.world_state.templates as world_state_templates
-from talemate.knowledge.backlog import counting_pushed
 from talemate.knowledge.intro import initialize_intro_audience, sync_intro_knowledge
 from talemate.config import Config, get_config
 from talemate.context import interaction, handle_generation_cancelled
-from talemate.emit import Emitter, emit, flush_emissions
+from talemate.emit import Emitter, emit
 from talemate.exceptions import (
     ExitScene,
     LLMAccuracyError,
@@ -707,43 +706,38 @@ class Scene(Emitter):
         if isinstance(messages, SceneMessage):
             messages = [messages]
 
-        from talemate.knowledge.revision_refresh import catch_up_revisions
-
-        player_submission = bool(messages) and all(
-            message.source == "player"
-            and isinstance(message, (CharacterMessage, NarratorMessage))
-            for message in messages
-        )
-        if not player_submission:
-            try:
-                with counting_pushed(
-                    self,
-                    sum(
-                        get_agent("summarizer").upcoming_perception_requests(
-                            self, message=message
-                        )
-                        for message in messages
-                    )
-                    if character_knowledge_enabled(self)
-                    else 0,
-                ):
-                    await catch_up_revisions(self)
-            except GenerationCancelled:
-                # The messages are accepted: a cancelled catch-up (a backlog
-                # question, a Stop) keeps them for the next catch-up to dispatch.
-                await self._append_for_dispatch(
-                    self._append_history(messages), emit_message=emit_message
-                )
-                raise
-
         valid_messages = self._append_history(messages)
+        if valid_messages:
+            self.saved = False
 
-        if player_submission:
-            await self._append_for_dispatch(valid_messages, emit_message=emit_message)
-            await catch_up_revisions(self)
-            return
+        event: events.HistoryEvent = events.HistoryEvent(
+            scene=self,
+            event_type="push_history",
+            messages=valid_messages,
+        )
 
-        await self.dispatch_history(valid_messages, emit_message=emit_message)
+        try:
+            try:
+                await self.signals["push_history"].send(event)
+            finally:
+                if emit_message:
+                    for message in valid_messages:
+                        self.emit_history_message(message)
+
+            for message in valid_messages:
+                if isinstance(message, CharacterMessage):
+                    await get_agent("conversation").finalize_message_avatar(message)
+
+            for message in valid_messages:
+                await self.signals["game_loop_new_message"].send(
+                    events.GameLoopNewMessageEvent(
+                        scene=self, event_type="game_loop_new_message", message=message
+                    )
+                )
+
+            await self.signals["push_history.after"].send(event)
+        finally:
+            self.emit_status()
 
     def _append_history(self, messages: list[SceneMessage]) -> list[SceneMessage]:
         if self.intro and self.intro_present is None:
@@ -789,20 +783,6 @@ class Scene(Emitter):
             bind_message_source(self, message)
         return valid_messages
 
-    async def _append_for_dispatch(
-        self, messages: list[SceneMessage], *, emit_message: bool
-    ) -> None:
-        """Mark appended messages for dispatch by the next catch-up, and save."""
-        self.saved = False
-        for message in messages:
-            message.history_dispatch_pending = True
-            if emit_message:
-                self.emit_history_message(message)
-        if emit_message:
-            # the line is on screen before the save starts
-            await flush_emissions()
-        await self.attempt_auto_save()
-
     def emit_history_message(self, message: SceneMessage):
         character_name = getattr(message, "character_name", None)
         emit(
@@ -810,59 +790,6 @@ class Scene(Emitter):
             message,
             character=self.get_character(character_name) if character_name else None,
         )
-
-    async def dispatch_history(
-        self, messages: list[SceneMessage], *, emit_message: bool = False
-    ):
-        completed = (
-            messages[0].history_dispatch_completed
-            if len(messages) == 1 and messages[0].history_dispatch_pending
-            else None
-        )
-
-        async def send(name, event):
-            if completed is None:
-                await self.signals[name].send(event)
-            else:
-                await self.signals[name].send(event, completed=completed)
-
-        event: events.HistoryEvent = events.HistoryEvent(
-            scene=self,
-            event_type="push_history",
-            messages=messages,
-        )
-
-        await send("push_history", event)
-
-        if emit_message:
-            for message in messages:
-                self.emit_history_message(message)
-
-        try:
-            if completed is None or "perceptions" not in completed:
-                if character_knowledge_enabled(self):
-                    await get_agent("summarizer").finalize_perceptions(self, messages)
-                if completed is not None:
-                    completed.append("perceptions")
-
-            if completed is None or "avatar" not in completed:
-                for message in messages:
-                    if isinstance(message, CharacterMessage):
-                        await get_agent("conversation").finalize_message_avatar(message)
-                if completed is not None:
-                    completed.append("avatar")
-
-            for message in messages:
-                await send(
-                    "game_loop_new_message",
-                    events.GameLoopNewMessageEvent(
-                        scene=self, event_type="game_loop_new_message", message=message
-                    ),
-                )
-
-            await send("push_history.after", event)
-        finally:
-            self.emit_status()
 
     def _message_removed(self, message, reference):
         from talemate.knowledge.revision_refresh import preserve_revision_index_repair

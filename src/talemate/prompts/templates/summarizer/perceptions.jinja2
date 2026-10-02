@@ -1,6 +1,5 @@
 {% with task_instructions="Use this as story context, not evidence of what a character perceives." %}{% include "scene-intent.jinja2" %}{% endwith %}
-{% for instruction in dynamic_instructions or [] %}{{ instruction }}
-{% endfor %}<|SECTION:TASK|>
+<|SECTION:TASK|>
 Analyze the finalized passage below. Do not continue the story. For each named character, work in two ordered steps: first identify inaccessible information, then write the accessible passage using the bounded rewrite regions below. The audience selects accessible information, not a new narrator. Do not add speaker labels.
 
 STEP 1, EXCLUSIONS: List each part this character cannot perceive as an exact unique span copied character for character from the passage, with a one-word reason such as inaudible, private-thought, unseen, asleep, absent or reader-only. Exclude only inaccessible information; retain every accessible fact and event, including observable acts mixed with private content. For each exclusion, supply a "forbidden" array naming only the secret-bearing words or phrases that must not return in this audience's rewritten text: concealed objects, identities, names, acts or private content. Use [] if there are none. Do not ban ordinary grammatical words or facts the audience can perceive. The host checks those words and phrases case-insensitively at word boundaries. The list is not permission to disclose an unlisted secret. Use exclusions [] when everything is accessible. If nothing is accessible, set status omitted, exclusions [] and text null.{% if rewrite_hidden_traces %}

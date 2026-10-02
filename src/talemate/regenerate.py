@@ -8,8 +8,7 @@ import talemate.emit.async_signals as async_signals
 from talemate.agents.editor.revision import RevisionContext
 from talemate.context import regeneration_context
 from talemate.exceptions import GenerationCancelled
-from talemate.knowledge.formatting import perception_speaker
-from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.step import knowledge_step
 from talemate.world_state.snapshot_revision import regeneration_snapshot
 from talemate.scene_message import (
     SceneMessage,
@@ -467,16 +466,7 @@ async def _regenerate(scene: "Scene") -> list[SceneMessage]:
     scene.history.pop()
 
     try:
-        if character_knowledge_enabled(scene):
-            summarizer = get_agent("summarizer")
-            await summarizer.confirm_perception_backlog(
-                scene,
-                upcoming=summarizer.upcoming_perception_requests(
-                    scene,
-                    speaker=perception_speaker(message),
-                    present=message.present,
-                ),
-            )
+        await knowledge_step(scene)
         outcome = await _regenerate_inplace(message, scene)
     except (GenerationCancelled, asyncio.CancelledError):
         # User-initiated interrupt — not a failure. Restore history, report
@@ -515,8 +505,6 @@ async def _regenerate(scene: "Scene") -> list[SceneMessage]:
         scene.append_message_version(message.id, text, source=source)
 
     try:
-        if character_knowledge_enabled(scene):
-            await get_agent("summarizer").finalize_perceptions(scene, [message])
         if isinstance(message, CharacterMessage):
             conversation = get_agent("conversation")
             await conversation.finalize_message_avatar(message)

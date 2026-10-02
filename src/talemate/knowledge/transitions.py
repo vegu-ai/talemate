@@ -171,9 +171,7 @@ def protected_transition(
         return None
     index = transition_index(scene, transition)
     if any(
-        isinstance(item, CharacterMessage)
-        and item.character_name == character
-        and not item.history_dispatch_pending
+        isinstance(item, CharacterMessage) and item.character_name == character
         for item in scene.history[index + 1 :]
     ):
         return None

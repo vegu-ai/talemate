@@ -3,6 +3,8 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from talemate.knowledge.step import knowledge_step
+
 import test_perception_context as cases
 from talemate.agents.summarize.perceptions import tracked_character_states
 from talemate.instance import get_agent
@@ -23,6 +25,7 @@ async def record(scene, insert):
     await world._apply_reinforcement(
         state, world._prepare_reinforcement(state, False), "Asleep.", False
     )
+    await knowledge_step(scene)
     scene.ts = 21600
     return state
 

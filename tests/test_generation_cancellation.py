@@ -12,7 +12,6 @@ from talemate.game.engine.nodes.core import LoopBreak
 from talemate.game.engine.nodes.scene import SceneLoop
 from talemate.game.scope import GameInstructionScope
 from talemate.instance import get_agent
-from talemate.knowledge.processing import evidence_writer
 from talemate.status import set_loading
 
 
@@ -119,15 +118,14 @@ async def test_cancellation_sinks_report_system_abort_once_and_keep_user_silent(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("decorate", [set_processing, evidence_writer])
 async def test_action_preserves_consumed_user_cancel(
-    scene, monkeypatch, cancellation_emissions, decorate
+    scene, monkeypatch, cancellation_emissions
 ):
     agent = get_agent("summarizer")
     monkeypatch.setattr(agent, "emit_status", AsyncMock())
     entered, release = asyncio.Event(), asyncio.Event()
 
-    @decorate
+    @set_processing
     async def action(self):
         entered.set()
         await release.wait()

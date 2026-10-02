@@ -1,10 +1,14 @@
-from talemate.knowledge.processing import evidence_writer, track_evidence_task
 import asyncio
 import weakref
 from typing import Literal
 
 import structlog
 
+from talemate.agents.summarize.perceptions import (
+    PERCEPTION_BACKLOG_THRESHOLD,
+    PerceptionBacklogDecision,
+    keep_stored_sources,
+)
 from talemate.context import handle_generation_cancelled
 from talemate.exceptions import GenerationCancelled
 from talemate.knowledge.mode import character_knowledge_enabled
@@ -16,21 +20,24 @@ from talemate.knowledge.perspectives import (
     set_source_perspectives,
     source_reference,
 )
+from talemate.knowledge.backlog import cancels_at_start
+from talemate.knowledge.summary_backlog import (
+    SummaryBacklog,
+    SummaryBacklogEntry,
+    summary_backlog,
+)
+from talemate.status import LoadingStatus
 from talemate.knowledge.summaries import (
     SummaryInput,
     summary_entry,
     summary_inputs,
 )
-from talemate.status import background_task
 
 log = structlog.get_logger(__name__)
-MAX_SUMMARY_REPAIR_PASSES = 8
 
 
 class AudienceSummaryMixin:
     def init_audience_summaries(self):
-        self._audience_summary_locks = weakref.WeakKeyDictionary()
-        self._summary_rebuild_tasks = weakref.WeakKeyDictionary()
         self._summary_dirty = weakref.WeakKeyDictionary()
         self._summary_waiting = weakref.WeakKeyDictionary()
         self._summary_generation_options = weakref.WeakKeyDictionary()
@@ -95,47 +102,49 @@ class AudienceSummaryMixin:
         )
         set_source_perspectives(scene, "summary", identity, outputs, layer=layer)
 
-    @evidence_writer
     async def ensure_summary_views(
         self, scene, identity, layer=0, *, generation_options=None, audiences=None
-    ):
+    ) -> int:
+        """Build the missing views of an entry; returns how many requested a summary."""
         if not character_knowledge_enabled(scene):
-            return
-        lock = self._audience_summary_locks.setdefault(scene, asyncio.Lock())
-        async with lock:
-            entry = summary_entry(scene, identity, layer)
-            if entry is None:
-                return
-            read = PerspectiveReadContext(scene)
-            inputs = summary_inputs(scene, entry, layer, read=read)
-            reference = source_reference(
-                scene, "summary", identity, layer=layer, read=read
+            return 0
+        dirty = self._summary_dirty.setdefault(scene, set())
+        entry = summary_entry(scene, identity, layer)
+        if entry is None:
+            dirty.difference_update((layer, identity, name) for name in audiences or ())
+            return 0
+        read = PerspectiveReadContext(scene)
+        inputs = summary_inputs(scene, entry, layer, read=read)
+        reference = source_reference(scene, "summary", identity, layer=layer, read=read)
+        groups = {}
+        names = set(inputs) if audiences is None else set(audiences)
+        for name in sorted(names):
+            if name not in scene.character_data or (
+                reference
+                and select_character_view(scene, reference, name, read=read).status
+                in ("ready", "omitted")
+            ):
+                dirty.discard((layer, identity, name))
+                continue
+            groups.setdefault(
+                inputs.get(name, SummaryInput(status="pending")), []
+            ).append(name)
+        requested = 0
+        for summary_input, names in groups.items():
+            requested += await self._generate_summary_group(
+                scene,
+                entry,
+                layer,
+                tuple(names),
+                summary_input,
+                generation_options=generation_options,
             )
-            groups = {}
-            names = set(inputs) if audiences is None else set(audiences)
-            for name in sorted(names):
-                if name not in scene.character_data:
-                    continue
-                if reference and select_character_view(
-                    scene, reference, name, read=read
-                ).status in ("ready", "omitted"):
-                    continue
-                groups.setdefault(
-                    inputs.get(name, SummaryInput(status="pending")), []
-                ).append(name)
-            for summary_input, names in groups.items():
-                await self._generate_summary_group(
-                    scene,
-                    entry,
-                    layer,
-                    tuple(names),
-                    summary_input,
-                    generation_options=generation_options,
-                )
+        return requested
 
     async def _generate_summary_group(
         self, scene, entry, layer, audience, summary_input, *, generation_options=None
-    ):
+    ) -> bool:
+        """Build one audience group's view; returns whether it sent a request."""
         identity = entry["id"]
         keys = {(layer, identity, name) for name in audience}
         dirty = self._summary_dirty.setdefault(scene, set())
@@ -145,7 +154,7 @@ class AudienceSummaryMixin:
         self._publish_summary_group(scene, identity, layer, audience, "pending")
         if summary_input.status == "pending":
             waiting.update(keys)
-            return
+            return False
         if summary_input.status == "omitted":
             self._publish_summary_group(
                 scene,
@@ -155,7 +164,7 @@ class AudienceSummaryMixin:
                 "omitted",
                 sources=summary_input.sources,
             )
-            return True
+            return False
         stamp = (entry["text"], entry.get("start"), entry.get("end"))
 
         def current():
@@ -176,7 +185,7 @@ class AudienceSummaryMixin:
 
         if not current():
             requeue()
-            return
+            return False
 
         while True:
             try:
@@ -201,7 +210,7 @@ class AudienceSummaryMixin:
                     raise ValueError("Summary response was empty")
                 if not current():
                     requeue()
-                    return False
+                    return True
                 self._publish_summary_group(
                     scene,
                     identity,
@@ -217,6 +226,9 @@ class AudienceSummaryMixin:
                 raise
             except GenerationCancelled as exc:
                 handle_generation_cancelled(exc)
+                if exc.by_user:
+                    requeue()
+                    raise
                 if current():
                     self._publish_summary_group(
                         scene,
@@ -229,11 +241,11 @@ class AudienceSummaryMixin:
                     dirty.difference_update(keys)
                 else:
                     requeue()
-                return
+                return True
             except Exception as exc:
                 if not current():
                     requeue()
-                    return
+                    return True
                 self._publish_summary_group(
                     scene,
                     identity,
@@ -254,10 +266,10 @@ class AudienceSummaryMixin:
                 )
                 if not current():
                     requeue()
-                    return
+                    return True
                 if action != "retry":
                     dirty.difference_update(keys)
-                    return
+                    return True
                 continue
 
     def _wake_summary_waiters(self, scene):
@@ -278,22 +290,113 @@ class AudienceSummaryMixin:
                 waiting.discard(key)
                 dirty.add(key)
 
+    def summary_backlog(self, scene, passages=()):
+        """The summary entries no answer approved yet; `passages` are about to be analyzed."""
+        self._wake_summary_waiters(scene)
+        return summary_backlog(
+            scene,
+            self._summary_dirty.get(scene, ()),
+            passages,
+            approved=self._summaries_approved(scene),
+        )
+
+    def keep_stored_summaries(self, scene, entries: list[SummaryBacklogEntry]) -> None:
+        keep_stored_sources(
+            scene,
+            [
+                ("summary", entry.identity, entry.layer)
+                for entry in sorted(entries, key=lambda entry: entry.key)
+            ],
+        )
+        remaining = {entry.key for entry in self.summary_backlog(scene).entries}
+        log.info(
+            "kept stored summaries",
+            entries=len(entries),
+            still_needed=len(remaining & {entry.key for entry in entries}),
+        )
+
+    def summary_frame(
+        self, rebuild: SummaryBacklog, keep: SummaryBacklog
+    ) -> dict | None:
+        if not rebuild.total:
+            return None
+        for entry in (*rebuild.entries, *rebuild.at_risk):
+            log.info(
+                "summary backlog entry",
+                layer=entry.layer,
+                identity=entry.identity,
+                characters=list(entry.names),
+                keepable=entry.keepable,
+                check=entry.check,
+                character=entry.character,
+                cited=entry.cited,
+            )
+        frame = {"rebuild": rebuild.frame(), "keep": keep.frame()}
+        log.info("summary backlog", **frame)
+        return frame
+
+    def apply_summary_decision(
+        self,
+        scene,
+        backlog: SummaryBacklog,
+        decision: PerceptionBacklogDecision,
+    ) -> None:
+        approved = self._summaries_approved(scene)
+        if decision == "analyze":
+            approved.update(backlog.keys())
+        elif decision == "keep":
+            self.keep_stored_summaries(scene, list(backlog.keepable))
+            approved.update(backlog.keep_keys())
+
+    async def _approve_summary_backlog(self, scene) -> None:
+        """
+        Approve the rebuild of the queued summary entries: up to the threshold
+        without a question, otherwise as the user decides. The entries that
+        analyses still to come can change were asked about with them.
+        """
+        backlog = self.summary_backlog(scene)
+        if backlog.total <= PERCEPTION_BACKLOG_THRESHOLD:
+            self._summaries_approved(scene).update(backlog.keys())
+            return
+        decision = await self.ask_knowledge_backlog(
+            scene,
+            perceptions=None,
+            summaries=self.summary_frame(backlog, backlog),
+            cancel_sequence=scene.cancel_sequence,
+            cancels_at_entry=cancels_at_start(scene),
+        )
+        self.apply_summary_decision(scene, backlog, decision)
+
     async def repair_summary_views(self, scene):
+        """
+        Build every queued summary view, one entry at a time, including the
+        layers that the built entries queue in turn. When more queued entries
+        than the backlog threshold, with the layered entries they can make out
+        of date, are not approved yet, the user is asked first.
+        """
         if not character_knowledge_enabled(scene):
             return
         dirty = self._summary_dirty.setdefault(scene, set())
-        for _ in range(MAX_SUMMARY_REPAIR_PASSES):
-            self._wake_summary_waiters(scene)
-            if not dirty:
-                break
-            groups = {}
-            for layer, identity, name in sorted(dirty):
-                groups.setdefault((layer, identity), []).append(name)
-            for (layer, identity), names in groups.items():
-                keys = {(layer, identity, name) for name in names}
-                dirty.difference_update(keys)
-                try:
-                    await self.ensure_summary_views(
+        await self._approve_summary_backlog(scene)
+        progress = LoadingStatus(cancellable=True)
+        try:
+            while True:
+                self._wake_summary_waiters(scene)
+                if not dirty:
+                    break
+                queued = set(dirty)
+                groups = {}
+                for layer, identity, name in sorted(queued):
+                    groups.setdefault((layer, identity), []).append(name)
+                requested = 0
+                for (layer, identity), names in groups.items():
+                    progress.max_steps = progress.current_step + len(
+                        {(layer, identity) for layer, identity, _ in dirty}
+                    )
+                    progress("Updating character summaries")
+                    # each group takes its keys off the queue as it starts, so
+                    # a cancel leaves the groups that have not started queued
+                    requested += await self.ensure_summary_views(
                         scene,
                         identity,
                         layer,
@@ -302,12 +405,14 @@ class AudienceSummaryMixin:
                             scene, {}
                         ).get((layer, identity)),
                     )
-                except asyncio.CancelledError:
-                    dirty.update(keys)
-                    raise
+                if not requested and dirty >= queued:
+                    # every entry went back on the queue before its request
+                    # (the scene was released, or its inputs did not hold); a
+                    # later step retries them
+                    break
+        finally:
+            progress.done()
         self._wake_summary_waiters(scene)
-        if dirty:
-            await self.schedule_audience_summaries(scene)
 
     async def queue_summary_views(
         self, scene, identity, layer=0, *, generation_options=None
@@ -325,31 +430,3 @@ class AudienceSummaryMixin:
         self._summary_dirty.setdefault(scene, set()).update(
             (layer, identity, name) for name in names
         )
-        await self.schedule_audience_summaries(scene)
-
-    async def schedule_audience_summaries(self, scene):
-        if not character_knowledge_enabled(scene):
-            return
-        self._wake_summary_waiters(scene)
-        if not self._summary_dirty.get(scene):
-            return
-        task = self._summary_rebuild_tasks.get(scene)
-        if task is not None and not task.done():
-            return
-        task = await self.rebuild_audience_summaries(scene)
-        self._summary_rebuild_tasks[scene] = task
-        track_evidence_task(scene, task)
-
-    @evidence_writer
-    @background_task("Updating character summaries")
-    async def rebuild_audience_summaries(self, scene):
-        while True:
-            if self.scene is not scene:
-                return
-            await self.repair_summary_views(scene)
-            if not self._summary_dirty.get(scene) and self.scene is scene:
-                await scene.attempt_auto_save()
-            self._wake_summary_waiters(scene)
-            if not self._summary_dirty.get(scene):
-                break
-            await asyncio.sleep(0)

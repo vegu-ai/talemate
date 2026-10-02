@@ -1233,7 +1233,7 @@
   title: Knowledge
   summary: Standard and Character perspectives knowledge, effort presets, request costs, scene overrides and first-save continuation,
     retry or discard. Covers Learn / Never Learn rules, Known by visibility, disclosures, retrieval, activation and deactivation
-    chips with automatic timing and arrival notes, and zero-request re-entry bridges.
+    chips with automatic timing and arrival notes, zero-request re-entry bridges, and asking when character summaries need a rebuild.
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: Pins keep context entries or character details in AI prompts, with manual activation, AI yes/no conditions and

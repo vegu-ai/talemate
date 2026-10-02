@@ -1,3 +1,4 @@
+from _knowledge_step_helpers import push_and_step
 import asyncio
 import json
 import threading
@@ -701,7 +702,7 @@ async def cached_reply_turn(rag, monkeypatch, mode, *, archive_during_push=False
         scene.signals["push_history.after"].connect(archive_after_reply)
 
     original = (await conversation.converse(character.actor))[0]
-    await scene.push_history(original)
+    await push_and_step(scene, original)
     return original, query, calls, dialogue_prompts
 
 
@@ -1108,6 +1109,7 @@ async def test_audience_cache_digest_follows_built_document_revision(rag, monkey
     pending = asyncio.create_task(conversation.rag_build(character))
     await asyncio.wait_for(question_started.wait(), timeout=5)
     memory.invalidate_audience_index(scene, groups={("authored",)})
+    syncing = asyncio.create_task(memory.ensure_audience_index(scene))
     await asyncio.wait_for(sync_started.wait(), timeout=5)
     scene.world_state.manual_context.pop("lore")
     memory.invalidate_audience_index(scene)
@@ -1121,6 +1123,7 @@ async def test_audience_cache_digest_follows_built_document_revision(rag, monkey
     finally:
         sync_release.set()
     result = await asyncio.wait_for(pending, timeout=5)
+    await syncing
 
     assert answers == 2
     assert "Fresh restricted lore." in result

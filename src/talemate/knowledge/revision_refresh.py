@@ -1,6 +1,5 @@
 """Revision refresh coordination shared by explicit keep and next-send catch-up."""
 
-import asyncio
 import hashlib
 import json
 from contextlib import contextmanager
@@ -15,21 +14,11 @@ from talemate.instance import get_agent
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspective_models import content_digest
 from talemate.knowledge.presence import relevant_audiences
-import talemate.emit.async_signals as async_signals
 from talemate.knowledge.revision_browsing import affected_archive_ids
-from talemate.knowledge.revision_scope import (
-    JobEvents,
-    active_revision_phase,
-    after_catch_up_events,
-    catch_up_owners,
-    catch_up_running,
-    hold_until_catch_up_ends,
-    job_perception_events,
-)
+from talemate.knowledge.revision_scope import active_revision_phase
 from talemate.scene_message import CharacterMessage, RevisionIndexRepair
 
 _archive_vector_repairs = WeakKeyDictionary()
-_catch_up_locks = WeakKeyDictionary()
 log = structlog.get_logger(__name__)
 
 
@@ -678,12 +667,11 @@ async def _refresh_perceptions(scene, message, identity, operations):
         return _current(scene, message, identity, operations)
 
     with revision_phase(scene, message, "perceptions"):
-        summarizer._register_perception_sources(scene, [message])
+        summarizer.register_perception_sources(scene, [message])
         await summarizer.ensure_perceptions(
             scene,
             before_message_id=message.id,
             still_current=operation_current,
-            counting=[message],
         )
     while True:
         perception_identity = _phase_identity(scene, message)
@@ -713,9 +701,7 @@ async def _refresh_perceptions(scene, message, identity, operations):
         message.set_revision_status("running", phase_receipts=receipts)
         try:
             with revision_phase(scene, message, "perceptions"):
-                await summarizer.ensure_perceptions(
-                    scene, still_current=still_current, counting=[message]
-                )
+                await summarizer.ensure_perceptions(scene, still_current=still_current)
             if not still_current():
                 raise GenerationCancelled(
                     "The selected version changed during analysis"
@@ -931,48 +917,13 @@ async def _refresh_revision(scene, message, identity, operations):
     return await _refresh(scene, message, identity, operations)
 
 
-_jobs = WeakKeyDictionary()
-
-
 async def refresh_revision(scene, message):
-    """Run or join the one scene-local job for this canonical revision."""
+    """Settle one revision."""
     if not revision_requires_refresh(scene, message):
         return revision_refresh_payload(scene, message)
     operations = revision_operations(scene, message)
     identity = _identity(scene, message, operations)
-    jobs = _jobs.setdefault(scene, {})
-    job = jobs.get(message.id)
-    if job is None or job.done() or getattr(job, "revision_identity", None) != identity:
-        job = asyncio.create_task(
-            _refresh_revision_job(scene, message, identity, operations)
-        )
-        job.revision_identity = identity
-        jobs[message.id] = job
-    try:
-        return await asyncio.shield(job)
-    finally:
-        if job.done() and jobs.get(message.id) is job:
-            jobs.pop(message.id, None)
-
-
-async def _refresh_revision_job(scene, message, identity, operations):
-    """
-    The refresh job owns the perception events of its analysis and sends
-    them when it ends, also when its waiter was cancelled: after a running
-    catch-up (generation waits for every pending revision), or in tasks.
-    """
-    events = JobEvents()
-    token = job_perception_events.set(events)
-    try:
-        return await _refresh_revision(scene, message, identity, operations)
-    finally:
-        job_perception_events.reset(token)
-        events.closed = True
-        if catch_up_running(scene):
-            hold_until_catch_up_ends(scene, events)
-        else:
-            for name, emission in events:
-                async_signals.send_soon(name, emission)
+    return await _refresh_revision(scene, message, identity, operations)
 
 
 def revisions_before_rebuild(scene) -> list:
@@ -1019,49 +970,10 @@ async def _repair_scene_indexes(scene) -> None:
 
 
 async def catch_up_revisions(scene) -> None:
-    """Await every pending revision in history order before new generation."""
-    # History listeners may push another message from inside this dispatch.
-    if catch_up_owners.get(scene) is asyncio.current_task():
-        return
-    lock = _catch_up_locks.setdefault(scene, asyncio.Lock())
-    held = []
-    try:
-        async with lock:
-            catch_up_owners[scene] = asyncio.current_task()
-            try:
-                await _catch_up_pending(scene)
-            finally:
-                catch_up_owners.pop(scene, None)
-                held = after_catch_up_events.pop(scene, [])
-    except BaseException:
-        for name, emission in held:
-            async_signals.send_soon(name, emission)
-        raise
-    # the lock is free: a listener's own catch-up finds nothing pending
-    for index, (name, emission) in enumerate(held):
-        try:
-            await async_signals.get(name).send(emission)
-        except BaseException:
-            for rest_name, rest in held[index + 1 :]:
-                async_signals.send_soon(rest_name, rest)
-            raise
-
-
-async def _catch_up_pending(scene) -> None:
+    """Settle every pending revision in history order."""
     await _repair_scene_indexes(scene)
     for message in list(scene.history):
         if message.revision_state is not None and revision_requires_refresh(
             scene, message
         ):
             await refresh_revision(scene, message)
-        if message.history_dispatch_pending:
-            if not any(entry is message for entry in scene.history):
-                continue
-            # Acceptance is durable before refresh; dispatch must not append
-            # or emit the player's line again after an interrupted refresh.
-            try:
-                await scene.dispatch_history([message])
-                message.history_dispatch_pending = False
-                message.history_dispatch_completed.clear()
-            finally:
-                await scene.attempt_auto_save()

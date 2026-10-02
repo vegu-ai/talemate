@@ -165,9 +165,6 @@ class SceneMessage(PerspectiveSourceModel):
 
     rev: int | None = None
 
-    history_dispatch_pending: bool = False
-    history_dispatch_completed: list[str] = pydantic.Field(default_factory=list)
-
     # active characters at push time; None when the scene never recorded it
     present: list[str] | None = None
 
@@ -465,10 +462,6 @@ class SceneMessage(PerspectiveSourceModel):
 
         if self.meta:
             rv["meta"] = self.meta
-
-        if self.history_dispatch_pending:
-            rv["history_dispatch_pending"] = True
-            rv["history_dispatch_completed"] = list(self.history_dispatch_completed)
 
         if self.present is not None:
             rv["present"] = list(self.present)

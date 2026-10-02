@@ -1,3 +1,10 @@
+from talemate.agents.summarize.perceptions import (
+    PERCEPTION_BACKLOG_THRESHOLD,
+    perception_backlog,
+    perception_passages,
+)
+from _knowledge_step_helpers import push_and_step
+from talemate.knowledge.step import knowledge_step
 import asyncio
 import json
 from pathlib import Path
@@ -63,11 +70,13 @@ async def test_saved_perspectives_survive_activation_after_reload(
     with ActiveScene(reloaded):
         await load_scene_from_data(reloaded, saved_data, name=str(saved_path))
         await activate_character(reloaded, "Carol")
-        summarizer = get_agent("summarizer")
         frames = []
         with answering("analyze", frames):
-            assert summarizer.check_perception_backlog(reloaded) is None
-            await summarizer.ensure_perceptions(reloaded)
+            assert (
+                perception_backlog(reloaded, perception_passages(reloaded)).total
+                <= PERCEPTION_BACKLOG_THRESHOLD
+            )
+            await knowledge_step(reloaded)
         request.assert_not_awaited()
         assert frames == []
         for message, original in zip(reloaded.history[:5], stored, strict=True):
@@ -169,9 +178,11 @@ async def test_absent_stale_ready_view_is_omitted_without_weakening_citations(
                 "The room is silent.",
             )
         stored = message.knowledge.model_dump()
-        summarizer = get_agent("summarizer")
-        assert summarizer.check_perception_backlog(scene) is None
-        await summarizer.ensure_perceptions(scene)
+        assert (
+            perception_backlog(scene, perception_passages(scene)).total
+            <= PERCEPTION_BACKLOG_THRESHOLD
+        )
+        await knowledge_step(scene)
         assert select_character_view(scene, reference, "Carol").status == "omitted"
         assert view_staleness(scene, reference, "Carol") is None
         assert project_character_history(scene, "Carol") == []
@@ -261,9 +272,11 @@ async def test_noncurrent_absent_view_does_not_block_generation(
             ],
         )
         stored = message.knowledge.model_dump()
-        summarizer = get_agent("summarizer")
-        assert summarizer.check_perception_backlog(scene) is None
-        await summarizer.ensure_perceptions(scene)
+        assert (
+            perception_backlog(scene, perception_passages(scene)).total
+            <= PERCEPTION_BACKLOG_THRESHOLD
+        )
+        await knowledge_step(scene)
         assert select_character_view(scene, reference, "Carol").status == "omitted"
         assert project_character_history(scene, "Carol") == []
         assert project_character_history(scene, "Bob")
@@ -284,7 +297,7 @@ async def test_no_cast_passage_is_omitted_before_and_after_hand_edit(
         excluding_passage(request),
     )
     with ActiveScene(scene):
-        await scene.push_history(message)
+        await push_and_step(scene, message)
         assert message.present is None
         assert message.knowledge is None
         await activate_character(scene, "Alice")
@@ -297,11 +310,13 @@ async def test_no_cast_passage_is_omitted_before_and_after_hand_edit(
         )
         scene.edit_message(message.id, "The room is silent.")
         stored = message.knowledge.model_dump()
-        summarizer = get_agent("summarizer")
         for _ in range(3):
-            await summarizer.ensure_perceptions(scene)
+            await knowledge_step(scene)
             assert project_character_history(scene, "Alice") == transition_history
-        assert summarizer.check_perception_backlog(scene) is None
+        assert (
+            perception_backlog(scene, perception_passages(scene)).total
+            <= PERCEPTION_BACKLOG_THRESHOLD
+        )
         assert message_view(scene, message, "Alice").status == "omitted"
         assert (
             select_character_view(
@@ -327,7 +342,7 @@ async def test_editing_passage_with_absent_view_repairs_present_character(
         excluding_passage(request),
     )
     with ActiveScene(scene):
-        await scene.push_history(message)
+        await push_and_step(scene, message)
         scene.active_characters.append("Carol")
         assert message.present == ["Alice"]
         absent = message_view(scene, message, "Carol")
@@ -352,8 +367,7 @@ async def test_editing_passage_with_absent_view_repairs_present_character(
         scene.edit_message(message.id, "Alice: The room is silent.")
         assert all(v.status == "pending" for v in message.knowledge.views)
         request.reset_mock()
-        summarizer = get_agent("summarizer")
-        await asyncio.wait_for(summarizer.ensure_perceptions(scene), 2)
+        await asyncio.wait_for(knowledge_step(scene), 2)
         request.assert_awaited_once()
         assert message.revision_feature_current("perceptions")
         assert [
@@ -372,7 +386,7 @@ async def test_editing_passage_with_absent_view_repairs_present_character(
             project_character_history(scene, "Alice")
         )
         assert project_character_history(scene, "Carol") == []
-        await summarizer.ensure_perceptions(scene)
+        await knowledge_step(scene)
         request.assert_awaited_once()
 
 
@@ -397,13 +411,13 @@ async def test_absent_pending_record_does_not_hold_back_readiness(scene, monkeyp
     )
     expected_views = [(("Carol",), "pending"), (("Alice",), "ready")]
     with ActiveScene(scene):
-        await scene.push_history(message)
+        await push_and_step(scene, message)
         scene.active_characters.append("Carol")
         edit_message_view(scene, message.id, "Carol", "I hear the bell.")
         scene.edit_message(message.id, "Alice: The room is silent.")
         statuses.clear()
         await asyncio.wait_for(
-            scene.push_history(CharacterMessage(message="Alice: The bell stops.")), 2
+            push_and_step(scene, CharacterMessage(message="Alice: The bell stops.")), 2
         )
         assert [s for s in statuses if s[0] == message.id][-1] == (message.id, "ready")
         assert [(v.audience, v.status) for v in message.knowledge.views] == (

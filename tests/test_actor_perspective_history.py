@@ -210,7 +210,7 @@ async def test_pending_lifecycle_stops_actor_request(cast, monkeypatch):
     monkeypatch.setattr(Prompt, "send", send)
     with pytest.raises(GenerationCancelled):
         await conversation.converse(scene.character_data["Bob"].actor)
-    ensure.assert_awaited_once_with(scene)
+    ensure.assert_awaited_once()
     send.assert_not_awaited()
 
 
@@ -548,51 +548,6 @@ async def test_retrieval_projects_owned_history(cast, monkeypatch):
     assert "Bob was away" not in extract.call_args.args[0]
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize("failure_in_prefix", [False, True])
-async def test_queued_revision_only_shares_cancellation_from_its_prefix(
-    cast, monkeypatch, failure_in_prefix
-):
-    import asyncio
-
-    scene, mixed = cast
-    summarizer = get_agent("summarizer")
-    target = CharacterMessage(message="Bob: Revision target.")
-    later = NarratorMessage(message="Later passage.")
-    scene.history.extend([target, later])
-    failed = mixed if failure_in_prefix else later
-    failed.present = ["Bob"]
-    set_source_perspectives(
-        scene, "message", failed.id, [{"audience": ["Bob"], "status": "failed"}]
-    )
-    entered = asyncio.Event()
-    release = asyncio.Event()
-    calls = []
-
-    async def analyze(scene, message):
-        calls.append(message.id)
-        entered.set()
-        await release.wait()
-        raise GenerationCancelled("Cancelled source analysis")
-
-    monkeypatch.setattr(summarizer, "analyze_perceptions", analyze)
-    whole_scene = asyncio.create_task(summarizer.ensure_perceptions(scene))
-    await entered.wait()
-    prefix = asyncio.create_task(
-        summarizer.ensure_perceptions(scene, before_message_id=target.id)
-    )
-    await asyncio.sleep(0)
-    release.set()
-    with pytest.raises(GenerationCancelled, match="Cancelled source"):
-        await whole_scene
-    if failure_in_prefix:
-        with pytest.raises(GenerationCancelled, match="Prerequisite"):
-            await prefix
-    else:
-        await prefix
-    assert calls == [failed.id]
-
-
 @pytest.mark.parametrize("format", ["movie_script", "ai_aware", "chat", "narrative"])
 def test_colonless_reader_message_cannot_become_speaker_header(
     cast, monkeypatch, format
@@ -613,39 +568,6 @@ def test_colonless_reader_message_cannot_become_speaker_header(
     assert text.strip() == "Someone walks in."
     assert "4417" not in text
     assert mixed.model_dump() == original
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("already_failed", [False, True])
-async def test_later_failure_cannot_mask_prefix_cancellation(
-    cast, monkeypatch, already_failed
-):
-    import asyncio
-
-    scene, mixed = cast
-    summarizer = get_agent("summarizer")
-    target = CharacterMessage(message="Bob: Revision target.")
-    later = NarratorMessage(message="Later passage.")
-    scene.history.extend([target, later])
-    set_source_perspectives(
-        scene, "message", mixed.id, [{"audience": ["Bob"], "status": "failed"}]
-    )
-    failures = summarizer._perception_failures.setdefault(scene, {})
-    if already_failed:
-        failures[mixed.id] = 1
-    lock = summarizer._perception_locks.setdefault(scene, asyncio.Lock())
-    analyze = AsyncMock()
-    monkeypatch.setattr(summarizer, "analyze_perceptions", analyze)
-    async with lock:
-        waiter = asyncio.create_task(
-            summarizer.ensure_perceptions(scene, before_message_id=target.id)
-        )
-        await asyncio.sleep(0)
-        failures[mixed.id] = failures.get(mixed.id, 0) + 1
-        failures[later.id] = failures.get(later.id, 0) + 1
-    with pytest.raises(GenerationCancelled, match="Prerequisite"):
-        await waiter
-    analyze.assert_not_awaited()
 
 
 @pytest.mark.asyncio

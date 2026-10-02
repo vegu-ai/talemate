@@ -1,4 +1,4 @@
-"""Perception backlog state that outlives one call: Cancel answers and pushed passages."""
+"""Perception backlog state that outlives one call: Cancel answers and the step's new lines."""
 
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -11,8 +11,9 @@ if TYPE_CHECKING:
 _cancels: WeakKeyDictionary = WeakKeyDictionary()
 # (scene, Cancel count) when the current action started
 _action: ContextVar = ContextVar("perception_backlog_action", default=None)
-# (scene, passages) that the running push appends after its catch-up
-_pushing: ContextVar = ContextVar("perception_backlog_pushing", default=None)
+# (scene, {id: requests}) of the new lines the running knowledge step registers
+# after its catch-up
+_new_lines: ContextVar = ContextVar("perception_backlog_new_lines", default=None)
 
 
 def record_cancel(scene: "Scene") -> None:
@@ -45,15 +46,17 @@ def cancel_stops_other_questions(scene: "Scene"):
 
 
 @contextmanager
-def counting_pushed(scene: "Scene", count: int):
-    """Count the passages a push appends in the questions of its catch-up."""
-    token = _pushing.set((scene, count))
+def counting_new_lines(scene: "Scene", requests: dict[int, int]):
+    """Count the step's new lines in a question asked before they are registered."""
+    token = _new_lines.set((scene, requests))
     try:
         yield
     finally:
-        _pushing.reset(token)
+        _new_lines.reset(token)
 
 
-def pushed_count(scene: "Scene") -> int:
-    pushing = _pushing.get()
-    return pushing[1] if pushing is not None and pushing[0] is scene else 0
+def counted_new_lines(scene: "Scene") -> dict[int, int]:
+    new_lines = _new_lines.get()
+    if new_lines is None or new_lines[0] is not scene:
+        return {}
+    return new_lines[1]

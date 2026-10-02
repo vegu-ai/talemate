@@ -23,7 +23,7 @@ export const CHARACTER_KNOWLEDGE_MODES = [
     {
         key: 'perception',
         title: 'Character perspectives',
-        summary: 'After every passage the AI writes what each character actually perceived, and their replies are grounded in that. Hands-off for you: keep secrets out of the shared description, mark private entries, hand out knowledge with a disclosure when needed. One extra analytical request per passage; needs a strong, reliable model. Best for stories with secrets and several active characters who know different things.',
+        summary: 'Before each generation the AI writes what each character actually perceived of the new passages, and their replies are grounded in that. Hands-off for you: keep secrets out of the shared description, mark private entries, hand out knowledge with a disclosure when needed. One extra analytical request per passage; needs a strong, reliable model. Best for stories with secrets and several active characters who know different things.',
         pros: [
             'Characters only know what they actually perceived',
             'Secrets hold without hand-tuning',

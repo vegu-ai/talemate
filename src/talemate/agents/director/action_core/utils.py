@@ -27,9 +27,12 @@ from talemate.util.prompt import (
     auto_close_tags,
 )
 from talemate.instance import get_agent
-from talemate.knowledge.advice import advice_fingerprint, require_current_advice
+from talemate.knowledge.advice import (
+    advice_fingerprint,
+    require_advice_scene,
+    warn_stale_advice,
+)
 from talemate.knowledge.mode import character_knowledge_enabled
-from talemate.knowledge.processing import wait_for_evidence_writers
 from talemate.agents.director.response_specs import (
     MESSAGE_SPEC,
     DECISION_SPEC,
@@ -660,13 +663,15 @@ async def execute_actions(
 
         async def _make_fn(wrapper, action_name: str):
             async def _call(_focal_call=None, **kwargs):
-                nonlocal batch_admitted
-                if check_evidence and not batch_admitted:
-                    require_current_advice(
-                        get_agent("director"), scene, None, fingerprint
-                    )
-                    # A generated batch may change its own evidence after admission.
-                    batch_admitted = True
+                nonlocal batch_checked
+                if check_evidence:
+                    require_advice_scene(get_agent("director"), scene)
+                    if not batch_checked:
+                        warn_stale_advice(
+                            get_agent("director"), scene, None, fingerprint
+                        )
+                        # later calls of the batch change the evidence themselves
+                        batch_checked = True
                 try:
                     return await wrapper(_focal_call=_focal_call, **kwargs)
                 except ActionRejected:
@@ -784,13 +789,10 @@ async def execute_actions(
         if on_action_complete:
             await on_action_complete(action_msg)
 
-    await wait_for_evidence_writers(
-        scene, agent=get_agent("director"), purpose="scene direction"
-    )
     fingerprint = advice_fingerprint(scene)
 
     check_evidence = character_knowledge_enabled(scene)
-    batch_admitted = False
+    batch_checked = False
 
     with focal.FocalContext() as focal_context:
         focal_context.hooks_after_call.append(on_call_complete)

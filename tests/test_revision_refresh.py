@@ -1,3 +1,5 @@
+from talemate.knowledge.step import knowledge_step
+from _knowledge_step_helpers import push_and_step
 import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -31,7 +33,7 @@ async def revised(setup, monkeypatch):
     scene, summarizer, request = setup
     message = NarratorMessage(message="The harbor bell rings once.")
     message.append_version("The harbor bell rings twice.", "regenerate")
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     baseline = message.knowledge
     scene.world_state.manual_context["harbor"] = ManualContext(
         id="harbor", text="The harbor closes at sunset."
@@ -169,7 +171,7 @@ async def test_return_after_failed_refresh_restores_views_and_keeps_later_grant(
 
 
 @pytest.mark.asyncio
-async def test_concurrent_refresh_and_next_send_share_analysis(revised):
+async def test_concurrent_steps_analyze_a_revision_once(revised):
     t = revised
     started, release = asyncio.Event(), asyncio.Event()
 
@@ -179,11 +181,11 @@ async def test_concurrent_refresh_and_next_send_share_analysis(revised):
         return test_perception_lifecycle.result()
 
     t.request.side_effect = analyze
-    first = asyncio.create_task(refresh_revision(t.scene, t.message))
+    first = asyncio.create_task(knowledge_step(t.scene))
     second = None
     try:
         await asyncio.wait_for(started.wait(), 3)
-        second = asyncio.create_task(catch_up_revisions(t.scene))
+        second = asyncio.create_task(knowledge_step(t.scene))
         await asyncio.sleep(0)
     finally:
         release.set()

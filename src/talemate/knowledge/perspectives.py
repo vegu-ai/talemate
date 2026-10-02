@@ -950,7 +950,9 @@ def has_stored_views(
     )
 
 
-def keep_stored_views(scene: "Scene", message_id: int) -> bool:
+def keep_stored_source_views(
+    scene: "Scene", key: tuple[Literal["message", "summary"], str | int, int]
+) -> bool:
     """
     Accept the stored ready and omitted views as current. Revisions stay, so no
     dependent becomes stale; a citation that cannot be made current is dropped.
@@ -958,7 +960,7 @@ def keep_stored_views(scene: "Scene", message_id: int) -> bool:
     from talemate.knowledge.revision_refresh import capture_revision_mutations
 
     _require_enabled(scene)
-    source = _find(scene, ("message", message_id, 0))
+    source = _find(scene, key)
     if (
         source is None
         or source.knowledge is None
@@ -967,28 +969,36 @@ def keep_stored_views(scene: "Scene", message_id: int) -> bool:
         )
     ):
         return False
+    if source.kind != "message":
+        _keep_stored(scene, source)
+        return True
     message = source.owner
     with capture_revision_mutations(scene, message=message):
         message.mark_revision_feature("perceptions")
-        source.knowledge = source.knowledge.model_copy(
-            update={"content_digest": content_digest(source.text)}
-        )
-        read = PerspectiveReadContext(scene)
-        own = source.reference()
-        source.knowledge = source.knowledge.model_copy(
-            update={
-                "views": tuple(
-                    _kept_view(scene, view, own, read)
-                    if view.status in ("ready", "omitted")
-                    else view
-                    for view in source.knowledge.views
-                )
-            }
-        )
+        _keep_stored(scene, source)
     return True
 
 
-def _kept_view(scene, view, own, read):
+def _keep_stored(scene, source) -> None:
+    source.knowledge = source.knowledge.model_copy(
+        update={"content_digest": content_digest(source.text)}
+    )
+    read = PerspectiveReadContext(scene)
+    own = source.reference()
+    readable = "summary" if source.kind == "summary" else None
+    source.knowledge = source.knowledge.model_copy(
+        update={
+            "views": tuple(
+                _kept_view(scene, view, own, read, readable=readable)
+                if view.status in ("ready", "omitted")
+                else view
+                for view in source.knowledge.views
+            )
+        }
+    )
+
+
+def _kept_view(scene, view, own, read, *, readable=None):
     provenance = []
     for item in view.passage_provenance:
         cited = _find(scene, ("message", item.message_id, 0), read)
@@ -1006,7 +1016,12 @@ def _kept_view(scene, view, own, read):
         current = _current_citation(scene, dependency, read)
         if current is not None and all(
             _fresh(
-                scene, current, name, {own}, readable=view.status == "ready", read=read
+                scene,
+                current,
+                name,
+                {own},
+                readable=view.status == "ready" if readable is None else readable,
+                read=read,
             )
             for name in view.audience
         ):

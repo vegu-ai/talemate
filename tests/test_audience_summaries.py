@@ -1,12 +1,14 @@
 import asyncio
+from types import SimpleNamespace
 import json
 from pathlib import Path
 from copy import deepcopy
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from _perception_backlog_helpers import answering
+from structlog.testing import capture_logs
 import talemate.emit.async_signals
-import talemate.agents.summarize.audience_summaries as audience_summary_module
 
 from talemate.character import Character
 from talemate.context import ActiveScene
@@ -111,7 +113,6 @@ def summary_scene(scene, monkeypatch, request):
     if not getattr(request, "param", False):
         monkeypatch.setattr(summarizer, "summarize", summarize)
         monkeypatch.setattr(summarizer, "summarize_events", summarize)
-    monkeypatch.setattr(summarizer, "schedule_audience_summaries", AsyncMock())
     with ActiveScene(scene):
         yield scene, summarizer, calls
 
@@ -378,7 +379,7 @@ async def test_legacy_summary_helper_adds_no_requests_or_records(
     scene, summarizer, calls = summary_scene
     scene.knowledge_eligibility = "legacy"
     await summarizer.ensure_summary_views(scene, "base-a")
-    await summarizer.schedule_audience_summaries(scene)
+    await summarizer.repair_summary_views(scene)
     assert calls == []
     assert "knowledge" not in scene.archived_history[0]
 
@@ -586,30 +587,6 @@ async def test_unrelated_edit_does_not_retry_cancelled_summary_branch(
 
 
 @pytest.mark.asyncio
-async def test_summary_repair_is_scheduled_off_the_callers_receive_loop(
-    summary_scene, monkeypatch
-):
-    scene, summarizer, _ = summary_scene
-    await generate_all(scene, summarizer)
-    scene.edit_message(scene.history[0].id, "An edited passage.")
-    release = asyncio.Event()
-
-    async def repair(scene):
-        await release.wait()
-        summarizer._summary_dirty[scene].clear()
-
-    monkeypatch.setattr(summarizer, "repair_summary_views", repair)
-    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
-    await asyncio.wait_for(
-        type(summarizer).schedule_audience_summaries(summarizer, scene), 0.5
-    )
-    task = summarizer._summary_rebuild_tasks[scene]
-    assert not task.done()
-    release.set()
-    await task
-
-
-@pytest.mark.asyncio
 async def test_oversize_layer_falls_back_to_fitting_base_views(
     summary_scene, monkeypatch
 ):
@@ -695,8 +672,7 @@ async def test_joining_cast_builds_partial_layer_and_drains_queue(summary_scene)
     await summarizer.repair_summary_views(scene)
     assert not summarizer._summary_dirty[scene]
     before = len(calls)
-    await type(summarizer).schedule_audience_summaries(summarizer, scene)
-    assert scene not in summarizer._summary_rebuild_tasks
+    await summarizer.repair_summary_views(scene)
     assert len(calls) == before
     outputs = deepcopy(scene.archived_history[0]["knowledge"]["views"])
     for output in outputs:
@@ -834,13 +810,11 @@ async def test_mid_repair_edit_is_processed_without_another_trigger(
         if first:
             first = False
             publish(scene, scene.history[3], "A new bell.", "A new bell.")
-            await type(summarizer).schedule_audience_summaries(summarizer, scene)
         return await original(text, **kwargs)
 
     monkeypatch.setattr(summarizer, "summarize", respond)
     monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
-    await type(summarizer).schedule_audience_summaries(summarizer, scene)
-    await summarizer._summary_rebuild_tasks[scene]
+    await summarizer.repair_summary_views(scene)
     assert "new bell" in selected(scene, "base-c").text
     assert not summarizer._summary_dirty[scene]
 
@@ -861,8 +835,6 @@ async def test_pending_inputs_wait_without_busy_repair_and_wake_on_readiness(
     assert not calls
     assert not summarizer._summary_dirty[scene]
     assert summarizer._summary_waiting[scene]
-    await type(summarizer).schedule_audience_summaries(summarizer, scene)
-    assert scene not in summarizer._summary_rebuild_tasks
     publish(scene, scene.history[0], PRIVATE, CLAIM)
     await summarizer.repair_summary_views(scene)
     assert selected(scene, "base-a").status == "ready"
@@ -1035,13 +1007,8 @@ async def test_cancelled_layer_does_not_stop_reader_chunk_commits(
 
 
 @pytest.mark.asyncio
-async def test_repair_continues_after_bounded_batch(summary_scene, monkeypatch):
+async def test_repair_retries_until_the_inputs_hold(summary_scene, monkeypatch):
     scene, summarizer, _ = summary_scene
-    monkeypatch.setattr(
-        summarizer,
-        "schedule_audience_summaries",
-        type(summarizer).schedule_audience_summaries.__get__(summarizer),
-    )
     count = 0
 
     async def respond(text, **kwargs):
@@ -1057,19 +1024,10 @@ async def test_repair_continues_after_bounded_batch(summary_scene, monkeypatch):
     monkeypatch.setattr(summarizer, "summarize", respond)
     monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
     await summarizer.queue_summary_views(scene, "base-a")
-    await type(summarizer).schedule_audience_summaries(summarizer, scene)
 
-    async def complete():
-        while True:
-            await summarizer._summary_rebuild_tasks[scene]
-            await asyncio.sleep(0)
-            if not summarizer._summary_dirty[scene]:
-                return
-
-    await asyncio.wait_for(complete(), 2)
+    await asyncio.wait_for(summarizer.repair_summary_views(scene), 2)
     assert count == 10
     assert selected(scene, "base-a", "Alice").status == "ready"
-    assert scene.attempt_auto_save.await_count == 1
 
 
 @pytest.mark.asyncio
@@ -1083,9 +1041,7 @@ async def test_background_queue_keeps_generation_options(summary_scene):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("summary_scene", [True], indirect=True)
-async def test_real_cancel_poll_clears_scene_flag_before_sibling(
-    summary_scene, monkeypatch
-):
+async def test_real_cancel_poll_stops_before_sibling(summary_scene, monkeypatch):
     scene, summarizer, _ = summary_scene
     scene.active = True
     sent = []
@@ -1109,14 +1065,14 @@ async def test_real_cancel_poll_clears_scene_flag_before_sibling(
 
     monkeypatch.setattr(summarizer.client, "generate", generate, raising=False)
     monkeypatch.setattr(summarizer.client, "send_prompt", send_prompt)
-    await asyncio.wait_for(summarizer.ensure_summary_views(scene, "base-a"), 2)
+    with pytest.raises(GenerationCancelled):
+        await asyncio.wait_for(summarizer.ensure_summary_views(scene, "base-a"), 2)
     assert interrupted.is_set()
     assert not scene.cancel_requested
-    assert len(sent) == 2
+    assert len(sent) == 1
     assert "This is a record for Alice " in str(sent[0])
-    assert "This is a record for Bob, Cara " in str(sent[1])
-    assert selected(scene, "base-a", "Alice").status == "failed"
-    assert selected(scene, "base-a").status == "ready"
+    assert selected(scene, "base-a", "Alice").status != "failed"
+    assert (0, "base-a", "Alice") in summarizer._summary_dirty[scene]
 
 
 @pytest.mark.asyncio
@@ -1184,17 +1140,10 @@ async def test_deleted_uncited_message_cannot_widen_summary(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("entry_point", ["summary", "perception"])
-async def test_final_batch_waiter_runs_from_every_repair_entry(
-    summary_scene, monkeypatch, entry_point
+async def test_a_layer_waiting_on_its_base_is_built_in_the_same_repair(
+    summary_scene, monkeypatch
 ):
     scene, summarizer, _ = summary_scene
-    monkeypatch.setattr(audience_summary_module, "MAX_SUMMARY_REPAIR_PASSES", 1)
-    monkeypatch.setattr(
-        summarizer,
-        "schedule_audience_summaries",
-        type(summarizer).schedule_audience_summaries.__get__(summarizer),
-    )
     monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
     await summarizer.ensure_summary_views(scene, "base-b")
     await summarizer.ensure_summary_views(scene, "layer-a", 1)
@@ -1202,49 +1151,11 @@ async def test_final_batch_waiter_runs_from_every_repair_entry(
     summarizer._summary_dirty.setdefault(scene, set()).update(
         (0, "base-a", name) for name in ("Alice", "Bob", "Cara")
     )
-    if entry_point == "summary":
-        await summarizer.schedule_audience_summaries(scene)
-    else:
-        monkeypatch.setattr(summarizer, "ensure_perceptions", AsyncMock())
-        perception_task = await summarizer.rebuild_perceptions(scene)
-        await perception_task
-    task = summarizer._summary_rebuild_tasks[scene]
-    await asyncio.wait_for(task, 2)
+    await summarizer.repair_summary_views(scene)
     assert selected(scene, "layer-a", layer=1).status == "ready"
     assert selected(scene, "layer-a", "Alice", 1).status == "ready"
     assert not summarizer._summary_dirty[scene]
     assert not summarizer._summary_waiting[scene]
-
-
-@pytest.mark.asyncio
-async def test_work_queued_during_autosave_stays_in_retained_task(
-    summary_scene, monkeypatch
-):
-    scene, summarizer, _ = summary_scene
-    monkeypatch.setattr(
-        summarizer,
-        "schedule_audience_summaries",
-        type(summarizer).schedule_audience_summaries.__get__(summarizer),
-    )
-    saves = 0
-    tasks = []
-
-    async def save():
-        nonlocal saves
-        saves += 1
-        tasks.append(asyncio.current_task())
-        if saves == 1:
-            publish(scene, scene.history[0], "Alice corrects her claim.", CLAIM)
-            await summarizer.queue_summary_views(scene, "base-a")
-
-    monkeypatch.setattr(scene, "attempt_auto_save", save)
-    await summarizer.queue_summary_views(scene, "base-a")
-    task = summarizer._summary_rebuild_tasks[scene]
-    await asyncio.wait_for(task, 2)
-    assert saves == 2
-    assert tasks == [task, task]
-    assert not summarizer._summary_dirty[scene]
-    assert "Alice corrects her claim" in selected(scene, "base-a", "Alice").text
 
 
 @pytest.mark.parametrize("older_count", [0, 200, 2000])
@@ -1328,3 +1239,232 @@ def test_history_projection_resolves_protected_return_once(summary_scene, monkey
     result = project_character_history(scene, "Bob")
     assert result
     spy.assert_called_once_with(scene, "Bob")
+
+
+@pytest.mark.asyncio
+async def test_stop_during_a_summary_view_stops_the_generation(
+    summary_scene, monkeypatch
+):
+    from talemate.agents.narrator import _narration
+
+    from talemate.knowledge.step import knowledge_step
+
+    scene, summarizer, _ = summary_scene
+    narrator = get_agent("narrator")
+    monkeypatch.setattr(narrator, "scene", scene)
+    await summarizer.queue_summary_views(scene, "base-a")
+    summarize = summarizer.summarize
+    names = ("Alice", "Bob", "Cara")
+
+    async def stopped(*args, **kwargs):
+        scene.interrupt()
+        raise GenerationCancelled("Generation cancelled by user", by_user=True)
+
+    monkeypatch.setattr(summarizer, "summarize", stopped)
+    generated = AsyncMock()
+    with pytest.raises(GenerationCancelled):
+        await _narration(narrator, generated, (), {})
+    generated.assert_not_awaited()
+    # Alice's group was stopped; Bob and Cara's group had not started
+    assert summarizer._summary_dirty[scene] == {(0, "base-a", name) for name in names}
+    assert all(selected(scene, "base-a", name).status != "failed" for name in names)
+
+    monkeypatch.setattr(summarizer, "summarize", summarize)
+    await knowledge_step(scene)
+    assert all(selected(scene, "base-a", name).status == "ready" for name in names)
+
+
+@pytest.mark.asyncio
+async def test_a_stop_keeps_a_group_the_user_ignored_out_of_the_queue(
+    summary_scene, monkeypatch
+):
+    from talemate.knowledge.step import knowledge_step
+
+    scene, summarizer, _ = summary_scene
+    await summarizer.queue_summary_views(scene, "base-a")
+    summarize = summarizer.summarize
+
+    async def fail_then_stop(text, **kwargs):
+        if kwargs["audience"] == ("Alice",):
+            raise RuntimeError("empty response")
+        scene.interrupt()
+        raise GenerationCancelled("Generation cancelled by user", by_user=True)
+
+    monkeypatch.setattr(summarizer, "summarize", fail_then_stop)
+    monkeypatch.setattr(
+        summarizer.client,
+        "_prompt_generation_error",
+        AsyncMock(return_value="ignore"),
+        raising=False,
+    )
+    with pytest.raises(GenerationCancelled):
+        await knowledge_step(scene)
+    assert summarizer._summary_dirty[scene] == {
+        (0, "base-a", "Bob"),
+        (0, "base-a", "Cara"),
+    }
+    assert selected(scene, "base-a", "Alice").status == "failed"
+
+    monkeypatch.setattr(summarizer, "summarize", summarize)
+    await knowledge_step(scene)
+    assert selected(scene, "base-a", "Alice").status == "failed"
+    assert selected(scene, "base-a", "Bob").status == "ready"
+
+
+@pytest.mark.asyncio
+async def test_an_approved_rebuild_builds_every_queued_summary_with_progress(
+    summary_scene, monkeypatch
+):
+    import talemate.status
+
+    from talemate.knowledge.step import knowledge_step
+
+    scene, summarizer, _ = summary_scene
+    scene.archived_history += [
+        ArchiveEntry(id=f"extra-{index}", text="READER", start=4, end=4).model_dump(
+            exclude_none=True
+        )
+        for index in range(6)
+    ]
+    for entry in scene.archived_history:
+        await summarizer.queue_summary_views(scene, entry["id"])
+    await summarizer.queue_summary_views(scene, "layer-a", 1)
+    statuses, frames = [], []
+    monkeypatch.setattr(
+        talemate.status,
+        "emit",
+        lambda typ, message="", status="", **kwargs: statuses.append(message),
+    )
+    with capture_logs() as logs, answering("analyze", frames):
+        await knowledge_step(scene)
+    assert len(frames) == 1
+    assert frames[0]["perceptions"] is None
+    summaries = frames[0]["summaries"]["rebuild"]
+    assert (summaries["entries"], summaries["layers"]) == (10, [0, 1])
+    assert summaries["characters"] == ["Alice", "Bob", "Cara"]
+    logged = [entry for entry in logs if entry["event"] == "summary backlog entry"]
+    assert len(logged) == summaries["total"]
+    assert {entry["check"] for entry in logged} <= {
+        "queued",
+        "no_record",
+        "view_status",
+    }
+    assert not summarizer._summary_dirty[scene]
+    assert not summarizer._summary_waiting[scene]
+    identities = [entry["id"] for entry in scene.archived_history]
+    assert all(selected(scene, identity).status == "ready" for identity in identities)
+    assert selected(scene, "layer-a", layer=1).status == "ready"
+    progress = [message for message in statuses if message]
+    assert progress[0] == f"Updating character summaries [1/{len(identities) + 1}]"
+    assert progress[-1].endswith(f"[{len(progress)}/{len(progress)}]")
+
+
+@pytest.mark.asyncio
+async def test_a_released_scene_ends_the_repair_and_keeps_the_queue(
+    summary_scene, monkeypatch
+):
+    scene, summarizer, _ = summary_scene
+    await summarizer.queue_summary_views(scene, "base-a")
+    monkeypatch.setattr(summarizer, "scene", SimpleNamespace())
+    await summarizer.repair_summary_views(scene)
+    assert summarizer._summary_dirty[scene] == {
+        (0, "base-a", name) for name in ("Alice", "Bob", "Cara")
+    }
+
+
+async def extra_entries(scene, summarizer, count):
+    """`count` built base entries over the last passage, so one edit dirties them all."""
+    scene.archived_history += [
+        ArchiveEntry(id=f"extra-{index}", text="READER", start=4, end=4).model_dump(
+            exclude_none=True
+        )
+        for index in range(count)
+    ]
+    for index in range(count):
+        await summarizer.ensure_summary_views(scene, f"extra-{index}")
+    assert all(
+        selected(scene, f"extra-{index}").status == "ready" for index in range(count)
+    )
+
+
+def change_last_passage(scene):
+    message = scene.history[4]
+    publish(scene, message, "Bob changes his account.", "Bob changes his account.")
+
+
+@pytest.mark.asyncio
+async def test_a_small_summary_backlog_rebuilds_without_a_question(
+    summary_scene, monkeypatch
+):
+    from talemate.knowledge.step import knowledge_step
+
+    scene, summarizer, calls = summary_scene
+    await extra_entries(scene, summarizer, 3)
+    change_last_passage(scene)
+    before = len(calls)
+    frames = []
+    with answering(None, frames):
+        await knowledge_step(scene)
+    assert frames == []
+    assert len(calls) > before
+    assert all(
+        selected(scene, f"extra-{index}").status == "ready" for index in range(3)
+    )
+
+
+@pytest.mark.asyncio
+async def test_keep_current_summaries_makes_them_current_without_a_request(
+    summary_scene, monkeypatch
+):
+    from talemate.knowledge.step import knowledge_step
+
+    scene, summarizer, calls = summary_scene
+    await extra_entries(scene, summarizer, 5)
+    # a newer revision of the cited passage without an invalidation, as a
+    # browsed revision leaves it: the stored summary texts survive
+    message = scene.history[4]
+    object.__setattr__(
+        message,
+        "knowledge",
+        message.knowledge.model_copy(
+            update={"revision": message.knowledge.revision + 1}
+        ),
+    )
+    for index in range(5):
+        await summarizer.queue_summary_views(scene, f"extra-{index}")
+    assert selected(scene, "extra-0").status == "pending"
+    before = len(calls)
+    frames = []
+    with answering("keep", frames):
+        await knowledge_step(scene)
+    assert len(frames) == 1
+    assert frames[0]["summaries"]["keep"]["keepable"] == 5
+    assert frames[0]["summaries"]["keep"]["keep_requests"] == 0
+    assert len(calls) == before
+    assert all(
+        selected(scene, f"extra-{index}").status == "ready" for index in range(5)
+    )
+    assert not summarizer._summary_dirty[scene]
+
+
+@pytest.mark.asyncio
+async def test_cancel_on_a_summary_backlog_stops_and_asks_again(
+    summary_scene, monkeypatch
+):
+    from talemate.knowledge.step import knowledge_step
+
+    scene, summarizer, calls = summary_scene
+    await extra_entries(scene, summarizer, 5)
+    change_last_passage(scene)
+    before = len(calls)
+    frames = []
+    with answering("cancel", frames), pytest.raises(GenerationCancelled):
+        await knowledge_step(scene)
+    assert len(calls) == before
+    assert selected(scene, "extra-0").status == "pending"
+    with answering("analyze", frames):
+        await knowledge_step(scene)
+    assert len(frames) == 2
+    assert all(
+        selected(scene, f"extra-{index}").status == "ready" for index in range(5)
+    )

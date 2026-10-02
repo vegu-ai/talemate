@@ -57,9 +57,6 @@ async def send_queued_frames(websocket, message_queue: asyncio.Queue) -> Excepti
             await websocket.send(payload)
         except WEBSOCKET_DISCONNECT_EXCEPTIONS as exc:
             return exc
-        finally:
-            # WebsocketHandler.flush joins the queue
-            message_queue.task_done()
 
 
 async def client_status_loop(interval: float = 3.0):

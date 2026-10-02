@@ -60,7 +60,6 @@ def disclosure_scene(scene, monkeypatch):
     ]
     summarizer = get_agent("summarizer")
     summarizer.connect(scene)
-    monkeypatch.setattr(summarizer, "schedule_audience_summaries", AsyncMock())
     monkeypatch.setattr(
         summarizer.client, "_prompt_generation_error", AsyncMock(return_value="cancel")
     )

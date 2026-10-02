@@ -305,7 +305,7 @@ While a refresh is in progress a :material-close: cancel icon is shown in place 
 
 The snapshot refreshes automatically every several character turns (each player or AI turn counts), on a cadence you can set in the [World State Agent settings](/talemate/user-guide/agents/world-state/settings/#turns).
 
-If the agent's text-generation client supports running more than one request at a time, the snapshot is generated quietly in the background and you can keep playing while it works. Otherwise it runs in the foreground so it doesn't compete with your other actions on the same client. Either way, manual refreshes behave the same and can be cancelled mid-generation.
+If the agent's text-generation client supports running more than one request at a time, the snapshot is generated quietly in the background and you can keep playing while it works. Otherwise, and always in Character perspectives mode, it runs in the foreground: in Character perspectives mode its character views are part of character knowledge, which is updated one request at a time. Either way, manual refreshes behave the same and can be cancelled mid-generation.
 
 ## :material-pin: Pinning the snapshot to the scene
 

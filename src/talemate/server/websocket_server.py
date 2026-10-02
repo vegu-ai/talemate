@@ -51,9 +51,6 @@ __all__ = [
 
 log = structlog.get_logger("talemate.server.websocket_server")
 
-# seconds a flush waits for the send task; a closed socket never sends
-FLUSH_TIMEOUT = 1.0
-
 AGENT_INSTANCES = {}
 
 
@@ -304,7 +301,6 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 return
 
             with ActiveScene(scene):
-                instance.get_agent("summarizer").check_perception_backlog(scene)
                 await scene.start(history_visible=True)
         except Exception:
             log.error("load_scene", error=traceback.format_exc())
@@ -332,15 +328,6 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 },
             }
         )
-
-    async def flush(self):
-        """Wait until the send task has sent every frame queued so far."""
-        # queue_put schedules the put for the next loop iteration
-        await asyncio.sleep(0)
-        try:
-            await asyncio.wait_for(self.out_queue.join(), FLUSH_TIMEOUT)
-        except asyncio.TimeoutError:
-            log.warning("websocket flush timed out", pending=self.out_queue.qsize())
 
     def queue_put(self, data):
         # Get the current event loop

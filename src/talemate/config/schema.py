@@ -9,6 +9,7 @@ import structlog
 from typing_extensions import Annotated
 
 import talemate.emit.async_signals as async_signals
+from talemate.knowledge.revision_scope import hold_for_step
 
 from talemate.client.registry import get_client_class
 from talemate.client.system_prompts import SystemPrompts
@@ -894,8 +895,10 @@ class Config(pydantic.BaseModel):
 
     async def set_dirty(self) -> list[tuple]:
         self.dirty = True
-        failures = await async_signals.get("config.changed").send(self)
-        failures += await async_signals.get("config.changed.follow").send(self)
+        failures = []
+        for name in ("config.changed", "config.changed.follow"):
+            if not hold_for_step(name, self):
+                failures += await async_signals.get(name).send(self)
         return failures
 
 

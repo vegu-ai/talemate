@@ -52,9 +52,6 @@ async def pin_load_scene(persistence_scene_factory, tmp_path, monkeypatch):
             ),
         )
         yield scene, memory
-        state = memory._audience_state(scene)
-        if state.task is not None:
-            await state.task
 
 
 @pytest.fixture

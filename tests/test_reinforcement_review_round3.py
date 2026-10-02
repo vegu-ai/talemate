@@ -2,6 +2,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from talemate.knowledge.step import knowledge_step
+
 import test_reinforcement_perspectives as cases
 from _perception_response_helpers import excluding_passage
 from test_reinforcement_review import response
@@ -78,6 +80,7 @@ async def test_context_db_detail_round_trips_real_prefixed_document(
         cases.READER,
         False,
     )
+    await knowledge_step(scene)
     manager = scene.world_state_manager
     identity = f"Marie.detail.{cases.QUESTION}"
     binding = entry_binding(scene, identity)
@@ -199,6 +202,7 @@ async def test_context_db_save_does_not_overwrite_a_refresh_during_document_read
         cases.READER,
         False,
     )
+    await knowledge_step(scene)
     manager = scene.world_state_manager
     identity = f"Marie.detail.{cases.QUESTION}"
     character = scene.character_data["Marie"]
@@ -231,6 +235,7 @@ async def test_context_db_save_does_not_overwrite_a_refresh_during_document_read
                 answer,
                 False,
             )
+            await knowledge_step(scene)
             assert entry_binding(scene, identity) is not old_binding
         refreshed["binding"] = entry_binding(scene, identity)
         refreshed["text"] = character.details[cases.QUESTION]

@@ -76,7 +76,6 @@ List of currently supported events.
 | [`agent.summarization.after_build_archive`](#agentsummarizationafter_build_archive) | Summarization Agent |
 | [`agent.summarization.layered_history.finalize`](#agentsummarizationlayered_historyfinalize) | Summarization Agent |
 | [`agent.summarization.rag_build_sub_instruction`](#agentsummarizationrag_build_sub_instruction) | Summarization Agent |
-| [`agent.summarization.perceptions.before`](#agentsummarizationperceptionsbefore) | Summarization Agent |
 | [`agent.summarization.perceptions.after`](#agentsummarizationperceptionsafter) | Summarization Agent |
 | [`agent.summarization.perceptions.failed`](#agentsummarizationperceptionsfailed) | Summarization Agent |
 | [`agent.tts.prepare.before`](#agentttspreparebefore) | TTS Agent |
@@ -369,7 +368,7 @@ Handlers can edit `generation` in-place to clean up or transform the text (the E
 
 ### agent.conversation.finalized
 
-Emitted once a character's message is in the history and the follow-up work on it is done: perceptions, summaries and voice preparation. The message is already visible to the player at this point.
+Emitted once a character's message is in the history, after it is shown to the player and before the new-message listeners (voice preparation, archive summaries) run. In Character perspectives mode its perspectives do not exist yet: they are analyzed before the next generation, which `agent.summarization.perceptions.after` reports.
 Handlers can set `avatar` to an asset id to change the portrait shown with the message. The shipped portrait module listens here.
 
 !!! payload "Payload"
@@ -1000,33 +999,9 @@ Fires when the summarizer assembles the additional sub-instruction used when fet
 
 ---
 
-### agent.summarization.perceptions.before
-
-Emitted before the Summarizer asks for the characters' views of a passage (Character Perspectives). It is emitted again for a repair attempt.
-Handlers can add `dynamic_instructions` to the request.
-
-Example: a mystery module adds "Nobody but Mara can perceive the masked figure's identity."
-
-!!! warning
-    Do not start a generation from this event: the analysis waits for the handler.
-
-!!! payload "Payload"
-
-    | Field | Type | Notes |
-    |-------|------|-------|
-    | `agent` | `SummarizeAgent` | The agent instance |
-    | `message_id` | `int` | The passage |
-    | `characters` | `list[str]` | The characters whose views are requested |
-    | `attempt` | `int` | `1`, or `2` for the repair attempt |
-    | `validation_error` | `str` | Why the first attempt was refused, on a repair attempt |
-    | `template_vars` | `dict` | Variables of the request |
-    | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable.** Instructions added to the request |
-
----
-
 ### agent.summarization.perceptions.after
 
-Emitted once the characters' views of a passage are stored, after the analysis has finished. When a revised message is analyzed again, the event is sent when that revision refresh ends; if a generation is catching up on pending revisions, it is sent after all of them are done. A handler can start a generation from this event.
+Emitted once the characters' views of a passage are stored. Character knowledge is updated in one step before a generation (or when you choose **Analyze perceptions**); the event is sent after that step has finished, and the generation waits for the handler. A handler can start a generation or a director action from this event.
 
 !!! payload "Payload"
 
@@ -1042,7 +1017,7 @@ Emitted once the characters' views of a passage are stored, after the analysis h
 
 ### agent.summarization.perceptions.failed
 
-Emitted after the analysis of a passage failed, once the analysis has finished.
+Emitted after the analysis of a passage failed, once the knowledge step has finished.
 
 !!! payload "Payload"
 
@@ -1474,7 +1449,7 @@ Every payload identifies the project with `project_path` and the save with `file
 
 ### scene.revision_saved
 
-Fires after a normal save commits a new revision. Usually the JSON file has also been written. If a later part of the save fails, this event still fires with `error` set: the revision exists even though the save operation reported an error. A save that records no new revision emits no saved event.
+Fires after a normal save commits a new revision. Usually the JSON file has also been written. If a later part of the save fails, this event still fires with `error` set: the revision exists even though the save operation reported an error. A save that records no new revision emits no saved event. A save made while character knowledge is being updated sends its event when that update has finished.
 
 !!! payload "Payload"
 

@@ -27,7 +27,6 @@ from talemate.knowledge.snapshots import (
 from talemate.prompts import Prompt
 from talemate.agents.world_state.response_specs import EXAMINE_SPEC
 from talemate.scene_message import SceneMessage, TimePassageMessage
-from talemate.knowledge.processing import evidence_writer, track_evidence_task
 from talemate.world_state import INTRO_ANCHOR_ID, WorldStateResponse
 from talemate.world_state.merge import (
     apply_bucket_patch,
@@ -422,9 +421,15 @@ class WorldStateSnapshotMixin:
         Whether the snapshot should run as a true background task. Only when the
         linked client can handle a concurrent request — otherwise a background
         snapshot would just contend with the main generation on the same client,
-        so we run it synchronously (foreground) instead.
+        so we run it synchronously (foreground) instead. Character perspectives
+        never run it in the background: its character views are knowledge, and
+        knowledge work runs one request at a time.
         """
-        return bool(self.client and self.client.supports_concurrent_inference)
+        return bool(
+            self.client
+            and self.client.supports_concurrent_inference
+            and not character_knowledge_enabled(self.scene)
+        )
 
     # signal connect
 
@@ -450,7 +455,13 @@ class WorldStateSnapshotMixin:
         if self.get_scene_state("inital_update_done"):
             return
 
-        await self.dispatch_world_state_update()
+        try:
+            await self.dispatch_world_state_update(
+                wait=character_knowledge_enabled(self.scene)
+            )
+        except GenerationCancelled:
+            # no turn runs yet at scene start; the cancel ends only the snapshot
+            pass
         self.set_scene_states(inital_update_done=True)
 
     async def on_game_loop_actor_iter(self, emission: GameLoopActorIterEvent):
@@ -489,13 +500,15 @@ class WorldStateSnapshotMixin:
         # its due value and retry next turn rather than starting an overlapping
         # run (which would race on scene.world_state and double the eviction
         # counter). dispatch returns False when one is already in flight.
-        if not await self.dispatch_world_state_update():
+        if not await self.dispatch_world_state_update(
+            wait=character_knowledge_enabled(self.scene)
+        ):
             return
 
         self.next_update = 0
 
     async def dispatch_world_state_update(
-        self, cancel_in_flight: bool = False, instructions: str = ""
+        self, cancel_in_flight: bool = False, instructions: str = "", wait: bool = False
     ) -> bool:
         """
         Run the world state snapshot as a single-flight tracked task. Returns
@@ -504,7 +517,10 @@ class WorldStateSnapshotMixin:
         Runs in the background (status "busy_bg", non-blocking UI) when the
         linked client supports concurrent inference; otherwise in the foreground
         (status "busy") so the user doesn't queue an action behind it on a client
-        that can't serve concurrent requests. Either way the call is non-blocking.
+        that can't serve concurrent requests. The call returns at once unless
+        ``wait`` is set: then it returns when the snapshot has finished, a
+        cancelled caller cancels the snapshot, and a Cancel or Stop during the
+        snapshot raises ``GenerationCancelled``.
 
         ``cancel_in_flight=True`` cancels a running snapshot and starts a fresh
         one — used by the manual refresh, where the user's explicit action
@@ -512,16 +528,34 @@ class WorldStateSnapshotMixin:
 
         ``instructions`` is one-off guidance for this pass only.
         """
+        scene = self.scene
+        cancel_sequence = scene.cancel_sequence
         task = await self.run_tracked_task(
             SNAPSHOT_TASK,
             lambda: _in_snapshot_slot(
-                lambda: self.scene.world_state.request_update(instructions=instructions)
+                lambda: scene.world_state.request_update(instructions=instructions)
             ),
             background=self.snapshot_runs_in_background,
             cancel_in_flight=cancel_in_flight,
             error_handler=self.on_world_state_error,
         )
-        track_evidence_task(self.scene, task)
+        running = task or self._tracked_task(SNAPSHOT_TASK)
+        if wait and running is not None:
+            try:
+                # its failures are reported by the tracked task's callback
+                await asyncio.wait([running])
+            except asyncio.CancelledError:
+                running.cancel()
+                raise
+            user_cancelled = (
+                not running.cancelled()
+                and running.exception() is None
+                and running.result() == "cancelled"
+            )
+            if user_cancelled or scene.cancel_sequence != cancel_sequence:
+                raise GenerationCancelled(
+                    "World state update was cancelled", by_user=True
+                )
         return task is not None
 
     def cancel_world_state_update(self) -> bool:
@@ -587,7 +621,6 @@ class WorldStateSnapshotMixin:
             cancel_in_flight=True,
             error_handler=self.on_add_snapshot_entity_error,
         )
-        track_evidence_task(self.scene, task)
         return task is not None
 
     async def add_snapshot_entity_in_slot(
@@ -615,7 +648,6 @@ class WorldStateSnapshotMixin:
             background=False,
             cancel_in_flight=True,
         )
-        track_evidence_task(self.scene, task)
         result = await task
         if isinstance(result, ValueError):
             raise result
@@ -674,7 +706,6 @@ class WorldStateSnapshotMixin:
             )
 
     @set_processing
-    @evidence_writer
     async def add_snapshot_entity(
         self, message_id: int, text: str
     ) -> SnapshotEntityAddition:
@@ -1041,12 +1072,13 @@ class WorldStateSnapshotMixin:
             provenance=snapshot_request.verified_provenance(),
         )
 
-    @evidence_writer
     async def apply_snapshot_update(
         self, world_state: "WorldState", instructions: str = ""
-    ):
+    ) -> Literal["cancelled"] | None:
         """
         Generate a fresh world-state snapshot and merge it into ``world_state``.
+        Returns "cancelled" when the user cancelled it (Stop, or Cancel in the
+        error dialog), so every caller waiting for the snapshot task sees it.
 
         Owns the snapshot policy: the scene-cut wipe, the LLM call
         (``request_world_state``), name normalization, the durable
@@ -1084,8 +1116,10 @@ class WorldStateSnapshotMixin:
             world_state.emit()
             emit("status", str(error), status="error")
             return
-        except GenerationCancelled:
+        except GenerationCancelled as exc:
             world_state.emit()
+            if exc.by_user or scene.cancel_requested:
+                return "cancelled"
             return
         except asyncio.CancelledError:
             # Background task was cancelled (manual cancel of the in-flight

@@ -34,10 +34,11 @@ from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspectives import invalidate_message_view_dependents
 from talemate.knowledge.revision_browsing import defer_revision_work
 from talemate.knowledge.revision_refresh import (
-    refresh_revision,
     restore_revision_baseline,
+    revision_refresh_payload,
     revision_requires_refresh,
 )
+from talemate.knowledge.step import knowledge_step
 from talemate.server.websocket_plugin import Plugin
 from talemate.status import background_task
 from talemate.knowledge.transitions import set_arrival_note
@@ -294,8 +295,6 @@ class SceneMessagePlugin(Plugin):
             source=payload.source,
             reason=payload.reason,
         )
-        if character_knowledge_enabled(self.scene):
-            await instance.get_agent("summarizer").rebuild_perceptions(self.scene)
         await self.scene.attempt_auto_save()
         await self.signal_operation_done(signal_only=True)
 
@@ -342,7 +341,7 @@ class SceneMessagePlugin(Plugin):
 
     @background_task("Updating kept version")
     async def handle_commit_revision(self, data: dict):
-        """Run or join the authoritative refresh for the selected canonical text."""
+        """Run the knowledge step for the selected canonical text."""
         payload = SwapRevisionPayload(**data)
         scene = self.scene
         message = scene.get_message(payload.id)
@@ -373,7 +372,8 @@ class SceneMessagePlugin(Plugin):
             selection_serial = message.revision_state.serial
             selection_active = scene.active
             needs_refresh = revision_requires_refresh(scene, message)
-            refresh = await refresh_revision(scene, message)
+            await knowledge_step(scene)
+            refresh = revision_refresh_payload(scene, message)
             if not needs_refresh:
                 await scene.attempt_auto_save()
             if (

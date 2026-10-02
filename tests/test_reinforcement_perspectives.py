@@ -1,3 +1,5 @@
+from _knowledge_step_helpers import push_and_step
+from talemate.knowledge.step import knowledge_step
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -48,6 +50,7 @@ async def apply(scene, request, *, insert="all-context", character=None):
     world = get_agent("world_state")
     message = world._prepare_reinforcement(reinforcement, False)
     await world._apply_reinforcement(reinforcement, message, READER, False)
+    await knowledge_step(scene)
     return reinforcement
 
 
@@ -82,7 +85,7 @@ async def test_all_modes_analyze_heading_once_and_scope_history_inserts_and_side
     context = request.call_args.kwargs["vars"]["context"]
     assert QUESTION in context["passage"]["text"]
     assert READER in context["passage"]["text"]
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     assert request.await_count == 1
     assert bool(scene.history) == (insert == "sequential")
     history = "\n".join(project_character_history(scene, "Alice"))
@@ -163,7 +166,7 @@ async def test_direct_source_edits_fail_closed_rebuild_and_survive_save(setup):
         row["group"] == ("authored",) for row in audience_documents(scene).values()
     )
     request.return_value = result(answer("Alice sees the lantern go dark.", None))
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     assert reinforcement.perspective_source.id > old.id
     assert "go dark" in reinforcement.context_for(scene, "Alice")
     assert select_character_view(scene, old, "Alice").status == "unavailable"
@@ -197,13 +200,13 @@ async def test_direct_failure_and_retry_use_shared_lifecycle(setup, monkeypatch)
     recovery = AsyncMock(return_value="ignore")
     monkeypatch.setattr(summarizer.client, "_prompt_generation_error", recovery)
     with pytest.raises(GenerationCancelled, match="successful retry"):
-        await summarizer.finalize_perceptions(scene, [])
+        await knowledge_step(scene)
     assert reinforcement.perspective_source.knowledge.views[0].status == "failed"
     with pytest.raises(GenerationCancelled, match="failed"):
         reinforcement.context_for(scene, "Alice")
     assert reinforcement.answer == READER
     request.return_value = result(answer(VISIBLE, None))
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     assert reinforcement.context_for(scene, "Alice") == f"# Internal note - {VISIBLE}"
     assert request.await_count == 2
     recovery.assert_awaited_once()
@@ -224,7 +227,7 @@ async def test_investigations_review_titles_and_distinguish_actual_learning(
     request.return_value = result(
         answer("Alice finds a vial under the bed." if discovery else None, None)
     )
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     assert QUESTION in request.call_args.kwargs["vars"]["context"]["passage"]["text"]
     history = "\n".join(project_character_history(scene, "Alice"))
     assert ("finds a vial" in history) == discovery
@@ -237,7 +240,7 @@ async def test_investigations_review_titles_and_distinguish_actual_learning(
     assert message.knowledge.revision > revision
     with pytest.raises(GenerationCancelled, match="not run yet"):
         project_character_history(scene, "Alice")
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     assert "antidote" in request.call_args.kwargs["vars"]["context"]["passage"]["text"]
     assert request.await_count == 2
 
@@ -251,11 +254,7 @@ async def test_legacy_reinforcement_has_no_perception_request_or_serialized_sour
 ):
     scene, summarizer, request = setup
     scene.knowledge_eligibility = "legacy"
-    finalize = AsyncMock()
-    monkeypatch.setattr(summarizer, "finalize_perceptions", finalize)
     reinforcement = await apply(scene, request, insert=insert, character=character)
-    if insert != "sequential":
-        finalize.assert_not_awaited()
     request.assert_not_awaited()
     assert "perspective_source" not in reinforcement.model_dump()
     assert READER in reinforcement.context_for(scene, "Alice")
@@ -273,7 +272,7 @@ async def test_finalization_rejects_scene_switch_before_preparing_direct_sources
     scene.world_state.reinforce.append(reinforcement)
     monkeypatch.setattr(summarizer, "scene", Scene())
     with pytest.raises(GenerationCancelled, match="scene changed"):
-        await summarizer.finalize_perceptions(scene, [])
+        await knowledge_step(scene)
     assert reinforcement.perspective_source is None
     request.assert_not_awaited()
 
@@ -307,6 +306,7 @@ async def test_real_index_updates_generated_entries_and_cache_then_removes_sourc
     await world._apply_reinforcement(
         reinforcement, world._prepare_reinforcement(reinforcement, False), READER, False
     )
+    await knowledge_step(scene)
     elmer = scene.character_data["Elmer"]
     config = conversation.actions["use_long_term_memory"].config
     monkeypatch.setattr(config["cache"], "value", True)
@@ -324,6 +324,7 @@ async def test_real_index_updates_generated_entries_and_cache_then_removes_sourc
         answer="The lantern went dark. The poison is still hidden.",
         insert="all-context",
     )
+    await knowledge_step(scene)
     documents = await memory.get_document(QUESTION, viewer="Elmer")
     assert documents and all("go dark" in doc for doc in documents.values())
     assert all("poison" not in doc for doc in documents.values())
@@ -357,7 +358,7 @@ async def test_direct_answer_changed_during_analysis_discards_stale_response(set
         return result(answer("Alice sees the lantern go dark.", None))
 
     request.side_effect = changing
-    await summarizer.finalize_perceptions(scene, [])
+    await knowledge_step(scene)
     assert (
         reinforcement.context_for(scene, "Alice")
         == "# Internal note - Alice sees the lantern go dark."
@@ -375,10 +376,12 @@ async def test_insert_mode_changes_retire_only_the_selected_source(setup):
     await world._apply_reinforcement(
         second, world._prepare_reinforcement(second, False), "It rains.", False
     )
+    await knowledge_step(scene)
     second_source = second.source_for(scene)
     await scene.world_state.add_reinforcement(
         QUESTION, answer=READER, insert="all-context"
     )
+    await knowledge_step(scene)
     assert second.source_for(scene) is second_source
     assert source_reference(scene, "message", first_id) is None
     direct_id = first.source_for(scene).id
@@ -386,12 +389,14 @@ async def test_insert_mode_changes_retire_only_the_selected_source(setup):
     await scene.world_state.add_reinforcement(
         QUESTION, answer=READER, insert="sequential"
     )
+    await knowledge_step(scene)
     assert source_reference(scene, "message", direct_id) is None
     assert first.perspective_source is None
     assert second.source_for(scene) is second_source
     await world._apply_reinforcement(
         first, world._prepare_reinforcement(first, False), READER, False
     )
+    await knowledge_step(scene)
     assert first.source_for(scene).id not in (first_id, direct_id)
     assert first.context_for(scene, "Alice") == f"# Internal note - {VISIBLE}"
 
@@ -409,7 +414,7 @@ async def test_direct_passage_does_not_acquire_a_later_disclosure_on_retry(setup
     assert disclosure.message_id_boundary >= source.id
     source.message = "A different reader interpretation."
     reinforcement.answer = source.message
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     context = perception_context(scene, source)
     assert all(
         "sapphire" not in item["text"]
@@ -418,7 +423,7 @@ async def test_direct_passage_does_not_acquire_a_later_disclosure_on_retry(setup
     )
     later = ContextInvestigationMessage(message="Alice learns the future secret.")
     request.return_value = result(answer("Alice learns the future secret.", None))
-    await scene.push_history(later)
+    await push_and_step(scene, later)
     context = perception_context(scene, source)
     assert all(item["id"] != later.id for item in context["prior_physical_context"])
     assert all(

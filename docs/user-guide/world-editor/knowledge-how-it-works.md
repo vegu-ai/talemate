@@ -11,7 +11,7 @@ The diagrams trace what is recorded, which requests run, and how the results rea
 - **Known by** controls access to authored sheets, details, world entries, static history and pins.
 - **Disclosures** establish selected information for a character in Character perspectives mode without inventing dialogue.
 
-Your finished line appears immediately. In Character perspectives mode, dependent generation waits for its perception analysis. Browsing revisions starts no analysis; **Analyze perceptions** or sending the next line refreshes the selected version. Standard mode settles summary cleanup without a knowledge request.
+Your finished line appears immediately. In Character perspectives mode, the next generation first analyzes every passage that still needs a perspective, your line and the previous reply included. Browsing revisions starts no analysis; **Analyze perceptions** or sending the next line refreshes the selected version. Standard mode settles summary cleanup without a knowledge request.
 
 ## A character leaves and returns
 
@@ -61,12 +61,12 @@ A missing presence list means shared history. Everyone present sees the complete
 
 ## Character perspectives mode: one line is said
 
-After every passage, Talemate writes what each character perceived, and replies are built from those views.
+Before each generation, Talemate writes what each character perceived of the passages that have no perspectives yet, and replies are built from those views.
 
 ```mermaid
 flowchart TD
     A["A passage is finished:<br/>a character line, a player line or narration"] --> B["The passage joins the story,<br/>with everyone who was in the scene"]
-    B --> C["The Summarizer asks:<br/>what did each character perceive?<br/>One request for all of them"]
+    B --> C["Before the next generation,<br/>the Summarizer asks:<br/>what did each character perceive?<br/>One request for all of them"]
     C --> D{"Is every character's view valid?"}
     D -- "yes" --> E["Each character's view of the passage<br/>is stored beside it"]
     D -- "no, and Automatically<br/>repair analysis on" --> F["One more request for<br/>the missing views only"]

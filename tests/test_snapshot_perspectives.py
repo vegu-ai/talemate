@@ -1,3 +1,4 @@
+from _knowledge_step_helpers import push_and_step
 import copy
 import json
 from unittest.mock import DEFAULT, AsyncMock
@@ -75,7 +76,7 @@ async def prepared(setup, monkeypatch):
     scene, summarizer, request = setup
     message = NarratorMessage(message=PRIVATE)
     request.return_value = cases.result(cases.answer(PUBLIC, PRIVATE))
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     world = get_agent("world_state")
     monkeypatch.setattr(
         world.actions["update_world_state"].config["inject_as_scene_memory"],

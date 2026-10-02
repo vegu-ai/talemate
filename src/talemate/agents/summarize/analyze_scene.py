@@ -10,7 +10,6 @@ from talemate.agents.base import (
     DynamicInstruction,
 )
 from talemate.prompts import Prompt
-from talemate.knowledge.processing import wait_for_evidence_writers
 from talemate.prompts.response import ResponseSpec, AnchorExtractor
 from talemate.util import strip_partial_sentences
 import talemate.emit.async_signals
@@ -28,10 +27,10 @@ from talemate.knowledge.advice import (
     advice_context,
     advice_fingerprint,
     deep_analysis_fingerprint,
-    StaleAdvice,
     emission_character,
     emission_analysis_type,
-    require_current_advice,
+    require_advice_scene,
+    warn_stale_advice,
 )
 
 if TYPE_CHECKING:
@@ -227,7 +226,6 @@ class SceneAnalyzationMixin:
             return
 
         scene = self.scene
-        await wait_for_evidence_writers(scene, agent=self)
         character = emission_character(scene, emission)
         boundary, evidence_budget = self._analysis_evidence_key(
             scene, character, emission_type
@@ -293,7 +291,8 @@ class SceneAnalyzationMixin:
         if not analysis:
             return
         if character_knowledge_enabled(scene):
-            require_current_advice(
+            require_advice_scene(self, scene)
+            warn_stale_advice(
                 self,
                 scene,
                 character,
@@ -623,12 +622,15 @@ class SceneAnalyzationMixin:
                 deep_emission.deep_analysis_context = deep_analysis_context
                 deep_context = deep_analysis_context
 
+            if character_knowledge_enabled(scene):
+                require_advice_scene(self, scene)
             await talemate.emit.async_signals.get(
                 "agent.summarization.scene_analysis.after_deep_analysis"
             ).send(deep_emission)
 
         if character_knowledge_enabled(scene):
-            require_current_advice(
+            require_advice_scene(self, scene)
+            warn_stale_advice(
                 self,
                 scene,
                 character,
@@ -639,8 +641,9 @@ class SceneAnalyzationMixin:
             if deep_context and retrieval_fp != deep_analysis_fingerprint(
                 scene, character, boundary
             ):
-                raise StaleAdvice(
-                    "Deep analysis sources changed during retrieval; retry"
+                log.warning(
+                    "deep analysis sources changed during retrieval",
+                    character=character.name if character else None,
                 )
             self.set_scene_states(
                 deep_analysis_context=deep_context,
@@ -677,8 +680,6 @@ class SceneAnalyzationMixin:
         """
 
         scene = self.scene
-        if evidence_key is None:
-            await wait_for_evidence_writers(scene, agent=self)
         character = advice_character(scene, character, typ=typ)
         if evidence_key is None:
             boundary, evidence_budget = self._analysis_evidence_key(
@@ -731,7 +732,8 @@ class SceneAnalyzationMixin:
             return result
 
         if character_knowledge_enabled(scene):
-            require_current_advice(
+            require_advice_scene(self, scene)
+            warn_stale_advice(
                 self,
                 scene,
                 character,
@@ -779,7 +781,8 @@ class SceneAnalyzationMixin:
         )
 
         if character_knowledge_enabled(scene):
-            require_current_advice(
+            require_advice_scene(self, scene)
+            warn_stale_advice(
                 self,
                 scene,
                 character,

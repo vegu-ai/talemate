@@ -1,3 +1,5 @@
+from _knowledge_step_helpers import push_and_step
+from talemate.knowledge.step import knowledge_step
 import pytest
 
 import test_perception_lifecycle
@@ -39,6 +41,7 @@ async def test_tracked_state_outlives_passage_window_and_is_removed(
     await world._apply_reinforcement(
         state, world._prepare_reinforcement(state, False), "Bob is blindfolded.", False
     )
+    await knowledge_step(scene)
     source = state.source_for(scene)
     assert source.knowledge.acquired.ts == 3600
     assert request.await_count == 1
@@ -134,7 +137,7 @@ async def test_intention_changes_discard_inflight_response_and_change_receipt(
     scene, summarizer, request = setup
     message = CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
     scene.history.append(message)
-    summarizer._register_perception_sources(scene, [message])
+    summarizer.register_perception_sources(scene, [message])
     before = _phase_identity(scene, message)
 
     async def analyze(*args, **kwargs):
@@ -149,7 +152,7 @@ async def test_intention_changes_discard_inflight_response_and_change_receipt(
         return result()
 
     request.side_effect = analyze
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
 
     assert request.await_count == 2
     assert all(view.text != "Stale." for view in message.knowledge.views)
@@ -165,8 +168,8 @@ async def test_scene_description_edit_does_not_repeat_analysis(setup):
         return result()
 
     request.side_effect = analyze
-    await scene.push_history(
-        CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
+    await push_and_step(
+        scene, CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
     )
     assert request.await_count == 1
 
@@ -184,6 +187,7 @@ async def test_editing_tracked_state_uses_last_update_time(tracked_scene, insert
     await world._apply_reinforcement(
         state, world._prepare_reinforcement(state, False), "Blindfolded.", False
     )
+    await knowledge_step(scene)
     source = state.source_for(scene)
     scene.history.append(TimePassageMessage(message="Six hours later.", ts=21600))
     scene.ts = 21600
@@ -191,6 +195,8 @@ async def test_editing_tracked_state_uses_last_update_time(tracked_scene, insert
     await scene.world_state.add_reinforcement(
         "Condition", "Bob", answer="Awake and alert.", insert=insert
     )
+
+    await knowledge_step(scene)
 
     message = CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
     assert perception_context(scene, message)["cast"][1]["tracked_states"] == {
@@ -211,6 +217,7 @@ async def test_editing_tracked_state_uses_last_update_time(tracked_scene, insert
         interval=20,
         answer_confirmed=False,
     )
+    await knowledge_step(scene)
     assert state.updated_ts == 21600
     assert perception_context(scene, message)["cast"][1]["tracked_states"] == {
         "Condition": "(1 Hour ago) Awake and alert."

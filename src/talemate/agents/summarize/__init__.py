@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from talemate.knowledge.processing import evidence_writer
-
 import re
 
 import structlog
@@ -428,7 +426,6 @@ class SummarizeAgent(
         }
 
     @set_processing
-    @evidence_writer
     async def build_archive(
         self,
         scene,
@@ -685,7 +682,6 @@ class SummarizeAgent(
 
         return result
 
-    @evidence_writer
     async def summarize_entry(
         self,
         entry: ArchiveEntry,

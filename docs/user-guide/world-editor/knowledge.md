@@ -20,7 +20,7 @@ Every story runs in one of two character knowledge modes. You choose when you cr
     - Leaks are yours to catch and fix by hand
 - Pick this if: Your model is small or older, the story has few secrets, or the scene is mostly you and one character.
 
-**Character perspectives** — After every passage the AI writes what each character actually perceived, and their replies are grounded in that. Hands-off for you: keep secrets out of the shared description, mark private entries, hand out knowledge with a disclosure when needed. One extra analytical request per passage; needs a strong, reliable model. Best for stories with secrets and several active characters who know different things. **Cannot be changed once the story has history.**
+**Character perspectives** — Before each generation the AI writes what each character actually perceived of the new passages, and their replies are grounded in that. Hands-off for you: keep secrets out of the shared description, mark private entries, hand out knowledge with a disclosure when needed. One extra analytical request per passage; needs a strong, reliable model. Best for stories with secrets and several active characters who know different things. **Cannot be changed once the story has history.**
 
 - Pros:
     - Characters only know what they actually perceived
@@ -99,7 +99,7 @@ Perception uses the generating model's common-sense interpretation, not a proof 
 
 #### When many passages need a new analysis
 
-Sometimes many passages need a new analysis at once: after you load a story that an earlier Talemate version saved, after you edit an early message, or when a character recorded as present lacks a perspective of those passages. When more than 3 passages would be analyzed, Talemate asks first. The count includes an upcoming character reply or **Regenerate** passage only when an audience will need analysis. The question appears right after a scene loads, before a generation, or after a new message that would start the analyses. Up to 3 passages are analyzed without a question, as before. The question is for a backlog: a normal turn with no out-of-date passages never asks.
+Sometimes many passages need a new analysis at once: after you load a story that an earlier Talemate version saved, after you edit an early message, or when a character recorded as present lacks a perspective of those passages. When more than 3 passages would be analyzed, Talemate asks first. The count includes new passages that are not analyzed yet. The question appears when a generation starts, or when you choose **Analyze perceptions**. Up to 3 passages are analyzed without a question, as before. The question is for a backlog: a normal turn with no out-of-date passages never asks.
 
 The question shows how many passages need a new analysis, how many of them are new, how many still have stored perspectives, how many lack a perspective for a character, and how many more passages a new analysis can make out of date. Each analysis is one request. With **Automatically repair analysis** on, an analysis can make one more request to repair a view. The tooltips of the buttons show the most requests that can follow. Provider and network retries, and a **Retry** after a failed analysis, are not counted. You can choose:
 
@@ -108,6 +108,16 @@ The question shows how many passages need a new analysis, how many of them are n
 - **Cancel**: stop the generation. Talemate asks again the next time it needs these perspectives.
 
 Say you load a long story from an earlier version and regenerate the last reply. Instead of 101 analyses one after the other, you see that 101 passages need a new analysis, the new reply included, and you can keep the perspectives you already have. When Talemate asks, its log names each of these passages and the check that made its stored perspective out of date, whichever choice you make. It also names the check for each passage it analyzes.
+
+#### When many character summaries need a rebuild
+
+Each archived summary also has a version per character, built from what that character perceived. When the passages under a summary are analyzed again, or when the history is regenerated, those character summaries need a rebuild. Up to 3 are rebuilt without a question before the generation. When more are due, Talemate asks first, in the same way. The question shows how many character summaries need a rebuild, which characters they belong to, which summary layers they are on, and how many each choice rebuilds: **Rebuild** includes the layered summaries a rebuild can make out of date, **Keep current summaries** only those it cannot keep, with the layered summaries built on them. The tooltips show the most requests that can follow. You can choose:
+
+- **Rebuild**: rebuild them all now, one after the other, before the generation. The status bar shows the progress, for example "Updating character summaries [3/14]".
+- **Keep current summaries**: mark the stored character summaries as current as they are, with no request. After a passage has been analyzed again, the summaries built on it have no stored text left to keep and are rebuilt.
+- **Cancel**: stop the generation. Talemate asks again the next time it needs these summaries.
+
+When the passages and the summaries are both due in the same turn, you get one question for both, titled "Character knowledge needs an update". Its buttons apply to both: **Analyze and rebuild**, **Keep stored**, or **Cancel**. Say you edit an early message in a long story. The next turn asks once: 2 passages need a new analysis, and 14 character summaries for Mara and Edwin need a rebuild afterwards. **Keep stored** keeps the old perspectives and summaries, with no request. **Analyze and rebuild** brings both up to date before the reply. As with passages, the log names each summary and why it is out of date.
 
 ### Author responsibilities
 

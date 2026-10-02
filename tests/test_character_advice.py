@@ -4,6 +4,9 @@ import json
 import asyncio
 
 import pytest
+from structlog.testing import capture_logs
+
+import talemate.emit.async_signals
 
 import test_actor_perspective_history
 from test_actor_perspective_history import PRIVATE, PUBLIC
@@ -16,7 +19,6 @@ from talemate.instance import get_agent
 from talemate.knowledge.advice import (
     advice_context,
     advice_record_metadata,
-    StaleAdvice,
 )
 from talemate.knowledge.perspectives import (
     set_source_perspectives,
@@ -255,9 +257,11 @@ async def test_deep_analysis_queries_character_evidence_and_clears_empty_result(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("typ", ["guidance", "analysis"])
-async def test_evidence_change_during_generation_is_cancelled_without_retry(
+async def test_evidence_change_during_generation_is_logged_without_retry(
     advice, monkeypatch, typ
 ):
+    from structlog.testing import capture_logs
+
     scene, message = advice
     calls = []
 
@@ -267,7 +271,7 @@ async def test_evidence_change_during_generation_is_cancelled_without_retry(
         return "", {"guidance": "Old advice.", "analysis": "Old analysis."}
 
     monkeypatch.setattr(Prompt, "request", request)
-    with pytest.raises(GenerationCancelled, match="evidence changed"):
+    with capture_logs() as logs:
         if typ == "guidance":
             await get_agent("director").guide_actor_off_of_scene_analysis(
                 "analysis", scene.character_data["Bob"]
@@ -276,7 +280,133 @@ async def test_evidence_change_during_generation_is_cancelled_without_retry(
             await get_agent("summarizer").analyze_scene_for_next_action(
                 "conversation", scene.character_data["Bob"]
             )
+    assert {
+        (log["character"], log["changed"])
+        for log in logs
+        if log["event"] == "advice evidence changed during generation"
+    } == {("Bob", "evidence")}
     assert len(calls) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("typ", ["guidance", "analysis"])
+async def test_scene_released_during_generation_stops_the_advice(
+    advice, monkeypatch, typ
+):
+    scene, _ = advice
+    agent = get_agent("director" if typ == "guidance" else "summarizer")
+    state = dict(scene.agent_state.get(agent.agent_type, {}))
+
+    async def request(*args, **kwargs):
+        monkeypatch.setattr(agent, "scene", SimpleNamespace())
+        return "", {"guidance": "Old advice.", "analysis": "Old analysis."}
+
+    monkeypatch.setattr(Prompt, "request", request)
+    generated = AsyncMock()
+    signal = talemate.emit.async_signals.get(
+        "agent.director.guide.generated"
+        if typ == "guidance"
+        else "agent.summarization.scene_analysis.after"
+    )
+    signal.connect(generated)
+    try:
+        with pytest.raises(GenerationCancelled):
+            if typ == "guidance":
+                await agent.guide_actor_off_of_scene_analysis(
+                    "analysis", scene.character_data["Bob"]
+                )
+            else:
+                await agent.analyze_scene_for_next_action(
+                    "conversation", scene.character_data["Bob"]
+                )
+    finally:
+        signal.disconnect(generated)
+    generated.assert_not_awaited()
+    assert scene.agent_state.get(agent.agent_type, {}) == state
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("released", [False, True])
+async def test_scene_released_mid_batch_stops_the_next_call(
+    advice, monkeypatch, released
+):
+    scene, _ = advice
+    director = get_agent("director")
+    node = DirectorChatAction()
+    monkeypatch.setattr(action_utils, "get_node", lambda registry: lambda: node)
+
+    async def execute(**kwargs):
+        if released:
+            monkeypatch.setattr(director, "scene", SimpleNamespace())
+        return "executed"
+
+    wrapper = AsyncMock(side_effect=execute)
+    wrapper.get_argument_nodes = AsyncMock(return_value=[])
+    monkeypatch.setattr(action_utils, "FunctionWrapper", lambda *args: wrapper)
+    scene.nodegraph_state = GraphState()
+    scene.nodegraph_state.shared["_director_chat_actions"] = {
+        "direct_actor": "test/action"
+    }
+    call = {
+        "function": "direct_actor",
+        "arguments": {"character": "Bob", "direction": "Old advice"},
+    }
+
+    second = {**call, "arguments": {"character": "Bob", "direction": "More advice"}}
+
+    async def request(*args, **kwargs):
+        return "\n".join(
+            "```json\n" + json.dumps(item) + "\n```" for item in (call, second)
+        ), {}
+
+    monkeypatch.setattr(Prompt, "request", request)
+    with ActiveAgent(director, test_scene_released_mid_batch_stops_the_next_call):
+        if released:
+            with pytest.raises(GenerationCancelled):
+                await action_utils.execute_actions(
+                    director.client, scene, [{"name": "direct_actor"}], [], Mock()
+                )
+        else:
+            await action_utils.execute_actions(
+                director.client, scene, [{"name": "direct_actor"}], [], Mock()
+            )
+    assert wrapper.await_count == (1 if released else 2)
+
+
+@pytest.mark.asyncio
+async def test_scene_released_during_deep_analysis_sends_no_after_event(
+    advice, monkeypatch
+):
+    scene, _ = advice
+    summarizer = get_agent("summarizer")
+    summarizer.actions["analyze_scene"].config["deep_analysis"].value = True
+    capture(monkeypatch, investigate="What did Alice say?")
+
+    async def released(**kwargs):
+        monkeypatch.setattr(summarizer, "scene", SimpleNamespace())
+        return ["Alice claimed the door was locked."]
+
+    summarizer.rag_build.side_effect = released
+    after = AsyncMock()
+    signal = talemate.emit.async_signals.get(
+        "agent.summarization.scene_analysis.after_deep_analysis"
+    )
+    signal.connect(after)
+    try:
+        with (
+            ActiveAgent(
+                summarizer,
+                test_scene_released_during_deep_analysis_sends_no_after_event,
+            ),
+            pytest.raises(GenerationCancelled),
+        ):
+            await summarizer.analyze_scene_for_next_action(
+                "conversation", scene.character_data["Bob"]
+            )
+    finally:
+        signal.disconnect(after)
+    summarizer.rag_build.assert_awaited_once()
+    after.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -502,32 +632,30 @@ async def test_action_arguments_validate_evidence_before_callback(
 
     monkeypatch.setattr(Prompt, "request", request)
     result_factory = Mock(return_value="result")
-    with ActiveAgent(director, test_action_arguments_validate_evidence_before_callback):
-        if changed:
-            with pytest.raises(GenerationCancelled, match="evidence changed"):
-                await action_utils.execute_actions(
-                    director.client,
-                    scene,
-                    [{"name": "direct_actor"}],
-                    [],
-                    result_factory,
-                )
-            wrapper.assert_not_awaited()
-            result_factory.assert_not_called()
-        else:
-            result = await action_utils.execute_actions(
-                director.client, scene, [{"name": "direct_actor"}], [], result_factory
-            )
-            assert result == ["result"]
-            focal_call = wrapper.await_args.kwargs["_focal_call"]
-            assert focal_call.name == "direct_actor"
-            assert focal_call.arguments == {
-                "character": "Bob",
-                "direction": "Old advice",
-            }
-            wrapper.assert_awaited_once_with(
-                _focal_call=focal_call, character="Bob", direction="Old advice"
-            )
+    with (
+        ActiveAgent(director, test_action_arguments_validate_evidence_before_callback),
+        capture_logs() as logs,
+    ):
+        result = await action_utils.execute_actions(
+            director.client, scene, [{"name": "direct_actor"}], [], result_factory
+        )
+        assert result == ["result"]
+        assert len(
+            [
+                log
+                for log in logs
+                if log["event"] == "advice evidence changed during generation"
+            ]
+        ) == int(changed)
+        focal_call = wrapper.await_args.kwargs["_focal_call"]
+        assert focal_call.name == "direct_actor"
+        assert focal_call.arguments == {
+            "character": "Bob",
+            "direction": "Old advice",
+        }
+        wrapper.assert_awaited_once_with(
+            _focal_call=focal_call, character="Bob", direction="Old advice"
+        )
     assert len(calls) == 1
 
 
@@ -721,23 +849,25 @@ async def test_action_batch_admission_through_callers(
             return await director.chat_send(chat.id, "Carry out the plan.")
         return await director.direction_execute_turn(always_on=True, max_actions=2)
 
-    if changed:
-        with pytest.raises(GenerationCancelled, match="evidence changed"):
-            await generate()
-        wrapper.assert_not_awaited()
-        assert decisions.await_count == 1
-    else:
+    with capture_logs() as logs:
         await generate()
-        assert wrapper.await_count == 3
-        assert sorted(mutations) == ["0", "1", "2"]
-        assert decisions.await_count == (2 if entry_point == "chat" else 1)
+    assert len(
+        [
+            log
+            for log in logs
+            if log["event"] == "advice evidence changed during generation"
+        ]
+    ) == int(changed)
+    assert wrapper.await_count == 3
+    assert sorted(mutations) == ["0", "1", "2"]
+    assert decisions.await_count == (2 if entry_point == "chat" else 1)
     messages = (
         director.chat_get(chat.id).messages
         if entry_point == "chat"
         else director.direction_get().messages
     )
     results = [item for item in messages if item.type == "action_result"]
-    assert len(results) == (0 if changed else 3)
+    assert len(results) == 3
     assert all(item.status == "success" for item in results)
     assert argument_requests == ["director.chat-execute-actions"]
 
@@ -758,7 +888,7 @@ async def test_chat_persists_completed_actions_before_later_cancellation(
 
     async def execute(*, create_result, on_action_complete, **kwargs):
         await on_action_complete(create_result(name="direct_actor", result="completed"))
-        raise StaleAdvice("Later generation cancelled")
+        raise GenerationCancelled("Later generation cancelled")
 
     monkeypatch.setattr(action_utils, "execute_actions", execute)
     with pytest.raises(GenerationCancelled, match="Later generation cancelled"):
@@ -832,90 +962,3 @@ async def test_chat_retains_action_inserted_message(advice, monkeypatch, mode, o
     else:
         assert len(results) == 1
     assert decisions.await_count == (2 if outcome == "complete" else 1)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("mode", ["legacy", "perception"])
-async def test_director_waits_for_existing_evidence_before_action_arguments(
-    advice, monkeypatch, mode
-):
-    from talemate.knowledge.processing import evidence_writer
-
-    scene, _ = advice
-    scene.knowledge_eligibility = mode
-    director = get_agent("director")
-    node = DirectorChatAction()
-    monkeypatch.setattr(action_utils, "get_node", lambda registry: lambda: node)
-    wrapper = AsyncMock(return_value="executed")
-    wrapper.get_argument_nodes = AsyncMock(return_value=[])
-    monkeypatch.setattr(action_utils, "FunctionWrapper", lambda *args: wrapper)
-    scene.nodegraph_state = GraphState()
-    scene.nodegraph_state.shared["_director_chat_actions"] = {
-        "direct_actor": "test/action"
-    }
-    release, started, waiting = asyncio.Event(), asyncio.Event(), asyncio.Event()
-
-    @evidence_writer
-    async def update(scene):
-        started.set()
-        await release.wait()
-        scene.world_state.location = "The new harbor"
-
-    def status(typ, **data):
-        if (
-            data.get("message")
-            == "Waiting for knowledge updates before scene direction"
-        ):
-            waiting.set()
-
-    async def request(*args, **kwargs):
-        assert scene.world_state.location == (
-            "The new harbor" if mode == "perception" else None
-        )
-        return (
-            '```json\n{"function": "direct_actor", "arguments": {"character": "Bob", "direction": "Current advice"}}\n```',
-            {},
-        )
-
-    request = AsyncMock(side_effect=request)
-    monkeypatch.setattr(Prompt, "request", request)
-    monkeypatch.setattr("talemate.status.emit", status)
-    writer = asyncio.create_task(update(scene))
-    action = None
-    try:
-        await asyncio.wait_for(started.wait(), 2)
-        with ActiveAgent(
-            director, test_director_waits_for_existing_evidence_before_action_arguments
-        ):
-            action = asyncio.create_task(
-                action_utils.execute_actions(
-                    director.client,
-                    scene,
-                    [{"name": "direct_actor"}],
-                    [],
-                    Mock(return_value="result"),
-                )
-            )
-            if mode == "perception":
-                await asyncio.wait_for(waiting.wait(), 2)
-                request.assert_not_awaited()
-                release.set()
-            assert await asyncio.wait_for(action, 2) == ["result"]
-        request.assert_awaited_once()
-        focal_call = wrapper.await_args.kwargs["_focal_call"]
-        assert focal_call.name == "direct_actor"
-        assert focal_call.arguments == {
-            "character": "Bob",
-            "direction": "Current advice",
-        }
-        wrapper.assert_awaited_once_with(
-            _focal_call=focal_call, character="Bob", direction="Current advice"
-        )
-        if mode == "legacy":
-            assert not writer.done()
-            assert not waiting.is_set()
-    finally:
-        release.set()
-        await asyncio.gather(
-            writer, *([action] if action else []), return_exceptions=True
-        )

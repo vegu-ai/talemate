@@ -1,3 +1,5 @@
+from _knowledge_step_helpers import push_and_step
+from talemate.knowledge.step import knowledge_step
 import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
@@ -80,7 +82,7 @@ async def test_new_answer_uses_current_evidence_disclosure_and_presence(setup):
     old = reinforcement.perspective_source
     learned = NarratorMessage(message="Bob sees the lantern go dark.")
     request.return_value = response(Alice=None, Bob=learned.message)
-    await scene.push_history(learned)
+    await push_and_step(scene, learned)
     disclosure = add_disclosure(
         scene, audience=["Bob"], text="The current code is 5298."
     )
@@ -89,6 +91,7 @@ async def test_new_answer_uses_current_evidence_disclosure_and_presence(setup):
     await scene.world_state.add_reinforcement(
         cases.QUESTION, answer="The lantern is dark.", insert="all-context"
     )
+    await knowledge_step(scene)
     current = reinforcement.perspective_source
     context = request.call_args.kwargs["vars"]["context"]
     assert current.id > learned.id > old.id
@@ -105,7 +108,7 @@ async def test_new_answer_uses_current_evidence_disclosure_and_presence(setup):
     )
     assert source_reference(scene, "message", old.id) is None
     calls = request.await_count
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     assert reinforcement.perspective_source is current
     assert request.await_count == calls
 
@@ -124,7 +127,7 @@ async def test_investigation_metadata_describes_reader_operation_and_subject(
         "narrator", "narrate_character", character="Alice", query="Reader question"
     )
     request.return_value = response(Alice=None, Bob=None)
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     passage = request.call_args.kwargs["vars"]["context"]["passage"]
     assert passage["sub_type"] == sub_type
     assert passage["subject_character"] == "Alice"
@@ -257,7 +260,7 @@ async def test_rename_live_character_reinforcement_leaves_world_question_untouch
     assert entry_binding(scene, f"Robert.detail.{cases.QUESTION}") is not None
     assert entry_binding(scene, world_question) == world_binding
     request.return_value = response(Alice=cases.VISIBLE, Robert=None)
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     assert (
         scene.world_state.reinforcement_entry_context(
             f"Robert.detail.{cases.QUESTION}", "Alice"
@@ -311,13 +314,14 @@ async def test_blocked_perception_keeps_canonical_entry_and_answer_together(
     )
     new_answer = "The lantern is now dark; poison remains hidden."
     world = get_agent("world_state")
+    await world._apply_reinforcement(
+        reinforcement,
+        world._prepare_reinforcement(reinforcement, False),
+        new_answer,
+        False,
+    )
     with pytest.raises(GenerationCancelled):
-        await world._apply_reinforcement(
-            reinforcement,
-            world._prepare_reinforcement(reinforcement, False),
-            new_answer,
-            False,
-        )
+        await knowledge_step(scene)
     assert reinforcement.answer == new_answer
     canonical = (
         scene.character_data[character].details[cases.QUESTION]
@@ -326,7 +330,7 @@ async def test_blocked_perception_keeps_canonical_entry_and_answer_together(
     )
     assert new_answer in canonical
     request.return_value = response(Alice="Alice sees darkness.", Bob=None)
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     assert reinforcement.context_for(scene, "Alice") == prefix + "Alice sees darkness."
 
 
@@ -366,14 +370,14 @@ async def test_shared_prefix_matches_context_and_unchanged_sources_are_not_rebou
     scene, summarizer, request = setup
     direct = await cases.apply(scene, request)
     message = NarratorMessage(message="Alice sees rain.")
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     assert [
         item["id"]
         for item in perception_context(scene, message)["prior_physical_context"]
     ] == [item.id for item in perception_prefix(scene, message.id)]
     set_source = Mock(side_effect=AssertionError("unchanged source rebound"))
     monkeypatch.setattr(type(direct.perspective_source), "set_source", set_source)
-    await summarizer.ensure_perceptions(scene)
+    await knowledge_step(scene)
     set_source.assert_not_called()
 
 
@@ -517,7 +521,7 @@ async def test_shared_entries_do_not_export_scene_local_source_ids(
         "world_state", "update_reinforcement", question="Other question", character=None
     )
     request.return_value = response(Alice="Unrelated local view.", Bob=None)
-    await scene.push_history(local)
+    await push_and_step(scene, local)
     if character:
         scene.character_data.pop(character)
     await shared.update_to_scene(scene)

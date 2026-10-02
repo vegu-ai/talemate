@@ -24,6 +24,7 @@ from _world_state_helpers import (
     scene_with_memory,  # noqa: F401 - pytest fixture
 )
 
+import talemate.emit.async_signals
 import talemate.instance as instance_module
 import talemate.agents.world_state as world_state_module
 import talemate.agents.world_state.snapshot as snapshot_module
@@ -372,6 +373,108 @@ class TestUpdateWorldState:
         await agent.update_world_state(force=True)
         await agent._tracked_task(SNAPSHOT_TASK)
         assert observed["background"] is True
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("mode", ["perception", "legacy"])
+    async def test_perspectives_mode_waits_for_the_snapshot_turn(  # noqa: F811
+        self, scene, monkeypatch, mode
+    ):
+        """In Character perspectives mode the world state update returns only
+        once the snapshot has finished, even with a concurrent-capable client."""
+        from talemate.world_state import WorldState
+
+        agent = instance_module.get_agent("world_state")
+        scene.knowledge_eligibility = mode
+        _enable_client_concurrency(monkeypatch, agent)
+        release = asyncio.Event()
+        finished = []
+
+        async def _slow_request_update(self, *args, **kwargs):
+            await release.wait()
+            finished.append(True)
+
+        monkeypatch.setattr(WorldState, "request_update", _slow_request_update)
+        turn = asyncio.create_task(agent.update_world_state(force=True))
+        await asyncio.sleep(0.05)
+        assert turn.done() is (mode == "legacy")
+        release.set()
+        await asyncio.wait_for(turn, 2)
+        await asyncio.wait_for(
+            agent._tracked_task(SNAPSHOT_TASK) or asyncio.sleep(0), 2
+        )
+        assert finished == [True]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("cancel", ["stop", "dialog"])
+    @pytest.mark.parametrize("mode", ["perception", "legacy"])
+    async def test_a_cancel_in_a_waited_snapshot_ends_the_turn(  # noqa: F811
+        self, scene, monkeypatch, cancel, mode
+    ):
+        agent = instance_module.get_agent("world_state")
+        scene.knowledge_eligibility = mode
+        _enable_client_concurrency(monkeypatch, agent)
+
+        async def cancelled(**kwargs):
+            if cancel == "stop":
+                scene.interrupt()
+            raise GenerationCancelled("Generation cancelled by user", by_user=True)
+
+        monkeypatch.setattr(agent, "request_world_state", cancelled)
+        agent.next_update = 5
+        try:
+            if mode == "perception":
+                with pytest.raises(GenerationCancelled):
+                    await agent.update_world_state(force=True)
+                assert agent.next_update == 5
+            else:
+                await agent.update_world_state(force=True)
+                await asyncio.wait_for(agent._tracked_task(SNAPSHOT_TASK), 2)
+                assert agent.next_update == 0
+        finally:
+            scene.cancel_requested = False
+
+    @pytest.mark.asyncio
+    async def test_a_turn_that_joins_a_snapshot_ends_on_its_cancel(  # noqa: F811
+        self, scene, monkeypatch
+    ):
+        agent = instance_module.get_agent("world_state")
+        scene.knowledge_eligibility = "perception"
+        _enable_client_concurrency(monkeypatch, agent)
+        release = asyncio.Event()
+
+        async def dialog_cancel(**kwargs):
+            await release.wait()
+            raise GenerationCancelled("Generation cancelled by user", by_user=True)
+
+        monkeypatch.setattr(agent, "request_world_state", dialog_cancel)
+        # the World panel's refresh starts it without waiting
+        assert await agent.dispatch_world_state_update()
+        connected = talemate.emit.async_signals.get("game_loop_actor_iter")
+        monkeypatch.setattr(connected, "receivers", [agent.on_game_loop_actor_iter])
+        agent.next_update = agent.update_world_state_turns
+        turn = asyncio.create_task(
+            connected.send(SimpleNamespace(scene=scene, actor=None))
+        )
+        await asyncio.sleep(0.05)
+        assert not turn.done()
+        release.set()
+        with pytest.raises(GenerationCancelled):
+            await asyncio.wait_for(turn, 2)
+
+    @pytest.mark.asyncio
+    async def test_a_cancel_in_the_initial_snapshot_ends_only_the_snapshot(  # noqa: F811
+        self, scene, monkeypatch
+    ):
+        agent = instance_module.get_agent("world_state")
+        scene.knowledge_eligibility = "perception"
+        monkeypatch.setattr(type(agent), "initial_update", property(lambda self: True))
+
+        async def cancelled(**kwargs):
+            raise GenerationCancelled("Generation cancelled by user", by_user=True)
+
+        monkeypatch.setattr(agent, "request_world_state", cancelled)
+        await agent.on_scene_loop_init_after(None)
+        assert agent.get_scene_state("inital_update_done")
 
     @pytest.mark.asyncio
     async def test_dispatch_forwards_instructions_through_the_chain(  # noqa: F811

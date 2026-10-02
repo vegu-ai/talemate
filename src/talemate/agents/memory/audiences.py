@@ -7,14 +7,11 @@ import structlog
 from pydantic import BaseModel, ConfigDict, Field
 from chromadb.utils.batch_utils import create_batches
 
-from talemate.context import scene_is_loading
 from talemate.agents.memory.exceptions import MemoryShutdownRefused
 from talemate.agents.memory.shutdown import cancel_on_memory_shutdown
 
 from talemate.knowledge.memory import audience_documents
 from talemate.knowledge.mode import character_knowledge_enabled
-from talemate.knowledge.processing import evidence_writer, track_evidence_task
-from talemate.knowledge.revision_browsing import defer_derived_jobs
 from talemate.knowledge.reinforcements import reinforcement_source_keys
 from talemate.knowledge.perspectives import PerspectiveReadContext, perspectives_changed
 
@@ -29,7 +26,6 @@ class AudienceIndexState(BaseModel):
     db: object = None
     fingerprints: dict | None = None
     lock: asyncio.Lock = Field(default_factory=asyncio.Lock)
-    task: asyncio.Task | None = None
     documents: dict = Field(default_factory=dict)
     documents_revision: int = -1
     dirty: set | None = None
@@ -79,31 +75,11 @@ class AudienceMemoryMixin:
             state.dirty.update(groups)
         if reconcile:
             state.fingerprints = None
-        if (
-            self.scene is not scene
-            or not self.db
-            or not self._ready_to_add
-            or self.readonly
-            or scene_is_loading.get()
-            or defer_derived_jobs.get()
-        ):
-            return
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            return
-        if state.task is None or state.task.done():
-            state.task = loop.create_task(self.ensure_audience_index(scene))
-            track_evidence_task(scene, state.task)
-            state.task.add_done_callback(self._audience_update_done)
 
-    @staticmethod
-    def _audience_update_done(task):
-        if not task.cancelled() and task.exception() is not None:
-            log.warning(
-                "audience index update failed; retry on next read",
-                error=str(task.exception()),
-            )
+    def audience_index_writable(self, scene) -> bool:
+        return bool(
+            self.scene is scene and self.db and self._ready_to_add and not self.readonly
+        )
 
     async def rebuild_audience_index(self):
         if not character_knowledge_enabled(self.scene):
@@ -133,7 +109,6 @@ class AudienceMemoryMixin:
                     state.dirty = None
             self._audience_states.pop(scene, None)
 
-    @evidence_writer
     @cancel_on_memory_shutdown
     async def ensure_audience_index(self, scene):
         if not character_knowledge_enabled(scene):

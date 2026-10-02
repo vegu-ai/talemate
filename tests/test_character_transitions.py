@@ -591,10 +591,7 @@ async def test_protected_bridge_precedes_later_context_under_tiny_budget(
         else True
     )
     assert protected_transition(scene, "Nora") is transition
-    pending = CharacterMessage("Nora: I am back.", history_dispatch_pending=True)
-    scene.history.append(pending)
-    assert protected_transition(scene, "Nora") is transition
-    pending.history_dispatch_pending = False
+    scene.history.append(CharacterMessage("Nora: I am back."))
     assert protected_transition(scene, "Nora") is None
 
 

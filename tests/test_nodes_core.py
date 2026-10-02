@@ -27,7 +27,6 @@ from typing import Any, ClassVar
 import pytest
 import structlog
 
-from talemate.emit.async_signals import DEFERRED
 from talemate.game.engine.nodes.core import (
     UNRESOLVED,
     Comment,
@@ -1833,11 +1832,11 @@ async def test_listen_execute_from_event_stop_module_is_not_a_failure():
 
 
 @pytest.mark.asyncio
-async def test_listen_execute_from_event_outside_state_reports_deferred():
+async def test_listen_execute_from_event_outside_state_returns_silently():
     listen = Listen(title="listen")
     listen.set_property("event_name", "evt")
     result = await listen.execute_from_event("payload")
-    assert result is DEFERRED
+    assert result is None
 
 
 @pytest.mark.asyncio

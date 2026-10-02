@@ -4,7 +4,6 @@ Utilities for managing the scene history.
 Most of these currently exist as mehtods on the Scene object, but i am in the process of moving them here.
 """
 
-from talemate.knowledge.processing import evidence_writer
 import pydantic
 import asyncio
 from typing import TYPE_CHECKING, Callable
@@ -625,7 +624,6 @@ async def static_history(scene: "Scene") -> list[ArchiveEntry]:
     ]
 
 
-@evidence_writer
 async def rebuild_history(
     scene: "Scene",
     callback: Callable | None = None,
@@ -758,7 +756,6 @@ async def character_activity(
     )
 
 
-@evidence_writer
 async def update_history_entry(
     scene: "Scene", entry: HistoryEntry, *, still_current=None
 ) -> LayeredArchiveEntry | ArchiveEntry:
@@ -812,7 +809,6 @@ async def update_history_entry(
         return layered_entry
 
 
-@evidence_writer
 async def regenerate_history_entry(
     scene: "Scene",
     entry: HistoryEntry,

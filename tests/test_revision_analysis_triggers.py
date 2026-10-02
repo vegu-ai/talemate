@@ -1,3 +1,5 @@
+from _knowledge_step_helpers import push_and_step
+from talemate.knowledge.step import knowledge_step
 import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -13,7 +15,6 @@ from talemate.knowledge.perspective_models import content_digest
 from talemate.knowledge.perspectives import select_character_view, source_reference
 from talemate.knowledge.readiness import perception_readiness
 from talemate.knowledge.revision_refresh import (
-    catch_up_revisions,
     revision_refresh_payload,
 )
 from talemate.regenerate import regenerate
@@ -93,7 +94,7 @@ async def test_automatic_final_text_is_ready_without_action_or_next_send(
     if mode == "off":
         t.editor.actions["revision"].config["automatic_revision"].value = False
     message = kind(message=original)
-    await t.scene.push_history(message)
+    await push_and_step(t.scene, message)
     expected = original if mode == "off" else original.replace("brass", "silver")
     assert message.message == expected
     assert [value for phase, value in t.order if phase == "perception"] == [
@@ -101,8 +102,8 @@ async def test_automatic_final_text_is_ready_without_action_or_next_send(
     ]
     assert t.request.await_count == 1
     assert_ready(t.scene, message)
-    await catch_up_revisions(t.scene)
-    await t.summarizer.ensure_perceptions(t.scene)
+    await knowledge_step(t.scene)
+    await knowledge_step(t.scene)
     assert t.request.await_count == 1
     assert message.revision_feature_current("perceptions")
 
@@ -114,7 +115,7 @@ async def test_regeneration_analyzes_only_final_accepted_version(flow, monkeypat
         message="The old key is here.",
         meta={"agent": "narrator", "function": "narrate_environment"},
     )
-    await t.scene.push_history(message)
+    await push_and_step(t.scene, message)
     t.request.reset_mock()
     t.order.clear()
     monkeypatch.setattr(
@@ -123,13 +124,14 @@ async def test_regeneration_analyzes_only_final_accepted_version(flow, monkeypat
         AsyncMock(return_value="The brass key is in the lock."),
     )
     assert await regenerate(t.scene) == [message]
+    await knowledge_step(t.scene)
     assert message.message == "The silver key is in the lock."
     assert [value for phase, value in t.order if phase == "perception"] == [
         message.message
     ]
     assert t.request.await_count == 1
     assert_ready(t.scene, message)
-    await catch_up_revisions(t.scene)
+    await knowledge_step(t.scene)
     assert t.request.await_count == 1
 
 
@@ -141,17 +143,14 @@ async def test_manual_save_retains_text_and_defers_until_action_or_send(
 ):
     t = flow
     message = kind(message="Alice: The brass key is here.")
-    await t.scene.push_history(message)
+    await push_and_step(t.scene, message)
     t.request.reset_mock()
-    rebuild = AsyncMock()
-    monkeypatch.setattr(t.summarizer, "rebuild_perceptions", rebuild)
     edited = 'Alice: "The ruby key is in the drawer."'
     await t.plugin.handle_edit({"id": message.id, "text": edited})
     await asyncio.sleep(0)
     assert message.message == edited
     assert message.versions[message.active_version].message == edited
     t.request.assert_not_awaited()
-    rebuild.assert_not_awaited()
     assert refresh(t.scene, message)["required"]
     selected = select_character_view(
         t.scene, source_reference(t.scene, "message", message.id), "Bob"
@@ -164,10 +163,10 @@ async def test_manual_save_retains_text_and_defers_until_action_or_send(
             )
         )
     else:
-        await catch_up_revisions(t.scene)
+        await knowledge_step(t.scene)
     assert t.request.await_count == 1
     assert_ready(t.scene, message)
-    await catch_up_revisions(t.scene)
+    await knowledge_step(t.scene)
     assert t.request.await_count == 1
 
 
@@ -175,13 +174,10 @@ async def test_manual_save_retains_text_and_defers_until_action_or_send(
 async def test_unchanged_manual_save_does_not_schedule_work(flow, monkeypatch):
     t = flow
     message = NarratorMessage(message="The brass key is here.")
-    await t.scene.push_history(message)
+    await push_and_step(t.scene, message)
     state, knowledge = message.revision_state, message.knowledge
     t.request.reset_mock()
-    rebuild = AsyncMock()
-    monkeypatch.setattr(t.summarizer, "rebuild_perceptions", rebuild)
     await t.plugin.handle_edit({"id": message.id, "text": message.message})
-    rebuild.assert_not_awaited()
     t.request.assert_not_awaited()
     assert message.revision_state is state
     assert message.knowledge is knowledge
@@ -192,7 +188,7 @@ async def test_unchanged_manual_save_does_not_schedule_work(flow, monkeypatch):
 async def test_action_repairs_actual_missing_results_even_at_baseline(flow, missing):
     t = flow
     message = NarratorMessage(message="The brass key is here.")
-    await t.scene.push_history(message)
+    await push_and_step(t.scene, message)
     message.mark_revision_committed()
     if missing == "absent":
         message.knowledge = None
@@ -216,7 +212,7 @@ async def test_failed_automatic_analysis_remains_actionable_and_retries_once(flo
     t.request.side_effect = GenerationCancelled("analysis canceled")
     message = NarratorMessage(message="The brass key is here.")
     with pytest.raises(GenerationCancelled):
-        await t.scene.push_history(message)
+        await push_and_step(t.scene, message)
     assert message.message == "The silver key is here."
     assert refresh(t.scene, message)["required"]
     assert perception_readiness(t.scene, message) == "failed"
@@ -234,7 +230,7 @@ async def test_failed_automatic_analysis_remains_actionable_and_retries_once(flo
 async def test_duplicate_action_and_send_share_selected_text_analysis(flow):
     t = flow
     message = NarratorMessage(message="The brass key is here.")
-    await t.scene.push_history(message)
+    await push_and_step(t.scene, message)
     await t.plugin.handle_edit({"id": message.id, "text": "The ruby key is here."})
     t.request.reset_mock()
     entered, release = asyncio.Event(), asyncio.Event()
@@ -250,7 +246,7 @@ async def test_duplicate_action_and_send_share_selected_text_analysis(flow):
     first = await t.plugin.handle_commit_revision(payload)
     await asyncio.wait_for(entered.wait(), 3)
     second = await t.plugin.handle_commit_revision(payload)
-    send = asyncio.create_task(catch_up_revisions(t.scene))
+    send = asyncio.create_task(knowledge_step(t.scene))
     release.set()
     await asyncio.wait_for(asyncio.gather(first, second, send), 3)
     assert t.request.await_count == 1
@@ -270,7 +266,7 @@ async def test_edit_during_automatic_analysis_does_not_analyze_new_selection(flo
         return await successful(*args, **kwargs)
 
     t.request.side_effect = delayed
-    push = asyncio.create_task(t.scene.push_history(message))
+    push = asyncio.create_task(push_and_step(t.scene, message))
     await asyncio.wait_for(entered.wait(), 3)
     await t.plugin.handle_edit({"id": message.id, "text": "The ruby key is here."})
     release.set()
@@ -281,7 +277,7 @@ async def test_edit_during_automatic_analysis_does_not_analyze_new_selection(flo
     assert refresh(t.scene, message)["required"]
     assert perception_readiness(t.scene, message) != "ready"
     t.request.side_effect = successful
-    await catch_up_revisions(t.scene)
+    await knowledge_step(t.scene)
     assert t.request.await_count == 2
     assert_ready(t.scene, message)
 
@@ -292,7 +288,7 @@ async def test_automatic_baseline_return_restores_results_without_analyzing_orig
 ):
     t = flow
     message = NarratorMessage(message="The brass key is here.")
-    await t.scene.push_history(message)
+    await push_and_step(t.scene, message)
     baseline = message.knowledge.model_dump()
     await t.plugin.handle_swap_revision({"id": message.id, "index": 0})
     assert refresh(t.scene, message)["required"]
@@ -310,11 +306,11 @@ async def test_effective_eligibility_does_not_enable_perceptions(flow, mode):
     t = flow
     t.scene.knowledge_eligibility = mode
     message = NarratorMessage(message="The brass key is here.")
-    await t.scene.push_history(message)
+    await push_and_step(t.scene, message)
     assert t.request.await_count == int(mode == "perception")
     await t.plugin.handle_edit({"id": message.id, "text": "The ruby key is here."})
     before = t.request.await_count
-    await catch_up_revisions(t.scene)
+    await knowledge_step(t.scene)
     assert t.request.await_count - before == int(mode == "perception")
 
 
@@ -333,7 +329,7 @@ async def test_unrevised_fallback_is_analyzed_once(flow, monkeypatch, outcome):
 
     monkeypatch.setattr(t.editor, "revision_revise", revise)
     message = NarratorMessage(message="The brass key is here.")
-    await t.scene.push_history(message)
+    await push_and_step(t.scene, message)
     assert message.active_version == 0
     assert message.message == "The brass key is here."
     assert t.request.await_count == 1
@@ -371,7 +367,7 @@ async def test_obsolete_automatic_analysis_cannot_publish_completion(flow, mutat
         return await successful(*args, **kwargs)
 
     t.request.side_effect = delayed
-    push = asyncio.create_task(t.scene.push_history(message))
+    push = asyncio.create_task(push_and_step(t.scene, message))
     await asyncio.wait_for(entered.wait(), 3)
     if mutation == "delete":
         t.scene.delete_message(message.id)
@@ -395,7 +391,7 @@ async def test_current_source_views_do_not_certify_failed_dependent_phase(
 ):
     t = flow
     message = NarratorMessage(message="The brass key is here.")
-    await t.scene.push_history(message)
+    await push_and_step(t.scene, message)
     message.knowledge = None
     repairs = AsyncMock(side_effect=RuntimeError("dependent summary failed"))
     monkeypatch.setattr(t.summarizer, "repair_summary_views", repairs)
@@ -408,7 +404,8 @@ async def test_current_source_views_do_not_certify_failed_dependent_phase(
     repairs.side_effect = None
     await (await t.plugin.handle_commit_revision(payload))
     assert t.request.await_count == before
-    assert repairs.await_count == 2
+    # the refresh and the step each update the summary views
+    assert repairs.await_count == 3
     assert_ready(t.scene, message)
 
 
@@ -428,8 +425,7 @@ async def test_manual_save_after_auto_job_does_not_get_analyzed_by_finalizer(
 
     monkeypatch.setattr(revision_refresh, "refresh_revision", edit_after_refresh)
     message = NarratorMessage(message="The brass key is here.")
-    with pytest.raises(GenerationCancelled):
-        await t.scene.push_history(message)
+    await push_and_step(t.scene, message)
     assert message.message == "The ruby key is here."
     assert t.request.await_count == 1
     assert refresh(t.scene, message)["required"]

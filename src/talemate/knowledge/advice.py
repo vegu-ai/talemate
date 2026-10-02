@@ -3,6 +3,8 @@ import json
 from typing import TYPE_CHECKING, Any, Literal
 from types import EllipsisType
 
+import structlog
+
 from talemate.agents.context import active_agent
 from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
@@ -19,16 +21,14 @@ from talemate.knowledge.perspectives import (
 from talemate.knowledge.snapshots import snapshot_for
 from talemate.util import count_tokens
 
+log = structlog.get_logger(__name__)
+
 if TYPE_CHECKING:
     from talemate.agents.base import Agent, AgentEmission
     from talemate.tale_mate import Character, Scene
 
 KnowledgeAnalysisType = Literal["conversation", "narration"]
 ENTRY_SOURCE_KINDS = {"dialogue": "message", "archived": "summary", "layer": "summary"}
-
-
-class StaleAdvice(GenerationCancelled):
-    focal_reraise = True
 
 
 def advice_character(
@@ -327,7 +327,12 @@ def advice_record_is_current(
     )
 
 
-def require_current_advice(
+def require_advice_scene(agent: "Agent", scene: "Scene") -> None:
+    if agent.scene is not scene:
+        raise GenerationCancelled("The scene changed during advice generation")
+
+
+def warn_stale_advice(
     agent: "Agent",
     scene: "Scene",
     character: "Character | None",
@@ -336,14 +341,17 @@ def require_current_advice(
     boundary: list[int] | None = None,
     budget: int | None = None,
 ) -> None:
-    """Cancel stale generation before insertion or Focal callback execution."""
-    if (
-        agent.scene is not scene
-        or (
-            boundary is not None
-            and [message.id for message in scene.history] != boundary
-        )
-        or advice_fingerprint(scene, character, boundary=boundary, budget=budget)
+    if boundary is not None and [message.id for message in scene.history] != boundary:
+        changed = "history"
+    elif (
+        advice_fingerprint(scene, character, boundary=boundary, budget=budget)
         != fingerprint
     ):
-        raise StaleAdvice("Character evidence changed during advice generation; retry")
+        changed = "evidence"
+    else:
+        return
+    log.warning(
+        "advice evidence changed during generation",
+        character=character.name if character else None,
+        changed=changed,
+    )

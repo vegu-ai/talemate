@@ -52,13 +52,6 @@ class _MemoryAgent:
             raise self.error
 
 
-class _SummarizerAgent:
-    """Only the backlog check of a loaded scene is reached."""
-
-    def check_perception_backlog(self, scene):
-        return None
-
-
 class _ReleaseHandler:
     """Stand-in for the real handler, which is too heavy to construct.
 
@@ -97,7 +90,6 @@ def wired(monkeypatch, tmp_path: Path):
 
     instance.AGENTS[AGENT_TYPE] = agent
     instance.AGENTS["memory"] = memory
-    monkeypatch.setitem(instance.AGENTS, "summarizer", _SummarizerAgent())
     # the real agent types have no instances in a test process
     monkeypatch.setattr(instance, "agent_types", lambda: [AGENT_TYPE])
     try:

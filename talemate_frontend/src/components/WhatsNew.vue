@@ -151,7 +151,7 @@ export default {
                                         "Add a selected person, object or place from the story to the world snapshot and keep it tracked.",
                                         "Character arrivals and departures appear in history, with arrival notes and optional narration when moving characters into or out of the scene.",
                                         "Prose perspective presets include examples, and the Director can help choose perspectives or reassess the scene's intent.",
-                                        "Finished passages appear while follow-up analysis, summaries and voice preparation continue.",
+                                        "Finished passages appear while follow-up summaries and voice preparation continue. In Character perspectives mode, new passages are analyzed before the next generation.",
                                         "Editing or deleting earlier passages warns when later story details may become inconsistent."
                                     ]
                                 },

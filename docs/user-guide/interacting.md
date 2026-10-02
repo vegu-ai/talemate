@@ -142,9 +142,9 @@ Browsing changes the active text immediately without running analysis or saving 
 
 Double-clicking a message, editing its text and pressing Enter saves the edit without starting analysis. The action or your next send/choice updates the edited passage. Unchanged edits and canceled edits require no new analysis.
 
-Your submitted character or narrator line appears immediately while any required refresh runs. The next response still waits for that work. If refreshing fails or is cancelled, your line stays in history; retrying resumes the pending work without adding the line again. Auto-save saves the accepted line before refreshing; with auto-save disabled, save the scene yourself before closing it.
+Your submitted character or narrator line appears immediately. The next response first refreshes edited messages and analyzes new passages. If that fails or is cancelled, your line stays in history and the response does not start; the next send or generation retries it. The scene counts as unsaved until it is saved; with auto-save disabled, save the scene yourself before closing it.
 
-Automatic revision completes before Character perspectives analyzes the generated message. It analyzes the final accepted text once and marks that version ready; sending your next line does not repeat successful analysis of that unchanged version. Failed analysis leaves the action available for retry.
+Character perspectives analyzes a generated message when the next generation starts, after automatic revision has finished. It analyzes the final accepted text once and marks that version ready; sending your next line does not repeat successful analysis of that unchanged version. Failed analysis leaves the action available for retry.
 
 Character perspectives analyzes the chosen passage and repairs dependent summaries. Standard mode settles affected summary cleanup without a knowledge request. Returning to the baseline restores evidence still owned by the revision transaction. If the memory index needs repair, **Update knowledge** or your next send retries it without repeating current analysis. Index work remains pending when unavailable, while the story can continue.
 

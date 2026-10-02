@@ -1,5 +1,6 @@
+from _knowledge_step_helpers import push_and_step
+from talemate.knowledge.step import knowledge_step
 from types import SimpleNamespace
-import asyncio
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
 import pytest
@@ -17,89 +18,6 @@ from talemate.scene_message import CharacterMessage
 from talemate.knowledge.perspectives import add_disclosure
 
 cast = test_actor_perspective_history.cast
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("direct", [False, True])
-async def test_analysis_waits_for_existing_snapshot_before_capturing_evidence(
-    cast, monkeypatch, direct
-):
-    from talemate.knowledge.perspectives import source_reference, select_character_view
-    from talemate.knowledge.snapshot_models import SnapshotPerspectives
-    from talemate.knowledge.snapshots import snapshot_digest
-
-    scene, message = cast
-    summarizer = get_agent("summarizer")
-    world_state = get_agent("world_state")
-    summarizer.actions["analyze_scene"].enabled = True
-    bob = scene.get_character("Bob")
-    release = asyncio.Event()
-    waiting = asyncio.Event()
-    statuses = []
-
-    def status(typ, **data):
-        statuses.append(data)
-        if data.get("status") == "busy":
-            waiting.set()
-
-    monkeypatch.setattr("talemate.status.emit", status)
-    monkeypatch.setattr(summarizer, "emit_message", AsyncMock())
-
-    async def update(**kwargs):
-        await release.wait()
-        source = select_character_view(
-            scene, source_reference(scene, "message", message.id), bob.name
-        ).source
-        scene.world_state.location = "The harbor"
-        scene.world_state.location_perspectives = SnapshotPerspectives(
-            content_digest=snapshot_digest("location", "The harbor"),
-            views=[
-                {
-                    "audience": [bob.name],
-                    "status": "ready",
-                    "text": "The harbor",
-                    "sources": [source],
-                }
-            ],
-        )
-
-    update = AsyncMock(side_effect=update)
-    monkeypatch.setattr(type(scene.world_state), "request_update", update)
-    request = AsyncMock(return_value=("", {"analysis": "Ask about the harbor."}))
-    monkeypatch.setattr("talemate.prompts.Prompt.request", request)
-    await world_state.dispatch_world_state_update()
-    emission = ConversationAgentEmission(
-        agent=get_agent("conversation"), character=bob, response=""
-    )
-    with ActiveAgent(
-        get_agent("conversation"),
-        test_analysis_waits_for_existing_snapshot_before_capturing_evidence,
-    ):
-        task = asyncio.create_task(
-            summarizer.analyze_scene_for_next_action("conversation", bob)
-            if direct
-            else summarizer.on_inject_instructions(emission)
-        )
-        try:
-            await asyncio.wait_for(waiting.wait(), 2)
-            assert not task.done()
-            request.assert_not_awaited()
-            assert (
-                statuses[0]["message"]
-                == "Waiting for knowledge updates before scene analysis"
-            )
-            release.set()
-            await asyncio.wait_for(task, 5)
-        finally:
-            release.set()
-            await asyncio.gather(task, return_exceptions=True)
-    update.assert_awaited_once()
-    request.assert_awaited_once()
-    assert (
-        request.call_args.kwargs["vars"]["evidence"]["snapshot"]["location"]
-        == "The harbor"
-    )
-    assert statuses[-1]["status"] == "idle"
 
 
 @pytest.mark.asyncio
@@ -213,9 +131,15 @@ async def analysis_turn(cast, monkeypatch, request):
     monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
     perspectives_changed.connect(memory._audiences_changed, sender=scene)
 
-    async def finalize(scene, messages):
+    async def analyze(scene, new=frozenset(), **kwargs):
+        from talemate.knowledge.revision_scope import active_revision_phase
+
+        phase = active_revision_phase.get()
+        analyzed = {*new, *((phase[1].id,) if phase else ())}
         if scene.knowledge_eligibility == "perception":
-            for message in messages:
+            for message in scene.history:
+                if message.id not in analyzed:
+                    continue
                 set_source_perspectives(
                     scene,
                     "message",
@@ -229,7 +153,7 @@ async def analysis_turn(cast, monkeypatch, request):
                     ],
                 )
 
-    monkeypatch.setattr(summarizer, "finalize_perceptions", finalize)
+    monkeypatch.setattr(summarizer, "ensure_perceptions", analyze)
     count = 0
 
     async def converse(actor, instruction=None):
@@ -243,8 +167,9 @@ async def analysis_turn(cast, monkeypatch, request):
         return [CharacterMessage(message=f"Bob: Reply {count}.")]
 
     monkeypatch.setattr(conversation, "converse", converse)
+    await knowledge_step(scene)
     message = (await converse(scene.get_character("Bob").actor))[0]
-    await scene.push_history(message)
+    await push_and_step(scene, message)
     try:
         yield SimpleNamespace(
             scene=scene,
@@ -359,8 +284,8 @@ async def test_reply_and_index_changes_stay_outside_saved_boundary(analysis_turn
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("analysis_turn", ["perception"], indirect=True)
-async def test_concurrent_new_line_still_cancels_analysis(analysis_turn):
-    from talemate.exceptions import GenerationCancelled
+async def test_concurrent_new_line_logs_and_keeps_the_advice(analysis_turn):
+    from structlog.testing import capture_logs
 
     t = analysis_turn
     t.summarizer.actions["analyze_scene"].config["cache_analysis"].value = False
@@ -372,9 +297,13 @@ async def test_concurrent_new_line_still_cancels_analysis(analysis_turn):
         return "", {"analysis": "Outdated advice."}
 
     t.calls.side_effect = changed
-    with pytest.raises(GenerationCancelled, match="evidence changed"):
+    with capture_logs() as logs:
         await t.converse(t.scene.get_character("Bob").actor)
-    assert t.calls.await_count == 2
+    assert {
+        (log["character"], log["changed"])
+        for log in logs
+        if log["event"] == "advice evidence changed during generation"
+    } == {("Bob", "history")}
 
 
 @pytest.mark.asyncio
@@ -437,8 +366,8 @@ async def test_deep_analysis_checks_summary_outside_initial_evidence(
     from talemate.knowledge.advice import (
         advice_context,
         advice_fingerprint,
-        StaleAdvice,
     )
+    from structlog.testing import capture_logs
     from talemate.knowledge.memory import audience_documents
 
     scene, _ = cast
@@ -502,17 +431,18 @@ async def test_deep_analysis_checks_summary_outside_initial_evidence(
             agent=conversation, character=bob, response=""
         )
         if mutate_during_retrieval:
-            with pytest.raises(StaleAdvice, match="Deep analysis sources changed"):
+            with capture_logs() as logs:
                 await summarizer.on_inject_instructions(emission)
-            assert not emission.dynamic_instructions
-            mutate_during_retrieval = False
-            await summarizer.on_inject_instructions(emission)
-            assert any(
-                item.title == "Deep Analysis Context"
-                for item in emission.dynamic_instructions
-            )
+            assert [
+                log["character"]
+                for log in logs
+                if log["event"] == "deep analysis sources changed during retrieval"
+            ] == ["Bob"]
+            assert [item.title for item in emission.dynamic_instructions] == [
+                "Scene Analysis"
+            ]
             request.assert_awaited_once()
-            assert summarizer.rag_build.await_count == 2
+            summarizer.rag_build.assert_awaited_once()
             return
         await summarizer.on_inject_instructions(emission)
         assert any(
@@ -543,69 +473,3 @@ async def test_deep_analysis_checks_summary_outside_initial_evidence(
         ]
         request.assert_awaited_once()
         summarizer.rag_build.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_analysis_waits_for_summarizer_passes_before_capturing_evidence(
-    cast, monkeypatch
-):
-    from talemate.knowledge.advice import analysis_evidence_fingerprint
-
-    scene, message = cast
-    summarizer = get_agent("summarizer")
-    conversation = get_agent("conversation")
-    bob = scene.get_character("Bob")
-    summarizer.actions["analyze_scene"].enabled = True
-    scene.archived_history = [
-        {"id": "archive", "text": "Reader summary", "start": 0, "end": 0, "ts": 0}
-    ]
-    entered = asyncio.Event()
-    release = asyncio.Event()
-    waiting = asyncio.Event()
-
-    def status(typ, **data):
-        if data.get("message") == "Waiting for knowledge updates before scene analysis":
-            waiting.set()
-
-    async def summarize(text, **kwargs):
-        entered.set()
-        await release.wait()
-        return "The rain stopped earlier."
-
-    summary_request = AsyncMock(side_effect=summarize)
-    analysis_request = AsyncMock(return_value=("", {"analysis": "Ask about the rain."}))
-    monkeypatch.setattr("talemate.status.emit", status)
-    monkeypatch.setattr(summarizer, "summarize", summary_request)
-    monkeypatch.setattr(summarizer, "schedule_audience_summaries", AsyncMock())
-    monkeypatch.setattr(summarizer, "emit_message", AsyncMock())
-    monkeypatch.setattr("talemate.prompts.Prompt.request", analysis_request)
-    writer = asyncio.create_task(summarizer.ensure_summary_views(scene, "archive"))
-    analysis = None
-    try:
-        await asyncio.wait_for(entered.wait(), 2)
-        boundary, budget = summarizer._analysis_evidence_key(scene, bob, "conversation")
-        before = analysis_evidence_fingerprint(scene, bob, boundary, budget)
-        with ActiveAgent(
-            conversation,
-            test_analysis_waits_for_summarizer_passes_before_capturing_evidence,
-        ):
-            emission = ConversationAgentEmission(
-                agent=conversation, character=bob, response=""
-            )
-            analysis = asyncio.create_task(summarizer.on_inject_instructions(emission))
-            await asyncio.wait_for(waiting.wait(), 2)
-            analysis_request.assert_not_awaited()
-            release.set()
-            await asyncio.wait_for(analysis, 5)
-        assert analysis_evidence_fingerprint(scene, bob, boundary, budget) != before
-        assert summary_request.await_count == 2  # Alice, then Bob and Cara.
-        analysis_request.assert_awaited_once()
-        assert any(
-            item.content == "Ask about the rain."
-            for item in emission.dynamic_instructions
-        )
-    finally:
-        release.set()
-        await asyncio.gather(
-            writer, *([analysis] if analysis else []), return_exceptions=True
-        )

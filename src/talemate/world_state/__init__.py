@@ -408,6 +408,8 @@ class WorldState(BaseModel):
         - initial_only: When true, emit the current state without requesting a
           new one if characters already exist or automatic updates are off.
         - instructions: One-off guidance for this snapshot pass only.
+
+        Returns "cancelled" when the user cancelled the snapshot.
         """
 
         if initial_only and self.characters:
@@ -419,7 +421,7 @@ class WorldState(BaseModel):
             self.emit()
             return
 
-        await self.agent.apply_snapshot_update(self, instructions=instructions)
+        return await self.agent.apply_snapshot_update(self, instructions=instructions)
 
     async def persist(self):
         """
@@ -548,9 +550,6 @@ class WorldState(BaseModel):
                 source = prepare_reinforcement_source(self.scene, reinforcement)
                 await write_reinforcement_entry(self.scene, reinforcement, source)
                 self.emit()
-                await instance.get_agent("summarizer").finalize_perceptions(
-                    self.scene, []
-                )
             elif character:
                 character = self.agent.scene.get_character(character)
                 await character.set_detail(question, answer)
@@ -581,8 +580,6 @@ class WorldState(BaseModel):
         self.reinforce.append(reinforcement)
 
         self.emit()
-        if answer and character_knowledge_enabled(self.scene):
-            await instance.get_agent("summarizer").finalize_perceptions(self.scene, [])
 
         return reinforcement
 

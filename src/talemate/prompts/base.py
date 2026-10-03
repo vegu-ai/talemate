@@ -106,7 +106,7 @@ _render_signals: ContextVar[_HeldSignals | None] = ContextVar(
 def signals_after_render():
     """
     Hold back signals sent while a template renders. A template's
-    agent_action and decide() calls run in a nested event loop, where a
+    agent_action and decision policy calls run in a nested event loop, where a
     listener graph must not run; the outermost render sends the held
     signals in tasks once it returns.
     """

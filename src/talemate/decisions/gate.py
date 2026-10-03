@@ -5,7 +5,7 @@ from pydantic import BaseModel, RootModel, StrictBool, StrictStr
 
 from talemate.prompts.base import send_outside_render
 
-from .policy import PolicyAction, PolicyInvocation
+from .policy import ActionBudget, PolicyAction, PolicyInvocation
 from .service import decision_service
 
 
@@ -145,9 +145,11 @@ async def decision_gate(
         original_result=original_result,
         is_current=is_current,
         actions={
-            ("gate", "resolve"): PolicyAction(
+            "resolve": PolicyAction(
+                name="gate.resolve",
                 call=resolve,
                 enabled=lambda: True,
+                budget=ActionBudget(limit=1),
                 serialize_result=lambda value: {
                     "fallback_ran": bool(fallback_ids),
                     "fallback_ids": fallback_ids,

@@ -1,5 +1,6 @@
 import asyncio
 import copy
+import inspect
 import random
 from collections.abc import Callable, Mapping
 from pathlib import Path
@@ -32,6 +33,17 @@ from .events import (
 )
 from .ownership import Ownership
 from .provider import DecisionError, FailureCode
+from .questions import (
+    Answers,
+    ChoiceResult,
+    Choice,
+    YesNo,
+    YesNoAnswer,
+    choice,
+    plain,
+    to_answer,
+    yes_no,
+)
 from .service import DecisionHandle, DecisionService, Unavailable
 
 
@@ -46,8 +58,15 @@ class ActionBudget(BaseModel):
 
 
 class PolicyAction(BaseModel):
+    """
+    An action a policy template may call by its helper name. `name` is the
+    action as the Decision Log shows it, e.g. `gate.resolve`. The value the
+    action returns is the invocation's result.
+    """
+
     model_config = ConfigDict(frozen=True)
 
+    name: str
     call: Callable
     enabled: Callable[[], bool]
     budget: ActionBudget | None = None
@@ -114,7 +133,8 @@ class PolicyInvocation(Generic[T]):
         validate_result: Callable[[Any], T],
         disabled_path: Callable,
         original_result: T,
-        actions: Mapping[tuple[str, str], PolicyAction] | None = None,
+        actions: Mapping[str, PolicyAction] | None = None,
+        can_keep: bool = False,
         is_current: Callable[[], bool] = lambda: True,
     ):
         self.id = str(uuid4())
@@ -124,6 +144,7 @@ class PolicyInvocation(Generic[T]):
         self.disabled_path = disabled_path
         self.original_result = validate_result(original_result)
         self.actions = dict(actions or {})
+        self.can_keep = can_keep
         self.is_current = is_current
         self.status: InvocationStatus = "new"
         self.rendered_text: str | None = None
@@ -169,16 +190,20 @@ class PolicyInvocation(Generic[T]):
         env = self.prompt.template_env()
         env.undefined = jinja2.StrictUndefined
         helpers = {
-            "decide": self.decide,
-            "agent_action": self.agent_action,
+            "ask": self.ask,
+            "yes_no": yes_no,
+            "choice": choice,
+            "note": self.note,
             "agent_config": self.prompt.agent_config,
-            "decision_outcome": self.decision_outcome,
-            "decision_result": self.decision_result,
             "random_choice": random.choice,
             "len": len,
             "make_list": list,
             "make_dict": dict,
         }
+        for name, spec in self.actions.items():
+            helpers[name] = self._action_helper(spec)
+        if self.can_keep:
+            helpers["keep"] = self.keep
         env.globals.update(helpers)
         template = env.get_template(f"{self.prompt.name}.jinja2")
         self.source_group = self._source_group(template)
@@ -305,13 +330,20 @@ class PolicyInvocation(Generic[T]):
             self._interruption = exc
             raise
 
-    def decide(self, label, *, state, questions, presentation=None):
+    def ask(self, label, *, state, questions, presentation=None) -> Answers:
         self._check_running()
+        if not isinstance(questions, dict) or not all(
+            isinstance(question, (YesNo, Choice)) for question in questions.values()
+        ):
+            raise DecisionError(FailureCode.TEMPLATE)
         result = self._ownership.bridge(
             self.service.evaluate(
                 label,
                 state=state,
-                questions=questions,
+                questions={
+                    key: question.engine_question()
+                    for key, question in questions.items()
+                },
                 invocation_id=self.id,
                 template_uid=self.prompt.uid,
                 source_group=self.source_group,
@@ -323,28 +355,30 @@ class PolicyInvocation(Generic[T]):
         if isinstance(result, Unavailable):
             raise PolicyUnavailable(result)
         self.handles[result.request_id] = result
-        return result
-
-    def _associated(self, association, *, allow_unassociated=False):
-        if association is None and allow_unassociated:
-            return []
-        handles = (
-            association if isinstance(association, (list, tuple)) else [association]
+        return Answers(
+            {
+                key: to_answer(key, result.request_id, question, result.answers[key])
+                for key, question in questions.items()
+            }
         )
+
+    def _records(self, answers=()):
+        """
+        The requests an outcome or action belongs to: those that produced the
+        given answers, otherwise every request this invocation made.
+        """
+        if not answers:
+            return [self.service.log.records[key] for key in self.handles]
         records = []
-        for handle in handles:
+        for answer in answers:
             if (
-                not isinstance(handle, DecisionHandle)
-                or self.handles.get(handle.request_id) is not handle
+                not isinstance(answer, (YesNoAnswer, ChoiceResult))
+                or answer.request_id not in self.handles
             ):
                 raise DecisionError(FailureCode.TEMPLATE)
-            if handle.invocation_id != self.id:
-                raise DecisionError(FailureCode.TEMPLATE)
-            record = self.service.log.records[handle.request_id]
+            record = self.service.log.records[answer.request_id]
             if record not in records:
                 records.append(record)
-        if not records and not allow_unassociated:
-            raise DecisionError(FailureCode.TEMPLATE)
         return records
 
     def _action_update(self, action, records):
@@ -358,18 +392,30 @@ class PolicyInvocation(Generic[T]):
         for record in records:
             self.service.log.update(record)
 
-    def agent_action(self, agent_name, _action_name, *, _decision=None, **kwargs):
+    def _action_helper(self, spec):
+        def helper(*args, **kwargs):
+            self._set_result(self._run_action(spec, args, kwargs))
+            return ""
+
+        return helper
+
+    def _run_action(self, spec: PolicyAction, args, kwargs):
         self._check_running()
-        records = self._associated(_decision, allow_unassociated=True)
-        action = ActionRecord(action=f"{agent_name}.{_action_name}")
+        try:
+            arguments = inspect.signature(spec.call).bind(
+                *plain(list(args)), **plain(kwargs)
+            )
+        except TypeError:
+            raise DecisionError(FailureCode.TEMPLATE) from None
+        records = self._records()
+        action = ActionRecord(action=spec.name)
         self.action_trace.append(action)
         for record in records:
             record.actions.append(action)
         started = None
         try:
-            spec = self.actions.get((agent_name, _action_name))
             denied = None
-            if spec is None or not spec.enabled():
+            if not spec.enabled():
                 denied = FailureCode.ACTION_DENIED
             elif (
                 spec.budget is not None
@@ -380,7 +426,9 @@ class PolicyInvocation(Generic[T]):
                 action.status = "skipped"
                 action.failure = Failure.from_code(denied)
                 raise PolicyActionError(denied, records)
-            action.arguments = serialize_log_value(spec.serialize_arguments(kwargs))
+            action.arguments = serialize_log_value(
+                spec.serialize_arguments(dict(arguments.arguments))
+            )
             self._ownership.check()
             if spec.budget is not None:
                 self._budget_usage[id(spec.budget)] = (
@@ -389,7 +437,9 @@ class PolicyInvocation(Generic[T]):
             self._action_started = True
             started = monotonic()
             self._action_update(action, records)
-            value = self._ownership.bridge(spec.call(**kwargs))
+            value = self._ownership.bridge(
+                spec.call(*arguments.args, **arguments.kwargs)
+            )
             self._ownership.check()
             action.result = serialize_log_value(spec.serialize_result(value))
             action.status = "completed"
@@ -408,9 +458,12 @@ class PolicyInvocation(Generic[T]):
                 action.elapsed_ms = (monotonic() - started) * 1000
             self._action_update(action, records)
 
-    def decision_outcome(self, handle, action, *, reason=None, **details):
+    def note(self, action, reason=None, *answers, **details):
         """
-        With no handle, the outcome belongs to an invocation that made no request.
+        Records why the template decided as it did. Each answer adds its
+        probabilities and its threshold to the details, keyed by answer id
+        where several answers share a detail; with no answers the note belongs
+        to every request, or to the invocation when it made none.
         """
         self._check_running()
         if (
@@ -419,25 +472,51 @@ class PolicyInvocation(Generic[T]):
             or (reason is not None and not isinstance(reason, str))
         ):
             raise DecisionError(FailureCode.TEMPLATE)
+        records = self._records(answers)
+        details = dict(details)
+        measured: dict[str, dict] = {}
+        thresholds = {}
+        sources = {}
+        for answer in answers:
+            # a question id is unique within one request only
+            if sources.setdefault(answer.id, answer.request_id) != answer.request_id:
+                raise DecisionError(FailureCode.TEMPLATE)
+            for key, value in answer.log_details().items():
+                measured.setdefault(key, {})[answer.id] = value
+            thresholds[answer.id] = answer.threshold
+        for key, values in measured.items():
+            if key in details:
+                raise DecisionError(FailureCode.TEMPLATE)
+            details[key] = next(iter(values.values())) if len(values) == 1 else values
+        if thresholds:
+            if "threshold" in details or "thresholds" in details:
+                raise DecisionError(FailureCode.TEMPLATE)
+            if len(set(thresholds.values())) == 1:
+                details["threshold"] = next(iter(thresholds.values()))
+            else:
+                details["thresholds"] = thresholds
         outcome = {
             "action": action,
             "reason": reason or "reason unspecified",
             "details": serialize_log_value(details),
         }
-        if handle is None:
+        if not records:
             invocation = self.service.log.invocations[self.id]
-            if invocation.request_count:
-                raise DecisionError(FailureCode.TEMPLATE)
             invocation.outcomes.append(outcome)
             self.service.log.update_invocation(self.id)
             return ""
-        for record in self._associated(handle):
+        for record in records:
             record.outcomes.append(copy.deepcopy(outcome))
             self.service.log.update(record)
         return ""
 
-    def decision_result(self, value):
+    def keep(self):
+        """The result is the caller's original one."""
         self._check_running()
+        self._set_result(self.original_result)
+        return ""
+
+    def _set_result(self, value):
         if self._result_count:
             raise DecisionError(FailureCode.RESULT)
         try:
@@ -447,4 +526,3 @@ class PolicyInvocation(Generic[T]):
         except Exception:
             raise DecisionError(FailureCode.RESULT) from None
         self._result_count += 1
-        return ""

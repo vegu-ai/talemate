@@ -4685,7 +4685,83 @@
           "source_group": "override",
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
-          "actions": [],
+          "actions": [
+            {
+              "action": "editor.revision_rewrite",
+              "arguments": {
+                "info": {
+                  "text": "original"
+                },
+                "decision_findings": []
+              },
+              "id": "action-1",
+              "status": "pending",
+              "result": null,
+              "elapsed_ms": null,
+              "failure": null,
+              "reason": null
+            }
+          ],
+          "request_count": 0,
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.unassociated",
+          "source_group": "override",
+          "status": "running",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [
+            {
+              "action": "editor.revision_rewrite",
+              "arguments": {
+                "info": {
+                  "text": "original"
+                },
+                "decision_findings": []
+              },
+              "id": "action-1",
+              "status": "completed",
+              "result": "rewritten",
+              "elapsed_ms": 820.0,
+              "failure": null,
+              "reason": null
+            }
+          ],
+          "request_count": 0,
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.unassociated",
+          "source_group": "override",
+          "status": "running",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [
+            {
+              "action": "editor.revision_rewrite",
+              "arguments": {
+                "info": {
+                  "text": "original"
+                },
+                "decision_findings": []
+              },
+              "id": "action-1",
+              "status": "completed",
+              "result": "rewritten",
+              "elapsed_ms": 820.0,
+              "failure": null,
+              "reason": null
+            }
+          ],
           "request_count": 1,
           "outcomes": []
         }
@@ -4701,7 +4777,7 @@
           "provider": "fake",
           "model": "any-model-name",
           "id": "request-1",
-          "timestamp": "2026-09-21T09:00:01+00:00",
+          "timestamp": "2026-09-21T09:00:02+00:00",
           "state": null,
           "questions": {},
           "presentation": {},
@@ -4727,7 +4803,7 @@
           "provider": "fake",
           "model": "any-model-name",
           "id": "request-1",
-          "timestamp": "2026-09-21T09:00:01+00:00",
+          "timestamp": "2026-09-21T09:00:02+00:00",
           "state": {
             "passage": "original",
             "history": [
@@ -4763,7 +4839,7 @@
           "provider": "fake",
           "model": "any-model-name",
           "id": "request-1",
-          "timestamp": "2026-09-21T09:00:01+00:00",
+          "timestamp": "2026-09-21T09:00:02+00:00",
           "state": {
             "passage": "original",
             "history": [
@@ -4804,64 +4880,6 @@
           "id": "invocation-1",
           "template_uid": "editor.unassociated",
           "source_group": "override",
-          "status": "running",
-          "timestamp": "2026-09-21T09:00:00+00:00",
-          "actions": [
-            {
-              "action": "editor.revision_rewrite",
-              "arguments": {
-                "info": {
-                  "text": "original"
-                }
-              },
-              "id": "action-1",
-              "status": "pending",
-              "result": null,
-              "elapsed_ms": null,
-              "failure": null,
-              "reason": null
-            }
-          ],
-          "request_count": 1,
-          "outcomes": []
-        }
-      },
-      {
-        "type": "decisions",
-        "event": "invocation",
-        "entry": {
-          "id": "invocation-1",
-          "template_uid": "editor.unassociated",
-          "source_group": "override",
-          "status": "running",
-          "timestamp": "2026-09-21T09:00:00+00:00",
-          "actions": [
-            {
-              "action": "editor.revision_rewrite",
-              "arguments": {
-                "info": {
-                  "text": "original"
-                }
-              },
-              "id": "action-1",
-              "status": "completed",
-              "result": "rewritten",
-              "elapsed_ms": 820.0,
-              "failure": null,
-              "reason": null
-            }
-          ],
-          "request_count": 1,
-          "outcomes": []
-        }
-      },
-      {
-        "type": "decisions",
-        "event": "invocation",
-        "entry": {
-          "id": "invocation-1",
-          "template_uid": "editor.unassociated",
-          "source_group": "override",
           "status": "completed",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [
@@ -4870,7 +4888,8 @@
               "arguments": {
                 "info": {
                   "text": "original"
-                }
+                },
+                "decision_findings": []
               },
               "id": "action-1",
               "status": "completed",
@@ -4896,7 +4915,7 @@
             "provider": "fake",
             "model": "any-model-name",
             "id": "request-1",
-            "timestamp": "2026-09-21T09:00:01+00:00",
+            "timestamp": "2026-09-21T09:00:02+00:00",
             "state": {
               "passage": "original",
               "history": [
@@ -4943,7 +4962,8 @@
                 "arguments": {
                   "info": {
                     "text": "original"
-                  }
+                  },
+                  "decision_findings": []
                 },
                 "id": "action-1",
                 "status": "completed",
@@ -6587,39 +6607,11 @@
     "question_types": [
       {
         "type": "decisions",
-        "event": "invocation",
-        "entry": {
-          "id": "invocation-1",
-          "template_uid": "editor.question-types",
-          "source_group": null,
-          "status": "running",
-          "timestamp": "2026-09-21T09:00:00+00:00",
-          "actions": [],
-          "request_count": 0,
-          "outcomes": []
-        }
-      },
-      {
-        "type": "decisions",
-        "event": "invocation",
-        "entry": {
-          "id": "invocation-1",
-          "template_uid": "editor.question-types",
-          "source_group": "override",
-          "status": "running",
-          "timestamp": "2026-09-21T09:00:00+00:00",
-          "actions": [],
-          "request_count": 1,
-          "outcomes": []
-        }
-      },
-      {
-        "type": "decisions",
         "event": "request",
         "entry": {
           "invocation_id": "invocation-1",
           "template_uid": "editor.question-types",
-          "source_group": "override",
+          "source_group": null,
           "label": "editor-style",
           "provider": "fake",
           "model": "any-model-name",
@@ -6645,7 +6637,7 @@
         "entry": {
           "invocation_id": "invocation-1",
           "template_uid": "editor.question-types",
-          "source_group": "override",
+          "source_group": null,
           "label": "editor-style",
           "provider": "fake",
           "model": "any-model-name",
@@ -6695,7 +6687,7 @@
         "entry": {
           "invocation_id": "invocation-1",
           "template_uid": "editor.question-types",
-          "source_group": "override",
+          "source_group": null,
           "label": "editor-style",
           "provider": "fake",
           "model": "any-model-name",
@@ -6771,113 +6763,6 @@
           "failure": null,
           "policy_failure": null,
           "actions": [],
-          "outcomes": []
-        }
-      },
-      {
-        "type": "decisions",
-        "event": "request",
-        "entry": {
-          "invocation_id": "invocation-1",
-          "template_uid": "editor.question-types",
-          "source_group": "override",
-          "label": "editor-style",
-          "provider": "fake",
-          "model": "any-model-name",
-          "id": "request-1",
-          "timestamp": "2026-09-21T09:00:01+00:00",
-          "state": {
-            "passage": "original"
-          },
-          "questions": {
-            "repeats": {
-              "type": "noul",
-              "instructions": "Does this passage repeat an earlier story beat?"
-            },
-            "tone": {
-              "type": "choice",
-              "instructions": "Which tone does the passage take?",
-              "options": {
-                "warm": "Warm and close",
-                "cool": "Distant and clipped"
-              }
-            },
-            "tension": {
-              "type": "score",
-              "instructions": "How much tension does the passage carry?",
-              "rubric": [
-                "none",
-                "some",
-                "high"
-              ]
-            }
-          },
-          "presentation": {},
-          "status": "completed",
-          "dispatched": true,
-          "elapsed_ms": 140.0,
-          "answers": {
-            "repeats": {
-              "type": "noul",
-              "p_true": 0.74
-            },
-            "tone": {
-              "type": "choice",
-              "selected": "warm",
-              "probabilities": {
-                "warm": 0.7,
-                "cool": 0.3
-              },
-              "confidence": 0.8
-            },
-            "tension": {
-              "type": "score",
-              "value": 1.5,
-              "probabilities": [
-                0.2,
-                0.3,
-                0.5
-              ],
-              "legend": [
-                "none",
-                "some",
-                "high"
-              ],
-              "confidence": 0.6
-            }
-          },
-          "raw": {
-            "repeats": {
-              "noul": 0.74
-            },
-            "tone": "warm",
-            "tension": 1.5
-          },
-          "failure": null,
-          "policy_failure": null,
-          "actions": [],
-          "outcomes": [
-            {
-              "action": "no_action",
-              "reason": "below_threshold",
-              "details": {
-                "threshold": 0.8
-              }
-            }
-          ]
-        }
-      },
-      {
-        "type": "decisions",
-        "event": "invocation",
-        "entry": {
-          "id": "invocation-1",
-          "template_uid": "editor.question-types",
-          "source_group": "override",
-          "status": "completed",
-          "timestamp": "2026-09-21T09:00:00+00:00",
-          "actions": [],
-          "request_count": 1,
           "outcomes": []
         }
       },
@@ -6888,7 +6773,7 @@
           {
             "invocation_id": "invocation-1",
             "template_uid": "editor.question-types",
-            "source_group": "override",
+            "source_group": null,
             "label": "editor-style",
             "provider": "fake",
             "model": "any-model-name",
@@ -6964,29 +6849,10 @@
             "failure": null,
             "policy_failure": null,
             "actions": [],
-            "outcomes": [
-              {
-                "action": "no_action",
-                "reason": "below_threshold",
-                "details": {
-                  "threshold": 0.8
-                }
-              }
-            ]
-          }
-        ],
-        "invocations": [
-          {
-            "id": "invocation-1",
-            "template_uid": "editor.question-types",
-            "source_group": "override",
-            "status": "completed",
-            "timestamp": "2026-09-21T09:00:00+00:00",
-            "actions": [],
-            "request_count": 1,
             "outcomes": []
           }
-        ]
+        ],
+        "invocations": []
       }
     ],
     "two_asks": [
@@ -7134,7 +7000,205 @@
           "source_group": "override",
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
-          "actions": [],
+          "actions": [
+            {
+              "action": "editor.revision_rewrite",
+              "arguments": {
+                "info": {
+                  "text": "original"
+                },
+                "decision_findings": []
+              },
+              "id": "action-1",
+              "status": "pending",
+              "result": null,
+              "elapsed_ms": null,
+              "failure": null,
+              "reason": null
+            }
+          ],
+          "request_count": 1,
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "request",
+        "entry": {
+          "invocation_id": "invocation-1",
+          "template_uid": "editor.two-asks",
+          "source_group": "override",
+          "label": "editor-repetition",
+          "provider": "fake",
+          "model": "any-model-name",
+          "id": "request-1",
+          "timestamp": "2026-09-21T09:00:01+00:00",
+          "state": {
+            "passage": "original",
+            "history": [
+              "earlier"
+            ]
+          },
+          "questions": {
+            "repeats": {
+              "type": "noul",
+              "instructions": "Does this passage repeat an earlier story beat?"
+            }
+          },
+          "presentation": {},
+          "status": "completed",
+          "dispatched": true,
+          "elapsed_ms": 140.0,
+          "answers": {
+            "repeats": {
+              "type": "noul",
+              "p_true": 0.74
+            }
+          },
+          "raw": {
+            "repeats": {
+              "noul": 0.74
+            }
+          },
+          "failure": null,
+          "policy_failure": null,
+          "actions": [
+            {
+              "action": "editor.revision_rewrite",
+              "arguments": {
+                "info": {
+                  "text": "original"
+                },
+                "decision_findings": []
+              },
+              "id": "action-1",
+              "status": "pending",
+              "result": null,
+              "elapsed_ms": null,
+              "failure": null,
+              "reason": null
+            }
+          ],
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.two-asks",
+          "source_group": "override",
+          "status": "running",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [
+            {
+              "action": "editor.revision_rewrite",
+              "arguments": {
+                "info": {
+                  "text": "original"
+                },
+                "decision_findings": []
+              },
+              "id": "action-1",
+              "status": "completed",
+              "result": "rewritten",
+              "elapsed_ms": 820.0,
+              "failure": null,
+              "reason": null
+            }
+          ],
+          "request_count": 1,
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "request",
+        "entry": {
+          "invocation_id": "invocation-1",
+          "template_uid": "editor.two-asks",
+          "source_group": "override",
+          "label": "editor-repetition",
+          "provider": "fake",
+          "model": "any-model-name",
+          "id": "request-1",
+          "timestamp": "2026-09-21T09:00:01+00:00",
+          "state": {
+            "passage": "original",
+            "history": [
+              "earlier"
+            ]
+          },
+          "questions": {
+            "repeats": {
+              "type": "noul",
+              "instructions": "Does this passage repeat an earlier story beat?"
+            }
+          },
+          "presentation": {},
+          "status": "completed",
+          "dispatched": true,
+          "elapsed_ms": 140.0,
+          "answers": {
+            "repeats": {
+              "type": "noul",
+              "p_true": 0.74
+            }
+          },
+          "raw": {
+            "repeats": {
+              "noul": 0.74
+            }
+          },
+          "failure": null,
+          "policy_failure": null,
+          "actions": [
+            {
+              "action": "editor.revision_rewrite",
+              "arguments": {
+                "info": {
+                  "text": "original"
+                },
+                "decision_findings": []
+              },
+              "id": "action-1",
+              "status": "completed",
+              "result": "rewritten",
+              "elapsed_ms": 820.0,
+              "failure": null,
+              "reason": null
+            }
+          ],
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.two-asks",
+          "source_group": "override",
+          "status": "running",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [
+            {
+              "action": "editor.revision_rewrite",
+              "arguments": {
+                "info": {
+                  "text": "original"
+                },
+                "decision_findings": []
+              },
+              "id": "action-1",
+              "status": "completed",
+              "result": "rewritten",
+              "elapsed_ms": 820.0,
+              "failure": null,
+              "reason": null
+            }
+          ],
           "request_count": 2,
           "outcomes": []
         }
@@ -7150,7 +7214,7 @@
           "provider": "fake",
           "model": "any-model-name",
           "id": "request-2",
-          "timestamp": "2026-09-21T09:00:02+00:00",
+          "timestamp": "2026-09-21T09:00:03+00:00",
           "state": null,
           "questions": {},
           "presentation": {},
@@ -7176,7 +7240,7 @@
           "provider": "fake",
           "model": "any-model-name",
           "id": "request-2",
-          "timestamp": "2026-09-21T09:00:02+00:00",
+          "timestamp": "2026-09-21T09:00:03+00:00",
           "state": {
             "passage": "original"
           },
@@ -7209,7 +7273,7 @@
           "provider": "fake",
           "model": "any-model-name",
           "id": "request-2",
-          "timestamp": "2026-09-21T09:00:02+00:00",
+          "timestamp": "2026-09-21T09:00:03+00:00",
           "state": {
             "passage": "original"
           },
@@ -7247,184 +7311,6 @@
           "id": "invocation-1",
           "template_uid": "editor.two-asks",
           "source_group": "override",
-          "status": "running",
-          "timestamp": "2026-09-21T09:00:00+00:00",
-          "actions": [
-            {
-              "action": "editor.revision_rewrite",
-              "arguments": {
-                "info": {
-                  "text": "original"
-                }
-              },
-              "id": "action-1",
-              "status": "pending",
-              "result": null,
-              "elapsed_ms": null,
-              "failure": null,
-              "reason": null
-            }
-          ],
-          "request_count": 2,
-          "outcomes": []
-        }
-      },
-      {
-        "type": "decisions",
-        "event": "request",
-        "entry": {
-          "invocation_id": "invocation-1",
-          "template_uid": "editor.two-asks",
-          "source_group": "override",
-          "label": "editor-repetition",
-          "provider": "fake",
-          "model": "any-model-name",
-          "id": "request-1",
-          "timestamp": "2026-09-21T09:00:01+00:00",
-          "state": {
-            "passage": "original",
-            "history": [
-              "earlier"
-            ]
-          },
-          "questions": {
-            "repeats": {
-              "type": "noul",
-              "instructions": "Does this passage repeat an earlier story beat?"
-            }
-          },
-          "presentation": {},
-          "status": "completed",
-          "dispatched": true,
-          "elapsed_ms": 140.0,
-          "answers": {
-            "repeats": {
-              "type": "noul",
-              "p_true": 0.74
-            }
-          },
-          "raw": {
-            "repeats": {
-              "noul": 0.74
-            }
-          },
-          "failure": null,
-          "policy_failure": null,
-          "actions": [
-            {
-              "action": "editor.revision_rewrite",
-              "arguments": {
-                "info": {
-                  "text": "original"
-                }
-              },
-              "id": "action-1",
-              "status": "pending",
-              "result": null,
-              "elapsed_ms": null,
-              "failure": null,
-              "reason": null
-            }
-          ],
-          "outcomes": []
-        }
-      },
-      {
-        "type": "decisions",
-        "event": "invocation",
-        "entry": {
-          "id": "invocation-1",
-          "template_uid": "editor.two-asks",
-          "source_group": "override",
-          "status": "running",
-          "timestamp": "2026-09-21T09:00:00+00:00",
-          "actions": [
-            {
-              "action": "editor.revision_rewrite",
-              "arguments": {
-                "info": {
-                  "text": "original"
-                }
-              },
-              "id": "action-1",
-              "status": "completed",
-              "result": "rewritten",
-              "elapsed_ms": 820.0,
-              "failure": null,
-              "reason": null
-            }
-          ],
-          "request_count": 2,
-          "outcomes": []
-        }
-      },
-      {
-        "type": "decisions",
-        "event": "request",
-        "entry": {
-          "invocation_id": "invocation-1",
-          "template_uid": "editor.two-asks",
-          "source_group": "override",
-          "label": "editor-repetition",
-          "provider": "fake",
-          "model": "any-model-name",
-          "id": "request-1",
-          "timestamp": "2026-09-21T09:00:01+00:00",
-          "state": {
-            "passage": "original",
-            "history": [
-              "earlier"
-            ]
-          },
-          "questions": {
-            "repeats": {
-              "type": "noul",
-              "instructions": "Does this passage repeat an earlier story beat?"
-            }
-          },
-          "presentation": {},
-          "status": "completed",
-          "dispatched": true,
-          "elapsed_ms": 140.0,
-          "answers": {
-            "repeats": {
-              "type": "noul",
-              "p_true": 0.74
-            }
-          },
-          "raw": {
-            "repeats": {
-              "noul": 0.74
-            }
-          },
-          "failure": null,
-          "policy_failure": null,
-          "actions": [
-            {
-              "action": "editor.revision_rewrite",
-              "arguments": {
-                "info": {
-                  "text": "original"
-                }
-              },
-              "id": "action-1",
-              "status": "completed",
-              "result": "rewritten",
-              "elapsed_ms": 820.0,
-              "failure": null,
-              "reason": null
-            }
-          ],
-          "outcomes": []
-        }
-      },
-      {
-        "type": "decisions",
-        "event": "invocation",
-        "entry": {
-          "id": "invocation-1",
-          "template_uid": "editor.two-asks",
-          "source_group": "override",
           "status": "completed",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [
@@ -7433,7 +7319,8 @@
               "arguments": {
                 "info": {
                   "text": "original"
-                }
+                },
+                "decision_findings": []
               },
               "id": "action-1",
               "status": "completed",
@@ -7495,7 +7382,8 @@
                 "arguments": {
                   "info": {
                     "text": "original"
-                  }
+                  },
+                  "decision_findings": []
                 },
                 "id": "action-1",
                 "status": "completed",
@@ -7515,7 +7403,7 @@
             "provider": "fake",
             "model": "any-model-name",
             "id": "request-2",
-            "timestamp": "2026-09-21T09:00:02+00:00",
+            "timestamp": "2026-09-21T09:00:03+00:00",
             "state": {
               "passage": "original"
             },
@@ -7559,7 +7447,8 @@
                 "arguments": {
                   "info": {
                     "text": "original"
-                  }
+                  },
+                  "decision_findings": []
                 },
                 "id": "action-1",
                 "status": "completed",
@@ -7720,7 +7609,205 @@
           "source_group": "override",
           "status": "running",
           "timestamp": "2026-09-21T09:00:00+00:00",
-          "actions": [],
+          "actions": [
+            {
+              "action": "editor.revision_rewrite",
+              "arguments": {
+                "info": {
+                  "text": "original"
+                },
+                "decision_findings": []
+              },
+              "id": "action-1",
+              "status": "pending",
+              "result": null,
+              "elapsed_ms": null,
+              "failure": null,
+              "reason": null
+            }
+          ],
+          "request_count": 1,
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "request",
+        "entry": {
+          "invocation_id": "invocation-1",
+          "template_uid": "editor.two-asks-pruned",
+          "source_group": "override",
+          "label": "editor-repetition",
+          "provider": "fake",
+          "model": "any-model-name",
+          "id": "request-1",
+          "timestamp": "2026-09-21T09:00:01+00:00",
+          "state": {
+            "passage": "original",
+            "history": [
+              "earlier"
+            ]
+          },
+          "questions": {
+            "repeats": {
+              "type": "noul",
+              "instructions": "Does this passage repeat an earlier story beat?"
+            }
+          },
+          "presentation": {},
+          "status": "completed",
+          "dispatched": true,
+          "elapsed_ms": 140.0,
+          "answers": {
+            "repeats": {
+              "type": "noul",
+              "p_true": 0.74
+            }
+          },
+          "raw": {
+            "repeats": {
+              "noul": 0.74
+            }
+          },
+          "failure": null,
+          "policy_failure": null,
+          "actions": [
+            {
+              "action": "editor.revision_rewrite",
+              "arguments": {
+                "info": {
+                  "text": "original"
+                },
+                "decision_findings": []
+              },
+              "id": "action-1",
+              "status": "pending",
+              "result": null,
+              "elapsed_ms": null,
+              "failure": null,
+              "reason": null
+            }
+          ],
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.two-asks-pruned",
+          "source_group": "override",
+          "status": "running",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [
+            {
+              "action": "editor.revision_rewrite",
+              "arguments": {
+                "info": {
+                  "text": "original"
+                },
+                "decision_findings": []
+              },
+              "id": "action-1",
+              "status": "completed",
+              "result": "rewritten",
+              "elapsed_ms": 820.0,
+              "failure": null,
+              "reason": null
+            }
+          ],
+          "request_count": 1,
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "request",
+        "entry": {
+          "invocation_id": "invocation-1",
+          "template_uid": "editor.two-asks-pruned",
+          "source_group": "override",
+          "label": "editor-repetition",
+          "provider": "fake",
+          "model": "any-model-name",
+          "id": "request-1",
+          "timestamp": "2026-09-21T09:00:01+00:00",
+          "state": {
+            "passage": "original",
+            "history": [
+              "earlier"
+            ]
+          },
+          "questions": {
+            "repeats": {
+              "type": "noul",
+              "instructions": "Does this passage repeat an earlier story beat?"
+            }
+          },
+          "presentation": {},
+          "status": "completed",
+          "dispatched": true,
+          "elapsed_ms": 140.0,
+          "answers": {
+            "repeats": {
+              "type": "noul",
+              "p_true": 0.74
+            }
+          },
+          "raw": {
+            "repeats": {
+              "noul": 0.74
+            }
+          },
+          "failure": null,
+          "policy_failure": null,
+          "actions": [
+            {
+              "action": "editor.revision_rewrite",
+              "arguments": {
+                "info": {
+                  "text": "original"
+                },
+                "decision_findings": []
+              },
+              "id": "action-1",
+              "status": "completed",
+              "result": "rewritten",
+              "elapsed_ms": 820.0,
+              "failure": null,
+              "reason": null
+            }
+          ],
+          "outcomes": []
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.two-asks-pruned",
+          "source_group": "override",
+          "status": "running",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [
+            {
+              "action": "editor.revision_rewrite",
+              "arguments": {
+                "info": {
+                  "text": "original"
+                },
+                "decision_findings": []
+              },
+              "id": "action-1",
+              "status": "completed",
+              "result": "rewritten",
+              "elapsed_ms": 820.0,
+              "failure": null,
+              "reason": null
+            }
+          ],
           "request_count": 2,
           "outcomes": []
         }
@@ -7736,7 +7823,7 @@
           "provider": "fake",
           "model": "any-model-name",
           "id": "request-2",
-          "timestamp": "2026-09-21T09:00:02+00:00",
+          "timestamp": "2026-09-21T09:00:03+00:00",
           "state": null,
           "questions": {},
           "presentation": {},
@@ -7762,7 +7849,7 @@
           "provider": "fake",
           "model": "any-model-name",
           "id": "request-2",
-          "timestamp": "2026-09-21T09:00:02+00:00",
+          "timestamp": "2026-09-21T09:00:03+00:00",
           "state": {
             "passage": "original"
           },
@@ -7795,7 +7882,7 @@
           "provider": "fake",
           "model": "any-model-name",
           "id": "request-2",
-          "timestamp": "2026-09-21T09:00:02+00:00",
+          "timestamp": "2026-09-21T09:00:03+00:00",
           "state": {
             "passage": "original"
           },
@@ -7833,184 +7920,6 @@
           "id": "invocation-1",
           "template_uid": "editor.two-asks-pruned",
           "source_group": "override",
-          "status": "running",
-          "timestamp": "2026-09-21T09:00:00+00:00",
-          "actions": [
-            {
-              "action": "editor.revision_rewrite",
-              "arguments": {
-                "info": {
-                  "text": "original"
-                }
-              },
-              "id": "action-1",
-              "status": "pending",
-              "result": null,
-              "elapsed_ms": null,
-              "failure": null,
-              "reason": null
-            }
-          ],
-          "request_count": 2,
-          "outcomes": []
-        }
-      },
-      {
-        "type": "decisions",
-        "event": "request",
-        "entry": {
-          "invocation_id": "invocation-1",
-          "template_uid": "editor.two-asks-pruned",
-          "source_group": "override",
-          "label": "editor-repetition",
-          "provider": "fake",
-          "model": "any-model-name",
-          "id": "request-1",
-          "timestamp": "2026-09-21T09:00:01+00:00",
-          "state": {
-            "passage": "original",
-            "history": [
-              "earlier"
-            ]
-          },
-          "questions": {
-            "repeats": {
-              "type": "noul",
-              "instructions": "Does this passage repeat an earlier story beat?"
-            }
-          },
-          "presentation": {},
-          "status": "completed",
-          "dispatched": true,
-          "elapsed_ms": 140.0,
-          "answers": {
-            "repeats": {
-              "type": "noul",
-              "p_true": 0.74
-            }
-          },
-          "raw": {
-            "repeats": {
-              "noul": 0.74
-            }
-          },
-          "failure": null,
-          "policy_failure": null,
-          "actions": [
-            {
-              "action": "editor.revision_rewrite",
-              "arguments": {
-                "info": {
-                  "text": "original"
-                }
-              },
-              "id": "action-1",
-              "status": "pending",
-              "result": null,
-              "elapsed_ms": null,
-              "failure": null,
-              "reason": null
-            }
-          ],
-          "outcomes": []
-        }
-      },
-      {
-        "type": "decisions",
-        "event": "invocation",
-        "entry": {
-          "id": "invocation-1",
-          "template_uid": "editor.two-asks-pruned",
-          "source_group": "override",
-          "status": "running",
-          "timestamp": "2026-09-21T09:00:00+00:00",
-          "actions": [
-            {
-              "action": "editor.revision_rewrite",
-              "arguments": {
-                "info": {
-                  "text": "original"
-                }
-              },
-              "id": "action-1",
-              "status": "completed",
-              "result": "rewritten",
-              "elapsed_ms": 820.0,
-              "failure": null,
-              "reason": null
-            }
-          ],
-          "request_count": 2,
-          "outcomes": []
-        }
-      },
-      {
-        "type": "decisions",
-        "event": "request",
-        "entry": {
-          "invocation_id": "invocation-1",
-          "template_uid": "editor.two-asks-pruned",
-          "source_group": "override",
-          "label": "editor-repetition",
-          "provider": "fake",
-          "model": "any-model-name",
-          "id": "request-1",
-          "timestamp": "2026-09-21T09:00:01+00:00",
-          "state": {
-            "passage": "original",
-            "history": [
-              "earlier"
-            ]
-          },
-          "questions": {
-            "repeats": {
-              "type": "noul",
-              "instructions": "Does this passage repeat an earlier story beat?"
-            }
-          },
-          "presentation": {},
-          "status": "completed",
-          "dispatched": true,
-          "elapsed_ms": 140.0,
-          "answers": {
-            "repeats": {
-              "type": "noul",
-              "p_true": 0.74
-            }
-          },
-          "raw": {
-            "repeats": {
-              "noul": 0.74
-            }
-          },
-          "failure": null,
-          "policy_failure": null,
-          "actions": [
-            {
-              "action": "editor.revision_rewrite",
-              "arguments": {
-                "info": {
-                  "text": "original"
-                }
-              },
-              "id": "action-1",
-              "status": "completed",
-              "result": "rewritten",
-              "elapsed_ms": 820.0,
-              "failure": null,
-              "reason": null
-            }
-          ],
-          "outcomes": []
-        }
-      },
-      {
-        "type": "decisions",
-        "event": "invocation",
-        "entry": {
-          "id": "invocation-1",
-          "template_uid": "editor.two-asks-pruned",
-          "source_group": "override",
           "status": "completed",
           "timestamp": "2026-09-21T09:00:00+00:00",
           "actions": [
@@ -8019,7 +7928,8 @@
               "arguments": {
                 "info": {
                   "text": "original"
-                }
+                },
+                "decision_findings": []
               },
               "id": "action-1",
               "status": "completed",
@@ -8053,7 +7963,7 @@
             "provider": "fake",
             "model": "any-model-name",
             "id": "request-2",
-            "timestamp": "2026-09-21T09:00:02+00:00",
+            "timestamp": "2026-09-21T09:00:03+00:00",
             "state": {
               "passage": "original"
             },
@@ -8097,7 +8007,8 @@
                 "arguments": {
                   "info": {
                     "text": "original"
-                  }
+                  },
+                  "decision_findings": []
                 },
                 "id": "action-1",
                 "status": "completed",

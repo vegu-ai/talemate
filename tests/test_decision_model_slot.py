@@ -41,9 +41,9 @@ ANSWERED = {
 }
 
 POLICY = """
-{% set r = decide("repetition", state={"passage": passage}, questions={"only": {
-    "type": "noul", "instructions": "Does this passage repeat?"}}) %}
-{{ decision_result("decided") }}
+{% set answers = ask("repetition", state={"passage": passage}, questions={
+    "only": yes_no("Does this passage repeat?", threshold=0.5)}) %}
+{{ keep() }}
 """
 
 
@@ -557,7 +557,8 @@ class TestContinuation:
                 variables={"passage": "complete text"},
                 validate_result=lambda value: text.validate_python(value, strict=True),
                 disabled_path=fallback,
-                original_result="complete text",
+                original_result="decided",
+                can_keep=True,
             )
 
         with PrependTemplateDirectories(str(tmp_path)):

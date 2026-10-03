@@ -153,15 +153,18 @@ class DecisionChecksMixin:
                 )
             )
 
-        def serialize_action_arguments(kwargs):
-            findings = kwargs.get("decision_findings")
+        revision = getattr(self, f"revision_{method}")
+
+        async def revise(findings):
+            return await revision(info=info, decision_findings=findings)
+
+        def serialize_action_arguments(arguments):
             return {
-                "text": kwargs["info"].text,
+                "text": info.text,
                 "decision_findings": decision_findings_adapter.dump_python(
-                    decision_findings_adapter.validate_python(findings), mode="json"
-                )
-                if findings is not None
-                else None,
+                    decision_findings_adapter.validate_python(arguments["findings"]),
+                    mode="json",
+                ),
             }
 
         invocation = PolicyInvocation(
@@ -178,10 +181,12 @@ class DecisionChecksMixin:
             ),
             disabled_path=disabled_path,
             original_result=info.text,
+            can_keep=True,
             is_current=is_current,
             actions={
-                ("editor", f"revision_{method}"): PolicyAction(
-                    call=getattr(self, f"revision_{method}"),
+                "revise": PolicyAction(
+                    name=f"editor.revision_{method}",
+                    call=revise,
                     enabled=lambda: (
                         self.revision_decision_checks_active
                         and self.revision_method == method

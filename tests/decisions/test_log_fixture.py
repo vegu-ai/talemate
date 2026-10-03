@@ -33,65 +33,32 @@ FIXTURE = (
 TEMPLATE = (
     Path(__file__).parents[1] / "data/decisions/editor-repetition.jinja2"
 ).read_text()
-DECIDE = """{% set r = decide("editor-repetition",
+ASK = """{% set answers = ask("editor-repetition",
     state={"passage": passage, "history": last3},
-    questions={"repeats": {
-        "type": "noul",
-        "instructions": "Does this passage repeat an earlier story beat?"
-    }}) %}"""
+    questions={"repeats": yes_no("Does this passage repeat an earlier story beat?", threshold=0.8)}) %}"""
 NO_REASON = (
-    DECIDE
+    ASK
     + """
-{{ decision_outcome(r, "no_action") }}
-{{ decision_result(info.text) }}"""
+{{ note("no_action") }}
+{{ keep() }}"""
 )
-UNASSOCIATED = (
-    DECIDE
-    + """
-{{ agent_action("editor", "revision_rewrite", info=info) }}
-{{ decision_result(info.text) }}"""
-)
+ACTION_BEFORE_REQUEST = "{{ revise([]) }}" + ASK
 CANCEL_AFTER_ANSWER = (
-    DECIDE
+    ASK
     + """
 {{ cancel() }}
-{{ decision_outcome(r, "no_action", reason="below_threshold", threshold=0.8) }}
-{{ decision_result(info.text) }}"""
+{{ note("no_action", "below_threshold", threshold=0.8) }}
+{{ keep() }}"""
 )
-QUESTION_TYPES = """{% set r = decide("editor-style",
-    state={"passage": passage},
-    questions={
-        "repeats": {
-            "type": "noul",
-            "instructions": "Does this passage repeat an earlier story beat?"
-        },
-        "tone": {
-            "type": "choice",
-            "instructions": "Which tone does the passage take?",
-            "options": {"warm": "Warm and close", "cool": "Distant and clipped"}
-        },
-        "tension": {
-            "type": "score",
-            "instructions": "How much tension does the passage carry?",
-            "rubric": ["none", "some", "high"]
-        }
-    }) %}
-{% set threshold = decision_checks[0].threshold %}
-{{ decision_outcome(r, "no_action", reason="below_threshold", threshold=threshold) }}
-{{ decision_result(info.text) }}"""
 TWO_ASKS = (
-    DECIDE
+    ASK
     + """
-{% set second = decide("editor-style",
+{{ revise([]) }}
+{% set second = ask("editor-style",
     state={"passage": passage},
-    questions={"repeats": {
-        "type": "noul",
-        "instructions": "Does the closing line repeat an earlier one?"
-    }}) %}
-{{ agent_action("editor", "revision_rewrite", info=info, _decision=r) }}
-{{ decision_result(info.text) }}"""
+    questions={"repeats": yes_no("Does the closing line repeat an earlier one?", threshold=0.8)}) %}"""
 )
-NO_REQUEST = """{{ decision_result(info.text) }}"""
+NO_REQUEST = """{{ keep() }}"""
 BASE_TIME = datetime(2026, 9, 21, 9, 0, tzinfo=timezone.utc)
 REQUEST_MS = 140.0
 ACTION_MS = 820.0
@@ -333,10 +300,11 @@ async def cancelled(stage):
 
 
 async def unassociated_action(stage):
+    """The action ran before the request, so the request does not claim it."""
     stage.answer(0.74)
     service, route = stage.start()
     await stage.create(
-        uid="editor.unassociated", source=UNASSOCIATED, service=service
+        uid="editor.unassociated", source=ACTION_BEFORE_REQUEST, service=service
     ).run()
     await route.send("snapshot")
     return route.frames
@@ -406,7 +374,10 @@ async def cancelled_after_answer(stage):
 
 
 async def question_types(stage):
-    """One request, three question types, three answers on one row."""
+    """
+    One request, three question types, three answers on one row. Policy
+    templates ask yes/no and choice questions; the service takes all three.
+    """
     stage.provider.answers = {
         "repeats": {"type": "noul", "p_true": 0.74},
         "tone": {
@@ -425,15 +396,34 @@ async def question_types(stage):
     }
     stage.provider.raw = {"repeats": {"noul": 0.74}, "tone": "warm", "tension": 1.5}
     service, route = stage.start()
-    await stage.create(
-        uid="editor.question-types", source=QUESTION_TYPES, service=service
-    ).run()
+    await service.evaluate(
+        "editor-style",
+        state={"passage": "original"},
+        questions={
+            "repeats": {
+                "type": "noul",
+                "instructions": "Does this passage repeat an earlier story beat?",
+            },
+            "tone": {
+                "type": "choice",
+                "instructions": "Which tone does the passage take?",
+                "options": {"warm": "Warm and close", "cool": "Distant and clipped"},
+            },
+            "tension": {
+                "type": "score",
+                "instructions": "How much tension does the passage carry?",
+                "rubric": ["none", "some", "high"],
+            },
+        },
+        invocation_id="question-types",
+        template_uid="editor.question-types",
+    )
     await route.send("snapshot")
     return route.frames
 
 
 async def two_asks(stage):
-    """Two requests in one invocation; the action names the first."""
+    """Two requests in one invocation; the action comes between them."""
     stage.answer(0.74)
     service, route = stage.start()
     await stage.create(uid="editor.two-asks", source=TWO_ASKS, service=service).run()
@@ -471,8 +461,10 @@ async def action_denied(stage):
         source=TEMPLATE,
         service=service,
         actions={
-            ("editor", "revision_rewrite"): PolicyAction(
-                call=stage.editor.revision_rewrite, enabled=lambda: False
+            "revise": PolicyAction(
+                name="editor.revision_rewrite",
+                call=stage.editor.revision_rewrite,
+                enabled=lambda: False,
             )
         },
     ).run()
@@ -584,10 +576,10 @@ async def outcome_before_request(stage):
     await stage.create(
         uid="editor.outcome-before-request",
         source=(
-            '{{ decision_outcome(none, "note", reason="checked_first") }}'
-            + DECIDE
-            + '{{ decision_outcome(r, "no_action", reason="below_threshold", threshold=0.8) }}'
-            + "{{ decision_result(info.text) }}"
+            '{{ note("note", "checked_first") }}'
+            + ASK
+            + '{{ note("no_action", "below_threshold", threshold=0.8) }}'
+            + "{{ keep() }}"
         ),
         service=service,
     ).run()

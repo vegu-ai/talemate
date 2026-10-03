@@ -1,0 +1,4429 @@
+{
+ "avatar-at-threshold": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "avatar": "harbour-day"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "avatar": "harbour-day"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "avatar": "harbour-day"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "avatar": "harbour-day"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "avatar-selection",
+    "option_order": {
+     "avatar": [
+      "none",
+      "harbour-day",
+      "harbour-night"
+     ]
+    },
+    "outcomes": [
+     {
+      "action": "select_portrait",
+      "detail_order": [
+       "avatar",
+       "p_true",
+       "confidence",
+       "choice_confidence",
+       "threshold"
+      ],
+      "details": {
+       "avatar": "harbour-day",
+       "choice_confidence": 0.9,
+       "confidence": 0.9,
+       "p_true": 0.1,
+       "threshold": 0.9
+      },
+      "reason": "confident_existing_portrait"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "fits_current",
+     "avatar"
+    ],
+    "questions": {
+     "avatar": {
+      "instructions": "Which existing portrait fits this character in this message? Choose none if none fits well.",
+      "options": {
+       "harbour-day": "Harbour day: harbour, day",
+       "harbour-night": "harbour-night: harbour, night",
+       "none": "None of the existing portraits fits well; use the usual selection or generation request."
+      },
+      "type": "choice"
+     },
+     "fits_current": {
+      "instructions": "Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "character": "Mara",
+     "content": "Dawn breaks over the harbour.",
+     "current_avatar": null,
+     "portraits": {
+      "harbour-day": {
+       "name": "Harbour day",
+       "tags": [
+        "harbour",
+        "day"
+       ]
+      },
+      "harbour-night": {
+       "name": null,
+       "tags": [
+        "harbour",
+        "night"
+       ]
+      }
+     }
+    },
+    "state_order": [
+     "content",
+     "character",
+     "current_avatar",
+     "portraits"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "avatar": "harbour-day"
+  }
+ },
+ "avatar-fits-without-current": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "avatar": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "avatar": "fallback"
+       },
+       "fallback_ids": [
+        "avatar"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "avatar": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "avatar": "fallback"
+       },
+       "fallback_ids": [
+        "avatar"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "avatar-selection",
+    "option_order": {
+     "avatar": [
+      "none",
+      "harbour-day",
+      "harbour-night"
+     ]
+    },
+    "outcomes": [
+     {
+      "action": "fallback",
+      "detail_order": [
+       "avatar",
+       "p_true",
+       "confidence",
+       "choice_confidence",
+       "threshold"
+      ],
+      "details": {
+       "avatar": null,
+       "choice_confidence": 0.5,
+       "confidence": 0.99,
+       "p_true": 0.99,
+       "threshold": 0.9
+      },
+      "reason": "no_confident_existing_portrait"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "fits_current",
+     "avatar"
+    ],
+    "questions": {
+     "avatar": {
+      "instructions": "Which existing portrait fits this character in this message? Choose none if none fits well.",
+      "options": {
+       "harbour-day": "Harbour day: harbour, day",
+       "harbour-night": "harbour-night: harbour, night",
+       "none": "None of the existing portraits fits well; use the usual selection or generation request."
+      },
+      "type": "choice"
+     },
+     "fits_current": {
+      "instructions": "Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "character": "Mara",
+     "content": "Dawn breaks over the harbour.",
+     "current_avatar": null,
+     "portraits": {
+      "harbour-day": {
+       "name": "Harbour day",
+       "tags": [
+        "harbour",
+        "day"
+       ]
+      },
+      "harbour-night": {
+       "name": null,
+       "tags": [
+        "harbour",
+        "night"
+       ]
+      }
+     }
+    },
+    "state_order": [
+     "content",
+     "character",
+     "current_avatar",
+     "portraits"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "avatar": "fallback"
+  }
+ },
+ "avatar-keep": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "avatar": "harbour-day"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "avatar": "harbour-day"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "avatar": "harbour-day"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "avatar": "harbour-day"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "avatar-selection",
+    "option_order": {
+     "avatar": [
+      "none",
+      "harbour-day",
+      "harbour-night"
+     ]
+    },
+    "outcomes": [
+     {
+      "action": "select_portrait",
+      "detail_order": [
+       "avatar",
+       "p_true",
+       "confidence",
+       "choice_confidence",
+       "threshold"
+      ],
+      "details": {
+       "avatar": "harbour-day",
+       "choice_confidence": 0.99,
+       "confidence": 0.95,
+       "p_true": 0.95,
+       "threshold": 0.9
+      },
+      "reason": "current_portrait_fits"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "fits_current",
+     "avatar"
+    ],
+    "questions": {
+     "avatar": {
+      "instructions": "Which existing portrait fits this character in this message? Choose none if none fits well.",
+      "options": {
+       "harbour-day": "Harbour day: harbour, day",
+       "harbour-night": "harbour-night: harbour, night",
+       "none": "None of the existing portraits fits well; use the usual selection or generation request."
+      },
+      "type": "choice"
+     },
+     "fits_current": {
+      "instructions": "Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "character": "Mara",
+     "content": "Dawn breaks over the harbour.",
+     "current_avatar": "harbour-day",
+     "portraits": {
+      "harbour-day": {
+       "name": "Harbour day",
+       "tags": [
+        "harbour",
+        "day"
+       ]
+      },
+      "harbour-night": {
+       "name": null,
+       "tags": [
+        "harbour",
+        "night"
+       ]
+      }
+     }
+    },
+    "state_order": [
+     "content",
+     "character",
+     "current_avatar",
+     "portraits"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "avatar": "harbour-day"
+  }
+ },
+ "avatar-keep-at-threshold": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "avatar": "harbour-day"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "avatar": "harbour-day"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "avatar": "harbour-day"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "avatar": "harbour-day"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "avatar-selection",
+    "option_order": {
+     "avatar": [
+      "none",
+      "harbour-day",
+      "harbour-night"
+     ]
+    },
+    "outcomes": [
+     {
+      "action": "select_portrait",
+      "detail_order": [
+       "avatar",
+       "p_true",
+       "confidence",
+       "choice_confidence",
+       "threshold"
+      ],
+      "details": {
+       "avatar": "harbour-day",
+       "choice_confidence": 0.5,
+       "confidence": 0.9,
+       "p_true": 0.9,
+       "threshold": 0.9
+      },
+      "reason": "current_portrait_fits"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "fits_current",
+     "avatar"
+    ],
+    "questions": {
+     "avatar": {
+      "instructions": "Which existing portrait fits this character in this message? Choose none if none fits well.",
+      "options": {
+       "harbour-day": "Harbour day: harbour, day",
+       "harbour-night": "harbour-night: harbour, night",
+       "none": "None of the existing portraits fits well; use the usual selection or generation request."
+      },
+      "type": "choice"
+     },
+     "fits_current": {
+      "instructions": "Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "character": "Mara",
+     "content": "Dawn breaks over the harbour.",
+     "current_avatar": "harbour-day",
+     "portraits": {
+      "harbour-day": {
+       "name": "Harbour day",
+       "tags": [
+        "harbour",
+        "day"
+       ]
+      },
+      "harbour-night": {
+       "name": null,
+       "tags": [
+        "harbour",
+        "night"
+       ]
+      }
+     }
+    },
+    "state_order": [
+     "content",
+     "character",
+     "current_avatar",
+     "portraits"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "avatar": "harbour-day"
+  }
+ },
+ "avatar-none": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "avatar": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "avatar": "fallback"
+       },
+       "fallback_ids": [
+        "avatar"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "avatar": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "avatar": "fallback"
+       },
+       "fallback_ids": [
+        "avatar"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "avatar-selection",
+    "option_order": {
+     "avatar": [
+      "none",
+      "harbour-day",
+      "harbour-night"
+     ]
+    },
+    "outcomes": [
+     {
+      "action": "fallback",
+      "detail_order": [
+       "avatar",
+       "p_true",
+       "confidence",
+       "choice_confidence",
+       "threshold"
+      ],
+      "details": {
+       "avatar": null,
+       "choice_confidence": 0.99,
+       "confidence": 0.9,
+       "p_true": 0.1,
+       "threshold": 0.9
+      },
+      "reason": "no_confident_existing_portrait"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "fits_current",
+     "avatar"
+    ],
+    "questions": {
+     "avatar": {
+      "instructions": "Which existing portrait fits this character in this message? Choose none if none fits well.",
+      "options": {
+       "harbour-day": "Harbour day: harbour, day",
+       "harbour-night": "harbour-night: harbour, night",
+       "none": "None of the existing portraits fits well; use the usual selection or generation request."
+      },
+      "type": "choice"
+     },
+     "fits_current": {
+      "instructions": "Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "character": "Mara",
+     "content": "Dawn breaks over the harbour.",
+     "current_avatar": "harbour-day",
+     "portraits": {
+      "harbour-day": {
+       "name": "Harbour day",
+       "tags": [
+        "harbour",
+        "day"
+       ]
+      },
+      "harbour-night": {
+       "name": null,
+       "tags": [
+        "harbour",
+        "night"
+       ]
+      }
+     }
+    },
+    "state_order": [
+     "content",
+     "character",
+     "current_avatar",
+     "portraits"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "avatar": "fallback"
+  }
+ },
+ "avatar-switch": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "avatar": "harbour-night"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "avatar": "harbour-night"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "avatar": "harbour-night"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "avatar": "harbour-night"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "avatar-selection",
+    "option_order": {
+     "avatar": [
+      "none",
+      "harbour-day",
+      "harbour-night"
+     ]
+    },
+    "outcomes": [
+     {
+      "action": "select_portrait",
+      "detail_order": [
+       "avatar",
+       "p_true",
+       "confidence",
+       "choice_confidence",
+       "threshold"
+      ],
+      "details": {
+       "avatar": "harbour-night",
+       "choice_confidence": 0.95,
+       "confidence": 0.9,
+       "p_true": 0.1,
+       "threshold": 0.9
+      },
+      "reason": "confident_existing_portrait"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "fits_current",
+     "avatar"
+    ],
+    "questions": {
+     "avatar": {
+      "instructions": "Which existing portrait fits this character in this message? Choose none if none fits well.",
+      "options": {
+       "harbour-day": "Harbour day: harbour, day",
+       "harbour-night": "harbour-night: harbour, night",
+       "none": "None of the existing portraits fits well; use the usual selection or generation request."
+      },
+      "type": "choice"
+     },
+     "fits_current": {
+      "instructions": "Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "character": "Mara",
+     "content": "Dawn breaks over the harbour.",
+     "current_avatar": "harbour-day",
+     "portraits": {
+      "harbour-day": {
+       "name": "Harbour day",
+       "tags": [
+        "harbour",
+        "day"
+       ]
+      },
+      "harbour-night": {
+       "name": null,
+       "tags": [
+        "harbour",
+        "night"
+       ]
+      }
+     }
+    },
+    "state_order": [
+     "content",
+     "character",
+     "current_avatar",
+     "portraits"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "avatar": "harbour-night"
+  }
+ },
+ "avatar-uncertain": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "avatar": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "avatar": "fallback"
+       },
+       "fallback_ids": [
+        "avatar"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "avatar": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "avatar": "fallback"
+       },
+       "fallback_ids": [
+        "avatar"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "avatar-selection",
+    "option_order": {
+     "avatar": [
+      "none",
+      "harbour-day",
+      "harbour-night"
+     ]
+    },
+    "outcomes": [
+     {
+      "action": "fallback",
+      "detail_order": [
+       "avatar",
+       "p_true",
+       "confidence",
+       "choice_confidence",
+       "threshold"
+      ],
+      "details": {
+       "avatar": null,
+       "choice_confidence": 0.5,
+       "confidence": 0.5,
+       "p_true": 0.5,
+       "threshold": 0.9
+      },
+      "reason": "no_confident_existing_portrait"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "fits_current",
+     "avatar"
+    ],
+    "questions": {
+     "avatar": {
+      "instructions": "Which existing portrait fits this character in this message? Choose none if none fits well.",
+      "options": {
+       "harbour-day": "Harbour day: harbour, day",
+       "harbour-night": "harbour-night: harbour, night",
+       "none": "None of the existing portraits fits well; use the usual selection or generation request."
+      },
+      "type": "choice"
+     },
+     "fits_current": {
+      "instructions": "Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "character": "Mara",
+     "content": "Dawn breaks over the harbour.",
+     "current_avatar": "harbour-day",
+     "portraits": {
+      "harbour-day": {
+       "name": "Harbour day",
+       "tags": [
+        "harbour",
+        "day"
+       ]
+      },
+      "harbour-night": {
+       "name": null,
+       "tags": [
+        "harbour",
+        "night"
+       ]
+      }
+     }
+    },
+    "state_order": [
+     "content",
+     "character",
+     "current_avatar",
+     "portraits"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "avatar": "fallback"
+  }
+ },
+ "background-at-threshold": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "background": "harbour-day"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "background": "harbour-day"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "background": "harbour-day"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "background": "harbour-day"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "background-selection",
+    "option_order": {
+     "background": [
+      "none",
+      "harbour-day",
+      "harbour-night"
+     ]
+    },
+    "outcomes": [
+     {
+      "action": "select_background",
+      "detail_order": [
+       "background",
+       "p_true",
+       "confidence",
+       "choice_confidence",
+       "threshold"
+      ],
+      "details": {
+       "background": "harbour-day",
+       "choice_confidence": 0.9,
+       "confidence": 0.9,
+       "p_true": 0.1,
+       "threshold": 0.9
+      },
+      "reason": "confident_existing_background"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "fits_current",
+     "background"
+    ],
+    "questions": {
+     "background": {
+      "instructions": "Which existing scene background fits the place, time of day and situation of this moment? Choose none if none fits well.",
+      "options": {
+       "harbour-day": "Harbour day: harbour, day",
+       "harbour-night": "harbour-night: harbour, night",
+       "none": "None of the existing backgrounds fits well; use the usual selection or generation request."
+      },
+      "type": "choice"
+     },
+     "fits_current": {
+      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the background name and tags. If there is no current background, answer no.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "backgrounds": {
+      "harbour-day": {
+       "name": "Harbour day",
+       "tags": [
+        "harbour",
+        "day"
+       ]
+      },
+      "harbour-night": {
+       "name": null,
+       "tags": [
+        "harbour",
+        "night"
+       ]
+      }
+     },
+     "content": "Dawn breaks over the harbour.",
+     "current_background": null
+    },
+    "state_order": [
+     "content",
+     "current_background",
+     "backgrounds"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "background": "harbour-day"
+  }
+ },
+ "background-fits-without-current": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "background": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "background": "fallback"
+       },
+       "fallback_ids": [
+        "background"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "background": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "background": "fallback"
+       },
+       "fallback_ids": [
+        "background"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "background-selection",
+    "option_order": {
+     "background": [
+      "none",
+      "harbour-day",
+      "harbour-night"
+     ]
+    },
+    "outcomes": [
+     {
+      "action": "fallback",
+      "detail_order": [
+       "background",
+       "p_true",
+       "confidence",
+       "choice_confidence",
+       "threshold"
+      ],
+      "details": {
+       "background": null,
+       "choice_confidence": 0.5,
+       "confidence": 0.99,
+       "p_true": 0.99,
+       "threshold": 0.9
+      },
+      "reason": "no_confident_existing_background"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "fits_current",
+     "background"
+    ],
+    "questions": {
+     "background": {
+      "instructions": "Which existing scene background fits the place, time of day and situation of this moment? Choose none if none fits well.",
+      "options": {
+       "harbour-day": "Harbour day: harbour, day",
+       "harbour-night": "harbour-night: harbour, night",
+       "none": "None of the existing backgrounds fits well; use the usual selection or generation request."
+      },
+      "type": "choice"
+     },
+     "fits_current": {
+      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the background name and tags. If there is no current background, answer no.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "backgrounds": {
+      "harbour-day": {
+       "name": "Harbour day",
+       "tags": [
+        "harbour",
+        "day"
+       ]
+      },
+      "harbour-night": {
+       "name": null,
+       "tags": [
+        "harbour",
+        "night"
+       ]
+      }
+     },
+     "content": "Dawn breaks over the harbour.",
+     "current_background": null
+    },
+    "state_order": [
+     "content",
+     "current_background",
+     "backgrounds"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "background": "fallback"
+  }
+ },
+ "background-keep": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "background": "harbour-day"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "background": "harbour-day"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "background": "harbour-day"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "background": "harbour-day"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "background-selection",
+    "option_order": {
+     "background": [
+      "none",
+      "harbour-day",
+      "harbour-night"
+     ]
+    },
+    "outcomes": [
+     {
+      "action": "select_background",
+      "detail_order": [
+       "background",
+       "p_true",
+       "confidence",
+       "choice_confidence",
+       "threshold"
+      ],
+      "details": {
+       "background": "harbour-day",
+       "choice_confidence": 0.99,
+       "confidence": 0.95,
+       "p_true": 0.95,
+       "threshold": 0.9
+      },
+      "reason": "current_background_fits"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "fits_current",
+     "background"
+    ],
+    "questions": {
+     "background": {
+      "instructions": "Which existing scene background fits the place, time of day and situation of this moment? Choose none if none fits well.",
+      "options": {
+       "harbour-day": "Harbour day: harbour, day",
+       "harbour-night": "harbour-night: harbour, night",
+       "none": "None of the existing backgrounds fits well; use the usual selection or generation request."
+      },
+      "type": "choice"
+     },
+     "fits_current": {
+      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the background name and tags. If there is no current background, answer no.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "backgrounds": {
+      "harbour-day": {
+       "name": "Harbour day",
+       "tags": [
+        "harbour",
+        "day"
+       ]
+      },
+      "harbour-night": {
+       "name": null,
+       "tags": [
+        "harbour",
+        "night"
+       ]
+      }
+     },
+     "content": "Dawn breaks over the harbour.",
+     "current_background": "harbour-day"
+    },
+    "state_order": [
+     "content",
+     "current_background",
+     "backgrounds"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "background": "harbour-day"
+  }
+ },
+ "background-keep-at-threshold": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "background": "harbour-day"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "background": "harbour-day"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "background": "harbour-day"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "background": "harbour-day"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "background-selection",
+    "option_order": {
+     "background": [
+      "none",
+      "harbour-day",
+      "harbour-night"
+     ]
+    },
+    "outcomes": [
+     {
+      "action": "select_background",
+      "detail_order": [
+       "background",
+       "p_true",
+       "confidence",
+       "choice_confidence",
+       "threshold"
+      ],
+      "details": {
+       "background": "harbour-day",
+       "choice_confidence": 0.5,
+       "confidence": 0.9,
+       "p_true": 0.9,
+       "threshold": 0.9
+      },
+      "reason": "current_background_fits"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "fits_current",
+     "background"
+    ],
+    "questions": {
+     "background": {
+      "instructions": "Which existing scene background fits the place, time of day and situation of this moment? Choose none if none fits well.",
+      "options": {
+       "harbour-day": "Harbour day: harbour, day",
+       "harbour-night": "harbour-night: harbour, night",
+       "none": "None of the existing backgrounds fits well; use the usual selection or generation request."
+      },
+      "type": "choice"
+     },
+     "fits_current": {
+      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the background name and tags. If there is no current background, answer no.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "backgrounds": {
+      "harbour-day": {
+       "name": "Harbour day",
+       "tags": [
+        "harbour",
+        "day"
+       ]
+      },
+      "harbour-night": {
+       "name": null,
+       "tags": [
+        "harbour",
+        "night"
+       ]
+      }
+     },
+     "content": "Dawn breaks over the harbour.",
+     "current_background": "harbour-day"
+    },
+    "state_order": [
+     "content",
+     "current_background",
+     "backgrounds"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "background": "harbour-day"
+  }
+ },
+ "background-none": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "background": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "background": "fallback"
+       },
+       "fallback_ids": [
+        "background"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "background": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "background": "fallback"
+       },
+       "fallback_ids": [
+        "background"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "background-selection",
+    "option_order": {
+     "background": [
+      "none",
+      "harbour-day",
+      "harbour-night"
+     ]
+    },
+    "outcomes": [
+     {
+      "action": "fallback",
+      "detail_order": [
+       "background",
+       "p_true",
+       "confidence",
+       "choice_confidence",
+       "threshold"
+      ],
+      "details": {
+       "background": null,
+       "choice_confidence": 0.99,
+       "confidence": 0.9,
+       "p_true": 0.1,
+       "threshold": 0.9
+      },
+      "reason": "no_confident_existing_background"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "fits_current",
+     "background"
+    ],
+    "questions": {
+     "background": {
+      "instructions": "Which existing scene background fits the place, time of day and situation of this moment? Choose none if none fits well.",
+      "options": {
+       "harbour-day": "Harbour day: harbour, day",
+       "harbour-night": "harbour-night: harbour, night",
+       "none": "None of the existing backgrounds fits well; use the usual selection or generation request."
+      },
+      "type": "choice"
+     },
+     "fits_current": {
+      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the background name and tags. If there is no current background, answer no.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "backgrounds": {
+      "harbour-day": {
+       "name": "Harbour day",
+       "tags": [
+        "harbour",
+        "day"
+       ]
+      },
+      "harbour-night": {
+       "name": null,
+       "tags": [
+        "harbour",
+        "night"
+       ]
+      }
+     },
+     "content": "Dawn breaks over the harbour.",
+     "current_background": "harbour-day"
+    },
+    "state_order": [
+     "content",
+     "current_background",
+     "backgrounds"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "background": "fallback"
+  }
+ },
+ "background-switch": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "background": "harbour-night"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "background": "harbour-night"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "background": "harbour-night"
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "background": "harbour-night"
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "background-selection",
+    "option_order": {
+     "background": [
+      "none",
+      "harbour-day",
+      "harbour-night"
+     ]
+    },
+    "outcomes": [
+     {
+      "action": "select_background",
+      "detail_order": [
+       "background",
+       "p_true",
+       "confidence",
+       "choice_confidence",
+       "threshold"
+      ],
+      "details": {
+       "background": "harbour-night",
+       "choice_confidence": 0.95,
+       "confidence": 0.9,
+       "p_true": 0.1,
+       "threshold": 0.9
+      },
+      "reason": "confident_existing_background"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "fits_current",
+     "background"
+    ],
+    "questions": {
+     "background": {
+      "instructions": "Which existing scene background fits the place, time of day and situation of this moment? Choose none if none fits well.",
+      "options": {
+       "harbour-day": "Harbour day: harbour, day",
+       "harbour-night": "harbour-night: harbour, night",
+       "none": "None of the existing backgrounds fits well; use the usual selection or generation request."
+      },
+      "type": "choice"
+     },
+     "fits_current": {
+      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the background name and tags. If there is no current background, answer no.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "backgrounds": {
+      "harbour-day": {
+       "name": "Harbour day",
+       "tags": [
+        "harbour",
+        "day"
+       ]
+      },
+      "harbour-night": {
+       "name": null,
+       "tags": [
+        "harbour",
+        "night"
+       ]
+      }
+     },
+     "content": "Dawn breaks over the harbour.",
+     "current_background": "harbour-day"
+    },
+    "state_order": [
+     "content",
+     "current_background",
+     "backgrounds"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "background": "harbour-night"
+  }
+ },
+ "background-uncertain": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "background": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "background": "fallback"
+       },
+       "fallback_ids": [
+        "background"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "background": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "background": "fallback"
+       },
+       "fallback_ids": [
+        "background"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "background-selection",
+    "option_order": {
+     "background": [
+      "none",
+      "harbour-day",
+      "harbour-night"
+     ]
+    },
+    "outcomes": [
+     {
+      "action": "fallback",
+      "detail_order": [
+       "background",
+       "p_true",
+       "confidence",
+       "choice_confidence",
+       "threshold"
+      ],
+      "details": {
+       "background": null,
+       "choice_confidence": 0.5,
+       "confidence": 0.5,
+       "p_true": 0.5,
+       "threshold": 0.9
+      },
+      "reason": "no_confident_existing_background"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "fits_current",
+     "background"
+    ],
+    "questions": {
+     "background": {
+      "instructions": "Which existing scene background fits the place, time of day and situation of this moment? Choose none if none fits well.",
+      "options": {
+       "harbour-day": "Harbour day: harbour, day",
+       "harbour-night": "harbour-night: harbour, night",
+       "none": "None of the existing backgrounds fits well; use the usual selection or generation request."
+      },
+      "type": "choice"
+     },
+     "fits_current": {
+      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the background name and tags. If there is no current background, answer no.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "backgrounds": {
+      "harbour-day": {
+       "name": "Harbour day",
+       "tags": [
+        "harbour",
+        "day"
+       ]
+      },
+      "harbour-night": {
+       "name": null,
+       "tags": [
+        "harbour",
+        "night"
+       ]
+      }
+     },
+     "content": "Dawn breaks over the harbour.",
+     "current_background": "harbour-day"
+    },
+    "state_order": [
+     "content",
+     "current_background",
+     "backgrounds"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "background": "fallback"
+  }
+ },
+ "editor-at-threshold": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "editor.revision_rewrite",
+      "arguments": {
+       "decision_findings": [
+        {
+         "instructions": "Follow the writing style and active prose rules; preserve factual content.",
+         "kind": "style",
+         "p_true": 0.8,
+         "passage_id": "s2",
+         "text": "A shiver ran down her spine."
+        }
+       ],
+       "text": "She scanned the empty platform once more. A shiver ran down her spine."
+      },
+      "failure": null,
+      "reason": null,
+      "result": "She checked the departure board. Her hands tightened on the ticket.",
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "editor.revision_rewrite",
+      "arguments": {
+       "decision_findings": [
+        {
+         "instructions": "Follow the writing style and active prose rules; preserve factual content.",
+         "kind": "style",
+         "p_true": 0.8,
+         "passage_id": "s2",
+         "text": "A shiver ran down her spine."
+        }
+       ],
+       "text": "She scanned the empty platform once more. A shiver ran down her spine."
+      },
+      "failure": null,
+      "reason": null,
+      "result": "She checked the departure board. Her hands tightened on the ticket.",
+      "status": "completed"
+     }
+    ],
+    "label": "editor-checks",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "revision_rewrite",
+      "detail_order": [
+       "flagged_question_ids",
+       "skipped_passages"
+      ],
+      "details": {
+       "flagged_question_ids": [
+        "s2_style"
+       ],
+       "skipped_passages": []
+      },
+      "reason": "flagged_passages"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {
+     "s1_description_reuse": {
+      "group_id": "description_reuse",
+      "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s1_repetition": {
+      "group_id": "repetition",
+      "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s1_style": {
+      "group_id": "style",
+      "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "label": "Writing style and unwanted prose",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s2_description_reuse": {
+      "group_id": "description_reuse",
+      "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s2_repetition": {
+      "group_id": "repetition",
+      "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s2_style": {
+      "group_id": "style",
+      "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "label": "Writing style and unwanted prose",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "all",
+      "threshold": 0.8
+     }
+    },
+    "question_order": [
+     "s1_repetition",
+     "s1_description_reuse",
+     "s1_style",
+     "s2_repetition",
+     "s2_description_reuse",
+     "s2_style"
+    ],
+    "questions": {
+     "s1_description_reuse": {
+      "false_criteria": "No reuse of distinctive phrasing or imagery; shared names, common words, or necessary factual continuity alone do not count.",
+      "instructions": "Does passage s1 reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "true_criteria": "Substantially the same distinctive wording or image is reused, even if this describes a new occurrence of the action.",
+      "type": "noul"
+     },
+     "s1_repetition": {
+      "false_criteria": "The passage adds a new action, fact or development; necessary continuity or recurring subjects alone are not repetition.",
+      "instructions": "Does passage s1 repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "true_criteria": "The passage restates an already conveyed beat without a meaningful new development.",
+      "type": "noul"
+     },
+     "s1_style": {
+      "false_criteria": "The passage follows the applicable instructions. Vivid detail, atmosphere or dialogue is not a violation on its own.",
+      "instructions": "Does passage s1 violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "true_criteria": "The passage conflicts with an explicit writing-style instruction or exhibits unwanted prose described by an active rule.",
+      "type": "noul"
+     },
+     "s2_description_reuse": {
+      "false_criteria": "No reuse of distinctive phrasing or imagery; shared names, common words, or necessary factual continuity alone do not count.",
+      "instructions": "Does passage s2 reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "true_criteria": "Substantially the same distinctive wording or image is reused, even if this describes a new occurrence of the action.",
+      "type": "noul"
+     },
+     "s2_repetition": {
+      "false_criteria": "The passage adds a new action, fact or development; necessary continuity or recurring subjects alone are not repetition.",
+      "instructions": "Does passage s2 repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "true_criteria": "The passage restates an already conveyed beat without a meaningful new development.",
+      "type": "noul"
+     },
+     "s2_style": {
+      "false_criteria": "The passage follows the applicable instructions. Vivid detail, atmosphere or dialogue is not a violation on its own.",
+      "instructions": "Does passage s2 violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "true_criteria": "The passage conflicts with an explicit writing-style instruction or exhibits unwanted prose described by an active rule.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "context_name": null,
+     "context_type": null,
+     "history": [
+      "Mara looked along the deserted platform."
+     ],
+     "passages": [
+      {
+       "id": "s1",
+       "text": "She scanned the empty platform once more."
+      },
+      {
+       "id": "s2",
+       "text": "A shiver ran down her spine."
+      }
+     ],
+     "prose_rules": [
+      {
+       "active": true,
+       "classification": "unwanted",
+       "instructions": "Replace the stock reaction with a concrete action.",
+       "match_method": "regex",
+       "phrase": "A shiver ran down her spine."
+      }
+     ],
+     "source_context": null,
+     "speaker": null,
+     "summarization_history": null,
+     "text": "She scanned the empty platform once more. A shiver ran down her spine.",
+     "writing_style": "Use concrete actions. Avoid stock physiological reactions such as a shiver running down a spine."
+    },
+    "state_order": [
+     "text",
+     "speaker",
+     "passages",
+     "history",
+     "writing_style",
+     "prose_rules",
+     "context_type",
+     "context_name",
+     "source_context",
+     "summarization_history"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": "She checked the departure board. Her hands tightened on the ticket."
+ },
+ "editor-below-minimum": {
+  "invocations": [
+   {
+    "actions": [],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [],
+    "label": "editor-checks",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "no_action",
+      "detail_order": [
+       "minimum",
+       "flagged_passages",
+       "flagged_question_ids",
+       "skipped_passages"
+      ],
+      "details": {
+       "flagged_passages": 1,
+       "flagged_question_ids": [
+        "s1_repetition",
+        "s1_style"
+       ],
+       "minimum": 2,
+       "skipped_passages": []
+      },
+      "reason": "below_minimum"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {
+     "s1_description_reuse": {
+      "group_id": "description_reuse",
+      "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s1_repetition": {
+      "group_id": "repetition",
+      "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s1_style": {
+      "group_id": "style",
+      "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "label": "Writing style and unwanted prose",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s2_description_reuse": {
+      "group_id": "description_reuse",
+      "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s2_repetition": {
+      "group_id": "repetition",
+      "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s2_style": {
+      "group_id": "style",
+      "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "label": "Writing style and unwanted prose",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "all",
+      "threshold": 0.8
+     }
+    },
+    "question_order": [
+     "s1_repetition",
+     "s1_description_reuse",
+     "s1_style",
+     "s2_repetition",
+     "s2_description_reuse",
+     "s2_style"
+    ],
+    "questions": {
+     "s1_description_reuse": {
+      "false_criteria": "No reuse of distinctive phrasing or imagery; shared names, common words, or necessary factual continuity alone do not count.",
+      "instructions": "Does passage s1 reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "true_criteria": "Substantially the same distinctive wording or image is reused, even if this describes a new occurrence of the action.",
+      "type": "noul"
+     },
+     "s1_repetition": {
+      "false_criteria": "The passage adds a new action, fact or development; necessary continuity or recurring subjects alone are not repetition.",
+      "instructions": "Does passage s1 repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "true_criteria": "The passage restates an already conveyed beat without a meaningful new development.",
+      "type": "noul"
+     },
+     "s1_style": {
+      "false_criteria": "The passage follows the applicable instructions. Vivid detail, atmosphere or dialogue is not a violation on its own.",
+      "instructions": "Does passage s1 violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "true_criteria": "The passage conflicts with an explicit writing-style instruction or exhibits unwanted prose described by an active rule.",
+      "type": "noul"
+     },
+     "s2_description_reuse": {
+      "false_criteria": "No reuse of distinctive phrasing or imagery; shared names, common words, or necessary factual continuity alone do not count.",
+      "instructions": "Does passage s2 reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "true_criteria": "Substantially the same distinctive wording or image is reused, even if this describes a new occurrence of the action.",
+      "type": "noul"
+     },
+     "s2_repetition": {
+      "false_criteria": "The passage adds a new action, fact or development; necessary continuity or recurring subjects alone are not repetition.",
+      "instructions": "Does passage s2 repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "true_criteria": "The passage restates an already conveyed beat without a meaningful new development.",
+      "type": "noul"
+     },
+     "s2_style": {
+      "false_criteria": "The passage follows the applicable instructions. Vivid detail, atmosphere or dialogue is not a violation on its own.",
+      "instructions": "Does passage s2 violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "true_criteria": "The passage conflicts with an explicit writing-style instruction or exhibits unwanted prose described by an active rule.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "context_name": null,
+     "context_type": null,
+     "history": [
+      "Mara looked along the deserted platform."
+     ],
+     "passages": [
+      {
+       "id": "s1",
+       "text": "She scanned the empty platform once more."
+      },
+      {
+       "id": "s2",
+       "text": "A shiver ran down her spine."
+      }
+     ],
+     "prose_rules": [
+      {
+       "active": true,
+       "classification": "unwanted",
+       "instructions": "Replace the stock reaction with a concrete action.",
+       "match_method": "regex",
+       "phrase": "A shiver ran down her spine."
+      }
+     ],
+     "source_context": null,
+     "speaker": null,
+     "summarization_history": null,
+     "text": "She scanned the empty platform once more. A shiver ran down her spine.",
+     "writing_style": "Use concrete actions. Avoid stock physiological reactions such as a shiver running down a spine."
+    },
+    "state_order": [
+     "text",
+     "speaker",
+     "passages",
+     "history",
+     "writing_style",
+     "prose_rules",
+     "context_type",
+     "context_name",
+     "source_context",
+     "summarization_history"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": "She scanned the empty platform once more. A shiver ran down her spine."
+ },
+ "editor-below-thresholds": {
+  "invocations": [
+   {
+    "actions": [],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [],
+    "label": "editor-checks",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "no_action",
+      "detail_order": [
+       "thresholds",
+       "flagged_question_ids",
+       "skipped_passages"
+      ],
+      "details": {
+       "flagged_question_ids": [],
+       "skipped_passages": [],
+       "thresholds": {
+        "s1_description_reuse": 0.8,
+        "s1_repetition": 0.8,
+        "s1_style": 0.8,
+        "s2_description_reuse": 0.8,
+        "s2_repetition": 0.8,
+        "s2_style": 0.8
+       }
+      },
+      "reason": "below_thresholds"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {
+     "s1_description_reuse": {
+      "group_id": "description_reuse",
+      "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s1_repetition": {
+      "group_id": "repetition",
+      "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s1_style": {
+      "group_id": "style",
+      "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "label": "Writing style and unwanted prose",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s2_description_reuse": {
+      "group_id": "description_reuse",
+      "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s2_repetition": {
+      "group_id": "repetition",
+      "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s2_style": {
+      "group_id": "style",
+      "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "label": "Writing style and unwanted prose",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "all",
+      "threshold": 0.8
+     }
+    },
+    "question_order": [
+     "s1_repetition",
+     "s1_description_reuse",
+     "s1_style",
+     "s2_repetition",
+     "s2_description_reuse",
+     "s2_style"
+    ],
+    "questions": {
+     "s1_description_reuse": {
+      "false_criteria": "No reuse of distinctive phrasing or imagery; shared names, common words, or necessary factual continuity alone do not count.",
+      "instructions": "Does passage s1 reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "true_criteria": "Substantially the same distinctive wording or image is reused, even if this describes a new occurrence of the action.",
+      "type": "noul"
+     },
+     "s1_repetition": {
+      "false_criteria": "The passage adds a new action, fact or development; necessary continuity or recurring subjects alone are not repetition.",
+      "instructions": "Does passage s1 repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "true_criteria": "The passage restates an already conveyed beat without a meaningful new development.",
+      "type": "noul"
+     },
+     "s1_style": {
+      "false_criteria": "The passage follows the applicable instructions. Vivid detail, atmosphere or dialogue is not a violation on its own.",
+      "instructions": "Does passage s1 violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "true_criteria": "The passage conflicts with an explicit writing-style instruction or exhibits unwanted prose described by an active rule.",
+      "type": "noul"
+     },
+     "s2_description_reuse": {
+      "false_criteria": "No reuse of distinctive phrasing or imagery; shared names, common words, or necessary factual continuity alone do not count.",
+      "instructions": "Does passage s2 reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "true_criteria": "Substantially the same distinctive wording or image is reused, even if this describes a new occurrence of the action.",
+      "type": "noul"
+     },
+     "s2_repetition": {
+      "false_criteria": "The passage adds a new action, fact or development; necessary continuity or recurring subjects alone are not repetition.",
+      "instructions": "Does passage s2 repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "true_criteria": "The passage restates an already conveyed beat without a meaningful new development.",
+      "type": "noul"
+     },
+     "s2_style": {
+      "false_criteria": "The passage follows the applicable instructions. Vivid detail, atmosphere or dialogue is not a violation on its own.",
+      "instructions": "Does passage s2 violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "true_criteria": "The passage conflicts with an explicit writing-style instruction or exhibits unwanted prose described by an active rule.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "context_name": null,
+     "context_type": null,
+     "history": [
+      "Mara looked along the deserted platform."
+     ],
+     "passages": [
+      {
+       "id": "s1",
+       "text": "She scanned the empty platform once more."
+      },
+      {
+       "id": "s2",
+       "text": "A shiver ran down her spine."
+      }
+     ],
+     "prose_rules": [
+      {
+       "active": true,
+       "classification": "unwanted",
+       "instructions": "Replace the stock reaction with a concrete action.",
+       "match_method": "regex",
+       "phrase": "A shiver ran down her spine."
+      }
+     ],
+     "source_context": null,
+     "speaker": null,
+     "summarization_history": null,
+     "text": "She scanned the empty platform once more. A shiver ran down her spine.",
+     "writing_style": "Use concrete actions. Avoid stock physiological reactions such as a shiver running down a spine."
+    },
+    "state_order": [
+     "text",
+     "speaker",
+     "passages",
+     "history",
+     "writing_style",
+     "prose_rules",
+     "context_type",
+     "context_name",
+     "source_context",
+     "summarization_history"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": "She scanned the empty platform once more. A shiver ran down her spine."
+ },
+ "editor-nothing-in-scope": {
+  "invocations": [
+   {
+    "actions": [],
+    "outcomes": [
+     {
+      "action": "no_action",
+      "detail_order": [
+       "skipped_passages"
+      ],
+      "details": {
+       "skipped_passages": [
+        {
+         "group_id": "filler",
+         "instructions": "Does shown below pad the moment?",
+         "label": "Filler",
+         "passage_id": "s1",
+         "scope": "dialogue"
+        },
+        {
+         "group_id": "filler",
+         "instructions": "Does shown below pad the moment?",
+         "label": "Filler",
+         "passage_id": "s2",
+         "scope": "dialogue"
+        }
+       ]
+      },
+      "reason": "nothing_in_scope"
+     }
+    ],
+    "status": "completed"
+   }
+  ],
+  "requests": [],
+  "result": "She scanned the empty platform once more. A shiver ran down her spine."
+ },
+ "editor-prose-scope": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "editor.revision_rewrite",
+      "arguments": {
+       "decision_findings": [
+        {
+         "instructions": "Cut the padding. Change only the prose of this passage.",
+         "kind": "style",
+         "p_true": 0.9,
+         "passage_id": "s1",
+         "text": "She scanned the empty platform once more."
+        }
+       ],
+       "text": "She scanned the empty platform once more. A shiver ran down her spine."
+      },
+      "failure": null,
+      "reason": null,
+      "result": "She checked the departure board. Her hands tightened on the ticket.",
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "editor.revision_rewrite",
+      "arguments": {
+       "decision_findings": [
+        {
+         "instructions": "Cut the padding. Change only the prose of this passage.",
+         "kind": "style",
+         "p_true": 0.9,
+         "passage_id": "s1",
+         "text": "She scanned the empty platform once more."
+        }
+       ],
+       "text": "She scanned the empty platform once more. A shiver ran down her spine."
+      },
+      "failure": null,
+      "reason": null,
+      "result": "She checked the departure board. Her hands tightened on the ticket.",
+      "status": "completed"
+     }
+    ],
+    "label": "editor-checks",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "revision_rewrite",
+      "detail_order": [
+       "flagged_question_ids",
+       "skipped_passages"
+      ],
+      "details": {
+       "flagged_question_ids": [
+        "s1_filler"
+       ],
+       "skipped_passages": []
+      },
+      "reason": "flagged_passages"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {
+     "s1_filler": {
+      "group_id": "filler",
+      "instructions": "Does shown below pad the moment?",
+      "label": "Filler",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "prose",
+      "threshold": 0.8
+     },
+     "s2_filler": {
+      "group_id": "filler",
+      "instructions": "Does shown below pad the moment?",
+      "label": "Filler",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "prose",
+      "threshold": 0.8
+     }
+    },
+    "question_order": [
+     "s1_filler",
+     "s2_filler"
+    ],
+    "questions": {
+     "s1_filler": {
+      "instructions": "Judge only the prose of passage s1 (its `prose` text: everything outside double quotes); ignore its dialogue. Does s1 pad the moment?",
+      "type": "noul"
+     },
+     "s2_filler": {
+      "instructions": "Judge only the prose of passage s2 (its `prose` text: everything outside double quotes); ignore its dialogue. Does s2 pad the moment?",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "context_name": null,
+     "context_type": null,
+     "history": [
+      "Mara looked along the deserted platform."
+     ],
+     "passages": [
+      {
+       "id": "s1",
+       "prose": "She scanned the empty platform once more.",
+       "text": "She scanned the empty platform once more."
+      },
+      {
+       "id": "s2",
+       "prose": "A shiver ran down her spine.",
+       "text": "A shiver ran down her spine."
+      }
+     ],
+     "prose_rules": [
+      {
+       "active": true,
+       "classification": "unwanted",
+       "instructions": "Replace the stock reaction with a concrete action.",
+       "match_method": "regex",
+       "phrase": "A shiver ran down her spine."
+      }
+     ],
+     "source_context": null,
+     "speaker": null,
+     "summarization_history": null,
+     "text": "She scanned the empty platform once more. A shiver ran down her spine.",
+     "writing_style": "Use concrete actions. Avoid stock physiological reactions such as a shiver running down a spine."
+    },
+    "state_order": [
+     "text",
+     "speaker",
+     "passages",
+     "history",
+     "writing_style",
+     "prose_rules",
+     "context_type",
+     "context_name",
+     "source_context",
+     "summarization_history"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": "She checked the departure board. Her hands tightened on the ticket."
+ },
+ "editor-revision": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "editor.revision_rewrite",
+      "arguments": {
+       "decision_findings": [
+        {
+         "instructions": "Remove this repeated beat, or replace it with genuinely different content if repetition handling is set to rewrite.",
+         "kind": "repetition",
+         "p_true": 0.93,
+         "passage_id": "s1",
+         "text": "She scanned the empty platform once more."
+        },
+        {
+         "instructions": "Follow the writing style and active prose rules; preserve factual content.",
+         "kind": "style",
+         "p_true": 0.91,
+         "passage_id": "s2",
+         "text": "A shiver ran down her spine."
+        }
+       ],
+       "text": "She scanned the empty platform once more. A shiver ran down her spine."
+      },
+      "failure": null,
+      "reason": null,
+      "result": "She checked the departure board. Her hands tightened on the ticket.",
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "editor.revision_rewrite",
+      "arguments": {
+       "decision_findings": [
+        {
+         "instructions": "Remove this repeated beat, or replace it with genuinely different content if repetition handling is set to rewrite.",
+         "kind": "repetition",
+         "p_true": 0.93,
+         "passage_id": "s1",
+         "text": "She scanned the empty platform once more."
+        },
+        {
+         "instructions": "Follow the writing style and active prose rules; preserve factual content.",
+         "kind": "style",
+         "p_true": 0.91,
+         "passage_id": "s2",
+         "text": "A shiver ran down her spine."
+        }
+       ],
+       "text": "She scanned the empty platform once more. A shiver ran down her spine."
+      },
+      "failure": null,
+      "reason": null,
+      "result": "She checked the departure board. Her hands tightened on the ticket.",
+      "status": "completed"
+     }
+    ],
+    "label": "editor-checks",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "revision_rewrite",
+      "detail_order": [
+       "flagged_question_ids",
+       "skipped_passages"
+      ],
+      "details": {
+       "flagged_question_ids": [
+        "s1_repetition",
+        "s2_style"
+       ],
+       "skipped_passages": []
+      },
+      "reason": "flagged_passages"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {
+     "s1_description_reuse": {
+      "group_id": "description_reuse",
+      "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s1_repetition": {
+      "group_id": "repetition",
+      "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s1_style": {
+      "group_id": "style",
+      "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "label": "Writing style and unwanted prose",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s2_description_reuse": {
+      "group_id": "description_reuse",
+      "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s2_repetition": {
+      "group_id": "repetition",
+      "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s2_style": {
+      "group_id": "style",
+      "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "label": "Writing style and unwanted prose",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "all",
+      "threshold": 0.8
+     }
+    },
+    "question_order": [
+     "s1_repetition",
+     "s1_description_reuse",
+     "s1_style",
+     "s2_repetition",
+     "s2_description_reuse",
+     "s2_style"
+    ],
+    "questions": {
+     "s1_description_reuse": {
+      "false_criteria": "No reuse of distinctive phrasing or imagery; shared names, common words, or necessary factual continuity alone do not count.",
+      "instructions": "Does passage s1 reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "true_criteria": "Substantially the same distinctive wording or image is reused, even if this describes a new occurrence of the action.",
+      "type": "noul"
+     },
+     "s1_repetition": {
+      "false_criteria": "The passage adds a new action, fact or development; necessary continuity or recurring subjects alone are not repetition.",
+      "instructions": "Does passage s1 repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "true_criteria": "The passage restates an already conveyed beat without a meaningful new development.",
+      "type": "noul"
+     },
+     "s1_style": {
+      "false_criteria": "The passage follows the applicable instructions. Vivid detail, atmosphere or dialogue is not a violation on its own.",
+      "instructions": "Does passage s1 violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "true_criteria": "The passage conflicts with an explicit writing-style instruction or exhibits unwanted prose described by an active rule.",
+      "type": "noul"
+     },
+     "s2_description_reuse": {
+      "false_criteria": "No reuse of distinctive phrasing or imagery; shared names, common words, or necessary factual continuity alone do not count.",
+      "instructions": "Does passage s2 reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "true_criteria": "Substantially the same distinctive wording or image is reused, even if this describes a new occurrence of the action.",
+      "type": "noul"
+     },
+     "s2_repetition": {
+      "false_criteria": "The passage adds a new action, fact or development; necessary continuity or recurring subjects alone are not repetition.",
+      "instructions": "Does passage s2 repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "true_criteria": "The passage restates an already conveyed beat without a meaningful new development.",
+      "type": "noul"
+     },
+     "s2_style": {
+      "false_criteria": "The passage follows the applicable instructions. Vivid detail, atmosphere or dialogue is not a violation on its own.",
+      "instructions": "Does passage s2 violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "true_criteria": "The passage conflicts with an explicit writing-style instruction or exhibits unwanted prose described by an active rule.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "context_name": null,
+     "context_type": null,
+     "history": [
+      "Mara looked along the deserted platform."
+     ],
+     "passages": [
+      {
+       "id": "s1",
+       "text": "She scanned the empty platform once more."
+      },
+      {
+       "id": "s2",
+       "text": "A shiver ran down her spine."
+      }
+     ],
+     "prose_rules": [
+      {
+       "active": true,
+       "classification": "unwanted",
+       "instructions": "Replace the stock reaction with a concrete action.",
+       "match_method": "regex",
+       "phrase": "A shiver ran down her spine."
+      }
+     ],
+     "source_context": null,
+     "speaker": null,
+     "summarization_history": null,
+     "text": "She scanned the empty platform once more. A shiver ran down her spine.",
+     "writing_style": "Use concrete actions. Avoid stock physiological reactions such as a shiver running down a spine."
+    },
+    "state_order": [
+     "text",
+     "speaker",
+     "passages",
+     "history",
+     "writing_style",
+     "prose_rules",
+     "context_type",
+     "context_name",
+     "source_context",
+     "summarization_history"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": "She checked the departure board. Her hands tightened on the ticket."
+ },
+ "editor-revision-unslop": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "editor.revision_unslop",
+      "arguments": {
+       "decision_findings": [
+        {
+         "instructions": "Remove this repeated beat, or replace it with genuinely different content if repetition handling is set to rewrite.",
+         "kind": "repetition",
+         "p_true": 0.93,
+         "passage_id": "s1",
+         "text": "She scanned the empty platform once more."
+        },
+        {
+         "instructions": "Follow the writing style and active prose rules; preserve factual content.",
+         "kind": "style",
+         "p_true": 0.91,
+         "passage_id": "s2",
+         "text": "A shiver ran down her spine."
+        }
+       ],
+       "text": "She scanned the empty platform once more. A shiver ran down her spine."
+      },
+      "failure": null,
+      "reason": null,
+      "result": "She checked the departure board. Her hands tightened on the ticket.",
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "editor.revision_unslop",
+      "arguments": {
+       "decision_findings": [
+        {
+         "instructions": "Remove this repeated beat, or replace it with genuinely different content if repetition handling is set to rewrite.",
+         "kind": "repetition",
+         "p_true": 0.93,
+         "passage_id": "s1",
+         "text": "She scanned the empty platform once more."
+        },
+        {
+         "instructions": "Follow the writing style and active prose rules; preserve factual content.",
+         "kind": "style",
+         "p_true": 0.91,
+         "passage_id": "s2",
+         "text": "A shiver ran down her spine."
+        }
+       ],
+       "text": "She scanned the empty platform once more. A shiver ran down her spine."
+      },
+      "failure": null,
+      "reason": null,
+      "result": "She checked the departure board. Her hands tightened on the ticket.",
+      "status": "completed"
+     }
+    ],
+    "label": "editor-checks",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "revision_unslop",
+      "detail_order": [
+       "flagged_question_ids",
+       "skipped_passages"
+      ],
+      "details": {
+       "flagged_question_ids": [
+        "s1_repetition",
+        "s2_style"
+       ],
+       "skipped_passages": []
+      },
+      "reason": "flagged_passages"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {
+     "s1_description_reuse": {
+      "group_id": "description_reuse",
+      "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s1_repetition": {
+      "group_id": "repetition",
+      "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s1_style": {
+      "group_id": "style",
+      "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "label": "Writing style and unwanted prose",
+      "passage_id": "s1",
+      "passage_text": "She scanned the empty platform once more.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s2_description_reuse": {
+      "group_id": "description_reuse",
+      "instructions": "Does passage shown below reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s2_repetition": {
+      "group_id": "repetition",
+      "instructions": "Does passage shown below repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "label": "Repeated beats and description reuse",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "all",
+      "threshold": 0.8
+     },
+     "s2_style": {
+      "group_id": "style",
+      "instructions": "Does passage shown below violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "label": "Writing style and unwanted prose",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "all",
+      "threshold": 0.8
+     }
+    },
+    "question_order": [
+     "s1_repetition",
+     "s1_description_reuse",
+     "s1_style",
+     "s2_repetition",
+     "s2_description_reuse",
+     "s2_style"
+    ],
+    "questions": {
+     "s1_description_reuse": {
+      "false_criteria": "No reuse of distinctive phrasing or imagery; shared names, common words, or necessary factual continuity alone do not count.",
+      "instructions": "Does passage s1 reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "true_criteria": "Substantially the same distinctive wording or image is reused, even if this describes a new occurrence of the action.",
+      "type": "noul"
+     },
+     "s1_repetition": {
+      "false_criteria": "The passage adds a new action, fact or development; necessary continuity or recurring subjects alone are not repetition.",
+      "instructions": "Does passage s1 repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "true_criteria": "The passage restates an already conveyed beat without a meaningful new development.",
+      "type": "noul"
+     },
+     "s1_style": {
+      "false_criteria": "The passage follows the applicable instructions. Vivid detail, atmosphere or dialogue is not a violation on its own.",
+      "instructions": "Does passage s1 violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "true_criteria": "The passage conflicts with an explicit writing-style instruction or exhibits unwanted prose described by an active rule.",
+      "type": "noul"
+     },
+     "s2_description_reuse": {
+      "false_criteria": "No reuse of distinctive phrasing or imagery; shared names, common words, or necessary factual continuity alone do not count.",
+      "instructions": "Does passage s2 reuse a distinctive phrase, image, or description already used in the history or an earlier current passage? Reuse may be near-verbatim, paraphrased, or applied to a new occurrence; shared names, ordinary words, and factual continuity alone do not count. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself description reuse; flag only redundant reuse within the draft.",
+      "true_criteria": "Substantially the same distinctive wording or image is reused, even if this describes a new occurrence of the action.",
+      "type": "noul"
+     },
+     "s2_repetition": {
+      "false_criteria": "The passage adds a new action, fact or development; necessary continuity or recurring subjects alone are not repetition.",
+      "instructions": "Does passage s2 repeat information, an action, observation or story beat already conveyed in preceding history or earlier passages of the current text? Judge meaning, not shared words. For summarization or contextual generation, overlap with source_context or summarization_history is expected evidence, not itself repetition; flag only redundant retelling within the draft.",
+      "true_criteria": "The passage restates an already conveyed beat without a meaningful new development.",
+      "type": "noul"
+     },
+     "s2_style": {
+      "false_criteria": "The passage follows the applicable instructions. Vivid detail, atmosphere or dialogue is not a violation on its own.",
+      "instructions": "Does passage s2 violate the supplied writing_style or an active prose_rule? Evaluate the passage in its complete current text and task context. The prose rules include the director's intended corrections; judge their meaning, not just matching words.",
+      "true_criteria": "The passage conflicts with an explicit writing-style instruction or exhibits unwanted prose described by an active rule.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "context_name": null,
+     "context_type": null,
+     "history": [
+      "Mara looked along the deserted platform."
+     ],
+     "passages": [
+      {
+       "id": "s1",
+       "text": "She scanned the empty platform once more."
+      },
+      {
+       "id": "s2",
+       "text": "A shiver ran down her spine."
+      }
+     ],
+     "prose_rules": [
+      {
+       "active": true,
+       "classification": "unwanted",
+       "instructions": "Replace the stock reaction with a concrete action.",
+       "match_method": "regex",
+       "phrase": "A shiver ran down her spine."
+      }
+     ],
+     "source_context": null,
+     "speaker": null,
+     "summarization_history": null,
+     "text": "She scanned the empty platform once more. A shiver ran down her spine.",
+     "writing_style": "Use concrete actions. Avoid stock physiological reactions such as a shiver running down a spine."
+    },
+    "state_order": [
+     "text",
+     "speaker",
+     "passages",
+     "history",
+     "writing_style",
+     "prose_rules",
+     "context_type",
+     "context_name",
+     "source_context",
+     "summarization_history"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": "She checked the departure board. Her hands tightened on the ticket."
+ },
+ "entity-references": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "Ilse": false,
+        "Mara": true,
+        "Oren": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "Ilse": false,
+        "Mara": true,
+        "Oren": "fallback"
+       },
+       "fallback_ids": [
+        "Oren"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "Ilse": false,
+        "Mara": true,
+        "Oren": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "Ilse": false,
+        "Mara": true,
+        "Oren": "fallback"
+       },
+       "fallback_ids": [
+        "Oren"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "memory-entity-references",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "include",
+      "detail_order": [
+       "character",
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "character": "Mara",
+       "confidence": 0.95,
+       "p_true": 0.95,
+       "threshold": 0.9
+      },
+      "reason": "confident"
+     },
+     {
+      "action": "exclude",
+      "detail_order": [
+       "character",
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "character": "Ilse",
+       "confidence": 0.95,
+       "p_true": 0.05,
+       "threshold": 0.9
+      },
+      "reason": "confident"
+     },
+     {
+      "action": "fallback",
+      "detail_order": [
+       "character",
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "character": "Oren",
+       "confidence": 0.5,
+       "p_true": 0.5,
+       "threshold": 0.9
+      },
+      "reason": "uncertain"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "Mara",
+     "Ilse",
+     "Oren"
+    ],
+    "questions": {
+     "Ilse": {
+      "instructions": "Does this text refer to Ilse, by name, pronoun, title, nickname or description? Resolve meaning in context rather than matching words. Aliases: Ilse. Description: A lighthouse keeper.",
+      "type": "noul"
+     },
+     "Mara": {
+      "instructions": "Does this text refer to Mara, by name, pronoun, title, nickname or description? Resolve meaning in context rather than matching words. Aliases: Mara, the captain. Description: A sailor.",
+      "type": "noul"
+     },
+     "Oren": {
+      "instructions": "Does this text refer to Oren, by name, pronoun, title, nickname or description? Resolve meaning in context rather than matching words. Aliases: Oren. Description: ",
+      "type": "noul"
+     }
+    },
+    "state": "The captain waved.",
+    "state_order": null,
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "Ilse": false,
+   "Mara": true,
+   "Oren": "fallback"
+  }
+ },
+ "pins": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "door": true,
+        "rain": null,
+        "sleep": false
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "door": true,
+        "rain": "fallback",
+        "sleep": false
+       },
+       "fallback_ids": [
+        "rain"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "door": true,
+        "rain": null,
+        "sleep": false
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "door": true,
+        "rain": "fallback",
+        "sleep": false
+       },
+       "fallback_ids": [
+        "rain"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "pin-conditions",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "answer",
+      "detail_order": [
+       "pin",
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "confidence": 0.95,
+       "p_true": 0.95,
+       "pin": "door",
+       "threshold": 0.9
+      },
+      "reason": "confident"
+     },
+     {
+      "action": "answer",
+      "detail_order": [
+       "pin",
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "confidence": 0.95,
+       "p_true": 0.05,
+       "pin": "sleep",
+       "threshold": 0.9
+      },
+      "reason": "confident"
+     },
+     {
+      "action": "fallback",
+      "detail_order": [
+       "pin",
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "confidence": 0.5,
+       "p_true": 0.5,
+       "pin": "rain",
+       "threshold": 0.9
+      },
+      "reason": "uncertain"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "door",
+     "sleep",
+     "rain"
+    ],
+    "questions": {
+     "door": {
+      "instructions": "At the end of the scene, is this condition true? Is the door open?",
+      "type": "noul"
+     },
+     "rain": {
+      "instructions": "At the end of the scene, is this condition true? Is it raining?",
+      "type": "noul"
+     },
+     "sleep": {
+      "instructions": "At the end of the scene, is this condition true? Is anybody asleep?",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "history": [
+      "The door opens.",
+      "Nobody is asleep."
+     ],
+     "previous_states": {
+      "door": {
+       "condition": "Is the door open?",
+       "state": false
+      },
+      "rain": {
+       "condition": "Is it raining?",
+       "state": null
+      },
+      "sleep": {
+       "condition": "Is anybody asleep?",
+       "state": true
+      }
+     }
+    },
+    "state_order": [
+     "history",
+     "previous_states"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "door": true,
+   "rain": "fallback",
+   "sleep": false
+  }
+ },
+ "query-0.05": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "query": false
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "query": false
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "query": false
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "query": false
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "yes-no-query",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "answer",
+      "detail_order": [
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "confidence": 0.95,
+       "p_true": 0.05,
+       "threshold": 0.9
+      },
+      "reason": "confident"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "query"
+    ],
+    "questions": {
+     "query": {
+      "instructions": "Is the door open?",
+      "type": "noul"
+     }
+    },
+    "state": "The door is open.",
+    "state_order": null,
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "query": false
+  }
+ },
+ "query-0.1": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "query": false
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "query": false
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "query": false
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "query": false
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "yes-no-query",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "answer",
+      "detail_order": [
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "confidence": 0.9,
+       "p_true": 0.1,
+       "threshold": 0.9
+      },
+      "reason": "confident"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "query"
+    ],
+    "questions": {
+     "query": {
+      "instructions": "Is the door open?",
+      "type": "noul"
+     }
+    },
+    "state": "The door is open.",
+    "state_order": null,
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "query": false
+  }
+ },
+ "query-0.5": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "query": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "query": "fallback"
+       },
+       "fallback_ids": [
+        "query"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "query": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "query": "fallback"
+       },
+       "fallback_ids": [
+        "query"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "yes-no-query",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "fallback",
+      "detail_order": [
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "confidence": 0.5,
+       "p_true": 0.5,
+       "threshold": 0.9
+      },
+      "reason": "uncertain"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "query"
+    ],
+    "questions": {
+     "query": {
+      "instructions": "Is the door open?",
+      "type": "noul"
+     }
+    },
+    "state": "The door is open.",
+    "state_order": null,
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "query": "fallback"
+  }
+ },
+ "query-0.9": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "query": true
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "query": true
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "query": true
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "query": true
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "yes-no-query",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "answer",
+      "detail_order": [
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "confidence": 0.9,
+       "p_true": 0.9,
+       "threshold": 0.9
+      },
+      "reason": "confident"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "query"
+    ],
+    "questions": {
+     "query": {
+      "instructions": "Is the door open?",
+      "type": "noul"
+     }
+    },
+    "state": "The door is open.",
+    "state_order": null,
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "query": true
+  }
+ },
+ "query-0.95": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "query": true
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "query": true
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "query": true
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "query": true
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "yes-no-query",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "answer",
+      "detail_order": [
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "confidence": 0.95,
+       "p_true": 0.95,
+       "threshold": 0.9
+      },
+      "reason": "confident"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "query"
+    ],
+    "questions": {
+     "query": {
+      "instructions": "Is the door open?",
+      "type": "noul"
+     }
+    },
+    "state": "The door is open.",
+    "state_order": null,
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "query": true
+  }
+ },
+ "reinforcement-0.05": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "state": false
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "state": false
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "state": false
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "state": false
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "tracked-state-update",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "keep_state",
+      "detail_order": [
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "confidence": 0.95,
+       "p_true": 0.05,
+       "threshold": 0.9
+      },
+      "reason": "confident_no_change"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "changed"
+    ],
+    "questions": {
+     "changed": {
+      "instructions": "Has the scene since the last update changed this tracked state's answer, or does the previous answer conflict with the current scene? Judge the question for the specified character, or the world when no character is specified. Consider the update instructions.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "character": "Mara",
+     "context": "Mara is on deck.",
+     "current_ts": "PT2H",
+     "instructions": "One line.",
+     "last_updated_ts": "PT1H",
+     "previous_answer": "On deck.",
+     "question": "Where is Mara?"
+    },
+    "state_order": [
+     "question",
+     "character",
+     "instructions",
+     "previous_answer",
+     "last_updated_ts",
+     "current_ts",
+     "context"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "state": false
+  }
+ },
+ "reinforcement-0.1": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "state": false
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "state": false
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "state": false
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "state": false
+       },
+       "fallback_ids": [],
+       "fallback_ran": false
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "tracked-state-update",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "keep_state",
+      "detail_order": [
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "confidence": 0.9,
+       "p_true": 0.1,
+       "threshold": 0.9
+      },
+      "reason": "confident_no_change"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "changed"
+    ],
+    "questions": {
+     "changed": {
+      "instructions": "Has the scene since the last update changed this tracked state's answer, or does the previous answer conflict with the current scene? Judge the question for the specified character, or the world when no character is specified. Consider the update instructions.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "character": "Mara",
+     "context": "Mara is on deck.",
+     "current_ts": "PT2H",
+     "instructions": "One line.",
+     "last_updated_ts": "PT1H",
+     "previous_answer": "On deck.",
+     "question": "Where is Mara?"
+    },
+    "state_order": [
+     "question",
+     "character",
+     "instructions",
+     "previous_answer",
+     "last_updated_ts",
+     "current_ts",
+     "context"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "state": false
+  }
+ },
+ "reinforcement-0.5": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "state": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "state": "fallback"
+       },
+       "fallback_ids": [
+        "state"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "state": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "state": "fallback"
+       },
+       "fallback_ids": [
+        "state"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "tracked-state-update",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "fallback",
+      "detail_order": [
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "confidence": 0.5,
+       "p_true": 0.5,
+       "threshold": 0.9
+      },
+      "reason": "update_needed_or_uncertain"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "changed"
+    ],
+    "questions": {
+     "changed": {
+      "instructions": "Has the scene since the last update changed this tracked state's answer, or does the previous answer conflict with the current scene? Judge the question for the specified character, or the world when no character is specified. Consider the update instructions.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "character": "Mara",
+     "context": "Mara is on deck.",
+     "current_ts": "PT2H",
+     "instructions": "One line.",
+     "last_updated_ts": "PT1H",
+     "previous_answer": "On deck.",
+     "question": "Where is Mara?"
+    },
+    "state_order": [
+     "question",
+     "character",
+     "instructions",
+     "previous_answer",
+     "last_updated_ts",
+     "current_ts",
+     "context"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "state": "fallback"
+  }
+ },
+ "reinforcement-0.95": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "state": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "state": "fallback"
+       },
+       "fallback_ids": [
+        "state"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "state": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "state": "fallback"
+       },
+       "fallback_ids": [
+        "state"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "tracked-state-update",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "fallback",
+      "detail_order": [
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "confidence": 0.95,
+       "p_true": 0.95,
+       "threshold": 0.9
+      },
+      "reason": "update_needed_or_uncertain"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "changed"
+    ],
+    "questions": {
+     "changed": {
+      "instructions": "Has the scene since the last update changed this tracked state's answer, or does the previous answer conflict with the current scene? Judge the question for the specified character, or the world when no character is specified. Consider the update instructions.",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "character": "Mara",
+     "context": "Mara is on deck.",
+     "current_ts": "PT2H",
+     "instructions": "One line.",
+     "last_updated_ts": "PT1H",
+     "previous_answer": "On deck.",
+     "question": "Where is Mara?"
+    },
+    "state_order": [
+     "question",
+     "character",
+     "instructions",
+     "previous_answer",
+     "last_updated_ts",
+     "current_ts",
+     "context"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "state": "fallback"
+  }
+ },
+ "snapshot-references": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "Ilse": false,
+        "Mara": true,
+        "Oren": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "Ilse": false,
+        "Mara": true,
+        "Oren": "fallback"
+       },
+       "fallback_ids": [
+        "Oren"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "gate.resolve",
+      "arguments": {
+       "answers": {
+        "Ilse": false,
+        "Mara": true,
+        "Oren": null
+       }
+      },
+      "failure": null,
+      "reason": null,
+      "result": {
+       "answers": {
+        "Ilse": false,
+        "Mara": true,
+        "Oren": "fallback"
+       },
+       "fallback_ids": [
+        "Oren"
+       ],
+       "fallback_ran": true
+      },
+      "status": "completed"
+     }
+    ],
+    "label": "snapshot-audience-references",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "include",
+      "detail_order": [
+       "character",
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "character": "Mara",
+       "confidence": 0.9,
+       "p_true": 0.9,
+       "threshold": 0.9
+      },
+      "reason": "confident"
+     },
+     {
+      "action": "exclude",
+      "detail_order": [
+       "character",
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "character": "Ilse",
+       "confidence": 0.9,
+       "p_true": 0.1,
+       "threshold": 0.9
+      },
+      "reason": "confident"
+     },
+     {
+      "action": "fallback",
+      "detail_order": [
+       "character",
+       "p_true",
+       "confidence",
+       "threshold"
+      ],
+      "details": {
+       "character": "Oren",
+       "confidence": 0.89,
+       "p_true": 0.89,
+       "threshold": 0.9
+      },
+      "reason": "uncertain"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {},
+    "question_order": [
+     "Mara",
+     "Ilse",
+     "Oren"
+    ],
+    "questions": {
+     "Ilse": {
+      "instructions": "Does this text refer to Ilse, by name, pronoun, title, nickname or description? Resolve meaning in context rather than matching words. Aliases: Ilse. Description: A lighthouse keeper.",
+      "type": "noul"
+     },
+     "Mara": {
+      "instructions": "Does this text refer to Mara, by name, pronoun, title, nickname or description? Resolve meaning in context rather than matching words. Aliases: Mara, the captain. Description: A sailor.",
+      "type": "noul"
+     },
+     "Oren": {
+      "instructions": "Does this text refer to Oren, by name, pronoun, title, nickname or description? Resolve meaning in context rather than matching words. Aliases: Oren. Description: ",
+      "type": "noul"
+     }
+    },
+    "state": "The captain waved.",
+    "state_order": null,
+    "status": "completed"
+   }
+  ],
+  "result": {
+   "Ilse": false,
+   "Mara": true,
+   "Oren": "fallback"
+  }
+ }
+}

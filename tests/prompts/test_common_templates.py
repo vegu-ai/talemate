@@ -139,6 +139,7 @@ class TestCommonTemplatesDocumentation:
             "context_id_items.jinja2",
             "decision-character-references.jinja2",
             "decision-check-macros.jinja2",
+            "decision-visual-selection.jinja2",
             "dynamic-instructions.jinja2",
             "generation-options-instructions.jinja2",
             "extra-context.jinja2",

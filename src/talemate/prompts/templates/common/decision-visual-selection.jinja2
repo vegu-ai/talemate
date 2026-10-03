@@ -1,0 +1,27 @@
+{#
+Keeps the current image while it fits, otherwise picks an existing one the
+model is confident about, otherwise leaves the choice to the usual request.
+`kind` names the image in the Decision Log: select_<kind>, current_<kind>_fits.
+#}
+{% macro select(label, state, slot, kind, current, assets, threshold, fits_current, which, none_fits) %}
+{% set options = {} %}
+{% for id, asset in assets.items() %}
+    {% set _ = options.update({id: (asset.name or id) ~ ": " ~ (asset.tags | join(", "))}) %}
+{% endfor %}
+{% set answers = ask(label, state=state, questions={
+    "fits_current": yes_no(fits_current, threshold=threshold),
+    slot: choice(which, options=options, none=none_fits, threshold=threshold)
+}) %}
+{% set fits = answers.fits_current %}
+{% set picked = answers[slot] %}
+{% if current and fits.yes %}
+    {{ note("select_" ~ kind, "current_" ~ kind ~ "_fits", fits, picked, **{slot: current}) }}
+    {{ resolve({slot: current}) }}
+{% elif picked.value %}
+    {{ note("select_" ~ kind, "confident_existing_" ~ kind, fits, picked, **{slot: picked.value}) }}
+    {{ resolve({slot: picked.value}) }}
+{% else %}
+    {{ note("fallback", "no_confident_existing_" ~ kind, fits, picked, **{slot: none}) }}
+    {{ resolve({slot: none}) }}
+{% endif %}
+{% endmacro %}

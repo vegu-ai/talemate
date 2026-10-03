@@ -1,7 +1,36 @@
 import pytest
 
-from talemate.decisions.models import NoulAnswer
+from talemate.decisions import PolicyAction
+from talemate.decisions.questions import YesNoAnswer
 from talemate.world_state.templates.decision_checks import DecisionCheck
+
+
+async def capture(value):
+    return value
+
+
+CAPTURE = {
+    "capture": PolicyAction(name="test.capture", call=capture, enabled=lambda: True)
+}
+
+
+def answers(checks, probabilities):
+    thresholds = {
+        question.id: check.threshold for check in checks for question in check.questions
+    }
+    return {
+        key: YesNoAnswer(
+            id=key,
+            request_id="request",
+            p_true=value,
+            threshold=thresholds[key.split("_", 1)[1]],
+        )
+        for key, value in probabilities.items()
+    }
+
+
+def engine_questions(questions):
+    return {key: question.engine_question() for key, question in questions.items()}
 
 
 async def test_common_macros_build_and_filter_two_checks_for_two_passages(
@@ -49,7 +78,7 @@ async def test_common_macros_build_and_filter_two_checks_for_two_passages(
         {% set results = namespace() %}
         {% set _ = checks.build_questions(passages, decision_checks, batch) %}
         {% set _ = checks.collect_findings(answers, batch.evaluations, results) %}
-        {{ decision_result({"questions": batch.questions, "presentation": batch.presentation,
+        {{ capture({"questions": batch.questions, "presentation": batch.presentation,
             "evaluations": batch.evaluations, "findings": results.findings,
             "flagged": results.flagged, "flagged_questions": results.flagged_questions,
             "thresholds": results.thresholds}) }}
@@ -58,27 +87,26 @@ async def test_common_macros_build_and_filter_two_checks_for_two_passages(
         variables={
             "passages": passages,
             "decision_checks": checks,
-            "answers": {
-                key: NoulAnswer(type="noul", p_true=value)
-                for key, value in probabilities.items()
-            },
+            "answers": answers(checks, probabilities),
         },
         validate_result=lambda value: value,
+        actions=CAPTURE,
     )
 
     result = await invocation.run()
+    questions = engine_questions(result["questions"])
 
     assert invocation.status == "completed"
-    assert list(result["questions"]) == list(probabilities)
+    assert list(questions) == list(probabilities)
     for passage in passages:
         pid = passage["id"]
-        assert result["questions"][f"{pid}_repeat"] == {
+        assert questions[f"{pid}_repeat"] == {
             "type": "noul",
             "instructions": f"Does {pid} repeat a beat?",
             "true_criteria": f"Repeated in {pid}.",
             "false_criteria": f"New in {pid}.",
         }
-        assert result["questions"][f"{pid}_abstract"] == {
+        assert questions[f"{pid}_abstract"] == {
             "type": "noul",
             "instructions": f"Passage {pid}: Is it too abstract?",
             "true_criteria": None,
@@ -162,30 +190,30 @@ async def test_scoped_check_judges_its_part_and_skips_passages_without_it(
         {% set results = namespace() %}
         {% set _ = checks.build_questions(passages, decision_checks, batch) %}
         {% set _ = checks.collect_findings(answers, batch.evaluations, results) %}
-        {{ decision_result({"questions": batch.questions, "presentation": batch.presentation,
+        {{ capture({"questions": batch.questions, "presentation": batch.presentation,
             "skipped": batch.skipped, "findings": results.findings}) }}
         """,
         uid="narrator.scoped-checks",
         variables={
             "passages": passages,
             "decision_checks": checks,
-            "answers": {
-                "s1_habit": NoulAnswer(type="noul", p_true=0.9),
-                "s1_beat": NoulAnswer(type="noul", p_true=0.1),
-                "s2_beat": NoulAnswer(type="noul", p_true=0.1),
-            },
+            "answers": answers(
+                checks, {"s1_habit": 0.9, "s1_beat": 0.1, "s2_beat": 0.1}
+            ),
         },
         validate_result=lambda value: value,
+        actions=CAPTURE,
     )
 
     result = await invocation.run()
+    questions = engine_questions(result["questions"])
 
-    assert list(result["questions"]) == ["s1_habit", "s1_beat", "s2_beat"]
-    assert result["questions"]["s1_habit"]["instructions"] == (
+    assert list(questions) == ["s1_habit", "s1_beat", "s2_beat"]
+    assert questions["s1_habit"]["instructions"] == (
         "Judge only the dialogue of passage s1 (its `dialogue` text: the words inside"
         " double quotes); ignore its narration. Does s1 repeat a catchphrase?"
     )
-    assert result["questions"]["s1_beat"]["instructions"] == "Does s1 repeat a beat?"
+    assert questions["s1_beat"]["instructions"] == "Does s1 repeat a beat?"
     assert result["presentation"]["s1_habit"]["passage_text"] == '"Curious weather."'
     assert result["presentation"]["s1_habit"]["scope"] == "dialogue"
     assert result["presentation"]["s1_beat"]["passage_text"] == passages[0]["text"]
@@ -233,22 +261,20 @@ async def test_scoped_check_without_its_part(policy_factory, marked):
         {% import "decision-check-macros.jinja2" as checks %}
         {% set batch = namespace() %}
         {% set _ = checks.build_questions(passages, decision_checks, batch) %}
-        {{ decision_result({"questions": batch.questions, "presentation": batch.presentation,
+        {{ capture({"questions": batch.questions, "presentation": batch.presentation,
             "skipped": batch.skipped}) }}
         """,
         uid="narrator.scoped-without-part",
         variables={"passages": [passage], "decision_checks": checks},
         validate_result=lambda value: value,
+        actions=CAPTURE,
     )
 
     result = await invocation.run()
 
     if marked:
         assert invocation.status == "completed"
-        assert (
-            result["questions"]["s1_filler"]["instructions"]
-            == "Does s1 pad the moment?"
-        )
+        assert result["questions"]["s1_filler"].text == "Does s1 pad the moment?"
         assert result["presentation"]["s1_filler"]["scope"] == "all"
         assert result["skipped"] == []
     else:

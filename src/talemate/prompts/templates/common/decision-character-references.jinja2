@@ -1,17 +1,12 @@
 {% set questions = {} %}
 {% for character in characters %}
-    {% set _ = questions.update({character.name: {
-        "type": "noul",
-        "instructions": "Does this text refer to " ~ character.name ~ ", by name, pronoun, title, nickname or description? Resolve meaning in context rather than matching words. Aliases: " ~ (character.aliases | join(", ")) ~ ". Description: " ~ character.description
-    }}) %}
+    {% set _ = questions.update({character.name: yes_no(
+        "Does this text refer to " ~ character.name ~ ", by name, pronoun, title, nickname or description? Resolve meaning in context rather than matching words. Aliases: " ~ (character.aliases | join(", ")) ~ ". Description: " ~ character.description,
+        threshold=threshold
+    )}) %}
 {% endfor %}
-{% set r = decide(label, state=text, questions=questions) %}
-{% set answers = {} %}
-{% for character in characters %}
-    {% set p = r.answers[character.name].p_true %}
-    {% set confidence = [p, 1 - p] | max %}
-    {% set answer = (p >= threshold) if confidence >= threshold else none %}
-    {% set _ = answers.update({character.name: answer}) %}
-    {{ decision_outcome(r, "include" if answer is sameas true else "exclude" if answer is sameas false else "fallback", reason="confident" if answer is not none else "uncertain", character=character.name, p_true=p, confidence=confidence, threshold=threshold) }}
+{% set answers = ask(label, state=text, questions=questions) %}
+{% for name, answer in answers.items() %}
+    {{ note("include" if answer.yes else "exclude" if answer.no else "fallback", "uncertain" if answer.uncertain else "confident", answer, character=name) }}
 {% endfor %}
-{{ decision_result(agent_action("gate", "resolve", answers=answers, _decision=r)) }}
+{{ resolve(answers) }}

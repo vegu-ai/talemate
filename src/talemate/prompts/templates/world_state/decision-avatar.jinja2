@@ -1,23 +1,7 @@
+{% import "decision-visual-selection.jinja2" as visual %}
 {% set threshold = 0.9 %}
-{% set options = {"none": "None of the existing portraits fits well; use the usual selection or generation request."} %}
-{% for id, portrait in state.portraits.items() %}
-    {% set _ = options.update({id: (portrait.name or id) ~ ": " ~ (portrait.tags | join(", "))}) %}
-{% endfor %}
-{% set r = decide("avatar-selection", state=state, questions={
-    "fits_current": {"type": "noul", "instructions": "Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no."},
-    "avatar": {"type": "choice", "instructions": "Which existing portrait fits this character in this message? Choose none if none fits well.", "options": options}
-}) %}
-{% set p = r.answers.fits_current.p_true %}
-{% set choice = r.answers.avatar %}
-{% if state.current_avatar and p >= threshold %}
-    {% set avatar = state.current_avatar %}
-    {% set reason = "current_portrait_fits" %}
-{% elif choice.confidence >= threshold and choice.selected in state.portraits %}
-    {% set avatar = choice.selected %}
-    {% set reason = "confident_existing_portrait" %}
-{% else %}
-    {% set avatar = none %}
-    {% set reason = "no_confident_existing_portrait" %}
-{% endif %}
-{{ decision_outcome(r, "select_portrait" if avatar else "fallback", reason=reason, avatar=avatar, p_true=p, confidence=[p, 1 - p] | max, choice_confidence=choice.confidence, threshold=threshold) }}
-{{ decision_result(agent_action("gate", "resolve", answers={"avatar": avatar}, _decision=r)) }}
+{{ visual.select("avatar-selection", state, slot="avatar", kind="portrait",
+    current=state.current_avatar, assets=state.portraits, threshold=threshold,
+    fits_current="Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no.",
+    which="Which existing portrait fits this character in this message? Choose none if none fits well.",
+    none_fits="None of the existing portraits fits well; use the usual selection or generation request.") }}

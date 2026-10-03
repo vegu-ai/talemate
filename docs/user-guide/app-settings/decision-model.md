@@ -49,6 +49,9 @@ its own option to turn it off. The Editor's
 [Decision Checks](../agents/editor/settings.md#decision-checks) have their own switch and
 stay off until you turn them on. Turning on the decision model does not turn them on.
 
+Each feature asks its questions through a policy template, where you can change a
+question or its threshold: see [Decision policy overrides](../prompts/template-overrides.md#decision-policy-overrides).
+
 ## The settings
 
 **Provider** selects **OpenRouter** or **SystemOne API**. The features that use the decision

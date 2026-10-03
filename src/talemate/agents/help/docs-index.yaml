@@ -1027,7 +1027,8 @@
   summary: Override a default prompt template by copying it into the user, scene or a custom group with the same agent directory
     and filename; delete the copy to restore the default. Keep outdated, incomplete and incompatible overrides current after
     an update; Compare with default diff. World snapshot overrides follow the snapshot input contract, the snapshot_request.context_history
-    call; incompatible snapshot prompt notices.
+    call; incompatible snapshot prompt notices. Decision policy overrides change a question or threshold with yes_no, choice,
+    ask, note and resolve.
 - path: user-guide/prompts/volatile-context-placement.md
   title: Volatile Context Placement
   summary: Optimize for Prompt Caching moves volatile RAG, dynamic notes and other changing context after scene history to

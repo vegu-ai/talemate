@@ -156,8 +156,8 @@ async def test_entity_visibility_filter_still_applies(cast, monkeypatch):
 
 
 @pytest.mark.parametrize("consumer", ["memory", "snapshot"])
-@pytest.mark.parametrize("result", ["{}", '{"Mara": "false", "Will": false}'])
-async def test_malformed_direct_reference_result_uses_original_matcher(
+@pytest.mark.parametrize("result", ["", '{{ note("include", "confident") }}'])
+async def test_reference_policy_without_result_uses_original_matcher(
     cast, monkeypatch, tmp_path, consumer, result
 ):
     from talemate.prompts.base import PrependTemplateDirectories
@@ -167,7 +167,7 @@ async def test_malformed_direct_reference_result_uses_original_matcher(
         if consumer == "memory"
         else "decision-snapshot-references"
     )
-    (tmp_path / f"{name}.jinja2").write_text("{{ decision_result(" + result + ") }}")
+    (tmp_path / f"{name}.jinja2").write_text(result)
     with PrependTemplateDirectories(str(tmp_path)):
         names, _ = await reference_names(
             cast, monkeypatch, consumer, "Will waits outside."

@@ -1,4 +1,5 @@
 import asyncio
+import copy
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -22,11 +23,10 @@ from talemate.exceptions import (
 )
 from talemate.prompts.base import PrependTemplateDirectories, Prompt
 
-from .test_models import QUESTIONS, ANSWERS
 
-
-DECIDE = '{% set r = decide("test", state=passage, questions={"repeats": {"type": "noul", "instructions": "Repeat?"}}) %}'
-ACTION = 'agent_action("editor", "revision_rewrite", info=info, _decision=r)'
+ASK = '{% set answers = ask("test", state=passage, questions={"repeats": yes_no("Repeat?", threshold=0.5)}) %}'
+ASK_OTHER = ASK.replace("set answers =", "set other =")
+REVISE = "revise([])"
 
 
 async def test_spec_example_uses_real_render_and_async_action_once(
@@ -63,8 +63,8 @@ async def test_spec_example_uses_real_render_and_async_action_once(
 
 async def test_empty_render_has_explicit_once_guard(policy_factory, provider):
     p = policy_factory
-    source = DECIDE.replace("%}", "-%}") + '{{- decision_result("value") -}}'
-    invocation = p.create(source)
+    source = ASK.replace("%}", "-%}") + "{{- keep() -}}"
+    invocation = p.create(source, original_result="value")
     with pytest.raises(RuntimeError):
         _ = invocation.result
     assert await invocation.run() == "value"
@@ -73,7 +73,7 @@ async def test_empty_render_has_explicit_once_guard(policy_factory, provider):
     assert await invocation.run() == "value"
     str(invocation)
     assert len(provider.calls) == 1
-    second = p.create()
+    second = p.create(original_result="value")
     assert await second.run() == "value"
     assert len(provider.calls) == 2
     assert second.id != invocation.id
@@ -106,23 +106,19 @@ async def test_source_inspection_editing_and_override_do_not_execute(
     assert "Does this passage repeat" in source
     assert not provider.calls
     assert invocation.status == "new"
-    replacement = (
-        DECIDE.replace("Repeat?", "Is this surprising?")
-        + '{{ decision_result("new route") }}'
-    )
+    replacement = ASK.replace("Repeat?", "Is this surprising?") + "{{ keep() }}"
     (p.directory / "policy.jinja2").write_text(replacement)
     assert Prompt.load_template_source("editor", "policy") == replacement
     assert not provider.calls
     p.editor.revision_rewrite.assert_not_awaited()
-    assert await invocation.run() == "new route"
+    assert await invocation.run() == "original"
+    p.editor.revision_rewrite.assert_not_awaited()
     assert provider.calls[0].questions["repeats"].instructions == "Is this surprising?"
 
 
 async def test_missing_explanation_stays_unspecified(policy_factory):
     p = policy_factory
-    assert (
-        await p.create(DECIDE + "{{ decision_result(info.text) }}").run() == "original"
-    )
+    assert await p.create(ASK + "{{ keep() }}").run() == "original"
     record = next(iter(p.service.log.records.values()))
     assert record.outcomes == []
     assert not record.actions
@@ -181,11 +177,9 @@ async def test_failure_runs_disabled_path_once_before_any_dependent_action(
         ("{{ undefined_value }}", FailureCode.TEMPLATE),
         ("{% broken %}", FailureCode.TEMPLATE),
         ("empty", FailureCode.RESULT),
-        ("{{ decision_result(42) }}", FailureCode.RESULT),
-        (
-            '{{ decision_result("one") }}{{ decision_result("two") }}',
-            FailureCode.RESULT,
-        ),
+        ("{{ keep() }}{{ keep() }}", FailureCode.RESULT),
+        ("{{ revise() }}", FailureCode.TEMPLATE),
+        ("{{ unknown_action([]) }}", FailureCode.TEMPLATE),
     ],
 )
 async def test_template_and_result_failure_before_action_uses_fallback(
@@ -217,14 +211,14 @@ async def test_failed_and_disabled_continuations_are_identical(
 @pytest.mark.parametrize(
     "suffix",
     [
-        "{{ decision_result(42) }}",
+        "{{ keep() }}",
         "{{ missing }}",
-        "{{ decision_result(" + ACTION + ") }}",
+        "{{ " + REVISE + " }}",
     ],
 )
 async def test_no_recovery_action_after_first_dispatch(policy_factory, suffix):
     p = policy_factory
-    invocation = p.create(DECIDE + "{{ " + ACTION + " }}" + suffix)
+    invocation = p.create(ASK + "{{ " + REVISE + " }}" + suffix)
     assert await invocation.run() == "original"
     p.editor.revision_rewrite.assert_awaited_once()
     p.fallback.assert_not_awaited()
@@ -251,8 +245,10 @@ async def test_action_failure_is_logged_without_second_rewrite(policy_factory):
 async def test_enablement_rejects_override_action(policy_factory):
     p = policy_factory
     actions = {
-        ("editor", "revision_rewrite"): PolicyAction(
-            call=p.editor.revision_rewrite, enabled=lambda: False
+        "revise": PolicyAction(
+            name="editor.revision_rewrite",
+            call=p.editor.revision_rewrite,
+            enabled=lambda: False,
         )
     }
     assert await p.create(actions=actions).run() == "disabled result"
@@ -374,25 +370,11 @@ async def test_action_completion_updates_same_request_after_model_completion(
     assert not model_done["actions"]
 
 
-async def test_multiple_handles_and_unassociated_actions(policy_factory):
+async def test_an_action_belongs_to_every_request_before_it(policy_factory):
     p = policy_factory
-    source = DECIDE + DECIDE.replace("set r =", "set other =")
-    source += '{{ agent_action("editor", "revision_rewrite", info=info, _decision=[r, other]) }}'
-    source += (
-        '{{ decision_result(agent_action("editor", "revision_rewrite", info=info)) }}'
-    )
-    invocation = p.create(
-        source,
-        actions={
-            ("editor", "revision_rewrite"): PolicyAction(
-                call=p.editor.revision_rewrite,
-                enabled=lambda: True,
-                budget=ActionBudget(limit=2),
-            )
-        },
-    )
+    invocation = p.create(ASK + ASK_OTHER + "{{ " + REVISE + " }}")
     assert await invocation.run() == "rewritten"
-    assert len(invocation.action_trace) == 2
+    assert len(invocation.action_trace) == 1
     entries = list(p.service.log.records.values())
     assert len(entries) == 2
     assert entries[0].actions[0].id == entries[1].actions[0].id
@@ -425,7 +407,8 @@ async def test_concurrent_requests_keep_their_own_action_outcomes(
             "decision_checks": [p.editor],
             "last3": [],
             "info": SimpleNamespace(text="first"),
-        }
+        },
+        original_result="first",
     )
     second = p.create(
         variables={
@@ -454,12 +437,12 @@ async def test_real_loader_scene_and_explicit_group_sources(
     scene_dir = tmp_path / "scene"
     (scene_dir / "editor").mkdir(parents=True)
     (scene_dir / "editor/policy.jinja2").write_text(
-        DECIDE + '{{ decision_result("scene") }}'
+        ASK + '{{ note("scene", "source") }}{{ keep() }}'
     )
     custom_dir = tmp_path / "groups"
     (custom_dir / "experiment/editor").mkdir(parents=True)
     (custom_dir / "experiment/editor/policy.jinja2").write_text(
-        DECIDE + '{{ decision_result("group") }}'
+        ASK + '{{ note("group", "source") }}{{ keep() }}'
     )
     monkeypatch.setattr(groups, "_CUSTOM_GROUPS_DIR", custom_dir)
     scene = SimpleNamespace(
@@ -472,13 +455,21 @@ async def test_real_loader_scene_and_explicit_group_sources(
         first = p.create()
         first.prompt._config = first.prompt.config.model_copy(deep=True)
         first.prompt.config.prompts.template_sources = {}
-        assert await first.run() == "scene"
+        assert await first.run() == "original"
         assert first.source_group == "scene"
+        assert (
+            p.service.log.records[next(iter(first.handles))].outcomes[0]["action"]
+            == "scene"
+        )
         second = p.create()
         second.prompt._config = second.prompt.config.model_copy(deep=True)
         second.prompt.config.prompts.template_sources = {"editor.policy": "experiment"}
-        assert await second.run() == "group"
+        assert await second.run() == "original"
         assert second.source_group == "experiment"
+        assert (
+            p.service.log.records[next(iter(second.handles))].outcomes[0]["action"]
+            == "group"
+        )
 
 
 @pytest.mark.parametrize("hook", ["enabled", "arguments"])
@@ -491,11 +482,12 @@ async def test_pre_dispatch_hook_error_finishes_attempt_and_uses_fallback(
         raise ValueError("private hook detail")
 
     action = PolicyAction(
-        call=p.editor.revision_rewrite,
+        name="editor.revision_rewrite",
+        call=lambda findings: p.editor.revision_rewrite(decision_findings=findings),
         enabled=broken if hook == "enabled" else lambda: True,
         serialize_arguments=broken if hook == "arguments" else lambda kwargs: {},
     )
-    invocation = p.create(actions={("editor", "revision_rewrite"): action})
+    invocation = p.create(actions={"revise": action})
     assert await invocation.run() == "disabled result"
     p.fallback.assert_awaited_once()
     p.editor.revision_rewrite.assert_not_awaited()
@@ -511,30 +503,31 @@ async def test_helpers_cannot_execute_before_or_after_invocation(
     p = policy_factory
     invocation = p.create()
     with pytest.raises(RuntimeError):
-        invocation.agent_action(
-            "editor", "revision_rewrite", info=invocation.prompt.vars["info"]
-        )
+        invocation.keep()
     assert await invocation.run() == "rewritten"
     with pytest.raises(RuntimeError):
-        invocation.decide("repeat", state="text", questions={})
+        invocation.ask("repeat", state="text", questions={})
     with pytest.raises(RuntimeError):
-        invocation.decision_result("replacement")
+        invocation.note("no_action")
+    with pytest.raises(RuntimeError):
+        invocation.keep()
     assert invocation.result == "rewritten"
     assert len(provider.calls) == 1
 
 
-async def test_foreign_request_handle_cannot_receive_actions(policy_factory):
+async def test_foreign_answer_cannot_receive_outcomes(policy_factory):
     p = policy_factory
-    first = p.create(DECIDE + '{{ decision_result("first") }}')
-    assert await first.run() == "first"
-    handle = next(iter(first.handles.values()))
+    first = p.create(ASK + "{% set _ = captured.append(answers.repeats) %}{{ keep() }}")
+    captured = []
+    first.prompt.vars["captured"] = captured
+    assert await first.run() == "original"
+    (foreign,) = captured
     second = p.create(
-        '{{ decision_result(agent_action("editor", "revision_rewrite", info=info, _decision=foreign)) }}',
-        variables={"info": SimpleNamespace(text="second"), "foreign": handle},
+        '{{ note("no_action", "foreign", foreign) }}{{ keep() }}',
+        variables={"info": SimpleNamespace(text="second"), "foreign": foreign},
     )
     assert await second.run() == "disabled result"
-    p.editor.revision_rewrite.assert_not_awaited()
-    assert not p.service.log.records[handle.request_id].actions
+    assert not p.service.log.records[foreign.request_id].outcomes
 
 
 async def test_disabled_path_error_preserves_original_and_records_failure(
@@ -605,6 +598,7 @@ async def test_control_flow_propagates_through_policy_without_recovery(
     error = interruption("control flow")
     source = None
     kwargs = {}
+    armed = False
 
     def interrupt(*args):
         raise error
@@ -618,16 +612,20 @@ async def test_control_flow_propagates_through_policy_without_recovery(
         p.fallback.side_effect = error
     elif stage == "enabled":
         kwargs["actions"] = {
-            ("editor", "revision_rewrite"): PolicyAction(
-                call=p.editor.revision_rewrite, enabled=interrupt
+            "revise": PolicyAction(
+                name="editor.revision_rewrite",
+                call=p.editor.revision_rewrite,
+                enabled=interrupt,
             )
         }
     else:
-        source = DECIDE + '{{ decision_result("interrupted") }}'
+        source = ASK + "{{ keep() }}"
+        kwargs["original_result"] = "interrupted"
         kwargs["validate_result"] = (
-            lambda value: interrupt() if value == "interrupted" else value
+            lambda value: interrupt() if value == "interrupted" and armed else value
         )
     invocation = p.create(source, **kwargs)
+    armed = True
     with pytest.raises(interruption) as caught:
         await invocation.run()
     assert caught.value is error
@@ -645,38 +643,32 @@ async def test_control_flow_propagates_through_policy_without_recovery(
         p.editor.revision_rewrite.assert_not_awaited()
 
 
-async def test_unassociated_action_does_not_invent_request_no_action(policy_factory):
+async def test_action_before_any_request_stays_on_the_invocation(policy_factory):
     p = policy_factory
-    invocation = p.create(
-        DECIDE
-        + '{{ decision_result(agent_action("editor", "revision_rewrite", info=info)) }}'
-    )
+    invocation = p.create("{{ " + REVISE + " }}")
     assert await invocation.run() == "rewritten"
-    entry = next(iter(p.service.log.records.values()))
-    assert entry.actions == entry.outcomes == []
+    assert not p.service.log.records
     assert invocation.action_trace[0].status == "completed"
     event = [event for event in p.events if event["event"] == "invocation"][-1]
     assert event["entry"]["actions"][0]["result"] == "rewritten"
 
 
-@pytest.mark.parametrize("association", ["r", "[r, other]"])
-async def test_denied_action_failure_and_fallback_follow_explicit_handles(
-    policy_factory, association
+async def test_denied_action_failure_and_fallback_follow_the_requests(
+    policy_factory,
 ):
     p = policy_factory
-    source = DECIDE + DECIDE.replace("set r =", "set other =")
-    source += '{{ agent_action("editor", "denied", _decision=' + association + ") }}"
-    invocation = p.create(source)
+    actions = {
+        "revise": PolicyAction(
+            name="editor.denied", call=p.editor.revision_rewrite, enabled=lambda: False
+        )
+    }
+    invocation = p.create(ASK + ASK_OTHER + "{{ " + REVISE + " }}", actions=actions)
     assert await invocation.run() == "disabled result"
     first, second = p.service.log.records.values()
     assert first.policy_failure.code == FailureCode.ACTION_DENIED
     assert [a.action for a in first.actions] == ["editor.denied", "disabled_path"]
-    if association == "r":
-        assert second.policy_failure is None
-        assert second.actions == second.outcomes == []
-    else:
-        assert second.policy_failure.code == FailureCode.ACTION_DENIED
-        assert [a.id for a in second.actions] == [a.id for a in first.actions]
+    assert second.policy_failure.code == FailureCode.ACTION_DENIED
+    assert [a.id for a in second.actions] == [a.id for a in first.actions]
     assert all(entry.failure is None for entry in (first, second))
     p.fallback.assert_awaited_once()
 
@@ -685,15 +677,15 @@ async def test_denied_action_failure_and_fallback_follow_explicit_handles(
     "suffix,code",
     [
         ("{{ undefined }}", FailureCode.TEMPLATE),
-        ("{{ decision_result(42) }}", FailureCode.RESULT),
-        ('{{ agent_action("editor", "denied") }}', FailureCode.ACTION_DENIED),
+        ("", FailureCode.RESULT),
+        ("{{ keep() }}{{ keep() }}", FailureCode.RESULT),
     ],
 )
 async def test_unassociated_failures_get_synthetic_policy_entry(
     policy_factory, suffix, code
 ):
     p = policy_factory
-    invocation = p.create(DECIDE + DECIDE.replace("set r =", "set other =") + suffix)
+    invocation = p.create(ASK + ASK_OTHER + suffix)
     assert await invocation.run() == "disabled result"
     first, second, policy = p.service.log.records.values()
     for entry in (first, second):
@@ -706,15 +698,10 @@ async def test_unassociated_failures_get_synthetic_policy_entry(
     p.fallback.assert_awaited_once()
 
 
-@pytest.mark.parametrize("association", ["none", "[]", "[none]"])
-async def test_explicit_outcome_requires_a_handle(policy_factory, association):
+@pytest.mark.parametrize("association", ["none", "[]", "answers", '"text"'])
+async def test_a_note_takes_only_answers(policy_factory, association):
     p = policy_factory
-    source = (
-        DECIDE
-        + "{{ decision_outcome("
-        + association
-        + ', "no_action") }}{{ decision_result(info.text) }}'
-    )
+    source = ASK + '{{ note("no_action", "reason", ' + association + ") }}{{ keep() }}"
     assert await p.create(source).run() == "disabled result"
     first, policy = p.service.log.records.values()
     assert first.outcomes == []
@@ -723,10 +710,7 @@ async def test_explicit_outcome_requires_a_handle(policy_factory, association):
 
 async def test_outcome_without_a_request_belongs_to_the_invocation(policy_factory):
     p = policy_factory
-    source = (
-        '{{ decision_outcome(none, "no_action", reason="nothing_in_scope", skipped=2) }}'
-        "{{ decision_result(info.text) }}"
-    )
+    source = '{{ note("no_action", "nothing_in_scope", skipped=2) }}{{ keep() }}'
     assert await p.create(source).run() == "original"
     assert not p.service.log.records
     (invocation,) = p.service.log.invocations.values()
@@ -742,9 +726,9 @@ async def test_outcome_without_a_request_belongs_to_the_invocation(policy_factor
 async def test_invocation_outcome_stays_when_a_request_follows(policy_factory):
     p = policy_factory
     source = (
-        '{{ decision_outcome(none, "note", reason="checked_first") }}'
-        + DECIDE
-        + '{{ decision_outcome(r, "no_action") }}{{ decision_result(info.text) }}'
+        '{{ note("note", "checked_first") }}'
+        + ASK
+        + '{{ note("no_action") }}{{ keep() }}'
     )
     assert await p.create(source).run() == "original"
     (invocation,) = p.service.log.invocations.values()
@@ -759,19 +743,20 @@ async def test_reused_action_map_has_fresh_shared_budget_per_invocation(policy_f
     budget = ActionBudget(limit=1)
     alternative = AsyncMock(return_value="alternative")
     actions = {
-        ("editor", "revision_rewrite"): PolicyAction(
-            call=p.editor.revision_rewrite, enabled=lambda: True, budget=budget
+        "revise": PolicyAction(
+            name="editor.revision_rewrite",
+            call=p.editor.revision_rewrite,
+            enabled=lambda: True,
+            budget=budget,
         ),
-        ("editor", "alternative"): PolicyAction(
-            call=alternative, enabled=lambda: True, budget=budget
+        "alternative": PolicyAction(
+            name="editor.alternative",
+            call=alternative,
+            enabled=lambda: True,
+            budget=budget,
         ),
     }
-    source = (
-        DECIDE
-        + "{{ "
-        + ACTION
-        + ' }}{{ decision_result(agent_action("editor", "alternative", _decision=r)) }}'
-    )
+    source = ASK + "{{ revise() }}{{ alternative() }}"
     for _ in range(2):
         invocation = p.create(source, actions=actions)
         assert await invocation.run() == "original"
@@ -786,18 +771,23 @@ async def test_equal_limits_on_distinct_budgets_allow_both_actions(policy_factor
     p = policy_factory
     first, second = AsyncMock(return_value="first"), AsyncMock(return_value="second")
     actions = {
-        ("editor", "first"): PolicyAction(
-            call=first, enabled=lambda: True, budget=ActionBudget(limit=1)
+        "first": PolicyAction(
+            name="editor.first",
+            call=first,
+            enabled=lambda: True,
+            budget=ActionBudget(limit=1),
         ),
-        ("editor", "second"): PolicyAction(
-            call=second, enabled=lambda: True, budget=ActionBudget(limit=1)
+        "second": PolicyAction(
+            name="editor.second",
+            call=second,
+            enabled=lambda: True,
+            budget=ActionBudget(limit=1),
         ),
     }
-    invocation = p.create(
-        '{{ agent_action("editor", "first") }}{{ decision_result(agent_action("editor", "second")) }}',
-        actions=actions,
-    )
-    assert await invocation.run() == "second"
+    invocation = p.create("{{ first() }}{{ second() }}", actions=actions)
+    # both budgets allow their action; the second result is what fails
+    assert await invocation.run() == "original"
+    assert invocation.status == "preserved"
     first.assert_awaited_once()
     second.assert_awaited_once()
     assert [action.status for action in invocation.action_trace] == [
@@ -820,29 +810,32 @@ async def test_only_successful_argument_projection_can_reach_logs(policy_factory
     if mode == "enabled_failure":
         enabled.side_effect = RuntimeError(private)
     spec = PolicyAction(
+        name="editor.revision_rewrite",
         call=p.editor.revision_rewrite,
         enabled=enabled,
         budget=ActionBudget(limit=1),
         serialize_arguments=selector,
     )
-    action = 'agent_action("editor", "revision_rewrite", info=info, hidden=private_value, _decision=r)'
-    source = DECIDE + ("{{ " + action + " }}" if mode == "budget" else "")
-    source += "{{ decision_result(" + action + ") }}"
+    action = "{{ revise(hidden=private_value) }}"
+    source = ASK + (action if mode == "budget" else "") + action
     invocation = p.create(
         source,
-        actions={} if mode == "unknown" else {("editor", "revision_rewrite"): spec},
+        actions={} if mode == "unknown" else {"revise": spec},
     )
     invocation.prompt.vars["private_value"] = private
     assert await invocation.run() == (
         "original" if mode == "budget" else "disabled result"
     )
-    attempt = next(
-        a
-        for a in reversed(invocation.action_trace)
-        if a.action == "editor.revision_rewrite"
-    )
-    assert attempt.arguments is None
-    assert attempt.status == ("failed" if mode.endswith("failure") else "skipped")
+    if mode == "unknown":
+        assert invocation.action_trace[0].action == "disabled_path"
+    else:
+        attempt = next(
+            a
+            for a in reversed(invocation.action_trace)
+            if a.action == "editor.revision_rewrite"
+        )
+        assert attempt.arguments is None
+        assert attempt.status == ("failed" if mode.endswith("failure") else "skipped")
     assert private not in str(p.events)
     assert private not in str(p.service.log.snapshot())
     if mode == "budget":
@@ -857,37 +850,35 @@ async def test_only_successful_argument_projection_can_reach_logs(policy_factory
 
 
 @pytest.mark.parametrize(
-    "history", ["no_action", "explicit_reason", "unassociated_action", "cancelled"]
+    "history", ["no_action", "explicit_reason", "action_before_request", "cancelled"]
 )
 async def test_late_subscriber_can_distinguish_invocation_outcomes(
     policy_factory, history
 ):
     p = policy_factory
-    suffix = "{{ decision_result(info.text) }}"
+    prefix, suffix = ASK, "{{ keep() }}"
     kwargs = {}
+    armed = False
     if history == "explicit_reason":
-        suffix = (
-            '{{ decision_outcome(r, "no_action", reason="below_threshold", threshold=0.8) }}'
-            + suffix
-        )
-    elif history == "unassociated_action":
-        suffix = '{{ decision_result(agent_action("editor", "revision_rewrite", info=info)) }}'
+        suffix = '{{ note("no_action", "below_threshold", threshold=0.8) }}' + suffix
+    elif history == "action_before_request":
+        prefix, suffix = "{{ " + REVISE + " }}", ASK
     elif history == "cancelled":
 
         def validate(value):
-            if value == "interrupt":
+            if armed:
                 raise ExitScene()
             return value
 
         kwargs["validate_result"] = validate
-        suffix = '{{ decision_result("interrupt") }}'
-    invocation = p.create(DECIDE + suffix, **kwargs)
+    invocation = p.create(prefix + suffix, **kwargs)
+    armed = True
     if history == "cancelled":
         with pytest.raises(ExitScene):
             await invocation.run()
     else:
         assert await invocation.run() == (
-            "rewritten" if history == "unassociated_action" else "original"
+            "rewritten" if history == "action_before_request" else "original"
         )
     late_events = []
     p.service.log.subscribe(late_events.append)
@@ -902,7 +893,7 @@ async def test_late_subscriber_can_distinguish_invocation_outcomes(
     assert retained["status"] == (
         "cancelled" if history == "cancelled" else "completed"
     )
-    if history == "unassociated_action":
+    if history == "action_before_request":
         assert retained["actions"][0]["result"] == "rewritten"
         assert retained["actions"][0]["status"] == "completed"
     else:
@@ -929,16 +920,13 @@ async def test_pending_unassociated_action_is_retained_with_its_invocation(
             stopped.set()
 
     p.editor.revision_rewrite.side_effect = action
-    invocation = p.create(
-        DECIDE
-        + '{{ decision_result(agent_action("editor", "revision_rewrite", info=info)) }}'
-    )
+    invocation = p.create("{{ " + REVISE + " }}" + ASK)
     task = asyncio.create_task(invocation.run())
     try:
         await asyncio.wait_for(started.wait(), 1)
         p.service.log.clear_finished()
         snapshot = p.service.log.snapshot()
-        assert snapshot["requests"][0]["status"] == "completed"
+        assert snapshot["requests"] == []
         assert snapshot["invocations"][0]["status"] == "running"
         assert snapshot["invocations"][0]["actions"][0]["status"] == "pending"
     finally:
@@ -953,44 +941,189 @@ async def test_pending_unassociated_action_is_retained_with_its_invocation(
     assert p.service.log.snapshot() == {"requests": [], "invocations": []}
 
 
+MIXED_ANSWERS = {
+    "bool": {"type": "noul", "p_true": 0.74},
+    "choice": {
+        "type": "choice",
+        "selected": "a",
+        "probabilities": {"none": 0.1, "a": 0.6, "b": 0.3},
+        "confidence": 0.8,
+    },
+}
+
+
 @pytest.mark.parametrize("invalid", [False, True])
-async def test_all_question_types_route_through_real_jinja_and_log(
+async def test_question_types_route_through_real_jinja_and_log(
     policy_factory, provider, invalid
 ):
     p = policy_factory
-    provider.answers = {**ANSWERS}
+    provider.answers = copy.deepcopy(MIXED_ANSWERS)
     if invalid:
-        provider.answers = {
-            **provider.answers,
-            "score": {**ANSWERS["score"], "value": 10},
-        }
+        provider.answers["choice"]["probabilities"] = {"a": 0.7, "b": 0.3}
     source = """
-    {% set r = decide("mixed", state=passage, questions=questions) %}
-    {% if r.answers.bool.p_true > 0.7 and r.answers.choice.selected == "a" and r.answers.score.value > 1 %}
-      {{ decision_result(agent_action("editor", "revision_rewrite", info=info, _decision=r)) }}
+    {% set answers = ask("mixed", state=passage, questions={
+        "bool": yes_no("Does the supplied passage repeat?", threshold=0.7),
+        "choice": choice("Select a supplied candidate", options={"a": "Wait", "b": "Leave"}, none="Neither fits", threshold=0.75)
+    }) %}
+    {% if answers.bool.yes and answers.choice.value == "a" %}
+      {{ revise([]) }}
     {% else %}
-      {{ decision_result(info.text) }}
+      {{ keep() }}
     {% endif %}
     """
-    invocation = p.create(
-        source,
-        variables={
-            "questions": QUESTIONS,
-            "passage": "text",
-            "info": SimpleNamespace(text="original"),
-        },
-    )
+    invocation = p.create(source)
     assert await invocation.run() == ("disabled result" if invalid else "rewritten")
     entry = next(iter(p.service.log.records.values()))
     assert len(provider.calls) == 1
-    assert set(provider.calls[0].questions) == set(QUESTIONS)
+    questions = provider.calls[0].questions
+    assert set(questions) == {"bool", "choice"}
+    assert list(questions["choice"].options) == ["none", "a", "b"]
     if invalid:
         assert entry.answers is None
         assert entry.failure.code == FailureCode.INVALID_RESPONSE
         p.editor.revision_rewrite.assert_not_awaited()
         p.fallback.assert_awaited_once()
     else:
-        assert entry.answers == ANSWERS
+        assert entry.answers == MIXED_ANSWERS
         p.editor.revision_rewrite.assert_awaited_once()
         p.fallback.assert_not_awaited()
     p.generative.assert_not_awaited()
+
+
+NOTE_ANSWERS = {
+    "a": {"type": "noul", "p_true": 0.9},
+    "b": {"type": "noul", "p_true": 0.2},
+    "c": {
+        "type": "choice",
+        "selected": "x",
+        "probabilities": {"none": 0.2, "x": 0.8},
+        "confidence": 0.8,
+    },
+}
+
+
+@pytest.mark.parametrize(
+    "thresholds,noted,details",
+    [
+        (
+            (0.8, 0.8, 0.8),
+            "answers.a, answers.c",
+            {
+                "p_true": 0.9,
+                "confidence": 0.9,
+                "choice_confidence": 0.8,
+                "threshold": 0.8,
+            },
+        ),
+        (
+            (0.8, 0.8, 0.7),
+            "answers.a, answers.c",
+            {
+                "p_true": 0.9,
+                "confidence": 0.9,
+                "choice_confidence": 0.8,
+                "thresholds": {"a": 0.8, "c": 0.7},
+            },
+        ),
+        (
+            (0.8, 0.8, 0.8),
+            "answers.a, answers.b",
+            {
+                "p_true": {"a": 0.9, "b": 0.2},
+                "confidence": {"a": 0.9, "b": 0.8},
+                "threshold": 0.8,
+            },
+        ),
+        (
+            (0.8, 0.8, 0.8),
+            "answers.a, answers.b, answers.c, pin='door'",
+            {
+                "pin": "door",
+                "p_true": {"a": 0.9, "b": 0.2},
+                "confidence": {"a": 0.9, "b": 0.8},
+                "choice_confidence": 0.8,
+                "threshold": 0.8,
+            },
+        ),
+    ],
+)
+async def test_a_note_adds_the_details_of_its_answers(
+    policy_factory, provider, thresholds, noted, details
+):
+    p = policy_factory
+    provider.answers = copy.deepcopy(NOTE_ANSWERS)
+    a, b, c = thresholds
+    source = (
+        '{% set answers = ask("note", state=passage, questions={'
+        f'"a": yes_no("A?", threshold={a}), "b": yes_no("B?", threshold={b}), '
+        f'"c": choice("C?", options={{"x": "X"}}, none="Neither", threshold={c})'
+        "}) %}"
+        '{{ note("no_action", "checked", ' + noted + ") }}{{ keep() }}"
+    )
+    assert await p.create(source).run() == "original"
+    (record,) = p.service.log.records.values()
+    (outcome,) = record.outcomes
+    assert outcome["details"] == details
+    assert list(outcome["details"]) == list(details)
+
+
+@pytest.mark.parametrize("explicit", ["threshold=0.5", "thresholds={}", "p_true=0.5"])
+async def test_a_note_refuses_a_detail_its_answers_record(
+    policy_factory, provider, explicit
+):
+    p = policy_factory
+    provider.answers = {"a": copy.deepcopy(NOTE_ANSWERS["a"])}
+    source = (
+        '{% set answers = ask("note", state=passage, questions={'
+        '"a": yes_no("A?", threshold=0.8)}) %}'
+        '{{ note("no_action", "checked", answers.a, ' + explicit + ") }}{{ keep() }}"
+    )
+    assert await p.create(source).run() == "disabled result"
+    record, policy = p.service.log.records.values()
+    assert record.outcomes == []
+    assert policy.failure.code == FailureCode.TEMPLATE
+
+
+async def test_none_is_not_an_option_id(policy_factory, provider):
+    p = policy_factory
+    source = (
+        '{% set answers = ask("pick", state=passage, questions={"c": choice("C?", '
+        'options={"none": "A real candidate", "x": "X"}, none="Neither", threshold=0.5)}) %}'
+        "{{ keep() }}"
+    )
+    assert await p.create(source).run() == "disabled result"
+    assert not provider.calls
+    (policy,) = p.service.log.records.values()
+    assert policy.failure.code == FailureCode.TEMPLATE
+
+
+async def test_a_note_refuses_answers_from_two_requests_with_one_id(
+    policy_factory, provider
+):
+    p = policy_factory
+    provider.answers = {"a": copy.deepcopy(NOTE_ANSWERS["a"])}
+    source = (
+        '{% set one = ask("one", state=passage, questions={"a": yes_no("A?", threshold=0.8)}) %}'
+        '{% set two = ask("two", state=passage, questions={"a": yes_no("A?", threshold=0.6)}) %}'
+        '{{ note("no_action", "checked", one.a, two.a) }}{{ keep() }}'
+    )
+    assert await p.create(source).run() == "disabled result"
+    first, second, policy = p.service.log.records.values()
+    assert first.outcomes == second.outcomes == []
+    assert policy.failure.code == FailureCode.TEMPLATE
+
+
+async def test_a_note_takes_the_same_answer_twice(policy_factory, provider):
+    p = policy_factory
+    provider.answers = {"a": copy.deepcopy(NOTE_ANSWERS["a"])}
+    source = (
+        '{% set answers = ask("one", state=passage, questions={"a": yes_no("A?", threshold=0.8)}) %}'
+        '{{ note("no_action", "checked", answers.a, answers.a) }}{{ keep() }}'
+    )
+    assert await p.create(source).run() == "original"
+    (record,) = p.service.log.records.values()
+    assert record.outcomes[0]["details"] == {
+        "p_true": 0.9,
+        "confidence": 0.9,
+        "threshold": 0.8,
+    }

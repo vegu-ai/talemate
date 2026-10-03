@@ -98,7 +98,7 @@ On by default. The **Evaluate Query** node and yes/no script queries use the con
 
 Both options have their own editable policy template in **Prompts** (`world_state.decision-pin-conditions` and `world_state.decision-query`). The templates control the questions and confidence threshold. **Decision Log** shows the answers and whether the fallback ran. A confident answer can still be wrong; turn the option off if it misses a condition you expect to change.
 
-When editing a decision policy for these features, keep its `gate.resolve` action inside `decision_result`. It validates the answers and runs any needed fallback. Returning a dictionary directly is treated as a failed policy.
+When editing a decision policy for these features, finish it with `resolve(answers)`: it checks the answers and sends every uncertain one to the usual request. See [Decision policy overrides](../../prompts/template-overrides.md#decision-policy-overrides).
 
 ## Character Progression
 

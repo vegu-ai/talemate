@@ -61,27 +61,38 @@ def policy_factory(tmp_path, monkeypatch, provider):
         if source is not None:
             (tmp_path / f"{uid.split('.', 1)[1]}.jinja2").write_text(source)
         budget = ActionBudget(limit=1)
-        defaults = {
-            "service": service,
-            "variables": {
+        variables = kwargs.pop(
+            "variables",
+            {
                 "passage": "original",
                 "decision_checks": [editor],
                 "last3": ["earlier"],
                 "info": SimpleNamespace(text="original"),
             },
+        )
+        info = variables.get("info")
+
+        async def revise(findings):
+            return await editor.revision_rewrite(info=info, decision_findings=findings)
+
+        defaults = {
+            "service": service,
+            "variables": variables,
             "validate_result": lambda value: adapter.validate_python(
                 value, strict=True
             ),
             "disabled_path": fallback,
             "original_result": "original",
+            "can_keep": True,
             "actions": {
-                ("editor", "revision_rewrite"): PolicyAction(
-                    call=editor.revision_rewrite,
+                "revise": PolicyAction(
+                    name="editor.revision_rewrite",
+                    call=revise,
                     enabled=lambda: True,
                     budget=budget,
                     serialize_arguments=lambda arguments: {
-                        **arguments,
-                        "info": {"text": arguments["info"].text},
+                        "info": {"text": info.text},
+                        "decision_findings": arguments["findings"],
                     },
                 )
             },

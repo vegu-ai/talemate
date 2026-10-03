@@ -339,7 +339,7 @@ async def test_before_dispatch_failures_fall_back_once(editor_case, failure, tmp
         c.provider.capabilities = ProviderCapabilities(max_input_tokens=1)
     source = {
         "template": "{{ undefined_value }}",
-        "result": "{{ decision_result(12) }}",
+        "result": "{{ keep() }}{{ keep() }}",
     }.get(failure)
     if source:
         (tmp_path / "decision-checks.jinja2").write_text(source)
@@ -354,19 +354,19 @@ async def test_before_dispatch_failures_fall_back_once(editor_case, failure, tmp
     assert records[-1].actions[0].status == "completed"
 
 
-OVERRIDE = """{% set r = decide("custom", state=info.text, questions={"custom": {"type": "noul", "instructions": "Custom question?"}}) %}
+OVERRIDE = """{% set answers = ask("custom", state=info.text, questions={"custom": yes_no("Custom question?", threshold=0.5)}) %}
 {% set findings = [{"passage_id": "s2", "text": "A shiver ran down her spine.", "kind": "style", "instructions": "Use a concrete action."}] %}
-{% set value = agent_action("editor", "revision_rewrite", info=info, decision_findings=findings, _decision=r) %}
+{{ revise(findings) }}
 """
 
 
 @pytest.mark.parametrize(
     "ending",
     [
-        "{{ decision_result(value) }}",
+        "",
         "{{ undefined_value }}",
-        "{{ decision_result(12) }}",
-        '{{ decision_result(agent_action("editor", "revision_rewrite", info=info, decision_findings=findings, _decision=r)) }}',
+        "{{ keep() }}",
+        "{{ revise(findings) }}",
     ],
 )
 async def test_override_and_failures_after_start_never_dispatch_twice(
@@ -379,11 +379,7 @@ async def test_override_and_failures_after_start_never_dispatch_twice(
         result, _ = await revise(c)
     c.client.send_prompt.assert_awaited_once()
     c.editor.revision_detect_bad_prose.assert_not_awaited()
-    assert result == (
-        c.data["revised"]
-        if ending == "{{ decision_result(value) }}"
-        else c.data["current"]
-    )
+    assert result == (c.data["revised"] if ending == "" else c.data["current"])
     assert c.provider.calls[0].questions["custom"].instructions == "Custom question?"
     assert all(
         a.action != "disabled_path"
@@ -399,11 +395,8 @@ async def test_override_can_choose_action_with_empty_findings(
     c = editor_case
     c.editor.actions["revision"].config["revision_method"].value = method
     c.editor.actions["revision"].config["min_issues"].value = 10
-    source = OVERRIDE.replace("decision_findings=findings", "decision_findings=[]")
-    source = source.replace('"revision_rewrite"', f'"revision_{method}"')
-    (tmp_path / "decision-checks.jinja2").write_text(
-        source + "{{ decision_result(value) }}"
-    )
+    source = OVERRIDE.replace("revise(findings)", "revise([])")
+    (tmp_path / "decision-checks.jinja2").write_text(source)
     with PrependTemplateDirectories(str(tmp_path)):
         assert (await revise(c))[0] == c.data["revised"]
     c.client.send_prompt.assert_awaited_once()
@@ -411,6 +404,7 @@ async def test_override_can_choose_action_with_empty_findings(
     c.editor._revision_evaluate_semantic_similarity.assert_not_awaited()
     record = next(iter(c.service.log.records.values()))
     assert len(record.actions) == 1
+    assert record.actions[0].action == f"editor.revision_{method}"
     assert record.actions[0].arguments["decision_findings"] == []
 
 
@@ -767,7 +761,8 @@ async def test_exact_threshold_and_template_override_comparison(editor_case, tmp
     ).read_text()
     (tmp_path / "decision-checks.jinja2").write_text(
         source.replace(
-            "probability >= evaluation.threshold", "probability > evaluation.threshold"
+            "match.value = answer.yes",
+            "match.value = answer.p_true > answer.threshold",
         )
     )
     with PrependTemplateDirectories(str(tmp_path)):

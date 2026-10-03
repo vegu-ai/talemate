@@ -31,12 +31,12 @@
                 {% set instructions = "Judge only the " ~ part ~ " of passage " ~ passage.id ~ " (its `" ~ part ~ "` text: " ~ meaning ~ "); ignore its " ~ other ~ ". " ~ instructions %}
                 {% set evaluation_instructions = evaluation_instructions ~ " Change only the " ~ part ~ " of this passage." %}
             {% endif %}
-            {% set _ = output.questions.update({id: {
-                "type": "noul",
-                "instructions": instructions,
-                "true_criteria": question.true_criteria.replace("{passage_id}", passage.id) if has_criteria else none,
-                "false_criteria": question.false_criteria.replace("{passage_id}", passage.id) if has_criteria else none
-            }}) %}
+            {% set _ = output.questions.update({id: yes_no(
+                instructions,
+                threshold=check.threshold,
+                true_criteria=question.true_criteria.replace("{passage_id}", passage.id) if has_criteria else none,
+                false_criteria=question.false_criteria.replace("{passage_id}", passage.id) if has_criteria else none
+            )}) %}
             {% set _ = output.presentation.update({id: {
                 "group_id": question.id,
                 "label": check.name,
@@ -59,13 +59,13 @@
 {% set output.flagged_questions = [] %}
 {% set output.thresholds = {} %}
     {% for evaluation in evaluations %}
-        {% set probability = answers[evaluation.id].p_true %}
+        {% set answer = answers[evaluation.id] %}
         {% set _ = output.thresholds.update({evaluation.id: evaluation.threshold}) %}
-        {% set match = namespace(value=probability >= evaluation.threshold) %}
-        {% if caller is defined %}{% set _ = caller(probability, evaluation, match) %}{% endif %}
+        {% set match = namespace(value=answer.yes) %}
+        {% if caller is defined %}{% set _ = caller(answer, evaluation, match) %}{% endif %}
         {% if match.value %}
             {% set _ = output.flagged_questions.append(evaluation.id) %}
-            {% set _ = output.findings.append({"passage_id": evaluation.passage.id, "text": evaluation.passage.text, "kind": evaluation.kind, "instructions": evaluation.instructions, "p_true": probability}) %}
+            {% set _ = output.findings.append({"passage_id": evaluation.passage.id, "text": evaluation.passage.text, "kind": evaluation.kind, "instructions": evaluation.instructions, "p_true": answer.p_true}) %}
             {% if evaluation.passage.id not in output.flagged %}{% set _ = output.flagged.append(evaluation.passage.id) %}{% endif %}
         {% endif %}
     {% endfor %}

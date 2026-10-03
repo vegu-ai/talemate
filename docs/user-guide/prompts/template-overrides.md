@@ -59,3 +59,38 @@ Put the call after the memory retrieval and any other context that can run agent
 The call records where the story history ended when it was read. If a message arrives during memory retrieval, it becomes part of the snapshot's source; if an earlier message is edited or deleted, the result is discarded. Do not replace the call with `scene.context_history`, and do not read the history before the memory retrieval.
 
 If Talemate reports an incompatible snapshot prompt, open **Template Files → Active** in the Prompt Manager and locate the template named in the notice. Compare it with the current default and update your override, or delete the override to restore the default. An incompatible result is not applied; Talemate makes no automatic retry.
+
+## Decision policy overrides
+
+When a [decision model](../app-settings/decision-model.md) is set up, some features ask it a quick question before they make their usual request. Each of these features has a policy template you can override: `world_state.decision-query`, `world_state.decision-pin-conditions`, `world_state.decision-reinforcement`, `world_state.decision-avatar`, `world_state.decision-background`, `world_state.decision-snapshot-references`, `memory.decision-entity-references` and `editor.decision-checks`.
+
+A policy says what it wants to know, in plain words, and what to do with the answer. Most overrides only change a question's wording or its `threshold`: how sure the model must be before its answer counts. For example, the yes/no query policy:
+
+```jinja2
+{% set threshold = 0.9 %}
+{% set answers = ask("yes-no-query", state=text, questions={"query": yes_no(query, threshold=threshold)}) %}
+{% set answer = answers.query %}
+{{ note("fallback" if answer.uncertain else "answer", "uncertain" if answer.uncertain else "confident", answer) }}
+{{ resolve(answers) }}
+```
+
+Lower the threshold to 0.75 and the model's answer is used whenever it is at least 75% sure. Below that, the usual request answers the question.
+
+| Function | What it does |
+|---|---|
+| `yes_no(question, threshold=…)` | A yes/no question. `true_criteria` and `false_criteria` can say what counts as yes and as no. |
+| `choice(question, options=…, none=…, threshold=…)` | Pick one of `options` (id to description). `none` describes choosing none of them; `"none"` cannot be an option id. |
+| `ask(label, state=…, questions=…)` | Sends the questions as one request and returns the answers by question id. |
+| `note(action, reason, answer, …)` | Writes the line the [Decision Log](../debug-tools.md#decisions) shows for this decision. Pass the answers it is based on and their probabilities and threshold are added; with several yes/no answers, each probability is listed under its question id. Answers passed together need different question ids, unless they are the same answer. |
+| `resolve(answers)` | Finishes a policy: every answer that is `none` goes to the usual request. The answers must be exactly the ones the feature expects; if they are not, every one goes to the usual request. |
+| `revise(findings)`, `keep()` | Editor checks only: revise the text with these findings, or keep it unchanged. |
+
+A yes/no answer has `yes`, `no` and `uncertain`, and `value` is `true`, `false` or `none` when the model was not sure enough. `yes` means the probability of yes reached the threshold, and `no` that the probability of no did; with a threshold of 0.5 or lower both can be true, and `value` is then `true`. A choice answer's `value` is the chosen option, or `none` when the model chose none of them or was not sure enough. Both have `confidence`, and a yes/no answer also has `p_true`, the probability of yes.
+
+Read an answer as `answers.query` or `answers["query"]`. The bracket form always works; use it when a question id is also the name of something the answers already have, such as `items`, `keys` or `values`.
+
+If your policy asks an extra question of its own, pass only the feature's answers to `resolve`, for example `resolve({"query": answers.query})`.
+
+`world_state.decision-avatar` and `world_state.decision-background` share their logic in `common/decision-visual-selection.jinja2`. Override one of them to change its questions or threshold, or the shared template to change how both choose.
+
+A policy that fails before it calls `resolve`, `revise` or `keep`, or never calls one, falls back to the usual request. After `resolve` has run, a later failure keeps the resolved answers; after `revise`, it keeps the original text and discards the revision. A failure after `keep()` still falls back to the usual request.

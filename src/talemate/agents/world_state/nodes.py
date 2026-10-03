@@ -1,3 +1,4 @@
+import re
 import structlog
 from typing import ClassVar, TYPE_CHECKING
 from talemate.context import active_scene
@@ -29,31 +30,57 @@ TYPE_CHOICES.extend(
 log = structlog.get_logger("talemate.game.engine.nodes.agents.world_state")
 
 
-@register("agents/world_state/DetermineAvatar")
-class DetermineAvatar(GenerateResponse):
+@register("agents/world_state/DetermineVisual")
+class DetermineVisual(GenerateResponse):
     """
-    Selects an existing portrait with the configured decision model when confident.
-    Otherwise sends the supplied prompt through Generate Response. Uses the World
-    State Character Portraits → Use Decision Model setting.
+    Picks the existing portrait or scene background that fits a message.
+    With World State → Character Portraits (or Scene Backgrounds) → Use
+    Decision Model on, the decision model keeps the current one or picks
+    another existing one when it is sure. Otherwise the supplied prompt runs
+    through Generate Response.
 
     Inputs:
 
-    - character: The character whose portrait is being selected
-    - content: The message to select a portrait for
-    - assets: The existing portraits available to the character
+    - character: The character whose portrait is picked (portraits only)
+    - content: The message to pick for
+    - assets: The existing portraits or backgrounds to pick from
+
+    Properties:
+
+    - kind: portrait or background
 
     Other inputs and outputs match Generate Response. The extracted asset_id
-    identifies the selected portrait; an empty fallback result may request generation.
+    is the picked asset; an empty one from the usual request may ask for a
+    new image. The other extracted values come from that request and are
+    missing when the decision model decided. An extracted `references` text
+    becomes the list of the given assets' ids it names.
     """
+
+    class Fields(GenerateResponse.Fields):
+        kind = PropertyField(
+            name="kind",
+            description="Pick a portrait or a scene background",
+            type="str",
+            default="portrait",
+            choices=["portrait", "background"],
+        )
+
+    def __init__(self, title="Determine Visual", **kwargs):
+        super().__init__(title=title, **kwargs)
 
     def setup(self):
         super().setup()
-        self.add_input("character", socket_type="character")
+        self.add_input("character", socket_type="character", optional=True)
         self.add_input("content", socket_type="str")
         self.add_input("assets", socket_type="list")
+        self.set_property("kind", "portrait")
 
     async def run(self, state: GraphState):
         agent = self.require_input("agent")
+        kind = self.get_property("kind")
+        character = self.normalized_input_value("character")
+        if kind == "portrait" and character is None:
+            raise InputValueError(self, "character", "Portraits need a character.")
         self.set_output_values(
             {
                 "state": self.get_input_value("state"),
@@ -66,18 +93,29 @@ class DetermineAvatar(GenerateResponse):
                 "data_obj": None,
             }
         )
+        extracted = {}
 
         async def fallback(ids):
-            await super(DetermineAvatar, self).run(state)
-            return {"avatar": self.get_output_socket("extracted").value["asset_id"]}
+            await super(DetermineVisual, self).run(state)
+            extracted.update(self.get_output_socket("extracted").value or {})
+            return {ids[0]: extracted.get("asset_id")}
 
-        asset_id = await agent.determine_avatar_with_decisions(
-            self.require_input("character"),
+        assets = self.require_input("assets")
+        asset_id = await agent.determine_visual_with_decisions(
+            kind,
             self.require_input("content"),
-            self.require_input("assets"),
+            assets,
             fallback,
+            character=character,
         )
-        self.set_output_values({"extracted": {"asset_id": asset_id}})
+        if isinstance(extracted.get("references"), str):
+            ids = {asset.id for asset in assets}
+            extracted["references"] = [
+                ref
+                for ref in re.split(r"[\s,`]+", extracted["references"])
+                if ref in ids
+            ]
+        self.set_output_values({"extracted": {**extracted, "asset_id": asset_id}})
 
 
 @register("agents/world_state/Settings")

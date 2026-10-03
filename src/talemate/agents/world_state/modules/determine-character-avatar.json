@@ -1431,7 +1431,8 @@
         "data_multiple": false,
         "response_length": 256,
         "action_type": "world_state",
-        "attempts": 1
+        "attempts": 1,
+        "kind": "portrait"
       },
       "x": 1200,
       "y": 1590,
@@ -1439,7 +1440,7 @@
       "height": 410,
       "collapsed": false,
       "inherited": false,
-      "registry": "agents/world_state/DetermineAvatar",
+      "registry": "agents/world_state/DetermineVisual",
       "base_type": "core/Node"
     },
     "dff77d08-664a-491b-8305-919f52976cb6": {

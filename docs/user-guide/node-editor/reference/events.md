@@ -85,6 +85,7 @@ List of currently supported events.
 | [`agent.tts.generate.after`](#agentttsgenerateafter) | TTS Agent |
 | [`agent.visual.generation.before_generate`](#agentvisualgenerationbefore_generate) | Visual Agent |
 | [`agent.visual.generation.after_generate`](#agentvisualgenerationafter_generate) | Visual Agent |
+| [`agent.visual.generation.failed`](#agentvisualgenerationfailed) | Visual Agent |
 | [`agent.visual.prompt_finalize.before`](#agentvisualprompt_finalizebefore) | Visual Agent |
 | [`agent.visual.prompt_finalize.after`](#agentvisualprompt_finalizeafter) | Visual Agent |
 | [`asset_saved`](#asset_saved) | Scene Assets |
@@ -1129,6 +1130,21 @@ Fires after a generation request has completed and the resulting image has been 
     | `agent` | `VisualAgent` | The agent instance |
     | `request` | `GenerationRequest` | The original request |
     | `response` | `GenerationResponse` | The completed response, including base64 image data |
+
+---
+
+### agent.visual.generation.failed
+
+Fires when a generation request ends without an image: the backend failed, the user cancelled it, or it could not start (for example no backend is available).
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `VisualAgent` | The agent instance |
+    | `request` | `GenerationRequest` | The request, including its `purpose` |
+    | `error` | `str \| None` | Why it failed; `None` when it was cancelled |
+    | `cancelled` | `bool` | `True` when the generation was cancelled |
 
 ---
 

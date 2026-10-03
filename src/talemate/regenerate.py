@@ -17,6 +17,7 @@ from talemate.scene_message import (
     NarratorMessage,
     ReinforcementMessage,
     ContextInvestigationMessage,
+    SceneBackdropMessage,
 )
 
 if TYPE_CHECKING:
@@ -48,7 +49,10 @@ def regenerate_target_message(scene: "Scene") -> SceneMessage | None:
         return None
 
     # Match the non-story tail removed by regenerate().
-    while isinstance(message, (ReinforcementMessage, CharacterTransitionMessage)):
+    while isinstance(
+        message,
+        (ReinforcementMessage, CharacterTransitionMessage, SceneBackdropMessage),
+    ):
         try:
             cur_idx -= 1
             message = scene.history[cur_idx]
@@ -402,17 +406,27 @@ async def regenerate(scene: "Scene") -> list[SceneMessage]:
     transitions = [
         (i, item)
         for i, item in enumerate(scene.history)
-        if i > boundary and isinstance(item, CharacterTransitionMessage)
+        if i > boundary
+        and isinstance(item, (CharacterTransitionMessage, SceneBackdropMessage))
     ]
-    for _, transition in reversed(transitions):
-        scene.history.remove(transition)
-    try:
-        with regeneration_snapshot(scene, message):
-            return await _regenerate(scene)
-    finally:
-        for index, transition in transitions:
-            scene.history.insert(min(index, len(scene.history)), transition)
-            scene.emit_history_message(transition)
+    async with scene.assets.backdrops_lifted():
+        for _, transition in reversed(transitions):
+            scene.history.remove(transition)
+        try:
+            with regeneration_snapshot(scene, message):
+                return await _regenerate(scene)
+        finally:
+            for index, transition in transitions:
+                # an abandoned generation's pending backdrop message is not restored
+                if (
+                    isinstance(transition, SceneBackdropMessage)
+                    and transition.pending
+                    and not scene.assets.keeps_pending_backdrop(transition)
+                ):
+                    emit("remove_message", "", id=transition.id)
+                    continue
+                scene.history.insert(min(index, len(scene.history)), transition)
+                scene.emit_history_message(transition)
 
 
 async def _regenerate(scene: "Scene") -> list[SceneMessage]:

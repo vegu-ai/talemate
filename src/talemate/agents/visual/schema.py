@@ -320,6 +320,10 @@ class AssetAttachmentContext(pydantic.BaseModel):
     current_avatar: bool = False
     override_current_avatar: bool = False
 
+    # scene backdrop
+    scene_backdrop: bool = False
+    backdrop_message_id: int | None = None
+
     # asset meta
     asset_name: str | None = None
     tags: list[str] = pydantic.Field(default_factory=list)
@@ -334,6 +338,9 @@ class AssetAttachmentContext(pydantic.BaseModel):
             return True
 
         if self.default_avatar or self.current_avatar:
+            return True
+
+        if self.scene_backdrop:
             return True
 
         return False
@@ -358,6 +365,8 @@ class GenerationRequest(pydantic.BaseModel):
     )
 
     reference_assets: list[str] = pydantic.Field(default_factory=list)
+
+    purpose: str | None = None
 
     inline_reference: str | None = pydantic.Field(default=None, exclude=False)
 

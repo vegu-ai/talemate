@@ -167,6 +167,7 @@ const FEATURES = {
     "editor.decision-checks": "Editor checks",
     "world_state.decision-pin-conditions": "Context pin conditions",
     "world_state.decision-avatar": "Portrait selection",
+    "world_state.decision-background": "Background selection",
     "world_state.decision-query": "Yes/no question",
     "world_state.decision-reinforcement": "Tracked state update",
     "world_state.decision-snapshot-references": "Characters mentioned (World State)",

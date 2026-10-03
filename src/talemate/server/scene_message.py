@@ -202,7 +202,8 @@ class SceneMessagePlugin(Plugin):
 
     async def handle_get_history_position(self, data: dict):
         payload = HistoryPositionPayload(**data)
-        if self.scene.message_index(payload.id) < 0:
+        index = self.scene.message_index(payload.id)
+        if index < 0:
             await self.signal_operation_failed(
                 f"Message {payload.id} not found in scene history",
                 request_id=payload.request_id,
@@ -214,7 +215,11 @@ class SceneMessagePlugin(Plugin):
                 "type": self.router,
                 "action": "history_position",
                 "id": payload.id,
-                "final": self.scene.history[-1].id == payload.id,
+                # a backdrop change recorded after the message is not later story
+                "final": all(
+                    entry.typ == "scene_backdrop"
+                    for entry in self.scene.history[index + 1 :]
+                ),
                 "request_id": payload.request_id,
             }
         )

@@ -60,6 +60,22 @@ export function visibleMessages(messages, revealCount) {
 }
 
 /**
+ * The backdrop asset a passage had, from the scene's backdrop messages.
+ * Outside playthrough, or in a story without backdrop messages, it is the
+ * saved backdrop. Before the first revealed change it is what that change
+ * replaced. Pending messages (an image still being generated) are skipped.
+ */
+export function playthroughBackdrop(messages, revealCount, savedBackdrop) {
+    const changes = messages.filter((message) => message.type === 'scene_backdrop' && !message.pending);
+    if (revealCount === null || revealCount === undefined || !changes.length) {
+        return savedBackdrop;
+    }
+    const revealed = new Set(visibleMessages(messages, revealCount));
+    const last = changes.filter((message) => revealed.has(message)).at(-1);
+    return last ? last.backdrop : changes[0].previous_backdrop;
+}
+
+/**
  * TTS request for the message auto-advance just revealed, or null when it
  * cannot be spoken.
  */

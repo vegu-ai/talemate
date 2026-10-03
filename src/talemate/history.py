@@ -15,7 +15,7 @@ import uuid
 from talemate.emit import emit
 import talemate.emit.async_signals as async_signals
 from talemate.instance import get_agent
-from talemate.scene_message import SceneMessage, TimePassageMessage
+from talemate.scene_message import NON_STORY_TYPES, SceneMessage, TimePassageMessage
 from talemate.util import count_tokens
 from talemate.util.time import (
     amount_unit_to_seconds,
@@ -57,16 +57,7 @@ __all__ = [
     "compute_layer_stats",
     "collect_time_passages",
     "render_span",
-    "SPAN_LINE_EXCLUDED_TYPES",
 ]
-
-# messages that are never part of a summarized span
-SPAN_LINE_EXCLUDED_TYPES = (
-    "director",
-    "context_investigation",
-    "reinforcement",
-    "character_transition",
-)
 
 log = structlog.get_logger()
 
@@ -201,7 +192,7 @@ def collect_source_entries(scene: "Scene", entry: HistoryEntry) -> list[SourceEn
     if entry.layer == 0:
         # base layer
         def include_message(message: SceneMessage) -> bool:
-            return message.typ not in SPAN_LINE_EXCLUDED_TYPES
+            return message.typ not in NON_STORY_TYPES
 
         result = [
             SourceEntry(

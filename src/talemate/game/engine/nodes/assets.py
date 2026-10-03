@@ -1075,6 +1075,7 @@ class MakeAssetAttachmentContext(Node):
     - current_avatar: whether to set the current avatar image
     - override_default_avatar: whether to override the default avatar image (requires default_avatar=true)
     - override_current_avatar: whether to override the current avatar image (requires current_avatar=true)
+    - scene_backdrop: whether the saved image becomes the scene backdrop; while it is generated, a pending backdrop message waits for it in the history
 
     Outputs:
     - context: the asset attachment context object
@@ -1092,6 +1093,7 @@ class MakeAssetAttachmentContext(Node):
     - current_avatar: current avatar flag (passed through)
     - override_default_avatar: default avatar override flag (passed through)
     - override_current_avatar: current avatar override flag (passed through)
+    - scene_backdrop: scene backdrop flag (passed through)
 
     Note:
     - When message_ids is empty, assets will be attached to the most recent appropriate message
@@ -1194,6 +1196,12 @@ class MakeAssetAttachmentContext(Node):
             type="bool",
             default=False,
         )
+        scene_backdrop = PropertyField(
+            name="scene_backdrop",
+            description="Whether the saved image becomes the scene backdrop",
+            type="bool",
+            default=False,
+        )
 
     def __init__(self, title="Make Asset Attachment Context", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -1213,6 +1221,7 @@ class MakeAssetAttachmentContext(Node):
         self.add_input("current_avatar", socket_type="bool", optional=True)
         self.add_input("override_default_avatar", socket_type="bool", optional=True)
         self.add_input("override_current_avatar", socket_type="bool", optional=True)
+        self.add_input("scene_backdrop", socket_type="bool", optional=True)
 
         self.set_property("asset_name", "")
         self.set_property("tags", [])
@@ -1228,6 +1237,7 @@ class MakeAssetAttachmentContext(Node):
         self.set_property("current_avatar", False)
         self.set_property("override_default_avatar", False)
         self.set_property("override_current_avatar", False)
+        self.set_property("scene_backdrop", False)
 
         self.add_output("context", socket_type="asset_attachment_context")
         self.add_output("asset_name", socket_type="str")
@@ -1244,6 +1254,7 @@ class MakeAssetAttachmentContext(Node):
         self.add_output("current_avatar", socket_type="bool")
         self.add_output("override_default_avatar", socket_type="bool")
         self.add_output("override_current_avatar", socket_type="bool")
+        self.add_output("scene_backdrop", socket_type="bool")
 
     async def run(self, state: GraphState):
         tags = self.normalized_input_value("tags")
@@ -1262,6 +1273,7 @@ class MakeAssetAttachmentContext(Node):
         current_avatar = self.normalized_input_value("current_avatar")
         override_default_avatar = self.normalized_input_value("override_default_avatar")
         override_current_avatar = self.normalized_input_value("override_current_avatar")
+        scene_backdrop = bool(self.normalized_input_value("scene_backdrop"))
 
         context = AssetAttachmentContext(
             asset_name=asset_name,
@@ -1278,6 +1290,7 @@ class MakeAssetAttachmentContext(Node):
             current_avatar=current_avatar,
             override_default_avatar=override_default_avatar,
             override_current_avatar=override_current_avatar,
+            scene_backdrop=scene_backdrop,
         )
 
         self.set_output_values(
@@ -1297,6 +1310,7 @@ class MakeAssetAttachmentContext(Node):
                 "current_avatar": current_avatar,
                 "override_default_avatar": override_default_avatar,
                 "override_current_avatar": override_current_avatar,
+                "scene_backdrop": scene_backdrop,
             }
         )
 
@@ -1407,6 +1421,65 @@ class SetCoverImage(Node):
                 "override_scene": override_scene,
                 "override_character": override_character,
                 "character": character,
+            }
+        )
+
+
+@register("assets/SetSceneBackdrop")
+class SetSceneBackdrop(Node):
+    """
+    Make an existing scene asset the scene backdrop, the image shown behind
+    the scene text. A changed backdrop is recorded in the scene history, so
+    Playthrough shows each passage with the backdrop it had. Whether the
+    backdrop is shown at all (Immersive) is left as it is.
+
+    Inputs:
+
+    - state: The graph state
+    - asset_id: The id of the asset to show as the backdrop
+
+    Outputs:
+
+    - state: The state input, passed through
+    - asset_id: The asset id, passed through
+    - changed: True when the backdrop changed (False when it already was the backdrop)
+    """
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            title_color=ASSET_NODE_TITLE_COLOR,
+            node_color=ASSET_NODE_COLOR,
+            icon="F0552",  # upload
+        )
+
+    def __init__(self, title="Set Scene Backdrop", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("asset_id", socket_type="str")
+
+        self.set_property("asset_id", "")
+
+        self.add_output("state")
+        self.add_output("asset_id", socket_type="str")
+        self.add_output("changed", socket_type="bool")
+
+    async def run(self, state: GraphState):
+        asset_id = self.require_input("asset_id")
+        scene: "Scene" = active_scene.get()
+        if not scene.assets.validate_asset_id(asset_id):
+            raise InputValueError(self, "asset_id", f"No asset with id {asset_id}.")
+        prior = scene.assets.backdrop
+        await scene.assets.set_scene_backdrop(asset_id=asset_id)
+
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "asset_id": asset_id,
+                "changed": scene.assets.backdrop != prior,
             }
         )
 

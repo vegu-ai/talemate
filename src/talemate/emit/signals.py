@@ -7,6 +7,7 @@ PlayerMessage = signal("player")
 DirectorMessage = signal("director")
 TimePassageMessage = signal("time")
 CharacterTransitionMessage = signal("character_transition")
+SceneBackdropMessage = signal("scene_backdrop")
 StatusMessage = signal("status")
 AgentMessage = signal("agent")
 ReinforcementMessage = signal("reinforcement")
@@ -82,6 +83,7 @@ handlers = {
     "director": DirectorMessage,
     "time": TimePassageMessage,
     "character_transition": CharacterTransitionMessage,
+    "scene_backdrop": SceneBackdropMessage,
     "context_investigation": ContextInvestigationMessage,
     "reinforcement": ReinforcementMessage,
     "request_input": RequestInput,

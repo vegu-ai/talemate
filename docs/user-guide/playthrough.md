@@ -103,6 +103,11 @@ surfaces that would add to it are put away while it runs:
 - The world panel in the sidebar no longer offers to update the world state, or
   to make one of its characters real.
 
+The scene backdrop follows the story: each passage is shown with the backdrop
+it had when it was written, using the **Backdrop** entries that record every
+[backdrop change](inline-visuals.md#scene-backdrop). Stories from before these
+entries existed keep showing the scene's saved backdrop.
+
 Everything else keeps working normally — application and agent settings,
 template browsing, the world editor and image generation. All of it comes back
 when the playthrough ends.

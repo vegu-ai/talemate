@@ -116,6 +116,7 @@ Creates a generation request for image generation.
 | `callback` | `function` | callback function to run after generation (optional) |
 | `extra_config` | `dict` | additional configuration dict (optional) |
 | `asset_attachment_context` | `asset_attachment_context` | controls automatic asset attachment behavior (optional) |
+| `purpose` | `str` | why the image is generated, checked by Generation Running (optional) |
 
 **Outputs**
 
@@ -140,6 +141,7 @@ Creates a generation request for image generation.
 | `character_name` | `str` | `""` | The name of the character to generate |
 | `instructions` | `text` | `""` | The instructions for the generation request |
 | `extra_config` | `dict` | `{}` | The extra configuration for the generation request |
+| `purpose` | `str` | `""` | Why the image is generated, checked by Generation Running |
 
 ## Select Backend
 

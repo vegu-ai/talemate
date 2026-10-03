@@ -1078,6 +1078,9 @@ def _load_history(history):
             _history.append(_prepare_legacy_history(text))
 
         elif isinstance(text, dict):
+            # its generation ended with the session that started it
+            if text.get("typ") == "scene_backdrop" and text.get("pending"):
+                continue
             _history.append(_prepare_history(text))
 
     return _history

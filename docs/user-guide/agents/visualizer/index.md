@@ -79,3 +79,7 @@ The Director agent can also generate images through director chat. When chatting
 
 For more information on director chat, see the [Director Chat documentation](../director/chat.md).
 
+
+### Scene Backgrounds during play
+
+The World State agent can keep the scene backdrop fitting the story as you play: it picks one of the scene's backgrounds, or asks the Visualizer for a new one in the scene background style. When an existing background is a good starting point, such as the same street at night, it is passed as a reference and an image editing backend creates a variation of it. The feature is off by default; see [Scene Backgrounds](../world-state/settings.md#scene-backgrounds) in the World State settings.

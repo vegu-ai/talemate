@@ -377,6 +377,11 @@
                     <CharacterTransitionMessage :message="message" :locked="uxLocked || appBusy || revealCount !== null" />
                 </div>
             </div>
+            <div v-else-if="message.type === 'scene_backdrop'" :class="`message ${message.type}`">
+                <div class="scene-backdrop-message" :id="`message-${message.id}`" :data-message-type="message.type">
+                    <SceneBackdropMessage :message="message" :asset-name="assetsMap[message.backdrop]?.meta?.name || null" :immersive="scene?.data?.assets?.backdrop_enabled !== false" :locked="uxLocked || appBusy || revealCount !== null" />
+                </div>
+            </div>
             <div v-else-if="message.type === 'time'" :class="`message ${message.type}`">
                 <div class="time-message"  :id="`message-${message.id}`" :data-message-type="message.type">
                     <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" :title="message.title" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === visibleMessages.length - 1" />
@@ -438,6 +443,7 @@ import NarratorMessage from './NarratorMessage.vue';
 import DirectorMessage from './DirectorMessage.vue';
 import TimePassageMessage from './TimePassageMessage.vue';
 import CharacterTransitionMessage from './CharacterTransitionMessage.vue';
+import SceneBackdropMessage from './SceneBackdropMessage.vue';
 import StatusMessage from './StatusMessage.vue';
 import RequestInput from './RequestInput.vue';
 import PlayerChoiceMessage from './PlayerChoiceMessage.vue';
@@ -464,7 +470,7 @@ import { isKnownSceneCharacter } from '@/utils/entityActions';
 import { parseCharacterMessage } from '@/utils/characterMessage.js';
 import { primaryModifierLabel } from '@/utils/keyboardModifiers';
 import { base64ToObjectUrl } from '@/utils/objectUrl.js';
-import { chapterBoundaries, visibleMessages } from '@/utils/playthrough.js';
+import { chapterBoundaries, playthroughBackdrop, visibleMessages } from '@/utils/playthrough.js';
 import { newUuid } from '@/utils/uuid';
 import {
     getMessageColor as resolveMessageColor,
@@ -560,7 +566,7 @@ const ASSET_SELECT_TYPES = {
 
 const ASSET_SELECT_DIALOG_KEYS = Object.values(ASSET_SELECT_TYPES).map(t => t.dialogKey)
 
-const ALWAYS_RENDERED_MESSAGE_TYPES = ['character', 'processing_input', 'request_input', 'system', 'status', 'narrator', 'character_transition', 'time', 'player_choice', 'ux']
+const ALWAYS_RENDERED_MESSAGE_TYPES = ['character', 'processing_input', 'request_input', 'system', 'status', 'narrator', 'character_transition', 'scene_backdrop', 'time', 'player_choice', 'ux']
 
 // frames after which a character's views may differ although the rows stay
 // the same; a changed set of rows refreshes through the perspectiveRowIds watcher
@@ -612,6 +618,7 @@ export default {
         DirectorMessage,
         TimePassageMessage,
         CharacterTransitionMessage,
+        SceneBackdropMessage,
         StatusMessage,
         RequestInput,
         PlayerChoiceMessage,
@@ -742,10 +749,10 @@ export default {
             // the asset, assets.backdrop_enabled gates rendering. messageId
             // (when the asset is message-attached) drives the indicator icon
             const assets = this.scene?.data?.assets;
-            if (!assets?.backdrop || !assets.backdrop_enabled) {
+            const assetId = playthroughBackdrop(this.messages, this.revealCount, assets?.backdrop);
+            if (!assetId || !assets?.backdrop_enabled) {
                 return null;
             }
-            const assetId = assets.backdrop;
             const message = this.messages.find(
                 (msg) => msg.asset_id === assetId && msg.asset_type === 'scene_illustration'
             );
@@ -2188,7 +2195,7 @@ export default {
                     if (existing !== -1) this.messages.splice(existing, 1, { ...transition });
                 }
             }
-            if (data.type === 'character_transition') {
+            if (data.type === 'character_transition' || data.type === 'scene_backdrop') {
                 const existing = this.messages.findIndex(message => message.type === data.type && message.id === data.id);
                 if (existing === -1) this.messages.push({ ...data });
                 else this.messages.splice(existing, 1, { ...data });

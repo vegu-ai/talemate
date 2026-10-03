@@ -1161,6 +1161,21 @@
       "inherited": false,
       "registry": "scene/event/trigger/GameLoopActorIter",
       "base_type": "core/EventTrigger"
+    },
+    "897c8422-6186-4b7d-b50d-d97128c06d39": {
+      "title": "On Message Set Background",
+      "id": "897c8422-6186-4b7d-b50d-d97128c06d39",
+      "properties": {
+        "event_name": "game_loop_new_message"
+      },
+      "x": -332,
+      "y": 410,
+      "width": 304,
+      "height": 38,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/world_state/onMessageSetBackground",
+      "base_type": "core/Event"
     }
   },
   "edges": {
@@ -1459,7 +1474,7 @@
       "x": -357,
       "y": 3,
       "width": 352,
-      "height": 357,
+      "height": 467,
       "color": "#a1309b",
       "font_size": 24,
       "inherited": false

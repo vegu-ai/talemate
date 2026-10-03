@@ -7,6 +7,7 @@ import enum
 import io
 import json
 import asyncio
+import contextlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -24,6 +25,7 @@ from talemate.emit import emit
 import talemate.emit.async_signals as async_signals
 from talemate.config import get_config, Config
 import talemate.scene_message as scene_message
+from talemate.scene_signals import message_removed, scene_reset
 from talemate.agents.visual.schema import (
     VIS_TYPE,
     GEN_TYPE,
@@ -409,7 +411,8 @@ async def _handle_asset_saved(payload: AssetSavedPayload):
     # in; backdrop_enabled is left untouched so an explicit "Immersive" off
     # isn't overridden
 
-    if payload.new_asset:
+    # a generated backdrop is applied by the generation itself
+    if payload.new_asset and not asset_attachment_context.scene_backdrop:
         kind = VIS_TYPE_TO_MESSAGE_ASSET_KIND.get(asset.meta.vis_type)
         if kind and config.appearance.scene.message_assets[kind].auto_backdrop:
             await scene.assets.set_scene_backdrop(asset_id=asset.id)
@@ -470,6 +473,21 @@ async def _handle_asset_saved(payload: AssetSavedPayload):
 async_signals.get("asset_saved").connect(_handle_asset_saved)
 
 
+def _forget_pending_backdrop(scene: "Scene", message=None, **kwargs):
+    if isinstance(message, scene_message.SceneBackdropMessage):
+        scene.assets.pending_backdrops.pop(message.id, None)
+
+
+message_removed.connect(_forget_pending_backdrop, weak=False)
+
+
+def _forget_pending_backdrops(scene: "Scene", **kwargs):
+    scene.assets.pending_backdrops.clear()
+
+
+scene_reset.connect(_forget_pending_backdrops, weak=False)
+
+
 class SceneAssets:
     def __init__(self, scene: Scene):
         self.scene = scene
@@ -479,6 +497,11 @@ class SceneAssets:
         # whether it currently renders at all
         self.backdrop: str | None = None
         self.backdrop_enabled: bool = True
+        # backdrop messages waiting for their generated image, by message id
+        self.pending_backdrops: dict[int, scene_message.SceneBackdropMessage] = {}
+        # generated images waiting while a history edit holds backdrop
+        # messages out of the history (see backdrops_lifted)
+        self._lifted_backdrops: list[tuple[AssetAttachmentContext, str]] | None = None
 
     def _fire_signal(self, name: str, payload: pydantic.BaseModel):
         """Fire an async signal from a synchronous context."""
@@ -1724,6 +1747,7 @@ class SceneAssets:
         asset_id: str | None = None,
         enabled: bool | None = None,
         clear: bool = False,
+        record: bool = True,
     ) -> str | None:
         """
         Updates the scene backdrop.
@@ -1733,6 +1757,9 @@ class SceneAssets:
         enabled toggles whether it renders at all.
 
         clear removes the backdrop asset entirely (asset_id is ignored).
+
+        A changed backdrop asset is recorded in the history as a backdrop
+        message unless record is False.
         """
         log.debug("set_scene_backdrop", asset_id=asset_id, enabled=enabled, clear=clear)
         prior = (self.backdrop, self.backdrop_enabled)
@@ -1746,6 +1773,9 @@ class SceneAssets:
         if enabled is not None:
             self.backdrop_enabled = enabled
 
+        if record and self.backdrop != prior[0]:
+            await self._record_backdrop(prior[0], self.backdrop)
+
         if (self.backdrop, self.backdrop_enabled) != prior:
             await async_signals.get("scene.backdrop_changed").send(
                 SceneBackdropChangedPayload(
@@ -1758,6 +1788,123 @@ class SceneAssets:
             self.scene.emit_status()
 
         return self.backdrop
+
+    async def _record_backdrop(self, previous: str | None, backdrop: str | None):
+        """
+        Records a backdrop change. Consecutive changes at the end of the
+        history share one backdrop message instead of piling up.
+        """
+        history = self.scene.history
+        tail = history[-1] if history else None
+        if not isinstance(tail, scene_message.SceneBackdropMessage) or tail.pending:
+            await self.scene.push_history(
+                scene_message.SceneBackdropMessage(
+                    backdrop=backdrop, previous_backdrop=previous
+                ),
+                emit_message=True,
+            )
+        elif tail.previous_backdrop == backdrop:
+            self.scene.delete_message(tail.id)
+        else:
+            tail.backdrop = backdrop
+            self.scene.emit_history_message(tail)
+
+    async def begin_generated_backdrop(self, ctx: AssetAttachmentContext):
+        """
+        Records a pending backdrop message for an image whose generation
+        starts now; the saved image fills it in.
+        """
+        message = scene_message.SceneBackdropMessage(
+            pending=True, previous_backdrop=self.backdrop
+        )
+        await self.scene.push_history(message, emit_message=True)
+        self.pending_backdrops[message.id] = message
+        ctx.backdrop_message_id = message.id
+
+    def _history_index(self, message: scene_message.SceneMessage) -> int:
+        return next(
+            (i for i, entry in enumerate(self.scene.history) if entry is message), -1
+        )
+
+    async def finish_generated_backdrop(
+        self, ctx: AssetAttachmentContext, asset_id: str
+    ):
+        """
+        Makes a generated image the backdrop and marks the scene unsaved. The
+        image stays in the library without changing the scene when the scene
+        was released, its pending message was removed meanwhile (deleted, the
+        history went back past it or was reset), or a later backdrop change
+        was recorded after it. A backdrop message right before the filled one
+        is merged into it. While a history edit holds backdrop messages out
+        of the history, the fill waits until they are back.
+        """
+        if not self.scene.active:
+            self.pending_backdrops.pop(ctx.backdrop_message_id, None)
+            return
+        if ctx.backdrop_message_id is None:
+            await self.set_scene_backdrop(asset_id=asset_id)
+            self.scene._mark_scene_unsaved()
+            return
+        if self._lifted_backdrops is not None:
+            self._lifted_backdrops.append((ctx, asset_id))
+            return
+        message = self.pending_backdrops.pop(ctx.backdrop_message_id, None)
+        index = self._history_index(message) if message is not None else -1
+        if index < 0:
+            return
+        history = self.scene.history
+        if any(
+            isinstance(entry, scene_message.SceneBackdropMessage) and not entry.pending
+            for entry in history[index + 1 :]
+        ):
+            self.scene.delete_message(message.id)
+            return
+        message.backdrop = asset_id
+        message.pending = False
+        before = history[index - 1] if index > 0 else None
+        if (
+            isinstance(before, scene_message.SceneBackdropMessage)
+            and not before.pending
+        ):
+            message.previous_backdrop = before.previous_backdrop
+            self.scene.delete_message(before.id)
+        await self.set_scene_backdrop(asset_id=asset_id, record=False)
+        self.scene.emit_history_message(message)
+        self.scene._mark_scene_unsaved()
+
+    def abandon_generated_backdrop(self, ctx: AssetAttachmentContext):
+        message = self.pending_backdrops.pop(ctx.backdrop_message_id, None)
+        if (
+            message is not None
+            and self.scene.active
+            and self._history_index(message) >= 0
+        ):
+            self.scene.delete_message(message.id)
+
+    def keeps_pending_backdrop(self, message: scene_message.SceneMessage) -> bool:
+        """
+        Whether a pending backdrop message still waits for its image, so a
+        history edit that took it out for a moment puts it back.
+        """
+        return self.pending_backdrops.get(message.id) is message
+
+    @contextlib.asynccontextmanager
+    async def backdrops_lifted(self):
+        """
+        Wraps a history edit that takes backdrop messages out of the history
+        and puts them back: generated images that arrive meanwhile are applied
+        once the outermost one ends.
+        """
+        if self._lifted_backdrops is not None:
+            yield
+            return
+        self._lifted_backdrops = []
+        try:
+            yield
+        finally:
+            held, self._lifted_backdrops = self._lifted_backdrops, None
+            for ctx, asset_id in held:
+                await self.finish_generated_backdrop(ctx, asset_id)
 
     async def set_character_cover_image_from_bytes(
         self, character: "Character", bytes: bytes, override: bool = False

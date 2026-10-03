@@ -241,7 +241,8 @@
   title: Overview
   summary: Visualizer overview for text-to-image, reference editing and image analysis with multiple backends, visual styles
     and the Visual Library. Introduces inline visuals, Visualize Scene/Character/Moment shortcuts, Alt prompt-only and Ctrl
-    instructions, automatic generation and Director Chat images.
+    instructions, automatic generation and Director Chat images. World State Scene Backgrounds generate scene backgrounds
+    during play, as variations of existing ones.
 - path: user-guide/agents/visualizer/settings.md
   title: Settings
   summary: Visualizer settings for separate image backends, timeout, automatic setup/generation, reference analysis, editing-prompt
@@ -629,7 +630,8 @@
   title: Inline Visuals
   summary: Generate and manage inline scene illustrations, backgrounds, cards and character portraits, including Visualize
     on context-investigation messages and image click shortcuts. Covers auto-attachment, render cadence/size, Scene Backdrop,
-    Auto Backdrop and the Immersive toggle.
+    Auto Backdrop and the Immersive toggle. Backdrop entries record each backdrop change; Scene Backgrounds set it as the
+    story moves.
 - path: user-guide/integrations/runpod.md
   title: Runpod
   summary: 'Legacy RunPod integration guide for remotely hosted Text-Generation-WebUI: API keys, Community/Secure Cloud, storage,
@@ -798,13 +800,13 @@
   title: Visualizer Agent Prompt Nodes
   summary: Visualizer prompt node reference for Prompt/Prompt Part, Apply Style versus configured Apply Styles, Finalize Prompt,
     enums and unpacking positive/negative strings. Covers keyword/descriptive formats, implied negatives, character finalizers,
-    required state gating and UNSPECIFIED style behavior.
+    required state gating and UNSPECIFIED style behavior. Generation Running checks a generation purpose.
 - path: user-guide/node-editor/reference/nodes/agents-world-state.md
   title: World State Agent Nodes
   summary: World-state node reference for time advancement/chapter titles, character progression suggestions, presence checks,
-    sheet extraction and tracked State Reinforcement. Covers Evaluate Query, Request/Emit World State, avatar selection, deactivation
-    and websocket handlers with sockets/properties; Evaluate Query and Determine Avatar use decision model confidence with
-    LLM fallback.
+    sheet extraction and tracked State Reinforcement. Covers Evaluate Query, Request/Emit World State, avatar and background selection,
+    deactivation and websocket handlers with sockets/properties; Evaluate Query and Determine Visual use decision model confidence
+    with LLM fallback.
 - path: user-guide/node-editor/reference/nodes/agents.md
   title: Agent Nodes
   summary: 'Generic agent node reference: Get Agent, Call Agent Function and conditional calls, Dynamic Instruction, Toggle
@@ -822,8 +824,8 @@
 - path: user-guide/node-editor/reference/nodes/assets.md
   title: Asset Nodes
   summary: Scene asset nodes to add base64 image data, fetch or list assets, check partial asset IDs, remove assets, set character
-    avatars and scene or character cover images, and update message asset attachments with optional override_cadence for manual
-    choices.
+    avatars and scene or character cover images, set the scene backdrop, and update message asset attachments with optional
+    override_cadence for manual choices.
 - path: user-guide/node-editor/reference/nodes/context-id.md
   title: Context ID Nodes
   summary: 'Context IDs address scene context entries generically: Path to Context ID, Context ID Get/Set Value, Character
@@ -993,7 +995,7 @@
   summary: Playthrough replays existing scene messages with Space/click advance, scrubber, time-passage chapters, restart,
     optional voice narration and auto-advance. Covers when the Playthrough chip is offered (more than 15 character and narrator
     messages), remembered progress, read-only scenes, hidden editing tools, the title-only scene header, and Fork from here
-    using revision state or trimmed legacy history.
+    using revision state or trimmed legacy history. Each passage shows the scene backdrop it had.
 - path: user-guide/prompts/context-history-review.md
   title: Scene Context History Review
   summary: 'Preview reader or character context without generation: selected history, existing analysis evidence, presence/audience/budget

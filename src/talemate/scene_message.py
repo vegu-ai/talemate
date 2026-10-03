@@ -37,6 +37,14 @@ __all__ = [
 
 VersionSource = Literal["original", "revision", "regenerate", "continue", "custom"]
 
+NON_STORY_TYPES = (
+    "director",
+    "context_investigation",
+    "reinforcement",
+    "character_transition",
+    "scene_backdrop",
+)
+
 # Default revision-stack shape for messages that don't (yet) have one —
 # either no message_obj at all on a wire payload, or a message type that
 # hasn't opted into versions. Keeps the wire schema homogeneous.
@@ -982,6 +990,29 @@ class CharacterTransitionMessage(SceneMessage):
         return render_transition(scene, self) if scene is not None else self.message
 
 
+class SceneBackdropMessage(SceneMessage):
+    """
+    Records that the scene backdrop changed at this point of the story, so a
+    replay can show the backdrop each passage had. Never part of any prompt.
+    """
+
+    typ: str = "scene_backdrop"
+    message: str = ""
+    backdrop: str | None = None
+    previous_backdrop: str | None = None
+    # an image is still being generated for it; never kept across a load
+    pending: bool = False
+
+    def to_dict(self) -> dict:
+        return {
+            **super().to_dict(),
+            **self.model_dump(include={"backdrop", "previous_backdrop", "pending"}),
+        }
+
+    def as_format(self, format: str, **kwargs) -> str:
+        return ""
+
+
 MESSAGES = {
     "scene": SceneMessage,
     "character": CharacterMessage,
@@ -991,4 +1022,5 @@ MESSAGES = {
     "reinforcement": ReinforcementMessage,
     "context_investigation": ContextInvestigationMessage,
     "character_transition": CharacterTransitionMessage,
+    "scene_backdrop": SceneBackdropMessage,
 }

@@ -8,6 +8,7 @@ import {
     currentChapter,
     INTRO_ANCHOR,
     playthroughAvailable,
+    playthroughBackdrop,
     PLAYTHROUGH_MIN_MESSAGES,
     revealForAnchor,
     speakRequest,
@@ -316,5 +317,37 @@ describe("chunkIsAbandoned", () => {
     it("keeps everything when nothing was abandoned", () => {
         expect(chunkIsAbandoned(4, [])).toBe(false);
         expect(chunkIsAbandoned(4, undefined)).toBe(false);
+    });
+});
+
+describe("playthroughBackdrop", () => {
+    const story = [
+        { id: 1, type: "narrator", text: "morning on the quay" },
+        { id: 2, type: "scene_backdrop", backdrop: "night", previous_backdrop: "day", pending: false },
+        { id: 3, type: "narrator", text: "night falls" },
+        { id: 4, type: "scene_backdrop", backdrop: null, previous_backdrop: "night", pending: true },
+        { id: 5, type: "character", text: "let's go" },
+    ];
+
+    it("is the saved backdrop outside playthrough", () => {
+        expect(playthroughBackdrop(story, null, "night")).toBe("night");
+    });
+
+    it("shows what the first change replaced before it is revealed", () => {
+        expect(playthroughBackdrop(story, 1, "night")).toBe("day");
+    });
+
+    it("follows the latest revealed change", () => {
+        expect(playthroughBackdrop(story, 2, "day")).toBe("night");
+        expect(playthroughBackdrop(story, 5, "day")).toBe("night");
+    });
+
+    it("skips a pending change", () => {
+        const pendingOnly = [story[0], { ...story[3] }];
+        expect(playthroughBackdrop(pendingOnly, 2, "saved")).toBe("saved");
+    });
+
+    it("keeps the saved backdrop for stories without changes", () => {
+        expect(playthroughBackdrop(messages, 2, "saved")).toBe("saved");
     });
 });

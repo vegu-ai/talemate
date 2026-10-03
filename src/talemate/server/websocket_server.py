@@ -500,6 +500,19 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
     def handle_character_transition(self, emission: Emission):
         self.queue_put(transition_payload(self.scene, emission.message_object))
 
+    def handle_scene_backdrop(self, emission: Emission):
+        message = emission.message_object
+        self.queue_put(
+            {
+                "type": "scene_backdrop",
+                "id": message.id,
+                "backdrop": message.backdrop,
+                "previous_backdrop": message.previous_backdrop,
+                "pending": message.pending,
+                "flags": int(message.flags),
+            }
+        )
+
     def handle_context_investigation(self, emission: Emission):
         message_obj = emission.message_object
         asset_id = None

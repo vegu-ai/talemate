@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from _node_test_helpers import run_node
-from talemate.agents.world_state.nodes import DetermineAvatar
+from talemate.agents.world_state.nodes import DetermineVisual
 from talemate.character import Character
 from talemate.prompts import Prompt
 from talemate.prompts.response import AnchorExtractor, ResponseSpec
@@ -137,7 +137,7 @@ async def test_avatar_node_uses_original_generation_once(
     monkeypatch.setattr(Prompt, "send", send)
     prompt = Prompt.from_text("Select an avatar.", vars={})
     result = await run_node(
-        DetermineAvatar(),
+        DetermineVisual(),
         scene=c.scene,
         inputs={
             "state": True,

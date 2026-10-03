@@ -257,7 +257,7 @@ PAGE_TITLES: dict[str, tuple[str, str]] = {
     ),
     "assets": (
         "Asset Nodes",
-        "Scene asset CRUD: add, get, list, remove and update assets, cover and avatar images.",
+        "Scene asset CRUD: add, get, list, remove and update assets, cover, avatar and backdrop images.",
     ),
     "assets-meta": (
         "Asset Meta And Selection Nodes",

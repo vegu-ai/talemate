@@ -42,7 +42,9 @@ from talemate.scene_message import (
     SceneMessage,
     TimePassageMessage,
     ContextInvestigationMessage,
+    SceneBackdropMessage,
     MESSAGES as MESSAGE_TYPES,
+    NON_STORY_TYPES,
 )
 from talemate.util import count_tokens
 from talemate.util.prompt import condensed
@@ -920,6 +922,16 @@ class Scene(Emitter):
 
             return self.history[idx]
 
+    def last_story_message_index(self) -> int:
+        """
+        Index of the newest history entry that is part of the story text, or
+        -1 when there is none.
+        """
+        for idx in range(len(self.history) - 1, -1, -1):
+            if self.history[idx].typ not in NON_STORY_TYPES:
+                return idx
+        return -1
+
     def message_index(self, message_id: int) -> int:
         """
         Returns the index of the given message in the history
@@ -1109,6 +1121,7 @@ class Scene(Emitter):
                 ReinforcementMessage,
                 DirectorMessage,
                 ContextInvestigationMessage,
+                SceneBackdropMessage,
             ]
         else:
             # ignore me also be a list of message type strings (e.g. 'director')

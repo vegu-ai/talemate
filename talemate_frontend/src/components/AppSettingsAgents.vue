@@ -1,5 +1,5 @@
 <template>
-    <v-row>
+    <v-row ref="settingsContent">
         <v-col cols="4">
             <v-alert v-if="agents.length === 0" color="muted" variant="text" density="compact" icon="mdi-information-outline" class="mb-2">
                 Waiting for agent status.
@@ -108,6 +108,18 @@
                             </v-tooltip>
                         </v-expansion-panel-title>
                         <v-expansion-panel-text>
+                            <v-alert v-if="section.key === 'backgrounds' && backgroundGenerationBlocked"
+                                variant="outlined" density="compact" color="warning" icon="mdi-image-off-outline"
+                                class="mt-2 mb-4" data-background-generation-note>
+                                <div class="text-body-small text-mutedheader">No new backgrounds</div>
+                                <span class="text-muted text-body-small">Generate New Backgrounds is on, but the Visualizer has no image generation or image editing backend, so new backgrounds can't be generated. Existing scene backgrounds are still picked.</span>
+                                <div class="mt-1 ml-n2">
+                                    <v-btn size="x-small" variant="text" color="primary" class="text-none"
+                                        prepend-icon="mdi-cog-outline" @click="openVisualizerBackends">
+                                        Open Visualizer settings
+                                    </v-btn>
+                                </div>
+                            </v-alert>
                             <!-- GENERAL — client assignment (global only) and every
                                  non-container action, rendered by the mode's renderer -->
                             <template v-if="section.key === '_config'">
@@ -188,6 +200,7 @@ import {
     actionHasOverridable,
     countSceneOverrides,
     effectiveConditionMet,
+    effectiveConfigValue,
     sectionOverrideCounts,
 } from '@/constants/sceneAgentSettings';
 import {
@@ -325,6 +338,16 @@ export default {
         },
         schemaActions() {
             return this.selectedAgent?.data?.actions || {};
+        },
+        backgroundGenerationBlocked() {
+            if (this.selectedName !== 'world_state') return false;
+            const overlay = this.mode === 'scene' ? this.sceneOverlay : null;
+            if (effectiveConfigValue(this.effectiveActions, overlay, 'backgrounds.config.generate_new') !== true) {
+                return false;
+            }
+            const visual = this.effectiveActionsFor('visual');
+            return !effectiveConfigValue(visual, null, '_config.config.backend')
+                && !effectiveConfigValue(visual, null, '_config.config.backend_image_edit');
         },
         effortMode() {
             return effortMode(perspectivesEnabled(this.sceneData));
@@ -681,12 +704,18 @@ export default {
                 this.openPanels = this.sections.some(s => s.key === section) ? [section] : ['_config'];
                 this.snapOpenPanels();
                 this.$nextTick(() => {
-                    const el = this.$el.querySelector(`[data-agent-section="${section}"]`);
+                    // the template has two roots, so $el is not the panel
+                    const el = this.$refs.settingsContent?.$el?.querySelector(`[data-agent-section="${section}"]`);
                     if (el) {
                         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
                 });
             });
+        },
+
+        openVisualizerBackends() {
+            // the backends are global settings, hidden in scene mode
+            this.setSelection({ agent: 'visual', tab: '_config', mode: 'global' });
         },
 
         overrideCountLabel(count) {

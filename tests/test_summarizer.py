@@ -37,6 +37,7 @@ from talemate.knowledge.timeline import message_times
 from talemate.scene_message import (
     CharacterMessage,
     DirectorMessage,
+    SceneBackdropMessage,
     TimePassageMessage,
 )
 
@@ -277,6 +278,22 @@ class TestArchiveStatus:
         assert status["due"] is due
         assert status["due_reason"] == ("threshold" if due else None)
         assert status["remaining_tokens"] == remaining
+
+    def test_a_backdrop_entry_at_the_end_keeps_the_newest_reply_unarchived(
+        self, summarizer_scene
+    ):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 35)
+        scene.history = [
+            make_character_message("x" * 10),
+            make_character_message("y" * 10),
+            make_character_message("z" * 10),
+            SceneBackdropMessage(backdrop="harbour-night"),
+        ]
+
+        span = summarizer.collect_archive_span(scene)
+        assert span.end is None
+        assert summarizer.archive_status()["pending_tokens"] == 34
 
     def test_time_passage_cut_reports_zero_remaining(self, summarizer_scene):
         scene, summarizer = summarizer_scene

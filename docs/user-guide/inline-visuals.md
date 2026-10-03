@@ -128,7 +128,7 @@ Any scene illustration can be promoted to the **scene backdrop** — instead of 
 
 ![Scene backdrop active](/talemate/img/0.39.0/scene-backdrop-active.png)
 
-The backdrop belongs to the scene and is saved with it, so it survives reloads and history edits.
+The backdrop belongs to the scene and is saved with it, so it survives reloads and history edits. Each change is also recorded in the scene as a small **Backdrop** entry; [Playthrough](playthrough.md) uses these entries to show each passage with the backdrop it had. While Immersive is off, these entries show their image full width in the story.
 
 ### Setting a backdrop
 
@@ -138,6 +138,7 @@ There are several ways to set the backdrop:
 - **From the Visual Library** — select an asset in the Scene Assets tab and click **Set backdrop**
 - **From the world editor** — use the per-image actions in the [Scene Visual Manager](world-editor/scene/visuals.md) (World Editor → Scene → Visuals), which is also the place to fully **unset** the backdrop (the image stays in the scene assets)
 - **Automatically** — enable **Auto Backdrop** for Scene Illustrations and/or Scene Backgrounds in the [Appearance Settings](app-settings/appearance.md#visuals); newly generated images of that type then become the backdrop as they arrive
+- **As the story moves** — enable [Scene Backgrounds](agents/world-state/settings.md#scene-backgrounds) in the World State agent settings; the agent picks or generates a background that fits the current place and time of day
 
 ### The Immersive toggle
 

@@ -26,7 +26,7 @@ from talemate.knowledge.snapshots import (
 )
 from talemate.prompts import Prompt
 from talemate.agents.world_state.response_specs import EXAMINE_SPEC
-from talemate.scene_message import SceneMessage, TimePassageMessage
+from talemate.scene_message import NON_STORY_TYPES, SceneMessage, TimePassageMessage
 from talemate.world_state import INTRO_ANCHOR_ID, WorldStateResponse
 from talemate.world_state.merge import (
     apply_bucket_patch,
@@ -55,19 +55,6 @@ if TYPE_CHECKING:
     from talemate.world_state import WorldState
 
 log = structlog.get_logger("talemate.agents.world_state")
-
-# Message types skipped while `current_moment` walks scene.history
-# collecting focus lines. Every focus message ends up in `anchor_message_ids`
-# and can render inline highlights — so anything kept in this list is excluded
-# from the focus span and gets no highlights. `context_investigation` is the
-# soft case: the `include_context_investigation` config knob removes it from
-# the per-call ignore set when enabled.
-WORLD_STATE_SNAPSHOT_IGNORE = [
-    "reinforcement",
-    "director",
-    "context_investigation",
-    "character_transition",
-]
 
 # Opaque key for the world state snapshot's tracked single-flight task
 # (Agent.run_tracked_task) — internal, not user-facing. The manual add shares
@@ -948,7 +935,9 @@ class WorldStateSnapshotMixin:
         ignore set; when on it becomes a valid focus candidate that can also
         receive highlights.
         """
-        ignore_types = set(WORLD_STATE_SNAPSHOT_IGNORE)
+        # every focus message can render inline highlights, so an ignored
+        # type is excluded from the focus span and gets none
+        ignore_types = set(NON_STORY_TYPES)
         if self.update_world_state_include_context_investigation:
             ignore_types.discard("context_investigation")
 

@@ -147,6 +147,8 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/visual/modu
 | `prompt_only` | `bool` | (optional) |
 | `callback` | `function` | (optional) |
 | `asset_ctx` | `asset_attachment_context` | (optional) |
+| `purpose` | `str` | (optional) |
+| `references` | `list` | (optional) |
 
 **Outputs**
 
@@ -159,6 +161,8 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/visual/modu
 | `prompt_only` | `bool` |  |
 | `callback` | `function` |  |
 | `asset_ctx` | `asset_attachment_context` |  |
+| `purpose` | `str` |  |
+| `references` | `list` |  |
 | `prompt` | `str` |  |
 | `visual_prompt` | `visual/prompt` |  |
 | `generation_request` | `visual/generation_request` |  |

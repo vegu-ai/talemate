@@ -13,13 +13,7 @@ from .response_specs import (
     SUMMARY_SPEC,
     CHUNK_CLEAN_SPEC,
 )
-from talemate.scene_message import (
-    CharacterTransitionMessage,
-    DirectorMessage,
-    TimePassageMessage,
-    ContextInvestigationMessage,
-    ReinforcementMessage,
-)
+from talemate.scene_message import NON_STORY_TYPES, TimePassageMessage
 from talemate.world_state.templates import GenerationOptions
 from talemate.client import ClientBase
 from talemate.agents.base import (
@@ -36,7 +30,6 @@ from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
 
 from talemate.history import (
-    SPAN_LINE_EXCLUDED_TYPES,
     ArchiveEntry,
     render_span,
 )
@@ -300,7 +293,7 @@ class SummarizeAgent(
         """
         Walk the unarchived history the way the next archive would consume
         it: from the entry after the last archive end, skipping messages that
-        are not dialogue, ignoring the newest message (the user may still
+        are not dialogue, ignoring the newest story message (the user may still
         regenerate it), and stopping at a time passage, a presence change or
         the token threshold. `end` stays None while nothing is due.
         """
@@ -329,18 +322,10 @@ class SummarizeAgent(
 
         log.debug("build_archive", start=start, recent_entry=recent_entry)
 
-        for i in range(start, max(start, len(scene.history) - 1)):
+        for i in range(start, max(start, scene.last_story_message_index())):
             dialogue = scene.history[i]
 
-            if isinstance(
-                dialogue,
-                (
-                    DirectorMessage,
-                    ContextInvestigationMessage,
-                    ReinforcementMessage,
-                    CharacterTransitionMessage,
-                ),
-            ):
+            if dialogue.typ in NON_STORY_TYPES:
                 # these messages are not part of the dialogue and should not be summarized
                 if i == start:
                     start += 1
@@ -588,7 +573,7 @@ class SummarizeAgent(
         return [
             message
             for message in scene.history[entry.start : entry.end + 1]
-            if message.typ not in SPAN_LINE_EXCLUDED_TYPES
+            if message.typ not in NON_STORY_TYPES
         ]
 
     def _entry_span(self, scene, entry: ArchiveEntry):

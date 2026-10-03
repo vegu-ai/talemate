@@ -31,6 +31,8 @@ from talemate.agents.memory.rag import MemoryRAGMixin
 
 from .character_progression import CharacterProgressionMixin
 from .avatars import AvatarMixin
+from .backgrounds import BackgroundMixin
+from .visual_selection import VisualSelectionMixin
 from .snapshot import WorldStateSnapshotMixin
 from .snapshot import SNAPSHOT_TASK as SNAPSHOT_TASK
 from .reinforcements import WorldStateReinforcementsMixin
@@ -74,6 +76,8 @@ class WorldStateAgent(
     WorldStateQueriesMixin,
     CharacterProgressionMixin,
     AvatarMixin,
+    BackgroundMixin,
+    VisualSelectionMixin,
     Agent,
 ):
     """
@@ -97,6 +101,7 @@ class WorldStateAgent(
         MemoryRAGMixin.add_actions(actions)
         CharacterProgressionMixin.add_actions(actions)
         AvatarMixin.add_actions(actions)
+        BackgroundMixin.add_actions(actions)
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):

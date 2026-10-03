@@ -1,0 +1,58 @@
+{#-
+Extractors:
+  - response: AsIsExtractor()
+
+Override example:
+  {{ set_anchor_extractor("response", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("response") }}
+-#}
+<|SECTION:AVAILABLE BACKGROUNDS|>
+{% for asset in assets %}
+Name: {{ asset.meta.name }}
+ID: `{{ asset.id }}`
+Tags: {{ join(asset.meta.tags, ", ") }}
+---
+{% else %}
+No scene backgrounds yet.
+{% endfor %}
+<|CLOSE_SECTION|>
+
+<|SECTION:CURRENT BACKGROUND|>
+{% set current_asset = assets | selectattr("id", "equalto", current) | first if current else none %}
+{% if current_asset %}
+Name: {{ current_asset.meta.name }}
+ID: `{{ current }}`
+{% elif current %}
+ID: `{{ current }}` (not a scene background)
+{% else %}
+None
+{% endif %}
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+Pick the scene background that fits the place, time of day and situation of the following moment in the story:
+
+```
+{{ content }}
+```
+
+Respond with the asset id of the background within <ASSET_ID></ASSET_ID> tags.
+
+Keep the current background, by responding with its id, unless the story has moved to another place or the time of day, weather or lighting has clearly changed. Dialogue, mood and small movements within the same place do not need a different background. If an existing background already shows the place, pick it.
+
+IMPORTANT: The asset id is the `ID` value NOT the `Name` value.
+
+{% if generation_allowed %}
+If no background fits well, provide an empty <ASSET_ID></ASSET_ID> tag. An empty asset ID will prompt the generation of a new background. Request a new background when:
+- The story has moved to a place none of the backgrounds shows
+- The time of day, weather or lighting has changed so much that the available backgrounds would misrepresent the moment
+
+Never request a new background for a place an existing background already shows at that time of day.
+
+When you request a new background, also give it a short name within <NAME></NAME> tags (for example "Harbour at night") and describe it within <INSTRUCTIONS></INSTRUCTIONS> tags: the place, time of day, weather, lighting and mood. Describe the environment only, with no characters in it.
+
+If existing backgrounds should guide the new one, for example the same place at another time of day or a variation of it, list their ids within <REFERENCES></REFERENCES> tags, separated by commas. Leave the tag empty otherwise.
+{% else %}
+If no background fits well, choose the closest available match from the list above.
+{% endif %}
+<|CLOSE_SECTION|>

@@ -16,7 +16,7 @@ Every node available in the node editor, grouped by category. Each page lists th
 | [Agent Nodes](agents.md) | 9 | Generic agent interaction: get an agent, call agent functions, read and count agent state variables. |
 | [AI Function Nodes (Focal)](focal.md) | 8 | AI function calling: define callable functions and arguments, unpack calls and collect results. |
 | [Asset Meta And Selection Nodes](assets-meta.md) | 6 | Asset metadata, search, selection and attachment context for passing assets to generation. |
-| [Asset Nodes](assets.md) | 9 | Scene asset CRUD: add, get, list, remove and update assets, cover and avatar images. |
+| [Asset Nodes](assets.md) | 10 | Scene asset CRUD: add, get, list, remove and update assets, cover, avatar and backdrop images. |
 | [Context ID Nodes](context-id.md) | 11 | Context IDs: build, convert, compress, read and write context-addressable values and pins. |
 | [Conversation Agent Nodes](agents-conversation.md) | 2 | Generate character dialogue through the conversation agent. |
 | [Core Nodes](core.md) | 7 | Graph plumbing: module Input/Output/Property, Route, Watch, Null and Stage. |
@@ -59,9 +59,9 @@ Every node available in the node editor, grouped by category. Each page lists th
 | [Validation Nodes](validation.md) | 7 | Validate values: characters, asset IDs, context IDs, containment and set/unset checks. |
 | [Visualizer Agent Generation Nodes](agents-visual-generation.md) | 7 | Visual generation: generation requests, image generation, backend selection/status and image analysis. |
 | [Visualizer Agent Modules](agents-visual-modules.md) | 10 | Ready-made visual generation flows: generate visual assets, avatars, portraits, image edits and regenerations. |
-| [Visualizer Agent Prompt Nodes](agents-visual.md) | 8 | Visual prompt building: prompt parts, styles, finalization and unpacking. |
+| [Visualizer Agent Prompt Nodes](agents-visual.md) | 9 | Visual prompt building: prompt parts, styles, finalization and unpacking. |
 | [Voice Agent Nodes](agents-tts.md) | 8 | Text-to-speech: get and unpack voices, generate speech and read or rewrite generation text through the voice agent. |
 | [Websocket Nodes](websocket.md) | 4 | Websocket plumbing: routers, responses and operation done/failed signals. |
 | [World Entry Nodes](scene-world-state.md) | 8 | World entries (get, save, unpack, remove) and generation options: spices and writing styles. |
 | [World Panel Nodes](world-panel.md) | 2 | The characters, items, places and location the World State panel shows: read them, and add a person, object or place named in a message. |
-| [World State Agent Nodes](agents-world-state.md) | 14 | World state operations: time advancement, character progression, world state emission and extraction. |
+| [World State Agent Nodes](agents-world-state.md) | 16 | World state operations: time advancement, character progression, world state emission and extraction. |

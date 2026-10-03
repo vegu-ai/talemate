@@ -684,6 +684,7 @@ class GenerationRequestNode(AgentNode):
     - callback: callback function to run after generation (optional)
     - extra_config: additional configuration dict (optional)
     - asset_attachment_context: controls automatic asset attachment behavior (optional)
+    - purpose: why the image is generated, checked by Generation Running (optional)
 
     Outputs:
     - generation_request: the created generation request object
@@ -738,6 +739,12 @@ class GenerationRequestNode(AgentNode):
             description="The instructions for the generation request",
             default="",
         )
+        purpose = PropertyField(
+            name="purpose",
+            type="str",
+            description="Why the image is generated, checked by Generation Running",
+            default="",
+        )
 
     def __init__(self, title="Visual Generation Request", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -757,12 +764,14 @@ class GenerationRequestNode(AgentNode):
             socket_type="asset_attachment_context",
             optional=True,
         )
+        self.add_input("purpose", socket_type="str", optional=True)
         self.set_property("vis_type", "UNSPECIFIED")
         self.set_property("gen_type", "TEXT_TO_IMAGE")
         self.set_property("format", "LANDSCAPE")
         self.set_property("character_name", "")
         self.set_property("instructions", "")
         self.set_property("extra_config", {})
+        self.set_property("purpose", "")
         self.add_output("generation_request", socket_type="visual/generation_request")
         self.add_output("prompt", socket_type="visual/prompt")
         self.add_output("vis_type", socket_type="str")
@@ -807,6 +816,7 @@ class GenerationRequestNode(AgentNode):
             extra_config=extra_config,
             asset_attachment_context=asset_attachment_context
             or AssetAttachmentContext(),
+            purpose=self.normalized_input_value("purpose") or None,
         )
         self.set_output_values(
             {
@@ -867,6 +877,51 @@ class GenerateImage(AgentNode):
                 "generation_response": response,
             }
         )
+
+
+@register("agents/visual/GenerationRunning")
+class GenerationRunning(AgentNode):
+    """
+    Whether image generations for a purpose are still running in the active
+    scene. A generation counts from its request until its image is saved, or
+    until it fails or is cancelled. The purpose is the one given to the
+    Visual Generation Request (or to Generate Visual Asset).
+
+    Inputs:
+
+    - purpose: The purpose to check
+
+    Outputs:
+
+    - running: True while at least one generation for the purpose runs
+    - count: How many generations for the purpose are running
+    """
+
+    _agent_name: ClassVar[str] = "visual"
+
+    class Fields:
+        purpose = PropertyField(
+            name="purpose",
+            type="str",
+            description="The purpose to check",
+            default="",
+        )
+
+    def __init__(self, title="Generation Running", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("purpose", socket_type="str", optional=True)
+        self.set_property("purpose", "")
+        self.add_output("running", socket_type="bool")
+        self.add_output("count", socket_type="int")
+
+    async def run(self, state: GraphState):
+        purpose = self.require_input("purpose")
+        if not purpose:
+            raise InputValueError(self, "purpose", "Give the purpose to check.")
+        count = self.agent.generations_running(purpose)
+        self.set_output_values({"running": count > 0, "count": count})
 
 
 @register("agents/visual/UnpackGenerationRequest")

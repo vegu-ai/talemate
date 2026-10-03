@@ -170,6 +170,51 @@ For example, if a character is described as wearing formal attire at a party but
 
 When a new portrait is generated, it is automatically added to the character's portrait collection and tagged based on the scene context.
 
+## Scene Backgrounds
+
+![World state agent scene backgrounds settings](/talemate/img/0.40.0/world-state-scene-backgrounds-settings.png)
+
+The Scene Backgrounds settings let the World State Agent keep the scene backdrop fitting the story while you play. When the story moves from the harbour at noon to a lantern-lit tavern at night, the agent can switch to a matching background you already have, or generate a new one.
+
+Scene Backgrounds is off by default. Every check sends a model request, and a new background is also an image request.
+
+### Background Selection
+
+##### Selection Frequency
+
+Controls how often the World State Agent checks whether the current background still fits the story.
+
+- **0**: Never (the default; the feature is off)
+- **1**: Check with every new character or narrator message
+- **2-10**: Check every N messages
+
+Player messages count, director notes and time passages do not. While a new background for the scene is still being generated, the agent skips the check, so the same place is not generated twice.
+
+The agent picks from the scene's **Scene Background** images. You can add and tag them in the [World Editor under Scene > Visuals](/talemate/user-guide/world-editor/scene/visuals/) or generate them with the [Visualizer](/talemate/user-guide/agents/visualizer/). Names and tags such as "harbour", "night" or "rain" help the agent choose.
+
+### Use Decision Model
+
+On by default. With a decision model configured, the agent first asks it whether the current background still fits, and which existing background fits best. When the decision model is sure, that answer is used without the usual LLM request. When it is not sure, or the decision fails, the usual request runs once.
+
+An incorrect confident answer can miss a change of setting. Turn this option off to always use the usual request. The editable policy is `world_state.decision-background` in **Prompts**, and its decisions appear in **Decision Log**.
+
+### Generate New Backgrounds
+
+##### Generate New Backgrounds
+
+Off by default. When enabled and no existing background fits, the agent describes the background the moment needs and the [Visualizer](/talemate/user-guide/agents/visualizer/) generates it in the scene background style. If an existing background is a good starting point, for example the same harbour by day when the story needs it at night, the agent can name it as a reference, and an image editing backend creates a variation of it.
+
+While the image is generated, a **Generating background…** entry appears in the scene. When the image is ready it becomes the backdrop and is saved to the scene's visuals.
+
+!!! warning "Prerequisites"
+    This feature requires a Visualizer with an image generation or image editing backend configured. Without one, the Scene Backgrounds settings show a **No new backgrounds** note with a link to the Visualizer settings, and the agent only picks from existing backgrounds.
+
+### Backdrop changes in the scene
+
+Every backdrop change, whether chosen by the agent or set by you with **Set as scene backdrop**, adds a small **Backdrop** entry to the scene. Several changes in a row with no story in between share one entry. Click it to preview the image. While Immersive is off, the entry shows the image full width in the story instead, the same way a Scene Background attached to a message shows at the **Big** display size. [Playthrough](/talemate/user-guide/playthrough/) uses these entries to show each passage with the backdrop it had. Removing an entry only removes the record; it does not change the current backdrop.
+
+The [Immersive](/talemate/user-guide/inline-visuals/#the-immersive-toggle) toggle still decides whether the backdrop is shown at all.
+
 ## Long Term Memory
 
 When generating the [world state snapshot](/talemate/user-guide/world-state/), the agent pulls in relevant long-term memory so the snapshot can build on established lore and earlier scene history. Semantic recall is always used and is on by default.

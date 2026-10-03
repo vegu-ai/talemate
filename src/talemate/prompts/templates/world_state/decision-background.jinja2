@@ -1,0 +1,23 @@
+{% set threshold = 0.9 %}
+{% set options = {"none": "None of the existing backgrounds fits well; use the usual selection or generation request."} %}
+{% for id, background in state.backgrounds.items() %}
+    {% set _ = options.update({id: (background.name or id) ~ ": " ~ (background.tags | join(", "))}) %}
+{% endfor %}
+{% set r = decide("background-selection", state=state, questions={
+    "fits_current": {"type": "noul", "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the background name and tags. If there is no current background, answer no."},
+    "background": {"type": "choice", "instructions": "Which existing scene background fits the place, time of day and situation of this moment? Choose none if none fits well.", "options": options}
+}) %}
+{% set p = r.answers.fits_current.p_true %}
+{% set choice = r.answers.background %}
+{% if state.current_background and p >= threshold %}
+    {% set background = state.current_background %}
+    {% set reason = "current_background_fits" %}
+{% elif choice.confidence >= threshold and choice.selected in state.backgrounds %}
+    {% set background = choice.selected %}
+    {% set reason = "confident_existing_background" %}
+{% else %}
+    {% set background = none %}
+    {% set reason = "no_confident_existing_background" %}
+{% endif %}
+{{ decision_outcome(r, "select_background" if background else "fallback", reason=reason, background=background, p_true=p, confidence=[p, 1 - p] | max, choice_confidence=choice.confidence, threshold=threshold) }}
+{{ decision_result(agent_action("gate", "resolve", answers={"background": background}, _decision=r)) }}

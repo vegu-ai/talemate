@@ -48,6 +48,7 @@ Note:
 | `current_avatar` | `bool` | (optional) whether to set the current avatar image |
 | `override_default_avatar` | `bool` | (optional) whether to override the default avatar image (requires default_avatar=true) |
 | `override_current_avatar` | `bool` | (optional) whether to override the current avatar image (requires current_avatar=true) |
+| `scene_backdrop` | `bool` | (optional) whether the saved image becomes the scene backdrop; while it is generated, a pending backdrop message waits for it in the history |
 
 **Outputs**
 
@@ -68,6 +69,7 @@ Note:
 | `current_avatar` | `bool` | current avatar flag (passed through) |
 | `override_default_avatar` | `bool` | default avatar override flag (passed through) |
 | `override_current_avatar` | `bool` | current avatar override flag (passed through) |
+| `scene_backdrop` | `bool` | scene backdrop flag (passed through) |
 
 **Properties**
 
@@ -87,6 +89,7 @@ Note:
 | `current_avatar` | `bool` | `False` | Whether to set the current avatar image |
 | `override_default_avatar` | `bool` | `False` | Whether to override the default avatar image (requires default_avatar=true) |
 | `override_current_avatar` | `bool` | `False` | Whether to override the current avatar image (requires current_avatar=true) |
+| `scene_backdrop` | `bool` | `False` | Whether the saved image becomes the scene backdrop |
 
 ## Make Asset Meta
 

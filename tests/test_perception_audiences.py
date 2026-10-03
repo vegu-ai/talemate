@@ -1,5 +1,6 @@
 from _knowledge_step_helpers import push_and_step
-from talemate.knowledge.step import knowledge_step
+from talemate.knowledge.status import knowledge_sync
+from talemate.knowledge.step import repair_knowledge
 import asyncio
 import json
 from pathlib import Path
@@ -10,7 +11,6 @@ import pytest
 from talemate.agents.context import ActiveAgent
 from talemate.agents.summarize.perceptions import (
     passage_provenance,
-    perception_backlog,
     perception_results_current,
 )
 from talemate.character import Character
@@ -151,16 +151,13 @@ async def test_verb_secret_speaker_keeps_unseen_aside(audience_scene):
 
 
 @pytest.mark.asyncio
-async def test_passthrough_backlog_needs_no_confirmation(audience_scene, monkeypatch):
+async def test_passthrough_lines_need_no_request(audience_scene):
     scene, summarizer, request = audience_scene
-    ask = AsyncMock(side_effect=AssertionError("No analysis needs approval"))
-    monkeypatch.setattr(summarizer, "_ask_backlog", ask)
     messages = [CharacterMessage(message=f"Alice: Bell {index}.") for index in range(5)]
     await asyncio.wait_for(push_and_step(scene, messages), 3)
     assert all(perception_results_current(scene, message) for message in messages)
-    assert perception_backlog(scene, messages).total == 0
+    assert knowledge_sync(scene).passages == 0
     request.assert_not_awaited()
-    ask.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -393,7 +390,8 @@ async def test_audience_retry_preserves_manual_view_unless_context_changes(
         await refresh_revision(scene, message)
         assert message.revision_state.status == "clean"
     else:
-        await knowledge_step(scene)
+        # a passage with a built view is not new: Repair analyzes the rest
+        await repair_knowledge(scene)
     expected = [["Bob", "Cora"], ["Cora"]] if enabled else [["Cora"], ["Bob", "Cora"]]
     if change_context:
         expected[1].insert(0, "Alice")

@@ -966,12 +966,13 @@ async def test_cancelled_direct_delete_removes_stale_audience_projection(
     assert "Common rain lore." not in stored["documents"]
 
 
-async def test_keep_returns_the_kept_views_to_the_audience_index(indexed_scene):
-    from talemate.agents.summarize.perceptions import keep_stored_perceptions
+async def test_stale_views_stay_in_the_audience_index(indexed_scene):
     from talemate.knowledge.perspective_models import content_digest
 
     scene, memory, message = indexed_scene
+    object.__setattr__(message, "present", ["Elmer", "Marie"])
     kept = "Marie carries a lantern."
+    await memory.rebuild_audience_index()
     assert any(kept in text for text in await contents(memory))
     object.__setattr__(
         message,
@@ -981,8 +982,5 @@ async def test_keep_returns_the_kept_views_to_the_audience_index(indexed_scene):
         ),
     )
     await memory.rebuild_audience_index()
-    assert not any(kept in text for text in await contents(memory))
-
-    keep_stored_perceptions(scene, [message])
-
+    # out of sync, but still what the character last knew
     assert any(kept in text for text in await contents(memory))

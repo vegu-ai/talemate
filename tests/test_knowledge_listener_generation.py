@@ -8,13 +8,12 @@ import asyncio
 import json
 
 import pytest
-from _perception_backlog_helpers import answering
 from structlog.testing import capture_logs
 
 import talemate.emit.async_signals as async_signals
 from talemate.instance import get_agent
 from talemate.knowledge.revision_refresh import revision_requires_refresh
-from talemate.knowledge.step import knowledge_step
+from talemate.knowledge.step import knowledge_step, repair_knowledge
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage, NarratorMessage
 
@@ -42,7 +41,8 @@ async def flow(audience_scene, monkeypatch, isolate_signals):
     async def answer(uid, *args, **kwargs):
         if uid == "summarizer.perceptions":
             return await perceive(uid, *args, **kwargs)
-        narrations.append(pending(scene))
+        # the generation runs with the edit still flagged: no automatic repair
+        narrations.append(pending(scene) == [earlier.id])
         return "The rain stops.", {
             "response": "The rain stops.",
             "analysis": "The rain stops.",
@@ -93,7 +93,7 @@ async def test_query_scene_from_a_player_line_listener(flow):
     on_player_line(query)
     await send_player_line()
     assert answers == ["Question: Is the bell quiet? Answer: The rain stops."]
-    assert narrations == [[]]
+    assert narrations == [True]
 
 
 @pytest.mark.asyncio
@@ -116,7 +116,7 @@ async def test_concurrent_batch_query_scene_from_a_player_line_listener(flow, co
     await send_player_line()
     [result] = answers
     assert sorted(result) == [str(index) for index in range(count)]
-    assert narrations == [[]] * count
+    assert narrations == [True] * count
 
 
 @pytest.mark.asyncio
@@ -133,7 +133,7 @@ async def test_scripting_api_narrate_query_from_a_player_line_listener(flow):
     on_player_line(query)
     await send_player_line()
     assert answers == ["The rain stops."]
-    assert narrations == [[]]
+    assert narrations == [True]
 
 
 @pytest.mark.asyncio
@@ -165,7 +165,7 @@ async def test_nested_query_in_a_task_of_its_listener(flow, parent_wait):
     assert pending(scene) == [earlier.id]
     later = await asyncio.wait_for(narrator.narrate_query("And now?"), timeout=10)
     assert later == "The rain stops."
-    assert narrations == [[], []]
+    assert narrations == [True, True]
 
 
 @pytest.mark.asyncio
@@ -181,8 +181,8 @@ async def test_perception_listener_of_a_step_can_query(flow):
     async_signals.get("agent.summarization.perceptions.after").connect(after)
     try:
         await send_player_line()
-        # the knowledge step of the next generation
-        await asyncio.wait_for(knowledge_step(scene), timeout=10)
+        # Repair analyzes the edited passage and the new line
+        await asyncio.wait_for(repair_knowledge(scene), timeout=10)
     finally:
         async_signals.get("agent.summarization.perceptions.after").disconnect(after)
     assert answers == ["The rain stops.", "The rain stops."]
@@ -251,7 +251,7 @@ async def test_perception_listener_can_start_a_director_action(
     try:
         with capture_logs() as logs:
             await send_player_line()
-            await asyncio.wait_for(knowledge_step(scene), timeout=20)
+            await asyncio.wait_for(repair_knowledge(scene), timeout=20)
     finally:
         async_signals.get("agent.summarization.perceptions.after").disconnect(after)
     assert not [log for log in logs if log["event"] == "Error in signal receiver"]
@@ -259,7 +259,7 @@ async def test_perception_listener_can_start_a_director_action(
 
 
 @pytest.mark.asyncio
-async def test_line_after_a_failed_step_is_analyzed_by_the_next_step(flow):
+async def test_a_line_whose_analysis_failed_waits_for_repair(flow):
     from talemate.agents.summarize.perceptions import perception_results_current
 
     scene, narrator, narrations, on_player_line, send_player_line = flow
@@ -278,6 +278,8 @@ async def test_line_after_a_failed_step_is_analyzed_by_the_next_step(flow):
         await asyncio.wait_for(knowledge_step(scene), timeout=10)
     assert failed
     await asyncio.wait_for(knowledge_step(scene), timeout=10)
+    assert not perception_results_current(scene, line)
+    await asyncio.wait_for(repair_knowledge(scene), timeout=10)
     assert pending(scene) == []
     assert perception_results_current(scene, line)
 
@@ -307,7 +309,7 @@ async def test_graph_listener_query_scene_on_a_player_line(flow):
     scene.signals["game_loop_new_message"].connect(listener.execute_from_event)
     await send_player_line()
     assert answers == ["Question: Is the bell quiet? Answer: The rain stops."]
-    assert narrations == [[]]
+    assert narrations == [True]
 
 
 @pytest.mark.asyncio
@@ -330,7 +332,7 @@ async def test_revision_saved_receiver_during_a_refresh_can_query(flow, monkeypa
     signal.connect(saved)
     try:
         # the receivers run after the step, before it returns
-        await asyncio.wait_for(knowledge_step(scene), timeout=10)
+        await asyncio.wait_for(repair_knowledge(scene), timeout=10)
     finally:
         signal.disconnect(saved)
     assert answers == ["The rain stops.", "The rain stops."]
@@ -351,10 +353,10 @@ async def test_a_step_waits_for_a_step_that_is_still_saving(flow, monkeypatch):
             raise RuntimeError("disk full")
 
     monkeypatch.setattr(scene, "attempt_auto_save", save)
-    first = asyncio.create_task(knowledge_step(scene))
+    first = asyncio.create_task(repair_knowledge(scene))
     await asyncio.wait_for(last_save.wait(), timeout=10)
     assert pending(scene) == []
-    second = asyncio.create_task(knowledge_step(scene))
+    second = asyncio.create_task(repair_knowledge(scene))
     await asyncio.sleep(0.05)
     assert not second.done()
     release.set()
@@ -398,7 +400,7 @@ async def test_config_changed_during_a_step_is_sent_after_release(
 
 
 @pytest.mark.asyncio
-async def test_one_answer_rebuilds_every_summary_of_the_refresh_and_the_step(
+async def test_the_step_builds_new_summaries_and_repair_settles_the_edit(
     audience_scene, monkeypatch
 ):
     from talemate.history import ArchiveEntry
@@ -434,12 +436,11 @@ async def test_one_answer_rebuilds_every_summary_of_the_refresh_and_the_step(
         return requested
 
     monkeypatch.setattr(summarizer, "ensure_summary_views", recorded)
-    frames = []
-    with answering("analyze", frames):
-        await asyncio.wait_for(knowledge_step(scene), timeout=10)
-    assert len(frames) == 1
-    assert frames[0]["summaries"]["rebuild"]["entries"] == 4
-    assert pending(scene) == []
+    await asyncio.wait_for(knowledge_step(scene), timeout=10)
+    # the new entries are built; the edit stays flagged
+    assert pending(scene) == [lines[0].id]
     assert len(built) == 4
-    assert any(refreshing for _, refreshing in built)
+    assert not any(refreshing for _, refreshing in built)
     assert not summarizer._summary_dirty[scene]
+    await asyncio.wait_for(repair_knowledge(scene), timeout=10)
+    assert pending(scene) == []

@@ -1,5 +1,5 @@
 from _knowledge_step_helpers import push_and_step
-from talemate.knowledge.step import knowledge_step
+from talemate.knowledge.step import knowledge_step, repair_knowledge
 import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
@@ -330,29 +330,30 @@ async def test_blocked_perception_keeps_canonical_entry_and_answer_together(
     )
     assert new_answer in canonical
     request.return_value = response(Alice="Alice sees darkness.", Bob=None)
-    await knowledge_step(scene)
+    # the failed analysis waits for Repair
+    await repair_knowledge(scene)
     assert reinforcement.context_for(scene, "Alice") == prefix + "Alice sees darkness."
 
 
-@pytest.mark.parametrize("status", ["pending", "failed"])
-async def test_index_skip_reports_viewer_entry_and_failure_state(
-    setup, monkeypatch, status
-):
+async def test_index_keeps_an_out_of_sync_reinforcement_view(setup, monkeypatch):
     import talemate.knowledge.memory as module
 
     scene, summarizer, request = setup
     reinforcement = await cases.apply(scene, request)
     reinforcement.perspective_source.message += " Edited."
     reinforcement.answer = reinforcement.perspective_source.message
-    summarizer._perception_status(scene, reinforcement.perspective_source, status)
+    summarizer._perception_status(scene, reinforcement.perspective_source, "pending")
+    assert all(
+        view.stale
+        for view in reinforcement.perspective_source.knowledge.views
+        if view.status in ("ready", "omitted")
+    )
     debug = Mock()
     monkeypatch.setattr(module.log, "debug", debug)
     audience_documents(scene)
-    assert any(
-        call.args == ("reinforcement_memory.skip",)
-        and call.kwargs["entry_id"] == cases.QUESTION
-        and call.kwargs["viewer"] == "Alice"
-        and status in call.kwargs["status"]
+    # the last view stays in the index until a repair
+    assert not any(
+        call.args == ("reinforcement_memory.skip",) and call.kwargs["viewer"] == "Alice"
         for call in debug.call_args_list
     )
 

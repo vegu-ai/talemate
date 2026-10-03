@@ -8,9 +8,11 @@ from talemate.knowledge.schema import (
     ReinforcementEntry,
     is_memory_attribute,
 )
-from talemate.knowledge.rename import rename_knowledge_references
-from talemate.knowledge.memory import invalidate_memory_audiences
-from talemate.knowledge.perspectives import validate_character_rename
+from talemate.scene_signals import (
+    character_changed,
+    character_renamed,
+    character_renaming,
+)
 from pydantic import ConfigDict
 import structlog
 import random
@@ -324,6 +326,16 @@ class Character(pydantic.BaseModel):
 
         return "\n".join(sheet_list)
 
+    def _signal_changed(self) -> None:
+        scene = active_scene.get()
+        if scene is not None:
+            character_changed.send(scene, character=self)
+
+    def validate_rename(self, new_name: str, scene=None) -> None:
+        """Raise ValueError when the scene cannot take the new name."""
+        if scene is not None:
+            character_renaming.send(scene, character=self, new_name=new_name)
+
     def rename(self, new_name: str):
         """
         Rename the character.
@@ -336,15 +348,13 @@ class Character(pydantic.BaseModel):
         """
 
         scene = active_scene.get()
-        if scene is not None:
-            validate_character_rename(scene, self, new_name)
+        self.validate_rename(new_name, scene)
         orig_name = self.name
         self.name = new_name
 
         if scene is not None:
-            rename_knowledge_references(scene, orig_name, new_name)
+            character_renamed.send(scene, old=orig_name, new=new_name)
 
-        invalidate_memory_audiences(scene)
         if orig_name.lower() == "you":
             # we dont want to replace "you" in the description
             # or anywhere else so we can just return here
@@ -403,7 +413,7 @@ class Character(pydantic.BaseModel):
                 setattr(self, key, value)
 
         self.memory_dirty = True
-        invalidate_memory_audiences(active_scene.get())
+        self._signal_changed()
 
     async def set_acting_instructions(self, instructions: str | None):
         """
@@ -617,7 +627,7 @@ class Character(pydantic.BaseModel):
             self.reinforcement_entries.pop(name, None)
         self.details[name] = value
         self.memory_dirty = True
-        invalidate_memory_audiences(active_scene.get())
+        self._signal_changed()
 
     def get_detail(self, name: str):
         return self.details.get(name)
@@ -645,7 +655,7 @@ class Character(pydantic.BaseModel):
     def set_base_attribute_defer(self, name: str, value):
         self.base_attributes[name] = value
         self.memory_dirty = True
-        invalidate_memory_audiences(active_scene.get())
+        self._signal_changed()
 
     def get_base_attribute(self, name: str):
         return self.base_attributes.get(name)
@@ -754,7 +764,7 @@ class Character(pydantic.BaseModel):
             self.details[detail] = other_character.details[detail]
 
         self.memory_dirty = True
-        invalidate_memory_audiences(active_scene.get())
+        self._signal_changed()
 
 
 class VoiceChangedEvent(pydantic.BaseModel):

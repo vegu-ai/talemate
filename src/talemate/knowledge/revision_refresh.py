@@ -1,5 +1,6 @@
 """Revision refresh coordination shared by explicit keep and next-send catch-up."""
 
+import asyncio
 import hashlib
 import json
 from contextlib import contextmanager
@@ -8,7 +9,7 @@ from weakref import WeakKeyDictionary
 import structlog
 from pydantic import BaseModel, ConfigDict
 
-from talemate.agents.summarize.perceptions import eligible_passage
+from talemate.agents.summarize.perceptions import eligible_passage, never_analyzed
 from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
 from talemate.knowledge.mode import character_knowledge_enabled
@@ -113,6 +114,38 @@ def _receipts_current(scene, message, operations: RevisionOperations, *, state=N
     )
 
 
+def turn_analyzes_revision(message) -> bool:
+    """
+    A pending revision the turn's knowledge step analyzes as a new line: one
+    revised before its first analysis, or a reply regenerated or continued
+    since its kept version. Other revisions (hand edits, a revision of a kept
+    reply) stay flagged until a repair.
+    """
+    if message.knowledge is None:
+        return True
+    # a failed analysis waits for a repair, a regenerated reply's included
+    if message.revision_state.status == "failed":
+        return False
+    if never_analyzed(message):
+        return True
+    # the kept version was analyzed when it was new; an edit elsewhere, or a
+    # hand edit of it in place, only flags it
+    if (
+        message.revision_matches_baseline
+        or message.active_version == message.revision_state.baseline_index
+    ):
+        return False
+    # the selected version, or one made since the kept one (the Editor's
+    # revision of a regenerated reply follows the regeneration)
+    versions = message.versions
+    index = message.active_version
+    since = versions[message.revision_state.baseline_index + 1 :]
+    selected = [versions[index]] if 0 <= index < len(versions) else []
+    return any(
+        version.source in ("regenerate", "continue") for version in (*selected, *since)
+    )
+
+
 def revision_requires_refresh(scene, message, operations=None) -> bool:
     """Include missing revised-source results without backfilling pristine history."""
     return bool(
@@ -136,7 +169,7 @@ def _revision_work_required(scene, message, operations=None) -> bool:
     if operations.perceptions:
         from talemate.agents.summarize.perceptions import perception_results_current
 
-        return not perception_results_current(scene, message)
+        return not perception_results_current(scene, message, inherited=False)
     return False
 
 
@@ -181,12 +214,34 @@ def revision_refresh_payload(
             "explanation": explanation,
             "running_label": running,
             "deferred_hint": (
-                "If you skip it, this runs when you send your next line."
+                (
+                    "If you skip it, it stays out of sync until you choose Repair."
+                    if operations.perceptions
+                    and not repair_only
+                    and not turn_analyzes_revision(message)
+                    else "If you skip it, this runs when you send your next line."
+                )
                 if dirty and (operations.any or pending_repair)
                 else None
             ),
         }
     }
+
+
+def revision_refreshes(scene) -> list[dict]:
+    """The refresh state of every message with a revision stack."""
+    refreshes = []
+    for message in scene.history:
+        if message.revision_state is None:
+            continue
+        payload = revision_refresh_payload(
+            scene, message, skip_history_membership_check=True
+        )
+        item = {"id": message.id, **payload}
+        if payload["revision_refresh"]["required"]:
+            item["archive_ids"] = sorted(affected_archive_ids(scene, message))
+        refreshes.append(item)
+    return refreshes
 
 
 def _scene_owned(scene) -> bool:
@@ -651,7 +706,9 @@ async def reconcile_revision_archive_vectors(
     return complete
 
 
-async def _refresh_perceptions(scene, message, identity, operations):
+async def _refresh_perceptions(
+    scene, message, identity, operations, *, repair=False, attempted=None
+):
     from talemate.agents.summarize.perceptions import (
         PerceptionInputsChanged,
         perception_results_current,
@@ -672,6 +729,8 @@ async def _refresh_perceptions(scene, message, identity, operations):
             scene,
             before_message_id=message.id,
             still_current=operation_current,
+            repair=repair,
+            attempted=attempted,
         )
     while True:
         perception_identity = _phase_identity(scene, message)
@@ -691,7 +750,9 @@ async def _refresh_perceptions(scene, message, identity, operations):
             raise GenerationCancelled("The selected version changed during analysis")
         if message.revision_state.phase_receipts.get(
             "refresh:perceptions"
-        ) == perception_identity and perception_results_current(scene, message):
+        ) == perception_identity and perception_results_current(
+            scene, message, inherited=False
+        ):
             return
         receipts = dict(message.revision_state.phase_receipts)
         # Missing source results revoke completion of the whole phase, even
@@ -701,7 +762,13 @@ async def _refresh_perceptions(scene, message, identity, operations):
         message.set_revision_status("running", phase_receipts=receipts)
         try:
             with revision_phase(scene, message, "perceptions"):
-                await summarizer.ensure_perceptions(scene, still_current=still_current)
+                await summarizer.ensure_perceptions(
+                    scene,
+                    still_current=still_current,
+                    targets=(message.id,),
+                    in_repair=repair,
+                    attempted=attempted,
+                )
             if not still_current():
                 raise GenerationCancelled(
                     "The selected version changed during analysis"
@@ -720,7 +787,7 @@ async def _refresh_perceptions(scene, message, identity, operations):
             if exc.invalidate:
                 warn_perception_regeneration(message)
             continue
-        if not perception_results_current(scene, message):
+        if not perception_results_current(scene, message, inherited=False):
             raise GenerationCancelled(
                 "Selected-source perception results are not ready"
             )
@@ -732,7 +799,15 @@ async def _refresh_perceptions(scene, message, identity, operations):
         return
 
 
-async def _refresh(scene, message, identity: str, operations: RevisionOperations):
+async def _refresh(
+    scene,
+    message,
+    identity: str,
+    operations: RevisionOperations,
+    *,
+    repair=False,
+    attempted=None,
+):
     from talemate.agents.summarize.perceptions import perception_results_current
 
     begin_revision_transaction(scene, message)
@@ -742,7 +817,9 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
     rollback_journal = None
     try:
         if operations.perceptions:
-            await _refresh_perceptions(scene, message, identity, operations)
+            await _refresh_perceptions(
+                scene, message, identity, operations, repair=repair, attempted=attempted
+            )
 
         def transaction_current():
             return (
@@ -750,7 +827,7 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
                 and _receipts_current(scene, message, operations)
                 and (
                     not operations.perceptions
-                    or perception_results_current(scene, message)
+                    or perception_results_current(scene, message, inherited=False)
                 )
             )
 
@@ -772,7 +849,8 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
         if not (
             _current(scene, message, identity, operations)
             and (
-                not operations.perceptions or perception_results_current(scene, message)
+                not operations.perceptions
+                or perception_results_current(scene, message, inherited=False)
             )
             and _receipts_current(
                 scene,
@@ -790,13 +868,21 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
             emit_perception_status(scene, message, "ready")
         scene.emit_status()
         return revision_refresh_payload(scene, message)
-    except BaseException:
+    except BaseException as exc:
         if _current(scene, message, identity, operations):
-            message.set_revision_status("failed")
+            # a Stop leaves the revision pending; only a failure is "failed"
+            stopped = isinstance(exc, asyncio.CancelledError) or (
+                isinstance(exc, GenerationCancelled)
+                and exc.by_user
+                and exc.view_status != "failed"
+            )
+            message.set_revision_status("deferred" if stopped else "failed")
             if operations.perceptions:
                 from talemate.knowledge.readiness import emit_perception_status
 
-                emit_perception_status(scene, message, "failed")
+                emit_perception_status(
+                    scene, message, "deferred" if stopped else "failed"
+                )
             scene.emit_status()
             try:
                 await scene.attempt_auto_save()
@@ -856,11 +942,15 @@ async def _repair_restored_indexes(scene, message) -> bool:
     return True
 
 
-async def _refresh_revision(scene, message, identity, operations):
+async def _refresh_revision(
+    scene, message, identity, operations, *, analyze=True, repair=False, attempted=None
+):
     if not _current(scene, message, identity, operations):
         raise GenerationCancelled("The selected version changed before refresh")
     repaired = await _repair_restored_indexes(scene, message)
-    if not _revision_work_required(scene, message, operations):
+    if not _revision_work_required(scene, message, operations) or (
+        operations.perceptions and not analyze
+    ):
         if repaired:
             await scene.attempt_auto_save()
         return revision_refresh_payload(scene, message)
@@ -914,16 +1004,37 @@ async def _refresh_revision(scene, message, identity, operations):
             raise
         scene.emit_status()
         return revision_refresh_payload(scene, message)
-    return await _refresh(scene, message, identity, operations)
+    return await _refresh(
+        scene, message, identity, operations, repair=repair, attempted=attempted
+    )
 
 
-async def refresh_revision(scene, message):
-    """Settle one revision."""
+async def refresh_revision(
+    scene,
+    message,
+    *,
+    analyze: bool = True,
+    repair: bool = False,
+    attempted: set[int] | None = None,
+):
+    """
+    Settle one revision; without `analyze`, a perception analysis waits. With
+    `repair`, the out-of-sync passages before it are analyzed first.
+    `attempted` is the knowledge step's, see `ensure_perceptions`.
+    """
     if not revision_requires_refresh(scene, message):
         return revision_refresh_payload(scene, message)
     operations = revision_operations(scene, message)
     identity = _identity(scene, message, operations)
-    return await _refresh_revision(scene, message, identity, operations)
+    return await _refresh_revision(
+        scene,
+        message,
+        identity,
+        operations,
+        analyze=analyze,
+        repair=repair,
+        attempted=attempted,
+    )
 
 
 def revisions_before_rebuild(scene) -> list:
@@ -969,11 +1080,36 @@ async def _repair_scene_indexes(scene) -> None:
         log.warning("Scene knowledge update deferred", error=str(exc))
 
 
-async def catch_up_revisions(scene) -> None:
-    """Settle every pending revision in history order."""
+async def catch_up_revisions(
+    scene,
+    *,
+    analyze: bool = True,
+    past_failures: bool = False,
+    attempted: set[int] | None = None,
+) -> None:
+    """
+    Settle every pending revision in history order. Without `analyze`, only
+    the revisions the turn analyzes as new lines (`turn_analyzes_revision`)
+    are analyzed; the others stay pending for a repair.
+    """
     await _repair_scene_indexes(scene)
     for message in list(scene.history):
         if message.revision_state is not None and revision_requires_refresh(
             scene, message
         ):
-            await refresh_revision(scene, message)
+            try:
+                await refresh_revision(
+                    scene,
+                    message,
+                    analyze=analyze or turn_analyzes_revision(message),
+                    repair=analyze,
+                    attempted=attempted,
+                )
+            except GenerationCancelled as exc:
+                # a Repair goes on past a revision the user chose to leave
+                # failed; a Stop ends it
+                if not past_failures or exc.by_user:
+                    raise
+                log.warning(
+                    "Revision left out of sync", message_id=message.id, error=str(exc)
+                )

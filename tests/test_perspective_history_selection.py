@@ -4,7 +4,6 @@ import pytest
 
 from talemate.agents.summarize.context_history import ContextHistoryParams
 from talemate.character import Character
-from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
 from talemate.knowledge.history_selection import HistorySelectionPolicy
 from talemate.knowledge.perspectives import (
@@ -358,7 +357,7 @@ def test_pending_outside_selected_budget_does_not_block(
     ]
 
 
-def test_pending_inside_minimum_reports_passage(perspective_history_scene, fixed_costs):
+def test_pending_inside_minimum_is_left_out(perspective_history_scene, fixed_costs):
     scene = perspective_history_scene
     fixed_costs.update(M=10)
     pending = scene.history[10]
@@ -369,14 +368,14 @@ def test_pending_inside_minimum_reports_passage(perspective_history_scene, fixed
         [{"audience": ["Bob"], "status": "pending"}],
     )
 
-    with pytest.raises(GenerationCancelled, match="not run yet") as raised:
-        _project(
-            scene,
-            30,
-            _policy(min_dialogue=3, max_dialogue=3, summary_boundary=10),
-        )
+    # an empty view waits for a repair; the rest of the history is selected
+    history, _ = _project(
+        scene,
+        30,
+        _policy(min_dialogue=3, max_dialogue=3, summary_boundary=10),
+    )
 
-    assert raised.value.message_id == pending.id
+    assert pending.id not in [line.message_id for line in history]
 
 
 def test_maximum_applies_to_best_fit_expansion(perspective_history_scene, fixed_costs):

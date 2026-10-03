@@ -17,7 +17,6 @@ import talemate.events as events
 import talemate.save as save
 import talemate.util as util
 import talemate.world_state.templates as world_state_templates
-from talemate.knowledge.intro import initialize_intro_audience, sync_intro_knowledge
 from talemate.config import Config, get_config
 from talemate.context import interaction, handle_generation_cancelled
 from talemate.emit import Emitter, emit
@@ -33,7 +32,6 @@ from talemate.exceptions import (
 from talemate.game.state import GameState
 from talemate.scene_assets import SceneAssets
 from talemate.scene.episodes import EpisodesManager
-from talemate.knowledge.transitions import DEPARTURES_KEY
 from talemate.scene_message import (
     CharacterMessage,
     CharacterTransitionMessage,
@@ -62,19 +60,18 @@ from talemate.history import (
     count_summary_layers,
     message_removed,
 )
-from talemate.knowledge.presence import presence_metadata, relevant_views
-from talemate.knowledge.memory import invalidate_memory_audiences
+from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.perspective_models import SceneKnowledge
-from talemate.knowledge.perspectives import (
-    bind_message_source,
-    remove_perspective_audiences,
-    reset_perspectives,
-    source_deleted,
-    source_reference,
-)
-from talemate.knowledge.mode import (
-    KnowledgeEligibility,
-    character_knowledge_enabled,
+from talemate.knowledge.perspectives import bind_message_source
+from talemate.knowledge.transitions import DEPARTURES_KEY, departures
+from talemate.knowledge.mode import KnowledgeEligibility
+from talemate.scene_signals import (
+    character_added,
+    character_removed,
+    intro_changed,
+    message_removed as message_removed_signal,
+    scene_reset,
+    scene_status_extras,
 )
 from talemate.scene.format import (
     CURRENT_SCENE_FORMAT_VERSION,
@@ -637,7 +634,7 @@ class Scene(Emitter):
             dict.fromkeys(self.active_characters if present is None else present)
         )
 
-        sync_intro_knowledge(self)
+        intro_changed.send(self)
 
     async def apply_intro(self, intro: str | None, emit_history: bool = True):
         # None is licensed but coerced: get_intro cannot take a None intro.
@@ -739,9 +736,31 @@ class Scene(Emitter):
         finally:
             self.emit_status()
 
+    def initialize_intro_present(self) -> None:
+        """
+        Who witnessed the intro: as saved, else whoever witnessed the opening
+        message, else the active characters.
+        """
+        if self.intro_present is None:
+            opening = next(
+                (
+                    message
+                    for message in self.history
+                    if message.typ in ("character", "narrator")
+                ),
+                None,
+            )
+            present = (
+                opening.present
+                if opening is not None and opening.present is not None
+                else self.active_characters
+            )
+            self.intro_present = list(dict.fromkeys(present))
+        intro_changed.send(self)
+
     def _append_history(self, messages: list[SceneMessage]) -> list[SceneMessage]:
         if self.intro and self.intro_present is None:
-            initialize_intro_audience(self)
+            self.initialize_intro_present()
 
         # there can only ever be one director message in the history
         # so if there is a new DirectorMessage in messages we remove the old one
@@ -791,12 +810,6 @@ class Scene(Emitter):
             character=self.get_character(character_name) if character_name else None,
         )
 
-    def _message_removed(self, message, reference):
-        from talemate.knowledge.revision_refresh import preserve_revision_index_repair
-
-        preserve_revision_index_repair(self, message)
-        source_deleted(self, reference, message_id=message.id)
-
     def remove_message_at(self, index: int) -> SceneMessage:
         """
         Removes the message at `index` from the history. Every removal goes
@@ -805,9 +818,8 @@ class Scene(Emitter):
         if index < 0:
             raise IndexError(f"history index {index} out of range")
         message = self.history[index]
-        reference = source_reference(self, "message", message.id)
         self.history.pop(index)
-        self._message_removed(message, reference)
+        message_removed_signal.send(self, message=message)
         message_removed(self, index, message)
         return message
 
@@ -1209,46 +1221,6 @@ class Scene(Emitter):
         emit("message_edited", target, id=message_id, data=None)
         self.log.info("Message active version swapped", index=index, id=message_id)
 
-    @property
-    def pending_perception_messages(self) -> list[int]:
-        if not character_knowledge_enabled(self):
-            return []
-        from talemate.knowledge.revision_refresh import revision_requires_refresh
-
-        return [
-            message.id
-            for message in self.history
-            if (
-                message.revision_state is not None
-                and revision_requires_refresh(self, message)
-            )
-            or (
-                message.knowledge is not None
-                and any(
-                    view.status not in ("ready", "omitted")
-                    for view in relevant_views(self, message)
-                )
-            )
-        ]
-
-    @property
-    def revision_refreshes(self) -> list[dict]:
-        from talemate.knowledge.revision_browsing import affected_archive_ids
-        from talemate.knowledge.revision_refresh import revision_refresh_payload
-
-        refreshes = []
-        for message in self.history:
-            if message.revision_state is None:
-                continue
-            payload = revision_refresh_payload(
-                self, message, skip_history_membership_check=True
-            )
-            item = {"id": message.id, **payload}
-            if payload["revision_refresh"]["required"]:
-                item["archive_ids"] = sorted(affected_archive_ids(self, message))
-            refreshes.append(item)
-        return refreshes
-
     async def add_actor(self, actor: Actor, commit_to_memory: bool = True):
         """
         Add an actor to the scene
@@ -1287,7 +1259,7 @@ class Scene(Emitter):
 
         if actor.character.name not in self.character_data:
             self.character_data[actor.character.name] = actor.character
-            invalidate_memory_audiences(self)
+            character_added.send(self, name=actor.character.name)
 
         for actor in self.actors:
             if (
@@ -1328,11 +1300,6 @@ class Scene(Emitter):
 
         if character.name in self.character_data:
             del self.character_data[character.name]
-            invalidate_memory_audiences(self)
-
-        remove_perspective_audiences(self, character.name)
-
-        from talemate.knowledge.transitions import departures
 
         departures(self).pop(character.name, None)
         for message in list(self.history):
@@ -1341,6 +1308,8 @@ class Scene(Emitter):
                 and message.character_name == character.name
             ):
                 self.delete_message(message.id)
+
+        character_removed.send(self, name=character.name)
 
         if purge_from_memory:
             await character.purge_from_memory()
@@ -1633,8 +1602,6 @@ class Scene(Emitter):
                 "active_pins": [pin.model_dump() for pin in self.active_pins],
                 "experimental": self.experimental,
                 "knowledge_eligibility": self.knowledge_eligibility,
-                "pending_perception_messages": self.pending_perception_messages,
-                "revision_refreshes": self.revision_refreshes,
                 "can_change_knowledge_eligibility": self.can_change_knowledge_eligibility,
                 "immutable_save": self.immutable_save,
                 "description": self.description,
@@ -1664,6 +1631,7 @@ class Scene(Emitter):
                 "game_state_path_settings": self.serialized_game_state_path_settings,
                 "playthrough_progress": self.playthrough_progress,
                 "history_stats": self.history_stats(),
+                **scene_status_extras(self),
             },
         )
 
@@ -1900,7 +1868,7 @@ class Scene(Emitter):
 
     async def emit_history(self, uncapped: bool = False):
         if self.intro and self.intro_present is None:
-            initialize_intro_audience(self)
+            self.initialize_intro_present()
         emit("clear_screen", "")
         # this is mostly to support character cards
         # we introduce the main character to all such characters, replacing
@@ -2357,7 +2325,7 @@ class Scene(Emitter):
         # remove messages
         self.history = []
         self.agent_state.get("conversation", {}).pop(DEPARTURES_KEY, None)
-        reset_perspectives(self)
+        scene_reset.send(self)
 
         # clear out archived history, but keep pre-established history
         self.archived_history = [

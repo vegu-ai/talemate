@@ -54,13 +54,15 @@ def perception_readiness(
         selected = select_character_view(scene, reference, character, read=read)
         if selected.status == "failed":
             return "failed"
-        if selected.status != "ready":
+        if selected.status != "ready" or selected.stale:
             return "deferred"
     if (
         message.knowledge is not None
         and message.knowledge.content_digest == content_digest(message.perception_text)
         and views
-        and all(view.status in ("ready", "omitted") for view in views)
+        and all(
+            view.status in ("ready", "omitted") and not view.stale for view in views
+        )
     ):
         return "ready"
     return "deferred"
@@ -75,12 +77,12 @@ def perception_status_message(state: PerceptionReadiness, message_id: int) -> st
     if state == "failed":
         return (
             f"Perception analysis for passage {message_id} failed; "
-            "it runs again on the next turn."
+            "Repair runs it again."
         )
     if state == "deferred":
         return (
-            "Perception analysis for this version has not run yet. "
-            "Analyze perceptions now, or send your next line."
+            "This perspective is out of sync with the passage. "
+            "Analyze perceptions now, or choose Repair."
         )
     return f"Perception analysis for passage {message_id} is ready."
 

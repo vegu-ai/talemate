@@ -10,6 +10,7 @@ from talemate.knowledge.perspectives import (
     PerspectiveReadContext,
     select_character_view,
     source_reference,
+    view_staleness,
 )
 from talemate.knowledge.perspective_models import SourceReference
 
@@ -132,6 +133,38 @@ def summary_inputs(scene, entry, layer, *, read=None):
             sources=tuple(sources),
         )
     return results
+
+
+def summary_repair_work(
+    scene, *, skip: set[tuple[int, str, str]] = frozenset()
+) -> list[tuple[int, str, tuple[str, ...]]]:
+    """
+    The summary entries with a character view that is not current, lowest
+    layer first and in history order, with the characters to rebuild.
+    """
+    read = PerspectiveReadContext(scene)
+    work = []
+    for layer, entries in enumerate([scene.archived_history, *scene.layered_history]):
+        for entry in entries:
+            identity = entry.get("id")
+            if not identity:
+                continue
+            reference = source_reference(
+                scene, "summary", identity, layer=layer, read=read
+            )
+            names = tuple(
+                name
+                for name in summary_inputs(scene, entry, layer, read=read)
+                if name in scene.character_data
+                and (layer, identity, name) not in skip
+                and (
+                    reference is None
+                    or view_staleness(scene, reference, name, read=read) is not None
+                )
+            )
+            if names:
+                work.append((layer, identity, names))
+    return work
 
 
 def summary_spans(scene, *, read=None):

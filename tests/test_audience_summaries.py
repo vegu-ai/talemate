@@ -6,8 +6,6 @@ from copy import deepcopy
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from _perception_backlog_helpers import answering
-from structlog.testing import capture_logs
 import talemate.emit.async_signals
 
 from talemate.character import Character
@@ -161,8 +159,8 @@ async def test_source_edit_invalidates_base_and_layer_but_preserves_other_branch
     unaffected = deepcopy(scene.archived_history[1:])
     calls.clear()
     scene.edit_message(scene.history[0].id, "Alice: Corrected reader passage.")
-    assert selected(scene, "base-a").status == "pending"
-    assert selected(scene, "layer-a", layer=1).status == "pending"
+    assert selected(scene, "base-a").stale
+    assert selected(scene, "layer-a", layer=1).stale
     assert selected(scene, "base-b").status == "ready"
     assert selected(scene, "base-c").status == "ready"
     publish(
@@ -171,14 +169,18 @@ async def test_source_edit_invalidates_base_and_layer_but_preserves_other_branch
         "Alice revises her claim.",
         "Alice corrects her earlier claim.",
     )
-    fallback = "\n".join(project_character_history(scene, "Bob"))
-    assert "Alice corrects her earlier claim." in fallback
-    assert CLAIM not in fallback
-    assert "READER-" not in fallback
-    await summarizer.repair_summary_views(scene)
+    # the stale summary stays in use until it is repaired
+    before = "\n".join(project_character_history(scene, "Bob"))
+    assert CLAIM in before
+    assert "Alice corrects her earlier claim." not in before
+    assert "READER-" not in before
+    await summarizer.repair_summary_views(scene, repair=True)
     assert len(calls) == 4
     assert scene.archived_history[1:] == unaffected
     assert selected(scene, "layer-a", layer=1).status == "ready"
+    assert not selected(scene, "layer-a", layer=1).stale
+    after = "\n".join(project_character_history(scene, "Bob"))
+    assert CLAIM not in after
 
 
 @pytest.mark.asyncio
@@ -191,11 +193,11 @@ async def test_editing_one_audience_preserves_ready_sibling_summaries(summary_sc
     publish(
         scene, scene.history[0], "Alice remembers a different private detail.", CLAIM
     )
-    assert selected(scene, "base-a", "Alice").status == "pending"
-    assert selected(scene, "layer-a", "Alice", 1).status == "pending"
+    assert selected(scene, "base-a", "Alice").stale
+    assert selected(scene, "layer-a", "Alice", 1).stale
     assert selected(scene, "base-a") == bob
     assert selected(scene, "layer-a", layer=1) == layered_bob
-    await summarizer.repair_summary_views(scene)
+    await summarizer.repair_summary_views(scene, repair=True)
     assert len(calls) == 2
     assert all(options["audience"] == ("Alice",) for _, options in calls)
     assert selected(scene, "base-a") == bob
@@ -282,8 +284,8 @@ async def test_omitted_input_is_a_durable_dependency(summary_scene):
         "Alice hears more.",
         "Bob now hears a public correction.",
     )
-    assert selected(scene, "base-a").status == "pending"
-    assert selected(scene, "layer-a", layer=1).status == "pending"
+    assert selected(scene, "base-a").stale
+    assert selected(scene, "layer-a", layer=1).stale
 
 
 @pytest.mark.asyncio
@@ -310,7 +312,7 @@ async def test_all_omitted_summary_skips_request_and_is_invalidated(
     assert selected(scene, "base-a").status == "omitted"
     assert len(calls) == 1
     publish(scene, scene.history[1], "Alice hears more.", "Bob hears it too.")
-    assert selected(scene, "base-a").status == "pending"
+    assert selected(scene, "base-a").stale
 
 
 @pytest.mark.asyncio
@@ -406,7 +408,7 @@ async def test_higher_layer_dependencies_keep_exact_layer_identity(summary_scene
     assert stored["sources"][0]["layer"] == 1
     assert stored["sources"][0]["id"] == "layer-a"
     scene.edit_message(scene.history[0].id, "Changed.")
-    assert selected(scene, "layer-b", layer=2).status == "pending"
+    assert selected(scene, "layer-b", layer=2).stale
 
 
 @pytest.mark.asyncio
@@ -497,8 +499,8 @@ async def test_saved_vs_original_dependencies_and_selection_survive_reload(
     await load_scene_from_data(scene, saved, name=str(path))
     assert selected(scene, "layer-a", layer=1) == expected
     scene.edit_message(scene.history[0].id, "Edited after reload.")
-    assert selected(scene, "base-a").status == "pending"
-    assert selected(scene, "layer-a", layer=1).status == "pending"
+    assert selected(scene, "base-a").stale
+    assert selected(scene, "layer-a", layer=1).stale
     assert selected(scene, "base-c").status == "ready"
 
 
@@ -565,7 +567,7 @@ async def test_summary_input_keeps_unprefixed_view_speaker(summary_scene):
 
 
 @pytest.mark.asyncio
-async def test_unrelated_edit_does_not_retry_cancelled_summary_branch(
+async def test_the_turn_step_leaves_a_cancelled_summary_branch_and_the_edit(
     summary_scene, monkeypatch
 ):
     scene, summarizer, calls = summary_scene
@@ -582,7 +584,7 @@ async def test_unrelated_edit_does_not_retry_cancelled_summary_branch(
     calls.clear()
     publish(scene, scene.history[0], "Alice revises her private recollection.", CLAIM)
     await summarizer.repair_summary_views(scene)
-    assert len(calls) == 2
+    assert calls == []
     assert scene.archived_history[2] == cancelled
 
 
@@ -685,7 +687,7 @@ async def test_joining_cast_builds_partial_layer_and_drains_queue(summary_scene)
         }
     )
     set_source_perspectives(scene, "summary", "base-a", outputs)
-    assert selected(scene, "layer-a", "Cara", 1).status == "pending"
+    assert selected(scene, "layer-a", "Cara", 1).stale
 
 
 @pytest.mark.asyncio
@@ -710,8 +712,8 @@ async def test_partial_base_keeps_absence_dependency_in_restored_summary_records
     scene.layered_history = deepcopy(saved["layered_history"])
     assert selected(scene, "layer-a", layer=1).status == "ready"
     publish(scene, scene.history[1], PRIVATE, "Bob hears new evidence.")
-    assert selected(scene, "base-a").status == "pending"
-    assert selected(scene, "layer-a", layer=1).status == "pending"
+    assert selected(scene, "base-a").stale
+    assert selected(scene, "layer-a", layer=1).stale
 
 
 @pytest.mark.asyncio
@@ -814,7 +816,7 @@ async def test_mid_repair_edit_is_processed_without_another_trigger(
 
     monkeypatch.setattr(summarizer, "summarize", respond)
     monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
-    await summarizer.repair_summary_views(scene)
+    await summarizer.repair_summary_views(scene, repair=True)
     assert "new bell" in selected(scene, "base-c").text
     assert not summarizer._summary_dirty[scene]
 
@@ -1329,26 +1331,13 @@ async def test_an_approved_rebuild_builds_every_queued_summary_with_progress(
     for entry in scene.archived_history:
         await summarizer.queue_summary_views(scene, entry["id"])
     await summarizer.queue_summary_views(scene, "layer-a", 1)
-    statuses, frames = [], []
+    statuses = []
     monkeypatch.setattr(
         talemate.status,
         "emit",
         lambda typ, message="", status="", **kwargs: statuses.append(message),
     )
-    with capture_logs() as logs, answering("analyze", frames):
-        await knowledge_step(scene)
-    assert len(frames) == 1
-    assert frames[0]["perceptions"] is None
-    summaries = frames[0]["summaries"]["rebuild"]
-    assert (summaries["entries"], summaries["layers"]) == (10, [0, 1])
-    assert summaries["characters"] == ["Alice", "Bob", "Cara"]
-    logged = [entry for entry in logs if entry["event"] == "summary backlog entry"]
-    assert len(logged) == summaries["total"]
-    assert {entry["check"] for entry in logged} <= {
-        "queued",
-        "no_record",
-        "view_status",
-    }
+    await knowledge_step(scene)
     assert not summarizer._summary_dirty[scene]
     assert not summarizer._summary_waiting[scene]
     identities = [entry["id"] for entry in scene.archived_history]
@@ -1393,78 +1382,150 @@ def change_last_passage(scene):
 
 
 @pytest.mark.asyncio
-async def test_a_small_summary_backlog_rebuilds_without_a_question(
-    summary_scene, monkeypatch
-):
+async def test_an_edit_flags_summaries_and_the_step_leaves_them(summary_scene):
+    from talemate.knowledge.status import knowledge_sync
     from talemate.knowledge.step import knowledge_step
 
     scene, summarizer, calls = summary_scene
+    await generate_all(scene, summarizer)
+    await extra_entries(scene, summarizer, 3)
+    assert knowledge_sync(scene).total == 0
+    change_last_passage(scene)
+    before = len(calls)
+    await knowledge_step(scene)
+    assert len(calls) == before
+    for index in range(3):
+        view = selected(scene, f"extra-{index}")
+        assert view.stale and view.text.startswith("Compressed: ")
+    assert knowledge_sync(scene).summary_layers == {0: 3}
+
+
+@pytest.mark.asyncio
+async def test_repair_rebuilds_base_summaries_before_layers(summary_scene, monkeypatch):
+    from talemate.knowledge.status import knowledge_sync
+    from talemate.knowledge.step import repair_knowledge
+
+    scene, summarizer, calls = summary_scene
+    await generate_all(scene, summarizer)
+    publish(scene, scene.history[0], "Alice revises her claim.", "Bob hears it.")
+    assert knowledge_sync(scene).summary_layers == {0: 1, 1: 1}
+    ensure = summarizer.ensure_summary_views
+    order = []
+
+    async def recorded(scene, identity, layer=0, **kwargs):
+        order.append((layer, identity))
+        return await ensure(scene, identity, layer, **kwargs)
+
+    monkeypatch.setattr(summarizer, "ensure_summary_views", recorded)
+    await repair_knowledge(scene)
+    assert order == [(0, "base-a"), (1, "layer-a")]
+    assert not selected(scene, "base-a").stale
+    assert not selected(scene, "layer-a", layer=1).stale
+    assert knowledge_sync(scene).total == 0
+
+
+@pytest.mark.asyncio
+async def test_stop_during_repair_leaves_the_rest_flagged(summary_scene, monkeypatch):
+    from talemate.knowledge.status import knowledge_sync
+    from talemate.knowledge.step import repair_knowledge
+
+    scene, summarizer, calls = summary_scene
+    await generate_all(scene, summarizer)
     await extra_entries(scene, summarizer, 3)
     change_last_passage(scene)
-    before = len(calls)
-    frames = []
-    with answering(None, frames):
-        await knowledge_step(scene)
-    assert frames == []
-    assert len(calls) > before
-    assert all(
-        selected(scene, f"extra-{index}").status == "ready" for index in range(3)
-    )
+    done = []
+
+    async def stop_after_one(text, **kwargs):
+        # one entry is two requests: Alice, and Bob with Cara
+        if len(done) == 2:
+            raise GenerationCancelled("Stopped", by_user=True)
+        done.append(text)
+        return "Rebuilt: " + text
+
+    monkeypatch.setattr(summarizer, "summarize", stop_after_one)
+    with pytest.raises(GenerationCancelled):
+        await repair_knowledge(scene)
+    assert not selected(scene, "extra-0").stale
+    for index in (1, 2):
+        view = selected(scene, f"extra-{index}")
+        assert view.stale and view.text.startswith("Compressed: ")
+    assert knowledge_sync(scene).summary_layers == {0: 2}
 
 
 @pytest.mark.asyncio
-async def test_keep_current_summaries_makes_them_current_without_a_request(
+async def test_a_failed_rebuild_keeps_the_flagged_text_of_a_mixed_group(
     summary_scene, monkeypatch
 ):
-    from talemate.knowledge.step import knowledge_step
-
     scene, summarizer, calls = summary_scene
-    await extra_entries(scene, summarizer, 5)
-    # a newer revision of the cited passage without an invalidation, as a
-    # browsed revision leaves it: the stored summary texts survive
-    message = scene.history[4]
-    object.__setattr__(
-        message,
-        "knowledge",
-        message.knowledge.model_copy(
-            update={"revision": message.knowledge.revision + 1}
-        ),
+    await generate_all(scene, summarizer)
+    # Bob and Cara share an input; Cara's earlier build failed
+    entry = scene.archived_history[1]
+    views = entry["knowledge"]["views"]
+    shared = next(view for view in views if "Bob" in view["audience"])
+    outputs = [
+        {k: v for k, v in view.items() if k != "revision"}
+        for view in views
+        if view is not shared
+    ]
+    outputs.append(
+        {
+            **{k: v for k, v in shared.items() if k not in ("revision", "id")},
+            "audience": ["Bob"],
+        }
     )
-    for index in range(5):
-        await summarizer.queue_summary_views(scene, f"extra-{index}")
-    assert selected(scene, "extra-0").status == "pending"
-    before = len(calls)
-    frames = []
-    with answering("keep", frames):
-        await knowledge_step(scene)
-    assert len(frames) == 1
-    assert frames[0]["summaries"]["keep"]["keepable"] == 5
-    assert frames[0]["summaries"]["keep"]["keep_requests"] == 0
-    assert len(calls) == before
-    assert all(
-        selected(scene, f"extra-{index}").status == "ready" for index in range(5)
-    )
-    assert not summarizer._summary_dirty[scene]
+    outputs.append({"audience": ["Cara"], "status": "failed"})
+    set_source_perspectives(scene, "summary", entry["id"], outputs)
+    publish(scene, scene.history[2], "Alice sees the rain end.", "The rain ends.")
+    before = selected(scene, entry["id"]).text
+    assert selected(scene, entry["id"]).stale
+    attempted = []
+
+    async def stop_after_alice(text, **kwargs):
+        attempted.append(text)
+        if "Alice sees the rain end." in text:
+            return "Rebuilt: " + text
+        raise GenerationCancelled("Stopped", by_user=True)
+
+    monkeypatch.setattr(summarizer, "summarize", stop_after_alice)
+    with pytest.raises(GenerationCancelled):
+        await summarizer.repair_summary_views(scene, repair=True)
+    # Alice's group is rebuilt, then the Stop comes in Bob and Cara's
+    assert len(attempted) == 2 and "The rain ends." in attempted[1]
+    assert not selected(scene, entry["id"], "Alice").stale
+    view = selected(scene, entry["id"])
+    assert view.stale and view.text == before
 
 
 @pytest.mark.asyncio
-async def test_cancel_on_a_summary_backlog_stops_and_asks_again(
+async def test_a_regenerated_entry_reaches_repair_with_its_options(
     summary_scene, monkeypatch
 ):
-    from talemate.knowledge.step import knowledge_step
+    from talemate.history import HistoryEntry, regenerate_history_entry
+    from talemate.knowledge.step import repair_knowledge
+    from talemate.scene_signals import archive_entry_regenerated
 
     scene, summarizer, calls = summary_scene
-    await extra_entries(scene, summarizer, 5)
-    change_last_passage(scene)
-    before = len(calls)
-    frames = []
-    with answering("cancel", frames), pytest.raises(GenerationCancelled):
-        await knowledge_step(scene)
-    assert len(calls) == before
-    assert selected(scene, "extra-0").status == "pending"
-    with answering("analyze", frames):
-        await knowledge_step(scene)
-    assert len(frames) == 2
-    assert all(
-        selected(scene, f"extra-{index}").status == "ready" for index in range(5)
+    await generate_all(scene, summarizer)
+    monkeypatch.setattr(
+        summarizer, "summarize_entry", AsyncMock(return_value="READER-B again")
     )
+    monkeypatch.setattr(summarizer, "previous_summaries", AsyncMock(return_value=[]))
+    options = GenerationOptions()
+    entry = HistoryEntry(**scene.archived_history[1], index=1, layer=0)
+    sent = []
+
+    def record(sender, **kwargs):
+        sent.append((sender, kwargs))
+
+    with archive_entry_regenerated.connected_to(record):
+        await regenerate_history_entry(scene, entry, generation_options=options)
+    assert sent == [
+        (scene, {"identity": "base-b", "layer": 0, "generation_options": options})
+    ]
+    before = len(calls)
+    await repair_knowledge(scene)
+    # base-b's groups; the layer above it is rebuilt with its own options
+    base = [kwargs for _, kwargs in calls[before:] if kwargs["extra_context"] == []]
+    assert len(base) == 2
+    assert all(kwargs["generation_options"] is options for kwargs in base)
+    assert not selected(scene, "base-b").stale

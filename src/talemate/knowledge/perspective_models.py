@@ -106,12 +106,16 @@ class PerspectiveOutput(AudienceRecord):
     text: StrictStr | None = None
     sources: tuple[SourceReference, ...] = ()
     passage_provenance: tuple[PassageProvenance, ...] = ()
+    # out of sync with its inputs; the text stays readable until a repair
+    stale: bool = False
 
     @model_serializer(mode="wrap")
     def serialize_provenance(self, handler):
         data = handler(self)
         if not self.passage_provenance:
             data.pop("passage_provenance", None)
+        if not self.stale:
+            data.pop("stale", None)
         return data
 
     @field_validator("id")
@@ -130,6 +134,8 @@ class PerspectiveOutput(AudienceRecord):
                 )
         elif self.text is not None:
             raise ValueError("Only a ready perspective may carry text")
+        if self.stale and self.status not in ("ready", "omitted"):
+            raise ValueError("Only a ready or omitted perspective can be stale")
         return self
 
 
@@ -138,12 +144,12 @@ class PerspectiveView(PerspectiveOutput):
     revision: int = Field(default=1, ge=1, strict=True)
 
     def invalidated(self) -> "PerspectiveView":
+        if self.status in ("ready", "omitted"):
+            return self.model_copy(
+                update={"revision": self.revision + 1, "stale": True}
+            )
         return self.model_copy(
-            update={
-                "revision": self.revision + 1,
-                "status": "pending",
-                "text": None,
-            }
+            update={"revision": self.revision + 1, "status": "pending", "text": None}
         )
 
 
@@ -230,6 +236,7 @@ class CharacterView(KnowledgeRecord):
     text: str | None = None
     source: SourceReference | None = None
     acquired: Acquisition | None = None
+    stale: bool = False
 
     @model_validator(mode="after")
     def text_only_when_ready(self):

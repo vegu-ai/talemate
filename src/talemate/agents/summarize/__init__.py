@@ -53,6 +53,7 @@ from .audience_summaries import AudienceSummaryMixin
 from talemate.exceptions import GenerationCancelled
 
 import talemate.agents.summarize.nodes  # noqa: F401
+import talemate.knowledge.listeners  # noqa: F401
 from talemate.agents.summarize.websocket_handler import SummarizeWebsocketHandler
 
 if TYPE_CHECKING:

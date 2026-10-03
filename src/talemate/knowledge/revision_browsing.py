@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
 
+from talemate.knowledge.mode import character_knowledge_enabled
+
 if TYPE_CHECKING:
     from talemate.knowledge.schema import KnowledgeEdge
     from talemate.tale_mate import Scene
@@ -79,9 +81,12 @@ class RevisionCurrency(BaseModel):
         sources: dict[int, bool] = {}
         stale_archive_ids: set[str] = set()
         stale = False
+        # with character perspectives an edit only flags what it affects, and
+        # retrieval keeps the last stored knowledge until a repair
+        flagged_only = character_knowledge_enabled(scene)
         for message in scene.history:
             state = getattr(message, "revision_state", None)
-            current = state is None or message.revision_matches_baseline
+            current = flagged_only or state is None or message.revision_matches_baseline
             # a later message with the same id wins, as in Scene.get_message
             sources[message.id] = current
             if not current:

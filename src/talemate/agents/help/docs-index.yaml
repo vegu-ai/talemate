@@ -638,7 +638,7 @@
 - path: user-guide/interacting.md
   title: Interacting with the scene
   summary: Send dialogue or narration, edit or delete messages, regenerate and continue messages, and browse or edit
-    revisions. Analyze perceptions refreshes character views; Update knowledge retries index work. Covers delete
+    revisions. Analyze perceptions refreshes character views of one passage; Update knowledge retries index work. Covers delete
     confirmations, edit consistency warnings, revision ownership, accepted player lines, cancellation and saving.
 - path: user-guide/node-editor/core-concepts/collector_nodes.md
   title: Collector Nodes
@@ -717,7 +717,8 @@
   title: Events
   summary: 'Event names, firing order, mutable payloads: game/scene loops, regeneration, agent generation/instruction hooks,
     creator dialogue examples, editor rewrite compatibility, help chat, summarizer archives/RAG, TTS chunk/audio hooks,
-    visual finalization, asset/backdrop changes. scene.revision_saved, scene.revision_forked, scene.revisions_deleted, scene.revision_failed.'
+    visual finalization, asset/backdrop changes. scene.revision_saved, scene.revision_forked, scene.revisions_deleted, scene.revision_failed,
+    scene.before_generation.'
 - path: user-guide/node-editor/reference/nodes/agents-conversation.md
   title: Conversation Agent Nodes
   summary: Conversation node reference for Generate Conversation and Conversation Settings, including registry paths, sockets
@@ -984,8 +985,8 @@
 - path: user-guide/perspective-view.md
   title: View a character's perspective
   summary: View Perspective splits the scene beside each message to show one character's view; double-click to edit a view
-    or empty cell. Covers empty-cell reasons, read-only introduction, scene header label, Analyze them again, private thoughts
-    and whispers, default rewrite regions with verbatim text outside them, and optional observable traces without revealing
+    or empty cell. Covers empty-cell reasons, read-only introduction, scene header label, out-of-sync views, Mark them out of sync,
+    private thoughts and whispers, default rewrite regions with verbatim text outside them, and optional observable traces without revealing
     hidden acts or objects.
 - path: user-guide/playthrough.md
   title: Playthrough Mode
@@ -1227,13 +1228,13 @@
 - path: user-guide/world-editor/knowledge-how-it-works.md
   title: 'Character knowledge: flow reference'
   summary: Flow diagrams for presence filtering, character views, audience summaries, reply inputs and memory ranking. Explains
-    intro audiences, revision browsing before keeping a version, re-entry bridges, Arrival Notes, automatic timing, activation/deactivation
+    intro audiences, revision browsing before keeping a version, Repair, re-entry bridges, Arrival Notes, automatic timing, activation/deactivation
     chips, retry/regeneration and the mode decision tree (model, secrets, cast size, cost).
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
   summary: Standard and Character perspectives knowledge, effort presets, request costs, scene overrides and first-save continuation,
     retry or discard. Covers Learn / Never Learn rules, Known by visibility, disclosures, retrieval, activation and deactivation
-    chips with automatic timing and arrival notes, zero-request re-entry bridges, and asking when character summaries need a rebuild.
+    chips with automatic timing and arrival notes, zero-request re-entry bridges, and Repair when perspectives or character summaries need a rebuild.
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: Pins keep context entries or character details in AI prompts, with manual activation, AI yes/no conditions and

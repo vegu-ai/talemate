@@ -1,6 +1,6 @@
 """
 The knowledge step: the one place knowledge work runs, as an explicit step
-before a generation or on the user's request.
+before a generation, or as the user's Repair.
 """
 
 import asyncio
@@ -10,17 +10,14 @@ import talemate.emit.async_signals as async_signals
 from talemate.agents.summarize.perceptions import eligible_passage
 from talemate.instance import get_agent
 from talemate.exceptions import GenerationCancelled
-from talemate.knowledge.backlog import (
-    cancelled_since,
-    cancels_at_start,
-    counting_new_lines,
-)
+from talemate.knowledge.backlog import cancel_count, cancelled_since
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspectives import message_sources
-from talemate.knowledge.revision_refresh import catch_up_revisions
+from talemate.knowledge.revision_refresh import catch_up_revisions, refresh_revision
 from talemate.knowledge.revision_scope import StepEvents, step_events
+from talemate.status import LoadingStatus
 
-__all__ = ["knowledge_step"]
+__all__ = ["knowledge_step", "repair_knowledge", "repair_passage"]
 
 # One step at a time per scene. The events a step produces, config.changed
 # included, are sent after it is released. Not covered: a template override
@@ -31,13 +28,33 @@ _locks = WeakKeyDictionary()
 
 async def knowledge_step(scene) -> None:
     """
-    Settle pending revisions, analyze pending passages, update the audience
-    summary views and the audience index, then send the events the step
-    produced.
+    Before a generation: analyze the new lines and build the summary views of
+    new archive entries. What an edit invalidated stays flagged for Repair.
     """
+    await _run(scene, repair=False)
+
+
+async def repair_knowledge(scene) -> None:
+    """
+    Rebuild everything that is not current, in dependency order: pending
+    revisions and passages in history order, then summaries layer by layer.
+    A Stop leaves the rest flagged.
+    """
+    await _run(scene, repair=True)
+
+
+async def repair_passage(scene, message) -> None:
+    """
+    The per-message repair: settle and analyze one edited passage, then do
+    the turn's own work. The views built on it stay flagged for Repair.
+    """
+    await _run(scene, repair=False, passage=message)
+
+
+async def _run(scene, *, repair: bool, passage=None) -> None:
     events = StepEvents()
     token = step_events.set(events)
-    cancels = cancels_at_start(scene)
+    cancels = cancel_count(scene)
     cancel_sequence = scene.cancel_sequence
 
     def stop_if_cancelled():
@@ -52,9 +69,9 @@ async def knowledge_step(scene) -> None:
                 await catch_up_revisions(scene)
                 stop_if_cancelled()
                 return
-            summarizer = get_agent("summarizer")
-            with summarizer.backlog_approvals(scene):
-                await _settle_and_analyze(scene, summarizer, stop_if_cancelled)
+            await _settle_and_analyze(
+                scene, stop_if_cancelled, repair=repair, passage=passage
+            )
     finally:
         step_events.reset(token)
         events.closed = True
@@ -62,10 +79,13 @@ async def knowledge_step(scene) -> None:
             await async_signals.get(name).send(emission)
 
 
-async def _settle_and_analyze(scene, summarizer, stop_if_cancelled) -> None:
+async def _settle_and_analyze(
+    scene, stop_if_cancelled, *, repair: bool, passage=None
+) -> None:
+    summarizer = get_agent("summarizer")
     # lines pushed since the last step; registered after the revisions settle,
     # so a refresh never analyzes them inside its journal. A revised one is
-    # registered and counted by its own refresh.
+    # registered and analyzed by its own refresh.
     new = [
         message
         for message in message_sources(scene)
@@ -73,16 +93,27 @@ async def _settle_and_analyze(scene, summarizer, stop_if_cancelled) -> None:
         and eligible_passage(message)
         and (message.revision_state is None or message.revision_matches_baseline)
     ]
-    with counting_new_lines(
-        scene,
-        {message.id: summarizer.perception_requests(scene, message) for message in new},
-    ):
-        await catch_up_revisions(scene)
+    # a passage done or ignored earlier in the step is not picked again, so an
+    # Ignore is asked once
+    attempted = set()
+    if passage is not None and passage.revision_state is not None:
+        await refresh_revision(scene, passage, attempted=attempted)
+        stop_if_cancelled()
+    await catch_up_revisions(
+        scene, analyze=repair, past_failures=repair, attempted=attempted
+    )
     stop_if_cancelled()
     summarizer.register_perception_sources(scene, new)
-    await summarizer.ensure_perceptions(scene, new={message.id for message in new})
+    progress = LoadingStatus(cancellable=True) if repair else None
+    try:
+        await summarizer.ensure_perceptions(
+            scene, repair=repair, progress=progress, attempted=attempted
+        )
+    finally:
+        if progress is not None:
+            progress.done()
     stop_if_cancelled()
-    await summarizer.repair_summary_views(scene)
+    await summarizer.repair_summary_views(scene, repair=repair)
     stop_if_cancelled()
     memory = get_agent("memory")
     if memory.audience_index_writable(scene):

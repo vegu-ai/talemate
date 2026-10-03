@@ -41,7 +41,7 @@ async def automatic_revision(cast, monkeypatch, request, isolate_signals):
         ),
     )
     # the knowledge step of a regeneration is covered elsewhere
-    monkeypatch.setattr("talemate.regenerate.knowledge_step", AsyncMock())
+    monkeypatch.setattr("talemate.events.before_generation", AsyncMock())
     conversation = get_agent("conversation")
     monkeypatch.setattr(conversation, "finalize_message_avatar", AsyncMock())
     monkeypatch.setattr(
@@ -106,11 +106,13 @@ async def test_automatic_revision_with_optional_history(automatic_revision, path
     assert message.versions[-1].source == "revision"
     assert message.message == "Bob: He checked the lantern."
     assert len(t.calls) == 1
-    assert t.warnings.call_count == int(t.failed)
+    # a failed view leaves its passage out of the character's history
+    assert t.warnings.call_count == 0
     rendered = t.calls[0][2]
-    if t.mode == "perception" and not t.failed:
-        assert test_actor_perspective_history.PUBLIC_SCRIPT in rendered
+    if t.mode == "perception":
         assert "UNSEEN-VAULT-CODE" not in rendered
+        if not t.failed:
+            assert test_actor_perspective_history.PUBLIC_SCRIPT in rendered
     else:
         assert test_actor_perspective_history.READER.split(": ", 1)[1] in rendered
         assert "UNSEEN-VAULT-CODE" in rendered

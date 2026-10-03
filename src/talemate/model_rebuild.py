@@ -25,6 +25,7 @@ from talemate.tale_mate import Actor, Scene
 from talemate.emit.base import Emission
 from talemate.events import (
     ArchiveEvent,
+    BeforeGenerationEvent,
     CharacterActivatedEvent,
     CharacterDeactivatedEvent,
     CharacterStateEvent,
@@ -87,6 +88,7 @@ for _model in (
     GameLoopNewMessageEvent,
     PlayerTurnStartEvent,
     RegenerateGeneration,
+    BeforeGenerationEvent,
     SceneLoopEvent,
     SceneCommandsCatalogEvent,
     PerspectiveViewEditedEvent,

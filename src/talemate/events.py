@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import pydantic
 import talemate.emit.async_signals as async_signals
@@ -26,6 +26,8 @@ __all__ = [
     "GameLoopNewMessageEvent",
     "PlayerTurnStartEvent",
     "RegenerateGeneration",
+    "BeforeGenerationEvent",
+    "before_generation",
     "UserInteractionEvent",
 ]
 
@@ -137,7 +139,32 @@ class RegenerateGeneration(Event):
     character: "Character | None" = None
 
 
+GenerationTrigger = Literal[
+    "narrator", "conversation", "editor", "regenerate", "command"
+]
+
+
+class BeforeGenerationEvent(Event):
+    """
+    Sent before a generation that continues the story or acts on it: a
+    narration, a character's line, an editor detail, a regenerated message or
+    a `!` command. A receiver that raises GenerationCancelled stops the
+    generation.
+    """
+
+    trigger: GenerationTrigger
+
+
+async def before_generation(scene: "Scene", trigger: GenerationTrigger) -> None:
+    await async_signals.get("scene.before_generation").send(
+        BeforeGenerationEvent(
+            scene=scene, event_type="scene.before_generation", trigger=trigger
+        )
+    )
+
+
 async_signals.register(
+    "scene.before_generation",
     "regenerate.msg.character",
     "regenerate.msg.narrator",
     "regenerate.msg.reinforcement",

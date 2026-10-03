@@ -1,14 +1,11 @@
 import asyncio
 import json
 import re
-import uuid
-from collections import Counter
 from collections.abc import Collection
-from contextlib import contextmanager
 from copy import deepcopy
 from typing import TYPE_CHECKING, Literal
 
-from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr, ValidationError
+from pydantic import BaseModel, StrictInt, StrictStr, ValidationError
 from weakref import WeakKeyDictionary
 
 import structlog
@@ -27,12 +24,7 @@ from talemate.emit import emit
 from talemate.client.presets import make_kind
 from talemate.util import count_tokens
 from talemate.prompts.response import CodeBlockExtractorMixin
-from talemate.knowledge.backlog import (
-    cancels_at_start,
-    cancelled_since,
-    counted_new_lines,
-    record_cancel,
-)
+from talemate.knowledge.backlog import record_cancel
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.formatting import (
     passage_metadata,
@@ -58,8 +50,6 @@ from talemate.knowledge.perspectives import (
     Staleness,
     message_sources,
     can_cite_view,
-    has_stored_views,
-    keep_stored_source_views,
     select_character_view,
     set_source_perspectives,
     source_reference,
@@ -104,21 +94,8 @@ class PerceptionsFailedEmission(AgentEmission):
 
 
 CONTEXT_PASSAGES = 12
-PERCEPTION_BACKLOG_THRESHOLD = 3
 SENTENCE_CLOSERS = "\"'”’)]}»*_"
 SENTENCE_END = re.compile(rf"[.!?…]+[{re.escape(SENTENCE_CLOSERS)}]*(?=\s|$)|\n+")
-
-PerceptionBacklogDecision = Literal["analyze", "keep", "cancel"]
-
-_perception_backlog_futures: dict[str, asyncio.Future] = {}
-
-
-def resolve_perception_backlog(
-    request_id: str, decision: PerceptionBacklogDecision
-) -> None:
-    future = _perception_backlog_futures.get(request_id)
-    if future and not future.done():
-        future.set_result(decision)
 
 
 class PerceptionAnalysis(PerspectiveOutput):
@@ -535,8 +512,14 @@ def perception_prefix(
     raise GenerationCancelled(f"History boundary {before_message_id} was removed")
 
 
-def perception_staleness(scene, message, *, read=None) -> Staleness | None:
-    """The first check that keeps the passage's stored results from being current."""
+def perception_staleness(
+    scene, message, *, read=None, inherited=True
+) -> Staleness | None:
+    """
+    The first check that keeps the passage's stored results from being current.
+    Without `inherited`, only the passage's own analysis counts, not the
+    out-of-sync knowledge it was built on.
+    """
     audiences = relevant_audiences(scene, message)
     if not audiences:
         return None
@@ -549,15 +532,29 @@ def perception_staleness(scene, message, *, read=None) -> Staleness | None:
     if reference is None:
         return Staleness(check="no_record")
     for name in audiences:
-        stale = view_staleness(scene, reference, name, read=read)
+        stale = view_staleness(scene, reference, name, read=read, inherited=inherited)
         if stale is not None:
             return stale
     return None
 
 
-def perception_results_current(scene, message, *, read=None) -> bool:
+def perception_results_current(scene, message, *, read=None, inherited=True) -> bool:
     """Verify exact selected-source results for every currently required audience."""
-    return perception_staleness(scene, message, read=read) is None
+    return perception_staleness(scene, message, read=read, inherited=inherited) is None
+
+
+def never_analyzed(message: SceneMessage) -> bool:
+    """
+    No view of the passage has been built or has failed yet: a new line, which
+    the turn's knowledge step analyzes. Anything else waits for a repair.
+    Registration gives a new line a view per audience, so one with no views
+    lost them (its only audience was removed) and is not new.
+    """
+    return (
+        message.knowledge is not None
+        and bool(message.knowledge.views)
+        and all(view.status == "pending" for view in message.knowledge.views)
+    )
 
 
 def _stored_view_current(scene, reference, view: PerspectiveView, *, read) -> bool:
@@ -570,204 +567,8 @@ def _stored_view_current(scene, reference, view: PerspectiveView, *, read) -> bo
         update={"view_id": view.id, "view_revision": view.revision}
     )
     return all(
-        select_character_view(scene, reference, name, read=read).status
-        in ("ready", "omitted")
+        view_staleness(scene, reference, name, read=read) is None
         for name in view.audience
-    )
-
-
-class PerceptionBacklog(BaseModel):
-    """The passages a perception run analyzes, counted without a request."""
-
-    model_config = ConfigDict(frozen=True)
-
-    # every required character has a stored ready or omitted view
-    keepable: tuple[SceneMessage, ...]
-    empty: tuple[SceneMessage, ...]
-    at_risk: tuple[SceneMessage, ...]
-    # what an analysis of `empty` alone can invalidate, after a Keep
-    empty_at_risk: tuple[SceneMessage, ...]
-    staleness: dict[int, Staleness]
-
-    @property
-    def needed(self) -> int:
-        return len(self.keepable) + len(self.empty)
-
-    @property
-    def total(self) -> int:
-        return self.needed + len(self.at_risk)
-
-    @property
-    def keep_total(self) -> int:
-        return len(self.empty) + len(self.empty_at_risk)
-
-    def checks(self) -> dict[str, int]:
-        return dict(Counter(stale.check for stale in self.staleness.values()))
-
-    def ids(self) -> set[int]:
-        return {message.id for message in (*self.keepable, *self.empty, *self.at_risk)}
-
-    def without(self, ids: set[int]) -> "PerceptionBacklog":
-        def rest(messages):
-            return tuple(message for message in messages if message.id not in ids)
-
-        return PerceptionBacklog(
-            keepable=rest(self.keepable),
-            empty=rest(self.empty),
-            at_risk=rest(self.at_risk),
-            empty_at_risk=rest(self.empty_at_risk),
-            staleness={
-                key: value for key, value in self.staleness.items() if key not in ids
-            },
-        )
-
-    def frame(self, *, attempts: int, new: set[int], unregistered: int) -> dict:
-        """
-        `attempts` is the number of requests one analysis can make;
-        `unregistered` counts the new lines the step has not registered yet.
-        """
-        needed = self.needed + unregistered
-        total = needed + len(self.at_risk)
-        keep_total = self.keep_total + unregistered
-        return {
-            "needed": needed,
-            "keepable": len(self.keepable),
-            "empty": len(self.empty),
-            "new": unregistered
-            + sum(message.id in new for message in (*self.keepable, *self.empty)),
-            "at_risk": len(self.at_risk),
-            "total": total,
-            "requests": total * attempts,
-            "keep_total": keep_total,
-            "keep_requests": keep_total * attempts,
-        }
-
-
-def analysis_dependents(
-    scene: "Scene",
-    passages: list[SceneMessage],
-    roots: list[SceneMessage],
-    *,
-    read: PerspectiveReadContext,
-) -> tuple[SceneMessage, ...]:
-    """
-    Passages whose required views an analysis of `roots` can invalidate. The
-    analysis rewrites the views of a root that are not current, and every
-    view of a root whose text changed since its analysis. A rewritten view
-    invalidates the views that cite it, transitively; a changed text also
-    invalidates the views that name the passage as physical context.
-    """
-    rewritten = set()
-    affected = set()
-    for root in roots:
-        if root.knowledge.content_digest != content_digest(root.perception_text):
-            rewritten.add(root.id)
-            continue
-        reference = source_reference(scene, "message", root.id, read=read)
-        for view in root.knowledge.views:
-            if not _stored_view_current(scene, reference, view, read=read):
-                affected.add((root.id, view.id))
-    touched = {root.id for root in roots}
-
-    def invalidated(view) -> bool:
-        return any(
-            dependency.kind == "message"
-            and (
-                dependency.id in rewritten
-                or (dependency.id, dependency.view_id) in affected
-                or (dependency.view_id is None and dependency.id in touched)
-            )
-            for dependency in view.sources
-        ) or any(item.message_id in rewritten for item in view.passage_provenance)
-
-    skip = {root.id for root in roots}
-    dependents = []
-    grew = True
-    while grew:
-        grew = False
-        for message in passages:
-            if (
-                message.id in skip
-                or message.knowledge is None
-                or not eligible_passage(message)
-            ):
-                continue
-            views = [view for view in message.knowledge.views if invalidated(view)]
-            if views:
-                skip.add(message.id)
-                audiences = set(relevant_audiences(scene, message))
-                if any(audiences.intersection(view.audience) for view in views):
-                    dependents.append(message)
-                # An absent-only passage needs no request, but its changed views
-                # can still invalidate a later passage where that audience is present.
-                affected.update((message.id, view.id) for view in views)
-                touched.add(message.id)
-                grew = True
-    return tuple(sorted(dependents, key=lambda message: message.id))
-
-
-def perception_backlog(
-    scene: "Scene", passages: list[SceneMessage], *, read=None
-) -> PerceptionBacklog:
-    read = read or PerspectiveReadContext(scene)
-    keepable, empty, staleness = [], [], {}
-    for message in passages:
-        if (
-            not eligible_passage(message)
-            or message.knowledge is None
-            or not analysis_audiences(scene, message)
-        ):
-            continue
-        stale = perception_staleness(scene, message, read=read)
-        if stale is None:
-            continue
-        staleness[message.id] = stale
-        if has_stored_views(message.knowledge, relevant_audiences(scene, message)):
-            keepable.append(message)
-        else:
-            empty.append(message)
-    return PerceptionBacklog(
-        keepable=tuple(keepable),
-        empty=tuple(empty),
-        at_risk=analysis_dependents(scene, passages, [*keepable, *empty], read=read),
-        empty_at_risk=analysis_dependents(scene, passages, empty, read=read),
-        staleness=staleness,
-    )
-
-
-def keep_stored_sources(
-    scene: "Scene",
-    keys: list[tuple[Literal["message", "summary"], str | int, int]],
-) -> None:
-    """Accept the stored views of each source in `keys` as current, in order."""
-    kept = {key for key in keys if keep_stored_source_views(scene, key)}
-    # Keep changes no revision and sends no invalidation, so the audience
-    # index would keep serving the views it left out while they were stale.
-    get_agent("memory").invalidate_audience_sources(scene, kept)
-
-
-def keep_stored_perceptions(scene: "Scene", messages: list[SceneMessage]) -> None:
-    """Accept the stored ready and omitted views of `messages` as current, in history order."""
-    keep_stored_sources(
-        scene,
-        [
-            ("message", message.id, 0)
-            for message in sorted(messages, key=lambda entry: entry.id)
-        ],
-    )
-    read = PerspectiveReadContext(scene)
-    remaining = {}
-    for message in messages:
-        stale = perception_staleness(scene, message, read=read)
-        if stale is None:
-            emit_perception_status(scene, message, perception_readiness(scene, message))
-        else:
-            remaining[message.id] = stale.check
-    log.info(
-        "kept stored perceptions",
-        passages=len(messages),
-        still_needed=len(remaining),
-        still_needed_checks=dict(Counter(remaining.values())),
     )
 
 
@@ -991,10 +792,6 @@ class PerceptionMixin:
     def init_perceptions(self) -> None:
         self._perception_deferred = WeakKeyDictionary()
         self._perception_running = WeakKeyDictionary()
-        # (cancel sequence, passage ids) and (cancel sequence, summary entry
-        # keys) an answer or the threshold approved in the running knowledge step
-        self._perception_approved = WeakKeyDictionary()
-        self._summary_approved = WeakKeyDictionary()
 
     def _perception_status(
         self,
@@ -1003,7 +800,13 @@ class PerceptionMixin:
         status: Literal["pending", "failed"],
         *,
         invalidate: bool = False,
+        add_missing: bool = True,
     ) -> None:
+        """
+        A failed view stays failed: only an analysis result or an edit of the
+        passage replaces it. `add_missing` gives each relevant audience
+        without a view one with `status`.
+        """
         previous = message.knowledge
         read = PerspectiveReadContext(scene)
         reference = source_reference(scene, "message", message.id, read=read)
@@ -1015,18 +818,23 @@ class PerceptionMixin:
             if invalidate or not _stored_view_current(
                 scene, reference, view, read=read
             ):
-                values.update(
-                    status=status,
-                    text=None,
-                    sources=(),
-                    passage_provenance=(),
-                )
+                if view.status in ("ready", "omitted"):
+                    # the last text stays readable until an analysis replaces it
+                    values["stale"] = True
+                else:
+                    values.update(
+                        status="failed" if view.status == "failed" else status,
+                        text=None,
+                        sources=(),
+                        passage_provenance=(),
+                    )
             outputs.append(PerspectiveOutput(**values))
-        outputs.extend(
-            PerspectiveOutput(audience=(name,), status=status)
-            for name in relevant_audiences(scene, message)
-            if name not in covered
-        )
+        if add_missing:
+            outputs.extend(
+                PerspectiveOutput(audience=(name,), status=status)
+                for name in relevant_audiences(scene, message)
+                if name not in covered
+            )
         set_source_perspectives(
             scene,
             "message",
@@ -1040,10 +848,13 @@ class PerceptionMixin:
         message: SceneMessage,
         *,
         read: PerspectiveReadContext | None = None,
+        inherited: bool = True,
     ) -> bool:
         if not eligible_passage(message) or message.knowledge is None:
             return False
-        return not perception_results_current(scene, message, read=read)
+        return not perception_results_current(
+            scene, message, read=read, inherited=inherited
+        )
 
     def register_perception_sources(
         self, scene: "Scene", messages: list[SceneMessage]
@@ -1056,179 +867,6 @@ class PerceptionMixin:
                     )
                     continue
                 self._perception_status(scene, message, "pending")
-
-    async def _ask_backlog(
-        self, scene: "Scene", frame: dict, cancel_sequence: int
-    ) -> PerceptionBacklogDecision:
-        request_id = uuid.uuid4().hex
-        future = asyncio.get_running_loop().create_future()
-        _perception_backlog_futures[request_id] = future
-        emit(
-            "perception_backlog",
-            message="",
-            websocket_passthrough=True,
-            data={"request_id": request_id, **frame},
-        )
-        try:
-            while not future.done():
-                if scene.cancel_requested or scene.cancel_sequence != cancel_sequence:
-                    raise GenerationCancelled("Generation cancelled", by_user=True)
-                if self.scene is not scene:
-                    raise GenerationCancelled("Perception scene changed")
-                # a cancel and a scene release both go through Scene.interrupt
-                await asyncio.wait(
-                    (future, scene.interrupt_signal),
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-            return future.result()
-        finally:
-            _perception_backlog_futures.pop(request_id, None)
-            if not future.done():
-                future.cancel()
-                emit(
-                    "perception_backlog_closed",
-                    message="",
-                    websocket_passthrough=True,
-                    data={"request_id": request_id},
-                )
-
-    @contextmanager
-    def backlog_approvals(self, scene: "Scene"):
-        """Backlog answers given inside the block last until it ends."""
-        try:
-            yield
-        finally:
-            self._perception_approved.pop(scene, None)
-            self._summary_approved.pop(scene, None)
-
-    @staticmethod
-    def _current_approvals(store, scene: "Scene") -> set:
-        # a Stop (a new cancel sequence) ends the approval
-        sequence, approved = store.get(scene, (None, None))
-        if sequence != scene.cancel_sequence:
-            approved = set()
-            store[scene] = (scene.cancel_sequence, approved)
-        return approved
-
-    def _approved(self, scene: "Scene") -> set[int]:
-        return self._current_approvals(self._perception_approved, scene)
-
-    def _summaries_approved(self, scene: "Scene") -> set[tuple[int, str]]:
-        return self._current_approvals(self._summary_approved, scene)
-
-    def _unapproved_backlog(
-        self, scene: "Scene", passages: list[SceneMessage]
-    ) -> PerceptionBacklog:
-        return perception_backlog(scene, passages).without(self._approved(scene))
-
-    async def ask_knowledge_backlog(
-        self,
-        scene: "Scene",
-        *,
-        perceptions: dict | None,
-        summaries: dict | None,
-        cancel_sequence: int,
-        cancels_at_entry: int,
-    ) -> PerceptionBacklogDecision:
-        """
-        One question about the step's perception analyses and summary
-        rebuilds. A Cancel stops the generation; a Cancel given since
-        `cancels_at_entry` stops it without asking again.
-        """
-        if cancelled_since(scene, cancels_at_entry):
-            raise GenerationCancelled(
-                "Knowledge update was not confirmed", by_user=True
-            )
-        decision = await self._ask_backlog(
-            scene, {"perceptions": perceptions, "summaries": summaries}, cancel_sequence
-        )
-        log.info("knowledge backlog decision", decision=decision)
-        if decision == "cancel":
-            record_cancel(scene)
-            raise GenerationCancelled(
-                "Knowledge update was not confirmed", by_user=True
-            )
-        return decision
-
-    async def _approve_perception_backlog(
-        self,
-        scene: "Scene",
-        *,
-        cancel_sequence: int,
-        cancels_at_entry: int,
-        new: set[int] = frozenset(),
-    ) -> None:
-        """
-        Approve every analysis the step still has to run, and the summary
-        rebuilds they cause: up to the threshold without a question, otherwise
-        as the user decides. New lines the step registers later count, and
-        the answer covers them.
-        """
-        approved = self._approved(scene)
-        pending = self._unapproved_backlog(scene, perception_passages(scene))
-        new_lines = {
-            message_id: requests
-            for message_id, requests in counted_new_lines(scene).items()
-            if message_id not in approved
-        }
-        new_ids, unregistered = new_lines.keys(), sum(new_lines.values())
-        summaries = self.summary_backlog(scene, pending.ids())
-        if (
-            pending.total + unregistered <= PERCEPTION_BACKLOG_THRESHOLD
-            and summaries.total <= PERCEPTION_BACKLOG_THRESHOLD
-        ):
-            approved.update(pending.ids(), new_ids)
-            self._summaries_approved(scene).update(summaries.keys())
-            return
-        attempts = 2 if self.resolve_config("perceptions", "automatic_repair") else 1
-        frame = pending.frame(attempts=attempts, new=new, unregistered=unregistered)
-        for message_id, stale in pending.staleness.items():
-            log.info(
-                "perception backlog passage",
-                message_id=message_id,
-                check=stale.check,
-                character=stale.character,
-                cited=stale.cited,
-            )
-        log.info("perception backlog", checks=pending.checks(), **frame)
-        # under Keep, only the passages without stored views are analyzed
-        kept_summaries = self.summary_backlog(
-            scene,
-            {message.id for message in (*pending.empty, *pending.empty_at_risk)},
-        )
-        decision = await self.ask_knowledge_backlog(
-            scene,
-            perceptions=frame,
-            summaries=self.summary_frame(summaries, kept_summaries),
-            cancel_sequence=cancel_sequence,
-            cancels_at_entry=cancels_at_entry,
-        )
-        approved = self._approved(scene)
-        if decision == "analyze":
-            approved.update(pending.ids(), new_ids)
-            self.apply_summary_decision(scene, summaries, decision)
-            return
-        current = self._unapproved_backlog(scene, perception_passages(scene))
-        keep_stored_perceptions(scene, [*current.keepable, *current.empty])
-        approved.update(
-            (message.id for message in (*current.empty, *current.empty_at_risk)),
-            new_ids,
-        )
-        self.apply_summary_decision(scene, kept_summaries, decision)
-
-    def perception_requests(self, scene: "Scene", message: SceneMessage) -> int:
-        if not eligible_passage(message) or not perception_body(message).strip():
-            return 0
-        present = message.present
-        return int(
-            bool(
-                filter_analysis_audiences(
-                    scene,
-                    scene.active_characters if present is None else present,
-                    speaker=perception_speaker(message),
-                )
-            )
-        )
 
     def _prepare_perception_sources(
         self, scene: "Scene", before_message_id: int | None
@@ -1258,19 +896,31 @@ class PerceptionMixin:
         *,
         before_message_id: int | None = None,
         still_current=None,
-        new: set[int] = frozenset(),
+        repair: bool = False,
+        progress=None,
+        targets: Collection[int] = (),
+        in_repair: bool = False,
+        attempted: set[int] | None = None,
     ) -> None:
         """
-        Analyze the pending passages; `new` are the passages the question
-        calls new.
+        Analyze the passages that were never analyzed, or only `targets`; with
+        `repair`, every passage whose views are not current. A passage is
+        analyzed once per call, unless the user retries it; `attempted` is the
+        step's own record, so a passage done or ignored earlier in the step is
+        not analyzed again, except as a target.
         """
         if not character_knowledge_enabled(scene):
             return
         if self.scene is not scene:
             raise GenerationCancelled("Perception scene changed")
-        cancels_at_entry = cancels_at_start(scene)
         self._prepare_perception_sources(scene, before_message_id)
         cancel_sequence = scene.cancel_sequence
+        # failed passages the user chose to retry in this step
+        retrying = set()
+        # a passage built on out-of-sync knowledge stays out of sync after its
+        # analysis, by inheritance
+        done = set()
+        attempted = done if attempted is None else attempted
         while True:
             if scene.cancel_requested or scene.cancel_sequence != cancel_sequence:
                 raise GenerationCancelled("Generation cancelled", by_user=True)
@@ -1282,32 +932,40 @@ class PerceptionMixin:
                 raise GenerationCancelled("Perception scene changed")
             read = PerspectiveReadContext(scene)
             refreshing = in_revision_phase(scene)
-            message = next(
-                (
-                    entry
-                    for entry in perception_prefix(scene, before_message_id)
-                    # a pending revision is analyzed by its own refresh
-                    if (
-                        refreshing
-                        or entry.revision_state is None
-                        or entry.revision_matches_baseline
+            due = (
+                entry
+                for entry in perception_prefix(scene, before_message_id)
+                # a pending revision is analyzed by its own refresh
+                if (
+                    refreshing
+                    or entry.revision_state is None
+                    or entry.revision_matches_baseline
+                )
+                and entry.id not in done
+                and (entry.id in targets or entry.id not in attempted)
+                # a revision's own analysis; the lines after it wait, so they
+                # are analyzed once, after what they build on
+                and (not targets or entry.id in targets)
+                and (
+                    self._perception_needed(scene, entry, read=read)
+                    if repair
+                    else (
+                        never_analyzed(entry)
+                        or entry.id in retrying
+                        or entry.id in targets
                     )
-                    and self._perception_needed(scene, entry, read=read)
-                ),
-                None,
+                    # done once its own analysis is current
+                    and self._perception_needed(
+                        scene, entry, read=read, inherited=False
+                    )
+                )
             )
+            message = next(due, None)
             if message is None:
                 return
-            if message.id not in self._approved(scene) and analysis_audiences(
-                scene, message
-            ):
-                await self._approve_perception_backlog(
-                    scene,
-                    cancel_sequence=cancel_sequence,
-                    cancels_at_entry=cancels_at_entry,
-                    new=new,
-                )
-                continue
+            if progress is not None:
+                progress.max_steps = progress.current_step + 1 + sum(1 for _ in due)
+                progress("Repairing character perspectives")
             stale = perception_staleness(scene, message, read=read)
             log.info(
                 "perception analysis needed",
@@ -1328,7 +986,14 @@ class PerceptionMixin:
                 running = self._perception_running.setdefault(scene, set())
                 running.add(message.id)
                 emit_perception_status(scene, message, "running")
-                await self.analyze_perceptions(scene, message)
+                done.add(message.id)
+                attempted.add(message.id)
+                if await self.analyze_perceptions(
+                    scene, message, in_repair=repair or in_repair
+                ):
+                    retrying.add(message.id)
+                    done.discard(message.id)
+                    attempted.discard(message.id)
             except PerceptionInputsChanged as exc:
                 if scene.cancel_requested or scene.cancel_sequence != cancel_sequence:
                     raise GenerationCancelled("Generation cancelled", by_user=True)
@@ -1336,6 +1001,8 @@ class PerceptionMixin:
                     raise GenerationCancelled(
                         "The selected version changed during analysis"
                     )
+                done.discard(message.id)
+                attempted.discard(message.id)
                 self._perception_status(
                     scene, message, "pending", invalidate=exc.invalidate
                 )
@@ -1346,7 +1013,7 @@ class PerceptionMixin:
                 if getattr(exc, "by_user", False):
                     record_cancel(scene)
                 running.discard(message.id)
-                readiness = perception_readiness(scene, message, "failed")
+                readiness = perception_readiness(scene, message)
                 if readiness != "running":
                     emit_perception_status(scene, message, readiness)
                 raise
@@ -1482,12 +1149,20 @@ class PerceptionMixin:
         self._perception_status(scene, message, "failed")
 
     @set_processing
-    async def analyze_perceptions(self, scene: "Scene", message: SceneMessage) -> None:
+    async def analyze_perceptions(
+        self, scene: "Scene", message: SceneMessage, *, in_repair: bool = False
+    ) -> bool:
+        """
+        Analyze one passage; True when the user asked to retry a failure. In a
+        Repair, Ignore leaves the passage out of sync and the Repair goes on.
+        """
         if not relevant_audiences(scene, message):
             raise GenerationCancelled(
                 "No relevant audience is available for perception analysis"
             )
-        self._perception_status(scene, message, "pending")
+        # the views stay as they are until the analysis ends, so a Stop leaves
+        # nothing to undo: a new line stays new, a failed one stays failed
+        self._perception_status(scene, message, "pending", add_missing=False)
         knowledge = message.knowledge
         analyzed = analysis_audiences(scene, message)
         context = deepcopy(perception_context(scene, message, audiences=analyzed))
@@ -1500,7 +1175,7 @@ class PerceptionMixin:
         preserved = [
             PerspectiveOutput(**view.model_dump(exclude={"revision"}))
             for view in knowledge.views
-            if view.status in ("ready", "omitted")
+            if (view.status in ("ready", "omitted") and not view.stale)
             or not set(audiences).intersection(view.audience)
         ]
         preserved_names = {name for view in preserved for name in view.audience}
@@ -1563,13 +1238,7 @@ class PerceptionMixin:
                     audiences=requested,
                     error=feedback,
                 )
-        except PerceptionInputsChanged:
-            raise
-        except (GenerationCancelled, asyncio.CancelledError):
-            if self._perception_current(scene, message, knowledge, context, intention):
-                self._mark_perceptions_failed(
-                    scene, message, knowledge, outputs, preserved
-                )
+        except (PerceptionInputsChanged, GenerationCancelled, asyncio.CancelledError):
             raise
         except Exception as exc:
             if not self._perception_current(
@@ -1597,14 +1266,25 @@ class PerceptionMixin:
             action = await self.client._prompt_generation_error(
                 f"Perception analysis failed for passage {message.id}. "
                 f"Reason: {exc}\n\n"
-                "Dependent generation is stopped. Retry to analyze this passage again; "
-                "Cancel or Ignore stops generation without using reader text."
-            )
-            if action != "retry":
-                raise GenerationCancelled(
-                    "Perception analysis requires a successful retry", by_user=True
+                + (
+                    "Retry to analyze this passage again. Ignore leaves it out of "
+                    "sync and goes on with the Repair; Cancel stops the Repair."
+                    if in_repair
+                    else "Dependent generation is stopped. Retry to analyze this "
+                    "passage again; Cancel or Ignore stops generation without using "
+                    "reader text."
                 )
-            return
+            )
+            if action == "retry":
+                return True
+            if in_repair and action == "ignore":
+                return False
+            raise GenerationCancelled(
+                "Perception analysis requires a successful retry",
+                by_user=True,
+                message_id=message.id,
+                view_status="failed",
+            )
         stored = [*preserved, *outputs.values()]
         set_source_perspectives(scene, "message", message.id, stored)
         # Every required audience completed successfully. Retained pending views

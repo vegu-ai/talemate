@@ -1,3 +1,4 @@
+from _knowledge_stale_helpers import not_current
 import pytest
 
 from talemate.knowledge.perspectives import (
@@ -50,9 +51,7 @@ def test_edit_starts_no_cascade(scene):
     assert scene.archived_history[0]["knowledge"]["views"][0]["revision"] == 1
 
 
-def test_dependents_count_is_what_the_invalidation_sets_to_pending(
-    scene, notifications
-):
+def test_dependents_count_is_what_the_invalidation_flags(scene, notifications):
     layered = add_layered_view(scene)
     edit_message_view(scene, 101, "Alice", "Alice burns the ledger.")
     dependents = message_view_dependents(scene, 101, "Alice")
@@ -61,8 +60,8 @@ def test_dependents_count_is_what_the_invalidation_sets_to_pending(
         ("summary", "layer-1", 1),
     }
     assert invalidate_message_view_dependents(scene, 101, "Alice") == len(dependents)
-    assert select_character_view(scene, summary_ref(scene), "Alice").status == "pending"
-    assert select_character_view(scene, layered, "Alice").status == "pending"
+    assert select_character_view(scene, summary_ref(scene), "Alice").stale
+    assert select_character_view(scene, layered, "Alice").stale
     assert (
         select_character_view(scene, message_ref(scene), "Alice").text
         == "Alice burns the ledger."
@@ -82,7 +81,7 @@ def test_stale_citation_is_not_revived(scene):
     view["sources"][0]["view_revision"] = 1
     edit_message_view(scene, 101, "Alice", "Second edit.")
     assert view["sources"][0]["view_revision"] == 1
-    assert select_character_view(scene, summary_ref(scene), "Alice").status == "pending"
+    assert not_current(scene, summary_ref(scene), "Alice")
 
 
 def test_empty_text_omits_the_view(scene):
@@ -217,14 +216,14 @@ def test_edit_survives_a_later_analysis_publication(scene):
     )
 
 
-def test_message_text_change_discards_the_edit(scene):
+def test_message_text_change_flags_the_edit(scene):
     scene.history[0].present = ["Alice"]
     scene.history[0].mark_revision_committed()
     edit_message_view(scene, 101, "Alice", "Alice burns the ledger.")
     scene.edit_message(101, "The ledger never arrived.")
     view = select_character_view(scene, message_ref(scene), "Alice")
-    assert view.status == "pending"
-    assert view.text is None
+    assert view.stale
+    assert view.text == "Alice burns the ledger."
 
 
 def test_refusals_change_nothing(scene, notifications):

@@ -28,17 +28,13 @@ from talemate.world_state.templates import GenerationOptions
 from talemate.exceptions import GenerationCancelled
 from talemate.context import handle_generation_cancelled
 from talemate.events import ArchiveEvent
-from talemate.knowledge.memory import invalidate_memory_audiences
 from talemate.knowledge.perspective_models import PerspectiveSourceModel
-from talemate.knowledge.timeline import (
-    shift_knowledge_edge_times,
-    shift_world_entry_times,
-)
-from talemate.knowledge.perspectives import (
-    shift_perspective_times,
-    source_content_changed,
-    source_deleted,
-    source_reference,
+from talemate.knowledge.timeline import shift_world_entry_times
+from talemate.scene_signals import (
+    archive_entry_changed,
+    archive_entry_regenerated,
+    archive_entry_removed,
+    timeline_shifted,
 )
 
 if TYPE_CHECKING:
@@ -780,7 +776,7 @@ async def update_history_entry(
             scene.archived_history[entry.index] = archive_entry.model_dump(
                 exclude_none=True
             )
-            source_content_changed(scene, "summary", archive_entry.id)
+            archive_entry_changed.send(scene, identity=archive_entry.id, layer=0)
         archive_entry = ArchiveEntry(**scene.archived_history[entry.index])
         await emit_archive_add(scene, archive_entry)
         if still_current is not None and not still_current():
@@ -800,8 +796,8 @@ async def update_history_entry(
             scene.layered_history[entry.layer - 1][entry.index] = (
                 layered_entry.model_dump(exclude_none=True)
             )
-            source_content_changed(
-                scene, "summary", layered_entry.id, layer=entry.layer
+            archive_entry_changed.send(
+                scene, identity=layered_entry.id, layer=entry.layer
             )
         layered_entry = LayeredArchiveEntry(
             **scene.layered_history[entry.layer - 1][entry.index]
@@ -876,11 +872,12 @@ async def regenerate_history_entry(
     await update_history_entry(scene, entry, still_current=still_current)
     if still_current is not None and not still_current():
         raise GenerationCancelled("The scene changed during history refresh")
-    await summarizer.queue_summary_views(
-        scene, entry.id, entry.layer, generation_options=generation_options
+    archive_entry_regenerated.send(
+        scene,
+        identity=entry.id,
+        layer=entry.layer,
+        generation_options=generation_options,
     )
-    if still_current is not None and not still_current():
-        raise GenerationCancelled("The scene changed during history refresh")
 
     return entry
 
@@ -1060,9 +1057,8 @@ async def delete_history_entry(scene: "Scene", entry: HistoryEntry) -> ArchiveEn
     if remove_idx is None:
         raise ValueError("Entry not found.")
 
-    reference = source_reference(scene, "summary", entry.id)
     removed_raw = scene.archived_history.pop(remove_idx)
-    source_deleted(scene, reference)
+    archive_entry_removed.send(scene, entry=removed_raw)
     removed_entry = ArchiveEntry(**removed_raw)
 
     # Zero stays the oldest event: the oldest remaining static entry, or the
@@ -1154,9 +1150,6 @@ def shift_scene_timeline(scene: "Scene", shift: int) -> None:
         for entry in layer:
             _shift_entry_ts(entry, shift)
 
-    # 4) shift acquisition stamps and knowledge edges
-    shift_knowledge_edge_times(scene, shift)
-    shift_perspective_times(scene, shift)
+    # 4) world entry times
     shift_world_entry_times(scene, shift)
-    # an audience document's ts comes from an acquisition stamp or from the entry
-    invalidate_memory_audiences(scene)
+    timeline_shifted.send(scene, shift=shift)

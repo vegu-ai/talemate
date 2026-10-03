@@ -14,7 +14,7 @@
       @keydown.escape.prevent="cancelEdit"
       @blur="cancelEdit">
     </v-textarea>
-    <div v-else-if="view && view.status === 'ready'" class="perspective-text" @dblclick="startEdit" v-html="renderedText"></div>
+    <div v-else-if="view && view.text" class="perspective-text" :class="{ 'perspective-text--stale': view.stale }" @dblclick="startEdit" v-html="renderedText"></div>
     <div v-else-if="view" class="perspective-empty" @dblclick="startEdit">
       <v-tooltip :text="emptyReason" location="top" max-width="300">
         <template v-slot:activator="{ props }">
@@ -22,14 +22,21 @@
         </template>
       </v-tooltip>
     </div>
+    <div v-if="view && view.stale && !editing" class="perspective-stale mt-1">
+      <v-tooltip text="This perspective was built before a change to the story. Generation keeps using it until you choose Repair." location="top" max-width="300">
+        <template v-slot:activator="{ props }">
+          <v-chip v-bind="props" size="x-small" label variant="tonal" color="warning" prepend-icon="mdi-sync-alert" tabindex="0">Out of sync</v-chip>
+        </template>
+      </v-tooltip>
+    </div>
     <div v-if="dependents > 0 && !editing" class="perspective-dependents text-body-small text-muted mt-1">
       <v-icon size="small" class="mr-1">mdi-information-outline</v-icon>
       {{ dependentsHint }}
-      <v-tooltip text="They go back to the analysis. The next turn makes one Summarizer request for each message." location="top" max-width="300">
+      <v-tooltip text="They are marked out of sync. Repair analyzes them again, one Summarizer request for each message." location="top" max-width="300">
         <template v-slot:activator="{ props }">
           <v-chip v-bind="props" size="x-small" label variant="tonal" color="primary" class="ml-1" :disabled="locked" @click="reanalyzeDependents">
-            <v-icon class="mr-1">mdi-refresh</v-icon>
-            Analyze them again
+            <v-icon class="mr-1">mdi-sync-alert</v-icon>
+            Mark them out of sync
           </v-chip>
         </template>
       </v-tooltip>
@@ -162,6 +169,10 @@ export default {
   white-space: pre-wrap;
   overflow-wrap: break-word;
   color: rgba(var(--v-theme-on-surface), 0.87);
+}
+
+.perspective-text--stale {
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
 }
 
 .perspective-text :deep(.scene-paragraph) {

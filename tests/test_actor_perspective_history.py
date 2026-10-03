@@ -110,24 +110,22 @@ def test_projection_budget_counts_replacement_and_keeps_reader_immutable(
 
 
 @pytest.mark.parametrize("status", ["pending", "failed"])
-def test_nonready_projection_blocks_without_reader_fallback(cast, status):
+def test_nonready_projection_skips_without_reader_fallback(cast, status):
     scene, mixed = cast
     set_source_perspectives(
         scene, "message", mixed.id, [{"audience": ["Bob"], "status": status}]
     )
-    expected = "failed" if status == "failed" else "not run yet"
-    with pytest.raises(GenerationCancelled, match=expected) as raised:
-        scene.context_history(stored_views=True, budget=1000, perspective="Bob")
-    assert raised.value.message_id == mixed.id
-    assert raised.value.view_status == status
-    assert raised.value.character == "Bob"
+    # an empty view waits for a repair; the reader's text never stands in
+    history = scene.context_history(stored_views=True, budget=1000, perspective="Bob")
+    assert READER.split(": ", 1)[1] not in "\n".join(history)
 
 
-def test_stale_projection_blocks(cast):
+def test_stale_projection_keeps_the_last_view(cast):
     scene, mixed = cast
+    before = project_character_history(scene, "Bob")
     scene.edit_message(mixed.id, "Alice: Changed reader text.")
-    with pytest.raises(GenerationCancelled, match="not run yet"):
-        project_character_history(scene, "Bob")
+    # generation keeps the last perspective until a repair
+    assert project_character_history(scene, "Bob") == before
 
 
 def test_missing_audience_is_absent(cast):
@@ -420,7 +418,7 @@ async def test_verbatim_repetition_survives_perception_paraphrasing(cast, mode):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("method", ["rewrite", "unslop"])
-async def test_revision_falls_back_without_repairing_its_prefix(
+async def test_revision_reads_empty_views_without_repairing_its_prefix(
     cast, monkeypatch, method
 ):
     scene, mixed = cast
@@ -469,9 +467,9 @@ async def test_revision_falls_back_without_repairing_its_prefix(
         )
     assert analyzed == []
     assert len(rendered) == 1
-    assert READER.split(": ", 1)[1] in rendered[0]
-    assert "Later failed passage" in rendered[0]
-    assert "UNSEEN-VAULT-CODE" in rendered[0]
+    # failed views leave their passages out of Bob's history; no reader text
+    assert "UNSEEN-VAULT-CODE" not in rendered[0]
+    assert "sapphire is hidden" not in rendered[0]
     assert mixed.knowledge.views[0].status == "failed"
     assert (
         target.knowledge.views[0].status == later.knowledge.views[0].status == "failed"

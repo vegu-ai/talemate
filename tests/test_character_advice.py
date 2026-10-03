@@ -172,7 +172,9 @@ async def test_author_planning_keeps_reader_context_and_evidence_boundary(
         scene, "message", message.id, [{"audience": ["Bob"], "status": "pending"}]
     )
     await get_agent("director").guide_narrator_off_of_scene_analysis("Reader planning.")
-    assert "Evidence is unavailable" in rendered[-1][1]
+    # the empty view is left out; the rest of Bob's evidence stays available
+    assert "Evidence is unavailable" not in rendered[-1][1]
+    assert "character evidence for bob" in rendered[-1][1].lower()
 
 
 @pytest.mark.asyncio

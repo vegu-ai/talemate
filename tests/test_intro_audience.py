@@ -11,6 +11,7 @@ from talemate.knowledge.intro import initialize_intro_audience
 from talemate.knowledge.memory import audience_documents
 from talemate.knowledge.perspectives import (
     select_character_view,
+    view_staleness,
     set_source_perspectives,
     source_reference,
     validate_saved_knowledge,
@@ -170,7 +171,7 @@ def test_intro_edit_invalidates_old_evidence_and_stamps_new_audience(intro_scene
     scene.active_characters = ["Bob"]
     scene.set_intro("The next opening belongs to Bob.")
     assert scene.intro_present == ["Bob"]
-    assert select_character_view(scene, previous, "Alice").status == "pending"
+    assert view_staleness(scene, previous, "Alice") is not None
     current = source_reference(scene, "intro", "intro")
     assert current.revision > previous.revision
     assert select_character_view(scene, current, "Bob").status == "ready"

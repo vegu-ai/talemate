@@ -1,5 +1,5 @@
 from _knowledge_step_helpers import push_and_step
-from talemate.knowledge.step import knowledge_step
+from talemate.knowledge.step import knowledge_step, repair_knowledge
 import asyncio
 import json
 from unittest.mock import AsyncMock
@@ -136,12 +136,9 @@ async def test_wrongly_typed_offered_id_repairs_dependency_and_edit_invalidates(
     )
     assert [p.message_id for p in alice.passage_provenance] == [message.id, prior.id]
     scene.edit_message(prior.id, "The bell was silent.")
-    assert (
-        next(
-            view for view in message.knowledge.views if view.audience == ("Alice",)
-        ).status
-        == "pending"
-    )
+    assert next(
+        view for view in message.knowledge.views if view.audience == ("Alice",)
+    ).stale
     dialog.assert_not_awaited()
 
 
@@ -306,7 +303,7 @@ async def test_transport_error_is_shown_without_validation_repair(analysis):
     assert "Reason: Model unavailable" in dialog.await_args.args[0]
 
 
-async def test_cancelled_repair_preserves_valid_views_and_propagates(analysis):
+async def test_cancelled_repair_leaves_the_line_new_and_propagates(analysis):
     scene, _, request, dialog = analysis
     request.side_effect = [
         result(response(("Alice",))),
@@ -315,9 +312,10 @@ async def test_cancelled_repair_preserves_valid_views_and_propagates(analysis):
     message = NarratorMessage(message="A bell rings.")
     with pytest.raises(GenerationCancelled):
         await push_and_step(scene, message)
+    # a cancel is not a failure: the views stay as they were before the attempt
     assert {view.audience[0]: view.status for view in message.knowledge.views} == {
-        "Alice": "ready",
-        "Bob": "failed",
+        "Alice": "pending",
+        "Bob": "pending",
     }
     dialog.assert_not_awaited()
 
@@ -373,7 +371,7 @@ async def test_repair_preserves_existing_shared_audience_view(analysis):
     )
     shared = message.knowledge.views[0]
     request.return_value = result(response(("Carol",)))
-    await knowledge_step(scene)
+    await repair_knowledge(scene)
     request.assert_awaited_once()
     assert message.knowledge.views[0] == shared
     assert message.knowledge.views[1].audience == ("Carol",)

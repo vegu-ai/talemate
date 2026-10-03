@@ -238,9 +238,7 @@ async def test_analysis_review_references_history_without_repeating_it(review_sc
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("review_scene", ["perception"], indirect=True)
-async def test_context_review_returns_correlated_deferred_and_running_status(
-    review_scene,
-):
+async def test_context_review_leaves_an_empty_view_out(review_scene):
     message = review_scene.history[-1]
     set_source_perspectives(
         review_scene,
@@ -249,36 +247,16 @@ async def test_context_review_returns_correlated_deferred_and_running_status(
         [{"audience": ["Bob"], "status": "pending"}],
     )
     plugin, frames = handler(review_scene)
-    await plugin.handle_context_review({"character": "Bob", "request_id": "deferred"})
-    assert frames[-1] == {
-        "type": "summarizer",
-        "action": "context_review_status",
-        "data": {
-            "scene_id": review_scene.id,
-            "message_id": message.id,
-            "selection_index": message.active_version,
-            "selection_digest": message.revision_digest(),
-            "selection_serial": message.revision_state.serial,
-            "character": "Bob",
-            "audiences": ["Alice", "Bob"],
-            "state": "deferred",
-            "message": (
-                "Perception analysis for this version has not run yet. "
-                "Analyze perceptions now, or send your next line."
-            ),
-        },
-        "request_id": "deferred",
-    }
-
-    summarizer = get_agent("summarizer")
-    summarizer._perception_running.setdefault(review_scene, set()).add(message.id)
-    await plugin.handle_context_review({"character": "Bob", "request_id": "running"})
-    assert frames[-1]["request_id"] == "running"
-    assert frames[-1]["data"]["state"] == "running"
-    assert frames[-1]["data"]["message"] == (
-        f"Perception analysis for passage {message.id} is still running; "
-        "the preview updates when it finishes."
-    )
+    for request_id in ("pending", "running"):
+        if request_id == "running":
+            get_agent("summarizer")._perception_running.setdefault(
+                review_scene, set()
+            ).add(message.id)
+        await plugin.handle_context_review(
+            {"character": "Bob", "request_id": request_id}
+        )
+        assert frames[-1]["request_id"] == request_id
+        assert frames[-1]["action"] == "context_review"
     Prompt.request.assert_not_awaited()
 
 

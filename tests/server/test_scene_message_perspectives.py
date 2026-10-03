@@ -66,12 +66,19 @@ async def test_get_perspectives_lists_each_message_and_the_intro(plugin, scene):
     (reply,) = replies(plugin, "perspectives")
     assert reply["character"] == "Erin"
     assert reply["views"] == {
-        101: {"status": "omitted", "text": None, "editable": True, "reason": None},
+        101: {
+            "status": "omitted",
+            "text": None,
+            "editable": True,
+            "reason": None,
+            "stale": False,
+        },
         102: {
             "status": "unsupported",
             "text": None,
             "editable": False,
             "reason": "This type of message has no perspectives.",
+            "stale": False,
         },
     }
     assert reply["intro"] == {
@@ -79,6 +86,7 @@ async def test_get_perspectives_lists_each_message_and_the_intro(plugin, scene):
         "text": None,
         "editable": False,
         "reason": None,
+        "stale": False,
     }
     assert reply["dependents"] == {}
 
@@ -106,6 +114,7 @@ async def test_edit_reports_the_view_and_its_dependents_then_saves(plugin, scene
         "text": "Alice burns the ledger.",
         "editable": True,
         "reason": None,
+        "stale": False,
     }
     assert reply["changed"] is True
     assert scene.saved is False
@@ -210,6 +219,7 @@ async def test_edit_with_empty_text_omits_the_view(plugin):
         "text": None,
         "editable": True,
         "reason": None,
+        "stale": False,
     }
     assert reply["changed"] is True
 
@@ -247,7 +257,7 @@ async def test_edit_is_refused_while_the_analysis_runs(plugin, scene, summarizer
 
 
 @pytest.mark.asyncio
-async def test_reanalyze_sets_the_dependents_to_pending(plugin, scene):
+async def test_reanalyze_flags_the_dependents(plugin, scene):
     layered = add_layered_view(scene)
     await plugin.handle_edit_perspective(
         {"id": 101, "character": "Alice", "text": "Alice burns the ledger."}
@@ -257,5 +267,5 @@ async def test_reanalyze_sets_the_dependents_to_pending(plugin, scene):
     )
     (reply,) = replies(plugin, "perspective_dependents_invalidated")
     assert reply["count"] == 2
-    assert select_character_view(scene, layered, "Alice").status == "pending"
+    assert select_character_view(scene, layered, "Alice").stale
     assert len(plugin.saves) == 2

@@ -240,7 +240,12 @@ async def test_stale_views_omit_without_reader_fallback(prepared, change):
     viewer = (
         "Alicia" if change == "rename" else "Bob" if change == "remove" else "Alice"
     )
-    assert not snapshot_for(scene, viewer)["characters"]
+    characters = snapshot_for(scene, viewer)["characters"]
+    if change == "source_edit":
+        # an edit flags the cited view; the snapshot keeps the last known view
+        assert characters == ["Bob has a bandaged arm."]
+    else:
+        assert not characters
     assert SECRET in render(scene)
 
 
@@ -520,7 +525,8 @@ async def test_omitted_stale_entity_does_not_recover_on_refresh(prepared, monkey
     for _ in range(4):
         await apply(prepared, {})
     assert scene.world_state.characters["Bob"].perspectives == prior
-    assert not snapshot_for(scene, "Alice")["characters"]
+    # flagged by the edit, the last view stays readable until a repair
+    assert snapshot_for(scene, "Alice")["characters"] == ["Bob has a bandaged arm."]
     assert SECRET in render(scene)
 
 

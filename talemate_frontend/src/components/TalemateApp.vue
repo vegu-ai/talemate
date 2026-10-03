@@ -490,7 +490,6 @@
   <RateLimitAlert ref="rateLimitAlert" />
   <AutoRetryAlert ref="autoRetryAlert" />
   <GenerationErrorDialog ref="generationErrorDialog" />
-  <PerceptionBacklogDialog ref="perceptionBacklogDialog" />
   <SceneRevisions
     ref="sceneRevisions"
     :scene="scene"
@@ -531,7 +530,6 @@ import StatusNotification from './StatusNotification.vue';
 import RateLimitAlert from './RateLimitAlert.vue';
 import AutoRetryAlert from './AutoRetryAlert.vue';
 import GenerationErrorDialog from './GenerationErrorDialog.vue';
-import PerceptionBacklogDialog from './PerceptionBacklogDialog.vue';
 import SceneRevisions from './SceneRevisions.vue';
 import VersionMismatchAlert from './VersionMismatchAlert.vue';
 import { versionsMatch } from '@/constants/version';
@@ -601,7 +599,6 @@ export default {
     RateLimitAlert,
     AutoRetryAlert,
     GenerationErrorDialog,
-    PerceptionBacklogDialog,
     SceneRevisions,
     VersionMismatchAlert,
     DirectorConsoleWidget,
@@ -1382,7 +1379,6 @@ export default {
           this.clearUxInteractions(); // Clear any active UX interactions when loading a new scene
           this.clearPrompts(); // Clear prompts when loading a new scene
           this.$refs.generationErrorDialog.closeAll(); // Backend cancelled the outgoing scene's pending generations
-          this.$refs.perceptionBacklogDialog.closeAll();
           this.requestAppConfig();
           this.requestWorldStateTemplates();
           this.requestPromptOverrideCheck();
@@ -1398,7 +1394,6 @@ export default {
           this.$refs.sceneMessages?.clear();
           this.clearUxInteractions(); // Clear any active UX interactions on load failure
           this.$refs.generationErrorDialog.closeAll(); // Backend cancelled the outgoing scene's pending generations
-          this.$refs.perceptionBacklogDialog.closeAll();
         } else if (data.id === 'load_scene_request') {
           // Load the requested scene (e.g., after forking)
           this.resetViews();
@@ -1447,16 +1442,6 @@ export default {
 
       if(data.type === 'auto_retry_done') {
         this.$refs.autoRetryAlert.close(data.data.generation_id);
-        return;
-      }
-
-      if(data.type === 'perception_backlog') {
-        this.$refs.perceptionBacklogDialog.open(data.data);
-        return;
-      }
-
-      if(data.type === 'perception_backlog_closed') {
-        this.$refs.perceptionBacklogDialog.dismiss(data.data.request_id);
         return;
       }
 

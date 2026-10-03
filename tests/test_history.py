@@ -1,6 +1,7 @@
 import pytest
 
 import talemate.history
+import talemate.knowledge.listeners
 from conftest import MockScene, bootstrap_scene
 from talemate.history import shift_scene_timeline
 from talemate.instance import get_agent
@@ -305,7 +306,7 @@ def test_shift_scene_timeline_refreshes_the_knowledge_memory(
     scene = perception_scene
     invalidated = []
     monkeypatch.setattr(
-        talemate.history, "invalidate_memory_audiences", invalidated.append
+        talemate.knowledge.listeners, "invalidate_memory_audiences", invalidated.append
     )
 
     shift_scene_timeline(scene, 600)
@@ -318,7 +319,7 @@ def test_shift_scene_timeline_leaves_the_knowledge_memory_alone_without_a_shift(
 ):
     invalidated = []
     monkeypatch.setattr(
-        talemate.history, "invalidate_memory_audiences", invalidated.append
+        talemate.knowledge.listeners, "invalidate_memory_audiences", invalidated.append
     )
 
     assert shift_scene_timeline(perception_scene, 0) is None

@@ -10,6 +10,7 @@ import structlog
 import talemate.client as client
 import talemate.emit.async_signals
 import talemate.util as util
+from talemate.events import before_generation
 from talemate.client.context import (
     client_context_attribute,
     set_client_context_attribute,
@@ -17,7 +18,6 @@ from talemate.client.context import (
 )
 from talemate.exceptions import ControlFlowException
 from talemate.prompts import Prompt
-from talemate.knowledge.backlog import cancel_stops_other_questions
 from talemate.scene_message import CharacterMessage
 from talemate.agents.utils import handle_empty_response_limit
 from talemate.ux.schema import Action
@@ -381,11 +381,7 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
 
         character = actor.character
 
-        # knowledge.step -> revision_refresh -> summarizer perceptions -> agents
-        from talemate.knowledge.step import knowledge_step
-
-        with cancel_stops_other_questions(self.scene):
-            await knowledge_step(self.scene)
+        await before_generation(self.scene, "conversation")
 
         emission = ConversationAgentEmission(
             agent=self, response="", actor=actor, character=character

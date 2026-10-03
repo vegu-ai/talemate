@@ -1,5 +1,7 @@
+from talemate.knowledge.revision_refresh import revision_refreshes
+from _knowledge_stale_helpers import pending_messages
 from _knowledge_step_helpers import push_and_step
-from talemate.knowledge.step import knowledge_step
+from talemate.knowledge.step import knowledge_step, repair_knowledge
 import asyncio
 import json
 from pathlib import Path
@@ -62,7 +64,7 @@ async def test_five_swaps_analyze_only_kept_text(browsing, commit):
         await plugin.handle_swap_revision({"id": message.id, "index": index})
         await asyncio.sleep(0)
         assert message.active_version == index
-        assert message.id in scene.pending_perception_messages
+        assert message.id in pending_messages(scene)
         request.assert_not_awaited()
     analyzed = []
 
@@ -83,10 +85,13 @@ async def test_five_swaps_analyze_only_kept_text(browsing, commit):
         assert analyzed == ["The bell rings."]
     else:
         await push_and_step(scene, NarratorMessage(message="Alice opens the window."))
-        # One request for the kept passage, one for the new passage.
-        assert analyzed == ["The bell rings.", "Alice opens the window."]
+        # back to the original text is an edit: the turn analyzes only the new
+        # passage, and Repair the kept one
+        assert analyzed == ["Alice opens the window."]
+        await repair_knowledge(scene)
+        assert analyzed == ["Alice opens the window.", "The bell rings."]
         assert request.await_count == 2
-    assert scene.pending_perception_messages == []
+    assert pending_messages(scene) == []
     assert all(view.status == "ready" for view in message.knowledge.views)
 
 
@@ -125,7 +130,7 @@ async def test_failed_commit_returns_correlated_error_and_stays_pending(browsing
     )
     with pytest.raises(GenerationCancelled):
         await task
-    assert message.id in scene.pending_perception_messages
+    assert message.id in pending_messages(scene)
     assert any(f.get("request_id") == "keep" and f.get("error") for f in frames)
 
 
@@ -139,12 +144,9 @@ async def test_browsing_preserves_and_revives_committed_perceptions(browsing):
     await plugin.handle_swap_revision({"id": message.id, "index": 0})
     assert message.knowledge is knowledge
     assert message.revision_state.status == "deferred"
-    assert (
-        select_character_view(
-            scene, source_reference(scene, "message", message.id), "Bob"
-        ).status
-        == "pending"
-    )
+    assert select_character_view(
+        scene, source_reference(scene, "message", message.id), "Bob"
+    ).stale
 
     await plugin.handle_swap_revision({"id": message.id, "index": baseline})
     assert message.knowledge is knowledge
@@ -364,8 +366,8 @@ async def test_regeneration_restores_ready_perception_baseline_and_dependents(
     baseline_knowledge = message.knowledge.model_dump(mode="json")
     dependent_baseline = dependent.knowledge.model_dump(mode="json")
     message.append_version("A newly regenerated bell passage.", "regenerate")
-    assert all(view.status == "pending" for view in message.knowledge.views)
-    assert dependent.knowledge.views[0].status == "pending"
+    assert all(view.stale for view in message.knowledge.views)
+    assert dependent.knowledge.views[0].stale
     assert message.revision_state.refresh_journal["writes"]["perspectives"]
 
     if reload:
@@ -752,7 +754,7 @@ async def test_pending_index_repair_survives_scene_file_reload(
 
     repair = reloaded.history[0].revision_state.pending_index_repair
     assert repair.archive_ids == ["base:A1"]
-    assert reloaded.revision_refreshes[0]["revision_refresh"]["required"]
+    assert revision_refreshes(reloaded)[0]["revision_refresh"]["required"]
     await refresh_revision(reloaded, reloaded.history[0])
     assert reloaded.history[0].revision_state.pending_index_repair is None
 

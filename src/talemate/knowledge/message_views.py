@@ -46,6 +46,8 @@ class MessageView(pydantic.BaseModel):
     text: str | None = None
     editable: bool = False
     reason: str | None = None
+    # the text is the last stored view, out of sync until a repair
+    stale: bool = False
 
     @pydantic.model_validator(mode="after")
     def explain_refusal(self):
@@ -74,13 +76,20 @@ def message_view(
         view = MessageView(status="omitted" if absent else "unavailable", editable=True)
     else:
         selected = select_character_view(scene, reference, character, read=read)
-        view = MessageView(status=selected.status, text=selected.text, editable=True)
+        view = MessageView(
+            status=selected.status,
+            text=selected.text,
+            editable=True,
+            stale=selected.stale,
+        )
     if absent and view.status == "omitted":
         return view.model_copy(update={"editable": not running and not deferred})
     if running:
-        return MessageView(status="running")
+        return MessageView(status="running", text=view.text, stale=view.stale)
     if deferred:
-        return MessageView(status="deferred")
+        return MessageView(
+            status="deferred", text=view.text, stale=view.text is not None
+        )
     return view
 
 

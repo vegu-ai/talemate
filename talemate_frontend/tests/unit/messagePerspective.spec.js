@@ -136,6 +136,20 @@ describe('perspective cell', () => {
             .toBe('The analysis of this message failed. Double-click to write a perspective.');
     });
 
+    it('keeps the text of an out-of-sync view and marks it', () => {
+        const { host } = mount({ view: { status: 'deferred', text: 'Nora hears the door.', stale: true, editable: false } });
+        const text = host.querySelector('.perspective-text');
+        expect(text.textContent).toBe('Nora hears the door.');
+        expect(text.classList.contains('perspective-text--stale')).toBe(true);
+        expect(host.querySelector('.perspective-stale .v-chip').textContent).toBe('Out of sync');
+    });
+
+    it('has no out-of-sync mark on a current view', () => {
+        const { host } = mount();
+        expect(host.querySelector('.perspective-stale')).toBeNull();
+        expect(host.querySelector('.perspective-text--stale')).toBeNull();
+    });
+
     it('renders nothing while the view is on its way', () => {
         const { host } = mount({ view: null });
         expect(host.querySelector('.perspective-text, .perspective-empty')).toBeNull();

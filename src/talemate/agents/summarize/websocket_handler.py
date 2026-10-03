@@ -1,26 +1,16 @@
-import pydantic
 import structlog
 
-from talemate.exceptions import GenerationCancelled
-from talemate.agents.summarize.perceptions import (
-    PerceptionBacklogDecision,
-    resolve_perception_backlog,
-)
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
 from talemate.knowledge.review import character_context_review
-from talemate.knowledge.readiness import perception_readiness, perception_status_data
+from talemate.knowledge.step import repair_knowledge
+from talemate.status import background_task
 
 __all__ = [
     "SummarizeWebsocketHandler",
 ]
 
 log = structlog.get_logger("talemate.server.summarize")
-
-
-class PerceptionBacklogResponsePayload(pydantic.BaseModel):
-    request_id: str
-    decision: PerceptionBacklogDecision
 
 
 class SummarizeWebsocketHandler(Plugin):
@@ -34,9 +24,15 @@ class SummarizeWebsocketHandler(Plugin):
     def summarizer(self):
         return get_agent("summarizer")
 
-    async def handle_perception_backlog_response(self, data: dict):
-        payload = PerceptionBacklogResponsePayload(**data)
-        resolve_perception_backlog(payload.request_id, payload.decision)
+    @background_task("Repairing character knowledge")
+    async def handle_repair_knowledge(self, data: dict):
+        """Rebuild every out-of-sync perspective and summary; a Stop keeps the rest flagged."""
+        scene = self.scene
+        try:
+            await repair_knowledge(scene)
+        finally:
+            scene.emit_status()
+        await self.signal_operation_done()
 
     async def handle_context_review(self, data: dict):
         scene = self.scene
@@ -52,30 +48,7 @@ class SummarizeWebsocketHandler(Plugin):
         if name is not None:
             if not isinstance(name, str) or name not in scene.active_characters:
                 raise ValueError("Select an active character for the context preview")
-            try:
-                preview = await character_context_review(
-                    scene, scene.character_data[name]
-                )
-            except GenerationCancelled as exc:
-                if exc.message_id is None or exc.view_status is None:
-                    raise
-                message = scene.get_message(exc.message_id)
-                if message is None:
-                    raise
-                state = perception_readiness(
-                    scene, message, exc.view_status, character=name
-                )
-                self.websocket_handler.queue_put(
-                    {
-                        "type": self.router,
-                        "action": "context_review_status",
-                        "data": perception_status_data(
-                            scene, message, state, character=name
-                        ),
-                        "request_id": data.get("request_id"),
-                    }
-                )
-                return
+            preview = await character_context_review(scene, scene.character_data[name])
         else:
             preview = self.summarizer.context_history_preview(scene)
             preview.update({"perspective": None, "exclusions": []})

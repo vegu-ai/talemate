@@ -4,11 +4,6 @@ from typing import Literal
 
 import structlog
 
-from talemate.agents.summarize.perceptions import (
-    PERCEPTION_BACKLOG_THRESHOLD,
-    PerceptionBacklogDecision,
-    keep_stored_sources,
-)
 from talemate.context import handle_generation_cancelled
 from talemate.exceptions import GenerationCancelled
 from talemate.knowledge.mode import character_knowledge_enabled
@@ -16,21 +11,16 @@ from talemate.knowledge.perspective_models import PerspectiveOutput
 from talemate.knowledge.perspectives import (
     PerspectiveReadContext,
     perspectives_changed,
-    select_character_view,
     set_source_perspectives,
     source_reference,
-)
-from talemate.knowledge.backlog import cancels_at_start
-from talemate.knowledge.summary_backlog import (
-    SummaryBacklog,
-    SummaryBacklogEntry,
-    summary_backlog,
+    view_staleness,
 )
 from talemate.status import LoadingStatus
 from talemate.knowledge.summaries import (
     SummaryInput,
     summary_entry,
     summary_inputs,
+    summary_repair_work,
 )
 
 log = structlog.get_logger(__name__)
@@ -87,13 +77,15 @@ class AudienceSummaryMixin:
             values = {key: value for key, value in view.items() if key != "revision"}
             values["audience"] = remaining
             if view["status"] != "failed" and any(
-                select_character_view(scene, reference, name, read=read).status
-                not in ("ready", "omitted")
+                view_staleness(scene, reference, name, read=read) is not None
                 for name in remaining
             ):
-                values.update(
-                    status="pending", text=None, sources=(), passage_provenance=()
-                )
+                if view["status"] in ("ready", "omitted"):
+                    values["stale"] = True
+                else:
+                    values.update(
+                        status="pending", text=None, sources=(), passage_provenance=()
+                    )
             outputs.append(PerspectiveOutput(**values))
         outputs.append(
             PerspectiveOutput(
@@ -120,9 +112,7 @@ class AudienceSummaryMixin:
         names = set(inputs) if audiences is None else set(audiences)
         for name in sorted(names):
             if name not in scene.character_data or (
-                reference
-                and select_character_view(scene, reference, name, read=read).status
-                in ("ready", "omitted")
+                reference and view_staleness(scene, reference, name, read=read) is None
             ):
                 dirty.discard((layer, identity, name))
                 continue
@@ -141,6 +131,20 @@ class AudienceSummaryMixin:
             )
         return requested
 
+    @staticmethod
+    def _without_stored_text(entry, audience) -> tuple[str, ...]:
+        """The names in `audience` with no stored ready or omitted view."""
+        stored = {
+            name: view
+            for view in (entry.get("knowledge") or {}).get("views", [])
+            for name in view["audience"]
+        }
+        return tuple(
+            name
+            for name in audience
+            if name not in stored or stored[name]["status"] not in ("ready", "omitted")
+        )
+
     async def _generate_summary_group(
         self, scene, entry, layer, audience, summary_input, *, generation_options=None
     ) -> bool:
@@ -151,7 +155,10 @@ class AudienceSummaryMixin:
         waiting = self._summary_waiting.setdefault(scene, set())
         dirty.difference_update(keys)
         waiting.difference_update(keys)
-        self._publish_summary_group(scene, identity, layer, audience, "pending")
+        # stored text stays readable, flagged, until a new summary replaces it
+        empty = self._without_stored_text(entry, audience)
+        if empty:
+            self._publish_summary_group(scene, identity, layer, empty, "pending")
         if summary_input.status == "pending":
             waiting.update(keys)
             return False
@@ -230,14 +237,15 @@ class AudienceSummaryMixin:
                     requeue()
                     raise
                 if current():
-                    self._publish_summary_group(
-                        scene,
-                        identity,
-                        layer,
-                        audience,
-                        "failed",
-                        sources=summary_input.sources,
-                    )
+                    if empty:
+                        self._publish_summary_group(
+                            scene,
+                            identity,
+                            layer,
+                            empty,
+                            "failed",
+                            sources=summary_input.sources,
+                        )
                     dirty.difference_update(keys)
                 else:
                     requeue()
@@ -246,14 +254,15 @@ class AudienceSummaryMixin:
                 if not current():
                     requeue()
                     return True
-                self._publish_summary_group(
-                    scene,
-                    identity,
-                    layer,
-                    audience,
-                    "failed",
-                    sources=summary_input.sources,
-                )
+                if empty:
+                    self._publish_summary_group(
+                        scene,
+                        identity,
+                        layer,
+                        empty,
+                        "failed",
+                        sources=summary_input.sources,
+                    )
                 log.warning(
                     "audience summary failed",
                     source_id=identity,
@@ -262,7 +271,11 @@ class AudienceSummaryMixin:
                 )
                 action = await self.client._prompt_generation_error(
                     f"Audience summary {identity} failed. Retry to rebuild it. "
-                    "Cancel or Ignore keeps it unavailable; character history uses only safe source views."
+                    + (
+                        "Cancel or Ignore keeps its last text, out of sync until a Repair."
+                        if not empty
+                        else "Cancel or Ignore keeps it unavailable; character history uses only safe source views."
+                    )
                 )
                 if not current():
                     requeue()
@@ -290,133 +303,102 @@ class AudienceSummaryMixin:
                 waiting.discard(key)
                 dirty.add(key)
 
-    def summary_backlog(self, scene, passages=()):
-        """The summary entries no answer approved yet; `passages` are about to be analyzed."""
-        self._wake_summary_waiters(scene)
-        return summary_backlog(
-            scene,
-            self._summary_dirty.get(scene, ()),
-            passages,
-            approved=self._summaries_approved(scene),
-        )
-
-    def keep_stored_summaries(self, scene, entries: list[SummaryBacklogEntry]) -> None:
-        keep_stored_sources(
-            scene,
-            [
-                ("summary", entry.identity, entry.layer)
-                for entry in sorted(entries, key=lambda entry: entry.key)
-            ],
-        )
-        remaining = {entry.key for entry in self.summary_backlog(scene).entries}
-        log.info(
-            "kept stored summaries",
-            entries=len(entries),
-            still_needed=len(remaining & {entry.key for entry in entries}),
-        )
-
-    def summary_frame(
-        self, rebuild: SummaryBacklog, keep: SummaryBacklog
-    ) -> dict | None:
-        if not rebuild.total:
-            return None
-        for entry in (*rebuild.entries, *rebuild.at_risk):
-            log.info(
-                "summary backlog entry",
-                layer=entry.layer,
-                identity=entry.identity,
-                characters=list(entry.names),
-                keepable=entry.keepable,
-                check=entry.check,
-                character=entry.character,
-                cited=entry.cited,
-            )
-        frame = {"rebuild": rebuild.frame(), "keep": keep.frame()}
-        log.info("summary backlog", **frame)
-        return frame
-
-    def apply_summary_decision(
-        self,
-        scene,
-        backlog: SummaryBacklog,
-        decision: PerceptionBacklogDecision,
-    ) -> None:
-        approved = self._summaries_approved(scene)
-        if decision == "analyze":
-            approved.update(backlog.keys())
-        elif decision == "keep":
-            self.keep_stored_summaries(scene, list(backlog.keepable))
-            approved.update(backlog.keep_keys())
-
-    async def _approve_summary_backlog(self, scene) -> None:
+    async def repair_summary_views(self, scene, *, repair: bool = False):
         """
-        Approve the rebuild of the queued summary entries: up to the threshold
-        without a question, otherwise as the user decides. The entries that
-        analyses still to come can change were asked about with them.
-        """
-        backlog = self.summary_backlog(scene)
-        if backlog.total <= PERCEPTION_BACKLOG_THRESHOLD:
-            self._summaries_approved(scene).update(backlog.keys())
-            return
-        decision = await self.ask_knowledge_backlog(
-            scene,
-            perceptions=None,
-            summaries=self.summary_frame(backlog, backlog),
-            cancel_sequence=scene.cancel_sequence,
-            cancels_at_entry=cancels_at_start(scene),
-        )
-        self.apply_summary_decision(scene, backlog, decision)
-
-    async def repair_summary_views(self, scene):
-        """
-        Build every queued summary view, one entry at a time, including the
-        layers that the built entries queue in turn. When more queued entries
-        than the backlog threshold, with the layered entries they can make out
-        of date, are not approved yet, the user is asked first.
+        Build the summary views that were never built (new archive entries),
+        one entry at a time, including the layers they queue in turn. With
+        `repair`, rebuild every summary view that is not current, layer by
+        layer; a view stays flagged until its rebuild succeeds.
         """
         if not character_knowledge_enabled(scene):
             return
-        dirty = self._summary_dirty.setdefault(scene, set())
-        await self._approve_summary_backlog(scene)
         progress = LoadingStatus(cancellable=True)
         try:
-            while True:
-                self._wake_summary_waiters(scene)
-                if not dirty:
-                    break
-                queued = set(dirty)
-                groups = {}
-                for layer, identity, name in sorted(queued):
-                    groups.setdefault((layer, identity), []).append(name)
-                requested = 0
-                for (layer, identity), names in groups.items():
-                    progress.max_steps = progress.current_step + len(
-                        {(layer, identity) for layer, identity, _ in dirty}
-                    )
-                    progress("Updating character summaries")
-                    # each group takes its keys off the queue as it starts, so
-                    # a cancel leaves the groups that have not started queued
-                    requested += await self.ensure_summary_views(
-                        scene,
-                        identity,
-                        layer,
-                        audiences=names,
-                        generation_options=self._summary_generation_options.get(
-                            scene, {}
-                        ).get((layer, identity)),
-                    )
-                if not requested and dirty >= queued:
-                    # every entry went back on the queue before its request
-                    # (the scene was released, or its inputs did not hold); a
-                    # later step retries them
-                    break
+            if repair:
+                await self._repair_all_summary_views(scene, progress)
+            else:
+                await self._build_new_summary_views(scene, progress)
         finally:
             progress.done()
         self._wake_summary_waiters(scene)
 
+    async def _build_new_summary_views(self, scene, progress):
+        dirty = self._summary_dirty.setdefault(scene, set())
+        while True:
+            self._wake_summary_waiters(scene)
+            # a view with stored text, or one that failed, waits for a repair
+            dirty.difference_update(
+                key for key in list(dirty) if not self._never_built(scene, *key)
+            )
+            if not dirty:
+                break
+            queued = set(dirty)
+            groups = {}
+            for layer, identity, name in sorted(queued):
+                groups.setdefault((layer, identity), []).append(name)
+            requested = 0
+            for (layer, identity), names in groups.items():
+                progress.max_steps = progress.current_step + len(
+                    {(layer, identity) for layer, identity, _ in dirty}
+                )
+                progress("Updating character summaries")
+                # each group takes its keys off the queue as it starts, so
+                # a cancel leaves the groups that have not started queued
+                requested += await self.ensure_summary_views(
+                    scene,
+                    identity,
+                    layer,
+                    audiences=names,
+                    generation_options=self._summary_options(scene, layer, identity),
+                )
+            if not requested and dirty >= queued:
+                # every entry went back on the queue before its request
+                # (the scene was released, or its inputs did not hold); a
+                # later step retries them
+                break
+
+    async def _repair_all_summary_views(self, scene, progress):
+        attempted = set()
+        progress.max_steps = len(summary_repair_work(scene))
+        while True:
+            work = summary_repair_work(scene, skip=attempted)
+            if not work:
+                break
+            layer, identity, names = work[0]
+            attempted.update((layer, identity, name) for name in names)
+            progress.max_steps = progress.current_step + len(work)
+            progress("Repairing character summaries")
+            await self.ensure_summary_views(
+                scene,
+                identity,
+                layer,
+                audiences=names,
+                generation_options=self._summary_options(scene, layer, identity),
+            )
+
+    def _summary_options(self, scene, layer, identity):
+        return self._summary_generation_options.get(scene, {}).get((layer, identity))
+
+    @staticmethod
+    def _never_built(scene, layer, identity, name) -> bool:
+        entry = summary_entry(scene, identity, layer)
+        if entry is None:
+            return True
+        return all(
+            view["status"] == "pending"
+            for view in (entry.get("knowledge") or {}).get("views", [])
+            if name in view["audience"]
+        )
+
     async def queue_summary_views(
         self, scene, identity, layer=0, *, generation_options=None
     ):
+        self.queue_summary_entry(
+            scene, identity, layer, generation_options=generation_options
+        )
+
+    def queue_summary_entry(self, scene, identity, layer=0, *, generation_options=None):
+        """Queue an entry's views; its generation options also serve a later Repair."""
         if not character_knowledge_enabled(scene):
             return
         entry = summary_entry(scene, identity, layer)

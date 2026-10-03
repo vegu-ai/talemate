@@ -38,7 +38,7 @@ from talemate.knowledge.revision_refresh import (
     revision_refresh_payload,
     revision_requires_refresh,
 )
-from talemate.knowledge.step import knowledge_step
+from talemate.knowledge.step import repair_passage
 from talemate.server.websocket_plugin import Plugin
 from talemate.status import background_task
 from talemate.knowledge.transitions import set_arrival_note
@@ -341,7 +341,7 @@ class SceneMessagePlugin(Plugin):
 
     @background_task("Updating kept version")
     async def handle_commit_revision(self, data: dict):
-        """Run the knowledge step for the selected canonical text."""
+        """Repair the perspectives of the selected canonical text (one passage)."""
         payload = SwapRevisionPayload(**data)
         scene = self.scene
         message = scene.get_message(payload.id)
@@ -372,7 +372,7 @@ class SceneMessagePlugin(Plugin):
             selection_serial = message.revision_state.serial
             selection_active = scene.active
             needs_refresh = revision_requires_refresh(scene, message)
-            await knowledge_step(scene)
+            await repair_passage(scene, message)
             refresh = revision_refresh_payload(scene, message)
             if not needs_refresh:
                 await scene.attempt_auto_save()

@@ -1,10 +1,6 @@
-from talemate.agents.summarize.perceptions import (
-    PERCEPTION_BACKLOG_THRESHOLD,
-    perception_backlog,
-    perception_passages,
-)
 from _knowledge_step_helpers import push_and_step
-from talemate.knowledge.step import knowledge_step
+from talemate.knowledge.status import knowledge_sync
+from talemate.knowledge.step import knowledge_step, repair_knowledge
 import asyncio
 import json
 from pathlib import Path
@@ -12,9 +8,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from _perception_backlog_helpers import answering
 from _perception_response_helpers import excluding_passage
-from test_perception_backlog import analysis, replace_view, story
+from _perception_story_helpers import analysis, replace_view, story
+from _knowledge_stale_helpers import not_current
 from talemate.character import Character, activate_character
 from talemate.context import ActiveScene
 from talemate.instance import get_agent
@@ -70,15 +66,8 @@ async def test_saved_perspectives_survive_activation_after_reload(
     with ActiveScene(reloaded):
         await load_scene_from_data(reloaded, saved_data, name=str(saved_path))
         await activate_character(reloaded, "Carol")
-        frames = []
-        with answering("analyze", frames):
-            assert (
-                perception_backlog(reloaded, perception_passages(reloaded)).total
-                <= PERCEPTION_BACKLOG_THRESHOLD
-            )
-            await knowledge_step(reloaded)
+        await knowledge_step(reloaded)
         request.assert_not_awaited()
-        assert frames == []
         for message, original in zip(reloaded.history[:5], stored, strict=True):
             assert message.knowledge.model_dump(mode="json") == original
             assert message_view(reloaded, message, "Carol").status == "omitted"
@@ -178,17 +167,15 @@ async def test_absent_stale_ready_view_is_omitted_without_weakening_citations(
                 "The room is silent.",
             )
         stored = message.knowledge.model_dump()
-        assert (
-            perception_backlog(scene, perception_passages(scene)).total
-            <= PERCEPTION_BACKLOG_THRESHOLD
-        )
         await knowledge_step(scene)
         assert select_character_view(scene, reference, "Carol").status == "omitted"
         assert view_staleness(scene, reference, "Carol") is None
         assert project_character_history(scene, "Carol") == []
-        assert select_character_view(scene, pinned, "Carol").status == "pending"
-        assert not can_cite_view(scene, pinned, "Carol")
-        assert not can_cite_view(scene, reference, "Carol")
+        assert not_current(scene, pinned, "Carol")
+        # an out-of-sync view stays citable while what it cites still resolves
+        citable = stale_kind != "dependency"
+        assert can_cite_view(scene, pinned, "Carol") is citable
+        assert can_cite_view(scene, reference, "Carol") is citable
         scene.archived_history = [{"id": "absent-summary", "text": "Reader summary."}]
         summary = set_source_perspectives(
             scene,
@@ -272,10 +259,6 @@ async def test_noncurrent_absent_view_does_not_block_generation(
             ],
         )
         stored = message.knowledge.model_dump()
-        assert (
-            perception_backlog(scene, perception_passages(scene)).total
-            <= PERCEPTION_BACKLOG_THRESHOLD
-        )
         await knowledge_step(scene)
         assert select_character_view(scene, reference, "Carol").status == "omitted"
         assert project_character_history(scene, "Carol") == []
@@ -313,10 +296,6 @@ async def test_no_cast_passage_is_omitted_before_and_after_hand_edit(
         for _ in range(3):
             await knowledge_step(scene)
             assert project_character_history(scene, "Alice") == transition_history
-        assert (
-            perception_backlog(scene, perception_passages(scene)).total
-            <= PERCEPTION_BACKLOG_THRESHOLD
-        )
         assert message_view(scene, message, "Alice").status == "omitted"
         assert (
             select_character_view(
@@ -365,9 +344,12 @@ async def test_editing_passage_with_absent_view_repairs_present_character(
         carol = next(v for v in message.knowledge.views if "Carol" in v.audience)
         assert carol.passage_provenance
         scene.edit_message(message.id, "Alice: The room is silent.")
-        assert all(v.status == "pending" for v in message.knowledge.views)
+        assert all(v.stale for v in message.knowledge.views)
         request.reset_mock()
+        # the turn's step leaves the edit flagged; Repair analyzes it
         await asyncio.wait_for(knowledge_step(scene), 2)
+        request.assert_not_awaited()
+        await asyncio.wait_for(repair_knowledge(scene), 2)
         request.assert_awaited_once()
         assert message.revision_feature_current("perceptions")
         assert [
@@ -379,9 +361,8 @@ async def test_editing_passage_with_absent_view_repairs_present_character(
         assert message_view(scene, message, "Carol").status == "omitted"
         retained = next(v for v in message.knowledge.views if v.id == carol.id)
         assert retained.audience == carol.audience
-        assert retained.status == "pending"
-        assert retained.text is None
-        assert retained.sources == retained.passage_provenance == ()
+        # an absent character's view is not analyzed; it stays flagged and reads as omitted
+        assert retained.stale
         assert f"Alice notices passage {message.id}." in "\n".join(
             project_character_history(scene, "Alice")
         )
@@ -409,7 +390,7 @@ async def test_absent_pending_record_does_not_hold_back_readiness(scene, monkeyp
     monkeypatch.setattr(
         "talemate.agents.summarize.perceptions.emit_perception_status", record
     )
-    expected_views = [(("Carol",), "pending"), (("Alice",), "ready")]
+    expected_views = [(("Carol",), "ready"), (("Alice",), "ready")]
     with ActiveScene(scene):
         await push_and_step(scene, message)
         scene.active_characters.append("Carol")
@@ -419,16 +400,22 @@ async def test_absent_pending_record_does_not_hold_back_readiness(scene, monkeyp
         await asyncio.wait_for(
             push_and_step(scene, CharacterMessage(message="Alice: The bell stops.")), 2
         )
+        # the edit, and the new line built on what was flagged
+        assert knowledge_sync(scene).passages == 2
+        assert perception_readiness(scene, message) == "deferred"
+        await asyncio.wait_for(repair_knowledge(scene), 2)
         assert [s for s in statuses if s[0] == message.id][-1] == (message.id, "ready")
         assert [(v.audience, v.status) for v in message.knowledge.views] == (
             expected_views
         )
         assert perception_readiness(scene, message) == "ready"
-        assert message.id not in scene.pending_perception_messages
+        assert knowledge_sync(scene).passages == 0
 
         replace_view(message, "Alice", status="failed", text=None)
         statuses.clear()
-        await asyncio.wait_for(get_agent("summarizer").ensure_perceptions(scene), 2)
+        await asyncio.wait_for(
+            get_agent("summarizer").ensure_perceptions(scene, repair=True), 2
+        )
         assert [s for s in statuses if s[0] == message.id] == [
             (message.id, "running"),
             (message.id, "ready"),
@@ -436,4 +423,4 @@ async def test_absent_pending_record_does_not_hold_back_readiness(scene, monkeyp
         assert [(v.audience, v.status) for v in message.knowledge.views] == (
             expected_views
         )
-        assert scene.pending_perception_messages == []
+        assert knowledge_sync(scene).passages == 0

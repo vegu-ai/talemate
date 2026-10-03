@@ -34,8 +34,6 @@ from talemate.emit import wait_for_input
 from talemate.exceptions import ActedAsCharacter, AbortWaitForInput, GenerationCancelled
 from talemate.context import active_scene, InteractionState, handle_generation_cancelled
 from talemate.instance import get_agent, AGENTS
-from talemate.knowledge.perspectives import validate_character_rename
-from talemate.knowledge.step import knowledge_step
 from talemate.character import (
     activate_character,
     deactivate_character,
@@ -596,7 +594,7 @@ class UpdateCharacterData(Node):
 
         scene = active_scene.get()
         if self.is_set(name) and scene is not None:
-            validate_character_rename(scene, character, name)
+            character.validate_rename(name, scene)
 
         if self.is_set(base_attributes):
             character.update(base_attributes=base_attributes)
@@ -1104,7 +1102,7 @@ class WaitForInput(Node):
             await self._handle_director_input(scene, state, text_message)
 
         if allow_commands and text_message.startswith("!"):
-            await knowledge_step(scene)
+            await events.before_generation(scene, "command")
             command_state = {}
             node_cmd_executed = False
             await scene.commands.execute(

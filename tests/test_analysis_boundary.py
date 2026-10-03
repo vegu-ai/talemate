@@ -131,10 +131,12 @@ async def analysis_turn(cast, monkeypatch, request):
     monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
     perspectives_changed.connect(memory._audiences_changed, sender=scene)
 
-    async def analyze(scene, new=frozenset(), **kwargs):
+    async def analyze(scene, **kwargs):
+        from talemate.agents.summarize.perceptions import never_analyzed
         from talemate.knowledge.revision_scope import active_revision_phase
 
         phase = active_revision_phase.get()
+        new = {message.id for message in scene.history if never_analyzed(message)}
         analyzed = {*new, *((phase[1].id,) if phase else ())}
         if scene.knowledge_eligibility == "perception":
             for message in scene.history:

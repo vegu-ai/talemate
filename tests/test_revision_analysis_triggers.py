@@ -1,5 +1,6 @@
+from _knowledge_stale_helpers import pending_messages
 from _knowledge_step_helpers import push_and_step
-from talemate.knowledge.step import knowledge_step
+from talemate.knowledge.step import knowledge_step, repair_knowledge
 import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -78,7 +79,7 @@ def assert_ready(scene, message):
     assert selected.text == perception_body(message)
     assert perception_readiness(scene, message) == "ready"
     assert not refresh(scene, message)["required"]
-    assert message.id not in scene.pending_perception_messages
+    assert message.id not in pending_messages(scene)
 
 
 @pytest.mark.asyncio
@@ -138,7 +139,7 @@ async def test_regeneration_analyzes_only_final_accepted_version(flow, monkeypat
 @pytest.mark.asyncio
 @pytest.mark.parametrize("trigger", ["action", "send"])
 @pytest.mark.parametrize("kind", [NarratorMessage, CharacterMessage])
-async def test_manual_save_retains_text_and_defers_until_action_or_send(
+async def test_manual_save_keeps_text_flagged_until_action_or_repair(
     flow, trigger, kind, monkeypatch
 ):
     t = flow
@@ -155,7 +156,8 @@ async def test_manual_save_retains_text_and_defers_until_action_or_send(
     selected = select_character_view(
         t.scene, source_reference(t.scene, "message", message.id), "Bob"
     )
-    assert selected.status not in ("ready", "omitted")
+    # the last perspective stays readable, flagged
+    assert selected.stale and selected.text
     if trigger == "action":
         await (
             await t.plugin.handle_commit_revision(
@@ -163,7 +165,10 @@ async def test_manual_save_retains_text_and_defers_until_action_or_send(
             )
         )
     else:
+        # the next turn leaves a hand edit flagged; Repair analyzes it
         await knowledge_step(t.scene)
+        t.request.assert_not_awaited()
+        await repair_knowledge(t.scene)
     assert t.request.await_count == 1
     assert_ready(t.scene, message)
     await knowledge_step(t.scene)
@@ -311,6 +316,8 @@ async def test_effective_eligibility_does_not_enable_perceptions(flow, mode):
     await t.plugin.handle_edit({"id": message.id, "text": "The ruby key is here."})
     before = t.request.await_count
     await knowledge_step(t.scene)
+    assert t.request.await_count == before
+    await repair_knowledge(t.scene)
     assert t.request.await_count - before == int(mode == "perception")
 
 
@@ -418,8 +425,8 @@ async def test_manual_save_after_auto_job_does_not_get_analyzed_by_finalizer(
     t = flow
     original_refresh = revision_refresh.refresh_revision
 
-    async def edit_after_refresh(scene, message):
-        result = await original_refresh(scene, message)
+    async def edit_after_refresh(scene, message, **kwargs):
+        result = await original_refresh(scene, message, **kwargs)
         await t.plugin.handle_edit({"id": message.id, "text": "The ruby key is here."})
         return result
 

@@ -3,7 +3,7 @@ agent.summarization.perceptions.after / .failed, sent after the knowledge step.
 """
 
 from _knowledge_step_helpers import push_and_step
-from talemate.knowledge.step import knowledge_step
+from talemate.knowledge.step import knowledge_step, repair_knowledge
 import asyncio
 from contextlib import suppress
 
@@ -152,7 +152,7 @@ async def test_revision_refresh_listener_that_generates_does_not_deadlock(
     listen("agent.summarization.perceptions.after", after)
     await edit_through_the_ui(scene, message, "The bell stops.")
     with capture_logs() as logs:
-        await asyncio.wait_for(knowledge_step(scene), timeout=10)
+        await asyncio.wait_for(repair_knowledge(scene), timeout=10)
     assert calls == [("start", False, False), ("done", None, None)]
     assert not [log for log in logs if log["event"] == "Error in signal receiver"]
     assert message.knowledge.revision == 2
@@ -174,8 +174,10 @@ async def test_step_sends_its_events_after_it_has_finished(audience_scene, liste
     await edit_through_the_ui(scene, first, "The bell stops.")
     await edit_through_the_ui(scene, second, "A door slams.")
     assert pending(scene) == [first.id, second.id]
-    # the generation that ran the step continues after the handlers
+    # the edits stay flagged until Repair, which sends its events after it finishes
     await asyncio.wait_for(knowledge_step(scene), timeout=10)
+    assert seen == []
+    await asyncio.wait_for(repair_knowledge(scene), timeout=10)
     assert sorted(seen) == [(first.id, [], False), (second.id, [], False)]
 
 
@@ -216,7 +218,7 @@ async def test_a_listener_task_started_in_a_step_sends_on_its_own(
     async_signals.get(probe).connect(late)
     listen("agent.summarization.perceptions.after", after)
     try:
-        await asyncio.wait_for(knowledge_step(scene), timeout=10)
+        await asyncio.wait_for(repair_knowledge(scene), timeout=10)
         step_ended.set()
         for _ in range(10):
             await asyncio.sleep(0)

@@ -19,6 +19,7 @@ List of currently supported events.
 | [`game_loop_player_character_iter`](#game_loop_player_character_iter) | Game Loop |
 | [`game_loop_new_message`](#game_loop_new_message) | Game Loop |
 | [`player_turn_start`](#player_turn_start) | Game Loop |
+| [`scene.before_generation`](#scenebefore_generation) | Game Loop |
 | [`scene_init`](#scene_init) | Scene Loop |
 | [`scene.revision_saved`](#scene-revision-events) | Scene Revisions |
 | [`scene.revision_forked`](#scene-revision-events) | Scene Revisions |
@@ -186,6 +187,19 @@ Triggered when the user turn starts. User input has not yet happened at this poi
     | Name | Type | Description |
     |------|------|-------------|
     | `scene` | `Scene` | The scene object |
+
+---
+
+### scene.before_generation
+
+Emitted before a generation that continues the story or acts on it: a narration, a character's line, an editor detail, a regenerated message or a `!` command. In Character perspectives mode the new passages are analyzed here, before the generation starts. A handler that cancels stops the generation.
+
+!!! payload "Payload"
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `scene` | `Scene` | The scene object |
+    | `trigger` | `str` | `narrator`, `conversation`, `editor`, `regenerate` or `command` |
 
 ---
 
@@ -1001,7 +1015,7 @@ Fires when the summarizer assembles the additional sub-instruction used when fet
 
 ### agent.summarization.perceptions.after
 
-Emitted once the characters' views of a passage are stored. Character knowledge is updated in one step before a generation (or when you choose **Analyze perceptions**); the event is sent after that step has finished, and the generation waits for the handler. A handler can start a generation or a director action from this event.
+Emitted once the characters' views of a passage are stored. New passages are analyzed in one step before a generation, and out-of-sync ones when you choose **Repair**; the event is sent after that step has finished, and the generation waits for the handler. A handler can start a generation or a director action from this event.
 
 !!! payload "Payload"
 

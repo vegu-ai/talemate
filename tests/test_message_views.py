@@ -59,6 +59,7 @@ def test_unsupported_running_and_deferred_are_not_editable(scene, summarizer):
         "text": None,
         "editable": False,
         "reason": "This type of message has no perspectives.",
+        "stale": False,
     }
     summarizer._perception_running[scene] = {101}
     running = message_view(scene, scene.history[0], "Alice")
@@ -69,7 +70,9 @@ def test_unsupported_running_and_deferred_are_not_editable(scene, summarizer):
     summarizer._perception_running.clear()
     scene.history[0].append_version("A new version of the passage.", source="custom")
     view = message_view(scene, scene.history[0], "Alice")
-    assert (view.status, view.text, view.editable) == ("deferred", None, False)
+    # the last perspective stays readable, flagged as out of sync
+    assert (view.status, view.editable, view.stale) == ("deferred", False, True)
+    assert view.text
     assert view.reason == "Keep a version of this message first."
 
 
@@ -97,12 +100,14 @@ def test_intro_view_is_read_only(scene, monkeypatch):
         "text": "Rain falls on the inn.",
         "editable": False,
         "reason": None,
+        "stale": False,
     }
     assert intro_view(scene, "Bob").model_dump() == {
         "status": "not_present",
         "text": None,
         "editable": False,
         "reason": None,
+        "stale": False,
     }
 
 

@@ -7,7 +7,11 @@ from typing import ClassVar, Literal
 
 import pydantic
 from talemate.knowledge.perspective_models import PerspectiveSourceModel
-from talemate.knowledge.perspectives import message_content_changed
+from talemate.scene_signals import (
+    message_changed,
+    message_versions_extras,
+    message_visibility_changed,
+)
 
 log = structlog.get_logger("talemate.scene_message")
 
@@ -335,11 +339,11 @@ class SceneMessage(PerspectiveSourceModel):
             and value != old_value
             and (self.knowledge is not None or self._knowledge_scene)
         ):
-            message_content_changed(self)
+            message_changed.send(self)
         elif name in ("meta", "source", "sub_type", "present", "from_choice") and (
             self.knowledge is not None or self._knowledge_scene
         ):
-            message_content_changed(self)
+            message_changed.send(self)
 
     @property
     def perception_text(self) -> str:
@@ -377,7 +381,7 @@ class SceneMessage(PerspectiveSourceModel):
         else:
             self.mark_revision_changed()
         if self.knowledge is not None or self._knowledge_scene:
-            message_content_changed(self)
+            message_changed.send(self)
         return version
 
     def set_active_version(self, index: int) -> None:
@@ -395,7 +399,7 @@ class SceneMessage(PerspectiveSourceModel):
         else:
             self.mark_revision_committed()
         if self.knowledge is not None or self._knowledge_scene:
-            message_content_changed(self)
+            message_changed.send(self)
 
     def versions_payload(self) -> dict:
         """
@@ -419,9 +423,7 @@ class SceneMessage(PerspectiveSourceModel):
         }
         scene = self._knowledge_scene() if self._knowledge_scene else None
         if scene is not None:
-            from talemate.knowledge.revision_refresh import revision_refresh_payload
-
-            payload.update(revision_refresh_payload(scene, self))
+            payload.update(message_versions_extras(scene, self))
         return payload
 
     def __init__(self, message: str | None = None, **data):
@@ -536,10 +538,7 @@ class SceneMessage(PerspectiveSourceModel):
         self._audience_visibility_changed()
 
     def _audience_visibility_changed(self):
-        from talemate.context import active_scene
-        from talemate.knowledge.memory import invalidate_memory_audiences
-
-        invalidate_memory_audiences(active_scene.get())
+        message_visibility_changed.send(self)
 
     def as_format(self, format: str, **kwargs) -> str:
         if format in ("movie_script", "ai_aware"):
@@ -558,14 +557,14 @@ class SceneMessage(PerspectiveSourceModel):
             self.mark_revision_changed()
         else:
             self.mark_revision_committed()
-        message_content_changed(self)
+        message_changed.send(self)
 
     def set_meta(self, **kwargs):
         if not self.meta:
             self.meta = {}
         self.meta.update(kwargs)
         self.mark_revision_changed()
-        message_content_changed(self)
+        message_changed.send(self)
 
 
 class CharacterMessage(SceneMessage):

@@ -7,6 +7,7 @@ import pydantic
 import structlog
 
 import talemate.client as client
+from talemate.events import before_generation
 from talemate.client.context import (
     client_context_attribute,
     set_client_context_attribute,
@@ -31,7 +32,6 @@ from talemate.prompts import Prompt
 from talemate.scene_message import NarratorMessage
 
 from talemate.instance import get_agent
-from talemate.knowledge.backlog import cancel_stops_other_questions
 
 from talemate.agents.registry import register
 
@@ -71,11 +71,7 @@ async def _narration(
     writing style, the injected instructions, and (for scene narration) the
     generated signal with the response.
     """
-    # knowledge.step -> revision_refresh -> summarizer perceptions -> agents
-    from talemate.knowledge.step import knowledge_step
-
-    with cancel_stops_other_questions(self.scene):
-        await knowledge_step(self.scene)
+    await before_generation(self.scene, "narrator")
     agent_context = active_agent.get()
     # ActiveAgent.__enter__ shares state by reference with the parent context,
     # so we save/restore the prior value rather than mutating in place.

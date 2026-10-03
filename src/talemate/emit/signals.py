@@ -27,8 +27,6 @@ AutoRetry = signal("auto_retry")
 AutoRetryDone = signal("auto_retry_done")
 GenerationError = signal("generation_error")
 GenerationErrorResponse = signal("generation_error_response")
-PerceptionBacklog = signal("perception_backlog")
-PerceptionBacklogClosed = signal("perception_backlog_closed")
 RequestClientStatus = signal("request_client_status")
 AgentStatus = signal("agent_status")
 RequestAgentStatus = signal("request_agent_status")
@@ -96,8 +94,6 @@ handlers = {
     "auto_retry_done": AutoRetryDone,
     "generation_error": GenerationError,
     "generation_error_response": GenerationErrorResponse,
-    "perception_backlog": PerceptionBacklog,
-    "perception_backlog_closed": PerceptionBacklogClosed,
     "request_client_status": RequestClientStatus,
     "agent_status": AgentStatus,
     "request_agent_status": RequestAgentStatus,

@@ -2,6 +2,7 @@ from _knowledge_step_helpers import push_and_step
 import asyncio
 import json
 from pathlib import Path
+from talemate.knowledge.status import knowledge_sync
 from talemate.regenerate import regenerate
 from talemate.tale_mate import Actor
 from talemate.server.scene_message import SceneMessagePlugin
@@ -10,7 +11,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from _perception_backlog_helpers import answering
 from _perception_response_helpers import exclude_passage, excluding_passage
 from talemate.agents.summarize.perceptions import parse_perceptions, perception_context
 from talemate.character import Character
@@ -25,7 +25,8 @@ from talemate.knowledge.perspectives import (
 )
 from talemate.knowledge.revision_browsing import defer_revision_work
 from talemate.knowledge.revision_refresh import catch_up_revisions
-from talemate.knowledge.step import knowledge_step
+from talemate.knowledge.step import knowledge_step, repair_knowledge
+from _knowledge_stale_helpers import not_current
 from talemate.scene_message import CharacterMessage, DirectorMessage, NarratorMessage
 
 CASES = json.loads(
@@ -365,28 +366,19 @@ async def test_deleted_source_discards_inflight_result(setup):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("agent_name", ["conversation", "narrator"])
-async def test_failed_perceptions_block_actor_generation(
-    setup, monkeypatch, agent_name
-):
+async def test_failed_perceptions_do_not_block_generation(setup):
     scene, summarizer, request = setup
     message = CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
     scene.history.append(message)
     set_source_perspectives(
         scene, "message", message.id, [{"audience": ["Alice"], "status": "failed"}]
     )
-    request.side_effect = GenerationCancelled("cancelled")
-    agent = get_agent(agent_name)
-    send = AsyncMock()
-    monkeypatch.setattr(agent.client, "send_prompt", send)
-    with pytest.raises(GenerationCancelled):
-        if agent_name == "conversation":
-            await agent.converse(
-                SimpleNamespace(character=scene.character_data["Alice"])
-            )
-        else:
-            await agent.narrate_scene()
-    send.assert_not_awaited()
+    # the failed view waits for Repair: the step before a generation and the
+    # character's history go on without it
+    await knowledge_step(scene)
+    request.assert_not_awaited()
+    history = scene.context_history(stored_views=True, budget=1000, perspective="Alice")
+    assert "Hello." not in "\n".join(history)
 
 
 def test_prompt_context_separates_reader_from_prior_knowledge(setup):
@@ -449,6 +441,9 @@ async def test_saved_incomplete_source_resumes_without_backfill(setup, status):
     saved = message.model_dump()
     scene.history[1] = CharacterMessage.model_validate(saved)
     await knowledge_step(scene)
+    # a line that never ran is new; a failed one waits for Repair
+    assert request.await_count == int(status == "pending")
+    await repair_knowledge(scene)
     assert old.knowledge is None
     assert request.await_count == 1
     assert scene.history[1].knowledge.acquired == message.knowledge.acquired
@@ -581,12 +576,14 @@ async def test_prior_view_invalidation_rebuilds_only_affected_sibling(setup):
             first.knowledge.views[1].model_dump(exclude={"revision"}),
         ],
     )
-    assert second.knowledge.views[0].status == "pending"
+    assert second.knowledge.views[0].stale
     assert second.knowledge.views[1] == bob
     request.return_value = result(
         answer("Alice's rebuilt view.", "Discard this unrelated rewrite.")
     )
     await knowledge_step(scene)
+    assert request.await_count == 2
+    await repair_knowledge(scene)
     assert request.await_count == 3
     assert (
         next(view for view in second.knowledge.views if view.audience == ("Bob",))
@@ -665,13 +662,7 @@ async def test_long_history_edit_reanalyzes_only_its_own_passage(setup):
         CharacterMessage(message=f"Alice: Independent weather report {i}.")
         for i in range(200)
     ]
-    frames = []
-    with answering("analyze", frames):
-        await push_and_step(scene, messages)
-    assert [
-        (frame["perceptions"]["needed"], frame["perceptions"]["new"])
-        for frame in frames
-    ] == [(200, 200)]
+    await push_and_step(scene, messages)
     assert request.await_count == 200
     assert all(
         not view.sources for message in messages for view in message.knowledge.views
@@ -682,6 +673,9 @@ async def test_long_history_edit_reanalyzes_only_its_own_passage(setup):
         sum(summarizer._perception_needed(scene, message) for message in messages) == 1
     )
     await knowledge_step(scene)
+    assert request.await_count == 200
+    assert knowledge_sync(scene).passages == 1
+    await repair_knowledge(scene)
     assert request.await_count == 201
     assert messages[-1].knowledge == untouched
 
@@ -746,14 +740,9 @@ async def test_omission_tracks_unperceived_physical_passage(setup):
     ] == [message.id, prior.id]
     scene.edit_message(prior.id, "Bob sits awake, watching the room.")
     assert message.knowledge.views[0] == alice
-    assert (
-        select_character_view(
-            scene, source_reference(scene, "message", message.id), "Bob"
-        ).status
-        == "pending"
-    )
+    assert not_current(scene, source_reference(scene, "message", message.id), "Bob")
     request.return_value = result(answer(bob="Bob hears the password swordfish."))
-    await knowledge_step(scene)
+    await repair_knowledge(scene)
     assert (
         select_character_view(
             scene, source_reference(scene, "message", message.id), "Bob"
@@ -806,7 +795,8 @@ async def test_dispatcher_remains_free_to_answer_explicit_analysis_retry(
     )
     try:
         rid = await wait_for_dialog()
-        assert message.knowledge.views[0].status == "failed"
+        # the failed analysis keeps the last perspective, flagged
+        assert message.knowledge.views[0].stale
         await received.put(
             {"type": "generation_error_response", "request_id": rid, "action": action}
         )
@@ -815,10 +805,10 @@ async def test_dispatcher_remains_free_to_answer_explicit_analysis_retry(
             while rid in _generation_error_futures:
                 await asyncio.sleep(0.01)
         if action == "retry":
-            await knowledge_step(scene)
             assert message.knowledge.views[0].status == "ready"
+            assert not message.knowledge.views[0].stale
         else:
-            assert message.knowledge.views[0].status == "failed"
+            assert message.knowledge.views[0].stale
     finally:
         loop.cancel()
 
@@ -918,8 +908,8 @@ async def test_provenance_survives_save_and_detects_unbound_physical_edit(setup)
     view = select_character_view(
         scene, source_reference(scene, "message", message.id), "Bob"
     )
-    assert view.status == "pending"
-    assert view.text is None
+    # the omitted view stays as it was, flagged as out of sync
+    assert view.status == "omitted" and view.stale
     bind_perspective_sources(scene)
 
 
@@ -978,8 +968,7 @@ async def test_cited_history_has_bounded_rebuild_and_one_index_per_scan(
 
     request.side_effect = cite_previous
     messages = [CharacterMessage(message=f"Alice: Report {i}.") for i in range(200)]
-    with answering("analyze", []):
-        await push_and_step(scene, messages)
+    await push_and_step(scene, messages)
     assert request.await_count == 200
     assert sum(bool(message.knowledge.views[1].sources) for message in messages) > 150
     original_sources = perspectives._sources
@@ -1001,10 +990,8 @@ async def test_cited_history_has_bounded_rebuild_and_one_index_per_scan(
         summarizer._perception_needed(scene, message, read=read) for message in messages
     )
     assert 1 < pending <= perspectives.MAX_DEPENDENCY_DEPTH + CONTEXT_PASSAGES + 1
-    frames = []
-    with answering("analyze", frames):
-        await knowledge_step(scene)
-    assert [frame["perceptions"]["needed"] for frame in frames] == [pending]
+    assert knowledge_sync(scene).passages == pending
+    await repair_knowledge(scene)
     assert request.await_count == 200 + pending
     assert messages[-1].knowledge == untouched
 
@@ -1060,7 +1047,7 @@ def test_saved_deep_chain_stops_at_bound_with_indexed_lookups(setup, monkeypatch
 
     monkeypatch.setattr(perspectives, "_sources", count_sources)
     monkeypatch.setattr(perspectives, "_find", count_find)
-    assert select_character_view(scene, reference, "Alice").status == "pending"
+    assert select_character_view(scene, reference, "Alice").stale
     assert scans == 1
     assert lookups <= perspectives.MAX_DEPENDENCY_DEPTH + 1
 

@@ -8,7 +8,6 @@ import talemate.emit.async_signals as async_signals
 from talemate.agents.editor.revision import RevisionContext
 from talemate.context import regeneration_context
 from talemate.exceptions import GenerationCancelled
-from talemate.knowledge.step import knowledge_step
 from talemate.world_state.snapshot_revision import regeneration_snapshot
 from talemate.scene_message import (
     SceneMessage,
@@ -466,7 +465,7 @@ async def _regenerate(scene: "Scene") -> list[SceneMessage]:
     scene.history.pop()
 
     try:
-        await knowledge_step(scene)
+        await events.before_generation(scene, "regenerate")
         outcome = await _regenerate_inplace(message, scene)
     except (GenerationCancelled, asyncio.CancelledError):
         # User-initiated interrupt — not a failure. Restore history, report

@@ -11,7 +11,7 @@ The diagrams trace what is recorded, which requests run, and how the results rea
 - **Known by** controls access to authored sheets, details, world entries, static history and pins.
 - **Disclosures** establish selected information for a character in Character perspectives mode without inventing dialogue.
 
-Your finished line appears immediately. In Character perspectives mode, the next generation first analyzes every passage that still needs a perspective, your line and the previous reply included. Browsing revisions starts no analysis; **Analyze perceptions** or sending the next line refreshes the selected version. Standard mode settles summary cleanup without a knowledge request.
+Your finished line appears immediately. In Character perspectives mode, the next generation first analyzes the new passages, your line and the previous reply included, and builds the character summaries of new archive entries. Edits are not analyzed again on their own: what they affect is flagged as out of sync and keeps its last text until **Analyze perceptions** (one passage) or **Repair** (everything). Standard mode settles summary cleanup without a knowledge request.
 
 ## A character leaves and returns
 

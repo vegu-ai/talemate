@@ -19,7 +19,7 @@ from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.snapshot_models import SnapshotPerspectives
 from talemate.knowledge.snapshots import snapshot_for
 from talemate.scene_message import ReinforcementMessage
-from talemate.knowledge.perspectives import source_reference, source_deleted
+from talemate.scene_signals import reinforcement_source_released
 from talemate.knowledge.reinforcements import (
     reinforcement_context,
     entry_binding,
@@ -508,11 +508,6 @@ class WorldState(BaseModel):
 
         if reinforcement:
             previous_source = reinforcement.source_for(self.scene)
-            previous_reference = (
-                source_reference(self.scene, "message", previous_source.id)
-                if previous_source
-                else None
-            )
             # update the reinforcement object
 
             reinforcement.instructions = instructions
@@ -525,7 +520,7 @@ class WorldState(BaseModel):
             reinforcement.insert = insert
             if old_insert_method != insert and insert == "sequential":
                 reinforcement.perspective_source = None
-                source_deleted(self.scene, previous_reference)
+                reinforcement_source_released.send(self.scene, message=previous_source)
 
             # find the reinforcement message i nthe scene history and update the answer
             if old_insert_method == "sequential":
@@ -641,15 +636,7 @@ class WorldState(BaseModel):
         # and remove them
 
         reinforcement = self.reinforce[idx]
-        # Avoid the knowledge.memory / instance import cycle.
-        from talemate.knowledge.memory import invalidate_memory_audiences
-
         direct_source = reinforcement.perspective_source
-        direct_reference = (
-            source_reference(self.scene, "message", direct_source.id)
-            if direct_source
-            else None
-        )
 
         self.agent.scene.pop_history(
             typ="reinforcement",
@@ -673,8 +660,7 @@ class WorldState(BaseModel):
                     del self.manual_context[reinforcement.question]
 
         self.reinforce.pop(idx)
-        source_deleted(self.scene, direct_reference)
-        invalidate_memory_audiences(self.scene)
+        reinforcement_source_released.send(self.scene, message=direct_source)
 
     def render(self):
         """

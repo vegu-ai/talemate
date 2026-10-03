@@ -1,4 +1,4 @@
-from talemate.knowledge.step import knowledge_step
+from talemate.knowledge.step import repair_knowledge
 from _knowledge_step_helpers import push_and_step
 import asyncio
 from types import SimpleNamespace
@@ -11,6 +11,7 @@ from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
 from talemate.knowledge.perspectives import select_character_view, source_reference
 from talemate.knowledge.revision_refresh import (
+    revision_refreshes,
     catch_up_revisions,
     refresh_revision,
     revision_operations,
@@ -59,7 +60,7 @@ async def revised(setup, monkeypatch):
 async def test_status_refreshes_match_the_payload_of_a_history_scan(revised):
     t = revised
     payload = revision_refresh_payload(t.scene, t.message)["revision_refresh"]
-    refreshes = {item["id"]: item for item in t.scene.revision_refreshes}
+    refreshes = {item["id"]: item for item in revision_refreshes(t.scene)}
 
     assert payload["required"]
     assert refreshes[t.message.id]["revision_refresh"] == payload
@@ -87,7 +88,7 @@ async def test_status_refreshes_scan_the_history_once_not_per_message(revised):
     t.scene.history = CountingHistory(t.scene.history)
     CountingHistory.scans = 0
 
-    refreshes = t.scene.revision_refreshes
+    refreshes = revision_refreshes(t.scene)
 
     assert len(refreshes) == 51
     # the loop itself, plus the archive lookup of the one required message
@@ -171,7 +172,7 @@ async def test_return_after_failed_refresh_restores_views_and_keeps_later_grant(
 
 
 @pytest.mark.asyncio
-async def test_concurrent_steps_analyze_a_revision_once(revised):
+async def test_concurrent_repairs_analyze_a_revision_once(revised):
     t = revised
     started, release = asyncio.Event(), asyncio.Event()
 
@@ -181,11 +182,11 @@ async def test_concurrent_steps_analyze_a_revision_once(revised):
         return test_perception_lifecycle.result()
 
     t.request.side_effect = analyze
-    first = asyncio.create_task(knowledge_step(t.scene))
+    first = asyncio.create_task(repair_knowledge(t.scene))
     second = None
     try:
         await asyncio.wait_for(started.wait(), 3)
-        second = asyncio.create_task(knowledge_step(t.scene))
+        second = asyncio.create_task(repair_knowledge(t.scene))
         await asyncio.sleep(0)
     finally:
         release.set()

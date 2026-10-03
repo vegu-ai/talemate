@@ -204,10 +204,6 @@ def source_context(
             "Reinforcement perception has not run yet; send the next line to analyze it"
         )
     selected = select_character_view(scene, reference, viewer, read=read)
-    if selected.status in ("pending", "failed"):
-        raise GenerationCancelled(
-            f"Reinforcement perception is {selected.status}; it runs again on the next turn"
-        )
     return (
         format_message_view(source, selected.text, "chat")
         if selected.status == "ready"

@@ -47,6 +47,8 @@
             </v-list>
         </v-menu>
 
+        <KnowledgeSyncIndicator v-if="perspectivesActive" :sync="scene?.data?.knowledge_sync" :disabled="appBusy || !appReady" />
+
         <SceneToolsSettings :app-busy="appBusy" :app-ready="appReady" />
 
         <v-tooltip v-if="sceneHelp" :text="sceneHelp" class="pre-wrap">
@@ -294,6 +296,7 @@ import SceneToolsCommands from './SceneToolsCommands.vue';
 import SceneToolsVisual from './SceneToolsVisual.vue';
 import SceneToolsWorld from './SceneToolsWorld.vue';
 import SceneToolsSettings from './SceneToolsSettings.vue';
+import KnowledgeSyncIndicator from './KnowledgeSyncIndicator.vue';
 import SceneToolsSave from './SceneToolsSave.vue';
 import SceneToolsTime from './SceneToolsTime.vue';
 import SceneToolShortcutModal from './SceneToolShortcutModal.vue';
@@ -309,6 +312,7 @@ export default {
 
     name: 'SceneTools',
     components: {
+        KnowledgeSyncIndicator,
         SceneToolsDirector,
         SceneToolsNarrator,
         SceneToolsActor,

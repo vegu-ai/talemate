@@ -7,6 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from conftest import MockScene
+from _knowledge_stale_helpers import not_current, stale_text
 import test_scene_format
 from talemate.character import Character
 from talemate.context import ActiveScene
@@ -182,10 +183,13 @@ def test_text_changes_advance_revision_and_invalidate_descendants(
         scene.set_message_active_version(101, 0)
     assert message.knowledge.revision == (3 if edit == "switch" else 2)
     assert message.rev == 9
-    assert select_character_view(scene, original, "Alice").status == "pending"
-    assert select_character_view(scene, message_ref(scene), "Alice").text is None
+    assert not_current(scene, original, "Alice")
+    assert (
+        stale_text(scene, message_ref(scene), "Alice")
+        == "Alice hides the ledger beneath the bed."
+    )
     summary = source_reference(scene, "summary", "summary-1")
-    assert select_character_view(scene, summary, "Alice").status == "pending"
+    assert not_current(scene, summary, "Alice")
     assert (
         select_character_view(scene, disclosure, "Bob").text
         == "The ledger is under the bed."
@@ -232,9 +236,10 @@ async def test_summary_edit_preserves_sources_and_invalidates_view(scene):
     )
     stored = scene.archived_history[0]["knowledge"]
     assert stored["revision"] == 2
-    assert stored["views"][0]["status"] == "pending"
+    assert stored["views"][0]["status"] == "ready"
+    assert stored["views"][0]["stale"] is True
     assert stored["views"][0]["sources"] == original
-    assert stored["views"][0]["text"] is None
+    assert stored["views"][0]["text"]
 
 
 def test_ready_summary_requires_appropriate_fresh_source_view(scene):
@@ -275,7 +280,7 @@ def test_ready_summary_requires_appropriate_fresh_source_view(scene):
 def test_raw_text_change_cannot_serve_stale_view(scene):
     ref = source_reference(scene, "summary", "summary-1")
     scene.archived_history[0]["text"] = "Changed without adapter"
-    assert select_character_view(scene, ref, "Alice").status == "pending"
+    assert not_current(scene, ref, "Alice")
 
 
 def test_rename_retains_views_and_does_not_grant_old_name(scene, notifications):
@@ -383,7 +388,7 @@ def test_source_references_survive_stale_reload(scene):
         saved["archived_history"][0]["knowledge"]
     )
     assert summary.views[0].sources[0].revision == 1
-    assert summary.views[0].status == "pending"
+    assert summary.views[0].stale
 
 
 def add_layered_view(scene):
@@ -421,7 +426,7 @@ def test_transitive_invalidation_preserves_unrelated_source(scene, notifications
     )
     layered = add_layered_view(scene)
     scene.edit_message(101, "The ledger never arrived.")
-    assert select_character_view(scene, layered, "Alice").status == "pending"
+    assert not_current(scene, layered, "Alice")
     assert select_character_view(scene, independent, "Alice").text == "A bell rings."
     assert {ref.key for ref in notifications[-1].affected} == {
         ("message", 101, 0),
@@ -444,7 +449,7 @@ async def test_layered_summary_adapter_preserves_dependency_records(scene):
         ),
     )
     assert updated.knowledge.revision == 2
-    assert updated.knowledge.views[0].status == "pending"
+    assert updated.knowledge.views[0].stale
     assert (
         updated.knowledge.model_dump(mode="json")["views"][0]["sources"]
         == before["views"][0]["sources"]
@@ -481,7 +486,7 @@ def test_replacing_audience_views_invalidates_dependents(scene, notifications):
     assert scene.history[0].knowledge.views[0].revision == 2
     assert scene.history[0].knowledge.acquired == previous_acquisition
     assert select_character_view(scene, ref, "Bob").status == "omitted"
-    assert scene.archived_history[0]["knowledge"]["views"][0]["status"] == "pending"
+    assert scene.archived_history[0]["knowledge"]["views"][0]["stale"] is True
     assert notifications[-1].reason == "views"
 
 
@@ -521,7 +526,9 @@ def test_standalone_message_invalidates_without_owner(scene):
     message.message = "Changed detached message"
     assert message.knowledge.revision == 2
     assert all(
-        view.status == "pending" and view.text is None
+        view.stale and (view.text is not None or view.status == "omitted")
+        if view.status in ("ready", "omitted")
+        else view.status == "pending" and view.text is None
         for view in message.knowledge.views
     )
     assert scene.history[0].knowledge.revision == 1
@@ -556,7 +563,7 @@ async def test_message_removal_emits_invalidation(scene, notifications, method):
     assert select_character_view(scene, old, "Alice").status == "unavailable"
     assert notifications[-1].reason == "deleted"
     assert notifications[-1].replacement is None
-    assert scene.archived_history[0]["knowledge"]["views"][0]["status"] == "pending"
+    assert scene.archived_history[0]["knowledge"]["views"][0]["stale"] is True
 
 
 @pytest.mark.parametrize("name", ["Alice", "Bob", "Cara"])
@@ -636,7 +643,7 @@ def test_dependency_edit_preserves_sibling_views_and_reader_revision(
     assert after["revision"] == before["revision"]
     assert after["content_digest"] == before["content_digest"]
     assert after["views"][1] == before["views"][1]
-    assert select_character_view(scene, summary, "Alice").status == "pending"
+    assert not_current(scene, summary, "Alice")
     assert select_character_view(scene, sibling.source, "Bob") == sibling
     assert sibling.source not in notifications[-1].affected
 
@@ -678,7 +685,7 @@ def test_retry_preserves_sibling_identity_and_dependents(scene, explicit_id):
     assert scene.archived_history[0]["knowledge"]["views"][0]["sources"][
         0
     ] == alice.source.model_dump(mode="json")
-    assert select_character_view(scene, bob.source, "Bob").status == "pending"
+    assert not_current(scene, bob.source, "Bob")
 
 
 @pytest.mark.parametrize("dep_status", ["ready", "omitted", "pending", "failed"])
@@ -708,7 +715,7 @@ def test_dependency_currency_readability_matrix(scene, dep_status, out_status):
     assert select_character_view(scene, summary, "Alice").status == out_status
     scene.history[0].knowledge = scene.history[0].knowledge.invalidated("Changed")
     if out_status == "omitted":
-        assert select_character_view(scene, summary, "Alice").status == "pending"
+        assert not_current(scene, summary, "Alice")
 
 
 @pytest.mark.parametrize("name", ["alice", "Alice", "", " Bob "])
@@ -828,7 +835,7 @@ def test_view_revision_withholds_stale_saved_dependency_without_notification(sce
         update={"views": (changed, *previous.views[1:])}
     )
     validate_saved_knowledge(json.loads(scene.json))
-    assert select_character_view(scene, summary, "Alice").status == "pending"
+    assert not_current(scene, summary, "Alice")
     with pytest.raises(ValueError, match="at this revision"):
         add_disclosure(scene, "Claim", ["Alice"], provenance=[evidence])
 
@@ -966,3 +973,38 @@ def test_reordered_audience_is_noop_and_preserves_dependent_prose(
         assert selected.source == pin
         assert select_character_view(scene, pin, name).text == "Shared evidence"
         assert select_character_view(scene, summary, name).text == "Shared summary"
+
+
+def test_a_rewrite_cannot_clear_the_out_of_sync_marker(scene):
+    from talemate.agents.summarize.perceptions import passage_provenance
+    from talemate.scene_message import NarratorMessage
+    from talemate.knowledge.perspectives import set_source_perspectives
+
+    scene.knowledge_eligibility = "perception"
+    scene.character_data = {"Alice": Character(name="Alice")}
+    message = NarratorMessage(message="A bell rings.")
+    scene.history = [message]
+    set_source_perspectives(
+        scene,
+        "message",
+        message.id,
+        [
+            {
+                "audience": ["Alice"],
+                "status": "ready",
+                "text": "Alice hears a bell.",
+                "passage_provenance": [passage_provenance(message).model_dump()],
+            }
+        ],
+    )
+    scene.edit_message(message.id, "A bell rings twice.")
+    (view,) = message.knowledge.views
+    assert view.stale
+    with pytest.raises(ValueError):
+        set_source_perspectives(
+            scene,
+            "message",
+            message.id,
+            [view.model_dump(exclude={"revision"}) | {"stale": False}],
+        )
+    assert message.knowledge.views[0].stale

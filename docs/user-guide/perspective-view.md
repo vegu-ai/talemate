@@ -20,9 +20,11 @@ Say Mara writes in her notebook alone in her room. With **View Perspective: Edwi
 
 **Double-click a perspective to change it.** Press Enter to save, Shift+Enter for a new line, Escape to cancel. You can also double-click an empty cell to write a perspective yourself, as long as the message is one that characters can notice. Save an empty text to say that the character noticed nothing. Messages that have no perspectives cannot get one this way, and the introduction is read only here: every character who was present shares its text, and you change it in the **Scene Editor**.
 
-Your text replaces only that one character's view of that one message, and it does not start an AI request. The Summarizer keeps your text when it analyzes the scene later. If you change the message itself, its perspectives are analyzed again and your text is replaced.
+Your text replaces only that one character's view of that one message, and it does not start an AI request. The Summarizer keeps your text when it analyzes the scene later. If you change the message itself, your text stays but is marked **Out of sync**; **Analyze perceptions** on that message, or **Repair**, analyzes it again and replaces your text.
 
-Later perspectives and summaries can be built on the one you changed. They stay as they are. When there are any, a note below the cell tells you how many, with an **Analyze them again** button. Click it only if your change should flow into them: they go back to the analysis, and your next turn makes one Summarizer request for each affected message.
+Later perspectives and summaries can be built on the one you changed. They stay as they are. When there are any, a note below the cell tells you how many, with a **Mark them out of sync** button. Click it only if your change should flow into them: they are flagged as out of sync, and **Repair** makes one Summarizer request for each affected message.
+
+A perspective that is out of sync shows its last text with an **Out of sync** chip. The story keeps using it until you choose **Repair** in the bar above the message input.
 
 ## Related pages
 

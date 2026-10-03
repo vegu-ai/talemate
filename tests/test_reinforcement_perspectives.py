@@ -1,5 +1,5 @@
 from _knowledge_step_helpers import push_and_step
-from talemate.knowledge.step import knowledge_step
+from talemate.knowledge.step import knowledge_step, repair_knowledge
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -202,11 +202,13 @@ async def test_direct_failure_and_retry_use_shared_lifecycle(setup, monkeypatch)
     with pytest.raises(GenerationCancelled, match="successful retry"):
         await knowledge_step(scene)
     assert reinforcement.perspective_source.knowledge.views[0].status == "failed"
-    with pytest.raises(GenerationCancelled, match="failed"):
-        reinforcement.context_for(scene, "Alice")
+    # the failed view gives nothing and blocks nothing; Repair runs it again
+    assert VISIBLE not in reinforcement.context_for(scene, "Alice")
     assert reinforcement.answer == READER
     request.return_value = result(answer(VISIBLE, None))
     await knowledge_step(scene)
+    assert request.await_count == 1
+    await repair_knowledge(scene)
     assert reinforcement.context_for(scene, "Alice") == f"# Internal note - {VISIBLE}"
     assert request.await_count == 2
     recovery.assert_awaited_once()
@@ -238,9 +240,11 @@ async def test_investigations_review_titles_and_distinguish_actual_learning(
         "narrator", "narrate_query", query="What is the secret antidote?"
     )
     assert message.knowledge.revision > revision
-    with pytest.raises(GenerationCancelled, match="not run yet"):
-        project_character_history(scene, "Alice")
+    # the last perspective stays in use, flagged, until a repair
+    assert "\n".join(project_character_history(scene, "Alice")) == history
     await knowledge_step(scene)
+    assert request.await_count == 1
+    await repair_knowledge(scene)
     assert "antidote" in request.call_args.kwargs["vars"]["context"]["passage"]["text"]
     assert request.await_count == 2
 
@@ -518,3 +522,34 @@ async def test_leaving_sequential_removes_every_answer_from_the_history(setup):
     )
 
     assert not any(isinstance(m, ReinforcementMessage) for m in scene.history)
+
+
+async def test_removing_a_reinforcement_flags_what_cites_its_answer(setup, monkeypatch):
+    from _perception_story_helpers import analysis
+
+    from talemate.agents.summarize.perceptions import perception_results_current
+    from talemate.scene_message import NarratorMessage
+    from talemate.scene_signals import reinforcement_source_released
+
+    scene, _, request = setup
+    reinforcement = await apply(scene, request)
+    source = reinforcement.source_for(scene)
+    monkeypatch.setattr(
+        "talemate.agents.summarize.perceptions.Prompt.request",
+        excluding_passage(analysis()),
+    )
+    line = NarratorMessage(message="Alice walks on.", source="narrate_scene")
+    await push_and_step(scene, line)
+    assert source.id in {
+        cited.id for view in line.knowledge.views for cited in view.sources
+    }
+    assert perception_results_current(scene, line)
+    released = []
+
+    def record(sender, *, message):
+        released.append(message)
+
+    with reinforcement_source_released.connected_to(record):
+        await scene.world_state.remove_reinforcement(0)
+    assert released == [source]
+    assert not perception_results_current(scene, line)

@@ -4,7 +4,7 @@ from typing import Union
 import pydantic
 import structlog
 
-from talemate.knowledge.perspectives import reset_perspectives
+from talemate.scene_signals import scene_reset
 
 log = structlog.get_logger("talemate.server.world_state_manager.scene_state_reset")
 
@@ -88,7 +88,7 @@ class SceneStateResetMixin:
             scene.history = []
             scene.agent_state.get("conversation", {}).pop(DEPARTURES_KEY, None)
             scene.layered_history = []
-            reset_perspectives(scene)
+            scene_reset.send(scene)
 
             if payload.wipe_history_include_static:
                 scene.archived_history = []

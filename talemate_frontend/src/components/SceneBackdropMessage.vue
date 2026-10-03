@@ -29,11 +29,11 @@
         <div v-if="expanded && previewable && thumbnail" class="backdrop-details">
             <v-img :src="thumbnail" :aspect-ratio="16 / 9" max-width="280" cover rounded="lg" />
         </div>
-        <div v-if="hasImage && !immersive" class="backdrop-inline">
+        <div v-if="showsInline" class="backdrop-inline">
             <MessageAssetImage
                 :asset_id="message.backdrop"
                 asset_type="scene_illustration"
-                display_size="big" />
+                :display_size="displaySize" />
         </div>
     </div>
 </template>
@@ -45,9 +45,13 @@ export default {
     components: { MessageAssetImage },
     props: {
         message: { type: Object, required: true },
-        assetName: { type: String, default: null },
+        // the backdrop's Visual Library entry; null once the image was removed
+        asset: { type: Object, default: null },
         // the backdrop renders behind the scene; otherwise the image is shown inline
         immersive: { type: Boolean, default: true },
+        // the Scene Background display settings: image size, and whether the image shows at all
+        displaySize: { type: String, default: 'big' },
+        showImage: { type: Boolean, default: true },
         locked: Boolean,
     },
     inject: ['requestDeleteMessage', 'getAssetFromCache', 'requestSceneAssets'],
@@ -61,17 +65,24 @@ export default {
         hasImage() {
             return !this.message.pending && !!this.message.backdrop;
         },
+        showsInline() {
+            return this.hasImage && !this.immersive && this.showImage;
+        },
         previewable() {
-            return this.hasImage && this.immersive;
+            return this.hasImage && !this.showsInline;
         },
         label() {
             if (this.message.pending) return 'Generating background…';
             if (!this.message.backdrop) return 'Backdrop cleared';
-            return `Backdrop: ${this.assetName || 'image removed'}`;
+            if (!this.asset) return 'Backdrop: image removed';
+            return `Backdrop: ${this.asset.meta?.name || 'Untitled'}`;
         },
         tooltip() {
             if (this.message.pending) return 'A new scene background is being generated. It becomes the backdrop when it is ready.';
-            if (!this.immersive) return 'The scene backdrop changed here. Turn on Immersive to show it behind the scene text.';
+            if (!this.immersive) {
+                const hint = 'The scene backdrop changed here. Turn on Immersive to show it behind the scene text.';
+                return this.previewable ? `${hint} Click to preview.` : hint;
+            }
             return 'The scene backdrop changed here. Playthrough shows this backdrop from this point on. Click to preview.';
         },
         thumbnail() {

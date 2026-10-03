@@ -145,14 +145,7 @@
                             style="max-width: 200px;"
                         ></v-select>
                     </td>
-                    <td style="padding: 4px 12px;">
-                        <v-checkbox
-                            v-model="config.scene_background.auto_backdrop"
-                            color="primary"
-                            density="compact"
-                            hide-details
-                        ></v-checkbox>
-                    </td>
+                    <td></td>
                 </tr>
             </tbody>
         </v-table>
@@ -190,7 +183,7 @@
                     <strong>On change:</strong> Only show when visual changes (portraits: tracked per character)<br><br>
                     <strong>Scene Illustration</strong> covers images of the current moment ("Visualize Moment"), <strong>Scene Background</strong> covers purely environmental images ("Visualize Scene (Background)").<br>
                     <strong>Sizes:</strong> Big = full width above message, Small/Medium = inline with text.<br>
-                    <strong>Auto Backdrop:</strong> Newly generated images of this type automatically become the scene backdrop (rendered behind the scene text). Any illustration can also be set as the backdrop manually via its image menu, and the scene-tools Immersive chip toggles the backdrop on and off.
+                    <strong>Auto Backdrop:</strong> Newly generated scene illustrations automatically become the scene backdrop (rendered behind the scene text). While auto-attach is on, scene backgrounds generated for the story always become the backdrop and are recorded as Backdrop entries in the history. Any illustration can also be set as the backdrop manually via its image menu, and the scene-tools Immersive chip toggles the backdrop on and off.
                 </div>
             </v-card-text>
         </v-card>
@@ -216,7 +209,6 @@ function defaultAssetConfig() {
         scene_background: {
             cadence: 'always',
             size: 'big',
-            auto_backdrop: false,
         },
     };
 }

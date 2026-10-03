@@ -671,7 +671,7 @@ class MessageAssetCadenceConfig(pydantic.BaseModel):
     cadence: Literal["always", "never", "on_change"] = "always"
     size: Literal["small", "medium", "big"] = "medium"
     # automatically promote newly generated assets of this kind to the scene
-    # backdrop (only meaningful for scene_illustration and scene_background)
+    # backdrop (only meaningful for scene_illustration)
     auto_backdrop: bool = False
 
 

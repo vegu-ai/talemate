@@ -457,21 +457,23 @@ def insert_time_passage(
     human = duration_to_human(duration, suffix=" later")
     tp_message = TimePassageMessage(ts=duration, message=human, title=title)
 
-    scene.history.insert(insertion_index, tp_message)
-
-    # Bump all archived_history start/end indices at or after the insertion point
-    for arch_entry in scene.archived_history:
-        if (
-            arch_entry.get("start") is not None
-            and arch_entry["start"] >= insertion_index
-        ):
-            arch_entry["start"] += 1
-        if arch_entry.get("end") is not None and arch_entry["end"] >= insertion_index:
-            arch_entry["end"] += 1
-
-    scene.fix_time()
+    scene.insert_message_at(insertion_index, tp_message)
 
     return tp_message
+
+
+def message_inserted(scene: "Scene", history_index: int) -> None:
+    """
+    Repair the archive after a message entered `scene.history` at
+    `history_index`: a span from that position on moves forward one, and a
+    span that runs past it grows by one.
+    """
+
+    for arch_entry in scene.archived_history:
+        if arch_entry.get("start") is not None and arch_entry["start"] >= history_index:
+            arch_entry["start"] += 1
+        if arch_entry.get("end") is not None and arch_entry["end"] >= history_index:
+            arch_entry["end"] += 1
 
 
 def message_removed(scene: "Scene", history_index: int, message: SceneMessage) -> None:
@@ -534,18 +536,7 @@ def insert_time_passage_after_message(
     human = duration_to_human(duration, suffix=" later")
     tp_message = TimePassageMessage(ts=duration, message=human, title=title)
 
-    scene.history.insert(insertion_index, tp_message)
-
-    for arch_entry in scene.archived_history:
-        if (
-            arch_entry.get("start") is not None
-            and arch_entry["start"] >= insertion_index
-        ):
-            arch_entry["start"] += 1
-        if arch_entry.get("end") is not None and arch_entry["end"] >= insertion_index:
-            arch_entry["end"] += 1
-
-    scene.fix_time()
+    scene.insert_message_at(insertion_index, tp_message)
 
     return tp_message
 

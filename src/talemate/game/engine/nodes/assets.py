@@ -1075,7 +1075,7 @@ class MakeAssetAttachmentContext(Node):
     - current_avatar: whether to set the current avatar image
     - override_default_avatar: whether to override the default avatar image (requires default_avatar=true)
     - override_current_avatar: whether to override the current avatar image (requires current_avatar=true)
-    - scene_backdrop: whether the saved image becomes the scene backdrop; while it is generated, a pending backdrop message waits for it in the history
+    - scene_backdrop: whether the saved image becomes the scene backdrop; while it is generated, a pending backdrop message waits for it in the history (right after the last of message_ids, or at the end)
 
     Outputs:
     - context: the asset attachment context object
@@ -1098,6 +1098,7 @@ class MakeAssetAttachmentContext(Node):
     Note:
     - When message_ids is empty, assets will be attached to the most recent appropriate message
     - When message_ids is provided, assets will only be attached to those specific messages
+    - A scene background generated with allow_auto_attach becomes the scene backdrop instead of a message asset (only while auto-attach is on in the appearance settings)
     - Use allow_override=true to replace existing message assets, false to skip messages that already have assets
     - Use delete_old=true to delete the old asset when replacing (requires allow_override=true)
     """

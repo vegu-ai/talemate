@@ -12,6 +12,7 @@ from talemate.agents.base import (
     set_processing,
 )
 import talemate.emit.async_signals as async_signals
+from talemate.config import get_config
 from talemate.emit import emit
 from talemate.context import active_scene
 from .schema import (
@@ -21,6 +22,7 @@ from .schema import (
     GenerationRequest,
     Resolution,
     FORMAT_TYPE,
+    VIS_TYPE,
 )
 from .exceptions import ImageEditNotAvailableError, TextToImageNotAvailableError
 from .backends import describe_error
@@ -199,6 +201,17 @@ class GenerationMixin:
 
     @set_processing
     async def generate(self, request: GenerationRequest) -> GenerationResponse:
+        ctx = request.asset_attachment_context
+        # a background meant for the story becomes the backdrop, not a message
+        # image; with auto-attach off it only goes to the library
+        if (
+            request.vis_type == VIS_TYPE.SCENE_BACKGROUND
+            and ctx.allow_auto_attach
+            and get_config().appearance.scene.auto_attach_assets
+        ):
+            request.asset_attachment_context = ctx.model_copy(
+                update={"scene_backdrop": True, "allow_auto_attach": False}
+            )
         self.running_generations[request.id] = RunningGeneration(
             request=request, scene=active_scene.get()
         )

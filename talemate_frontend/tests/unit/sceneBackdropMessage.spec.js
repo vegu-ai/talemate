@@ -8,13 +8,13 @@ afterEach(() => {
     for (const [app, host] of mounted.splice(0)) { app.unmount(); host.remove(); }
 });
 
-function mount(overrides = {}, { assetName = 'Harbour at night', cached = null, immersive = true } = {}) {
+function mount(overrides = {}, { asset = { meta: { name: 'Harbour at night' } }, cached = null, immersive = true, displaySize = 'big', showImage = true } = {}) {
     const deleted = [];
     const requested = [];
     const message = reactive({
         id: 7, type: 'scene_backdrop', backdrop: 'night', previous_backdrop: 'day', pending: false, ...overrides,
     });
-    const props = reactive({ message, assetName, immersive, locked: false });
+    const props = reactive({ message, asset, immersive, displaySize, showImage, locked: false });
     const app = createApp({ render: () => h(SceneBackdropMessage, props) });
     app.provide('requestDeleteMessage', (id) => deleted.push(id));
     app.provide('getAssetFromCache', () => cached);
@@ -62,8 +62,13 @@ describe('scene backdrop message', () => {
     });
 
     it('says when the backdrop image was removed from the library', () => {
-        const { host } = mount({}, { assetName: null });
+        const { host } = mount({}, { asset: null });
         expect(host.querySelector('.v-chip').textContent).toContain('Backdrop: image removed');
+    });
+
+    it('calls an image without a name untitled rather than removed', () => {
+        const { host } = mount({}, { asset: { meta: { name: null } } });
+        expect(host.querySelector('.v-chip').textContent).toContain('Backdrop: Untitled');
     });
 
     it('previews the image on click and asks for it when not cached', async () => {
@@ -108,6 +113,24 @@ describe('scene backdrop message', () => {
     it('keeps the compact row while the backdrop shows behind the scene', () => {
         const { host } = mount();
         expect(host.querySelector('.backdrop-inline')).toBeNull();
+    });
+
+    it('uses the Scene Background display size for the inline image', () => {
+        const { host } = mount({}, { immersive: false, displaySize: 'medium', cached: { base64: 'aW1n', mediaType: 'image/png' } });
+        const inline = host.querySelector('.backdrop-inline .message-asset-container');
+        expect(inline.classList.contains('scene-illustration-big')).toBe(false);
+        expect(inline.style.getPropertyValue('--asset-width')).toBe('350px');
+    });
+
+    it('keeps the image to a preview when the Scene Background cadence is Never', async () => {
+        const { host, requested } = mount({}, { immersive: false, showImage: false });
+        expect(host.querySelector('.backdrop-inline')).toBeNull();
+        const chip = host.querySelector('.v-chip');
+        expect(chip.classList.contains('clickable')).toBe(true);
+        expect(host.querySelector('.v-tooltip').dataset.text).toContain('Click to preview.');
+        chip.click();
+        await nextTick();
+        expect(requested).toEqual(['night']);
     });
 
     it('shows nothing inline while the image is still generating', () => {

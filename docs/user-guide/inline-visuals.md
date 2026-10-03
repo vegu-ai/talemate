@@ -27,7 +27,7 @@ The quickest way to generate inline visuals is through the scene tools visualize
 From this menu you can:
 
 - **Visualize Scene (Card)**: Generate a cover image of the current scene
-- **Visualize Scene (Background)**: Generate a purely environmental image
+- **Visualize Scene (Background)**: Generate a purely environmental image; it becomes the [scene backdrop](#scene-backdrop)
 - **[Character]** submenu (one per character in the scene):
     - **Card**: Generate a cover image portrait of that character
     - **Portrait**: Generate a face-focused portrait of that character
@@ -40,7 +40,7 @@ From this menu you can:
     - Hold **ALT** to generate only the prompt without creating an image
     - Hold **CTRL** to open a dialog where you can provide custom instructions
 
-When you generate an image and the **Auto-attach visuals** option is enabled, the resulting image will automatically appear in your scene feed attached to the most relevant message.
+When you generate an image and the **Auto-attach visuals** option is enabled, the resulting image will automatically appear in your scene feed attached to the most relevant message. A scene background becomes the [scene backdrop](#scene-backdrop) instead.
 
 ### Director Chat
 
@@ -79,10 +79,12 @@ Talemate looks at what the investigation was about and chooses the most fitting 
 
 The text of the investigation message is used to guide the generated image, so the result reflects the specific details described in that message.
 
+A scene background for a place is not attached to the message. It becomes a **Backdrop** entry right after the message instead, see [Scene Backdrop](#scene-backdrop).
+
 !!! note "Query results are not visualizable"
     A plain **Query** (asking the narrator a free-form question) does not show a Visualize action, because there is no single visual subject to match it to.
 
-Once an image has been generated, the **Visualize** action disappears for that message. From that point on you can regenerate, replace, or remove the image using the [inline visual actions](#viewing-and-managing) described below, just like any other attached image.
+Once an image has been generated, the **Visualize** action disappears for that message. From that point on you can regenerate, replace, or remove the image using the [inline visual actions](#viewing-and-managing) described below, just like any other attached image. A place keeps its **Visualize** action, since its background goes to a Backdrop entry rather than onto the message.
 
 ## Interacting with Inline Visuals
 
@@ -114,6 +116,8 @@ For faster workflow, inline visuals support several keyboard shortcuts when clic
 | Regenerate | Shift+click |
 | Regenerate and delete old | Alt+click |
 
+Regenerating a scene background that an older story attached to a message does not replace it on the message. The new background becomes the [scene backdrop](#scene-backdrop) through a new Backdrop entry at the end of the story, and the message keeps its image.
+
 ### Managing Portraits
 
 For character portraits (avatars), you have additional options:
@@ -128,7 +132,7 @@ Any scene illustration can be promoted to the **scene backdrop** — instead of 
 
 ![Scene backdrop active](/talemate/img/0.39.0/scene-backdrop-active.png)
 
-The backdrop belongs to the scene and is saved with it, so it survives reloads and history edits. Each change is also recorded in the scene as a small **Backdrop** entry; [Playthrough](playthrough.md) uses these entries to show each passage with the backdrop it had. While Immersive is off, these entries show their image full width in the story.
+The backdrop belongs to the scene and is saved with it, so it survives reloads and history edits. Each change is also recorded in the scene as a small **Backdrop** entry; [Playthrough](playthrough.md) uses these entries to show each passage with the backdrop it had. While Immersive is off, these entries show their image in the story, sized by the **Scene Background** [display settings](#configuring-display-settings). With its render cadence set to **Never**, the entry shows only its name; click it to preview the image.
 
 ### Setting a backdrop
 
@@ -137,7 +141,8 @@ There are several ways to set the backdrop:
 - **From a message** — click an inline scene illustration and choose **Set as scene backdrop** from its image menu
 - **From the Visual Library** — select an asset in the Scene Assets tab and click **Set backdrop**
 - **From the world editor** — use the per-image actions in the [Scene Visual Manager](world-editor/scene/visuals.md) (World Editor → Scene → Visuals), which is also the place to fully **unset** the backdrop (the image stays in the scene assets)
-- **Automatically** — enable **Auto Backdrop** for Scene Illustrations and/or Scene Backgrounds in the [Appearance Settings](app-settings/appearance.md#visuals); newly generated images of that type then become the backdrop as they arrive
+- **By generating a background** — **Visualize Scene (Background)** in the scene tools, **Visualize** on an Add Detail message about a place, or a Director Chat request for a scene background, while **Auto-attach visuals** is on. A **Generating background…** entry appears right away and becomes the backdrop when the image is ready; if the generation fails or is cancelled, the entry goes away
+- **Automatically** — enable **Auto Backdrop** for Scene Illustrations in the [Appearance Settings](app-settings/appearance.md#visuals); newly generated illustrations then become the backdrop as they arrive
 - **As the story moves** — enable [Scene Backgrounds](agents/world-state/settings.md#scene-backgrounds) in the World State agent settings; the agent picks or generates a background that fits the current place and time of day
 
 ### The Immersive toggle
@@ -161,7 +166,7 @@ Configure settings independently for each type of visual:
 - **Portrait**: Character face images
 - **Card**: Character or scene cards
 - **Scene Illustration**: Images of the current moment ("Visualize Moment")
-- **Scene Background**: Purely environmental images ("Visualize Scene (Background)")
+- **Scene Background**: Purely environmental images ("Visualize Scene (Background)"); also sets how Backdrop entries show their image while Immersive is off
 
 ### Render Cadence
 
@@ -188,11 +193,11 @@ Control how large visuals appear:
 
 ### Auto Backdrop
 
-Scene Illustrations and Scene Backgrounds additionally have an **Auto Backdrop** checkbox. When enabled, newly generated images of that type automatically become the [scene backdrop](#scene-backdrop) instead of only rendering inline.
+Scene Illustrations additionally have an **Auto Backdrop** checkbox. When enabled, newly generated illustrations automatically become the [scene backdrop](#scene-backdrop) instead of only rendering inline. Scene backgrounds generated for the story always become the backdrop, so they have no checkbox.
 
 ### Auto-attach Visuals
 
-The **Auto-attach visuals** toggle controls whether newly generated images are automatically attached to messages. When disabled, images go to the Visual Library but don't appear in the scene feed unless you manually attach them.
+The **Auto-attach visuals** toggle controls whether newly generated images are automatically attached to messages. When disabled, images go to the Visual Library but don't appear in the scene feed unless you manually attach them. This includes scene backgrounds: they do not become the backdrop.
 
 You can also toggle this setting quickly from the scene tools visualizer menu without opening the full settings panel.
 

@@ -75,13 +75,6 @@ VIS_TYPE_TO_ASSET_TYPE = {
     VIS_TYPE.UNSPECIFIED: None,
 }
 
-# vis_types eligible for the scene backdrop, mapped to their
-# appearance.scene.message_assets config entry
-VIS_TYPE_TO_MESSAGE_ASSET_KIND = {
-    VIS_TYPE.SCENE_BACKGROUND: "scene_background",
-    VIS_TYPE.SCENE_ILLUSTRATION: "scene_illustration",
-}
-
 
 def validate_image_data_url(image_data: str) -> None:
     """
@@ -406,16 +399,16 @@ async def _handle_asset_saved(payload: AssetSavedPayload):
                 message_ids=asset_attachment_context.message_ids,
             )
 
-    # scene backdrop auto-promotion — a newly generated scene illustration /
-    # background becomes the backdrop when its kind's appearance config opts
-    # in; backdrop_enabled is left untouched so an explicit "Immersive" off
-    # isn't overridden
-
-    # a generated backdrop is applied by the generation itself
-    if payload.new_asset and not asset_attachment_context.scene_backdrop:
-        kind = VIS_TYPE_TO_MESSAGE_ASSET_KIND.get(asset.meta.vis_type)
-        if kind and config.appearance.scene.message_assets[kind].auto_backdrop:
-            await scene.assets.set_scene_backdrop(asset_id=asset.id)
+    # scene illustration auto-promotion; backdrop_enabled is left untouched
+    # so an explicit "Immersive" off isn't overridden. A generated backdrop
+    # (every story scene background) is applied by the generation itself.
+    if (
+        payload.new_asset
+        and not asset_attachment_context.scene_backdrop
+        and asset.meta.vis_type == VIS_TYPE.SCENE_ILLUSTRATION
+        and config.appearance.scene.message_assets["scene_illustration"].auto_backdrop
+    ):
+        await scene.assets.set_scene_backdrop(asset_id=asset.id)
 
     # cover image (scene and character)
 
@@ -1812,14 +1805,54 @@ class SceneAssets:
     async def begin_generated_backdrop(self, ctx: AssetAttachmentContext):
         """
         Records a pending backdrop message for an image whose generation
-        starts now; the saved image fills it in.
+        starts now; the saved image fills it in. With message ids it goes
+        right after the latest of those messages and the backdrop messages
+        that follow it, otherwise at the end.
         """
-        message = scene_message.SceneBackdropMessage(
-            pending=True, previous_backdrop=self.backdrop
-        )
-        await self.scene.push_history(message, emit_message=True)
+        index = self._backdrop_insert_index(ctx.message_ids)
+        if index is None:
+            message = scene_message.SceneBackdropMessage(
+                pending=True, previous_backdrop=self.backdrop
+            )
+            await self.scene.push_history(message, emit_message=True)
+        else:
+            message = scene_message.SceneBackdropMessage(
+                pending=True, previous_backdrop=self._backdrop_at(index)
+            )
+            self.scene.insert_message_at(index, message)
+            await self.scene.emit_history()
         self.pending_backdrops[message.id] = message
         ctx.backdrop_message_id = message.id
+
+    def _backdrop_insert_index(self, message_ids: list[int]) -> int | None:
+        history = self.scene.history
+        found = [self.scene.message_index(message_id) for message_id in message_ids]
+        found = [index for index in found if index >= 0]
+        if not found:
+            return None
+        index = max(found) + 1
+        while index < len(history) and isinstance(
+            history[index], scene_message.SceneBackdropMessage
+        ):
+            index += 1
+        return index if index < len(history) else None
+
+    def _backdrop_at(self, index: int) -> str | None:
+        """The backdrop in effect right before history position `index`."""
+        history = self.scene.history
+        for entry in reversed(history[:index]):
+            if (
+                isinstance(entry, scene_message.SceneBackdropMessage)
+                and not entry.pending
+            ):
+                return entry.backdrop
+        for entry in history[index:]:
+            if (
+                isinstance(entry, scene_message.SceneBackdropMessage)
+                and not entry.pending
+            ):
+                return entry.previous_backdrop
+        return self.backdrop
 
     def _history_index(self, message: scene_message.SceneMessage) -> int:
         return next(
@@ -1830,13 +1863,15 @@ class SceneAssets:
         self, ctx: AssetAttachmentContext, asset_id: str
     ):
         """
-        Makes a generated image the backdrop and marks the scene unsaved. The
-        image stays in the library without changing the scene when the scene
-        was released, its pending message was removed meanwhile (deleted, the
-        history went back past it or was reset), or a later backdrop change
-        was recorded after it. A backdrop message right before the filled one
-        is merged into it. While a history edit holds backdrop messages out
-        of the history, the fill waits until they are back.
+        Fills a pending backdrop message with its generated image and marks
+        the scene unsaved. The image stays in the library without changing
+        the scene when the scene was released, its pending message was
+        removed meanwhile (deleted, the history went back past it or was
+        reset), or a later backdrop change follows it with only backdrop
+        messages between. A backdrop message right before the filled one is
+        merged into it. The image becomes the live backdrop only when no
+        later backdrop change follows. While a history edit holds backdrop
+        messages out of the history, the fill waits until they are back.
         """
         if not self.scene.active:
             self.pending_backdrops.pop(ctx.backdrop_message_id, None)
@@ -1853,14 +1888,26 @@ class SceneAssets:
         if index < 0:
             return
         history = self.scene.history
-        if any(
-            isinstance(entry, scene_message.SceneBackdropMessage) and not entry.pending
-            for entry in history[index + 1 :]
+        later_index = next(
+            (
+                position
+                for position, entry in enumerate(history[index + 1 :], index + 1)
+                if isinstance(entry, scene_message.SceneBackdropMessage)
+                and not entry.pending
+            ),
+            None,
+        )
+        later = history[later_index] if later_index is not None else None
+        if later is not None and all(
+            isinstance(entry, scene_message.SceneBackdropMessage)
+            for entry in history[index + 1 : later_index]
         ):
             self.scene.delete_message(message.id)
             return
         message.backdrop = asset_id
         message.pending = False
+        # an earlier entry may have filled since this one began
+        message.previous_backdrop = self._backdrop_at(index)
         before = history[index - 1] if index > 0 else None
         if (
             isinstance(before, scene_message.SceneBackdropMessage)
@@ -1868,7 +1915,11 @@ class SceneAssets:
         ):
             message.previous_backdrop = before.previous_backdrop
             self.scene.delete_message(before.id)
-        await self.set_scene_backdrop(asset_id=asset_id, record=False)
+        if later is None:
+            await self.set_scene_backdrop(asset_id=asset_id, record=False)
+        else:
+            later.previous_backdrop = asset_id
+            self.scene.emit_history_message(later)
         self.scene.emit_history_message(message)
         self.scene._mark_scene_unsaved()
 

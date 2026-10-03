@@ -11,14 +11,21 @@ from talemate.agents.summarize.context_history import (
     ContextHistoryParams,
 )
 from talemate.agents.visual.agent import VisualAgent
-from talemate.agents.visual.schema import AssetAttachmentContext, GenerationRequest
+from talemate.agents.visual.schema import (
+    VIS_TYPE,
+    AssetAttachmentContext,
+    GenerationRequest,
+)
 from talemate.context import active_scene
 from talemate.emit.base import Emission
 from talemate.history import HistoryEntry, collect_source_entries
 from talemate.load import _load_history
 import talemate.regenerate as regenerate_module
 from talemate.regenerate import regenerate_target_message
-from talemate.scene_assets import SceneAssets
+import talemate.scene_assets as scene_assets_module
+from talemate.config import get_config
+from talemate.scene_assets import Asset, AssetMeta, AssetSavedPayload, SceneAssets
+from talemate.world_state.snapshot_revision import SnapshotProvenance
 from talemate.scene_message import (
     NON_STORY_TYPES,
     NarratorMessage,
@@ -529,3 +536,265 @@ async def test_nested_lifts_apply_held_images_once_the_outermost_ends(active):
 
     assert backdrops(active) == [("harbour-night", None, False)]
     assert active.assets.backdrop == "harbour-night"
+
+
+def story_background_request(**ctx) -> GenerationRequest:
+    return GenerationRequest(
+        vis_type=VIS_TYPE.SCENE_BACKGROUND,
+        asset_attachment_context=AssetAttachmentContext(
+            allow_auto_attach=True, allow_override=True, **ctx
+        ),
+    )
+
+
+async def test_a_story_background_generation_becomes_a_backdrop_entry(visual, active):
+    request = story_background_request()
+
+    await visual.generate(request)
+    assert backdrops(active) == [(None, None, True)]
+    assert request.asset_attachment_context.scene_backdrop is True
+    assert request.asset_attachment_context.allow_auto_attach is False
+
+    visual.backend.release.set()
+    await settle()
+
+    assert backdrops(active) == [("generated", None, False)]
+    assert active.assets.backdrop == "generated"
+
+
+@pytest.mark.parametrize(
+    "request_",
+    [
+        GenerationRequest(
+            vis_type=VIS_TYPE.SCENE_BACKGROUND,
+            asset_attachment_context=AssetAttachmentContext(),
+        ),
+        GenerationRequest(
+            vis_type=VIS_TYPE.SCENE_ILLUSTRATION,
+            asset_attachment_context=AssetAttachmentContext(allow_auto_attach=True),
+        ),
+    ],
+    ids=["library background", "story illustration"],
+)
+async def test_other_generations_record_no_backdrop_entry(visual, active, request_):
+    await visual.generate(request_)
+    visual.backend.release.set()
+    await settle()
+
+    assert backdrops(active) == []
+    assert request_.asset_attachment_context.scene_backdrop is False
+
+
+async def test_a_background_for_an_older_message_goes_right_after_it(active):
+    harbour, tavern, street = (
+        NarratorMessage("The harbour lies quiet."),
+        NarratorMessage("The tavern door swings open."),
+        NarratorMessage("Rain runs down the street."),
+    )
+    active.history = [harbour, tavern, street]
+    active.archived_history = [{"text": "Arrival", "start": 0, "end": 1, "ts": 0}]
+    await active.assets.set_scene_backdrop(asset_id="harbour-day", record=False)
+    ctx = AssetAttachmentContext(scene_backdrop=True, message_ids=[harbour.id])
+
+    await active.assets.begin_generated_backdrop(ctx)
+
+    assert active.history[1].id == ctx.backdrop_message_id
+    assert backdrops(active) == [(None, "harbour-day", True)]
+    assert active.archived_history[0]["end"] == 2
+
+    await active.assets.finish_generated_backdrop(ctx, "harbour-dusk")
+
+    assert active.history[1].id == ctx.backdrop_message_id
+    assert backdrops(active) == [("harbour-dusk", "harbour-day", False)]
+    assert active.assets.backdrop == "harbour-dusk"
+
+
+async def test_a_background_for_the_latest_message_is_appended(active):
+    story = NarratorMessage("The harbour lies quiet.")
+    active.history = [story]
+    ctx = AssetAttachmentContext(scene_backdrop=True, message_ids=[story.id])
+
+    await active.assets.begin_generated_backdrop(ctx)
+
+    assert active.history[-1].id == ctx.backdrop_message_id
+
+
+async def test_a_background_for_an_older_message_replaces_the_entry_after_it(
+    active,
+):
+    harbour, tavern = (
+        NarratorMessage("The harbour lies quiet."),
+        NarratorMessage("The tavern door swings open."),
+    )
+    active.history = [
+        harbour,
+        SceneBackdropMessage(backdrop="harbour-day", previous_backdrop="dawn"),
+        tavern,
+    ]
+    ctx = AssetAttachmentContext(scene_backdrop=True, message_ids=[harbour.id])
+
+    await active.assets.begin_generated_backdrop(ctx)
+    assert active.history[2].id == ctx.backdrop_message_id
+
+    await active.assets.finish_generated_backdrop(ctx, "harbour-dusk")
+
+    assert backdrops(active) == [("harbour-dusk", "dawn", False)]
+    assert active.history[1].id == ctx.backdrop_message_id
+
+
+async def test_an_earlier_background_is_kept_but_not_live_before_a_later_change(
+    active,
+):
+    harbour, tavern = (
+        NarratorMessage("The harbour lies quiet."),
+        NarratorMessage("The tavern door swings open."),
+    )
+    later = SceneBackdropMessage(backdrop="tavern", previous_backdrop="harbour-day")
+    active.history = [harbour, tavern, later]
+    await active.assets.set_scene_backdrop(asset_id="tavern", record=False)
+    ctx = AssetAttachmentContext(scene_backdrop=True, message_ids=[harbour.id])
+
+    await active.assets.begin_generated_backdrop(ctx)
+    assert backdrops(active)[0] == (None, "harbour-day", True)
+
+    await active.assets.finish_generated_backdrop(ctx, "harbour-dusk")
+
+    assert backdrops(active) == [
+        ("harbour-dusk", "harbour-day", False),
+        ("tavern", "harbour-dusk", False),
+    ]
+    assert active.assets.backdrop == "tavern"
+
+
+async def test_a_late_image_is_kept_when_the_story_moved_on_before_a_later_change(
+    active,
+):
+    await active.assets.set_scene_backdrop(asset_id="harbour-day", record=False)
+    ctx = AssetAttachmentContext(scene_backdrop=True)
+    await active.assets.begin_generated_backdrop(ctx)
+    active.history.append(NarratorMessage("The tavern door swings open."))
+    await active.assets.set_scene_backdrop(asset_id="tavern")
+
+    await active.assets.finish_generated_backdrop(ctx, "harbour-night")
+
+    assert backdrops(active) == [
+        ("harbour-night", "harbour-day", False),
+        ("tavern", "harbour-night", False),
+    ]
+    assert active.assets.backdrop == "tavern"
+
+
+@pytest.mark.parametrize(
+    "vis_type, becomes_backdrop",
+    [(VIS_TYPE.SCENE_ILLUSTRATION, True), (VIS_TYPE.SCENE_BACKGROUND, False)],
+)
+async def test_auto_backdrop_promotes_only_scene_illustrations(
+    active, monkeypatch, vis_type, becomes_backdrop
+):
+    config = get_config().model_copy(deep=True)
+    for kind in ("scene_illustration", "scene_background"):
+        config.appearance.scene.message_assets[kind].auto_backdrop = True
+    config.appearance.scene.auto_attach_assets = False
+    monkeypatch.setattr(scene_assets_module, "get_config", lambda: config)
+    asset = Asset(
+        id="library-image",
+        file_type="png",
+        media_type="image/png",
+        meta=AssetMeta(vis_type=vis_type),
+    )
+
+    await scene_assets_module._handle_asset_saved(
+        AssetSavedPayload(asset=asset, new_asset=True)
+    )
+
+    assert (active.assets.backdrop == "library-image") is becomes_backdrop
+
+
+async def test_a_story_background_with_auto_attach_off_only_goes_to_the_library(
+    visual, active, monkeypatch
+):
+    config = get_config().model_copy(deep=True)
+    config.appearance.scene.auto_attach_assets = False
+    monkeypatch.setattr(generation_module, "get_config", lambda: config)
+    request = story_background_request()
+
+    await visual.generate(request)
+    visual.backend.release.set()
+    await settle()
+
+    assert backdrops(active) == []
+    assert active.assets.backdrop is None
+    assert request.asset_attachment_context.scene_backdrop is False
+
+
+@pytest.mark.parametrize("first", ["earlier", "later"])
+async def test_a_filled_entry_takes_the_backdrop_before_it_whichever_fills_first(
+    active, first
+):
+    harbour, tavern = (
+        NarratorMessage("The harbour lies quiet."),
+        NarratorMessage("The tavern door swings open."),
+    )
+    active.history = [harbour, tavern]
+    await active.assets.set_scene_backdrop(asset_id="dawn", record=False)
+    later = AssetAttachmentContext(scene_backdrop=True)
+    await active.assets.begin_generated_backdrop(later)
+    earlier = AssetAttachmentContext(scene_backdrop=True, message_ids=[harbour.id])
+    await active.assets.begin_generated_backdrop(earlier)
+
+    fills = [(earlier, "harbour-dusk"), (later, "tavern")]
+    for ctx, asset_id in fills if first == "earlier" else reversed(fills):
+        await active.assets.finish_generated_backdrop(ctx, asset_id)
+
+    assert backdrops(active) == [
+        ("harbour-dusk", "dawn", False),
+        ("tavern", "harbour-dusk", False),
+    ]
+    assert active.assets.backdrop == "tavern"
+
+    await active.assets.set_scene_backdrop(asset_id="dawn")
+    assert backdrops(active) == [
+        ("harbour-dusk", "dawn", False),
+        ("dawn", "harbour-dusk", False),
+    ]
+
+
+async def test_a_generated_backdrop_does_not_also_auto_promote(active, monkeypatch):
+    config = get_config().model_copy(deep=True)
+    config.appearance.scene.message_assets["scene_illustration"].auto_backdrop = True
+    config.appearance.scene.auto_attach_assets = False
+    monkeypatch.setattr(scene_assets_module, "get_config", lambda: config)
+    asset = Asset(
+        id="illustration",
+        file_type="png",
+        media_type="image/png",
+        meta=AssetMeta(vis_type=VIS_TYPE.SCENE_ILLUSTRATION),
+    )
+
+    await scene_assets_module._handle_asset_saved(
+        AssetSavedPayload(
+            asset=asset,
+            new_asset=True,
+            asset_attachment_context=AssetAttachmentContext(scene_backdrop=True),
+        )
+    )
+
+    assert active.assets.backdrop is None
+
+
+async def test_a_backdrop_entry_leaves_the_world_snapshot_inputs_unchanged(active):
+    harbour, tavern = (
+        NarratorMessage("The harbour lies quiet."),
+        NarratorMessage("The tavern door swings open."),
+    )
+    active.history = [harbour, tavern]
+    provenance = SnapshotProvenance.capture(active)
+
+    await active.assets.begin_generated_backdrop(
+        AssetAttachmentContext(scene_backdrop=True, message_ids=[harbour.id])
+    )
+    await active.assets.set_scene_backdrop(asset_id="tavern")
+
+    assert [m.typ for m in active.history].count("scene_backdrop") == 2
+    assert provenance.matches(active)
+    assert SnapshotProvenance.capture(active).source_message_id == tavern.id

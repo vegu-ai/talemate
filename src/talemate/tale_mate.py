@@ -60,6 +60,7 @@ from talemate.history import (
     emit_archive_add,
     ArchiveEntry,
     count_summary_layers,
+    message_inserted,
     message_removed,
 )
 from talemate.knowledge.presence import presence_metadata
@@ -824,6 +825,17 @@ class Scene(Emitter):
         message_removed_signal.send(self, message=message)
         message_removed(self, index, message)
         return message
+
+    def insert_message_at(self, index: int, message: SceneMessage):
+        """
+        Inserts `message` into the history at `index`, the counterpart of
+        remove_message_at: the archive indices and the timeline stay repaired.
+        """
+        self.history.insert(index, message)
+        bind_message_source(self, message)
+        message_inserted(self, index)
+        if isinstance(message, TimePassageMessage):
+            self.fix_time()
 
     def pop_message(self, message: SceneMessage | int) -> bool:
         """

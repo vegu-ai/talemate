@@ -130,7 +130,7 @@ Configure display settings for each type of visual:
 | **Portrait** | Character portraits that appear next to character messages |
 | **Card** | Character or scene cards that can be attached to messages |
 | **Scene Illustration** | Images of the current moment ("Visualize Moment") attached to messages |
-| **Scene Background** | Purely environmental images ("Visualize Scene (Background)") |
+| **Scene Background** | Purely environmental images ("Visualize Scene (Background)"). Also sets how Backdrop entries show their image while Immersive is off: Display Size picks the size, and Render Cadence **Never** shows the entry without its image |
 
 ### Display Settings
 
@@ -160,7 +160,9 @@ Controls how large the visual appears:
 
 #### Auto Backdrop
 
-Available for **Scene Illustration** and **Scene Background**. When enabled, newly generated images of that type automatically become the [scene backdrop](/talemate/user-guide/inline-visuals/#scene-backdrop) — rendered behind the scene text instead of only appearing inline. Off by default for both types.
+Available for **Scene Illustration**. When enabled, newly generated illustrations automatically become the [scene backdrop](/talemate/user-guide/inline-visuals/#scene-backdrop) — rendered behind the scene text instead of only appearing inline. Off by default.
+
+Scene backgrounds generated for the story always become the backdrop and are recorded as **Backdrop** entries in the story, so Scene Background has no Auto Backdrop checkbox.
 
 Any illustration can also be set as the backdrop manually via its image menu, and the scene tools **Immersive** chip toggles the backdrop on and off.
 
@@ -173,4 +175,4 @@ When a backdrop is active, message text sits on translucent panels so it stays r
 
 ### Auto-attach Visuals
 
-When enabled (the default), newly generated visuals are automatically attached to the relevant messages in your scene. Disable this if you prefer to manually manage which images appear with which messages.
+When enabled (the default), newly generated visuals are automatically attached to the relevant messages in your scene. Generated scene backgrounds become the [scene backdrop](/talemate/user-guide/inline-visuals/#scene-backdrop) instead. Disable this if you prefer to manually manage which images appear with which messages; scene backgrounds then only go to the Visual Library as well.

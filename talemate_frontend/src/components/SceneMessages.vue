@@ -379,7 +379,7 @@
             </div>
             <div v-else-if="message.type === 'scene_backdrop'" :class="`message ${message.type}`">
                 <div class="scene-backdrop-message" :id="`message-${message.id}`" :data-message-type="message.type">
-                    <SceneBackdropMessage :message="message" :asset-name="assetsMap[message.backdrop]?.meta?.name || null" :immersive="scene?.data?.assets?.backdrop_enabled !== false" :locked="uxLocked || appBusy || revealCount !== null" />
+                    <SceneBackdropMessage :message="message" :asset="assetsMap[message.backdrop] || null" :immersive="scene?.data?.assets?.backdrop_enabled !== false" :display-size="messageAssetsConfig?.scene_background?.size || 'big'" :show-image="messageAssetsConfig?.scene_background?.cadence !== 'never'" :locked="uxLocked || appBusy || revealCount !== null" />
                 </div>
             </div>
             <div v-else-if="message.type === 'time'" :class="`message ${message.type}`">
@@ -1697,12 +1697,14 @@ export default {
         },
 
         /**
-         * Mark a message as processing an asset operation
+         * Mark a message as processing an asset operation. A regenerated
+         * scene background becomes a Backdrop entry (or only goes to the
+         * library), so its message never gets the update that ends the mark.
          */
-        markAssetProcessing(messageId) {
-            if (messageId) {
-                this.processingAssetMessageIds.add(messageId);
-            }
+        markAssetProcessing(messageId, assetId = null) {
+            if (!messageId) return;
+            if (assetId && this.assetsMap[assetId]?.meta?.vis_type === VIS_TYPE.SCENE_BACKGROUND) return;
+            this.processingAssetMessageIds.add(messageId);
         },
 
         /**
@@ -1937,8 +1939,7 @@ export default {
                 return;
             }
 
-            // Mark this message as processing
-            this.processingAssetMessageIds.add(messageId);
+            this.markAssetProcessing(messageId, assetId);
 
             const ws = this.getWebsocket();
             const message = {

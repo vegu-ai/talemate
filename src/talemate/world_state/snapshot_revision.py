@@ -56,7 +56,12 @@ class SnapshotProvenance(BaseModel):
     def input_history(history, includes_director):
         # Broad snapshot history excludes Director messages; semantic RAG can
         # use them, so requests with retrieval must retain that dependency.
-        return [m for m in history if includes_director or m.typ != "director"]
+        # Backdrop entries never reach a prompt and may be inserted mid-history.
+        return [
+            m
+            for m in history
+            if m.typ != "scene_backdrop" and (includes_director or m.typ != "director")
+        ]
 
     def matches(self, scene):
         history = self.input_history(scene.history, self.includes_director)

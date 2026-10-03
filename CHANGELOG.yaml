@@ -28,6 +28,7 @@
   - "Editor and Writing Styles: Writing styles define the checks, their questions and thresholds; Add default checks covers common cases, and each check can judge all text, only dialogue or only prose."
   - "Editor and Writing Styles: Writing styles include a new Polished Prose style, used by Infinity Quest and Simulation Suite, and a rewritten Adventure Game style with a mid-90s point-and-click voice."
   - "Images: Optional Scene Backgrounds let the World State agent keep the scene backdrop fitting the story, by picking one of the scene's backgrounds or generating a new one, also as a variation of an existing background. It is off by default. Every backdrop change is recorded in the scene, and Playthrough shows each passage with its backdrop."
+  - "Images: Scene backgrounds generated for the story (Visualize Scene (Background), Visualize on a place, Director Chat) become the scene backdrop through a Backdrop entry instead of an image on a message, while Auto-attach visuals is on. A background for an earlier message goes right after it, and back-to-back changes share one entry. While Immersive is off, entries follow the Scene Background display size and cadence."
   - "Images: OpenRouter supports image-only generation and editing models, with model and provider suggestions and clearer errors for unsupported requests."
   - "Images: Paste images from the clipboard, choose megapixel resolution presets, and use the Qwen image-reference prompt preset."
   - "Voice: Volume and mute survive reloads; OpenAI-compatible voice backends offer audio-format selection and refresh complete voice lists without overwriting personal edits."
@@ -70,6 +71,7 @@
   - "Compatible Voice Servers: OpenAI-compatible voice backends now request MP3 by default. Select WAV under Response format if your server cannot produce MP3."
   - "Shared Worlds: Back up older shared worlds before upgrading. Missing shared entries can be recovered from a linked scene only until 0.40 first writes that world, so load the scene holding them first. Entries intentionally removed in an older version may also return. Recover overwritten text from older revisions in 0.39.0 before upgrading, or from a backup of `<project>/changelog/`."
   - "Scene Context Format: The scene context format (Screenplay, Chat, Narrative, AI Aware) moved from the Conversation agent's Generation settings to the Summarizer agent's Scene History settings. A format set on the Conversation agent in an earlier version is not carried over: the format starts at Screenplay, so set it again in Scene History if you used another one."
+  - "Scene Backgrounds: Auto Backdrop for Scene Backgrounds is removed, since generated story backgrounds always become the backdrop; Visual Library backgrounds only go to the library. Backgrounds already attached to messages keep showing, and regenerating one adds a Backdrop entry instead of replacing it on the message."
   - "Visual Styles: Shipped visual styles moved into Talemate's template group. Back up edits to templates/world-state/visual-styles.yaml before updating; if they block the update, stash them or restore the tracked file."
 0.39.0.dev:
   features:

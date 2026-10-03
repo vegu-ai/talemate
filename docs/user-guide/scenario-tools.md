@@ -397,7 +397,7 @@ Generates a portrait-oriented cover image of the current scene, suitable for use
 
 #### :material-image-filter-hdr: Visualize Scene (Background)
 
-Generates a purely environmental image of the scene without characters. Good for establishing shots or backgrounds.
+Generates a purely environmental image of the scene without characters. Good for establishing shots or backgrounds. With **Auto-attach visuals** on, the image becomes the [scene backdrop](/talemate/user-guide/inline-visuals/#scene-backdrop): a **Generating background…** entry appears at the end of the story and shows the image once it is ready.
 
 #### :material-account-tie: / :material-account: Character submenus
 

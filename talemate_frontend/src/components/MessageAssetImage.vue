@@ -207,7 +207,7 @@ export default {
       
       // Mark this message as processing to show loading indicator
       if (this.markAssetProcessing) {
-        this.markAssetProcessing(this.message_id);
+        this.markAssetProcessing(this.message_id, this.assetId);
       }
       
       const ws = this.getWebsocket();

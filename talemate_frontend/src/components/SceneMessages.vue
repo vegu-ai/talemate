@@ -1948,6 +1948,7 @@ export default {
                 asset_id: assetId,
                 asset_allow_override: true,
                 asset_allow_auto_attach: true,
+                message_ids: [messageId],
             };
 
             if (deleteOld) {

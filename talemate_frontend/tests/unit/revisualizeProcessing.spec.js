@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import SceneMessages from '@/components/SceneMessages.vue';
+import MessageAssetImage from '@/components/MessageAssetImage.vue';
 import { VIS_TYPE } from '@/constants/visual';
 
 function state() {
@@ -30,6 +31,24 @@ describe('regenerating a message image', () => {
         const { vm } = state();
         vm.sendRevisualizeAsset({ assetId: 'illustration', messageId: 42 });
         expect([...vm.processingAssetMessageIds]).toEqual([42]);
+    });
+
+    it('names the clicked message as the one to attach the new image to', () => {
+        const { vm, sent } = state();
+        vm.sendRevisualizeAsset({ assetId: 'illustration', messageId: 42, deleteOld: true });
+        expect(sent[0]).toMatchObject({ asset_id: 'illustration', message_ids: [42], asset_delete_old: true });
+    });
+
+    it('sends the clicked message from the image click shortcuts as well', () => {
+        const sent = [];
+        const vm = {
+            assetId: 'illustration',
+            message_id: 7,
+            markAssetProcessing: () => {},
+            getWebsocket: () => ({ send: (frame) => sent.push(JSON.parse(frame)) }),
+        };
+        MessageAssetImage.methods.regenerateIllustration.call(vm, false);
+        expect(sent[0]).toMatchObject({ action: 'revisualize', asset_id: 'illustration', message_ids: [7] });
     });
 
     it('applies the same rule to the image click shortcuts', () => {

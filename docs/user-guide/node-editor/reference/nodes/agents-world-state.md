@@ -340,7 +340,7 @@ Node module (base type `core/Event`) defined in `src/talemate/agents/world_state
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `event_name` | `str` | `"game_loop_new_message"` | Event to listen for |
-| `auto_register` | `bool` | `False` | Self-register from the node registry instead of requiring placement in the scene loop graph |
+| `auto_register` | `bool` | `True` | Self-register from the node registry instead of requiring placement in the scene loop graph |
 
 ## Request World State
 

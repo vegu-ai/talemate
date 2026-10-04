@@ -116,6 +116,8 @@ For faster workflow, inline visuals support several keyboard shortcuts when clic
 | Regenerate | Shift+click |
 | Regenerate and delete old | Alt+click |
 
+The new image replaces the one on the message you clicked, even when that message is further back in the story.
+
 Regenerating a scene background that an older story attached to a message does not replace it on the message. The new background becomes the [scene backdrop](#scene-backdrop) through a new Backdrop entry at the end of the story, and the message keeps its image.
 
 ### Managing Portraits

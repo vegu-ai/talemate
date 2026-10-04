@@ -2,7 +2,8 @@
   "title": "On Message Set Background",
   "id": "0e17cf80-ee58-4d0f-8359-0e3c90963fc3",
   "properties": {
-    "event_name": "game_loop_new_message"
+    "event_name": "game_loop_new_message",
+    "auto_register": true
   },
   "x": 0,
   "y": 0,

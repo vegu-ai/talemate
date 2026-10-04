@@ -142,7 +142,7 @@
   title: Overview
   summary: 'Overview of Talemate agents and responsibilities: Conversation, Creator, Director, Editor, Help, Memory, Narrator,
     Summarizer, Visualizer, Voice and World State. Links per-scene overrides for applying selected settings to individual
-    scenes.'
+    scenes. Legacy game.py scripting is deprecated.'
 - path: user-guide/agents/memory/embeddings.md
   title: Embeddings
   summary: Manage local and API embedding presets, model and client inputs, downloads, trust and CPU/CUDA device controls.
@@ -834,8 +834,8 @@
 - path: user-guide/node-editor/reference/nodes/core-functions.md
   title: Function Nodes
   summary: Function nodes define, retrieve and call reusable graphs, pass typed arguments, map Call For Each over collections,
-    and return results. Covers Error Handler, Unpack Exception, creative-mode Breakpoint, Scoped API Function with TM, and
-    isolated Run Module execution.
+    and return results. Covers Error Handler, Unpack Exception, creative-mode Breakpoint, Scoped API Function with TM (deprecated
+    legacy scripting API), and isolated Run Module execution.
 - path: user-guide/node-editor/reference/nodes/core-logic.md
   title: Logic Nodes
   summary: Logic nodes branch with Switch, RSwitch, RSwitch Advanced, Case and Case Router; combine conditions with AND/OR

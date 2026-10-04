@@ -37,6 +37,7 @@ async_signals.register(
     "agent.visual.generation.before_generate",
     "agent.visual.generation.after_generate",
     "agent.visual.generation.failed",
+    "agent.visual.generation.refused",
 )
 
 # an error body can be a whole HTML page; the notification gets one short line
@@ -59,6 +60,11 @@ class GenerationFailedEmission(AgentEmission):
     request: GenerationRequest
     error: str | None = None
     cancelled: bool = False
+
+
+class GenerationRefusedEmission(AgentEmission):
+    request: GenerationRequest
+    reason: str
 
 
 class RunningGeneration(pydantic.BaseModel):
@@ -199,8 +205,28 @@ class GenerationMixin:
 
         task.add_done_callback(remove_task)
 
+    async def _refuse_generation(
+        self, request: GenerationRequest, reason: str
+    ) -> GenerationResponse:
+        log.info(
+            "generation_refused",
+            request_id=request.id,
+            reason=reason,
+            automatic_source=request.automatic_source,
+            purpose=request.purpose,
+            vis_type=str(request.vis_type),
+        )
+        await async_signals.get("agent.visual.generation.refused").send(
+            GenerationRefusedEmission(agent=self, request=request, reason=reason)
+        )
+        return GenerationResponse(request=request, id=request.id, refused=True)
+
     @set_processing
     async def generate(self, request: GenerationRequest) -> GenerationResponse:
+        if request.automatic and not self.allow_automatic_generation:
+            return await self._refuse_generation(
+                request, "Automatic Generation is off in the Visualizer settings"
+            )
         ctx = request.asset_attachment_context
         # a background meant for the story becomes the backdrop, not a message
         # image; with auto-attach off it only goes to the library

@@ -1413,6 +1413,178 @@
       "inherited": false,
       "registry": "state/GetState",
       "base_type": "core/Node"
+    },
+    "ed783024-1870-4732-8c74-86fc4ec17a37": {
+      "title": "true",
+      "id": "ed783024-1870-4732-8c74-86fc4ec17a37",
+      "properties": {
+        "value": true
+      },
+      "x": -1700,
+      "y": 650,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "9a5c8d5e-b8d3-421b-9883-06081f19d137": {
+      "title": "Get Director Chat Context",
+      "id": "9a5c8d5e-b8d3-421b-9883-06081f19d137",
+      "properties": {},
+      "x": -1700,
+      "y": 700,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/GetDirectorChatContext",
+      "base_type": "core/Node"
+    },
+    "5557a7cb-e488-4ff6-91f7-0a1003186c23": {
+      "title": "Scene direction",
+      "id": "5557a7cb-e488-4ff6-91f7-0a1003186c23",
+      "properties": {
+        "substring": "scene_direction",
+        "mode": "exact",
+        "case_sensitive": true
+      },
+      "x": -1460,
+      "y": 660,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/StringCheck",
+      "base_type": "core/Node"
+    },
+    "60e3b44d-f7de-4ca9-832f-f052ff97dfe9": {
+      "title": "director.scene_direction",
+      "id": "60e3b44d-f7de-4ca9-832f-f052ff97dfe9",
+      "properties": {
+        "value": "director.scene_direction"
+      },
+      "x": -1460,
+      "y": 810,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "b5e0ae18-8cd4-4d94-a7ac-87566431f69e": {
+      "title": "Automatic source",
+      "id": "b5e0ae18-8cd4-4d94-a7ac-87566431f69e",
+      "properties": {},
+      "x": -1220,
+      "y": 700,
+      "width": 140,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitch",
+      "base_type": "core/Node"
+    },
+    "7373f4dd-b4eb-4714-998f-014a0a8fca2f": {
+      "title": "true",
+      "id": "7373f4dd-b4eb-4714-998f-014a0a8fca2f",
+      "properties": {
+        "value": true
+      },
+      "x": 30,
+      "y": 2100,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "5e8e7400-391b-416a-8227-900d8f9bb5b1": {
+      "title": "Get Director Chat Context",
+      "id": "5e8e7400-391b-416a-8227-900d8f9bb5b1",
+      "properties": {},
+      "x": 30,
+      "y": 2150,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/GetDirectorChatContext",
+      "base_type": "core/Node"
+    },
+    "8101f227-1bb2-469e-afde-c093a526f77e": {
+      "title": "Scene direction",
+      "id": "8101f227-1bb2-469e-afde-c093a526f77e",
+      "properties": {
+        "substring": "scene_direction",
+        "mode": "exact",
+        "case_sensitive": true
+      },
+      "x": 270,
+      "y": 2150,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/StringCheck",
+      "base_type": "core/Node"
+    },
+    "5701c043-0828-4c91-bc89-9047bc73c3fd": {
+      "title": "Visual Settings",
+      "id": "5701c043-0828-4c91-bc89-9047bc73c3fd",
+      "properties": {},
+      "x": 270,
+      "y": 2310,
+      "width": 405,
+      "height": 2406,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/visual/Settings",
+      "base_type": "core/Node"
+    },
+    "deee62d4-76f9-4c68-8d3a-5cd4bba0a864": {
+      "title": "true",
+      "id": "deee62d4-76f9-4c68-8d3a-5cd4bba0a864",
+      "properties": {
+        "value": true
+      },
+      "x": 270,
+      "y": 2350,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "a67508da-185d-45e4-a2c9-3e3633434560": {
+      "title": "Offered in this mode",
+      "id": "a67508da-185d-45e4-a2c9-3e3633434560",
+      "properties": {},
+      "x": 520,
+      "y": 2150,
+      "width": 140,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitch",
+      "base_type": "core/Node"
+    },
+    "7ededd80-1ba5-40a9-95f5-e783ec08f0b1": {
+      "title": "Image creation available",
+      "id": "7ededd80-1ba5-40a9-95f5-e783ec08f0b1",
+      "properties": {},
+      "x": 700,
+      "y": 2150,
+      "width": 160,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitch",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1674,9 +1846,6 @@
     "73274d98-3ccc-4746-a31d-5f97712da9f9.value": [
       "ae0c1b9b-8403-4c1d-b659-b7d68031d9d8.nodes"
     ],
-    "bf5667c1-3e02-42b5-96dd-3a3ed29c1054.can_generate_images": [
-      "73274d98-3ccc-4746-a31d-5f97712da9f9.value"
-    ],
     "0bf18986-4f9f-4fc1-bbac-b6ca7bc7ea98.fn": [
       "641520c8-0a7e-4ed4-8f05-8f9715994dac.condition"
     ],
@@ -1697,6 +1866,45 @@
     ],
     "76b66be1-f11c-4369-9baf-c4d3ec8340a0.value": [
       "a6fe2eb2-f5f3-4d7c-88be-24762fe5e26f.batch"
+    ],
+    "ed783024-1870-4732-8c74-86fc4ec17a37.value": [
+      "9a5c8d5e-b8d3-421b-9883-06081f19d137.state"
+    ],
+    "9a5c8d5e-b8d3-421b-9883-06081f19d137.mode": [
+      "5557a7cb-e488-4ff6-91f7-0a1003186c23.string"
+    ],
+    "5557a7cb-e488-4ff6-91f7-0a1003186c23.result": [
+      "b5e0ae18-8cd4-4d94-a7ac-87566431f69e.check"
+    ],
+    "60e3b44d-f7de-4ca9-832f-f052ff97dfe9.value": [
+      "b5e0ae18-8cd4-4d94-a7ac-87566431f69e.yes"
+    ],
+    "b5e0ae18-8cd4-4d94-a7ac-87566431f69e.value": [
+      "a34723ac-39b0-4f07-b071-cba33af1c1c4.automatic_source"
+    ],
+    "7373f4dd-b4eb-4714-998f-014a0a8fca2f.value": [
+      "5e8e7400-391b-416a-8227-900d8f9bb5b1.state"
+    ],
+    "5e8e7400-391b-416a-8227-900d8f9bb5b1.mode": [
+      "8101f227-1bb2-469e-afde-c093a526f77e.string"
+    ],
+    "8101f227-1bb2-469e-afde-c093a526f77e.result": [
+      "a67508da-185d-45e4-a2c9-3e3633434560.check"
+    ],
+    "5701c043-0828-4c91-bc89-9047bc73c3fd._config_automatic_generation": [
+      "a67508da-185d-45e4-a2c9-3e3633434560.yes"
+    ],
+    "deee62d4-76f9-4c68-8d3a-5cd4bba0a864.value": [
+      "a67508da-185d-45e4-a2c9-3e3633434560.no"
+    ],
+    "bf5667c1-3e02-42b5-96dd-3a3ed29c1054.can_generate_images": [
+      "7ededd80-1ba5-40a9-95f5-e783ec08f0b1.check"
+    ],
+    "a67508da-185d-45e4-a2c9-3e3633434560.value": [
+      "7ededd80-1ba5-40a9-95f5-e783ec08f0b1.yes"
+    ],
+    "7ededd80-1ba5-40a9-95f5-e783ec08f0b1.value": [
+      "73274d98-3ccc-4746-a31d-5f97712da9f9.value"
     ]
   },
   "groups": [
@@ -1775,7 +1983,7 @@
       "x": 6,
       "y": 1694,
       "width": 898,
-      "height": 350,
+      "height": 720,
       "color": "#b06634",
       "font_size": 24,
       "inherited": false

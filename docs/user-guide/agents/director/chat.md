@@ -186,6 +186,9 @@ Actions are organized into groups:
 !!! note "Scene Direction Only Actions"
     Some actions are only available during autonomous Scene Direction, not in Director Chat. The **Prompt for text input** action is one example - it allows the director to request information from you during autonomous direction but is not used during interactive chat sessions. See [Prompting the User for Input](/talemate/user-guide/agents/director/scene-direction/#prompting-the-user-for-input) for more details.
 
+!!! note "Images during Scene Direction"
+    An image you ask for in Director Chat is your request and is always allowed. During autonomous Scene Direction, **Create new Image(s)** is only offered while the Visualizer's [Automatic Generation](/talemate/user-guide/agents/visualizer/settings/#automatic-generation) setting is on.
+
 ### Toggling Actions
 
 Click on an action in the list to toggle it on or off:

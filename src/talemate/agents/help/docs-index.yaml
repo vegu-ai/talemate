@@ -94,7 +94,7 @@
   summary: 'Director Chat: Normal/Decisive/No Spoilers, write confirmations/timeouts, action toggles, personas and multiple
     chats. Update Context → Existing Characters sets Known by and grants or revokes knowledge through one free-form instruction.
     Covers Reject and abort (earlier changes remain), Reject with instructions and correction rounds, partial batches and
-    report_issue.'
+    report_issue. Create new Image(s) in Scene Direction needs Automatic Generation.'
 - path: user-guide/agents/director/index.md
   title: Overview
   summary: 'Director agent overview: game-master scene progression through autonomous Scene Direction, conversational Director
@@ -245,8 +245,8 @@
     during play, as variations of existing ones.
 - path: user-guide/agents/visualizer/settings.md
   title: Settings
-  summary: Visualizer settings for separate image backends, timeout, automatic setup/generation, reference analysis, editing-prompt
-    revision and visual styles. Covers prompt-finalizer presets including Ideogram JSON and Qwen 2.1 Image references, ordered
+  summary: Visualizer settings for separate image backends, timeout, automatic setup, Automatic Generation, reference analysis,
+    editing-prompt revision and visual styles. Covers prompt-finalizer presets including Ideogram JSON and Qwen 2.1 Image references, ordered
     exact/fuzzy/regex/AI actions and group references, per-character/scene overrides and local model and megapixel resolution
     presets.
 - path: user-guide/agents/visualizer/visual-library.md
@@ -720,7 +720,7 @@
   summary: 'Event names, firing order, mutable payloads: game/scene loops, regeneration, agent generation/instruction hooks,
     creator dialogue examples, editor rewrite compatibility, help chat, summarizer archives/RAG, TTS chunk/audio hooks,
     visual finalization, asset/backdrop changes. scene.revision_saved, scene.revision_forked, scene.revisions_deleted, scene.revision_failed,
-    scene.before_generation.'
+    scene.before_generation, agent.visual.generation.refused.'
 - path: user-guide/node-editor/reference/nodes/agents-conversation.md
   title: Conversation Agent Nodes
   summary: Conversation node reference for Generate Conversation and Conversation Settings, including registry paths, sockets

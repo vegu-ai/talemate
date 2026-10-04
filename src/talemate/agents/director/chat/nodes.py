@@ -42,6 +42,12 @@ TYPE_CHOICES.extend(
 )
 
 
+def detect_action_mode() -> ActionMode:
+    if scene_direction_context.get().get("in_direction_turn"):
+        return "scene_direction"
+    return "chat"
+
+
 @base_node_type("agents/director/DirectorChatAction")
 class DirectorChatAction(Function):
     """
@@ -212,26 +218,6 @@ class DirectorChatSubAction(Node):
         self.set_property("force_enabled", False)
         self.add_output("state", socket_type="any")
 
-    def _detect_mode(self) -> ActionMode:
-        """
-        Detect the current execution mode based on context variables.
-
-        Returns:
-            "chat" if in a chat context, "scene_direction" if in scene direction context
-        """
-        # Check if we're in a scene direction turn
-        ctx = scene_direction_context.get()
-        if ctx.get("in_direction_turn"):
-            return "scene_direction"
-
-        # Check if we're in a chat context
-        chat_ctx = director_chat_context.get()
-        if chat_ctx is not None:
-            return "chat"
-
-        # Default to chat
-        return "chat"
-
     async def run(self, state: GraphState):
         action_id = self.normalized_input_value("action_id")
 
@@ -251,7 +237,7 @@ class DirectorChatSubAction(Node):
                 return
 
         director = get_agent("director")
-        mode = self._detect_mode()
+        mode = detect_action_mode()
 
         # Create a descriptor from node properties for consistent gating logic
         availability = self.normalized_input_value("availability") or "both"
@@ -643,6 +629,9 @@ class GetDirectorChatContext(Node):
 
     When no chat context is active, `has_context` is False and `context` is
     an empty dict.
+
+    `mode` is "chat" while the director talks with the user and
+    "scene_direction" during the director's own scene direction turn.
     """
 
     def __init__(self, title="Get Director Chat Context", **kwargs):
@@ -653,6 +642,7 @@ class GetDirectorChatContext(Node):
         self.add_output("state")
         self.add_output("has_context", socket_type="bool")
         self.add_output("context", socket_type="dict")
+        self.add_output("mode", socket_type="str")
 
     async def run(self, state: GraphState):
         input_state = self.require_input("state")
@@ -667,5 +657,6 @@ class GetDirectorChatContext(Node):
                 "state": input_state,
                 "has_context": ctx is not None,
                 "context": context_dict,
+                "mode": detect_action_mode(),
             }
         )

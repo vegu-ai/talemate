@@ -19,12 +19,19 @@ class SetCoverImagePayload(pydantic.BaseModel):
     base64: str
 
 
-class RegeneratePayload(pydantic.BaseModel):
-    generation_request: GenerationRequest
-
-
 class GeneratePayload(pydantic.BaseModel):
     generation_request: GenerationRequest
+
+    @pydantic.field_validator("generation_request")
+    @classmethod
+    def user_request(cls, request: GenerationRequest) -> GenerationRequest:
+        # the Visual Library replays a stored request, automatic_source included
+        request.automatic_source = None
+        return request
+
+
+class RegeneratePayload(GeneratePayload):
+    pass
 
 
 class SaveImagePayload(pydantic.BaseModel):

@@ -167,6 +167,9 @@ For example, if a character is described as wearing formal attire at a party but
 
     - The Director's **Character Management > Generate Visuals** setting to be enabled
     - A Visual Agent with an image generation backend configured
+    - The Visualizer's [Automatic Generation](/talemate/user-guide/agents/visualizer/settings/#automatic-generation) setting to be enabled. While it is off, the Character Portraits settings show a **No new portraits** note with a link to the Visualizer settings, and the agent only picks from existing portraits.
+
+    **Generate new portrait** and **Auto-select portrait** in a message's portrait menu are your own requests and work with Automatic Generation off.
 
 When a new portrait is generated, it is automatically added to the character's portrait collection and tagged based on the scene context.
 
@@ -207,7 +210,7 @@ Off by default. When enabled and no existing background fits, the agent describe
 While the image is generated, a **Generating background…** entry appears in the scene. When the image is ready it becomes the backdrop and is saved to the scene's visuals.
 
 !!! warning "Prerequisites"
-    This feature requires a Visualizer with an image generation or image editing backend configured. Without one, the Scene Backgrounds settings show a **No new backgrounds** note with a link to the Visualizer settings, and the agent only picks from existing backgrounds.
+    This feature requires a Visualizer with an image generation or image editing backend configured, and the Visualizer's [Automatic Generation](/talemate/user-guide/agents/visualizer/settings/#automatic-generation) setting enabled. Without either, the Scene Backgrounds settings show a **No new backgrounds** note that names the cause, with a link to the Visualizer settings, and the agent only picks from existing backgrounds.
 
 ### Backdrop changes in the scene
 

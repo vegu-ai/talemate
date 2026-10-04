@@ -2451,6 +2451,74 @@
       "inherited": false,
       "registry": "state/SetState",
       "base_type": "core/Node"
+    },
+    "1b1fbfd7-1695-4769-a39b-91a6d373286c": {
+      "title": "IN automatic_source",
+      "id": "1b1fbfd7-1695-4769-a39b-91a6d373286c",
+      "properties": {
+        "input_type": "str",
+        "input_name": "automatic_source",
+        "input_optional": true,
+        "input_group": "",
+        "num": 10
+      },
+      "x": 1280,
+      "y": -1410,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "1dcbea98-055a-4eb3-a235-ae91a574e896": {
+      "title": "SET local.automatic_source",
+      "id": "1dcbea98-055a-4eb3-a235-ae91a574e896",
+      "properties": {
+        "name": "automatic_source",
+        "scope": "local"
+      },
+      "x": 1530,
+      "y": -1400,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "152ac4b2-8725-470a-8bd6-07540d41146a": {
+      "title": "OUT automatic_source",
+      "id": "152ac4b2-8725-470a-8bd6-07540d41146a",
+      "properties": {
+        "output_type": "str",
+        "output_name": "automatic_source",
+        "num": 13
+      },
+      "x": 2060,
+      "y": -1400,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "009e0ba3-fa7e-49b9-88c9-bddffa32cea2": {
+      "title": "GET local.automatic_source",
+      "id": "009e0ba3-fa7e-49b9-88c9-bddffa32cea2",
+      "properties": {
+        "name": "automatic_source",
+        "scope": "local"
+      },
+      "x": 698,
+      "y": 3039,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -2873,12 +2941,6 @@
     "953f7fa0-b710-4113-b929-a9f476b94b74.value": [
       "7d4bcf4c-b89f-4efd-a944-5f37be09ac06.value"
     ],
-    "83857a85-7f9d-47d2-83a6-8424533ce979.name": [
-      "ac033c3f-29bf-4b04-a479-0c15d5515603.state"
-    ],
-    "7d4bcf4c-b89f-4efd-a944-5f37be09ac06.name": [
-      "ac033c3f-29bf-4b04-a479-0c15d5515603.state_b"
-    ],
     "ac033c3f-29bf-4b04-a479-0c15d5515603.state": [
       "06c12177-7838-49a0-a3f0-e6e831b96091.value"
     ],
@@ -2902,6 +2964,24 @@
     ],
     "6a3762dc-f5c3-46f9-9642-698ce41b3962.name": [
       "de9461b8-ba7c-4453-8713-4e4ef6020eff.state_c"
+    ],
+    "1b1fbfd7-1695-4769-a39b-91a6d373286c.value": [
+      "1dcbea98-055a-4eb3-a235-ae91a574e896.value"
+    ],
+    "ac033c3f-29bf-4b04-a479-0c15d5515603.state_c": [
+      "152ac4b2-8725-470a-8bd6-07540d41146a.value"
+    ],
+    "009e0ba3-fa7e-49b9-88c9-bddffa32cea2.value": [
+      "1b1a1945-713b-47b6-b762-9a6e94c73522.automatic_source"
+    ],
+    "83857a85-7f9d-47d2-83a6-8424533ce979.value": [
+      "ac033c3f-29bf-4b04-a479-0c15d5515603.state"
+    ],
+    "7d4bcf4c-b89f-4efd-a944-5f37be09ac06.value": [
+      "ac033c3f-29bf-4b04-a479-0c15d5515603.state_b"
+    ],
+    "1dcbea98-055a-4eb3-a235-ae91a574e896.value": [
+      "ac033c3f-29bf-4b04-a479-0c15d5515603.state_c"
     ]
   },
   "groups": [
@@ -2996,12 +3076,12 @@
       "inherited": false
     },
     {
-      "title": "Input - purpose and references",
+      "title": "Input - purpose, references and automatic source",
       "x": 1258,
       "y": -1940,
       "width": 1040,
-      "height": 520,
-      "color": "#b58b2a",
+      "height": 750,
+      "color": "#88A",
       "font_size": 24,
       "inherited": false
     }

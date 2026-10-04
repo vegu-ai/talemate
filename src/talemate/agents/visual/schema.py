@@ -368,6 +368,10 @@ class GenerationRequest(pydantic.BaseModel):
 
     purpose: str | None = None
 
+    # the feature that started the generation without a user request;
+    # None for a generation the user asked for
+    automatic_source: str | None = None
+
     inline_reference: str | None = pydantic.Field(default=None, exclude=False)
 
     callback: Callable | None = pydantic.Field(default=None, exclude=True)
@@ -375,6 +379,10 @@ class GenerationRequest(pydantic.BaseModel):
     asset_attachment_context: AssetAttachmentContext = pydantic.Field(
         default=AssetAttachmentContext()
     )
+
+    @property
+    def automatic(self) -> bool:
+        return bool(self.automatic_source)
 
     @property
     def reference_bytes(self) -> list[bytes]:
@@ -418,6 +426,7 @@ class GenerationResponse(pydantic.BaseModel):
     id: str | None = None
     backend_name: str | None = None
     saved: bool = False
+    refused: bool = False
 
     @pydantic.computed_field
     @property

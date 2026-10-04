@@ -174,6 +174,8 @@ If enabled, the director will automatically assign a text-to-speech voice when c
 
 If enabled, the director is allowed to generate visual assets (portraits, cover images) for characters when requested.
 
+The cover image the director generates for a character it persists is an automatic generation: it also needs the Visualizer's [Automatic Generation](/talemate/user-guide/agents/visualizer/settings/#automatic-generation) setting.
+
 ## Director Chat
 
 !!! example "Experimental"

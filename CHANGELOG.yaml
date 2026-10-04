@@ -59,6 +59,7 @@
   - "Clients and Images: OpenRouter respects disabled reasoning and per-action overrides; OpenAI-compatible clients handle empty replies and report non-streamed generation speed correctly."
   - "Clients and Images: Local clients refuse blank server URLs, unavailable clients remain visible, and Ollama honors stopping strings."
   - "Clients and Images: Image uploads work over plain HTTP, OpenRouter images are stored as PNG, and ComfyUI prompt inputs and workflow lists resolve correctly."
+  - "Clients and Images: Images generated without your request follow the Visualizer's Automatic Generation setting: new portraits and scene backgrounds, the cover image for a character the Director persists, images the Director creates during Scene Direction, and portraits for characters the Simulation Suite adds. While it is off, the World State settings explain why nothing new is generated. Images you ask for are not affected, and node graphs can react to a refused request."
   - "Voice and Startup: Failed voice chunks no longer stop the playback queue, and compatible servers can return playable audio and complete voice listings."
   - "Voice and Startup: Ctrl+C handles cancelled image-backend probes quietly and bounds shutdown to five seconds when background work stalls."
   - "Voice and Startup: Windows installation and frontend startup are repaired; fresh source installs start without configuration, and installed tokenizers need no startup download."

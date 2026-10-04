@@ -607,6 +607,21 @@
       "inherited": false,
       "registry": "core/MakeBool",
       "base_type": "core/Node"
+    },
+    "89ecde6b-b5bd-4341-b561-e4c73cebaa7e": {
+      "title": "Automatic source",
+      "id": "89ecde6b-b5bd-4341-b561-e4c73cebaa7e",
+      "properties": {
+        "value": "simulation_suite.add_character"
+      },
+      "x": 653,
+      "y": 2370,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -718,6 +733,12 @@
       "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.assign_voice",
       "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.generate_dialogue_instructions",
       "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.generate_example_dialogue"
+    ],
+    "a748570f-e8ce-4281-84db-abe75decc5ad._config_automatic_generation": [
+      "d629347c-57f7-4681-9c90-9b8a196e0e74.c"
+    ],
+    "89ecde6b-b5bd-4341-b561-e4c73cebaa7e.value": [
+      "3c3c8925-d18c-4cb4-81e6-936c77512ef1.automatic_source"
     ]
   },
   "groups": [

@@ -488,6 +488,21 @@
       "registry": "core/ErrorHandler",
       "base_type": "core/Node",
       "height": 26
+    },
+    "701116b7-420b-478c-b9c3-e668a3a46d45": {
+      "title": "Automatic source",
+      "id": "701116b7-420b-478c-b9c3-e668a3a46d45",
+      "properties": {
+        "value": "world_state.backgrounds"
+      },
+      "x": 990,
+      "y": 815,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -574,6 +589,9 @@
     ],
     "3293c7fe-ccfe-4416-91c4-92791c21e05f.fn": [
       "1b839970-fd3f-4de9-b191-4bc5abf17ec8.fn"
+    ],
+    "701116b7-420b-478c-b9c3-e668a3a46d45.value": [
+      "0af5fcab-ca65-42ee-9147-913fb3954505.automatic_source"
     ]
   },
   "groups": [

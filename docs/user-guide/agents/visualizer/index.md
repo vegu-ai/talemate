@@ -14,7 +14,7 @@ The Visualizer agent supports multiple image generation backends, allowing you t
 - **Style Templates**: Configure different visual styles for different types of content (character cards, portraits, scene backgrounds, etc.)
 - **Visual Library Integration**: Generated images are managed through the Visual Library, where you can organize, iterate, and save visual assets
 - **[Inline Visuals](../../inline-visuals.md)**: Generated images can appear directly in your scene feed alongside messages, providing an immersive visual storytelling experience
-- **Automatic Generation**: Optionally allow the agent to automatically generate visual content based on scene context
+- **Automatic Generation**: Optionally allow features such as new portraits and new scene backgrounds to generate images without you asking (see [Automatic Generation](settings.md#automatic-generation))
 - **Prompt Generation**: Supports both direct prompts and natural language instructions that incorporate character and scene context
 
 ## Configuration

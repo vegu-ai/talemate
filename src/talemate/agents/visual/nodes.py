@@ -685,6 +685,10 @@ class GenerationRequestNode(AgentNode):
     - extra_config: additional configuration dict (optional)
     - asset_attachment_context: controls automatic asset attachment behavior (optional)
     - purpose: why the image is generated, checked by Generation Running (optional)
+    - automatic_source: the feature that starts this generation without a user
+      request; leave empty when the user asked for the image. An automatic
+      request is refused while the Visualizer's Automatic Generation setting is
+      off (optional)
 
     Outputs:
     - generation_request: the created generation request object
@@ -745,6 +749,12 @@ class GenerationRequestNode(AgentNode):
             description="Why the image is generated, checked by Generation Running",
             default="",
         )
+        automatic_source = PropertyField(
+            name="automatic_source",
+            type="str",
+            description="The feature that starts this generation without a user request; empty when the user asked for it",
+            default="",
+        )
 
     def __init__(self, title="Visual Generation Request", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -765,6 +775,7 @@ class GenerationRequestNode(AgentNode):
             optional=True,
         )
         self.add_input("purpose", socket_type="str", optional=True)
+        self.add_input("automatic_source", socket_type="str", optional=True)
         self.set_property("vis_type", "UNSPECIFIED")
         self.set_property("gen_type", "TEXT_TO_IMAGE")
         self.set_property("format", "LANDSCAPE")
@@ -772,6 +783,7 @@ class GenerationRequestNode(AgentNode):
         self.set_property("instructions", "")
         self.set_property("extra_config", {})
         self.set_property("purpose", "")
+        self.set_property("automatic_source", "")
         self.add_output("generation_request", socket_type="visual/generation_request")
         self.add_output("prompt", socket_type="visual/prompt")
         self.add_output("vis_type", socket_type="str")
@@ -817,6 +829,7 @@ class GenerationRequestNode(AgentNode):
             asset_attachment_context=asset_attachment_context
             or AssetAttachmentContext(),
             purpose=self.normalized_input_value("purpose") or None,
+            automatic_source=self.normalized_input_value("automatic_source") or None,
         )
         self.set_output_values(
             {
@@ -850,7 +863,8 @@ class GenerateImage(AgentNode):
 
     - state: The state input, passed through
     - generation_request: The generation request, passed through
-    - generation_response: The generation response containing the image
+    - generation_response: The generation response containing the image;
+      its refused flag is set when the agent refused an automatic request
     """
 
     _agent_name: ClassVar[str] = "visual"
@@ -944,6 +958,8 @@ class UnpackGenerationRequest(AgentNode):
     - gen_type: The generation type
     - extra_config: The extra configuration dict
     - asset_attachment_context: The asset attachment context
+    - automatic_source: The feature that started the generation without a
+      user request; empty for a user request
     """
 
     _agent_name: ClassVar[str] = "visual"
@@ -964,6 +980,7 @@ class UnpackGenerationRequest(AgentNode):
         self.add_output(
             "asset_attachment_context", socket_type="asset_attachment_context"
         )
+        self.add_output("automatic_source", socket_type="str")
 
     async def run(self, state: GraphState):
         generation_request: GenerationRequest = self.require_input("generation_request")
@@ -978,6 +995,7 @@ class UnpackGenerationRequest(AgentNode):
                 "gen_type": generation_request.gen_type,
                 "extra_config": generation_request.extra_config,
                 "asset_attachment_context": generation_request.asset_attachment_context,
+                "automatic_source": generation_request.automatic_source or "",
             }
         )
 
@@ -999,6 +1017,8 @@ class UnpackGenerationResponse(AgentNode):
     - id: The generation's ID
     - backend_name: The name of the backend that generated the image
     - request: The generation request that produced this response
+    - refused: True when the visual agent refused the request without
+      generating (see the agent.visual.generation.refused event)
     """
 
     _agent_name: ClassVar[str] = "visual"
@@ -1014,6 +1034,7 @@ class UnpackGenerationResponse(AgentNode):
         self.add_output("id", socket_type="str")
         self.add_output("backend_name", socket_type="str")
         self.add_output("request", socket_type="visual/generation_request")
+        self.add_output("refused", socket_type="bool")
 
     async def run(self, state: GraphState):
         generation_response: GenerationResponse = self.normalized_input_value(
@@ -1027,6 +1048,7 @@ class UnpackGenerationResponse(AgentNode):
                 "id": generation_response.id,
                 "backend_name": generation_response.backend_name,
                 "request": generation_response.request,
+                "refused": generation_response.refused,
             }
         )
 

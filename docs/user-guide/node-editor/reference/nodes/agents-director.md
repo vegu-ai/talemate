@@ -229,6 +229,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/director/mo
 | `set_current_avatar` | `bool` | (optional) |
 | `set_default_avatar` | `bool` | (optional) |
 | `asset_ctx` | `asset_attachment_context` | (optional) |
+| `automatic_source` | `str` | (optional) |
 
 **Outputs**
 
@@ -239,6 +240,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/director/mo
 | `set_current_avatar` | `bool` |  |
 | `set_default_avatar` | `bool` |  |
 | `asset_ctx` | `asset_attachment_context` |  |
+| `automatic_source` | `str` |  |
 
 ## Log Director Action
 

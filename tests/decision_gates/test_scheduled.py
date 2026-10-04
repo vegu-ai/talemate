@@ -234,3 +234,99 @@ async def test_shipped_avatar_module_switches_existing_portrait(
     assert character.current_avatar == "angry"
     assert send.await_count == (not decision_enabled)
     assert len(c.provider.calls) == decision_enabled
+
+
+@pytest.mark.parametrize(
+    "automatic_generation, automatic_source, offered",
+    [
+        (True, "world_state.portraits", True),
+        (False, "world_state.portraits", False),
+        (False, "", True),
+    ],
+)
+async def test_shipped_avatar_module_offers_generation_only_when_allowed(
+    gate_case, monkeypatch, automatic_generation, automatic_source, offered, tmp_path
+):
+    from PIL import Image
+    from _node_test_helpers import (
+        build_graph,
+        execute_graph,
+        make_capture,
+        make_constant,
+    )
+    from talemate.game.engine.nodes.layout import load_graph_from_file
+    from talemate.game.engine.nodes.tools.analysis import ensure_registry_loaded
+    from talemate.instance import get_agent
+    from talemate.scene_assets import VIS_TYPE
+    from talemate.tale_mate import Actor
+
+    c = gate_case
+    ensure_registry_loaded()
+    character = Character(name="Mara", current_avatar="calm")
+    c.scene.character_data["Mara"] = character
+    c.scene.actors.append(Actor(character=character, agent=None))
+    c.scene.active_characters = ["Mara"]
+    c.scene.project_name = "avatar-module-test"
+    monkeypatch.setattr(c.scene, "scenes_dir", lambda: str(tmp_path))
+    asset_dir = tmp_path / c.scene.project_name / "assets"
+    asset_dir.mkdir(parents=True)
+    for name in ("calm", "angry"):
+        Image.new("RGB", (2, 2), "blue").save(asset_dir / f"{name}.png")
+    c.scene.assets._assets_cache = {
+        name: Asset(
+            id=name,
+            file_type="png",
+            media_type="image",
+            meta=AssetMeta(
+                name=name,
+                character_name="Mara",
+                tags=[name],
+                vis_type=VIS_TYPE.CHARACTER_PORTRAIT,
+            ),
+        )
+        for name in ("calm", "angry")
+    }
+    c.agent.actions["avatars"].config["decision_model"].value = False
+    c.agent.actions["avatars"].config["generate_new"].value = True
+    visual = get_agent("visual")
+    monkeypatch.setattr(
+        visual.actions["_config"].config["automatic_generation"],
+        "value",
+        automatic_generation,
+    )
+    prompts = []
+
+    async def send(prompt, *args, **kwargs):
+        prompts.append(str(prompt.vars.get("instructions", "")))
+        return "<ASSET_ID>angry</ASSET_ID>"
+
+    monkeypatch.setattr(Prompt, "send", send)
+    module, _ = load_graph_from_file(
+        "src/talemate/agents/world_state/modules/determine-character-avatar.json"
+    )
+    source = make_constant(
+        state=True,
+        character=character,
+        content="Mara shouts in anger.",
+        force_determine=True,
+        automatic_source=automatic_source,
+    )
+    captured = {}
+    output = make_capture(captured, "asset_id")
+    graph = build_graph(source, module, output)
+    for name in (
+        "state",
+        "character",
+        "content",
+        "force_determine",
+        "automatic_source",
+    ):
+        graph.connect(source.get_output_socket(name), module.get_input_socket(name))
+    graph.connect(
+        module.get_output_socket("asset_id"), output.get_input_socket("asset_id")
+    )
+    await execute_graph(c.scene, graph)
+
+    (prompt,) = prompts
+    assert ("prompt the generation of a new avatar" in prompt) is offered
+    assert captured["asset_id"] == "angry"

@@ -96,6 +96,9 @@ def case(gate_case, monkeypatch, tmp_path):
     monkeypatch.setattr(VisualAgent, "can_edit_images", property(lambda s: False))
     monkeypatch.setattr(VisualAgent, "backend", None, raising=False)
     visual.backend = GatedBackend()
+    monkeypatch.setattr(
+        visual.actions["_config"].config["automatic_generation"], "value", True
+    )
 
     async def no_finalize(request):
         pass
@@ -199,6 +202,7 @@ async def test_no_fit_generates_a_new_background_when_allowed(case):
     assert selection_prompts(case) == 1
     (request,) = case.visual.backend.requests
     assert request.purpose == PURPOSE
+    assert request.automatic_source == "world_state.backgrounds"
     assert not any("REVISED_PROMPT" in text for text in case.prompts)
     assert request.vis_type == VIS_TYPE.SCENE_BACKGROUND
     assert request.asset_attachment_context.scene_backdrop
@@ -230,6 +234,50 @@ async def test_no_fit_without_generate_new_keeps_the_background(case):
     assert "Name: harbour-day" in current
     assert case.visual.backend.requests == []
     assert backdrops(case.scene) == []
+
+
+async def test_automatic_generation_off_picks_from_existing_backgrounds(case):
+    case.config["decision_model"].value = False
+    case.config["generate_new"].value = True
+    case.visual.actions["_config"].config["automatic_generation"].value = False
+
+    await on_message(case, NarratorMessage("Dawn breaks over the harbour."))
+    await settle()
+
+    assert selection_prompts(case) == 1
+    assert "<NAME>" not in case.prompts[0]
+    assert case.visual.backend.requests == []
+    assert backdrops(case.scene) == []
+
+
+@pytest.mark.parametrize(
+    "attachment",
+    [
+        {"scene_backdrop": True, "asset_name": "Harbour at dawn"},
+        # a story background the visual agent itself turns into a backdrop
+        {"allow_auto_attach": True, "asset_name": "Harbour at dawn"},
+    ],
+)
+async def test_a_refused_automatic_background_leaves_no_pending_entry(case, attachment):
+    from talemate.agents.visual.schema import AssetAttachmentContext, GenerationRequest
+
+    case.visual.actions["_config"].config["automatic_generation"].value = False
+    request = GenerationRequest(
+        prompt="A misty harbour",
+        vis_type=VIS_TYPE.SCENE_BACKGROUND,
+        purpose=PURPOSE,
+        automatic_source="world_state.backgrounds",
+        asset_attachment_context=AssetAttachmentContext(**attachment),
+    )
+
+    response = await case.visual.generate(request)
+    await settle()
+
+    assert response.refused
+    assert case.visual.backend.requests == []
+    assert backdrops(case.scene) == []
+    assert case.visual.generations_running(PURPOSE) == 0
+    assert case.scene.assets.backdrop == "harbour-day"
 
 
 async def test_a_running_background_generation_skips_the_check(case):

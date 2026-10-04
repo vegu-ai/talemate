@@ -37,9 +37,21 @@ This setting is enabled by default and helps streamline the setup process when u
 
 ### Automatic Generation
 
-When enabled, allows the Visualizer agent to automatically generate visual content based on scene context. This can be useful for automatically creating character portraits or scene illustrations as your story progresses.
+Decides whether images can be generated without you asking for them. It is off by default, so no image is generated unless you ask for it.
 
-This setting is disabled by default, giving you full control over when images are generated.
+These features generate images on their own and only do so while Automatic Generation is on:
+
+- World State **Character Portraits → Generate New Portraits**: a new portrait when none of the character's portraits fits the moment
+- World State **Scene Backgrounds → Generate New Backgrounds**: a new background when none of the scene's backgrounds fits
+- Director **Character Management → Generate Visuals**: a cover image for a character the Director persists
+- The Director's **Create new Image(s)** action during [Scene Direction](/talemate/user-guide/agents/director/scene-direction/)
+- The portrait for a character the **Simulation Suite** adds when you ask the computer for one
+
+While it is off, the portrait and background features still pick from the images you already have, and the Director is not offered image creation during Scene Direction. The World State settings show a **No new portraits** or **No new backgrounds** note with a link back to this setting.
+
+Images you ask for are never affected: Visualize, Regenerate, the Visual Library, the message menu's portrait options, and images you ask the Director for in [Director Chat](/talemate/user-guide/agents/director/chat/).
+
+Automatic Generation can be overridden per scene.
 
 ## Prompt Generation
 

@@ -128,6 +128,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/world_state
 | `force_regenerate` | `bool` | (optional) |
 | `force_determine` | `bool` | (optional) |
 | `asset_ctx` | `asset_attachment_context` | (optional) |
+| `automatic_source` | `str` | (optional) |
 
 **Outputs**
 
@@ -140,6 +141,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/world_state
 | `asset_id` | `str` |  |
 | `force_determine` | `bool` |  |
 | `asset_ctx` | `asset_attachment_context` |  |
+| `automatic_source` | `str` |  |
 
 ## Determine Character Presence
 
@@ -183,6 +185,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/world_state
 | --- | --- | --- |
 | `state` | `any` |  |
 | `content` | `str` |  |
+| `automatic_source` | `str` | (optional) |
 
 **Outputs**
 
@@ -190,6 +193,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/world_state
 | --- | --- | --- |
 | `state` | `any` |  |
 | `content` | `str` |  |
+| `automatic_source` | `str` |  |
 
 ## Determine Visual
 

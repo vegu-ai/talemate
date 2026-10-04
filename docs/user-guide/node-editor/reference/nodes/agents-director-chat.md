@@ -253,6 +253,9 @@ without requiring node socket changes.
 When no chat context is active, `has_context` is False and `context` is
 an empty dict.
 
+`mode` is "chat" while the director talks with the user and
+"scene_direction" during the director's own scene direction turn.
+
 **Inputs**
 
 | Input | Type | Description |
@@ -266,6 +269,7 @@ an empty dict.
 | `state` | `any` |  |
 | `has_context` | `bool` |  |
 | `context` | `dict` |  |
+| `mode` | `str` |  |
 
 ## Query Game State
 

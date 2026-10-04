@@ -1208,6 +1208,105 @@
       "inherited": false,
       "registry": "assets/MakeAssetMeta",
       "base_type": "core/Node"
+    },
+    "323fc6b7-f35c-4ae1-b574-d6edab8c0169": {
+      "title": "IN automatic_source",
+      "id": "323fc6b7-f35c-4ae1-b574-d6edab8c0169",
+      "properties": {
+        "input_type": "str",
+        "input_name": "automatic_source",
+        "input_optional": true,
+        "input_group": "",
+        "num": 9
+      },
+      "x": 1620,
+      "y": 1373,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "d6f80022-7c4f-41ae-a3da-31e22c8fc0af": {
+      "title": "SET local.automatic_source",
+      "id": "d6f80022-7c4f-41ae-a3da-31e22c8fc0af",
+      "properties": {
+        "name": "automatic_source",
+        "scope": "local"
+      },
+      "x": 1870,
+      "y": 1383,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "707cc51a-2b86-41c7-b5a7-58017c27c6c8": {
+      "title": "Stage 0",
+      "id": "707cc51a-2b86-41c7-b5a7-58017c27c6c8",
+      "properties": {
+        "stage": 0
+      },
+      "x": 2130,
+      "y": 1383,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "2cb89733-f277-42ae-8aff-36c8248325d0": {
+      "title": "OUT automatic_source",
+      "id": "2cb89733-f277-42ae-8aff-36c8248325d0",
+      "properties": {
+        "output_type": "str",
+        "output_name": "automatic_source",
+        "num": 9
+      },
+      "x": 2400,
+      "y": 1383,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "1f3b0daa-2b9c-4a46-a68d-d6954b2e8e7a": {
+      "title": "GET local.automatic_source",
+      "id": "1f3b0daa-2b9c-4a46-a68d-d6954b2e8e7a",
+      "properties": {
+        "name": "automatic_source",
+        "scope": "local"
+      },
+      "x": 580,
+      "y": 4470,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "62389701-994a-44ea-abdc-3e4d59ba439b": {
+      "title": "GET local.automatic_source",
+      "id": "62389701-994a-44ea-abdc-3e4d59ba439b",
+      "properties": {
+        "name": "automatic_source",
+        "scope": "local"
+      },
+      "x": 460,
+      "y": 5060,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1416,6 +1515,21 @@
     ],
     "93472463-8240-4b53-92c8-8d435e39ab6c.format": [
       "c32025d8-50c4-4095-adbf-b4e29f322d96.format"
+    ],
+    "323fc6b7-f35c-4ae1-b574-d6edab8c0169.value": [
+      "d6f80022-7c4f-41ae-a3da-31e22c8fc0af.value"
+    ],
+    "d6f80022-7c4f-41ae-a3da-31e22c8fc0af.value": [
+      "707cc51a-2b86-41c7-b5a7-58017c27c6c8.state"
+    ],
+    "707cc51a-2b86-41c7-b5a7-58017c27c6c8.state": [
+      "2cb89733-f277-42ae-8aff-36c8248325d0.value"
+    ],
+    "1f3b0daa-2b9c-4a46-a68d-d6954b2e8e7a.value": [
+      "25f779e2-a2de-4679-ad02-68bc0abfc97f.automatic_source"
+    ],
+    "62389701-994a-44ea-abdc-3e4d59ba439b.value": [
+      "c32025d8-50c4-4095-adbf-b4e29f322d96.automatic_source"
     ]
   },
   "groups": [
@@ -1476,6 +1590,16 @@
       "width": 1796,
       "height": 945,
       "color": "#8AA",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Input - automatic source",
+      "x": 1600,
+      "y": 1300,
+      "width": 1040,
+      "height": 300,
+      "color": "#88A",
       "font_size": 24,
       "inherited": false
     }

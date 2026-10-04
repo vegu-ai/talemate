@@ -108,14 +108,14 @@
                             </v-tooltip>
                         </v-expansion-panel-title>
                         <v-expansion-panel-text>
-                            <v-alert v-if="section.key === 'backgrounds' && backgroundGenerationBlocked"
+                            <v-alert v-if="generationNote(section.key)"
                                 variant="outlined" density="compact" color="warning" icon="mdi-image-off-outline"
-                                class="mt-2 mb-4" data-background-generation-note>
-                                <div class="text-body-small text-mutedheader">No new backgrounds</div>
-                                <span class="text-muted text-body-small">Generate New Backgrounds is on, but the Visualizer has no image generation or image editing backend, so new backgrounds can't be generated. Existing scene backgrounds are still picked.</span>
+                                class="mt-2 mb-4" :data-generation-note="section.key">
+                                <div class="text-body-small text-mutedheader">{{ generationNote(section.key).title }}</div>
+                                <span class="text-muted text-body-small">{{ generationNote(section.key).text }}</span>
                                 <div class="mt-1 ml-n2">
                                     <v-btn size="x-small" variant="text" color="primary" class="text-none"
-                                        prepend-icon="mdi-cog-outline" @click="openVisualizerBackends">
+                                        prepend-icon="mdi-cog-outline" @click="openVisualizerSettings(generationNote(section.key).mode)">
                                         Open Visualizer settings
                                     </v-btn>
                                 </div>
@@ -348,6 +348,20 @@ export default {
             const visual = this.effectiveActionsFor('visual');
             return !effectiveConfigValue(visual, null, '_config.config.backend')
                 && !effectiveConfigValue(visual, null, '_config.config.backend_image_edit');
+        },
+        automaticGenerationBlocked() {
+            if (this.selectedName !== 'world_state') return { sections: [], mode: 'global' };
+            const visual = this.effectiveActionsFor('visual');
+            const visualOverlay = this.mode === 'scene' ? this.sceneOverlayFor('visual') : null;
+            if (effectiveConfigValue(visual, visualOverlay, '_config.config.automatic_generation') !== false) {
+                return { sections: [], mode: 'global' };
+            }
+            const overlay = this.mode === 'scene' ? this.sceneOverlay : null;
+            const sections = ['avatars', 'backgrounds'].filter(
+                (key) => effectiveConfigValue(this.effectiveActions, overlay, `${key}.config.generate_new`) === true,
+            );
+            const fromScene = effectiveConfigValue(visual, null, '_config.config.automatic_generation') !== false;
+            return { sections, mode: fromScene ? 'scene' : 'global' };
         },
         effortMode() {
             return effortMode(perspectivesEnabled(this.sceneData));
@@ -713,9 +727,34 @@ export default {
             });
         },
 
-        openVisualizerBackends() {
-            // the backends are global settings, hidden in scene mode
-            this.setSelection({ agent: 'visual', tab: '_config', mode: 'global' });
+        generationNote(sectionKey) {
+            const automatic = this.automaticGenerationBlocked.sections.includes(sectionKey);
+            if (sectionKey === 'avatars' && automatic) {
+                return {
+                    title: 'No new portraits',
+                    text: "Generate New Portraits is on, but the Visualizer's Automatic Generation setting is off, so new portraits can't be generated. Existing portraits are still picked.",
+                    mode: this.automaticGenerationBlocked.mode,
+                };
+            }
+            if (sectionKey !== 'backgrounds') return null;
+            const reasons = [];
+            if (this.backgroundGenerationBlocked) {
+                reasons.push('the Visualizer has no image generation or image editing backend');
+            }
+            if (automatic) {
+                reasons.push("the Visualizer's Automatic Generation setting is off");
+            }
+            if (!reasons.length) return null;
+            return {
+                title: 'No new backgrounds',
+                text: `Generate New Backgrounds is on, but ${reasons.join(' and ')}, so new backgrounds can't be generated. Existing scene backgrounds are still picked.`,
+                // the backends are global settings, hidden in scene mode
+                mode: this.backgroundGenerationBlocked ? 'global' : this.automaticGenerationBlocked.mode,
+            };
+        },
+
+        openVisualizerSettings(mode) {
+            this.setSelection({ agent: 'visual', tab: '_config', mode });
         },
 
         overrideCountLabel(count) {

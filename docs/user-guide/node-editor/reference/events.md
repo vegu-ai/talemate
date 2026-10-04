@@ -86,6 +86,7 @@ List of currently supported events.
 | [`agent.visual.generation.before_generate`](#agentvisualgenerationbefore_generate) | Visual Agent |
 | [`agent.visual.generation.after_generate`](#agentvisualgenerationafter_generate) | Visual Agent |
 | [`agent.visual.generation.failed`](#agentvisualgenerationfailed) | Visual Agent |
+| [`agent.visual.generation.refused`](#agentvisualgenerationrefused) | Visual Agent |
 | [`agent.visual.prompt_finalize.before`](#agentvisualprompt_finalizebefore) | Visual Agent |
 | [`agent.visual.prompt_finalize.after`](#agentvisualprompt_finalizeafter) | Visual Agent |
 | [`asset_saved`](#asset_saved) | Scene Assets |
@@ -1145,6 +1146,20 @@ Fires when a generation request ends without an image: the backend failed, the u
     | `request` | `GenerationRequest` | The request, including its `purpose` |
     | `error` | `str \| None` | Why it failed; `None` when it was cancelled |
     | `cancelled` | `bool` | `True` when the generation was cancelled |
+
+---
+
+### agent.visual.generation.refused
+
+Fires when the visual agent refuses a generation request without starting it. An automatic request (one with an `automatic_source`) is refused while the Visualizer's **Automatic Generation** setting is off. Nothing is generated, the request never counts as running, and the returned response has `refused` set.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `VisualAgent` | The agent instance |
+    | `request` | `GenerationRequest` | The refused request, including `automatic_source` (the feature that started it), `purpose`, `vis_type` and `character_name` |
+    | `reason` | `str` | Why it was refused |
 
 ---
 

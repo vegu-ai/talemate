@@ -94,7 +94,7 @@ to the scene's assets.
 | --- | --- | --- |
 | `state` | `any` | The state input, passed through |
 | `generation_request` | `visual/generation_request` | The generation request, passed through |
-| `generation_response` | `visual/generation_response` | The generation response containing the image |
+| `generation_response` | `visual/generation_response` | The generation response containing the image; its refused flag is set when the agent refused an automatic request |
 
 ## Visual Generation Request
 
@@ -117,6 +117,7 @@ Creates a generation request for image generation.
 | `extra_config` | `dict` | additional configuration dict (optional) |
 | `asset_attachment_context` | `asset_attachment_context` | controls automatic asset attachment behavior (optional) |
 | `purpose` | `str` | why the image is generated, checked by Generation Running (optional) |
+| `automatic_source` | `str` | the feature that starts this generation without a user request; leave empty when the user asked for the image. An automatic request is refused while the Visualizer's Automatic Generation setting is off (optional) |
 
 **Outputs**
 
@@ -142,6 +143,7 @@ Creates a generation request for image generation.
 | `instructions` | `text` | `""` | The instructions for the generation request |
 | `extra_config` | `dict` | `{}` | The extra configuration for the generation request |
 | `purpose` | `str` | `""` | Why the image is generated, checked by Generation Running |
+| `automatic_source` | `str` | `""` | The feature that starts this generation without a user request; empty when the user asked for it |
 
 ## Select Backend
 
@@ -205,6 +207,7 @@ Unpacks a visual generation request into its individual fields.
 | `gen_type` | `str` | The generation type |
 | `extra_config` | `dict` | The extra configuration dict |
 | `asset_attachment_context` | `asset_attachment_context` | The asset attachment context |
+| `automatic_source` | `str` | The feature that started the generation without a user request; empty for a user request |
 
 ## Unpack Visual Generation Response
 
@@ -228,3 +231,4 @@ Unpacks a visual generation response into its individual fields.
 | `id` | `str` | The generation's ID |
 | `backend_name` | `str` | The name of the backend that generated the image |
 | `request` | `visual/generation_request` | The generation request that produced this response |
+| `refused` | `bool` | True when the visual agent refused the request without generating (see the agent.visual.generation.refused event) |

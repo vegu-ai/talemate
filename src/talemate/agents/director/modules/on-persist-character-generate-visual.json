@@ -209,6 +209,34 @@
       "inherited": false,
       "registry": "assets/MakeAssetAttachmentContext",
       "base_type": "core/Node"
+    },
+    "aa4c6b28-a899-44b1-aaa1-03327701bddf": {
+      "title": "Visual Settings",
+      "id": "aa4c6b28-a899-44b1-aaa1-03327701bddf",
+      "properties": {},
+      "x": 525,
+      "y": 223,
+      "width": 405,
+      "height": 2406,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/visual/Settings",
+      "base_type": "core/Node"
+    },
+    "a73e66b0-3c49-49ec-a357-91ff1cc8a9ac": {
+      "title": "Automatic source",
+      "id": "a73e66b0-3c49-49ec-a357-91ff1cc8a9ac",
+      "properties": {
+        "value": "director.persist_character"
+      },
+      "x": 926,
+      "y": 521,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -245,6 +273,12 @@
     ],
     "140df7cb-b4bc-42d0-a999-75837b06ccb7.context": [
       "691caee7-f5cc-46c7-9002-8937c91d6e06.asset_ctx"
+    ],
+    "aa4c6b28-a899-44b1-aaa1-03327701bddf._config_automatic_generation": [
+      "1fd9743b-ee6b-495c-8d94-22df1f08b3ce.c"
+    ],
+    "a73e66b0-3c49-49ec-a357-91ff1cc8a9ac.value": [
+      "691caee7-f5cc-46c7-9002-8937c91d6e06.automatic_source"
     ]
   },
   "groups": [

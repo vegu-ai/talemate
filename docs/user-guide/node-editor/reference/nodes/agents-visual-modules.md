@@ -62,6 +62,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/visual/modu
 | `tags` | `list` | (optional) |
 | `asset_name` | `str` | (optional) |
 | `asset_ctx` | `asset_attachment_context` | (optional) |
+| `automatic_source` | `str` | (optional) |
 
 **Outputs**
 
@@ -75,6 +76,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/visual/modu
 | `tags` | `list` |  |
 | `asset_name` | `str` |  |
 | `asset_ctx` | `asset_attachment_context` |  |
+| `automatic_source` | `str` |  |
 | `generation_request` | `visual/generation_request` |  |
 
 ## Generate Character Portrait Legacy
@@ -90,6 +92,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/visual/modu
 | `state` | `any` |  |
 | `character` | `any` |  |
 | `instructions` | `str` | (optional) |
+| `automatic_source` | `str` | (optional) |
 
 **Outputs**
 
@@ -98,6 +101,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/visual/modu
 | `state` | `any` |  |
 | `character` | `any` |  |
 | `instructions` | `str` |  |
+| `automatic_source` | `str` |  |
 
 ## Generate Image Edit
 
@@ -116,6 +120,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/visual/modu
 | `asset_ctx` | `asset_attachment_context` | (optional) |
 | `vis_type` | `str` | (optional) |
 | `format` | `str` | (optional) |
+| `automatic_source` | `str` | (optional) |
 
 **Outputs**
 
@@ -127,6 +132,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/visual/modu
 | `asset_ctx` | `asset_attachment_context` |  |
 | `vis_type` | `str` |  |
 | `format` | `str` |  |
+| `automatic_source` | `str` |  |
 | `generation_request` | `visual/generation_request` |  |
 | `generation_response` | `visual/generation_response` |  |
 
@@ -149,6 +155,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/visual/modu
 | `asset_ctx` | `asset_attachment_context` | (optional) |
 | `purpose` | `str` | (optional) |
 | `references` | `list` | (optional) |
+| `automatic_source` | `str` | (optional) |
 
 **Outputs**
 
@@ -166,6 +173,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/visual/modu
 | `prompt` | `str` |  |
 | `visual_prompt` | `visual/prompt` |  |
 | `generation_request` | `visual/generation_request` |  |
+| `automatic_source` | `str` |  |
 
 ## Regenerate Visual Asset
 

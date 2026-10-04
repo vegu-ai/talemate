@@ -54,7 +54,7 @@ An optional decision model answers quick questions about your story with a proba
 
 Choose a light or dark theme, or create and share your own colors, message styling and editor appearance. A live preview lets you edit colors where they appear, while personal color overrides survive theme changes.
 
-### Playthrough
+### Replay
 
 Replay a story one passage at a time with optional narration, automatic advance and chapter navigation. Resume where you left off, or fork at the current passage to take the story in a new direction.
 

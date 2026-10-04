@@ -64,7 +64,7 @@ The scene keeps that distance. For example, you add "The war ended" 10 months ag
 
 ## Time Passage Entries
 
-The history view displays time passage entries with editable duration and chapter title fields. You can double-click a time passage entry to edit its duration (amount and unit) and the chapter title that names it in [Playthrough Mode](/talemate/user-guide/playthrough/#moving-around), or delete it entirely. A time passage inserted before a summarized entry can only be edited here — it sits further back than the scene view loads.
+The history view displays time passage entries with editable duration and chapter title fields. You can double-click a time passage entry to edit its duration (amount and unit) and the chapter title that names it in [Replay](/talemate/user-guide/replay/#moving-around), or delete it entirely. A time passage inserted before a summarized entry can only be edited here — it sits further back than the scene view loads.
 
 For more details on managing time passages, see the [Time Passage Management](/talemate/user-guide/time-passage/) documentation.
 

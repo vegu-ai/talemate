@@ -110,6 +110,13 @@ describe("the surfaces a replay hides", () => {
     });
 });
 
+describe("what the mode is called", () => {
+    it("the quick setting is labelled Replay", () => {
+        const entry = sceneTools.slice(sceneTools.indexOf('"value": "togglePlaythrough"'));
+        expect(entry.slice(0, entry.indexOf("\n"))).toContain('"title": "Replay"');
+    });
+});
+
 describe("when the mode is offered", () => {
     it("the quick setting takes its condition from the scene's history stats", () => {
         const playthrough = sceneTools.slice(sceneTools.indexOf('"value": "togglePlaythrough"'));

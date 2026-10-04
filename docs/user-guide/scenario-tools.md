@@ -29,7 +29,7 @@ Above the scene tools sits a row of small toggle chips. Click a chip to toggle i
 - **:material-content-save: Auto Save** — Automatically save after each game loop. Requires the scene to have been saved manually once; until then the chip shows a warning explaining why it is unavailable.
 - **:material-robot: Auto Progress** — The AI automatically progresses the scene after your turn.
 - **:material-image-area: Immersive** — Render the [scene backdrop](/talemate/user-guide/inline-visuals/#scene-backdrop) behind the scene text. This chip only appears when the scene has a backdrop image set (or a generated background is available to become one); toggling it off remembers the chosen image, so you can switch back at any time.
-- **:material-play-box-outline: Playthrough** — Replay the scene from the beginning, one message at a time. See [Playthrough Mode](playthrough.md). The chip is there only when the scene holds more than 15 character and narrator messages, and it is unavailable while an agent is busy.
+- **:material-play-box-outline: Replay** — Replay the scene from the beginning, one message at a time. See [Replay](replay.md). The chip is there only when the scene holds more than 15 character and narrator messages, and it is unavailable while an agent is busy.
 - **:material-cog: Settings** — Not a toggle: opens a shortcut menu to commonly used [application settings](/talemate/user-guide/app-settings/) (Game, Appearance) and the settings of individual agents (Conversation, Narrator, Creator, Director, Visualizer, Text to Speech).
 
 ## Tool Bar

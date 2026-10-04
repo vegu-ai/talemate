@@ -440,7 +440,7 @@ export default {
                 {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.canAutoSave ? this.autoSave : "Manually save scene for auto-save to be available"; }},
                 {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
                 {"value": "toggleImmersive", "title": "Immersive", "icon": "mdi-image-area", "description": "Render the scene backdrop image behind the scene", "condition": () => { return !!(this.sceneBackdropAssetId || this.sceneBackdropCandidate) }, "status": () => { return this.immersiveActive }},
-                {"value": "togglePlaythrough", "title": "Playthrough", "icon": "mdi-play-box-outline", "description": "Replay the scene from the beginning, one message at a time.", "condition": () => { return playthroughAvailable(this.scene?.data?.history_stats) }, "status": () => { return this.isPlaythroughActive() }},
+                {"value": "togglePlaythrough", "title": "Replay", "icon": "mdi-play-box-outline", "description": "Replay the scene from the beginning, one message at a time.", "condition": () => { return playthroughAvailable(this.scene?.data?.history_stats) }, "status": () => { return this.isPlaythroughActive() }},
             ],
         }
     },

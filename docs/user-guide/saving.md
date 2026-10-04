@@ -63,4 +63,4 @@ This opens the [Scene revisions](/talemate/user-guide/restoring-scenes) position
 
 Before a scene has a save filename, the message toolbar instead offers **Copy from here**. This copies messages through the selected point using the current world state and character details.
 
-[Playthrough](/talemate/user-guide/playthrough#forking-from-where-you-are) forks use the same saved revisions.
+[Replay](/talemate/user-guide/replay#forking-from-where-you-are) forks use the same saved revisions.

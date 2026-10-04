@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { fileURLToPath } from 'node:url';
+import { readSource } from './helpers/liftMethod.js';
 import Indicator from '@/components/KnowledgeSyncIndicator.vue';
 import { syncLabel, syncSummary, syncTotal } from '@/utils/knowledgeSync';
 
@@ -70,5 +72,25 @@ describe('KnowledgeSyncIndicator', () => {
         vm.repair();
         expect(vm.sent).toEqual([]);
         expect(vm.repairing).toBe(false);
+    });
+});
+
+describe('KnowledgeSyncIndicator template', () => {
+    const template = readSource(fileURLToPath(new URL('../../src/components/KnowledgeSyncIndicator.vue', import.meta.url)));
+
+    it('is primary while repairing and warning otherwise', () => {
+        expect(template).toContain(':color="repairing ? \'primary\' : \'warning\'"');
+    });
+
+    it('dims the whole control once while disabled, never while repairing', () => {
+        expect(template).toContain(":class=\"{ 'knowledge-sync--dimmed': disabled && !repairing }\"");
+        expect(template).toContain(':disabled="disabled"');
+        expect(template).toContain('.knowledge-sync__repair.v-btn--disabled {\n    opacity: 1;');
+        expect(template).not.toContain('knowledge-sync__status--dimmed');
+    });
+
+    it('stays on the chip row line: no vertical margin, a small button height', () => {
+        expect(template).toContain('class="knowledge-sync mx-1"');
+        expect(template).toContain('height: 28px;');
     });
 });

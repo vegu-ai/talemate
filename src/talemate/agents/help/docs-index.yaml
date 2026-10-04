@@ -990,10 +990,10 @@
     or empty cell. Covers empty-cell reasons, read-only introduction, scene header label, out-of-sync views, Mark them out of sync,
     private thoughts and whispers, default rewrite regions with verbatim text outside them, and optional observable traces without revealing
     hidden acts or objects.
-- path: user-guide/playthrough.md
-  title: Playthrough Mode
-  summary: Playthrough replays existing scene messages with Space/click advance, scrubber, time-passage chapters, restart,
-    optional voice narration and auto-advance. Covers when the Playthrough chip is offered (more than 15 character and narrator
+- path: user-guide/replay.md
+  title: Replay
+  summary: Replay walks through existing scene messages with Space/click advance, scrubber, time-passage chapters, restart,
+    optional voice narration and auto-advance. Covers when the Replay chip is offered (more than 15 character and narrator
     messages), remembered progress, read-only scenes, hidden editing tools, the title-only scene header, and Fork from here
     using revision state or trimmed legacy history. Each passage shows the scene backdrop it had.
 - path: user-guide/prompts/context-history-review.md
@@ -1037,20 +1037,20 @@
 - path: user-guide/restoring-scenes.md
   title: Scene revisions and restore points
   summary: 'Scene revisions (formerly Timeline): message rows, Span, date range, search; revision previews, Fork to new save,
-    inherited revisions and playthrough fork points; configured restore-point saves. Access through messages, Quick load or
+    inherited revisions and replay fork points; configured restore-point saves. Access through messages, Quick load or
     Scene Library. Damaged revision recovery, exact world-state reconstruction, current shared context and the 0.39.0 changelog
     upgrade.'
 - path: user-guide/saving.md
   title: Saving
   summary: Scene JSON saves, Auto Save, locked starting saves, Save As checkpoints, restore points, Scene revisions (formerly
-    Timeline) and playthrough forks. World Editor Save authors the loaded file and persists its lock; Save As protects locked
+    Timeline) and replay forks. World Editor Save authors the loaded file and persists its lock; Save As protects locked
     destinations. Dirty-scene warnings before tab close, reload or navigation clear after saving. Requires browser interaction;
     mobile tab discard, crashes and backend shutdown remain unprotected.
 - path: user-guide/scenario-tools.md
   title: Scene Tools
   summary: Scene toolbar reference for agent activity, regenerate/nuke with Ctrl or Ctrl+Alt direction, Actor/Director/Narrator
     actions, custom time jumps, tracked states, snapshot updates, character creation, Custom Commands, saving and visual generation.
-    Covers Auto Save/Progress, Immersive/Playthrough quick settings, reusable shortcuts and shortcut templates.
+    Covers Auto Save/Progress, Immersive/Replay quick settings, reusable shortcuts and shortcut templates.
 - path: user-guide/scene-browser.md
   title: Home Screen & Scene Library
   summary: 'Home screen and Scene Library: Quick load cards, project/save trees, character cards, filtering, scene/ZIP imports
@@ -1066,7 +1066,7 @@
   summary: 'Sticky, configurable scene header: title, History stats, Summarizer tokens and due reasons, Active character portraits with +N
     overflow, Knowledge effort chip for the scene knowledge popup (saves scene overrides), Knowledge mode label,
     Writing style and Visual style menus. Per-side item menus and ordering, Settings > Game visibility, Save and apply / Discard
-    change for pending settings, notice states, title-only header during Playthrough.'
+    change for pending settings, notice states, title-only header during Replay.'
 - path: user-guide/scene-state-reset.md
   title: Reset Scene State
   summary: 'Reset selected scene state: conversation and summaries, optionally static backstory, memory database, intent state,
@@ -1131,7 +1131,7 @@
 - path: user-guide/time-passage.md
   title: Time Passage Management
   summary: Insert, edit or delete time-passage markers using Scene Tools presets/custom durations, scene messages or World
-    State Manager history. Covers chapter titles for Playthrough navigation, timestamp recalculation, fixed 30-day months/365-day
+    State Manager history. Covers chapter titles for Replay navigation, timestamp recalculation, fixed 30-day months/365-day
     years, summarization boundaries and cleared actor directions.
 - path: user-guide/tracking-a-state.md
   title: Tracked states

@@ -1,18 +1,28 @@
 <template>
-    <span v-if="shown" class="knowledge-sync">
+    <v-btn-group
+        v-if="shown"
+        class="knowledge-sync mx-1"
+        :class="{ 'knowledge-sync--dimmed': disabled && !repairing }"
+        density="compact"
+        variant="tonal"
+        :color="repairing ? 'primary' : 'warning'"
+        divided
+        rounded="lg"
+    >
         <v-tooltip location="top" max-width="360">
             <template v-slot:activator="{ props }">
-                <v-chip
+                <v-btn
                     v-bind="props"
-                    class="knowledge-sync__count ma-1"
-                    size="x-small"
-                    :color="repairing ? 'primary' : 'warning'"
-                    tabindex="0"
+                    class="knowledge-sync__status text-none"
+                    size="small"
+                    :ripple="false"
                     :aria-label="summary"
+                    tabindex="0"
                 >
-                    <v-icon class="mr-1">{{ repairing ? 'mdi-sync' : 'mdi-sync-alert' }}</v-icon>
+                    <v-progress-circular v-if="repairing" class="mr-2" indeterminate="disable-shrink" size="14" width="2"></v-progress-circular>
+                    <v-icon v-else class="mr-2" size="small">mdi-sync-alert</v-icon>
                     {{ label }}
-                </v-chip>
+                </v-btn>
             </template>
             <div class="text-body-small">
                 <div>{{ summary }}</div>
@@ -21,20 +31,19 @@
         </v-tooltip>
         <v-tooltip v-if="!repairing" location="top" max-width="320" text="Analyze the out-of-sync passages again, then rebuild the summaries layer by layer. Stop leaves the rest out of sync.">
             <template v-slot:activator="{ props }">
-                <v-chip
+                <v-btn
                     v-bind="props"
-                    class="knowledge-sync__repair ma-1"
-                    size="x-small"
-                    color="primary"
+                    class="knowledge-sync__repair text-none"
+                    size="small"
                     :disabled="disabled"
                     @click="repair"
                 >
-                    <v-icon class="mr-1">mdi-auto-fix</v-icon>
+                    <v-icon class="mr-1" size="small">mdi-wrench-outline</v-icon>
                     Repair
-                </v-chip>
+                </v-btn>
             </template>
         </v-tooltip>
-    </span>
+    </v-btn-group>
 </template>
 
 <script>
@@ -95,11 +104,23 @@ export default {
 
 <style scoped>
 .knowledge-sync {
-    display: inline-flex;
-    align-items: center;
+    height: 28px;
     white-space: nowrap;
+    vertical-align: middle;
 }
-.knowledge-sync__count:focus-visible {
+.knowledge-sync--dimmed {
+    opacity: var(--v-disabled-opacity);
+}
+.knowledge-sync__repair.v-btn--disabled {
+    opacity: 1;
+}
+.knowledge-sync__status {
+    cursor: default;
+}
+.knowledge-sync__status :deep(.v-btn__overlay) {
+    display: none;
+}
+.knowledge-sync__status:focus-visible {
     outline: 2px solid rgb(var(--v-theme-primary));
     outline-offset: 2px;
 }

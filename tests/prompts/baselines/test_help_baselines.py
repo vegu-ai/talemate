@@ -263,7 +263,7 @@ class TestHelpBaselines:
     async def test_chat_send__playthrough_active(
         self, help_agent, agent_registry, baseline_checker
     ):
-        """A replay is running - the playthrough section renders and no
+        """A replay is running - the replay section renders and no
         `talemate://director-console` link is offered anywhere in the prompt."""
         chat = help_agent.chat_create()
         help_agent.client.send_prompt = AsyncMock(return_value="Here is your answer.")
@@ -275,7 +275,7 @@ class TestHelpBaselines:
             )
         prompt = capture_prompt(help_agent)
         # sectioning sentence-cases the heading it renders
-        assert "Playthrough mode is running" in prompt
+        assert "Replay is running" in prompt
         assert "talemate://director-console" not in prompt
         baseline_checker(prompt, AGENT, "chat_send__playthrough_active")
 

@@ -297,7 +297,7 @@
                 </div>
                 <v-text-field v-model="insertTimePassageTitle" label="Chapter title (optional)"
                     hide-details="auto" class="mt-3" density="compact"
-                    hint="Names the chapter this passage opens in playthrough mode." persistent-hint />
+                    hint="Names the chapter this passage opens in a replay." persistent-hint />
             </v-card-text>
             <v-card-actions>
                 <v-spacer />

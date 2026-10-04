@@ -14,7 +14,7 @@ Each item reads as a value with a short label next to it, for example **105** me
 
 In a narrow scene column (the creative environment, or a phone) the title moves to its own line above the items.
 
-While [Playthrough Mode](playthrough.md) runs, the header shows the title alone: the information items and the header buttons are put away. A playthrough shows no title bar at all when you have turned the header off.
+While a [replay](replay.md) runs, the header shows the title alone: the information items and the header buttons are put away. A replay shows no title bar at all when you have turned the header off.
 
 Because the header carries the title, the scene's tab in the main navigation reads **:material-script: Story** rather than the scene title, in both the gameplay and the creative environment.
 
@@ -92,7 +92,7 @@ By default the header is on, with **History stats** on the left and **Summarizer
 
 ## Perspective label
 
-While you [view a character's perspective](/talemate/user-guide/perspective-view) in a Character perspectives story, the header shows a label such as **Edwin's Perspective** below the title, above the perspective column. Click the **x** on the label to close the perspective view; it does the same as **None** in the **View Perspective** chip. With the header off there is no label, and the chip is the only control. A playthrough shows neither the label nor the perspective column; both come back when you leave it.
+While you [view a character's perspective](/talemate/user-guide/perspective-view) in a Character perspectives story, the header shows a label such as **Edwin's Perspective** below the title, above the perspective column. Click the **x** on the label to close the perspective view; it does the same as **None** in the **View Perspective** chip. With the header off there is no label, and the chip is the only control. A replay shows neither the label nor the perspective column; both come back when you leave it.
 
 ## Turning the header off and on
 

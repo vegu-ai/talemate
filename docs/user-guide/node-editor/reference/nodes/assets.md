@@ -260,7 +260,7 @@ override flags control whether an existing cover image is replaced.
 
 Make an existing scene asset the scene backdrop, the image shown behind
 the scene text. A changed backdrop is recorded in the scene history, so
-Playthrough shows each passage with the backdrop it had. Whether the
+Replay shows each passage with the backdrop it had. Whether the
 backdrop is shown at all (Immersive) is left as it is.
 
 **Inputs**

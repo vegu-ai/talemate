@@ -218,7 +218,7 @@ class TestProgress:
         (payload,) = [
             call.args[0] for call in plugin.websocket_handler.queue_put.call_args_list
         ]
-        assert "Could not record playthrough progress" in payload["error"]["message"]
+        assert "Could not record replay progress" in payload["error"]["message"]
 
 
 class TestAudioStopIsNotASceneChange:

@@ -132,7 +132,7 @@ Any scene illustration can be promoted to the **scene backdrop** — instead of 
 
 ![Scene backdrop active](/talemate/img/0.39.0/scene-backdrop-active.png)
 
-The backdrop belongs to the scene and is saved with it, so it survives reloads and history edits. Each change is also recorded in the scene as a small **Backdrop** entry; [Playthrough](playthrough.md) uses these entries to show each passage with the backdrop it had. While Immersive is off, these entries show their image in the story, sized by the **Scene Background** [display settings](#configuring-display-settings). With its render cadence set to **Never**, the entry shows only its name; click it to preview the image.
+The backdrop belongs to the scene and is saved with it, so it survives reloads and history edits. Each change is also recorded in the scene as a small **Backdrop** entry; [Replay](replay.md) uses these entries to show each passage with the backdrop it had. While Immersive is off, these entries show their image in the story, sized by the **Scene Background** [display settings](#configuring-display-settings). With its render cadence set to **Never**, the entry shows only its name; click it to preview the image.
 
 ### Setting a backdrop
 

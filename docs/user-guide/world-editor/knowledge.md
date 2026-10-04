@@ -101,9 +101,11 @@ Perception uses the generating model's common-sense interpretation, not a proof 
 
 Talemate analyzes new passages on its own, before each generation. A reply you regenerate or continue counts as a new passage too. Talemate never repeats an analysis on its own. When you edit, delete or browse a message, change who was present, or edit a summary, the perspectives and character summaries built on it are flagged as out of sync. They keep their last text, and generation keeps using it, so the story goes on with what the characters last knew. New passages are analyzed with that last known knowledge as well, so they can be out of sync from the start, and the count can grow until you repair.
 
-The bar above the message input shows how many pieces are out of sync, for example **3 out of sync**, beside **View Perspective**. Its tooltip lists the passages and the character summaries per summary layer. Nothing is shown while everything is in sync. In the perspective panel, an out-of-sync view is marked as such.
+The bar above the message input shows how many pieces are out of sync as one control beside **View Perspective**: the count, for example **3 out of sync**, with a **Repair** button on its right. The tooltip of the count lists the passages and the character summaries per summary layer. Nothing is shown while everything is in sync. In the perspective panel, an out-of-sync view is marked as such.
 
-Choose **Repair** next to the count to bring everything up to date. Repair runs one step at a time, with progress in the status bar:
+![The out-of-sync count with its Repair button in the bar above the message input](/talemate/img/0.40.0/knowledge-sync-repair.png)
+
+Choose **Repair** to bring everything up to date. While it runs, the control reads **Repairing** and the button is gone. Repair runs one step at a time, with progress in the status bar:
 
 1. It analyzes the out-of-sync passages again, in story order.
 2. It rebuilds the character summaries, the base summaries first, then each summary layer.

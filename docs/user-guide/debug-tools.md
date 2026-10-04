@@ -126,7 +126,7 @@ Changes are saved immediately when you finish editing.
 
 Game state variables that act as gameplay controls can be pinned to a compact toolbar above the scene tools. The toolbar uses the same type-matched controls as Debug Vars, so strings, numbers, and booleans can be changed without opening the Debug Tools drawer.
 
-The toolbar appears only while it has pinned paths. It is hidden during playthrough mode, where the playthrough controls replace the normal scene tools.
+The toolbar appears only while it has pinned paths. It is hidden during a replay, where the replay controls replace the normal scene tools.
 
 A path's Debug Vars and Scene toolbar targets are independent. You can pin a variable to either location or to both. The control settings are shared by both targets: the toolbar uses the label instead of the path, while an unlabeled control continues to show its path. The order you set positions a control in the toolbar and in Debug Vars alike, and paths without an order come last in alphabetical order.
 

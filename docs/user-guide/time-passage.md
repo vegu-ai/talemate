@@ -26,7 +26,7 @@ Available time units: minutes, hours, days, weeks, months, years.
 
 The chapter title is optional and names the stretch of scene the passage opens.
 It is shown on the time passage marker and is what the chapter menu in
-[Playthrough Mode](playthrough.md#moving-around) lists; without one, a chapter
+[Replay](replay.md#moving-around) lists; without one, a chapter
 is listed by its duration instead.
 
 !!! note "Months and Years"

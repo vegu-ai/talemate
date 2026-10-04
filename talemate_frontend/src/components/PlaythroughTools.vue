@@ -174,8 +174,8 @@ export default {
             }
             if (!this.forkTargetSaved) {
                 return this.immutableSave
-                    ? 'This message has not been saved yet — leave the playthrough and Save As first'
-                    : 'This message has not been saved yet — leave the playthrough and save the scene to fork from it';
+                    ? 'This message has not been saved yet — leave the replay and Save As first'
+                    : 'This message has not been saved yet — leave the replay and save the scene to fork from it';
             }
             return 'Continue the story from here in a new scene of your own';
         },

@@ -35,7 +35,7 @@ Select a row or one of its earlier revisions, review its preview, then choose **
 
 A fork keeps all revisions up to the selected point. You can browse those inherited revisions even after deleting the source save. Continuing the fork adds revisions of its own.
 
-A [playthrough](/talemate/user-guide/playthrough#forking-from-where-you-are) uses the same saved state for its current message. Several messages saved together share one revision, so a fork may include more than the selected message.
+A [replay](/talemate/user-guide/replay#forking-from-where-you-are) uses the same saved state for its current message. Several messages saved together share one revision, so a fork may include more than the selected message.
 
 ### World state and shared context
 

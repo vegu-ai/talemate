@@ -1,21 +1,21 @@
-# Playthrough Mode
+# Replay
 
-Playthrough mode replays a scene from its beginning, one message at a time. It is
+Replay walks through a scene from its beginning, one message at a time. It is
 for re-reading a story you have already played — on your own, or with someone
 watching. Nothing is added to the story while it runs, so the way onward is to
 [fork](#forking-from-where-you-are) it into a scene of your own.
 
-![A scene being replayed in playthrough mode](/talemate/img/0.40.0/playthrough-view.png)
+![A scene being replayed](/talemate/img/0.40.0/replay-view.png)
 
-## Starting a playthrough
+## Starting a replay
 
-Click the :material-play-box-outline: **Playthrough** chip in the
+Click the :material-play-box-outline: **Replay** chip in the
 [quick settings](scenario-tools.md#quick-settings) above the scene tools.
 
-![The Playthrough chip in the quick settings](/talemate/img/0.40.0/playthrough-chip.png)
+![The Replay chip in the quick settings](/talemate/img/0.40.0/replay-chip.png)
 
 The scene collapses to its first message and the scene tools and message input
-are replaced by the playthrough toolbar. The chip is unavailable while an agent
+are replaced by the replay toolbar. The chip is unavailable while an agent
 is busy.
 
 The chip is only there when the scene holds more than 15 character and narrator
@@ -36,7 +36,7 @@ The reveal counter next to the scrubber shows where you are — `7 / 106`.
 
 ## Moving around
 
-![The playthrough toolbar](/talemate/img/0.40.0/playthrough-toolbar.png)
+![The replay toolbar](/talemate/img/0.40.0/replay-toolbar.png)
 
 - **Scrubber** — drag it to jump anywhere in the scene.
 - **:material-format-list-bulleted: Chapters** — jump to the start of the scene
@@ -57,13 +57,13 @@ Jumping backwards hides the messages after the new position again.
   including stepping by hand. Stepping quickly does not queue up every message
   you pass — only the one you settle on is narrated. The toggle is only there
   when the Voice agent is enabled.
-- **:material-play-circle-outline: Auto-advance** — when on, the playthrough
+- **:material-play-circle-outline: Auto-advance** — when on, the replay
   moves on by itself: after the current message has finished being narrated, or
   on a short delay when narration is off or no voice agent is available.
 
 The two toggles are independent of each other. Narration is on by default and
 keeps whatever you set it to for the rest of the session; auto-advance starts
-off every time and is switched off again when the playthrough ends.
+off every time and is switched off again when the replay ends.
 
 If narration is taking too long, the Advance button becomes a **Cancel** button
 that aborts it.
@@ -81,19 +81,19 @@ a different one.
 
 A fork restores the scene's [saved revision](restoring-scenes.md): its story, world state and characters. Several messages saved together share one revision, so the fork can include messages recorded in the same save. The new save keeps earlier revisions and their origins through its fork point.
 
-The action is available for recorded character and narrator messages. If the selected message has not been saved yet, leave the playthrough and save the scene first. Use **Save As** for a read-only scene.
+The action is available for recorded character and narrator messages. If the selected message has not been saved yet, leave the replay and save the scene first. Use **Save As** for a read-only scene.
 
 Forking preserves the shared world connection. Shared context remains at its current state; it is not restored to the selected revision.
 
 ## What else the mode offers
 
-A playthrough is a walkthrough of a story that is already written, so the
+A replay is a walkthrough of a story that is already written, so the
 surfaces that would add to it are put away while it runs:
 
-- The message input and the scene tools are replaced by the playthrough toolbar.
+- The message input and the scene tools are replaced by the replay toolbar.
 - The [scene header](scene-header.md) keeps the scene title and puts its
   information items and its header buttons away. With the header turned off,
-  a playthrough shows no title bar.
+  a replay shows no title bar.
 - Per-message actions — edit, delete, regenerate, revisions — are disabled, and
   the entity actions that ask the narrator for new text are hidden.
 - The **:material-bullhorn: Director console** and its chat are gone, along with
@@ -110,9 +110,9 @@ entries existed keep showing the scene's saved backdrop.
 
 Everything else keeps working normally — application and agent settings,
 template browsing, the world editor and image generation. All of it comes back
-when the playthrough ends.
+when the replay ends.
 
-The [Help assistant](agents/help/index.md) knows when a playthrough is running,
+The [Help assistant](agents/help/index.md) knows when a replay is running,
 so it explains that the mode has put a surface away rather than walking you
 through opening it.
 
@@ -122,11 +122,11 @@ Leave with **Exit** or by pressing :material-keyboard-esc: **Escape**. The full
 history comes back, along with the normal tools.
 
 Your position is remembered in the scene — on the way out, when you load another
-scene, and when you fork — so starting a playthrough of the same scene again
+scene, and when you fork — so starting a replay of the same scene again
 resumes at the message you left off on. **Restart** followed by
-**Exit** clears it, and the next playthrough starts at the beginning.
+**Exit** clears it, and the next replay starts at the beginning.
 
 !!! note "Read-only scenes"
     Scenes shipped with Talemate are read-only, so progress cannot be recorded
-    in them. Save a copy of the scene first if you want a playthrough of it to
+    in them. Save a copy of the scene first if you want a replay of it to
     resume.

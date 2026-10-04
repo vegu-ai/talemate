@@ -2089,7 +2089,7 @@ class Scene(Emitter):
         """
         if self.immutable_save:
             raise TalemateError(
-                "This scene is read-only, playthrough progress cannot be saved to it"
+                "This scene is read-only, replay progress cannot be saved to it"
             )
 
         self.playthrough_progress = message_id

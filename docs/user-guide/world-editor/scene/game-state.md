@@ -36,7 +36,7 @@ Each pinned path can also have an optional label. The scene toolbar uses the lab
 
 Beyond the label, a pinned path carries control settings that decide how it is drawn and what it accepts. See [Control Settings](#control-settings) below.
 
-The scene toolbar appears only while it has pinned paths and is hidden during playthrough mode.
+The scene toolbar appears only while it has pinned paths and is hidden during a replay.
 
 ### Adding a Pinned Path
 

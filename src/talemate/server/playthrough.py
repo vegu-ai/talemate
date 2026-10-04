@@ -60,7 +60,7 @@ class PlaythroughPlugin(Plugin):
         except Exception as e:
             log.error("playthrough: could not record progress", error=str(e))
             await self.signal_operation_failed(
-                f"Could not record playthrough progress: {e}",
+                f"Could not record replay progress: {e}",
                 request_id=data.get("request_id"),
             )
             return

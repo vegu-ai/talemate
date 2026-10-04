@@ -110,13 +110,12 @@ Active character rows have a subtle accent in the current theme's primary color.
 Background rows use the theme's secondary color, and the **Inactive** section header
 has a muted accent.
 
-Expand an entry to see what the character is currently doing and a small kind label:
+Expand an entry to see what the character is currently doing.
 
-- **character**: "A real character, present in the scene"
-- **background**: "Picked up by the world state snapshot, not yet a character."
-
-Hover over or focus the label to read its tooltip. When **Make real** is available on
-that row, the background tooltip also says "Use Make real to promote."
+A background row carries a small **background** label under the name. Real characters have
+no label; the row's accent already says they are in the scene. Hover over or focus the label to
+read its tooltip: "Picked up by the world state snapshot, not yet a character." When
+**Make real** is available on that row, the tooltip also says "Use Make real to promote."
 
 ![world state 2](/talemate/img/0.40.0/world-state-snapshot-2.png)
 
@@ -129,7 +128,7 @@ characters can have a dot beside their name in the **Inactive** section too. Whe
 section is collapsed, its header shows a dot listing the affected characters; click it
 to expand the section. The Knowledge tab refreshes when new changes arrive.
 
-Ordinary messages, snapshot refreshes, loading a scene and playthrough do not trigger the
+Ordinary messages, snapshot refreshes, loading a scene and replay do not trigger the
 dot. Removing existing knowledge rules stays silent.
 These notifications add no AI requests.
 

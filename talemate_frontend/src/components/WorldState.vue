@@ -35,13 +35,24 @@
                     <!-- TITLE: CHARACTER NAME -->
 
                     <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
-                        {{ row.name }}
-                        <v-tooltip v-if="row.manual" :text="manualEntryTooltip">
-                            <template v-slot:activator="{ props }">
-                                <v-icon v-bind="props" size="x-small" class="ml-1" color="muted">mdi-pin</v-icon>
-                            </template>
-                        </v-tooltip>
-                        <span class="text-body-small ml-1 text-muted">{{ row.emotion }}</span>
+                        <div class="character-title">
+                            <div>
+                                {{ row.name }}
+                                <v-tooltip v-if="row.manual" :text="manualEntryTooltip">
+                                    <template v-slot:activator="{ props }">
+                                        <v-icon v-bind="props" size="x-small" class="ml-1" color="muted">mdi-pin</v-icon>
+                                    </template>
+                                </v-tooltip>
+                                <span class="text-body-small ml-1 text-muted">{{ row.emotion }}</span>
+                            </div>
+                            <v-tooltip v-if="!row.active" :text="characterKindTooltip(row)">
+                                <template v-slot:activator="{ props }">
+                                    <v-chip v-bind="props" class="character-kind" size="x-small" variant="tonal" color="secondary" label tabindex="0">
+                                        background
+                                    </v-chip>
+                                </template>
+                            </v-tooltip>
+                        </div>
                         <template v-slot:actions>
                             <span v-if="row.active" class="knowledge-marker-space"></span>
                             <v-icon v-if="characterSuggestions(row.name)" color="highlight5" class="mr-1">mdi-lightbulb-on</v-icon>
@@ -66,15 +77,6 @@
                     <!-- SNAPSHOT: CHARACTER -->
                             
                     <v-expansion-panel-text class="text-body-medium">
-                        <div class="mb-2">
-                            <v-tooltip :text="characterKindTooltip(row)">
-                                <template v-slot:activator="{ props }">
-                                    <v-chip v-bind="props" class="character-kind" size="x-small" variant="tonal" :color="row.active ? 'primary' : 'secondary'" label tabindex="0">
-                                        {{ row.active ? 'character' : 'background' }}
-                                    </v-chip>
-                                </template>
-                            </v-tooltip>
-                        </div>
                         {{ row.snapshot }}
 
                         <!-- ACTIONS: LOOK AT, PERSIST, MANAGE, TAKE OUT OF SCENE -->
@@ -500,7 +502,6 @@ export default {
             return !row.active && !this.mayBeExistingCharacter(row.name) && !this.isPlaythroughActive();
         },
         characterKindTooltip(row) {
-            if (row.active) return 'A real character, present in the scene';
             const description = 'Picked up by the world state snapshot, not yet a character.';
             return this.canMakeReal(row) ? `${description} Use Make real to promote.` : description;
         },
@@ -816,6 +817,16 @@ export default {
 .character-section-inactive > .v-expansion-panel-title {
     border-inline-start: 2px solid rgba(var(--v-theme-mutedheader), 0.45);
     background-color: rgba(var(--v-theme-mutedheader), 0.04);
+}
+.character-title {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+}
+.character-kind {
+    margin-top: 1px;
+    cursor: default;
 }
 .knowledge-marker-space {
     flex: 0 0 28px;

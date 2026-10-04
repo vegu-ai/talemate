@@ -83,7 +83,7 @@ export default {
                 const hint = 'The scene backdrop changed here. Turn on Immersive to show it behind the scene text.';
                 return this.previewable ? `${hint} Click to preview.` : hint;
             }
-            return 'The scene backdrop changed here. Playthrough shows this backdrop from this point on. Click to preview.';
+            return 'The scene backdrop changed here. Replay shows this backdrop from this point on. Click to preview.';
         },
         thumbnail() {
             const asset = this.message.backdrop ? this.getAssetFromCache(this.message.backdrop) : null;

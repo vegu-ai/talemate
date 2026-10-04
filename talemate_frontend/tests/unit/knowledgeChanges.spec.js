@@ -102,8 +102,17 @@ describe('background character promotion guidance', () => {
             const row = { name: 'Harbor clerk', active: false };
             expect(host.canMakeReal(row)).toBe(available);
             expect(characterKindTooltip.call(host, row).includes('Use Make real to promote.')).toBe(available);
-            expect(characterKindTooltip.call(host, { ...row, active: true })).toBe('A real character, present in the scene');
         });
+});
+
+describe('character kind badge', () => {
+    it('is shown only for a background row, in the panel title', () => {
+        const badge = source.indexOf('class="character-kind"');
+        expect(badge).toBeGreaterThan(-1);
+        expect(source.lastIndexOf('<v-tooltip v-if="!row.active"', badge)).toBeGreaterThan(source.lastIndexOf('<v-expansion-panel-title', badge));
+        expect(badge).toBeLessThan(source.indexOf('<v-expansion-panel-text'));
+        expect(source.indexOf('class="character-kind"', badge + 1)).toBe(-1);
+    });
 });
 
 describe('transient knowledge changes', () => {

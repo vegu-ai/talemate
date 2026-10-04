@@ -1,15 +1,33 @@
 import json
 import os
+import tempfile
+import time
+from contextlib import contextmanager
 from pathlib import Path
 
+import jinja2
 import pytest
+from jinja2 import meta
 
+import talemate.prompts
 from talemate.decisions.gate import decision_gate
+from talemate.prompts.extensions import CaptureContextExtension
 
 from test_editor_decision_checks import editor_case, revise, scoped_check  # noqa: F401
 
 GOLDEN = Path(__file__).parents[1] / "data/decisions/template-golden.json"
-RECORD = os.environ.get("TALEMATE_RECORD_DECISION_GOLDEN") == "1"
+LOCK = Path(tempfile.gettempdir()) / "talemate-decision-golden.lock"
+TEMPLATES = Path(talemate.prompts.__file__).parent / "templates"
+
+# Decision templates that are not policies: other templates include or import
+# them, so they never render a decision request of their own.
+HELPER_TEMPLATES = {
+    "common/decision-character-references.jinja2",
+    "common/decision-check-macros.jinja2",
+    "common/decision-visual-selection.jinja2",
+    "editor/decision-findings.jinja2",
+}
+EDITOR_UID = "editor.decision-checks"
 
 
 def noul(p):
@@ -197,13 +215,47 @@ def trace(service, result):
     )
 
 
-def check(name, observed):
-    golden = json.loads(GOLDEN.read_text()) if GOLDEN.exists() else {}
-    if RECORD:
-        golden[name] = observed
-        GOLDEN.write_text(json.dumps(golden, indent=1, sort_keys=True) + "\n")
+@contextmanager
+def golden_lock():
+    deadline = time.monotonic() + 30
+    while True:
+        try:
+            fd = os.open(LOCK, os.O_CREAT | os.O_EXCL)
+            break
+        except FileExistsError:
+            if time.monotonic() > deadline:
+                raise TimeoutError(f"Remove the stale lock file {LOCK}") from None
+            time.sleep(0.05)
+    try:
+        yield
+    finally:
+        os.close(fd)
+        LOCK.unlink()
+
+
+def read_golden():
+    return json.loads(GOLDEN.read_text()) if GOLDEN.exists() else {}
+
+
+def write_golden(golden):
+    GOLDEN.write_text(json.dumps(golden, indent=1, sort_keys=True) + "\n")
+
+
+def check(name, service, result, update, uid):
+    assert {i.template_uid for i in service.log.invocations.values()} == {uid}
+    observed = trace(service, result)
+    if update:
+        with golden_lock():
+            write_golden({**read_golden(), name: observed})
         return
-    assert observed == golden[name]
+    golden = read_golden()
+    assert name in golden, (
+        f"No golden case recorded for {name}. Run with --update-baselines."
+    )
+    assert observed == golden[name], (
+        f"Decision request does not match the golden case {name}. "
+        "Run with --update-baselines to update."
+    )
 
 
 @pytest.mark.parametrize(
@@ -212,7 +264,7 @@ def check(name, observed):
     ids=[case[0] for case in GATE_CASES],
 )
 async def test_gate_template_matches_golden(
-    gate_case, name, uid, candidates, variables, answers
+    gate_case, update_baselines, name, uid, candidates, variables, answers
 ):
     gate_case.provider.answers = answers
 
@@ -226,7 +278,7 @@ async def test_gate_template_matches_golden(
         variables=lambda: variables,
         fallback=fallback,
     )
-    check(name, trace(gate_case.service, result))
+    check(name, gate_case.service, result, update_baselines, uid)
 
 
 EDITOR_CASES = [
@@ -259,6 +311,7 @@ EDITOR_CASES = [
 )
 async def test_editor_template_matches_golden(
     editor_case,  # noqa: F811
+    update_baselines,
     name,
     method,
     minimum,
@@ -273,4 +326,58 @@ async def test_editor_template_matches_golden(
     if scope:
         c.scene.test_writing_style.decision_checks = [scoped_check(scope)]
     result, _ = await revise(c)
-    check(name, trace(c.service, result))
+    check(name, c.service, result, update_baselines, EDITOR_UID)
+
+
+def referenced_template_names():
+    env = jinja2.Environment(extensions=[CaptureContextExtension])
+    return {
+        name
+        for path in TEMPLATES.glob("*/*.jinja2")
+        for name in meta.find_referenced_templates(env.parse(path.read_text()))
+        if name
+    }
+
+
+def test_helper_templates_are_included_by_other_templates():
+    referenced = referenced_template_names()
+    unused = sorted(
+        helper
+        for helper in HELPER_TEMPLATES
+        if not (TEMPLATES / helper).exists() or Path(helper).name not in referenced
+    )
+    assert not unused, (
+        f"HELPER_TEMPLATES lists templates that no other template includes or "
+        f"imports: {unused}. Remove them, or give them a golden case if they "
+        "render as policies."
+    )
+
+
+def test_every_policy_template_has_a_golden_case():
+    policies = {
+        f"{path.parent.name}.{path.stem}"
+        for path in TEMPLATES.glob("*/decision-*.jinja2")
+        if path.relative_to(TEMPLATES).as_posix() not in HELPER_TEMPLATES
+    }
+    covered = {case[1] for case in GATE_CASES} | {EDITOR_UID}
+    missing = sorted(policies - covered)
+    assert not missing, (
+        f"Decision policy templates without a golden case: {missing}. Add a case "
+        "to GATE_CASES or EDITOR_CASES and run with --update-baselines. A "
+        "template that only other templates include or import belongs in "
+        "HELPER_TEMPLATES."
+    )
+
+
+def test_golden_file_has_no_orphan_cases(update_baselines):
+    names = {case[0] for case in [*GATE_CASES, *EDITOR_CASES]}
+    with golden_lock():
+        golden = read_golden()
+        orphans = sorted(set(golden) - names)
+        if update_baselines and orphans:
+            write_golden({k: v for k, v in golden.items() if k in names})
+            return
+    assert not orphans, (
+        f"Golden cases without a test case: {orphans}. "
+        "Run with --update-baselines to remove them."
+    )

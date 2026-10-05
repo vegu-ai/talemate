@@ -5,7 +5,7 @@
         threshold=threshold
     )}) %}
 {% endfor %}
-{% set answers = ask(label, state=text, questions=questions) %}
+{% set answers = ask(label, state=state, questions=questions) %}
 {% for name, answer in answers.items() %}
     {{ note("include" if answer.yes else "exclude" if answer.no else "fallback", "uncertain" if answer.uncertain else "confident", answer, character=name) }}
 {% endfor %}

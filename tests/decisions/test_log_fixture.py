@@ -60,6 +60,16 @@ TWO_ASKS = (
 )
 NO_REQUEST = """{{ keep() }}"""
 BASE_TIME = datetime(2026, 9, 21, 9, 0, tzinfo=timezone.utc)
+
+
+def editor_state(state):
+    """The editor policy's variables for a fixed decision state."""
+    return {
+        "decision_passages": lambda: state["passages"],
+        "decision_state": lambda budget: state,
+    }
+
+
 REQUEST_MS = 140.0
 ACTION_MS = 820.0
 
@@ -139,13 +149,15 @@ async def per_check_thresholds(stage):
         service=service,
         variables={
             "decision_checks": checks,
-            "decision_state": lambda: {
-                "text": "Original.",
-                "passages": [{"id": "s1", "text": "Original."}],
-                "history": [],
-                "writing_style": "Concrete prose",
-                "prose_rules": [],
-            },
+            **editor_state(
+                {
+                    "text": "Original.",
+                    "passages": [{"id": "s1", "text": "Original."}],
+                    "history": [],
+                    "writing_style": "Concrete prose",
+                    "prose_rules": [],
+                }
+            ),
             "revision_method": "rewrite",
             "info": SimpleNamespace(text="Original."),
         },
@@ -196,16 +208,18 @@ async def readable_checks(stage):
         service=service,
         variables={
             "decision_checks": checks,
-            "decision_state": lambda: {
-                "text": "She paid the clerk again. The clock showed eleven.",
-                "passages": [
-                    {"id": "s1", "text": "She paid the clerk again."},
-                    {"id": "s2", "text": "The clock showed eleven."},
-                ],
-                "history": ["She paid the clerk."],
-                "writing_style": "Concrete prose",
-                "prose_rules": [],
-            },
+            **editor_state(
+                {
+                    "text": "She paid the clerk again. The clock showed eleven.",
+                    "passages": [
+                        {"id": "s1", "text": "She paid the clerk again."},
+                        {"id": "s2", "text": "The clock showed eleven."},
+                    ],
+                    "history": ["She paid the clerk."],
+                    "writing_style": "Concrete prose",
+                    "prose_rules": [],
+                }
+            ),
             "revision_method": "rewrite",
             "info": SimpleNamespace(
                 text="She paid the clerk again. The clock showed eleven."
@@ -524,18 +538,20 @@ async def scoped_checks(stage):
         service=service,
         variables={
             "decision_checks": [scoped_check("Filler prose", "filler", "prose")],
-            "decision_state": lambda: {
-                "text": '"Mind the third rung." The ladder shifted.',
-                "passages": [
-                    {"id": "s1", "text": '"Mind the third rung."', "prose": ""},
-                    {
-                        "id": "s2",
-                        "text": "The ladder shifted.",
-                        "prose": "The ladder shifted.",
-                    },
-                ],
-                "history": [],
-            },
+            **editor_state(
+                {
+                    "text": '"Mind the third rung." The ladder shifted.',
+                    "passages": [
+                        {"id": "s1", "text": '"Mind the third rung."', "prose": ""},
+                        {
+                            "id": "s2",
+                            "text": "The ladder shifted.",
+                            "prose": "The ladder shifted.",
+                        },
+                    ],
+                    "history": [],
+                }
+            ),
             "revision_method": "rewrite",
             "info": SimpleNamespace(text='"Mind the third rung." The ladder shifted.'),
         },
@@ -554,13 +570,15 @@ async def nothing_in_scope(stage):
         service=service,
         variables={
             "decision_checks": [scoped_check("Filler prose", "filler", "prose")],
-            "decision_state": lambda: {
-                "text": '"Mind the third rung."',
-                "passages": [
-                    {"id": "s1", "text": '"Mind the third rung."', "prose": ""}
-                ],
-                "history": [],
-            },
+            **editor_state(
+                {
+                    "text": '"Mind the third rung."',
+                    "passages": [
+                        {"id": "s1", "text": '"Mind the third rung."', "prose": ""}
+                    ],
+                    "history": [],
+                }
+            ),
             "revision_method": "rewrite",
             "info": SimpleNamespace(text='"Mind the third rung."'),
         },

@@ -28,7 +28,7 @@ When on, **Look at** and **Add Detail** results also count as part of the curren
 
 On by default. When a decision model is configured and character knowledge is enabled, the snapshot can recognize off-stage characters mentioned by pronoun, title or nickname. For example, "the innkeeper" can select Mara's perspective, while "I will go" need not select Will. On-stage characters are still included, and each character's knowledge limits still apply.
 
-This adds one quick decision request per snapshot with off-stage characters to check, typically about 0.3–0.5 seconds depending on the provider. A snapshot with no off-stage characters sends none. Uncertain or failed decisions use the existing name match for each character. With the option off or no decision model, matching works as before. The editable policy is `world_state.decision-snapshot-references` in **Prompts**.
+This adds one quick decision request per snapshot with off-stage characters to check, typically about 0.3–0.5 seconds depending on the provider. With many off-stage characters and tight [input limits](../../app-settings/decision-model.md#advanced), the questions can go out as several requests. A snapshot with no off-stage characters sends none. Uncertain or failed decisions use the existing name match for each character. With the option off or no decision model, matching works as before. The editable policy is `world_state.decision-snapshot-references` in **Prompts**.
 
 ###### Custom instructions
 

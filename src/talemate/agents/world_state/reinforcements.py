@@ -6,6 +6,7 @@ import structlog
 
 import talemate.emit.async_signals
 from talemate.events import GameLoopEvent
+from talemate.decisions.budget import state_tokens
 from talemate.decisions.gate import decision_gate, decision_gate_enabled
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.reinforcements import (
@@ -27,6 +28,8 @@ from talemate.agents.base import (
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
     from talemate.world_state import Reinforcement
+
+FIT_MIN_CUT = 128
 
 log = structlog.get_logger("talemate.agents.world_state")
 
@@ -287,15 +290,53 @@ class WorldStateReinforcementsMixin:
             )
             return extracted["response"]
 
-        prompt = Prompt.get(
-            "world_state.update-reinforcements",
-            vars={**variables, "decensor": self.client.decensor_enabled},
-        )
-        # Render the actual update once, including overrides, memory, pins and
-        # its full history budget. A fallback sends this same prepared prompt.
-        context = prompt.prepare(self.client)
+        def update_prompt(max_tokens: int) -> Prompt:
+            return Prompt.get(
+                "world_state.update-reinforcements",
+                vars={
+                    **variables,
+                    "max_tokens": max_tokens,
+                    "decensor": self.client.decensor_enabled,
+                },
+            )
+
+        # a render at the client's full size is reused by the fallback, so
+        # memory retrieval runs once when the decision budget does not bind
+        full_prompt: Prompt | None = None
+
+        def decision_state(budget: int | None) -> dict:
+            nonlocal full_prompt
+            state = {
+                "question": reinforcement.question,
+                "character": reinforcement.character,
+                "instructions": reinforcement.instructions,
+                "previous_answer": reinforcement.answer,
+                "last_updated_ts": reinforcement.updated_ts,
+                "current_ts": scene.ts,
+                "context": "",
+            }
+            size = self.client.max_token_length
+            if budget is not None:
+                size = min(size, budget - state_tokens(state))
+            prompt = update_prompt(size)
+            context = prompt.prepare(self.client)
+            if size == self.client.max_token_length:
+                full_prompt = prompt
+            # the scene history is built from whole summaries and messages, so
+            # a cut by the overshoot alone can leave the render unchanged; the
+            # cut grows until a render fits or the size reaches zero
+            cut = 0
+            while budget is not None and size > 0:
+                overshoot = state_tokens({**state, "context": context}) - budget
+                if overshoot <= 0:
+                    break
+                cut = max(overshoot, cut * 2, FIT_MIN_CUT)
+                size = max(size - cut, 0)
+                context = update_prompt(size).prepare(self.client)
+            return {**state, "context": context}
 
         async def fallback(ids):
+            prompt = full_prompt or update_prompt(self.client.max_token_length)
             _, extracted = await prompt.send(
                 self.client, kind, response_spec=response_spec
             )
@@ -305,17 +346,7 @@ class WorldStateReinforcementsMixin:
             "world_state.decision-reinforcement",
             enabled=True,
             candidates={"state": [False]},
-            variables=lambda: {
-                "state": {
-                    "question": reinforcement.question,
-                    "character": reinforcement.character,
-                    "instructions": reinforcement.instructions,
-                    "previous_answer": reinforcement.answer,
-                    "last_updated_ts": reinforcement.updated_ts,
-                    "current_ts": scene.ts,
-                    "context": context,
-                },
-            },
+            variables=lambda: {"state": decision_state},
             fallback=fallback,
             is_current=lambda: self.scene is scene
             and reinforcement in scene.world_state.reinforce,

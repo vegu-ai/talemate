@@ -1,4 +1,5 @@
 from talemate.agents.base import AgentAction, AgentActionConfig, set_processing
+from talemate.decisions.budget import fit_text
 from talemate.decisions.gate import decision_gate
 
 
@@ -37,7 +38,10 @@ class WorldStateQueriesMixin:
             "world_state.decision-query",
             enabled=self.resolve_config("queries", "decision_model"),
             candidates={"query": [True, False]},
-            variables=lambda: {"query": query, "text": text},
+            variables=lambda: {
+                "query": query,
+                "state": lambda budget: fit_text(text, budget),
+            },
             fallback=fallback,
             is_current=lambda: self.scene is scene,
         )

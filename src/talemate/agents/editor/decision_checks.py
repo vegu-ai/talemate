@@ -10,6 +10,7 @@ from talemate.decisions import (
     PolicyInvocation,
     decision_service,
 )
+from talemate.decisions.budget import fit_list
 from talemate.util.dedupe import compile_text_to_sentences
 from talemate.util.dialogue import split_passages_dialogue_and_prose
 from talemate.world_state.templates.decision_checks import DecisionCheck
@@ -47,13 +48,10 @@ class DecisionChecksMixin:
             and not self._revision_disabled_by_context()
         )
 
-    def decision_check_state(
+    def decision_check_passages(
         self, info: RevisionInformation, checks: list[DecisionCheck]
-    ) -> dict[str, object]:
-        scene = self.scene
+    ) -> list[dict]:
         text, _ = _strip_character_prefix(info.text, info.character)
-        writing_style = scene.writing_style
-        character_name = info.character.name if info.character else None
         sentences = [sentence for sentence, _ in compile_text_to_sentences(text)]
         passages = [
             {"id": f"s{index}", "text": sentence}
@@ -71,13 +69,22 @@ class DecisionChecksMixin:
                 passage.update(
                     {scope: getattr(parts, scope) for scope in sorted(scopes)}
                 )
-        return {
+        return passages
+
+    def decision_check_state(
+        self,
+        info: RevisionInformation,
+        checks: list[DecisionCheck],
+        budget: int | None = None,
+    ) -> dict[str, object]:
+        scene = self.scene
+        writing_style = scene.writing_style
+        character_name = info.character.name if info.character else None
+        state = {
             "text": info.text,
             "speaker": character_name,
-            "passages": passages,
-            "history": []
-            if info.summarization_history is not None
-            else list(reversed(self.revision_repetition_history(with_speakers=True))),
+            "passages": self.decision_check_passages(info, checks),
+            "history": [],
             "writing_style": writing_style.render(scene, character_name)
             if writing_style
             else "",
@@ -88,8 +95,18 @@ class DecisionChecksMixin:
             "context_type": info.context_type,
             "context_name": info.context_name,
             "source_context": info.source_context,
-            "summarization_history": info.summarization_history,
+            "summarization_history": None,
         }
+        if info.summarization_history is not None:
+            return fit_list(
+                state, "summarization_history", info.summarization_history, budget
+            )
+        return fit_list(
+            state,
+            "history",
+            list(reversed(self.revision_repetition_history(with_speakers=True))),
+            budget,
+        )
 
     async def revision_with_decisions(self, info: RevisionInformation) -> str:
         def disabled_path():
@@ -172,6 +189,9 @@ class DecisionChecksMixin:
             service=decision_service,
             variables={
                 "info": info,
+                "decision_passages": partial(
+                    self.decision_check_passages, info, checks
+                ),
                 "decision_state": partial(self.decision_check_state, info, checks),
                 "revision_method": method,
                 "decision_checks": checks,

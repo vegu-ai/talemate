@@ -99,7 +99,7 @@ def reference_case(name, uid, probabilities):
         name,
         uid,
         {c["name"]: [True, False] for c in CHARACTERS},
-        {"text": "The captain waved.", "characters": CHARACTERS},
+        {"state": "The captain waved.", "characters": CHARACTERS},
         {key: noul(p) for key, p in probabilities.items()},
     )
 
@@ -110,7 +110,7 @@ GATE_CASES = [
             f"query-{p}",
             "world_state.decision-query",
             {"query": [True, False]},
-            {"query": "Is the door open?", "text": "The door is open."},
+            {"query": "Is the door open?", "state": "The door is open."},
             {"query": noul(p)},
         )
         for p in (0.95, 0.9, 0.05, 0.1, 0.5)
@@ -119,7 +119,13 @@ GATE_CASES = [
         "pins",
         "world_state.decision-pin-conditions",
         {key: [True, False] for key in PINS},
-        {"pins": PINS, "history": ["The door opens.", "Nobody is asleep."]},
+        {
+            "pins": PINS,
+            "state": {
+                "history": ["The door opens.", "Nobody is asleep."],
+                "previous_states": PINS,
+            },
+        },
         {"door": noul(0.95), "sleep": noul(0.05), "rain": noul(0.5)},
     ),
     *[

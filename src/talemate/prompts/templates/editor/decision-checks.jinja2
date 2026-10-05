@@ -1,9 +1,8 @@
 {% import "decision-check-macros.jinja2" as checks %}
-{% set state = decision_state() %}
 {% set batch = namespace() %}
-{% set _ = checks.build_questions(state.passages, decision_checks, batch) %}
+{% set _ = checks.build_questions(decision_passages(), decision_checks, batch) %}
 {% if batch.questions %}
-    {% set answers = ask("editor-checks", state=state, questions=batch.questions, presentation=batch.presentation) %}
+    {% set answers = ask("editor-checks", state=decision_state, questions=batch.questions, presentation=batch.presentation) %}
     {% set results = namespace() %}
     {% call(answer, evaluation, match) checks.collect_findings(answers, batch.evaluations, results) %}
         {% set match.value = answer.yes %}

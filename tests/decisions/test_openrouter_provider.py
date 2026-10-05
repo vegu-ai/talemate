@@ -137,15 +137,15 @@ async def test_every_question_type_reaches_the_decisions_endpoint(
 ):
     import importlib
 
-    service_module = importlib.import_module("talemate.decisions.service")
-    count_tokens = service_module.count_tokens
+    budget_module = importlib.import_module("talemate.decisions.budget")
+    count_tokens = budget_module.count_tokens
     counted = []
 
     def count(text):
         counted.append(json.loads(text))
         return count_tokens(text)
 
-    monkeypatch.setattr(service_module, "count_tokens", count)
+    monkeypatch.setattr(budget_module, "count_tokens", count)
     question, wire_question, wire_answer, normalized = QUESTION_CASES[question_type]
     sent = {}
     body = {

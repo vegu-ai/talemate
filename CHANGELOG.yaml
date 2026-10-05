@@ -36,6 +36,7 @@
   - "Prompt Tools: Prompt Manager flags template overrides that are incomplete or incompatible with the current default, compares them with it, and resets them to default."
   - "Prompt Tools: Prompts → Scene Context has its view controls in a toolbar, and the scene context format now lives in the Summarizer's Scene History settings, with global or scene override markers."
   - "Prompt Tools: Decision policy templates are written with yes_no, choice, ask, note and resolve: a question, its options and a threshold, with no decision-model details."
+  - "Decision Model: Requests fit the configured input limits. The oldest story history is left out first, and questions that do not fit together go out as several requests, so a local server, such as a llama.cpp build that serves `/v1/systemone`, works within its context size."
   - "Node Editor: Rewrite spoken text without changing the story, and use newline and tab escapes in String Join and Split delimiters."
   - "Node Editor: Added or edited command and agent modules become available automatically without a manual sync."
   - "Node Editor: New nodes and events cover the decision model, character knowledge and disclosures, game state, arrivals and departures, the world snapshot and reasoning effort per request."

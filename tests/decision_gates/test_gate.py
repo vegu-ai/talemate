@@ -13,7 +13,7 @@ async def query_gate(case, fallback):
         "world_state.decision-query",
         enabled=True,
         candidates={"query": [True, False]},
-        variables=lambda: {"query": "Is the door open?", "text": "The door is open."},
+        variables=lambda: {"query": "Is the door open?", "state": "The door is open."},
         fallback=fallback,
     )
 

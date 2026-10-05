@@ -195,10 +195,11 @@ in the scene settings. This does not
 enable automatic revision or change its selected targets. Automatic revision
 continues to exclude player input. Dedupe is unchanged.
 
-Each eligible invocation sends one decision request containing the complete current
-text, numbered passages, preceding story messages from **Repetition Range** (15 by
-default), and the
-applicable writing style and active prose rules. Generated context includes its
+Each eligible invocation is one evaluation, recorded as one Decision Log entry. It
+carries the complete current text, numbered passages, preceding story messages from
+**Repetition Range** (15 by default), and the applicable writing style and active prose
+rules. Under tight [input limits](../../app-settings/decision-model.md#advanced) it
+carries fewer preceding messages, and its questions can go out as several requests. Generated context includes its
 existing task instructions and source information; summaries use their supplied
 source history. This does not generate additional context with an LLM.
 
@@ -243,8 +244,11 @@ When checks are off, the Decision Model is unavailable, or evaluation fails befo
 revision starts, the Editor uses its usual detection and revision path. The
 Decision Log records failures and the fallback's outcome. A failure after a revision
 starts never launches another rewrite. Cancellation or a changed scene/message
-stops the operation. Oversize requests fail visibly; text is not silently truncated
-or split into extra requests.
+stops the operation. Before a request is sent, the earlier messages (or, for a summary,
+the earlier summaries) it carries are shortened to the decision model's
+[input limits](../../app-settings/decision-model.md#advanced), oldest first, and checks
+that do not fit together go out as several requests. A request that still does not fit
+is not sent, and the Decision Log shows it.
 
 Inspect **Decision Log** in Debug Tools or the Prompt Manager to see the submitted
 passages and questions, probabilities, the selected action or skip reason, and

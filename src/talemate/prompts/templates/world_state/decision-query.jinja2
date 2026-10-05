@@ -1,5 +1,5 @@
 {% set threshold = 0.9 %}
-{% set answers = ask("yes-no-query", state=text, questions={"query": yes_no(query, threshold=threshold)}) %}
+{% set answers = ask("yes-no-query", state=state, questions={"query": yes_no(query, threshold=threshold)}) %}
 {% set answer = answers.query %}
 {{ note("fallback" if answer.uncertain else "answer", "uncertain" if answer.uncertain else "confident", answer) }}
 {{ resolve(answers) }}

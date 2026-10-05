@@ -78,7 +78,7 @@ async def test_readiness_and_capabilities_never_depend_on_model_name(provider, m
         (ProviderCapabilities(max_question_input_tokens=1), FailureCode.OVERSIZE),
     ],
 )
-async def test_preflight_preserves_full_input_without_splitting(provider, caps, code):
+async def test_oversize_request_is_logged_whole_and_not_sent(provider, caps, code):
     provider.capabilities = caps
     service = DecisionService(provider, enabled=True)
     state = {"passage": "full sentence " * 100}
@@ -92,36 +92,47 @@ async def test_preflight_preserves_full_input_without_splitting(provider, caps, 
 
 
 @pytest.mark.parametrize(
-    "total_limit,question_limit,multiplier,allowed",
+    "total_limit,question_limit,multiplier,parts",
     [
-        (300, 200, 1.0, True),
-        (299, 200, 1.0, False),
-        (300, 199, 1.0, False),
-        (None, 200, 1.0, True),
-        (300, None, 1.0, True),
-        (450, 300, 1.5, True),
-        (449, 300, 1.5, False),
-        (450, 299, 1.5, False),
-        (450, None, 1.501, False),
-        (451, None, 1.501, True),
-        (None, 300, 1.501, False),
-        (None, 301, 1.501, True),
-        (64000, 32000, 1e308, False),
+        (300, 200, 1.0, 1),
+        (299, 200, 1.0, 2),
+        (200, 200, 1.0, 2),
+        (199, 200, 1.0, 0),
+        (300, 199, 1.0, 0),
+        (None, 200, 1.0, 1),
+        (300, None, 1.0, 1),
+        (450, 300, 1.5, 1),
+        (449, 300, 1.5, 2),
+        (450, 299, 1.5, 0),
+        (450, None, 1.501, 2),
+        (451, None, 1.501, 1),
+        (None, 300, 1.501, 0),
+        (None, 301, 1.501, 1),
+        (64000, 32000, 1e308, 0),
     ],
 )
-async def test_total_and_largest_question_have_independent_padded_limits(
-    provider, monkeypatch, total_limit, question_limit, multiplier, allowed
+async def test_questions_that_do_not_fit_together_are_sent_in_parts(
+    provider, monkeypatch, total_limit, question_limit, multiplier, parts
 ):
     import importlib
 
-    module = importlib.import_module("talemate.decisions.service")
+    module = importlib.import_module("talemate.decisions.budget")
     monkeypatch.setattr(module, "count_tokens", lambda text: 100)
     provider.capabilities = ProviderCapabilities(
         max_input_tokens=total_limit,
         max_question_input_tokens=question_limit,
         input_token_multiplier=multiplier,
     )
-    provider.answers["another"] = provider.answers["repeats"]
+
+    async def answer(request):
+        return ProviderResponse(
+            answers={
+                key: {"type": "noul", "p_true": 0.93} for key in request.questions
+            },
+            response_body=provider.raw,
+        )
+
+    provider.handler = answer
     service = DecisionService(provider, enabled=True)
     state = {"passage": "complete unchanged text"}
     questions = {**QUESTIONS, "another": QUESTIONS["repeats"]}
@@ -131,11 +142,21 @@ async def test_total_and_largest_question_have_independent_padded_limits(
     record = service.log.records[result.request_id]
     assert record.state == state
     assert record.questions == questions
-    assert record.dispatched is allowed
-    assert len(provider.calls) == int(allowed)
-    if allowed:
+    assert record.dispatched is bool(parts)
+    assert len(provider.calls) == parts
+    assert all(call.state == state for call in provider.calls)
+    if parts == 1:
+        assert list(provider.calls[0].questions) == ["repeats", "another"]
+        assert record.raw == provider.raw
+    elif parts == 2:
+        assert [list(call.questions) for call in provider.calls] == [
+            ["repeats"],
+            ["another"],
+        ]
+        assert record.raw == [provider.raw, provider.raw]
+    if parts:
         assert isinstance(result, DecisionHandle)
-        assert provider.calls[0].state == state
+        assert set(result.answers) == {"repeats", "another"}
     else:
         assert result.failure.code == FailureCode.OVERSIZE
         assert record.answers is None
@@ -148,7 +169,7 @@ async def test_largest_question_is_selected_independently_of_order(
 ):
     import importlib
 
-    module = importlib.import_module("talemate.decisions.service")
+    module = importlib.import_module("talemate.decisions.budget")
     counts = iter([100, *question_counts])
     monkeypatch.setattr(module, "count_tokens", lambda text: next(counts))
     provider.capabilities = ProviderCapabilities(
@@ -218,7 +239,7 @@ async def test_each_state_shape_counts_toward_the_largest_question_limit(
 async def test_undeclared_token_limits_do_not_estimate_or_refuse(provider, monkeypatch):
     import importlib
 
-    module = importlib.import_module("talemate.decisions.service")
+    module = importlib.import_module("talemate.decisions.budget")
 
     def unexpected_count(text):
         pytest.fail("An undeclared token limit should not trigger token counting")

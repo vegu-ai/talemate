@@ -6,6 +6,7 @@ import structlog
 
 import talemate.emit.async_signals
 from talemate.events import GameLoopEvent
+from talemate.decisions.budget import fit_list
 from talemate.decisions.gate import decision_gate
 from talemate.prompts import Prompt
 
@@ -179,15 +180,23 @@ class WorldStatePinConditionsMixin:
             )
             return answers
 
+        def decision_state(budget):
+            return fit_list(
+                {"history": [], "previous_states": pins_to_check},
+                "history",
+                scene.context_history(
+                    budget=min(2048, self.client.max_token_length - 500)
+                ),
+                budget,
+            )
+
         answers = await decision_gate(
             "world_state.decision-pin-conditions",
             enabled=self.resolve_config("check_pin_conditions", "decision_model"),
             candidates={key: [True, False] for key in pins_to_check},
             variables=lambda: {
                 "pins": pins_to_check,
-                "history": scene.context_history(
-                    budget=min(2048, self.client.max_token_length - 500)
-                ),
+                "state": decision_state,
             },
             fallback=fallback,
             accept=lambda value: {"state": value},

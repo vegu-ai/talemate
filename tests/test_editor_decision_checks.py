@@ -1101,3 +1101,51 @@ async def test_unbalanced_quotes_judge_scoped_checks_as_all(editor_case, text):
         assert item.passage_text == passage["text"]
     assert not request.questions["s1_filler"].instructions.startswith("Judge only")
     assert record.outcomes[0]["details"]["skipped_passages"] == []
+
+
+async def test_decision_state_history_is_fitted_newest_first(editor_case):
+    from talemate.agents.editor.revision import RevisionContext, RevisionInformation
+    from talemate.decisions.budget import state_tokens
+
+    c = editor_case
+    c.editor.actions["revision"].config["repetition_range"].value = 30
+    c.scene.history = [
+        NarratorMessage(f"Earlier {number}: the platform lights hum.")
+        for number in range(20)
+    ] + [c.previous, c.current]
+    info = RevisionInformation(text=c.current.message)
+    checks = c.scene.test_writing_style.decision_checks
+    with RevisionContext(c.current.id):
+        full = c.editor.decision_check_state(info, checks)
+        budget = state_tokens(full) - 60
+        fitted = c.editor.decision_check_state(info, checks, budget)
+
+    assert state_tokens(fitted) <= budget
+    assert full["history"][-1] == c.previous.message
+    assert 0 < len(fitted["history"]) < len(full["history"])
+    assert fitted["history"] == full["history"][-len(fitted["history"]) :]
+    assert {k: v for k, v in fitted.items() if k != "history"} == {
+        k: v for k, v in full.items() if k != "history"
+    }
+
+
+async def test_summary_mode_fits_the_previous_summaries(editor_case):
+    from talemate.agents.editor.revision import RevisionInformation
+    from talemate.decisions.budget import state_tokens
+
+    c = editor_case
+    summaries = [
+        f"Summary {number}: " + "The keepers argued about the lamp oil. " * 20
+        for number in range(12)
+    ]
+    info = RevisionInformation(text=c.current.message, summarization_history=summaries)
+    checks = c.scene.test_writing_style.decision_checks
+    full = c.editor.decision_check_state(info, checks)
+    budget = state_tokens({**full, "summarization_history": summaries[-3:]})
+
+    fitted = c.editor.decision_check_state(info, checks, budget)
+
+    assert state_tokens(fitted) <= budget
+    assert full["summarization_history"] == summaries
+    assert fitted["summarization_history"] == summaries[-3:]
+    assert fitted["history"] == []

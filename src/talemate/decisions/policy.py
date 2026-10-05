@@ -23,6 +23,7 @@ from talemate.prompts.base import (
 from talemate.prompts.groups import get_group_template_path
 from talemate.util.logging import serialize_log_value
 
+from .budget import state_tokens
 from .events import (
     ActionRecord,
     Failure,
@@ -336,14 +337,25 @@ class PolicyInvocation(Generic[T]):
             isinstance(question, (YesNo, Choice)) for question in questions.values()
         ):
             raise DecisionError(FailureCode.TEMPLATE)
+        engine_questions = {
+            key: question.engine_question() for key, question in questions.items()
+        }
+        if callable(state):
+            budget = self.service.state_budget(engine_questions)
+            fitted = state(budget)
+            if budget is not None and state_tokens(fitted) > budget:
+                # the part of the state that cannot shrink does not fit beside
+                # every question; the questions go out in parts, so give the
+                # state the room one part leaves
+                split = self.service.state_budget(engine_questions, split=True)
+                if split != budget:
+                    fitted = state(split)
+            state = fitted
         result = self._ownership.bridge(
             self.service.evaluate(
                 label,
                 state=state,
-                questions={
-                    key: question.engine_question()
-                    for key, question in questions.items()
-                },
+                questions=engine_questions,
                 invocation_id=self.id,
                 template_uid=self.prompt.uid,
                 source_group=self.source_group,

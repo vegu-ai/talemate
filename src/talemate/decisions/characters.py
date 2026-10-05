@@ -3,6 +3,7 @@ from collections.abc import Callable
 
 from pydantic import BaseModel
 
+from .budget import fit_text
 from .gate import decision_gate
 
 
@@ -55,7 +56,7 @@ async def referenced_characters(
 
     def variables():
         return {
-            "text": text,
+            "state": lambda budget: fit_text(text, budget),
             "characters": [
                 CharacterReference(
                     name=name,

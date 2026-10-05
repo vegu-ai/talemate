@@ -105,16 +105,30 @@ as if the decision model were off. In `config.yaml` this setting is `timeout_sec
 
 **Input limit (tokens)** is the largest request Talemate sends: the text plus all the
 questions. **Input limit per question (tokens)** is the largest single question with its
-text. Before it sends a request, Talemate estimates its size. If the estimate is larger than
-a limit, the request is not sent and the Decision Log says **Request not sent**. `0` means
-no limit. Use limits that your provider publishes. Changing the model name does not change
-these limits.
+text. `0` means no limit. Use limits that your provider publishes, or for a local server
+the limit it was started with. Changing the model name does not change these limits.
+
+Talemate fits each request to these limits before it sends it:
+
+- The text a feature sends is shortened so that it fits in one request with all of the
+  feature's questions. Story history loses its oldest messages first, so the most
+  recent part of the story is always what the model reads. For a tracked state, the
+  update prompt is rebuilt with less history; the full prompt is still used if the
+  usual request has to run.
+- When the questions alone fill the limit, or the part of the text that cannot be
+  shortened (such as the passage being checked and your writing style) does not fit
+  beside all of them, the text is shortened to fit beside the largest question instead,
+  and the questions go out in several requests, one after another, each with the same
+  text. They share one time limit, and the Decision Log shows them as one request.
+
+If a request still does not fit, for example because a single question is longer than the
+limit, it is not sent and the Decision Log says **Request not sent**.
 
 **Size estimate margin** multiplies Talemate's own size estimate, to be on the safe side.
-It must be 1 or more. A higher margin stops more oversize requests before they are sent,
-and also some that the provider would have accepted. A request that passes this check can
-still be rejected as too large by the provider. Talemate does not shorten or split your
-text to make it fit.
+It must be 1 or more. Talemate counts text with a general-purpose tokenizer, which can count
+fewer tokens than your model does. A higher margin leaves more room for that difference,
+and also shortens the text more than needed. A request that passes this check can still be
+rejected as too large by the provider.
 
 In `config.yaml` these three settings and their defaults are:
 
@@ -145,10 +159,32 @@ For [TypeSafe's hosted API](https://docs.typesafe.ai/api), use:
 The `jev-latest` alias can change as TypeSafe releases models. See its
 [model list](https://docs.typesafe.ai/models) for current names.
 
-Other compatible servers include **Von**, **Kev**, **Decider**, **litjev** and
-**openjev-sglang**, which you can run locally. Start your server yourself; Talemate does
+Other compatible servers include **Von**, **Kev**, **Decider**, **litjev**,
+**openjev-sglang** and llama.cpp builds that serve `/v1/systemone`, which you can run
+locally. Start your server yourself; Talemate does
 not download or start a model for you. There is no separate adapter or model-name check
 for each server. An ordinary chat-completions server is not enough.
+
+A local server has its own input limit: for llama.cpp it is the context size the model
+was loaded with (`n_ctx`), and it covers the text, every question and a little of the
+server's own prompt. Set **Input limit (tokens)** and **Input limit per question (tokens)**
+somewhat below it. A request larger than the server's limit is refused by the server, and
+Talemate reports that as a provider failure, not as text that was too long. A local model
+can also need several seconds for a long request, so raise the **Time limit** to match.
+
+For example, a llama.cpp server on another machine that serves `clef-flash` with a
+context size of 8192:
+
+| Setting | Value |
+| --- | --- |
+| **Provider** | SystemOne API |
+| **Server address** | `http://<server-address>:<port>` |
+| **Model** | `clef-flash` |
+| **SystemOne API Key** | empty |
+| **Time limit (seconds)** | `10` |
+| **Input limit (tokens)** | `8000` |
+| **Input limit per question (tokens)** | `8000` |
+| **Size estimate margin** | `1.1` |
 
 Treat decision answers as estimates. Talemate does not measure how accurate they are on
 your fiction, and calibration — whether a reported 80 percent probability is right about

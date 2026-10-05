@@ -385,7 +385,8 @@
     Von, Kev, Decider, litjev, openjev-sglang; base URL, container localhost, calibration. Request deadline without retry,
     timeout. Green dot Configured setup (not key test/authentication); Off/Incomplete/failure state banners. Request not sent;
     oversize input conservative token estimates; config.yaml defaults/limits max_input_tokens, max_question_input_tokens,
-    input_token_multiplier; zero/0 limit undeclared. Default-on World State/Memory; Editor checks separate opt-in.'
+    input_token_multiplier; zero/0 limit undeclared; text shortened to fit, questions split; llama.cpp n_ctx. Default-on
+    World State/Memory; Editor checks separate opt-in.'
 - path: user-guide/app-settings/game.md
   title: Game
   summary: Application settings navigation, search, Save/Discard, unsaved-edit badges and outside-change warnings; Game controls

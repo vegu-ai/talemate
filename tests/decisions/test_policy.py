@@ -1127,3 +1127,80 @@ async def test_a_note_takes_the_same_answer_twice(policy_factory, provider):
         "confidence": 0.9,
         "threshold": 0.8,
     }
+
+
+@pytest.mark.parametrize("limit", [None, 500])
+async def test_callable_state_receives_the_request_budget(
+    policy_factory, provider, limit
+):
+    p = policy_factory
+    provider.capabilities = ProviderCapabilities(max_question_input_tokens=limit)
+    budgets = []
+
+    def state(budget):
+        budgets.append(budget)
+        return {"passage": "fitted"}
+
+    invocation = p.create(
+        ASK + "{{ keep() }}",
+        variables={"passage": state, "info": SimpleNamespace(text="original")},
+    )
+    assert await invocation.run() == "original"
+    expected = p.service.state_budget(
+        {"repeats": {"type": "noul", "instructions": "Repeat?"}}
+    )
+    assert budgets == [expected]
+    assert (expected is None) == (limit is None)
+    assert provider.calls[0].state == {"passage": "fitted"}
+
+
+async def test_a_state_too_large_for_one_request_is_refit_for_parts(
+    policy_factory, provider
+):
+    from talemate.decisions.budget import fit_list, state_tokens
+
+    p = policy_factory
+    fixed = {"fixed": "The keepers' writing style: plain and dry. " * 20}
+    history = [f"Message {number}: the lamp turns." for number in range(40)]
+    questions = {
+        f"q{number}": {"type": "noul", "instructions": f"Does passage {number} repeat?"}
+        for number in range(10)
+    }
+    question_tokens = sum(
+        state_tokens({key: question}) for key, question in questions.items()
+    )
+    provider.capabilities = ProviderCapabilities(
+        max_input_tokens=question_tokens + state_tokens(fixed) // 2,
+        max_question_input_tokens=2000,
+    )
+
+    async def answer(request):
+        return ProviderResponse(
+            answers={key: {"type": "noul", "p_true": 0.2} for key in request.questions},
+            response_body={},
+        )
+
+    provider.handler = answer
+    budgets = []
+
+    def state(budget):
+        budgets.append(budget)
+        return fit_list({**fixed, "history": []}, "history", history, budget)
+
+    source = (
+        "{% set qs = {} %}{% for n in range(10) %}"
+        '{% set _ = qs.update({"q" ~ n: yes_no("Does passage " ~ n ~ " repeat?", threshold=0.5)}) %}'
+        "{% endfor %}"
+        '{% set answers = ask("test", state=passage, questions=qs) %}{{ keep() }}'
+    )
+    invocation = p.create(
+        source,
+        variables={"passage": state, "info": SimpleNamespace(text="original")},
+    )
+    assert await invocation.run() == "original"
+
+    together, split = budgets
+    assert 0 < together < state_tokens(fixed) < split
+    assert len(provider.calls) > 1
+    assert all(call.state["history"] for call in provider.calls)
+    assert provider.calls[0].state["history"][-1] == history[-1]

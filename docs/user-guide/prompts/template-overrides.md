@@ -68,7 +68,7 @@ A policy says what it wants to know, in plain words, and what to do with the ans
 
 ```jinja2
 {% set threshold = 0.9 %}
-{% set answers = ask("yes-no-query", state=text, questions={"query": yes_no(query, threshold=threshold)}) %}
+{% set answers = ask("yes-no-query", state=state, questions={"query": yes_no(query, threshold=threshold)}) %}
 {% set answer = answers.query %}
 {{ note("fallback" if answer.uncertain else "answer", "uncertain" if answer.uncertain else "confident", answer) }}
 {{ resolve(answers) }}
@@ -80,7 +80,7 @@ Lower the threshold to 0.75 and the model's answer is used whenever it is at lea
 |---|---|
 | `yes_no(question, threshold=…)` | A yes/no question. `true_criteria` and `false_criteria` can say what counts as yes and as no. |
 | `choice(question, options=…, none=…, threshold=…)` | Pick one of `options` (id to description). `none` describes choosing none of them; `"none"` cannot be an option id. |
-| `ask(label, state=…, questions=…)` | Sends the questions as one request and returns the answers by question id. |
+| `ask(label, state=…, questions=…)` | Sends the questions with the text the model reads (`state`) and returns the answers by question id. The `state` a feature passes to its policy is shortened to the [decision model's input limits](../app-settings/decision-model.md#advanced) for these questions; pass it on unchanged, as the default templates do. Questions that do not fit together are sent in several requests. |
 | `note(action, reason, answer, …)` | Writes the line the [Decision Log](../debug-tools.md#decisions) shows for this decision. Pass the answers it is based on and their probabilities and threshold are added; with several yes/no answers, each probability is listed under its question id. Answers passed together need different question ids, unless they are the same answer. |
 | `resolve(answers)` | Finishes a policy: every answer that is `none` goes to the usual request. The answers must be exactly the ones the feature expects; if they are not, every one goes to the usual request. |
 | `revise(findings)`, `keep()` | Editor checks only: revise the text with these findings, or keep it unchanged. |

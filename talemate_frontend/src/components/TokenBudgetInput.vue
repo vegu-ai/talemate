@@ -51,14 +51,21 @@ export default {
     isValid(value) {
       return value != null && value >= this.min && value <= this.max;
     },
+    // v-number-input reports the "-0" typed on the way to "-0.1" as 0
+    isNegativeZero(typed) {
+      return this.min >= 0 && Object.is(typed, -0);
+    },
     // the input still shows the old text when v-number-input reports a value
-    typedOutOfRange() {
+    typedValue() {
       const text = this.$refs.field?.$el?.querySelector('input')?.value;
-      if (!text) {
+      return text ? Number(text) : null;
+    },
+    typedOutOfRange() {
+      const typed = this.typedValue();
+      if (typed === null) {
         return false;
       }
-      const typed = Number(text);
-      return !Number.isFinite(typed) || !this.isValid(typed);
+      return !Number.isFinite(typed) || !this.isValid(typed) || this.isNegativeZero(typed);
     },
     // From text outside min/max, v-number-input reports a value on two paths:
     // the blur clamp raises a half-typed "16" to the nearest bound, and a step
@@ -67,11 +74,15 @@ export default {
     // waits one microtask for it and is refused without it.
     onInput(value) {
       if (this.isValid(value) && this.typedOutOfRange()) {
+        // a "-0" being typed keeps its text; the blur clamp reverts it
+        const typingNegativeZero = this.focused && this.isNegativeZero(this.typedValue());
         this.pendingStep = value;
         queueMicrotask(() => {
           if (this.pendingStep === value) {
             this.pendingStep = null;
-            this.revert();
+            if (!typingNegativeZero) {
+              this.revert();
+            }
           }
         });
         return;

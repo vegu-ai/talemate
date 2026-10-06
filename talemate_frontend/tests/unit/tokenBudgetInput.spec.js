@@ -9,12 +9,12 @@ afterEach(() => { for (const [app, host] of mounted.splice(0)) { app.unmount(); 
 // a refused value is reverted one microtask later, then rendered on the next ticks
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-function mount(saved = 8192) {
+function mount(saved = 8192, min = 1024) {
     const state = reactive({ modelValue: saved });
     const changes = [];
     let field;
     const app = createApp({ render: () => h(TokenBudgetInput, {
-        modelValue: state.modelValue, min: 1024,
+        modelValue: state.modelValue, min,
         'onUpdate:modelValue': (value) => { state.modelValue = value; changes.push(value); },
     }) });
     app.component('VNumberInput', defineComponent({
@@ -141,6 +141,56 @@ describe('the token budget input', () => {
         field().emit('update:modelValue', 1024);
         await nextTick();
         expect(changes).toEqual([1024]);
+    });
+
+    it.each([
+        ['typed one key at a time', ['-', '-0', '-0.', '-0.1']],
+        ['pasted whole', ['-0.1']],
+        ['stopped at -0', ['-', '-0']],
+    ])('does not save 0 when -0.1 is %s into a field whose minimum is 0, and keeps the typed text until blur', async (_, keys) => {
+        const { changes, field, input } = mount(8192, 0);
+        field().emit('update:focused', true);
+        for (const text of keys) {
+            input().value = text;
+            // v-number-input reports only numbers inside min/max, and "-0" as 0
+            const typed = Number(text);
+            if (typed >= 0) {
+                field().emit('update:modelValue', Math.max(typed, 0));
+            }
+            await settle();
+            expect(input().value).toBe(text);
+        }
+        field().emit('update:focused', false);
+        field().emit('update:modelValue', 0);
+        await settle();
+        expect(input().value).toBe('8192');
+        expect(changes).toEqual([]);
+    });
+
+    it.each([
+        ['0', 0, 1000],
+        ['1024', 1024, 1024],
+    ])('saves a step taken from focused -0 text at once when the minimum is %s', async (_, min, stepped) => {
+        const { changes, field, input } = mount(8192, min);
+        field().emit('update:focused', true);
+        input().value = '-0';
+        if (min === 0) {
+            field().emit('update:modelValue', 0);
+            await settle();
+        }
+        field().emit('update:modelValue', stepped);
+        input().dispatchEvent(new Event('change', { bubbles: true }));
+        await nextTick();
+        expect(changes).toEqual([stepped]);
+    });
+
+    it('still saves 0 typed into a field whose minimum is 0', async () => {
+        const { changes, field, input } = mount(8192, 0);
+        field().emit('update:focused', true);
+        input().value = '0';
+        field().emit('update:modelValue', 0);
+        await settle();
+        expect(changes).toEqual([0]);
     });
 
     it('follows a new value from the parent', async () => {

@@ -54,6 +54,7 @@ class OpenRouterAPIError(Exception):
 log = structlog.get_logger("talemate.client.openrouter")
 
 MODELS_URL = "https://openrouter.ai/api/v1/models"
+DECISION_MODELS_URL = f"{MODELS_URL}?output_modalities=decisions"
 IMAGE_MODELS_URL = "https://openrouter.ai/api/v1/images/models"
 PROVIDERS_URL = "https://openrouter.ai/api/v1/providers"
 
@@ -66,6 +67,8 @@ FETCH_RETRY_COOLDOWN = 30.0
 # and doing so improves the initial setup experience since all the models will be available right away.
 # MODELS_URL only lists models that output text: its output_modalities filter defaults to "text".
 AVAILABLE_MODELS = []
+
+DECISION_MODELS: list["DecisionModel"] = []
 
 # The image generation models of OpenRouter's Image API, keyed by model id in id order
 IMAGE_MODELS: dict[str, "ImageModel"] = {}
@@ -90,6 +93,11 @@ TOGGLEABLE_PARAMETERS = (
 )
 
 ToggleableParametersConfig = toggleable_parameters_config(TOGGLEABLE_PARAMETERS)
+
+
+class DecisionModel(pydantic.BaseModel):
+    id: str
+    name: str = ""
 
 
 class ImageModel(pydantic.BaseModel):
@@ -179,6 +187,7 @@ class ListFetch:
 
 
 MODELS_FETCH = ListFetch()
+DECISION_MODELS_FETCH = ListFetch()
 IMAGE_MODELS_FETCH = ListFetch()
 PROVIDERS_FETCH = ListFetch()
 
@@ -242,6 +251,35 @@ async def fetch_available_models(api_key: str = None):
         AVAILABLE_MODELS = models
         _on_list_changed()
     return AVAILABLE_MODELS
+
+
+def _parse_decision_models(data: list[dict]) -> list[DecisionModel]:
+    models = []
+    for entry in data:
+        try:
+            if not entry.get("id"):
+                continue
+            models.append(DecisionModel(id=entry["id"], name=entry.get("name") or ""))
+        except (AttributeError, TypeError, pydantic.ValidationError) as e:
+            log.warning(f"Skipped an OpenRouter decision model entry: {e}")
+    return sorted(models, key=lambda model: model.id)
+
+
+async def fetch_available_decision_models() -> list[DecisionModel]:
+    global DECISION_MODELS
+    models = await _fetch_list(
+        DECISION_MODELS_FETCH,
+        "decision models",
+        DECISION_MODELS_URL,
+        _parse_decision_models,
+    )
+    if models is not None and models != DECISION_MODELS:
+        DECISION_MODELS = models
+        emit(
+            "decision_models_changed",
+            data={"models": [model.model_dump() for model in models]},
+        )
+    return DECISION_MODELS
 
 
 def _parse_image_models(data: list[dict]) -> dict[str, ImageModel]:
@@ -310,6 +348,7 @@ async def fetch_available_providers(api_key: str = None):
 async def fetch_lists(api_key: str | None):
     await asyncio.gather(
         fetch_available_models(api_key),
+        fetch_available_decision_models(),
         fetch_available_image_models(),
         fetch_available_providers(api_key),
     )

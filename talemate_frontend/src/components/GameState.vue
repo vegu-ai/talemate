@@ -29,7 +29,7 @@
                     <v-col cols="12" md="5">
                         <GameStateWatchedPaths
                             :watched-paths="watchedPaths"
-                            :knob-paths="knobPaths"
+                            :control-paths="controlPaths"
                             :path-settings="pathSettings"
                             :variables="gameStateVariables"
                             :available-paths="gameStatePaths"
@@ -86,8 +86,8 @@ export default {
         watchedPaths() {
             return this.scene?.data?.game_state_watch_paths || [];
         },
-        knobPaths() {
-            return this.scene?.data?.game_state_knob_paths || [];
+        controlPaths() {
+            return this.scene?.data?.game_state_control_paths || [];
         },
         pathSettings() {
             return this.scene?.data?.game_state_path_settings || {};

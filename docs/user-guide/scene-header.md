@@ -88,7 +88,7 @@ Each side of the header has its own menu. Hover over the header and click the **
 
 The same choice is available as **Left of the title** and **Right of the title** in [Settings > Game > General](/talemate/user-guide/app-settings/game#scene-header). Both places edit the same setting, so a change in one shows in the other.
 
-By default the header is on, with **History stats** on the left and **Summarizer** on the right. The other items are off until you tick them for a side.
+By default the header is on, with **History stats** and **Active characters** on the left and **Summarizer** and **Writing style** on the right. The other items are off until you tick them for a side.
 
 ## Perspective label
 

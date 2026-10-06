@@ -262,8 +262,12 @@ class SceneHeader(pydantic.BaseModel):
 
     enabled: bool = True
     # item ids are opaque; preserve unknown values
-    slot_a: list[str] = pydantic.Field(default_factory=lambda: ["history_stats"])
-    slot_b: list[str] = pydantic.Field(default_factory=lambda: ["summarizer"])
+    slot_a: list[str] = pydantic.Field(
+        default_factory=lambda: ["history_stats", "active_characters"]
+    )
+    slot_b: list[str] = pydantic.Field(
+        default_factory=lambda: ["summarizer", "writing_style"]
+    )
 
     def set_item_shown(
         self, slot: Literal["slot_a", "slot_b"], item: str, shown: bool

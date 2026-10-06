@@ -556,6 +556,15 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             }
         )
 
+    def handle_decision_models_changed(self, emission: Emission):
+        self.queue_put(
+            {
+                "type": "config",
+                "action": "decision_models",
+                "data": emission.data,
+            }
+        )
+
     def handle_clear_screen(self, emission: Emission):
         self.queue_put(
             {

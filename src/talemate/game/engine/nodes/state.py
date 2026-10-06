@@ -944,8 +944,8 @@ def _game_state_path(node: Node, path) -> str:
 @register("state/GetGameStatePathSettings")
 class GetGameStatePathSettings(Node):
     """
-    How a game state path is pinned: a control in the scene header (knob),
-    listed in Debug Tools (debug), and the control's settings.
+    How a game state path is pinned: as a control in the scene header
+    (control), listed in Debug Tools (debug), and the control's settings.
 
     Inputs:
 
@@ -955,7 +955,7 @@ class GetGameStatePathSettings(Node):
 
     - path: the normalized path
     - pinned: True when the path is shown in the header or in Debug Tools
-    - knob: True when the path is a control in the scene header
+    - control: True when the path is a control in the scene header
     - debug: True when the path is listed in Debug Tools
     - read_only: True when the path or a pinned container above it is read only
     - settings: label, description, minimum, maximum, step, slider, choices, read_only and order, as set
@@ -969,7 +969,7 @@ class GetGameStatePathSettings(Node):
         self.set_property("path", "")
         self.add_output("path", socket_type="str")
         self.add_output("pinned", socket_type="bool")
-        self.add_output("knob", socket_type="bool")
+        self.add_output("control", socket_type="bool")
         self.add_output("debug", socket_type="bool")
         self.add_output("read_only", socket_type="bool")
         self.add_output("settings", socket_type="dict")
@@ -982,7 +982,7 @@ class GetGameStatePathSettings(Node):
             {
                 "path": path,
                 "pinned": path in scene.pinned_game_state_paths,
-                "knob": path in scene.game_state_knob_paths,
+                "control": path in scene.game_state_control_paths,
                 "debug": path in scene.game_state_watch_paths,
                 "read_only": scene.game_state_path_is_read_only(path),
                 "settings": settings.model_dump(exclude_defaults=True)
@@ -995,7 +995,7 @@ class GetGameStatePathSettings(Node):
 @register("state/PinGameStatePath")
 class PinGameStatePath(Node):
     """
-    Pin or unpin a game state path: `knob` shows it as a control in the scene
+    Pin or unpin a game state path: `control` shows it as a control in the scene
     header, `debug` lists it in Debug Tools. `settings` changes only the
     fields given. Unpinning from both targets removes the settings.
 
@@ -1008,7 +1008,7 @@ class PinGameStatePath(Node):
 
     Properties:
 
-    - target: knob or debug
+    - target: control or debug
 
     Outputs:
 
@@ -1022,8 +1022,8 @@ class PinGameStatePath(Node):
             name="target",
             description="Where the path is pinned",
             type="str",
-            default="knob",
-            choices=["knob", "debug"],
+            default="control",
+            choices=["control", "debug"],
         )
         enabled = PropertyField(
             name="enabled",
@@ -1041,7 +1041,7 @@ class PinGameStatePath(Node):
         self.add_input("enabled", socket_type="bool", optional=True)
         self.add_input("settings", socket_type="dict", optional=True)
         self.set_property("path", "")
-        self.set_property("target", "knob")
+        self.set_property("target", "control")
         self.set_property("enabled", True)
         self.add_output("state")
         self.add_output("path", socket_type="str")

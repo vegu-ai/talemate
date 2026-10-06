@@ -292,18 +292,18 @@ def replace_game_state(scene: "Scene", game_state: GameState):
     replace_game_state_variables(scene, game_state.variables)
 
 
-GameStatePinTarget = Literal["debug", "knob"]
+GameStatePinTarget = Literal["debug", "control"]
 
 # the Scene attribute holding each target's pinned paths
 GAME_STATE_PIN_TARGETS: dict[GameStatePinTarget, str] = {
     "debug": "game_state_watch_paths",
-    "knob": "game_state_knob_paths",
+    "control": "game_state_control_paths",
 }
 
 
 class GameStatePathSettings(pydantic.BaseModel):
     """
-    How one pinned game state path is presented and limited in the knob
+    How one pinned game state path is presented and limited in the control
     toolbar and in Debug Vars.
     """
 

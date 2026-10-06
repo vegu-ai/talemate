@@ -1,5 +1,5 @@
 <template>
-    <v-sheet v-if="displayPaths.length" class="game-state-knobs mb-2" rounded="lg" border>
+    <v-sheet v-if="displayPaths.length" class="game-state-controls mb-2" rounded="lg" border>
         <v-tooltip text="Edit these controls in the game state editor" location="top">
             <template v-slot:activator="{ props }">
                 <v-btn
@@ -16,7 +16,7 @@
         <GameStateValueInput
             v-for="path in displayPaths"
             :key="path"
-            class="game-state-knob"
+            class="game-state-control"
             :path="path"
             :settings="getSettingsForPath(path)"
             :answer="answers[path] || null"
@@ -38,7 +38,7 @@ import {
 } from '@/utils/gameStatePaths.js';
 
 export default {
-    name: 'GameStateKnobs',
+    name: 'GameStateControls',
     components: {
         GameStateValueInput,
     },
@@ -62,8 +62,8 @@ export default {
         };
     },
     computed: {
-        knobPaths() {
-            return this.scene?.data?.game_state_knob_paths || [];
+        controlPaths() {
+            return this.scene?.data?.game_state_control_paths || [];
         },
         gameStateVariables() {
             return this.scene?.data?.game_state?.variables || {};
@@ -71,7 +71,7 @@ export default {
         displayPaths() {
             return sortGameStatePathsByOrder(
                 this.scene,
-                expandGameStatePaths(this.knobPaths, this.gameStateVariables),
+                expandGameStatePaths(this.controlPaths, this.gameStateVariables),
             );
         },
     },
@@ -116,7 +116,7 @@ export default {
 </script>
 
 <style scoped>
-.game-state-knobs {
+.game-state-controls {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -125,7 +125,7 @@ export default {
     background-color: rgb(var(--v-theme-surface));
 }
 
-.game-state-knob {
+.game-state-control {
     flex: 1 1 180px;
     min-width: 150px;
     max-width: 260px;

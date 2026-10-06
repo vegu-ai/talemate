@@ -141,6 +141,23 @@
               </v-col>
             </v-row>
             
+            <v-row class="justify-center mb-6">
+              <v-col cols="12" md="8">
+                <v-alert
+                  density="comfortable"
+                  variant="outlined"
+                  color="muted"
+                >
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-layers-outline" size="small" class="mr-1" color="primary"></v-icon>
+                  </template>
+                  <div class="text-body-medium">
+                    <strong>Context size:</strong> {{ smallContextNote }}
+                  </div>
+                </v-alert>
+              </v-col>
+            </v-row>
+
             <v-row v-if="draftClient" class="justify-center">
               <v-col cols="12" md="8" class="text-left">
                 <ModelExpectationsPanel compact class="mb-2" />
@@ -514,6 +531,7 @@
 import { getProperty, setProperty } from 'dot-prop';
 import ClientConfigEditor from './ClientConfigEditor.vue';
 import ModelExpectationsPanel from './ModelExpectationsPanel.vue';
+import { SMALL_CONTEXT_NOTE } from '@/constants/modelExpectations';
 import { buildClientFromDefaults } from '@/utils/clientPresets';
 import { cloneNameKeyedMap, isReservedName } from '@/utils/nameKeyedMap';
 
@@ -539,6 +557,7 @@ export default {
     return {
       // set once in mounted(); cleared only by dismiss or the finishing save
       wizardSessionActive: false,
+      smallContextNote: SMALL_CONTEXT_NOTE,
       step: 1,
       clientType: null, // 'remote' | 'local'
       selectedClientPreset: null,

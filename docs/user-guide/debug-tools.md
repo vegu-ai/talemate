@@ -122,7 +122,7 @@ You can edit variable values directly in the Vars tab:
 
 Changes are saved immediately when you finish editing.
 
-## Scene Toolbar Knobs
+## Scene Toolbar Controls
 
 Game state variables that act as gameplay controls can be pinned to a compact toolbar above the scene tools. The toolbar uses the same type-matched controls as Debug Vars, so strings, numbers, and booleans can be changed without opening the Debug Tools drawer.
 
@@ -130,7 +130,7 @@ The toolbar appears only while it has pinned paths. It is hidden during a replay
 
 A path's Debug Vars and Scene toolbar targets are independent. You can pin a variable to either location or to both. The control settings are shared by both targets: the toolbar uses the label instead of the path, while an unlabeled control continues to show its path. The order you set positions a control in the toolbar and in Debug Vars alike, and paths without an order come last in alphabetical order.
 
-![Scene toolbar knobs](/talemate/img/0.40.0/gamestate-knob-toolbar.png)
+![Scene toolbar controls](/talemate/img/0.40.0/gamestate-controls-toolbar.png)
 
 ## Setting Up Pinned Paths
 
@@ -142,7 +142,7 @@ There are three ways to open the Game State Editor:
 
 1. **From Debug Tools**: Click the **Edit Game State** button in the Vars tab.
 2. **From World Editor**: Navigate to **:material-earth-box: World Editor** > **Scene** tab > **Game State** tab.
-3. **From the scene toolbar**: Click the :material-tune-variant: button at the left end of the knob toolbar. (The :material-tune: button on a row of the Pinned Variables table is a different control — it opens that path's control settings.)
+3. **From the scene toolbar**: Click the :material-tune-variant: button at the left end of the controls toolbar. (The :material-tune: button on a row of the Pinned Variables table is a different control — it opens that path's control settings.)
 
 ![World Editor Game State Tab](/talemate/img/0.40.0/world-editor-gamestate-tab.png)
 

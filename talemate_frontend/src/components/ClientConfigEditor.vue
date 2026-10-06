@@ -78,6 +78,14 @@
             <v-col v-if="contextLengthWarning" cols="12" class="pt-0">
               <v-alert type="warning" variant="tonal" density="compact" icon="mdi-alert-outline">{{ contextLengthWarning }}</v-alert>
             </v-col>
+            <v-col v-else-if="contextLengthHint" cols="12" class="pt-0">
+              <v-alert variant="outlined" color="muted" density="compact">
+                <template v-slot:prepend>
+                  <v-icon icon="mdi-layers-outline" size="small" color="primary"></v-icon>
+                </template>
+                <div class="text-body-medium">{{ contextLengthHint }}</div>
+              </v-alert>
+            </v-col>
 
             <!-- PROMPT TEMPLATE -->
             <v-col cols="8" v-if="promptTemplateAvailable" data-setting-anchor="prompt_template">
@@ -349,7 +357,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { markRaw } from 'vue';
 import { conditionMet } from '@/utils/uxConditions';
 import { countOverrides } from '@/utils/agentActionOverrides';
-import { contextLengthWarning } from '@/constants/modelExpectations';
+import { contextLengthHint, contextLengthWarning } from '@/constants/modelExpectations';
 import AppConfigPresetsSystemPrompts from './AppConfigPresetsSystemPrompts.vue';
 import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
 import TokenBudgetInput from './TokenBudgetInput.vue';
@@ -488,6 +496,9 @@ export default {
     },
     contextLengthWarning() {
       return contextLengthWarning(this.values.max_token_length);
+    },
+    contextLengthHint() {
+      return contextLengthHint(this.values.max_token_length);
     },
     // runtime capabilities — only the live client knows these, the defaults
     // below are what a not-yet-instantiated client would report

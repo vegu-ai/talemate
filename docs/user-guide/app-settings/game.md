@@ -46,7 +46,7 @@ This setting is enabled by default.
 
 **Left of the title** and **Right of the title** choose which items each side of the header shows. Pick any number of items per side, or none. The available items are **History stats** (messages and summary layers), **Summarizer** (dialogue tokens gathered against the summarizer's threshold, with a marker when a summary is due), **Active characters** (portraits of the characters in the scene), **Knowledge effort** (a chip that opens the scene's knowledge settings), **Knowledge mode** (Standard or Perspectives), **Writing style** and **Visual style** (the scene's style templates, with a menu to pick another one). The item menus on the two sides of the header change the same choice, and a change there shows here too. Your choices are kept while the header is hidden.
 
-The header is enabled by default, with History stats on the left and Summarizer on the right. The other items are off until you pick them for a side.
+The header is enabled by default, with History stats and Active characters on the left and Summarizer and Writing style on the right. The other items are off until you pick them for a side.
 
 ##### Release GPU cache on scene load
 

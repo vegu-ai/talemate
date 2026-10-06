@@ -1,3 +1,5 @@
+import asyncio
+
 import pydantic
 import structlog
 import os
@@ -9,6 +11,7 @@ from typing import get_args
 from talemate import VERSION
 from talemate.agents import observed_actions
 from talemate.changelog import delete_scene_revisions, scene_ref_from_path
+from talemate.client import openrouter
 from talemate.client.model_prompts import model_prompt, PromptSpec
 from talemate.client.registry import CLIENT_CLASSES
 from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
@@ -270,6 +273,10 @@ class TorchCudaInfo(pydantic.BaseModel):
     error: str | None = None
 
 
+class DecisionModelsPayload(pydantic.BaseModel):
+    models: list[openrouter.DecisionModel]
+
+
 class SystemCapabilitiesPayload(pydantic.BaseModel):
     torch_cuda: TorchCudaInfo = TorchCudaInfo()
 
@@ -296,7 +303,9 @@ def app_config_message(config: Config) -> dict:
     data.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
     data.update(theme=resolve_theme(config))
     data.update(
-        decision_model_defaults=DecisionModelConfig().model_dump(include={"model"})
+        decision_model_defaults=DecisionModelConfig().model_dump(
+            exclude={"enabled", "api_key"}
+        )
     )
 
     return {
@@ -322,6 +331,9 @@ def client_model_defaults(client_type: str) -> dict:
 
 class ConfigPlugin(Plugin):
     router = "config"
+
+    def connect(self):
+        self._decision_model_requests: set[asyncio.Task] = set()
 
     async def handle_save(self, data):
         app_config_data = ConfigPayload(**data)
@@ -595,6 +607,23 @@ class ConfigPlugin(Plugin):
                 "type": "config",
                 "action": "client_types",
                 "data": clients,
+            }
+        )
+
+    async def handle_request_decision_models(self, data):
+        # the list may still have to come from OpenRouter, which must not hold
+        # up the websocket receive loop
+        task = asyncio.create_task(self._send_decision_models())
+        self._decision_model_requests.add(task)
+        task.add_done_callback(self._decision_model_requests.discard)
+
+    async def _send_decision_models(self):
+        models = await openrouter.fetch_available_decision_models()
+        self.websocket_handler.queue_put(
+            {
+                "type": "config",
+                "action": "decision_models",
+                "data": DecisionModelsPayload(models=models).model_dump(),
             }
         )
 

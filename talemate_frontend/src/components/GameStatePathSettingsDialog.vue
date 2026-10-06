@@ -27,7 +27,7 @@
                     <v-text-field
                         v-model="draft.order"
                         label="Order"
-                        placeholder="Unordered knobs come last"
+                        placeholder="Unordered controls come last"
                         type="number"
                         density="compact"
                         variant="outlined"

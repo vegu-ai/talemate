@@ -63,7 +63,7 @@ class TestGameStateChanged:
     async def test_player_write_sends_path_value_and_previous_value(
         self, scene, plugin, received
     ):
-        scene.game_state_knob_paths = ["player/health"]
+        scene.game_state_control_paths = ["player/health"]
         scene.game_state_path_settings = {
             "player/health": GameStatePathSettings(minimum=0, maximum=10)
         }
@@ -132,7 +132,7 @@ class TestGameStateChanged:
 
     @pytest.mark.asyncio
     async def test_refused_write_sends_nothing(self, scene, plugin, received):
-        scene.game_state_knob_paths = ["weather"]
+        scene.game_state_control_paths = ["weather"]
         scene.game_state_path_settings = {
             "weather": GameStatePathSettings(choices=["sun", "rain"])
         }
@@ -147,8 +147,8 @@ class TestGameStateChanged:
 
 class TestGetGameStatePathSettings:
     @pytest.mark.asyncio
-    async def test_pinned_knob_with_settings(self, scene):
-        scene.game_state_knob_paths = ["player"]
+    async def test_pinned_control_with_settings(self, scene):
+        scene.game_state_control_paths = ["player"]
         scene.game_state_watch_paths = ["weather"]
         scene.game_state_path_settings = {
             "player": GameStatePathSettings(label="Player", read_only=True)
@@ -158,14 +158,14 @@ class TestGetGameStatePathSettings:
         )
         assert out["path"] == "player"
         assert out["pinned"] is True
-        assert out["knob"] is True
+        assert out["control"] is True
         assert out["debug"] is False
         assert out["read_only"] is True
         assert out["settings"] == {"label": "Player", "read_only": True}
 
     @pytest.mark.asyncio
     async def test_read_only_is_inherited_from_a_pinned_container(self, scene):
-        scene.game_state_knob_paths = ["player"]
+        scene.game_state_control_paths = ["player"]
         scene.game_state_path_settings = {
             "player": GameStatePathSettings(read_only=True)
         }
@@ -179,7 +179,7 @@ class TestGetGameStatePathSettings:
 
 class TestPinGameStatePath:
     @pytest.mark.asyncio
-    async def test_pin_as_knob_with_settings(self, scene):
+    async def test_pin_as_control_with_settings(self, scene):
         with patch.object(type(scene), "emit_status", autospec=True) as emit_status:
             out = await run_node(
                 PinGameStatePath(),
@@ -189,13 +189,13 @@ class TestPinGameStatePath:
                     "settings": {"label": "Health", "minimum": 0, "maximum": 10},
                 },
             )
-        assert scene.game_state_knob_paths == ["player/health"]
+        assert scene.game_state_control_paths == ["player/health"]
         assert out["settings"] == {"label": "Health", "minimum": 0, "maximum": 10}
         emit_status.assert_called_once_with(scene)
 
     @pytest.mark.asyncio
     async def test_settings_merge_keeps_fields_not_given(self, scene):
-        scene.game_state_knob_paths = ["player/health"]
+        scene.game_state_control_paths = ["player/health"]
         scene.game_state_path_settings = {
             "player/health": GameStatePathSettings(label="Health", maximum=10)
         }
@@ -209,7 +209,7 @@ class TestPinGameStatePath:
 
     @pytest.mark.asyncio
     async def test_unpin_from_the_last_target_drops_settings(self, scene):
-        scene.game_state_knob_paths = ["player/health"]
+        scene.game_state_control_paths = ["player/health"]
         scene.game_state_watch_paths = ["player/health"]
         scene.game_state_path_settings = {
             "player/health": GameStatePathSettings(label="Health")
@@ -239,4 +239,4 @@ class TestPinGameStatePath:
                 inputs={"path": "score", "settings": {"minimum": 5, "maximum": 1}},
             )
         assert exc.value.input_name == "settings"
-        assert scene.game_state_knob_paths == []
+        assert scene.game_state_control_paths == []

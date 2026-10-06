@@ -223,4 +223,12 @@ def test_payload_carries_the_decision_model_defaults(app_config, active_theme):
     message = server_config.app_config_message(app_config)
 
     assert message["data"]["decision_model"]["model"] == "vendor/chosen-model"
-    assert message["data"]["decision_model_defaults"] == {"model": "typesafe/jev-1.13"}
+    assert message["data"]["decision_model_defaults"] == {
+        "provider": "openrouter",
+        "base_url": "",
+        "model": "typesafe/jev-1.13",
+        "timeout_seconds": 1.5,
+        "max_input_tokens": 64000,
+        "max_question_input_tokens": 32000,
+        "input_token_multiplier": 1.5,
+    }

@@ -21,14 +21,14 @@ class TestSceneHeaderConfig:
         config = Config()
         header = config.game.scene_header
         assert header.enabled is True
-        assert header.slot_a == ["history_stats"]
-        assert header.slot_b == ["summarizer"]
+        assert header.slot_a == ["history_stats", "active_characters"]
+        assert header.slot_b == ["summarizer", "writing_style"]
 
     def test_missing_section_gets_defaults(self):
         config = Config(**{"game": {"general": {"auto_save": False}}})
         assert config.game.general.auto_save is False
         assert config.game.scene_header.enabled is True
-        assert config.game.scene_header.slot_a == ["history_stats"]
+        assert config.game.scene_header.slot_a == ["history_stats", "active_characters"]
 
     def test_values_round_trip(self):
         config = Config(
@@ -107,13 +107,13 @@ class TestSetItemShown:
     def test_shows_a_missing_item_at_the_end(self):
         header = Config().game.scene_header
         header.set_item_shown("slot_a", "summarizer", True)
-        assert header.slot_a == ["history_stats", "summarizer"]
-        assert header.slot_b == ["summarizer"]
+        assert header.slot_a == ["history_stats", "active_characters", "summarizer"]
+        assert header.slot_b == ["summarizer", "writing_style"]
 
     def test_showing_a_shown_item_changes_nothing(self):
         header = Config().game.scene_header
         header.set_item_shown("slot_a", "history_stats", True)
-        assert header.slot_a == ["history_stats"]
+        assert header.slot_a == ["history_stats", "active_characters"]
 
     def test_hides_an_item_and_keeps_the_others_in_order(self):
         header = Config(
@@ -231,6 +231,6 @@ async def test_quick_setting_rejects_a_slot_value_that_is_not_an_edit(value):
             {"action": "set", "setting": "scene_header_slot_a", "value": value}
         )
 
-    assert config.game.scene_header.slot_a == ["history_stats"]
+    assert config.game.scene_header.slot_a == Config().game.scene_header.slot_a
     set_dirty.assert_not_awaited()
     assert handler.messages == []

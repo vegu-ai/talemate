@@ -564,7 +564,7 @@
   title: Debug Tools
   summary: 'Debug Tools prompt log: Active requests, Completed/Failed/Cancelled outcomes, grouped retries, Clear, Dump to file
     and reasoning overrides. Decisions use compact rows and report dialogs with passage cards, thresholds, technical/raw details
-    and Previous/Next; memory retrieval, pinned Vars watch paths and scene toolbar knobs include labels/order/read-only,
+    and Previous/Next; memory retrieval, pinned Vars watch paths and scene toolbar controls include labels/order/read-only,
     bounds/sliders/choices, slash paths and Game State Editor JSON editing.'
 - path: user-guide/howto/create-a-new-scene/create-empty-scene.md
   title: Create an empty scene

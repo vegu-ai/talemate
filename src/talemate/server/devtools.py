@@ -29,7 +29,7 @@ log = structlog.get_logger("talemate.server.devtools")
 # the reply action and status message after a target's paths change
 GAME_STATE_PIN_UPDATES: dict[GameStatePinTarget, tuple[str, str]] = {
     "debug": ("game_state_watch_paths_updated", "Game state watch paths updated"),
-    "knob": ("game_state_knob_paths_updated", "Game state knob paths updated"),
+    "control": ("game_state_control_paths_updated", "Game state control paths updated"),
 }
 
 
@@ -291,8 +291,8 @@ class DevToolsPlugin(Plugin):
     async def handle_set_game_state_watch_paths(self, data):
         await self._set_game_state_paths(data, target="debug")
 
-    async def handle_set_game_state_knob_paths(self, data):
-        await self._set_game_state_paths(data, target="knob")
+    async def handle_set_game_state_control_paths(self, data):
+        await self._set_game_state_paths(data, target="control")
 
     async def handle_set_game_state_path_target(self, data):
         scene = self.scene

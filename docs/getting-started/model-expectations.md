@@ -14,6 +14,8 @@ Check your model against these three points:
 
 The **Context Length** setting of a client is the only one of the three that Talemate can check itself. A new client starts at 16384 tokens. When a client's Context Length sits below 16384, the client settings editor shows a warning under the field; raise the setting if your model allows it.
 
+A bigger context is not better by itself. Talemate is made to work well with smaller context sizes: its summarization layers keep the story context compact, so 16k to 48k is usually enough. The [Setup Wizard](setup-wizard.md) says so when you add a client, and when a client's Context Length is above 65536 the client settings editor shows a short note under the field. A larger context still works; set one if your model and budget allow it.
+
 ## Known good examples
 
 These are examples, updated with each release. They are never used as a check.
@@ -46,4 +48,4 @@ The bundled [Model Testing Harness](/talemate/user-guide/clients/model-testing-h
 ## Where this shows in the app
 
 - The [Setup Wizard](setup-wizard.md) shows this bar on its first step, before you pick a provider.
-- The client editor, in the wizard and on **Settings → Connections → Clients**, links to this page. The Clients page editor also shows the Context Length setting and warns when it is below 16384.
+- The client editor, in the wizard and on **Settings → Connections → Clients**, links to this page. The Clients page editor also shows the Context Length setting, warns when it is below 16384 and notes when it is above 65536 that a smaller context is usually enough.

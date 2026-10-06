@@ -58,7 +58,10 @@ question or its threshold: see [Decision policy overrides](../prompts/template-o
 model all share this one setup.
 
 **Model** is the model name your provider expects. For OpenRouter the default is
-`typesafe/jev-1.13`. For a SystemOne-compatible server, enter the name that server
+`typesafe/jev-1.13`, and the field lists the decision models OpenRouter offers, with their
+names, so you can pick one; you can still type any model name. If Talemate could not load
+that list, for example without an internet connection, the field says so and takes a typed
+name. For a SystemOne-compatible server, enter the name that server
 accepts. Switching providers keeps the model name you entered, so check it before you
 save. Talemate reads nothing into the name: it sends the value you enter and checks the
 answers that come back.
@@ -140,6 +143,15 @@ decision_model:
 ```
 
 Setting either limit to `0` leaves that limit undeclared.
+
+### Restore Defaults
+
+**:material-backup-restore: Restore Defaults** at the bottom of the page puts the provider,
+server address, model, time limit, both input limits and the size estimate margin back to
+their defaults. It keeps **Use a decision model** as it is and leaves your API keys alone,
+since the OpenRouter key is shared with the OpenRouter client. Like any other edit on the
+page, the change applies when you press **Save**, and **Discard** takes it back. The button
+is greyed out while the settings already hold the defaults.
 
 ## Using a SystemOne-compatible server
 

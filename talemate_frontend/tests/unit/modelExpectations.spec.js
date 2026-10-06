@@ -11,6 +11,9 @@ import {
     MODEL_EXPECTATIONS_POINTER,
     STRUGGLES_WITHOUT_THE_BAR,
     WORKS_WITHOUT_THE_BAR,
+    SMALL_CONTEXT_NOTE,
+    CONTEXT_LENGTH_HINT_ABOVE,
+    contextLengthHint,
     contextLengthWarning,
     formatKnownGoodModels,
 } from '@/constants/modelExpectations';
@@ -42,6 +45,22 @@ describe('context length warning', () => {
         expect(panel).not.toMatch(/contextLengthWarning|model_name|modelName/);
         expect(wizard).not.toMatch(/contextLengthWarning|KNOWN_GOOD_MODELS/);
         expect(clientEditor).not.toMatch(/KNOWN_GOOD_MODELS/);
+    });
+});
+
+describe('large context length hint', () => {
+    it.each([16384, 49152, 65536, undefined, null, '', 'abc'])('is silent at %s', (value) => {
+        expect(contextLengthHint(value)).toBeNull();
+    });
+    it.each([65537, 131072, '200000'])('says a smaller context is usually enough above 64k for %s', (value) => {
+        const text = contextLengthHint(value);
+        expect(text).toContain(SMALL_CONTEXT_NOTE);
+        expect(text).toMatch(/usually not needed/);
+    });
+    it('names the 16k to 48k range and the summarization layers', () => {
+        expect(CONTEXT_LENGTH_HINT_ABOVE).toBe(65536);
+        expect(SMALL_CONTEXT_NOTE).toContain('16k to 48k');
+        expect(SMALL_CONTEXT_NOTE).toContain('summarization layers');
     });
 });
 
@@ -81,6 +100,10 @@ describe('the docs page repeats the constant', () => {
         expect(docsPage).toContain(WORKS_WITHOUT_THE_BAR);
         expect(docsPage).toContain(STRUGGLES_WITHOUT_THE_BAR);
     });
+    it('repeats the smaller context note and its threshold', () => {
+        expect(docsPage).toContain(SMALL_CONTEXT_NOTE);
+        expect(docsPage).toContain(String(CONTEXT_LENGTH_HINT_ABOVE));
+    });
 });
 
 describe('where the guidance shows', () => {
@@ -89,6 +112,8 @@ describe('where the guidance shows', () => {
         const step2 = wizard.slice(wizard.indexOf('<!-- Step 2'), wizard.indexOf('<!-- Step 3'));
         expect(step1).toMatch(/<ModelExpectationsPanel \/>/);
         expect(step2).toMatch(/<ModelExpectationsPanel compact/);
+        expect(step2).toContain('{{ smallContextNote }}');
+        expect(wizard).toContain('smallContextNote: SMALL_CONTEXT_NOTE');
     });
     it('the client editor warns from the context length in the full field set only and links the guidance', () => {
         const simple = clientEditor.slice(clientEditor.indexOf('<!-- SIMPLE MODE'), clientEditor.indexOf('<!-- FULL MODE'));
@@ -96,6 +121,8 @@ describe('where the guidance shows', () => {
         // the wizard draft only spreads the type defaults, which never sit below the floor
         expect(simple).not.toContain('contextLengthWarning');
         expect(full).toMatch(/<v-col v-if="contextLengthWarning" cols="12"/);
+        expect(full).toMatch(/<v-col v-else-if="contextLengthHint" cols="12"/);
+        expect(simple).not.toContain('contextLengthHint');
         expect(clientEditor).toMatch(/<ModelExpectationsPanel compact/);
     });
 });

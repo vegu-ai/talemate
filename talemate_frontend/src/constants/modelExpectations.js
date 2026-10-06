@@ -5,6 +5,8 @@ export const MODEL_EXPECTATIONS_DOCS_URL = 'https://vegu-ai.github.io/talemate/g
 
 export const CONTEXT_LENGTH_FLOOR = 16384;
 export const CONTEXT_LENGTH_RECOMMENDED_PERSPECTIVES = 32768;
+export const CONTEXT_LENGTH_USUALLY_ENOUGH = 49152;
+export const CONTEXT_LENGTH_HINT_ABOVE = 65536;
 
 const thousands = (tokens) => `${Math.round(tokens / 1024)}k`;
 
@@ -13,6 +15,8 @@ export const MODEL_BAR = [
     'Reliable JSON and tool-call output',
     `A usable context of ${thousands(CONTEXT_LENGTH_FLOOR)} tokens or more (${thousands(CONTEXT_LENGTH_RECOMMENDED_PERSPECTIVES)} recommended for Character perspectives)`,
 ];
+
+export const SMALL_CONTEXT_NOTE = `Talemate is made to work well with smaller context sizes: its summarization layers keep the story context compact, so ${thousands(CONTEXT_LENGTH_FLOOR)} to ${thousands(CONTEXT_LENGTH_USUALLY_ENOUGH)} is usually enough.`;
 
 export const MODEL_EXPECTATIONS_INTRO = 'Talemate is built for current reasoning and agentic models: function calling, long context and reliable structured output. Check your model against this bar:';
 export const MODEL_EXPECTATIONS_POINTER = `Talemate expects a current reasoning model with reliable structured output and ${thousands(CONTEXT_LENGTH_FLOOR)} or more context.`;
@@ -52,4 +56,10 @@ export function contextLengthWarning(maxTokenLength) {
     if (!Number.isFinite(value) || value <= 0 || value >= CONTEXT_LENGTH_FLOOR) return null;
     return `Context Length is ${value} tokens. Talemate expects ${CONTEXT_LENGTH_FLOOR} or more. `
         + 'Raise it in the client settings if your model allows it; with less, expect failures in the director, planning and knowledge features.';
+}
+
+export function contextLengthHint(maxTokenLength) {
+    const value = Number(maxTokenLength);
+    if (!Number.isFinite(value) || value <= CONTEXT_LENGTH_HINT_ABOVE) return null;
+    return `${SMALL_CONTEXT_NOTE} A larger context works, but is usually not needed.`;
 }

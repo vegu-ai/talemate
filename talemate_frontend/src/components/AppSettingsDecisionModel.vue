@@ -1,95 +1,109 @@
 <template>
-    <v-row>
-        <v-col cols="12" md="9">
-            <div v-if="status?.state === 'ready'" class="d-flex align-center ga-2 mb-4 text-body-medium" data-testid="decision-model-configured">
-                <v-icon color="success" size="12">mdi-checkbox-blank-circle</v-icon>
-                Configured
-                <span class="text-medium-emphasis">· {{ providerLabel }}</span>
-            </div>
-            <v-alert v-else :type="stateAlert.type" variant="tonal" density="compact" class="mb-4" data-testid="decision-model-state">
-                <div class="text-body-medium">{{ stateAlert.text }}</div>
-            </v-alert>
+    <div>
+        <div v-if="status?.state === 'ready'" class="d-flex align-center ga-2 mb-4 text-body-medium" data-testid="decision-model-configured">
+            <v-icon color="success" size="12">mdi-checkbox-blank-circle</v-icon>
+            Configured
+            <span class="text-medium-emphasis">· {{ providerLabel }}</span>
+        </div>
+        <v-alert v-else :type="stateAlert.type" variant="tonal" density="compact" class="mb-4" data-testid="decision-model-state">
+            <div class="text-body-medium">{{ stateAlert.text }}</div>
+        </v-alert>
 
-            <v-alert v-if="failureText" type="error" variant="tonal" density="compact" class="mb-4">
-                <div class="text-body-medium">{{ failureText }}</div>
-            </v-alert>
+        <v-alert v-if="failureText" type="error" variant="tonal" density="compact" class="mb-4">
+            <div class="text-body-medium">{{ failureText }}</div>
+        </v-alert>
 
-            <div data-setting-anchor="decision_model_enabled" class="mb-6">
-                <v-switch color="primary" density="compact" hide-details
-                    v-model="settings.enabled" label="Use a decision model"></v-switch>
-                <p class="text-body-small text-medium-emphasis mt-1">
-                    While it is on, the text a feature checks is sent to the provider below.
-                    World State and Memory use it right away; Editor checks have their own switch.
-                </p>
-            </div>
+        <div data-setting-anchor="decision_model_enabled" class="mb-6">
+            <v-switch color="primary" density="compact" hide-details
+                v-model="settings.enabled" label="Use a decision model"></v-switch>
+            <p class="text-body-small text-medium-emphasis mt-1">
+                While it is on, the text a feature checks is sent to the provider below.
+                World State and Memory use it right away; Editor checks have their own switch.
+            </p>
+        </div>
 
-            <div data-setting-anchor="decision_model_provider" class="mb-4">
+        <v-row>
+            <v-col cols="12" md="4" data-setting-anchor="decision_model_provider">
                 <v-select v-model="settings.provider" :items="providers" label="Provider" density="compact"
                     :hint="providerHint" persistent-hint></v-select>
-            </div>
-
-            <div v-if="isSystemOne" data-setting-anchor="decision_model_base_url" class="mb-4">
+            </v-col>
+            <v-col cols="12" md="8" data-setting-anchor="decision_model_model">
+                <v-text-field v-if="isSystemOne" v-model="settings.model" label="Model" density="compact"
+                    :rules="[modelRule]" hide-details="auto" :hint="modelHint" persistent-hint></v-text-field>
+                <v-combobox v-else v-model="settings.model" :items="openRouterModelIds" label="Model" density="compact"
+                    :loading="decisionModels === null" :rules="[modelRule]" hide-details="auto"
+                    :hint="modelHint" persistent-hint>
+                    <template v-slot:item="{ props: itemProps, internalItem }">
+                        <v-list-item v-bind="itemProps" :subtitle="openRouterModelNames[internalItem.raw]"></v-list-item>
+                    </template>
+                </v-combobox>
+            </v-col>
+            <v-col v-if="isSystemOne" cols="12" data-setting-anchor="decision_model_base_url">
                 <v-text-field v-model="settings.base_url" label="Server address" density="compact"
                     placeholder="https://api.typesafe.ai" :rules="[baseUrlRule]" hide-details="auto"
                     hint="For example https://api.typesafe.ai, or http://localhost:8009 for a server on this machine."
                     persistent-hint></v-text-field>
-            </div>
+            </v-col>
+        </v-row>
 
-            <div data-setting-anchor="decision_model_model" class="mb-4">
-                <v-text-field v-model="settings.model" label="Model" density="compact"
-                    :rules="[modelRule]" hide-details="auto" :hint="modelHint" persistent-hint></v-text-field>
-            </div>
+        <div data-setting-anchor="decision_model_credential" class="mt-4">
+            <ConfigWidgetUnifiedApiKey :config-path="credential.path"
+                :title="credential.title" :description="credentialDescription"
+                :required="!isSystemOne"
+                :app-config="config" />
+        </div>
 
-            <div data-setting-anchor="decision_model_credential">
-                <ConfigWidgetUnifiedApiKey :config-path="credential.path"
-                    :title="credential.title" :description="credentialDescription"
-                    :required="!isSystemOne"
-                    :app-config="config" />
-            </div>
-
-            <v-expansion-panels v-model="advancedPanel" data-setting-anchor="decision_model_advanced">
-                <v-expansion-panel value="advanced" eager>
-                    <v-expansion-panel-title>
-                        <v-icon class="mr-2" color="primary" size="small">mdi-cog-outline</v-icon>
-                        Advanced
-                        <span class="text-medium-emphasis text-body-small ml-3">Time limit and input limits</span>
-                    </v-expansion-panel-title>
-                    <v-expansion-panel-text>
-                        <div data-setting-anchor="decision_model_timeout" class="mb-4">
-                            <v-text-field v-model.number="settings.timeout_seconds" label="Time limit (seconds)"
-                                type="number" min="0.1" step="0.1" density="compact"
+        <v-expansion-panels v-model="advancedPanel" data-setting-anchor="decision_model_advanced">
+            <v-expansion-panel value="advanced" eager>
+                <v-expansion-panel-title>
+                    <v-icon class="mr-2" color="primary" size="small">mdi-cog-outline</v-icon>
+                    Advanced
+                    <span class="text-medium-emphasis text-body-small ml-3">Time limit and input limits</span>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                    <v-row density="compact">
+                        <v-col cols="12" sm="6" md="3" data-setting-anchor="decision_model_timeout">
+                            <v-number-input v-model="settings.timeout_seconds" label="Time limit (seconds)"
+                                :min="0.1" :step="0.1" :precision="null" control-variant="stacked" density="compact"
                                 :rules="[timeoutRule]" hide-details="auto" persistent-hint
-                                hint="How long to wait for an answer. Without one in time, the feature carries on as if the decision model were off."></v-text-field>
-                        </div>
-                        <v-row density="compact">
-                            <v-col cols="12" sm="6" data-setting-anchor="decision_model_max_input_tokens">
-                                <v-text-field v-model.number="settings.max_input_tokens" label="Input limit (tokens)"
-                                    type="number" min="0" step="1000" density="compact"
-                                    :rules="[limitRule]" hide-details="auto" persistent-hint
-                                    hint="The largest request to send. 0 means no limit."></v-text-field>
-                            </v-col>
-                            <v-col cols="12" sm="6" data-setting-anchor="decision_model_max_question_input_tokens">
-                                <v-text-field v-model.number="settings.max_question_input_tokens" label="Input limit per question (tokens)"
-                                    type="number" min="0" step="1000" density="compact"
-                                    :rules="[limitRule]" hide-details="auto" persistent-hint
-                                    hint="The largest single question with its text. 0 means no limit."></v-text-field>
-                            </v-col>
-                        </v-row>
-                        <div data-setting-anchor="decision_model_input_token_multiplier" class="mt-4">
-                            <v-text-field v-model.number="settings.input_token_multiplier" label="Size estimate margin"
-                                type="number" min="1" step="0.1" density="compact"
+                                hint="Without an answer in time, the feature carries on without it."></v-number-input>
+                        </v-col>
+                        <v-col cols="12" sm="6" md="3" data-setting-anchor="decision_model_max_input_tokens">
+                            <TokenBudgetInput v-model="settings.max_input_tokens" label="Input limit (tokens)"
+                                :step="1000" :precision="null" control-variant="stacked" density="compact"
+                                :rules="[limitRule]" hide-details="auto" persistent-hint
+                                hint="The largest request. 0 means no limit." />
+                        </v-col>
+                        <v-col cols="12" sm="6" md="3" data-setting-anchor="decision_model_max_question_input_tokens">
+                            <TokenBudgetInput v-model="settings.max_question_input_tokens" label="Input limit per question (tokens)"
+                                :step="1000" :precision="null" control-variant="stacked" density="compact"
+                                :rules="[limitRule]" hide-details="auto" persistent-hint
+                                hint="The largest single question. 0 means no limit." />
+                        </v-col>
+                        <v-col cols="12" sm="6" md="3" data-setting-anchor="decision_model_input_token_multiplier">
+                            <v-number-input v-model="settings.input_token_multiplier" label="Size estimate margin"
+                                :min="1" :step="0.1" :precision="null" control-variant="stacked" density="compact"
                                 :rules="[multiplierRule]" hide-details="auto" persistent-hint
-                                hint="Talemate estimates the size of a request before it sends it. A higher margin stops more oversize requests early, and some that would have fit."></v-text-field>
-                        </div>
-                    </v-expansion-panel-text>
-                </v-expansion-panel>
-            </v-expansion-panels>
-        </v-col>
-    </v-row>
+                                hint="Multiplies the size estimate. Higher stops more oversize requests early."></v-number-input>
+                        </v-col>
+                    </v-row>
+                </v-expansion-panel-text>
+            </v-expansion-panel>
+        </v-expansion-panels>
+
+        <div class="d-flex align-center flex-wrap ga-2 mt-4" data-setting-anchor="decision_model_restore_defaults">
+            <v-btn color="warning" variant="text" prepend-icon="mdi-backup-restore"
+                :disabled="atDefaults" @click="restoreDefaults">Restore Defaults</v-btn>
+            <span class="text-body-small text-medium-emphasis">
+                Resets the provider, model and advanced settings. The switch and the API keys stay; Save applies the change.
+            </span>
+        </div>
+    </div>
 </template>
 
 <script>
 import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
+import TokenBudgetInput from './TokenBudgetInput.vue';
 import { PROVIDER_NAMES, lastFailureText, missingText, providerName } from '@/utils/decisionModelText';
 
 const STATE_ALERTS = {
@@ -116,7 +130,9 @@ export default {
     name: 'AppSettingsDecisionModel',
     components: {
         ConfigWidgetUnifiedApiKey,
+        TokenBudgetInput,
     },
+    inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler'],
     props: {
         config: Object,
         status: Object,
@@ -125,6 +141,8 @@ export default {
         return {
             providers: Object.entries(PROVIDER_NAMES).map(([value, title]) => ({ title, value })),
             advancedPanel: null,
+            // null while OpenRouter's list is on its way, empty when it could not be loaded
+            decisionModels: null,
         };
     },
     computed: {
@@ -142,10 +160,30 @@ export default {
                 ? 'A compatible server you run yourself, or a hosted one such as TypeSafe.'
                 : 'Uses your OpenRouter account.';
         },
+        defaults() {
+            return this.config.decision_model_defaults;
+        },
+        atDefaults() {
+            return Object.entries(this.defaults).every(([key, value]) => this.settings[key] === value);
+        },
+        openRouterModelIds() {
+            return (this.decisionModels || []).map((model) => model.id);
+        },
+        openRouterModelNames() {
+            return Object.fromEntries((this.decisionModels || []).map((model) => [model.id, model.name]));
+        },
         modelHint() {
-            return this.isSystemOne
-                ? 'The model name your server expects.'
-                : `The model name on OpenRouter. The default is ${this.config.decision_model_defaults.model}.`;
+            if (this.isSystemOne) {
+                return 'The model name your server expects.';
+            }
+            const fallback = `The default is ${this.defaults.model}.`;
+            if (this.decisionModels === null) {
+                return `The model name on OpenRouter. ${fallback}`;
+            }
+            if (this.decisionModels.length === 0) {
+                return `Could not load OpenRouter's decision models; type the model name. ${fallback}`;
+            }
+            return `Pick one of OpenRouter's decision models, or type a name. ${fallback}`;
         },
         stateAlert() {
             const alert = STATE_ALERTS[this.status?.state] || STATE_ALERTS.unknown;
@@ -184,6 +222,24 @@ export default {
         },
     },
     methods: {
+        restoreDefaults() {
+            Object.assign(this.settings, this.defaults);
+        },
+        requestDecisionModels() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'config',
+                action: 'request_decision_models',
+                data: {},
+            }));
+        },
+        handleMessage(message) {
+            if (message.type === 'config' && message.action === 'decision_models') {
+                this.decisionModels = message.data.models;
+            } else if (message.type === 'app_config' && !this.decisionModels?.length) {
+                // a reconnect or a save; the reply to the first request may never have arrived
+                this.requestDecisionModels();
+            }
+        },
         validBaseUrl(value) {
             if (!(value || '').trim()) {
                 return true;
@@ -248,6 +304,13 @@ export default {
             }
             return { valid: true };
         },
+    },
+    created() {
+        this.registerMessageHandler(this.handleMessage);
+        this.requestDecisionModels();
+    },
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
     },
 }
 </script>

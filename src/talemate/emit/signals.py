@@ -33,6 +33,7 @@ AgentStatus = signal("agent_status")
 RequestAgentStatus = signal("request_agent_status")
 PromptSent = signal("prompt_sent")
 AgentActionsObserved = signal("agent_actions_observed")
+DecisionModelsChanged = signal("decision_models_changed")
 MemoryRequest = signal("memory_request")
 
 RemoveMessage = signal("remove_message")
@@ -115,6 +116,7 @@ handlers = {
     "message_asset_update": MessageAssetUpdate,
     "prompt_sent": PromptSent,
     "agent_actions_observed": AgentActionsObserved,
+    "decision_models_changed": DecisionModelsChanged,
     "audio_queue": AudioQueue,
     "status": StatusMessage,
     "image_generated": ImageGenerated,

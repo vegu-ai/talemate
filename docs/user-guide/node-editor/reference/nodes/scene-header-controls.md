@@ -16,8 +16,8 @@ _2 nodes._
 
 `state/GetGameStatePathSettings`
 
-How a game state path is pinned: a control in the scene header (knob),
-listed in Debug Tools (debug), and the control's settings.
+How a game state path is pinned: as a control in the scene header
+(control), listed in Debug Tools (debug), and the control's settings.
 
 **Inputs**
 
@@ -31,7 +31,7 @@ listed in Debug Tools (debug), and the control's settings.
 | --- | --- | --- |
 | `path` | `str` | the normalized path |
 | `pinned` | `bool` | True when the path is shown in the header or in Debug Tools |
-| `knob` | `bool` | True when the path is a control in the scene header |
+| `control` | `bool` | True when the path is a control in the scene header |
 | `debug` | `bool` | True when the path is listed in Debug Tools |
 | `read_only` | `bool` | True when the path or a pinned container above it is read only |
 | `settings` | `dict` | label, description, minimum, maximum, step, slider, choices, read_only and order, as set |
@@ -46,7 +46,7 @@ listed in Debug Tools (debug), and the control's settings.
 
 `state/PinGameStatePath`
 
-Pin or unpin a game state path: `knob` shows it as a control in the scene
+Pin or unpin a game state path: `control` shows it as a control in the scene
 header, `debug` lists it in Debug Tools. `settings` changes only the
 fields given. Unpinning from both targets removes the settings.
 
@@ -72,5 +72,5 @@ fields given. Unpinning from both targets removes the settings.
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `path` | `str` | `""` | path |
-| `target` | `str` | `"knob"` | Where the path is pinned. Choices: `knob`, `debug`. |
+| `target` | `str` | `"control"` | Where the path is pinned. Choices: `control`, `debug`. |
 | `enabled` | `bool` | `True` | Pin (true) or unpin (false) |

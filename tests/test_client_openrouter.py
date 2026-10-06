@@ -58,7 +58,9 @@ def fetch_state(monkeypatch):
     monkeypatch.setattr(orc, "AVAILABLE_MODELS", [])
     monkeypatch.setattr(orc, "IMAGE_MODELS", {})
     monkeypatch.setattr(orc, "AVAILABLE_PROVIDERS", [])
+    monkeypatch.setattr(orc, "DECISION_MODELS", [])
     monkeypatch.setattr(orc, "MODELS_FETCH", orc.ListFetch())
+    monkeypatch.setattr(orc, "DECISION_MODELS_FETCH", orc.ListFetch())
     monkeypatch.setattr(orc, "IMAGE_MODELS_FETCH", orc.ListFetch())
     monkeypatch.setattr(orc, "PROVIDERS_FETCH", orc.ListFetch())
     monkeypatch.setattr(orc, "_lists_key_digest", None)
@@ -83,6 +85,20 @@ def http(monkeypatch, fetch_state):
 
 MODELS_PAYLOAD = {"data": [{"id": "z/model-b"}, {"id": "a/model-a"}, {"id": None}]}
 PROVIDERS_PAYLOAD = {"data": [{"name": "Beta"}, {"name": "Alpha"}, {"name": None}]}
+
+# shape taken from the live GET /api/v1/models?output_modalities=decisions (2026-10-06)
+DECISION_MODELS_PAYLOAD = {
+    "data": [
+        {
+            "id": "typesafe/jev-1.13",
+            "name": "TypeSafe: Jev 1.13",
+            "architecture": {"output_modalities": ["decisions"]},
+        },
+        {"id": "liquid/d1", "name": "LiquidAI: d1"},
+        {"id": "respan/span-01"},
+        {"id": None, "name": "Nameless"},
+    ]
+}
 
 # shapes taken from the live GET /api/v1/images/models (2026-09-22)
 IMAGE_MODELS_PAYLOAD = {
@@ -131,6 +147,8 @@ IMAGE_MODELS_PAYLOAD = {
 
 
 def respond_by_url(url):
+    if url == orc.DECISION_MODELS_URL:
+        return FakeResponse(200, DECISION_MODELS_PAYLOAD)
     if url == orc.IMAGE_MODELS_URL:
         return FakeResponse(200, IMAGE_MODELS_PAYLOAD)
     if url == orc.PROVIDERS_URL:
@@ -358,7 +376,12 @@ async def test_config_save_with_the_same_key_keeps_the_fetched_lists(http):
 
     await orc.on_config_saved(saved_config("sk-or-a"))
     assert sorted(http.calls) == sorted(
-        [orc.MODELS_URL, orc.IMAGE_MODELS_URL, orc.PROVIDERS_URL]
+        [
+            orc.MODELS_URL,
+            orc.DECISION_MODELS_URL,
+            orc.IMAGE_MODELS_URL,
+            orc.PROVIDERS_URL,
+        ]
     )
 
     http.calls.clear()
@@ -415,3 +438,82 @@ async def test_talemate_start_records_the_key_it_fetched_for(http, monkeypatch):
 
     assert started == ["sk-or-a"]
     assert orc._lists_key_digest == orc._key_digest("sk-or-a")
+
+
+@pytest.mark.asyncio
+async def test_decision_models_come_from_the_decisions_modality_list(http):
+    http.responder = respond_by_url
+
+    models = await orc.fetch_available_decision_models()
+
+    assert http.calls == [
+        "https://openrouter.ai/api/v1/models?output_modalities=decisions"
+    ]
+    assert [(model.id, model.name) for model in models] == [
+        ("liquid/d1", "LiquidAI: d1"),
+        ("respan/span-01", ""),
+        ("typesafe/jev-1.13", "TypeSafe: Jev 1.13"),
+    ]
+    assert orc.DECISION_MODELS_FETCH.fetched is True
+    # the settings page hears about it; agent settings do not carry this list
+    assert http.emits == ["decision_models_changed"]
+
+
+@pytest.mark.asyncio
+async def test_a_fetched_decision_model_list_is_not_fetched_again(http):
+    http.responder = respond_by_url
+    await orc.fetch_available_decision_models()
+    http.calls.clear()
+
+    models = await orc.fetch_available_decision_models()
+
+    assert http.calls == []
+    assert [model.id for model in models][-1] == "typesafe/jev-1.13"
+
+
+@pytest.mark.asyncio
+async def test_a_failed_decision_model_fetch_is_retried_on_config_save(http):
+    http.responder = lambda url: (
+        FakeResponse(503) if url == orc.DECISION_MODELS_URL else respond_by_url(url)
+    )
+    assert await orc.fetch_available_decision_models() == []
+    assert orc.DECISION_MODELS_FETCH.fetched is False
+
+    http.responder = respond_by_url
+    orc.DECISION_MODELS_FETCH.last_attempt = None
+    await orc.on_config_saved(saved_config(None))
+
+    assert "typesafe/jev-1.13" in [model.id for model in orc.DECISION_MODELS]
+
+
+@pytest.mark.asyncio
+async def test_a_malformed_decision_model_entry_is_skipped(http):
+    payload = {
+        "data": [
+            *DECISION_MODELS_PAYLOAD["data"],
+            {"id": "a/b", "name": {"en": "x"}},
+            None,
+            {"id": 123},
+        ]
+    }
+    http.responder = lambda url: FakeResponse(200, payload)
+
+    models = await orc.fetch_available_decision_models()
+
+    assert [model.id for model in models] == [
+        "liquid/d1",
+        "respan/span-01",
+        "typesafe/jev-1.13",
+    ]
+    assert orc.DECISION_MODELS_FETCH.fetched is True
+
+
+@pytest.mark.asyncio
+async def test_an_unchanged_decision_model_list_is_not_announced_again(http):
+    http.responder = respond_by_url
+    await orc.fetch_available_decision_models()
+    orc.DECISION_MODELS_FETCH.reset()
+
+    await orc.fetch_available_decision_models()
+
+    assert http.emits == ["decision_models_changed"]

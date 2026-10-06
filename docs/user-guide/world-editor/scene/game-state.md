@@ -53,7 +53,7 @@ Adding a new Debug Vars target automatically opens the Debug Tools drawer to its
 
 Edit a path's optional label directly in its table row; clear the field to return to the path-only display. Use the two checkboxes beside a pinned path to change where it appears. Turning off both **Debug Vars** and **Scene toolbar** removes the path and its settings from the table.
 
-![Game state controls pinned above the scene tools](/talemate/img/0.40.0/gamestate-knob-toolbar.png)
+![Game state controls pinned above the scene tools](/talemate/img/0.40.0/gamestate-controls-toolbar.png)
 
 ### Control Settings
 

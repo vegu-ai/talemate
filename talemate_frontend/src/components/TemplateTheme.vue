@@ -69,6 +69,17 @@
             <div v-if="!template.uid" class="text-body-small text-muted">The template has to be created before its theme can be applied.</div>
             <div v-else class="text-body-small text-muted">Repaints the app with these colors.</div>
 
+            <div class="mt-4">
+                <AskAgent
+                    agent="help"
+                    label="Ask help agent to set up a theme"
+                    :prompt="themePrompt"
+                    :disabled="!template.uid"
+                />
+            </div>
+            <div v-if="!template.uid" class="text-body-small text-muted">The template has to be created before the help agent can work on it.</div>
+            <div v-else class="text-body-small text-muted">Opens a help chat that asks what look you want before it changes anything.</div>
+
             <v-btn
                 rounded="sm"
                 prepend-icon="mdi-backup-restore"
@@ -225,6 +236,8 @@ import { CODE_EDITOR_THEMES } from '@/utils/codeEditorTheme';
 import { applyThemeTemplateMessage } from '@/utils/themePicker';
 import TemplateThemePreview from './TemplateThemePreview.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import AskAgent from './AskAgent.vue';
+import { buildThemePrompt } from '@/utils/themePrompt';
 import {
     APPEARANCE_STYLE_FLAGS,
     THEME_COLOR_GROUPS,
@@ -239,6 +252,7 @@ export default {
     components: {
         TemplateThemePreview,
         ConfirmActionPrompt,
+        AskAgent,
     },
     props: {
         immutableTemplate: {
@@ -268,6 +282,10 @@ export default {
     computed: {
         locked() {
             return !!(this.template && this.template.locked);
+        },
+
+        themePrompt() {
+            return buildThemePrompt(this.template);
         },
 
         resetChoices() {

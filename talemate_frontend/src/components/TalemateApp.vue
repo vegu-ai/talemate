@@ -338,7 +338,7 @@
                         @toggle-auto-advance="togglePlaythroughAutoAdvance"
                         @exit="stopPlaythrough" />
                       <template v-else>
-                      <GameStateKnobs :scene="scene" :disabled="busy || !ready" />
+                      <GameStateControls :scene="scene" :disabled="busy || !ready" />
                       <SceneTools 
                         @open-world-state-manager="onOpenWorldStateManager"
                         @open-agent-messages="onOpenAgentMessages"
@@ -512,7 +512,7 @@ import AIAgent from './AIAgent.vue';
 import AgentActivityBar from './AgentActivityBar.vue';
 import AgentActionOverrides from './AgentActionOverrides.vue';
 import SceneLanding from './SceneLanding.vue';
-import GameStateKnobs from './GameStateKnobs.vue';
+import GameStateControls from './GameStateControls.vue';
 import SceneHeader from './SceneHeader.vue';
 import SceneTools from './SceneTools.vue';
 import SceneSaveDialog from './SceneSaveDialog.vue';
@@ -576,7 +576,7 @@ export default {
     AgentActivityBar,
     AgentActionOverrides,
     SceneLanding,
-    GameStateKnobs,
+    GameStateControls,
     SceneHeader,
     SceneTools,
     SceneSaveDialog,

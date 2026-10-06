@@ -14,7 +14,7 @@ const manager = readSource(fileURLToPath(new URL(
 const input = readSource(fileURLToPath(new URL(
     "../../src/components/GameStateValueInput.vue", import.meta.url)));
 const toolbar = readSource(fileURLToPath(new URL(
-    "../../src/components/GameStateKnobs.vue", import.meta.url)));
+    "../../src/components/GameStateControls.vue", import.meta.url)));
 const editor = readSource(fileURLToPath(new URL(
     "../../src/components/GameState.vue", import.meta.url)));
 const debug = readSource(fileURLToPath(new URL(
@@ -166,9 +166,9 @@ describe("pin target manager", () => {
         const host = {
             selectedPath: "player/health",
             selectedLabel: "  Hit points  ",
-            selectedTargets: ["debug", "knob"],
+            selectedTargets: ["debug", "control"],
             watchedPaths: [],
-            knobPaths: ["quest/active"],
+            controlPaths: ["quest/active"],
             $emit: (...args) => emitted.push(args),
         };
 
@@ -181,7 +181,7 @@ describe("pin target manager", () => {
             }],
             ["debug-path-added", "player/health"],
             ["set-target", {
-                path: "player/health", target: "knob", enabled: true,
+                path: "player/health", target: "control", enabled: true,
                 settings: { label: "Hit points" },
             }],
         ]);
@@ -195,16 +195,16 @@ describe("pin target manager", () => {
         const host = {
             selectedPath: "player/health",
             selectedLabel: "   ",
-            selectedTargets: ["knob"],
+            selectedTargets: ["control"],
             watchedPaths: [],
-            knobPaths: [],
+            controlPaths: [],
             $emit: emit,
         };
 
         addPath.call(host);
 
         expect(emit).toHaveBeenCalledWith("set-target", {
-            path: "player/health", target: "knob", enabled: true,
+            path: "player/health", target: "control", enabled: true,
         });
     });
 
@@ -213,21 +213,21 @@ describe("pin target manager", () => {
         const emit = vi.fn();
 
         setTarget.call({ $emit: emit }, "player/health", "debug", false);
-        setTarget.call({ $emit: emit }, "player/health", "knob", false);
+        setTarget.call({ $emit: emit }, "player/health", "control", false);
 
         expect(emit.mock.calls).toEqual([
             ["set-target", {
                 path: "player/health", target: "debug", enabled: false,
             }],
             ["set-target", {
-                path: "player/health", target: "knob", enabled: false,
+                path: "player/health", target: "control", enabled: false,
             }],
         ]);
     });
 
     it("presents both target chips and sends path-scoped changes", () => {
         expect(manager).toContain('<v-chip value="debug"');
-        expect(manager).toContain('<v-chip value="knob"');
+        expect(manager).toContain('<v-chip value="control"');
         expect(editor).toContain("action: 'set_game_state_path_target'");
     });
 
@@ -264,7 +264,7 @@ describe("pin target manager", () => {
 
         onTargetChanged.call(host, {
             path: "player/health",
-            target: "knob",
+            target: "control",
             enabled: true,
             settings: { label: "Hit points" },
         });
@@ -278,7 +278,7 @@ describe("pin target manager", () => {
                 type: "devtools",
                 action: "set_game_state_path_target",
                 path: "player/health",
-                target: "knob",
+                target: "control",
                 enabled: true,
                 settings: { label: "Hit points" },
             },
@@ -293,7 +293,7 @@ describe("pin target manager", () => {
 });
 
 describe("shared value controls", () => {
-    it("renders the same primitive editors for debug vars and scene knobs", () => {
+    it("renders the same primitive editors for debug vars and scene controls", () => {
         expect(input).toContain("typeof value === 'string'");
         expect(input).toContain("typeof value === 'number'");
         expect(input).toContain("typeof value === 'boolean'");
@@ -392,8 +392,8 @@ describe("shared value controls", () => {
         expect(emit).toHaveBeenCalledWith("update-value", 12);
     });
 
-    it("submits knob edits through the path-scoped protocol", () => {
-        const updateValueAtPath = lift(toolbar, "updateValueAtPath", "GameStateKnobs.vue");
+    it("submits control edits through the path-scoped protocol", () => {
+        const updateValueAtPath = lift(toolbar, "updateValueAtPath", "GameStateControls.vue");
         const send = vi.fn();
         updateValueAtPath.call({
             getWebsocket: () => ({ send }),
@@ -413,19 +413,19 @@ describe("shared value controls", () => {
 describe("toolbar placement", () => {
     it("renders only when at least one configured path expands", () => {
         expect(toolbar).toContain('<v-sheet v-if="displayPaths.length"');
-        expect(toolbar).toContain("this.scene?.data?.game_state_knob_paths || []");
+        expect(toolbar).toContain("this.scene?.data?.game_state_control_paths || []");
     });
 
     it("sits above Scene Tools inside the non-playthrough branch", () => {
         const playthrough = app.indexOf("<PlaythroughTools");
         const normalMode = app.indexOf("<template v-else>", playthrough);
-        const knobs = app.indexOf("<GameStateKnobs", normalMode);
+        const controls = app.indexOf("<GameStateControls", normalMode);
         const sceneTools = app.indexOf("<SceneTools", normalMode);
 
         expect(playthrough).toBeGreaterThan(-1);
         expect(normalMode).toBeGreaterThan(playthrough);
-        expect(knobs).toBeGreaterThan(normalMode);
-        expect(sceneTools).toBeGreaterThan(knobs);
+        expect(controls).toBeGreaterThan(normalMode);
+        expect(sceneTools).toBeGreaterThan(controls);
     });
 });
 
@@ -631,7 +631,7 @@ describe("committed values do not rubber-band", () => {
     });
 
     it("records the answered value per path on both surfaces", () => {
-        const handleMessage = lift(toolbar, "handleMessage", "GameStateKnobs.vue");
+        const handleMessage = lift(toolbar, "handleMessage", "GameStateControls.vue");
         const target = { answers: {}, refusals: 0 };
 
         handleMessage.call(target, {
@@ -652,7 +652,7 @@ describe("committed values do not rubber-band", () => {
     });
 
     it("ignores traffic from other routers", () => {
-        const handleMessage = lift(toolbar, "handleMessage", "GameStateKnobs.vue");
+        const handleMessage = lift(toolbar, "handleMessage", "GameStateControls.vue");
         const target = { answers: {}, refusals: 0 };
 
         handleMessage.call(target, { type: "world_state_manager", error: { message: "x" } });
@@ -669,7 +669,7 @@ describe("toolbar affordances", () => {
 
     it("sends the tune button to the game state editor", () => {
         const openGameStateEditor = lift(
-            toolbar, "openGameStateEditor", "GameStateKnobs.vue",
+            toolbar, "openGameStateEditor", "GameStateControls.vue",
         );
         const openWorldStateManager = vi.fn();
 

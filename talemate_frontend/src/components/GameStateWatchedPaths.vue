@@ -28,7 +28,7 @@
                         <v-icon start>mdi-bug-outline</v-icon>
                         Debug Vars
                     </v-chip>
-                    <v-chip value="knob" size="small" color="primary" variant="outlined">
+                    <v-chip value="control" size="small" color="primary" variant="outlined">
                         <v-icon start>mdi-tune-variant</v-icon>
                         Scene toolbar
                     </v-chip>
@@ -81,8 +81,8 @@
                         </td>
                         <td class="text-center">
                             <v-checkbox-btn
-                                :model-value="knobPaths.includes(path)"
-                                @update:model-value="setTarget(path, 'knob', $event)"
+                                :model-value="controlPaths.includes(path)"
+                                @update:model-value="setTarget(path, 'control', $event)"
                                 density="compact"
                                 color="primary"
                                 :aria-label="`Show ${path} in the scene toolbar`"
@@ -131,7 +131,7 @@ export default {
             type: Array,
             default: () => [],
         },
-        knobPaths: {
+        controlPaths: {
             type: Array,
             default: () => [],
         },
@@ -160,7 +160,7 @@ export default {
     },
     computed: {
         managedPaths() {
-            return [...new Set([...this.watchedPaths, ...this.knobPaths])].sort();
+            return [...new Set([...this.watchedPaths, ...this.controlPaths])].sort();
         },
         settingsValue() {
             return getGameStateValue(this.variables, this.settingsPath);
@@ -184,8 +184,8 @@ export default {
                     this.$emit('debug-path-added', path);
                 }
             }
-            if (this.selectedTargets.includes('knob')) {
-                this.$emit('set-target', targetChange('knob'));
+            if (this.selectedTargets.includes('control')) {
+                this.$emit('set-target', targetChange('control'));
             }
             this.selectedPath = null;
             this.selectedLabel = '';

@@ -245,7 +245,7 @@ class Scene(Emitter):
         self.most_recent_ai_actor = None
 
         self.game_state_watch_paths: list[str] = []
-        self.game_state_knob_paths: list[str] = []
+        self.game_state_control_paths: list[str] = []
         self.game_state_path_settings: dict[str, GameStatePathSettings] = {}
 
         # if the user has requested to cancel the current action
@@ -287,7 +287,7 @@ class Scene(Emitter):
 
     @property
     def pinned_game_state_paths(self) -> set[str]:
-        return set(self.game_state_watch_paths) | set(self.game_state_knob_paths)
+        return set(self.game_state_watch_paths) | set(self.game_state_control_paths)
 
     @property
     def serialized_game_state_path_settings(self) -> dict[str, dict]:
@@ -1652,7 +1652,7 @@ class Scene(Emitter):
                 "agent_settings_opted_out": self._agent_settings_opted_out,
                 "agent_settings_files": self.agent_settings_files,
                 "game_state_watch_paths": self.game_state_watch_paths,
-                "game_state_knob_paths": self.game_state_knob_paths,
+                "game_state_control_paths": self.game_state_control_paths,
                 "game_state_path_settings": self.serialized_game_state_path_settings,
                 "playthrough_progress": self.playthrough_progress,
                 "history_stats": self.history_stats(),
@@ -2498,7 +2498,7 @@ class Scene(Emitter):
             "agent_settings_file": scene.agent_settings_link,
             "agent_settings_opted_out": scene._agent_settings_opted_out,
             "game_state_watch_paths": scene.game_state_watch_paths,
-            "game_state_knob_paths": scene.game_state_knob_paths,
+            "game_state_control_paths": scene.game_state_control_paths,
             "game_state_path_settings": scene.serialized_game_state_path_settings,
             "playthrough_progress": scene.playthrough_progress,
         }

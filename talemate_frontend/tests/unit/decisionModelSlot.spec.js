@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { createApp, defineComponent, h, nextTick, reactive } from 'vue';
 import DecisionModelSlot from '@/components/DecisionModelSlot.vue';
 import Pane from '@/components/AppSettingsDecisionModel.vue';
@@ -69,6 +70,51 @@ const VTextFieldStub = defineComponent({
         }),
 });
 
+// v-number-input hands its owner a number, or null for an empty field
+const VNumberInputStub = defineComponent({
+    props: ['modelValue', 'label', 'hint'],
+    emits: ['update:modelValue'],
+    setup: (props, { emit }) => () =>
+        h('input', {
+            class: 'number-field',
+            'aria-label': props.label,
+            'data-hint': props.hint,
+            value: props.modelValue,
+            onInput: (event) => emit('update:modelValue', event.target.value === '' ? null : Number(event.target.value)),
+        }),
+});
+
+const VComboboxStub = defineComponent({
+    props: ['modelValue', 'label', 'hint', 'items', 'loading'],
+    emits: ['update:modelValue'],
+    setup: (props, { emit }) => () =>
+        h('input', {
+            class: 'combobox',
+            'aria-label': props.label,
+            'data-hint': props.hint,
+            'data-items': JSON.stringify(props.items),
+            'data-loading': String(props.loading),
+            value: props.modelValue,
+            onInput: (event) => emit('update:modelValue', event.target.value),
+        }),
+});
+
+// the page asks the backend for OpenRouter's decision models when it is created
+let socket;
+function provideSocket(app) {
+    socket = { sent: [], handlers: [] };
+    app.provide('getWebsocket', () => ({ send: (message) => socket.sent.push(JSON.parse(message)) }));
+    app.provide('registerMessageHandler', (handler) => socket.handlers.push(handler));
+    app.provide('unregisterMessageHandler', (handler) => {
+        socket.handlers = socket.handlers.filter((registered) => registered !== handler);
+    });
+}
+
+async function receive(message) {
+    socket.handlers.forEach((handler) => handler(message));
+    await nextTick();
+}
+
 const VSelectStub = defineComponent({
     props: ['modelValue', 'label', 'items'],
     emits: ['update:modelValue'],
@@ -84,6 +130,7 @@ function mount(component, props, injections = {}) {
     document.body.appendChild(host);
     app = createApp(component, props);
     app.provide('openAppConfig', injections.openAppConfig || vi.fn());
+    provideSocket(app);
     for (const name of ['VRow', 'VCol', 'VAlert', 'VCard', 'VCardText', 'VCardTitle', 'VChip',
         'VSpacer', 'VExpandTransition', 'VList', 'VListItem', 'VListItemTitle',
         'VListItemSubtitle', 'VListSubheader']) {
@@ -95,6 +142,8 @@ function mount(component, props, injections = {}) {
     app.component('VSwitch', VSwitchStub);
     app.component('VTextField', VTextFieldStub);
     app.component('VSelect', VSelectStub);
+    app.component('VNumberInput', VNumberInputStub);
+    app.component('VCombobox', VComboboxStub);
     app.mount(host);
     return host;
 }
@@ -381,6 +430,7 @@ describe('settings pane', () => {
         const app_config = reactive(config());
         app = createApp(Pane, { config: app_config, status: status() });
         app.provide('openAppConfig', vi.fn());
+        provideSocket(app);
         const pane = app.mount(host);
         expect(pane.advancedPanel).toBeNull();
 
@@ -412,13 +462,176 @@ describe('settings pane', () => {
     });
 });
 
+describe('OpenRouter model picker', () => {
+    const MODELS = [
+        { id: 'liquid/d1', name: 'LiquidAI: d1' },
+        { id: 'typesafe/jev-1.13', name: 'TypeSafe: Jev 1.13' },
+    ];
+
+    it('asks for the decision models and offers them while still taking a typed name', async () => {
+        const app_config = config();
+        const element = mount(Pane, { config: app_config, status: status() });
+        const model = element.querySelector('[data-setting-anchor=decision_model_model] .combobox');
+        expect(socket.sent).toEqual([{ type: 'config', action: 'request_decision_models', data: {} }]);
+        expect(model.dataset.loading).toBe('true');
+
+        await receive({ type: 'config', action: 'decision_models', data: { models: MODELS } });
+
+        expect(model.dataset.loading).toBe('false');
+        expect(JSON.parse(model.dataset.items)).toEqual(['liquid/d1', 'typesafe/jev-1.13']);
+        expect(model.dataset.hint).toBe("Pick one of OpenRouter's decision models, or type a name. The default is vendor/shipped-default.");
+
+        model.value = 'someone/unlisted-model';
+        model.dispatchEvent(new Event('input'));
+        await nextTick();
+        expect(app_config.decision_model.model).toBe('someone/unlisted-model');
+    });
+
+    it('says when the list could not be loaded', async () => {
+        const element = mount(Pane, { config: config(), status: status() });
+        await receive({ type: 'config', action: 'decision_models', data: { models: [] } });
+
+        const model = element.querySelector('[data-setting-anchor=decision_model_model] .combobox');
+        expect(model.dataset.loading).toBe('false');
+        expect(model.dataset.hint).toBe("Could not load OpenRouter's decision models; type the model name. The default is vendor/shipped-default.");
+    });
+
+    it('fills the list when it arrives after an empty reply', async () => {
+        const element = mount(Pane, { config: config(), status: status() });
+        await receive({ type: 'config', action: 'decision_models', data: { models: [] } });
+
+        await receive({ type: 'config', action: 'decision_models', data: { models: MODELS } });
+
+        const model = element.querySelector('[data-setting-anchor=decision_model_model] .combobox');
+        expect(JSON.parse(model.dataset.items)).toEqual(['liquid/d1', 'typesafe/jev-1.13']);
+        expect(model.dataset.hint).toContain("Pick one of OpenRouter's decision models");
+    });
+
+    it('asks again on a new app config while it has no list, and not once it has one', async () => {
+        mount(Pane, { config: config(), status: status() });
+        const request = { type: 'config', action: 'request_decision_models', data: {} };
+
+        // the reply to the first request was lost with the socket
+        await receive({ type: 'app_config', data: {} });
+        expect(socket.sent).toEqual([request, request]);
+
+        await receive({ type: 'config', action: 'decision_models', data: { models: [] } });
+        await receive({ type: 'app_config', data: {} });
+        expect(socket.sent).toEqual([request, request, request]);
+
+        await receive({ type: 'config', action: 'decision_models', data: { models: MODELS } });
+        await receive({ type: 'app_config', data: {} });
+        expect(socket.sent).toHaveLength(3);
+    });
+
+    it('keeps a plain name field for a SystemOne server', () => {
+        const element = mount(Pane, { config: config({ provider: 'systemone' }), status: status() });
+        const anchor = element.querySelector('[data-setting-anchor=decision_model_model]');
+        expect(anchor.querySelector('.combobox')).toBeNull();
+        expect(anchor.querySelector('.field').dataset.hint).toBe('The model name your server expects.');
+    });
+
+    it('ignores other config messages and stops listening when it goes', async () => {
+        const element = mount(Pane, { config: config(), status: status() });
+        await receive({ type: 'config', action: 'client_types', data: { models: MODELS } });
+        expect(element.querySelector('.combobox').dataset.loading).toBe('true');
+
+        app.unmount();
+        app = null;
+        expect(socket.handlers).toEqual([]);
+    });
+});
+
+describe('restore defaults', () => {
+    const DEFAULTS = {
+        provider: 'openrouter',
+        base_url: '',
+        model: 'vendor/shipped-default',
+        timeout_seconds: 1.5,
+        max_input_tokens: 64000,
+        max_question_input_tokens: 32000,
+        input_token_multiplier: 1.5,
+    };
+
+    function restoreButton(element) {
+        return element.querySelector('[data-setting-anchor=decision_model_restore_defaults] button');
+    }
+
+    it('resets the decision model settings but keeps the switch and the API keys', async () => {
+        const app_config = reactive(config({
+            enabled: true,
+            provider: 'systemone',
+            base_url: 'http://localhost:8009',
+            api_key: 'systemone-test-key',
+            model: 'clef-flash',
+            timeout_seconds: 10,
+            max_input_tokens: 8000,
+            max_question_input_tokens: 8000,
+            input_token_multiplier: 1.1,
+        }));
+        app_config.decision_model_defaults = { ...DEFAULTS };
+        app_config.openrouter = { api_key: 'shared-test-key' };
+        const element = mount(Pane, { config: app_config, status: status() });
+        expect(restoreButton(element).disabled).toBe(false);
+
+        restoreButton(element).click();
+        await nextTick();
+
+        expect(app_config.decision_model).toEqual({ ...DEFAULTS, enabled: true, api_key: 'systemone-test-key' });
+        expect(app_config.openrouter.api_key).toBe('shared-test-key');
+        expect(restoreButton(element).disabled).toBe(true);
+    });
+
+    it('is off while the settings already hold the defaults', () => {
+        const app_config = config({ model: 'vendor/shipped-default' });
+        app_config.decision_model_defaults = { ...DEFAULTS };
+        app_config.decision_model.base_url = '';
+        const element = mount(Pane, { config: app_config, status: status() });
+        expect(restoreButton(element).disabled).toBe(true);
+    });
+});
+
+describe('layout', () => {
+    const source = readFileSync('src/components/AppSettingsDecisionModel.vue', 'utf-8');
+
+    it('names each listed model under its id', () => {
+        expect(source).toContain(':subtitle="openRouterModelNames[internalItem.raw]"');
+    });
+
+    it('uses the full width of the settings page', () => {
+        expect(source).not.toMatch(/md="9"/);
+    });
+
+    it('enters the time limit, input limits and margin as numbers, side by side', () => {
+        const advanced = source.slice(source.indexOf('<v-expansion-panel-text>'), source.indexOf('</v-expansion-panel-text>'));
+        expect(advanced.match(/<v-number-input /g)).toHaveLength(2);
+        expect(advanced.match(/<TokenBudgetInput /g)).toHaveLength(2);
+        expect(advanced.match(/<v-col cols="12" sm="6" md="3"/g)).toHaveLength(4);
+        expect(source).not.toMatch(/type="number"/);
+        const field = (anchor) => advanced.slice(advanced.indexOf(anchor), advanced.indexOf('</v-col>', advanced.indexOf(anchor)));
+        expect(field('decision_model_timeout')).toContain(':min="0.1"');
+        expect(field('decision_model_input_token_multiplier')).toContain(':min="1"');
+        // TokenBudgetInput keeps min 0 and refuses the blur clamp, so a typed -1 can never become 0 (no limit);
+        // without whole-number precision a pasted -0.1 stays a fraction that the rule rejects
+        for (const anchor of ['decision_model_max_input_tokens', 'decision_model_max_question_input_tokens']) {
+            expect(field(anchor)).toMatch(/<TokenBudgetInput v-model=/);
+            expect(field(anchor)).toContain(':precision="null"');
+        }
+        // decimals survive v-number-input's default whole-number precision
+        for (const anchor of ['decision_model_timeout', 'decision_model_input_token_multiplier']) {
+            expect(field(anchor)).toContain(':precision="null"');
+        }
+    });
+});
+
 describe('save validation', () => {
     function validate(slot) {
         host = document.createElement('div');
         document.body.appendChild(host);
         app = createApp(Pane, { config: config(slot), status: status() });
         app.provide('openAppConfig', vi.fn());
-        for (const name of ['VRow', 'VCol', 'VAlert', 'VCard', 'VCardText', 'VSwitch', 'VTextField', 'VSelect', 'VBtn']) {
+        provideSocket(app);
+        for (const name of ['VRow', 'VCol', 'VAlert', 'VCard', 'VCardText', 'VSwitch', 'VTextField', 'VSelect', 'VBtn', 'VNumberInput', 'VCombobox']) {
             app.component(name, Container);
         }
         return app.mount(host).validate();

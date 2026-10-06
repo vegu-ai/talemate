@@ -506,7 +506,7 @@ async def load_scene_from_data(
         scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.agent_state = scene_data.get("agent_state", {})
         scene.game_state_watch_paths = scene_data.get("game_state_watch_paths", [])
-        scene.game_state_knob_paths = scene_data.get("game_state_knob_paths", [])
+        scene.game_state_control_paths = scene_data.get("game_state_control_paths", [])
         scene.game_state_path_settings = load_game_state_path_settings(
             scene_data.get("game_state_path_settings", {}),
             scene.pinned_game_state_paths,

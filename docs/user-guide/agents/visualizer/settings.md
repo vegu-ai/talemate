@@ -53,6 +53,8 @@ Images you ask for are never affected: Visualize, Regenerate, the Visual Library
 
 Automatic Generation can be overridden per scene.
 
+You can also switch it with the :material-creation: **Automatic Generation** chip on the Visualizer in the agent panel, or from the [scene tools visualizer menu](/talemate/user-guide/scenario-tools/#automatic-generation). The menu also switches new portraits and new backgrounds on and off.
+
 ## Prompt Generation
 
 The Prompt Generation section contains settings that control how image prompts are created and refined before being sent to the image generation backend.

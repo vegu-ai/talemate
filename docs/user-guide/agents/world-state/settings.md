@@ -173,6 +173,8 @@ For example, if a character is described as wearing formal attire at a party but
 
 When a new portrait is generated, it is automatically added to the character's portrait collection and tagged based on the scene context.
 
+The [scene tools visualizer menu](/talemate/user-guide/scenario-tools/#automatic-generation) has a quick **Character portraits** toggle for this setting.
+
 ## Scene Backgrounds
 
 ![World state agent scene backgrounds settings](/talemate/img/0.40.0/world-state-scene-backgrounds-settings.png)
@@ -208,6 +210,8 @@ An incorrect confident answer can miss a change of setting. Turn this option off
 Off by default. When enabled and no existing background fits, the agent describes the background the moment needs and the [Visualizer](/talemate/user-guide/agents/visualizer/) generates it in the scene background style. If an existing background is a good starting point, for example the same harbour by day when the story needs it at night, the agent can name it as a reference, and an image editing backend creates a variation of it.
 
 While the image is generated, a **Generating background…** entry appears in the scene. When the image is ready it becomes the backdrop and is saved to the scene's visuals.
+
+The [scene tools visualizer menu](/talemate/user-guide/scenario-tools/#automatic-generation) has a quick **Backgrounds** toggle for this setting.
 
 !!! warning "Prerequisites"
     This feature requires a Visualizer with an image generation or image editing backend configured, and the Visualizer's [Automatic Generation](/talemate/user-guide/agents/visualizer/settings/#automatic-generation) setting enabled. Without either, the Scene Backgrounds settings show a **No new backgrounds** note that names the cause, with a link to the Visualizer settings, and the agent only picks from existing backgrounds.

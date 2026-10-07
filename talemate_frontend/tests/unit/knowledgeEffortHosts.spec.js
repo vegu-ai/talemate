@@ -11,6 +11,7 @@ import { effortMode } from '@/utils/knowledgeEffort';
 import { sceneIdentityOf, SceneAgentOverridesCoordinator } from '@/utils/sceneAgentOverrides';
 import { perspectivesEnabled } from '@/utils/sceneSettings';
 import { replyAfterAll } from '@/utils/writeReply';
+import { applyHeldValues, reportedValues } from '@/utils/pendingAgentWrites';
 
 const aiAgent = readSource(fileURLToPath(new URL('../../src/components/AIAgent.vue', import.meta.url)));
 const talemateApp = readSource(fileURLToPath(new URL('../../src/components/TalemateApp.vue', import.meta.url)));
@@ -115,7 +116,8 @@ describe('the drawer writes a batch in one save', () => {
     });
     // the drawer's queue, driven the way the frames arrive
     function drawerHost() {
-        const handleMessage = lift(aiAgent, 'handleMessage', 'AIAgent.vue', { effortMode, perspectivesEnabled, PENDING_EFFORT_TTL: 30000 });
+        const handleMessage = lift(aiAgent, 'handleMessage', 'AIAgent.vue', { effortMode, perspectivesEnabled, PENDING_EFFORT_TTL: 30000, reportedValues });
+        const reapplyPendingWrites = lift(aiAgent, 'reapplyPendingWrites', 'AIAgent.vue', { applyHeldValues });
         const queueEffort = lift(aiAgent, 'queueEffort', 'AIAgent.vue', { PENDING_EFFORT_TTL: 30000, sceneIdentityOf });
         const applyPendingEffort = lift(aiAgent, 'applyPendingEffort', 'AIAgent.vue', {
             EFFORT_AGENTS: ['conversation', 'summarizer', 'memory'],
@@ -123,7 +125,8 @@ describe('the drawer writes a batch in one save', () => {
             effortPinPatch: () => [{ agent: 'conversation', action: 'character_knowledge', config: { memory_pass: true } }],
             sceneIdentityOf,
         });
-        const self = { pendingEffort: null, sceneMode: 'legacy', scene: { data: { id: 'scene-A' } }, messages: {}, agentHasMessages: {}, state: { agents: standardAgents() }, applyActionValues: vi.fn(), applySceneAgentValues: vi.fn() };
+        const self = { pendingEffort: null, sceneMode: 'legacy', scene: { data: { id: 'scene-A' } }, messages: {}, agentHasMessages: {}, state: { agents: standardAgents() }, applyActionValues: vi.fn(), applySceneAgentValues: vi.fn(), lastReported: {}, pendingWrites: {} };
+        self.reapplyPendingWrites = reapplyPendingWrites.bind(self);
         self.handleMessage = handleMessage.bind(self);
         self.queueEffort = queueEffort.bind(self);
         self.applyPendingEffort = applyPendingEffort.bind(self);
@@ -259,7 +262,7 @@ describe('the drawer unregisters its message handler on unmount', () => {
         overrides.queue.push({ agent: 'memory', patch: {}, identity: 'scene-A', requestId: 'queued' });
         expect(overrides.busy).toBe(true);
 
-        const self = { overrides, pendingEffort: { stop: 'thorough', mode: 'perception', scope: 'scene' }, handleMessage: () => {} };
+        const self = { overrides, pendingEffort: { stop: 'thorough', mode: 'perception', scope: 'scene' }, handleMessage: () => {}, sliceReplies: {} };
         for (const name of declaredInjections()) self[name] = provider[name];
         self.resetSceneAgentOverrides = resetSceneAgentOverrides.bind(self);
         handlers.add(self.handleMessage);

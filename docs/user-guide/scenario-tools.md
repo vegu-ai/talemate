@@ -387,6 +387,25 @@ As of version 0.37.0, per-character entries are grouped into submenus. Scene-lev
 
 At the top of the menu, you can toggle the **Auto-attach visuals** option. When enabled, generated images will automatically appear alongside relevant messages in your scene feed. See [Inline Visuals](/talemate/user-guide/inline-visuals) for more details.
 
+#### Automatic generation
+
+![Automatic generation toggles in the scene tools visualizer menu](../img/0.40.0/scene-tools-visual-automatic-generation.png)
+
+**Automatic generation** decides whether Talemate may create images you did not ask for. It is the Visualizer's [Automatic Generation](/talemate/user-guide/agents/visualizer/settings/#automatic-generation) setting. While it is on, two more toggles appear below it:
+
+- **Character portraits**: create a new portrait when none of a character's portraits fits the moment.
+- **Backgrounds**: create a new scene background when none of the scene's backgrounds fits.
+
+Say your story moves Mara from the harbour to a formal ball. With **Character portraits** on, Talemate notices that none of her portraits shows her dressed for the ball and creates one. With **Backgrounds** on, the ballroom gets its own backdrop.
+
+Switching **Character portraits** or **Backgrounds** on also starts the World State agent's portrait or background selection if it was off. New images are only made while it picks. Switching them off stops new images only, so the agent keeps picking from the portraits and backgrounds you already have.
+
+The :material-cog: button next to each toggle opens its settings, where you can choose how often the agent picks and more.
+
+- **Needs Director Generate Visuals**: new portraits also need the Director's **Character Management → Generate Visuals** setting. **Settings** next to the note opens it.
+- :material-movie-open-cog-outline: the loaded scene overrides this setting. The toggle then changes the scene's values only, like the [quick-toggle chips](/talemate/user-guide/agents/scene-overrides/#quick-toggle-chips). For **Character portraits** and **Backgrounds** that includes the selection frequency the toggle may raise, even if the scene only overrode one of the two settings.
+- Greyed out: the Visualizer has no working image backend yet. The note below the toggles says so.
+
 !!! note "Keyboard modifiers"
     - Hold **ALT** to generate only the prompt without creating an image (useful for reviewing prompts before generation)
     - Hold **CTRL** to open a dialog where you can provide custom instructions for the generation

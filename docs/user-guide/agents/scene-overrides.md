@@ -82,6 +82,8 @@ A chip always shows the value the loaded scene is actually running on — the sc
 
 Unlike the settings page, a chip writes immediately — there is no pending state and no save step.
 
+The automatic generation toggles in the [scene tools visualizer menu](/talemate/user-guide/scenario-tools/#automatic-generation) work the same way. A **Character portraits** or **Backgrounds** toggle with the marker writes every value it changes to this scene only, including the selection frequency it may raise, even if the scene had overridden only the other setting.
+
 To go back to following the global value, clear the override in **Scene** mode on the Agents settings page and save.
 
 ## The overrides file

@@ -144,6 +144,8 @@ class VisualAgent(
                         type="bool",
                         value=False,
                         label="Automatic Generation",
+                        quick_toggle_root=True,
+                        icon="mdi-creation",
                         description="Allow images that are generated without your request: new portraits and backgrounds (World State), a cover image for a character the Director persists, and images the Director creates during scene direction. Images you ask for are not affected.",
                     ),
                 },

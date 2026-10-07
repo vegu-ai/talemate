@@ -91,6 +91,31 @@
 
                     <!-- Quick toggle action chips with their sub-config chips -->
                     <template v-for="(action, action_name) in agent.actions" :key="action_name">
+                        <template v-if="actionEnabled(agent, action_name) && action.config && agent.enabled">
+                            <v-tooltip
+                                v-for="(config, config_name) in getRootQuickToggleConfigs(action)"
+                                :key="`${action_name}-${config_name}-root`"
+                                :text="configChipTooltip(agent, action_name, config_name, config)"
+                                density="compact"
+                            >
+                                <template v-slot:activator="{ props }">
+                                    <v-chip
+                                        v-bind="props"
+                                        size="x-small"
+                                        label
+                                        :color="configValue(agent, action_name, config_name) ? 'success' : 'muted'"
+                                        variant="tonal"
+                                        :prepend-icon="config.icon"
+                                        @click.stop="toggleSubConfig(agent, action_name, config_name, config)"
+                                    >
+                                        {{ config.label }}
+                                        <v-icon class="ml-1" size="small" v-if="configValue(agent, action_name, config_name)">mdi-check-circle-outline</v-icon>
+                                        <v-icon class="ml-1" size="small" v-else>mdi-circle-outline</v-icon>
+                                        <v-icon class="ml-1" size="x-small" color="primary" v-if="isConfigOverridden(agent, action_name, config_name)">mdi-movie-open-cog-outline</v-icon>
+                                    </v-chip>
+                                </template>
+                            </v-tooltip>
+                        </template>
                         <!-- Action chip (if it has quick_toggle) -->
                         <template v-if="action.quick_toggle && agent.enabled">
                             <v-tooltip :text="actionChipTooltip(agent, action_name, action)" density="compact">
@@ -151,6 +176,7 @@ import { effortMode, effortPatch, effortPinPatch } from '@/utils/knowledgeEffort
 import { perspectivesEnabled } from '@/utils/sceneSettings';
 import { SceneAgentOverridesCoordinator, sceneIdentityOf } from '@/utils/sceneAgentOverrides';
 import { replyAfterAll } from '@/utils/writeReply';
+import { applyHeldValues, expectedValues, isEmptyWrite, reportedValues, writtenValues } from '@/utils/pendingAgentWrites';
 import AgentMessages from './AgentMessages.vue';
 import {
     configOverrideActive,
@@ -173,9 +199,14 @@ export default {
     data() {
         return {
             pendingEffort: null,
-            // request id -> reply of a scene override slice sent with one
+            // request id -> {reply, release} of a scene override slice in flight
             sliceReplies: {},
             sliceSeq: 0,
+            // agent name -> reportedValues() of its last status frame
+            lastReported: {},
+            // agent name -> [{id, held}] written by a save not answered yet
+            pendingWrites: {},
+            pendingWriteSeq: 0,
             // shared by every open hub: one scene-only writer, one busy flag
             overridesState: { busy: false, error: null },
             // the story mode of the last scene status frame
@@ -371,12 +402,36 @@ export default {
                 action: 'save_scene_overrides',
                 agent_type: agent.name,
                 override: overlay,
+                request_id: `drawer-slice-${Date.now()}-${++this.sliceSeq}`,
             };
-            if (reply) {
-                payload.request_id = `drawer-slice-${Date.now()}-${++this.sliceSeq}`;
-                this.sliceReplies[payload.request_id] = reply;
-            }
+            this.sliceReplies[payload.request_id] = {
+                reply,
+                release: this.holdWrite(agent.name, { actions: {}, scene_overrides: overlay }),
+            };
             this.getWebsocket().send(JSON.stringify(payload));
+        },
+        // Returns release(restore): call it once the write is answered.
+        // `restore` puts the last reported values back — a refused write
+        // stored nothing, and the frame that said so was masked by the hold.
+        holdWrite(agentName, held) {
+            if (isEmptyWrite(held)) return () => {};
+            const id = ++this.pendingWriteSeq;
+            (this.pendingWrites[agentName] ||= []).push({ id, held });
+            return (restore = false) => {
+                const rest = (this.pendingWrites[agentName] || []).filter((write) => write.id !== id);
+                if (rest.length) this.pendingWrites[agentName] = rest;
+                else delete this.pendingWrites[agentName];
+                const agent = this.state.agents.find((candidate) => candidate.name === agentName);
+                if (restore && agent && this.lastReported[agentName]) {
+                    applyHeldValues(agent, this.lastReported[agentName]);
+                    this.reapplyPendingWrites(agent);
+                }
+            };
+        },
+        reapplyPendingWrites(agent) {
+            for (const { held } of this.pendingWrites[agent.name] || []) {
+                applyHeldValues(agent, held);
+            }
         },
         toggleAction(agent, action_name, action) {
             if (this.isEnabledOverridden(agent, action_name)) {
@@ -516,6 +571,12 @@ export default {
                 'The connection closed before the answer arrived; the change may have been saved.',
             );
             this.pendingEffort = null;
+            // no answer can arrive now; the statuses of the next connection are the truth
+            for (const [requestId, { reply, release }] of Object.entries(this.sliceReplies)) {
+                delete this.sliceReplies[requestId];
+                release();
+                reply?.onError('The connection closed before the answer arrived; the change may have been saved.');
+            }
         },
         getQuickToggleActions(agent) {
             const result = {};
@@ -524,6 +585,15 @@ export default {
                     if (agent.actions[action_name] && agent.actions[action_name].quick_toggle) {
                         result[action_name] = agent.actions[action_name];
                     }
+                }
+            }
+            return result;
+        },
+        getRootQuickToggleConfigs(action) {
+            const result = {};
+            for (const config_name in action.config || {}) {
+                if (action.config[config_name]?.quick_toggle_root) {
+                    result[config_name] = action.config[config_name];
                 }
             }
             return result;
@@ -549,7 +619,19 @@ export default {
             } else {
                 this.state.agents[index] = agent;
             }
-            this.$emit('agents-updated', this.state.agents, reply);
+            const pending = (this.pendingWrites[agent.name] || []).map((write) => write.held);
+            const release = this.holdWrite(agent.name, writtenValues(expectedValues(this.lastReported[agent.name], pending), agent));
+            this.$emit('agents-updated', this.state.agents, {
+                onComplete: () => {
+                    release();
+                    reply?.onComplete?.();
+                },
+                // a failed apply stored the payload, so there is nothing to restore
+                onError: (message, applyFailed = false) => {
+                    release(!applyFailed);
+                    reply?.onError?.(message, applyFailed);
+                },
+            });
         },
         openMessages(agentName) {
             if(!this.agentMessagesRefs[agentName]) {
@@ -562,10 +644,11 @@ export default {
             this.overrides?.handleMessage(data);
 
             if (data.type === 'agent_config' && data.action === 'operation_done' && this.sliceReplies[data.request_id]) {
-                const reply = this.sliceReplies[data.request_id];
+                const { reply, release } = this.sliceReplies[data.request_id];
                 delete this.sliceReplies[data.request_id];
-                if (data.error) reply.onError(data.error.message);
-                else reply.onComplete();
+                release(!!data.error);
+                if (data.error) reply?.onError(data.error.message);
+                else reply?.onComplete();
             }
 
             // When a new scene is loaded, clear the messages and agentHasMessages
@@ -639,6 +722,8 @@ export default {
                         meta: data.meta,
                     });
                 }
+                this.lastReported[data.name] = reportedValues(data.data);
+                this.reapplyPendingWrites(this.state.agents.find((candidate) => candidate.name === data.name));
                 if (this.pendingEffort?.armed) {
                     this.pendingEffort.seen.add(data.name);
                     this.applyPendingEffort();

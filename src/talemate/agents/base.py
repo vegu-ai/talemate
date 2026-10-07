@@ -96,6 +96,8 @@ class AgentActionConfig(UxField):
 
     scope: Literal["global", "scene"] = "global"
     quick_toggle: bool = False
+    quick_toggle_root: bool = False
+    icon: str | None = None
     title: str | None = None
     value_migration: Callable | None = pydantic.Field(default=None, exclude=True)
     scene_overridable: bool = True
@@ -127,6 +129,15 @@ class AgentActionConfig(UxField):
         # declaration would render a dead field.
         if self.type in SECRET_FIELD_TYPES:
             self.scene_overridable = False
+        return self
+
+    @pydantic.model_validator(mode="after")
+    def _one_quick_toggle_placement(self):
+        if self.quick_toggle and self.quick_toggle_root:
+            raise ValueError(
+                f"AgentActionConfig {self.label!r}: quick_toggle and "
+                "quick_toggle_root are exclusive — the field would render as two chips"
+            )
         return self
 
 

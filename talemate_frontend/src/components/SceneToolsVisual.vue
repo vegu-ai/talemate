@@ -26,6 +26,43 @@
                     hide-details
                 ></v-checkbox>
             </v-list-item>
+            <v-list-item
+                v-for="row in generationRows"
+                :key="row.key"
+                density="compact"
+                :class="row.child ? 'pl-10' : null"
+                :data-testid="`auto-generation-${row.key}`"
+            >
+                <div class="d-flex align-center">
+                    <!-- stop: a toggle keeps the menu open -->
+                    <v-checkbox
+                        :model-value="row.on"
+                        @update:model-value="(value) => row.set(!!value)"
+                        :label="row.label"
+                        :disabled="!visualAgentReady"
+                        color="primary"
+                        density="compact"
+                        hide-details
+                        @click.stop
+                    ></v-checkbox>
+                    <v-tooltip v-if="row.overridden" text="Scene override — changes apply to this scene only" density="compact">
+                        <template v-slot:activator="{ props }">
+                            <v-icon v-bind="props" size="x-small" color="primary" class="ml-1">mdi-movie-open-cog-outline</v-icon>
+                        </template>
+                    </v-tooltip>
+                    <v-spacer></v-spacer>
+                    <v-tooltip :text="row.settingsLabel" density="compact">
+                        <template v-slot:activator="{ props }">
+                            <v-btn v-bind="props" icon="mdi-cog" size="x-small" variant="text" color="muted" class="ml-2" :aria-label="row.settingsLabel" @click="openAgentSettings(...row.settings)"></v-btn>
+                        </template>
+                    </v-tooltip>
+                </div>
+                <div v-if="row.warning" class="text-body-small text-warning d-flex align-center ms-7 mb-1">
+                    <v-icon size="x-small" color="warning" class="mr-1">mdi-alert-circle-outline</v-icon>
+                    {{ row.warning.text }}
+                    <v-btn v-if="row.warning.settings" size="x-small" variant="text" color="warning" class="ml-1" @click="openAgentSettings(...row.warning.settings)">Settings</v-btn>
+                </div>
+            </v-list-item>
             <v-divider></v-divider>
             <!-- visual agent not ready -->
             <div v-if="!visualAgentReady">
@@ -105,6 +142,12 @@
 <script>
 import { VIS_TYPE, VIS_TYPE_OPTIONS } from '@/constants/visual';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
+import {
+    automaticGenerationState,
+    generationState,
+    generationValues,
+    portraitsNeedGenerateVisuals,
+} from '@/utils/visualAutoGeneration';
 import SceneToolsShortcutItems from './SceneToolsShortcutItems.vue';
 export default {
     name: 'SceneToolsVisual',
@@ -161,7 +204,49 @@ export default {
                 }
             }
             return chars;
-        }
+        },
+        generationRows() {
+            const automatic = automaticGenerationState(this.drawerAgent('visual'));
+            if (!automatic) return [];
+            const rows = [{
+                key: 'automatic',
+                label: 'Automatic generation',
+                ...automatic,
+                set: (on) => this.applyAgentValues('visual', '_config', { config: { automatic_generation: on } }),
+                settings: ['visual', '_config'],
+                settingsLabel: 'Visualizer settings',
+            }];
+            if (!automatic.on) return rows;
+            const worldState = this.drawerAgent('world_state');
+            const portraits = generationState(worldState, 'avatars');
+            if (portraits) {
+                rows.push({
+                    key: 'portraits',
+                    label: 'Character portraits',
+                    child: true,
+                    ...portraits,
+                    set: (on) => this.setGeneration('avatars', portraits, 'Character portraits', on),
+                    settings: ['world_state', 'avatars'],
+                    settingsLabel: 'Character portrait settings',
+                    warning: portraits.on && portraitsNeedGenerateVisuals(this.drawerAgent('director'))
+                        ? { text: 'Needs Director Generate Visuals', settings: ['director', 'character_management'] }
+                        : null,
+                });
+            }
+            const backgrounds = generationState(worldState, 'backgrounds');
+            if (backgrounds) {
+                rows.push({
+                    key: 'backgrounds',
+                    label: 'Backgrounds',
+                    child: true,
+                    ...backgrounds,
+                    set: (on) => this.setGeneration('backgrounds', backgrounds, 'Backgrounds', on),
+                    settings: ['world_state', 'backgrounds'],
+                    settingsLabel: 'Background settings',
+                });
+            }
+            return rows;
+        },
     },
 
     data() {
@@ -177,7 +262,7 @@ export default {
         }
     },
 
-    inject: ['getWebsocket', 'appConfig'],
+    inject: ['getWebsocket', 'appConfig', 'applyAgentValues', 'applySceneAgentValues', 'openAgentSettings', 'getAgents'],
     
     watch: {
         appConfig: {
@@ -194,6 +279,25 @@ export default {
     },
 
     methods: {
+        // The drawer's copy holds values a save in flight wrote, which a stale
+        // status frame cannot put back; agentStatus is read for reactivity and
+        // as the fallback before the drawer has the agent.
+        drawerAgent(name) {
+            const status = this.agentStatus[name];
+            const agent = this.getAgents().find((candidate) => candidate.name === name);
+            if (!agent) return status;
+            return { actions: agent.actions, scene_overrides: agent.data?.scene_overrides };
+        },
+        // The row's override mark promises a scene-only change, so both fields of
+        // the pair go to the scene, the one not overridden yet included.
+        setGeneration(actionKey, state, label, on) {
+            const values = generationValues(this.drawerAgent('world_state'), actionKey, on);
+            if (state.overridden) {
+                this.applySceneAgentValues([{ agent: 'world_state', action: actionKey, config: values.config }], `${label}: ${on ? 'On' : 'Off'}`);
+                return;
+            }
+            this.applyAgentValues('world_state', actionKey, values);
+        },
         toggleAutoAttachAssets() {
             this.getWebsocket().send(JSON.stringify({
                 type: 'quick_settings',

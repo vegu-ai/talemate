@@ -4,10 +4,12 @@ import { lift, readSource } from "./helpers/liftMethod.js";
 import { createConfigSaveQueue } from "@/utils/configSaveQueue";
 import { buildNameKeyedPayload } from "@/utils/nameKeyedMap";
 import { agentsRequiringClient } from "@/utils/agentAssignments";
+import { applyHeldValues, reportedValues } from "@/utils/pendingAgentWrites";
 
 const source = name => readSource(fileURLToPath(new URL(`../../src/components/${name}.vue`, import.meta.url)));
 const saveAgents = lift(source("TalemateApp"), "saveAgents", "TalemateApp.vue", { buildNameKeyedPayload });
-const handleStatus = lift(source("AIAgent"), "handleMessage", "AIAgent.vue");
+const handleStatus = lift(source("AIAgent"), "handleMessage", "AIAgent.vue", { reportedValues });
+const reapplyPendingWrites = lift(source("AIAgent"), "reapplyPendingWrites", "AIAgent.vue", { applyHeldValues });
 const assignClient = lift(source("AIClient"), "assignClientToAllAgents", "AIClient.vue", { agentsRequiringClient });
 const fields = values => Object.fromEntries(Object.entries(values).map(([key, value]) => [key, { value }]));
 
@@ -37,7 +39,7 @@ describe("drawer agent persistence", () => {
                 memory: { enabled: true, client: null, actions: storedActions.memory },
             } : {},
         };
-        const drawer = { state: { agents: [{ name: "conversation" }, { name: "memory" }] } };
+        const drawer = { state: { agents: [{ name: "conversation" }, { name: "memory" }] }, lastReported: {}, pendingWrites: {}, reapplyPendingWrites };
         for (const name of ["conversation", "memory"]) {
             handleStatus.call(drawer, {
                 type: "agent_status", name, message: name, client: null,

@@ -33,12 +33,12 @@ describe("root-level config quick toggles", () => {
         const host = {
             isConfigOverridden: () => false,
             saveAgent: vi.fn(),
-            saveSceneOverrideSlice: vi.fn(),
+            writeSceneOverride: vi.fn(),
         };
         toggleSubConfig.call(host, agent, "_config", "automatic_generation", action.config.automatic_generation);
         expect(action.config.automatic_generation.value).toBe(true);
         expect(host.saveAgent).toHaveBeenCalledWith(agent);
-        expect(host.saveSceneOverrideSlice).not.toHaveBeenCalled();
+        expect(host.writeSceneOverride).not.toHaveBeenCalled();
     });
 
     it("toggles the scene override when one is active and leaves the global value", () => {
@@ -49,10 +49,10 @@ describe("root-level config quick toggles", () => {
             isConfigOverridden: () => true,
             sceneOverlay: () => overlay,
             saveAgent: vi.fn(),
-            saveSceneOverrideSlice: vi.fn(),
+            writeSceneOverride: vi.fn(),
         };
         toggleSubConfig.call(host, agent, "_config", "automatic_generation", action.config.automatic_generation);
-        expect(host.saveSceneOverrideSlice).toHaveBeenCalledWith(agent, "_config", { config: { automatic_generation: { value: false } } });
+        expect(host.writeSceneOverride).toHaveBeenCalledWith(agent, { action: "_config", config: { automatic_generation: false } }, "Automatic Generation: Off");
         expect(action.config.automatic_generation.value).toBe(false);
         expect(host.saveAgent).not.toHaveBeenCalled();
     });

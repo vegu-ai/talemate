@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { lift, readSource } from "./helpers/liftMethod.js";
 import { createConfigSaveQueue } from "@/utils/configSaveQueue";
 import { buildNameKeyedPayload } from "@/utils/nameKeyedMap";
-import { setActionOverrideSlice } from "@/constants/sceneAgentSettings";
+import { SceneAgentOverridesCoordinator } from "@/utils/sceneAgentOverrides";
 import { effortMode } from "@/utils/knowledgeEffort";
 import { perspectivesEnabled } from "@/utils/sceneSettings";
 import {
@@ -22,7 +22,8 @@ const methods = {
     holdWrite: lift(aiAgent, "holdWrite", "AIAgent.vue", { isEmptyWrite, applyHeldValues }),
     reapplyPendingWrites: lift(aiAgent, "reapplyPendingWrites", "AIAgent.vue", { applyHeldValues }),
     toggleSubConfig: lift(aiAgent, "toggleSubConfig", "AIAgent.vue"),
-    saveSceneOverrideSlice: lift(aiAgent, "saveSceneOverrideSlice", "AIAgent.vue", { setActionOverrideSlice }),
+    writeSceneOverride: lift(aiAgent, "writeSceneOverride", "AIAgent.vue", { applyHeldValues }),
+    applySceneAgentValues: lift(aiAgent, "applySceneAgentValues", "AIAgent.vue"),
     sceneOverlay: lift(aiAgent, "sceneOverlay", "AIAgent.vue"),
 };
 const saveAgents = lift(source("TalemateApp"), "saveAgents", "TalemateApp.vue", { buildNameKeyedPayload });
@@ -56,8 +57,7 @@ function setup() {
         state: { agents: [] },
         messages: {},
         agentHasMessages: {},
-        sliceReplies: {},
-        sliceSeq: 0,
+        chipError: null,
         lastReported: {},
         pendingWrites: {},
         pendingWriteSeq: 0,
@@ -67,6 +67,11 @@ function setup() {
         getWebsocket: () => ({ send: text => wire.push(JSON.parse(text)) }),
     };
     for (const [name, fn] of Object.entries(methods)) drawer[name] = fn.bind(drawer);
+    drawer.overrides = new SceneAgentOverridesCoordinator({
+        getWebsocket: drawer.getWebsocket,
+        scene: () => ({ data: { id: "scene-1", filename: "s.json", project_name: "p", agent_settings_file: "agent-settings.json" } }),
+        state: { busy: false, error: null },
+    });
     drawer.handleMessage(statusFrame("visual", { automatic: false }));
     drawer.handleMessage(statusFrame("world_state", { generate_new: false }));
     const agent = name => drawer.state.agents.find(candidate => candidate.name === name);
@@ -160,12 +165,13 @@ describe("a status frame older than a save in flight", () => {
         expect(drawer.pendingWrites).toEqual({});
     });
 
-    it("holds a scene override slice until its answer", () => {
+    it("holds a sparse scene override until its answer", () => {
         const { drawer, agent, wire } = setup();
         const overlay = { actions: { main: { config: { automatic: { value: true } } } } };
-        drawer.saveSceneOverrideSlice(agent("visual"), "main", overlay.actions.main);
+        drawer.writeSceneOverride(agent("visual"), { action: "main", config: { automatic: true } }, "Automatic: On");
         const sent = wire.at(-1);
-        expect(sent.request_id).toBeTruthy();
+        expect(sent.patch).toEqual({ set: { actions: { main: { config: { automatic: { value: true } } } } }, clear: [] });
+        expect(sent.override).toBeUndefined();
 
         drawer.handleMessage(statusFrame("visual", { automatic: false }, {}));
         expect(agent("visual").data.scene_overrides).toEqual(overlay);
@@ -176,15 +182,35 @@ describe("a status frame older than a save in flight", () => {
         expect(agent("visual").data.scene_overrides).toEqual(overlay);
     });
 
+    it("keeps a concurrent patch from another writer that lands while a chip write is held", () => {
+        const { drawer, agent, wire } = setup();
+        const start = { actions: { main: { enabled: true, config: { generate_new: { value: false } } } } };
+        drawer.handleMessage(statusFrame("world_state", { generate_new: false }, start));
+        // the other writer's patch was applied first: its echo arrives while the chip write is held
+        drawer.writeSceneOverride(agent("world_state"), { action: "main", enabled: false }, "Main: Off");
+        const sent = wire.at(-1);
+        expect(sent.patch).toEqual({ set: { actions: { main: { enabled: false, config: {} } } }, clear: [] });
+        const afterOther = { actions: { main: { enabled: true, config: { generate_new: { value: true } } } } };
+        drawer.handleMessage(statusFrame("world_state", { generate_new: false }, afterOther));
+        expect(agent("world_state").data.scene_overrides.actions.main).toEqual({ enabled: false, config: { generate_new: { value: true } } });
+
+        drawer.handleMessage({ type: "agent_config", action: "operation_done", request_id: sent.request_id });
+        const both = { actions: { main: { enabled: false, config: { generate_new: { value: true } } } } };
+        drawer.handleMessage(statusFrame("world_state", { generate_new: false }, both));
+        expect(agent("world_state").data.scene_overrides).toEqual(both);
+        expect(drawer.pendingWrites).toEqual({});
+    });
+
     it("restores the reported overlay when a scene override save is refused", () => {
         const { drawer, agent, wire } = setup();
-        drawer.saveSceneOverrideSlice(agent("visual"), "main", { config: { automatic: { value: true } } });
+        drawer.writeSceneOverride(agent("visual"), { action: "main", config: { automatic: true } }, "Automatic: On");
         const sent = wire.at(-1);
         // the backend re-emits the unchanged overlay, then refuses
         drawer.handleMessage(statusFrame("visual", { automatic: false }, {}));
         drawer.handleMessage({ type: "agent_config", action: "operation_done", request_id: sent.request_id, error: { message: "no file" } });
         expect(drawer.pendingWrites).toEqual({});
         expect(agent("visual").data.scene_overrides).toEqual({});
+        expect(drawer.chipError).toBe("no file");
     });
 });
 

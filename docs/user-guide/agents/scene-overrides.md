@@ -80,7 +80,9 @@ A chip always shows the value the loaded scene is actually running on — the sc
 - **No override active** — the chip toggles the global setting, as it always has.
 - **Override active** — the chip carries a small :material-movie-open-cog-outline: marker and toggles the scene's override only. Your global setting is left alone; hover the chip to see what it currently is.
 
-Unlike the settings page, a chip writes immediately — there is no pending state and no save step.
+Unlike the settings page, a chip writes immediately, with no save step. A chip changes only the value it shows, so a scene override you changed a moment earlier somewhere else, for example in the visualizer menu, stays as you set it.
+
+In a story with no save file yet, for example right after restoring a restore point, a marked chip or toggle first brings up **Save Scene**, like the knowledge hub. If you cancel, the change stays pending: the agent panel and the visualizer menu show it with **Save and apply** and **Discard change**. Until you choose one, other scene-override changes are refused, and the place you made them says so.
 
 The automatic generation toggles in the [scene tools visualizer menu](/talemate/user-guide/scenario-tools/#automatic-generation) work the same way. A **Character portraits** or **Backgrounds** toggle with the marker writes every value it changes to this scene only, including the selection frequency it may raise, even if the scene had overridden only the other setting.
 

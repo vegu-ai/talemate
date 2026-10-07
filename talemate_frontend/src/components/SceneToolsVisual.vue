@@ -63,6 +63,10 @@
                     <v-btn v-if="row.warning.settings" size="x-small" variant="text" color="warning" class="ml-1" @click="openAgentSettings(...row.warning.settings)">Settings</v-btn>
                 </div>
             </v-list-item>
+            <div v-if="pendingSave || writeError" class="px-4 pb-2" data-testid="auto-generation-feedback" @click.stop>
+                <SceneOverridePendingSave v-if="pendingSave" />
+                <div v-if="writeError" class="text-body-small text-error">{{ writeError }}</div>
+            </div>
             <v-divider></v-divider>
             <!-- visual agent not ready -->
             <div v-if="!visualAgentReady">
@@ -148,10 +152,12 @@ import {
     generationValues,
     portraitsNeedGenerateVisuals,
 } from '@/utils/visualAutoGeneration';
+import SceneOverridePendingSave from './SceneOverridePendingSave.vue';
 import SceneToolsShortcutItems from './SceneToolsShortcutItems.vue';
 export default {
     name: 'SceneToolsVisual',
     components: {
+        SceneOverridePendingSave,
         SceneToolsShortcutItems,
     },
     emits: ['shortcut-add', 'shortcut-edit', 'shortcut-add-template'],
@@ -191,6 +197,9 @@ export default {
     },
 
     computed: {
+        pendingSave() {
+            return !!this.sceneOverridesState()?.pendingSave;
+        },
         characters() {
             const chars = [];
             if (this.playerCharacter) {
@@ -212,7 +221,7 @@ export default {
                 key: 'automatic',
                 label: 'Automatic generation',
                 ...automatic,
-                set: (on) => this.applyAgentValues('visual', '_config', { config: { automatic_generation: on } }),
+                set: (on) => this.applyAgentValues('visual', '_config', { config: { automatic_generation: on } }, automatic.overridden ? this.writeReply() : null, `Automatic generation: ${on ? 'On' : 'Off'}`),
                 settings: ['visual', '_config'],
                 settingsLabel: 'Visualizer settings',
             }];
@@ -258,13 +267,17 @@ export default {
             dialogVisType: VIS_TYPE.CHARACTER_CARD,
             instructions: '',
             autoAttachAssets: true,
+            writeError: null,
             VIS_TYPE,
         }
     },
 
-    inject: ['getWebsocket', 'appConfig', 'applyAgentValues', 'applySceneAgentValues', 'openAgentSettings', 'getAgents'],
+    inject: ['getWebsocket', 'appConfig', 'applyAgentValues', 'applySceneAgentValues', 'sceneOverridesState', 'openAgentSettings', 'getAgents'],
     
     watch: {
+        pendingSave(pending) {
+            if (!pending) this.writeError = null;
+        },
         appConfig: {
             handler: function(newVal) {
                 if (newVal && newVal.appearance && newVal.appearance.scene) {
@@ -293,10 +306,17 @@ export default {
         setGeneration(actionKey, state, label, on) {
             const values = generationValues(this.drawerAgent('world_state'), actionKey, on);
             if (state.overridden) {
-                this.applySceneAgentValues([{ agent: 'world_state', action: actionKey, config: values.config }], `${label}: ${on ? 'On' : 'Off'}`);
+                this.applySceneAgentValues([{ agent: 'world_state', action: actionKey, config: values.config }], `${label}: ${on ? 'On' : 'Off'}`, this.writeReply());
                 return;
             }
             this.applyAgentValues('world_state', actionKey, values);
+        },
+        writeReply() {
+            this.writeError = null;
+            return {
+                onComplete: () => { this.writeError = null; },
+                onError: (message) => { this.writeError = message; },
+            };
         },
         toggleAutoAttachAssets() {
             this.getWebsocket().send(JSON.stringify({

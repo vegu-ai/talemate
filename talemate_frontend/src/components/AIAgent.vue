@@ -20,6 +20,10 @@
             </template>
         </v-tooltip>
     </v-list-subheader>
+    <div v-if="overridesState.pendingSave || chipError" class="px-4 pb-2" data-testid="agent-scene-override-feedback">
+        <SceneOverridePendingSave v-if="overridesState.pendingSave" />
+        <div v-if="chipError" class="text-body-small text-error">{{ chipError }}</div>
+    </div>
     <div v-if="isConnected()">
         <v-list density="compact">
             <!-- Ctrl + click toggles agent enable/disable when allowed -->
@@ -178,13 +182,13 @@ import { SceneAgentOverridesCoordinator, sceneIdentityOf } from '@/utils/sceneAg
 import { replyAfterAll } from '@/utils/writeReply';
 import { applyHeldValues, expectedValues, isEmptyWrite, reportedValues, writtenValues } from '@/utils/pendingAgentWrites';
 import AgentMessages from './AgentMessages.vue';
+import SceneOverridePendingSave from './SceneOverridePendingSave.vue';
 import {
     configOverrideActive,
     countSceneOverrides,
     effectiveActionEnabled,
     effectiveConfigValue,
     enabledOverrideActive,
-    setActionOverrideSlice,
 } from '@/constants/sceneAgentSettings';
 
 const EFFORT_AGENTS = ['conversation', 'summarizer', 'memory'];
@@ -192,23 +196,20 @@ const PENDING_EFFORT_TTL = 30000;
 
 export default {
     components: {
-        AgentMessages
+        AgentMessages,
+        SceneOverridePendingSave,
     },
     emits: ['agents-updated'],
 
     data() {
         return {
             pendingEffort: null,
-            // request id -> {reply, release} of a scene override slice in flight
-            sliceReplies: {},
-            sliceSeq: 0,
             // agent name -> reportedValues() of its last status frame
             lastReported: {},
             // agent name -> [{id, held}] written by a save not answered yet
             pendingWrites: {},
             pendingWriteSeq: 0,
-            // shared by every open hub: one scene-only writer, one busy flag
-            overridesState: { busy: false, error: null },
+            chipError: null,
             // the story mode of the last scene status frame
             sceneMode: 'legacy',
             state: {
@@ -228,7 +229,15 @@ export default {
         appConfig: Object,
         scene: Object,
     },
+    watch: {
+        'overridesState.pendingSave'(pending) {
+            if (!pending) this.chipError = null;
+        },
+    },
     computed: {
+        overridesState() {
+            return this.sceneOverridesState();
+        },
         overrideCount() {
             return countOverrides(this.appConfig?.agent_actions?.overrides);
         },
@@ -260,6 +269,7 @@ export default {
         'openAgentActionOverrides',
         'openAgentSettings',
         'requestSceneSave',
+        'sceneOverridesState',
     ],
     methods: {
         // The scene-only write path outside the settings page. A sparse
@@ -270,6 +280,9 @@ export default {
         },
         clearSceneAgentValues(entries, reply = null) {
             this.overrides?.clearSceneAgentValues(entries, reply);
+        },
+        patchSceneAgentValues(patch, label, reply = null) {
+            this.overrides?.patchSceneAgentValues(patch, label, reply);
         },
         sceneOverrideCount(agent) {
             return countSceneOverrides(agent?.data?.scene_overrides);
@@ -387,28 +400,30 @@ export default {
             return `Toggles ${config.label} globally`;
         },
         /**
-         * Persist a changed per-action override slice. The server replaces the
-         * whole per-agent slice, so the full overlay goes over the wire.
+         * Write overridden values of one action through the scene-only writer.
+         * entry: { action, enabled?, config: { key: value } }. The chip shows
+         * the written values until the writer answers.
          */
-        saveSceneOverrideSlice(agent, action_name, slice, reply = null) {
-            const overlay = {
-                actions: setActionOverrideSlice(this.sceneOverlay(agent).actions || {}, action_name, slice),
-            };
-            // Keep the local copy in sync so the chip updates immediately
-            // instead of waiting for the agent status echo.
-            agent.data.scene_overrides = overlay;
-            const payload = {
-                type: 'agent_config',
-                action: 'save_scene_overrides',
-                agent_type: agent.name,
-                override: overlay,
-                request_id: `drawer-slice-${Date.now()}-${++this.sliceSeq}`,
-            };
-            this.sliceReplies[payload.request_id] = {
-                reply,
-                release: this.holdWrite(agent.name, { actions: {}, scene_overrides: overlay }),
-            };
-            this.getWebsocket().send(JSON.stringify(payload));
+        writeSceneOverride(agent, entry, label, reply = null) {
+            const slice = { config: {} };
+            if (entry.enabled !== undefined) slice.enabled = entry.enabled;
+            for (const [key, value] of Object.entries(entry.config || {})) slice.config[key] = { value };
+            const held = { actions: {}, scene_overrides_set: { actions: { [entry.action]: slice } } };
+            applyHeldValues(agent, held);
+            const release = this.holdWrite(agent.name, held);
+            if (!reply) this.chipError = null;
+            this.applySceneAgentValues([{ agent: agent.name, ...entry }], label, {
+                onComplete: () => {
+                    release();
+                    reply?.onComplete();
+                },
+                // a refused or discarded change stored nothing; an unanswered one may be stored
+                onError: (message, applyFailed = false, unknown = false) => {
+                    release(!unknown);
+                    if (reply) reply.onError(message, applyFailed, unknown);
+                    else this.chipError = message;
+                },
+            });
         },
         // Returns release(restore): call it once the write is answered.
         // `restore` puts the last reported values back — a refused write
@@ -435,9 +450,8 @@ export default {
         },
         toggleAction(agent, action_name, action) {
             if (this.isEnabledOverridden(agent, action_name)) {
-                const slice = JSON.parse(JSON.stringify(this.sceneOverlay(agent).actions[action_name]));
-                slice.enabled = !slice.enabled;
-                this.saveSceneOverrideSlice(agent, action_name, slice);
+                const enabled = !this.sceneOverlay(agent).actions[action_name].enabled;
+                this.writeSceneOverride(agent, { action: action_name, enabled }, `${action.label}: ${enabled ? 'On' : 'Off'}`);
                 return;
             }
 
@@ -452,9 +466,8 @@ export default {
         },
         toggleSubConfig(agent, action_name, config_name, config) {
             if (this.isConfigOverridden(agent, action_name, config_name)) {
-                const slice = JSON.parse(JSON.stringify(this.sceneOverlay(agent).actions[action_name]));
-                slice.config[config_name] = { value: !slice.config[config_name].value };
-                this.saveSceneOverrideSlice(agent, action_name, slice);
+                const value = !this.sceneOverlay(agent).actions[action_name].config[config_name].value;
+                this.writeSceneOverride(agent, { action: action_name, config: { [config_name]: value } }, `${config.label}: ${value ? 'On' : 'Off'}`);
                 return;
             }
 
@@ -468,22 +481,20 @@ export default {
             this.saveAgent(agent);
         },
         // Every change of one agent action in one write: values already under a
-        // scene override go to the override slice, the rest to the agent, each
+        // scene override go to the scene-only writer, the rest to the agent, each
         // saved once. Returns false when the action is unknown. `reply`
-        // ({onComplete, onError}) hears the backend's answer to the change.
-        applyActionValues(agent, action_name, { enabled, config = {} } = {}, reply = null) {
+        // ({onComplete, onError}) hears the backend's answer to the change;
+        // `label` names the scene-only part where it is shown as pending.
+        applyActionValues(agent, action_name, { enabled, config = {} } = {}, reply = null, label = null) {
             const action = agent?.actions?.[action_name];
             if (!action) return false;
-            let slice = null;
-            const overrideSlice = () => {
-                if (!slice) slice = JSON.parse(JSON.stringify(this.sceneOverlay(agent).actions[action_name]));
-                return slice;
-            };
+            let sceneEntry = null;
+            const overrideEntry = () => (sceneEntry ||= { action: action_name, config: {} });
             let agentChanged = false;
             const restores = [];
             if (enabled !== undefined) {
                 if (this.isEnabledOverridden(agent, action_name)) {
-                    if (this.sceneOverlay(agent).actions[action_name].enabled !== enabled) overrideSlice().enabled = enabled;
+                    if (this.sceneOverlay(agent).actions[action_name].enabled !== enabled) overrideEntry().enabled = enabled;
                 } else if (action.enabled !== enabled) {
                     const previous = action.enabled;
                     action.enabled = enabled;
@@ -495,7 +506,7 @@ export default {
                 const field = action.config?.[config_name];
                 if (!field) continue;
                 if (this.isConfigOverridden(agent, action_name, config_name)) {
-                    overrideSlice().config[config_name] = { value };
+                    overrideEntry().config[config_name] = value;
                 } else if (field.value !== value) {
                     const previous = field.value;
                     field.value = value;
@@ -503,8 +514,8 @@ export default {
                     agentChanged = true;
                 }
             }
-            const answer = replyAfterAll(reply, (slice ? 1 : 0) + (agentChanged ? 1 : 0));
-            if (slice) this.saveSceneOverrideSlice(agent, action_name, slice, answer);
+            const answer = replyAfterAll(reply, (sceneEntry ? 1 : 0) + (agentChanged ? 1 : 0));
+            if (sceneEntry) this.writeSceneOverride(agent, sceneEntry, label || `${agent.label || agent.name}: ${action.label || action_name}`, answer);
             if (agentChanged) this.saveAgent(agent, {
                 onComplete: () => answer?.onComplete(),
                 // the field objects are shared with every agent status reader: a
@@ -571,12 +582,6 @@ export default {
                 'The connection closed before the answer arrived; the change may have been saved.',
             );
             this.pendingEffort = null;
-            // no answer can arrive now; the statuses of the next connection are the truth
-            for (const [requestId, { reply, release }] of Object.entries(this.sliceReplies)) {
-                delete this.sliceReplies[requestId];
-                release();
-                reply?.onError('The connection closed before the answer arrived; the change may have been saved.');
-            }
         },
         getQuickToggleActions(agent) {
             const result = {};
@@ -643,16 +648,9 @@ export default {
             // The scene-only writer tracks its own requests and scene generation
             this.overrides?.handleMessage(data);
 
-            if (data.type === 'agent_config' && data.action === 'operation_done' && this.sliceReplies[data.request_id]) {
-                const { reply, release } = this.sliceReplies[data.request_id];
-                delete this.sliceReplies[data.request_id];
-                release(!!data.error);
-                if (data.error) reply?.onError(data.error.message);
-                else reply?.onComplete();
-            }
-
             // When a new scene is loaded, clear the messages and agentHasMessages
             if (data.type === "system" && data.id === 'scene.loaded') {
+                this.chipError = null;
                 this.messages = {};
                 this.agentHasMessages = {};
                 // a hub stop belongs to the scene it was queued in: a load is a

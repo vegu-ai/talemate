@@ -231,10 +231,10 @@ class AgentConfigPlugin(Plugin):
         """Reject an override save and put the frontend back on the truth.
 
         Senders (the settings view's override buffer, the agent panel's
-        quick-toggle chips, the world editor's finalizers) update their local
-        copy of the overlay optimistically, so a refusal that only raised an
-        error toast would leave a value on screen that was never stored.
-        Re-emitting agent status ships the unchanged overlay back.
+        quick-toggle chips) update their local copy of the overlay
+        optimistically, so a refusal that only raised an error toast would
+        leave a value on screen that was never stored. Re-emitting agent status
+        ships the unchanged overlay back.
         """
         if agent:
             await agent.emit_status()

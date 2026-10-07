@@ -6,7 +6,8 @@ import { createApp, defineComponent, h, nextTick } from 'vue';
 import UxNote from '@/components/UxNote.vue';
 import { lift, readSource } from './helpers/liftMethod.js';
 import { replyAfterAll } from '@/utils/writeReply';
-import { sectionOverrideCounts, setActionOverrideSlice } from '@/constants/sceneAgentSettings';
+import { sectionOverrideCounts } from '@/constants/sceneAgentSettings';
+import { SceneAgentOverridesCoordinator } from '@/utils/sceneAgentOverrides';
 import { effortMode } from '@/utils/knowledgeEffort';
 import { perspectivesEnabled } from '@/utils/sceneSettings';
 import { applyHeldValues, isEmptyWrite, reportedValues } from '@/utils/pendingAgentWrites';
@@ -38,53 +39,65 @@ const Container = defineComponent({ setup: (_, { slots }) => () => h('div', slot
 describe('the drawer answers a single agent write', () => {
   const deps = { replyAfterAll };
 
-  it('sends an overridden value to the scene override with a request id and answers on its reply', () => {
-    const applyActionValues = lift(aiAgent, 'applyActionValues', 'AIAgent.vue', deps);
-    const saveSceneOverrideSlice = lift(aiAgent, 'saveSceneOverrideSlice', 'AIAgent.vue', { setActionOverrideSlice });
-    const holdWrite = lift(aiAgent, 'holdWrite', 'AIAgent.vue', { isEmptyWrite, applyHeldValues });
-    const handleMessage = lift(aiAgent, 'handleMessage', 'AIAgent.vue', { effortMode, perspectivesEnabled, PENDING_EFFORT_TTL: 30000, reportedValues });
+  // the drawer with its real scene-only writer
+  function drawerWithWriter(agent) {
     const sent = [];
-    const agent = { name: 'summarizer', data: { scene_overrides: formatOverride('chat') }, actions: summarizerStatus().actions };
     const self = {
-      sliceReplies: {}, sliceSeq: 0, saveAgent: vi.fn(), state: { agents: [agent] },
-      getWebsocket: () => ({ send: text => sent.push(JSON.parse(text)) }),
+      saveAgent: vi.fn(), state: { agents: [agent] }, chipError: null,
       sceneOverlay: a => a.data.scene_overrides, isEnabledOverridden: () => false,
       isConfigOverridden: (a, action, key) => key === 'format',
       lastReported: {}, pendingWrites: {}, pendingWriteSeq: 0, reapplyPendingWrites: () => {},
     };
-    self.saveSceneOverrideSlice = saveSceneOverrideSlice.bind(self);
-    self.holdWrite = holdWrite.bind(self);
+    self.overrides = new SceneAgentOverridesCoordinator({
+      getWebsocket: () => ({ send: text => sent.push(JSON.parse(text)) }),
+      scene: () => ({ data: { id: 'scene-1', filename: 's.json', project_name: 'p', agent_settings_file: 'agent-settings.json' } }),
+      state: { busy: false, error: null },
+    });
+    self.applySceneAgentValues = lift(aiAgent, 'applySceneAgentValues', 'AIAgent.vue').bind(self);
+    self.writeSceneOverride = lift(aiAgent, 'writeSceneOverride', 'AIAgent.vue', { applyHeldValues }).bind(self);
+    self.holdWrite = lift(aiAgent, 'holdWrite', 'AIAgent.vue', { isEmptyWrite, applyHeldValues }).bind(self);
+    self.handleMessage = lift(aiAgent, 'handleMessage', 'AIAgent.vue', { effortMode, perspectivesEnabled, PENDING_EFFORT_TTL: 30000, reportedValues }).bind(self);
+    return { self, sent };
+  }
+
+  it('sends an overridden value to the scene-only writer as a sparse patch and answers on its reply', () => {
+    const applyActionValues = lift(aiAgent, 'applyActionValues', 'AIAgent.vue', deps);
+    const agent = { name: 'summarizer', data: { scene_overrides: formatOverride('chat') }, actions: summarizerStatus().actions };
+    const { self, sent } = drawerWithWriter(agent);
     const reply = { onComplete: vi.fn(), onError: vi.fn() };
 
     applyActionValues.call(self, agent, 'manage_scene_history', { config: { format: 'narrative' } }, reply);
 
     expect(self.saveAgent).not.toHaveBeenCalled();
     expect(sent[0]).toMatchObject({ action: 'save_scene_overrides', agent_type: 'summarizer',
-      override: formatOverride('narrative') });
-    expect(sent[0].request_id).toBeTruthy();
-    handleMessage.call(self, { type: 'agent_config', action: 'operation_done', request_id: 'someone-else' });
+      patch: { set: { actions: { manage_scene_history: { config: { format: { value: 'narrative' } } } } }, clear: [] } });
+    expect(sent[0].override).toBeUndefined();
+    expect(agent.data.scene_overrides).toEqual(formatOverride('narrative'));
+    self.handleMessage({ type: 'agent_config', action: 'operation_done', request_id: 'someone-else' });
     expect(reply.onComplete).not.toHaveBeenCalled();
-    handleMessage.call(self, { type: 'agent_config', action: 'operation_done', request_id: sent[0].request_id, data: {} });
+    self.handleMessage({ type: 'agent_config', action: 'operation_done', request_id: sent[0].request_id, data: {} });
     expect(reply.onComplete).toHaveBeenCalledTimes(1);
     expect(reply.onError).not.toHaveBeenCalled();
     expect(self.pendingWrites).toEqual({});
   });
 
-  it('reports a refused scene override', () => {
-    const handleMessage = lift(aiAgent, 'handleMessage', 'AIAgent.vue', { effortMode, perspectivesEnabled, PENDING_EFFORT_TTL: 30000, reportedValues });
+  it('reports a refused scene override and puts the reported overlay back', () => {
+    const applyActionValues = lift(aiAgent, 'applyActionValues', 'AIAgent.vue', deps);
+    const agent = { name: 'summarizer', data: { scene_overrides: formatOverride('chat') }, actions: summarizerStatus().actions };
+    const { self, sent } = drawerWithWriter(agent);
+    self.lastReported.summarizer = reportedValues({ ...summarizerStatus(), scene_overrides: formatOverride('chat') });
     const reply = { onComplete: vi.fn(), onError: vi.fn() };
-    const release = vi.fn();
-    const self = { sliceReplies: { r1: { reply, release } }, state: { agents: [] } };
-    handleMessage.call(self, { type: 'agent_config', action: 'operation_done', request_id: 'r1', error: { message: 'Failed to write agent-settings file' } });
-    expect(reply.onError).toHaveBeenCalledWith('Failed to write agent-settings file');
-    expect(release).toHaveBeenCalledWith(true);
-    expect(self.sliceReplies).toEqual({});
+    applyActionValues.call(self, agent, 'manage_scene_history', { config: { format: 'narrative' } }, reply);
+    self.handleMessage({ type: 'agent_config', action: 'operation_done', request_id: sent[0].request_id, error: { message: 'Failed to write agent-settings file' } });
+    expect(reply.onError).toHaveBeenCalledWith('Failed to write agent-settings file', false, false);
+    expect(self.pendingWrites).toEqual({});
+    expect(agent.data.scene_overrides).toEqual(formatOverride('chat'));
   });
 
   it('hands a global write and its reply to the config save', () => {
     const applyActionValues = lift(aiAgent, 'applyActionValues', 'AIAgent.vue', deps);
     const agent = { name: 'summarizer', data: { scene_overrides: {} }, actions: summarizerStatus().actions };
-    const self = { saveAgent: vi.fn(), saveSceneOverrideSlice: vi.fn(), sceneOverlay: () => ({}), isEnabledOverridden: () => false, isConfigOverridden: () => false };
+    const self = { saveAgent: vi.fn(), writeSceneOverride: vi.fn(), sceneOverlay: () => ({}), isEnabledOverridden: () => false, isConfigOverridden: () => false };
     const reply = { onComplete: vi.fn(), onError: vi.fn() };
 
     applyActionValues.call(self, agent, 'manage_scene_history', { config: { format: 'chat' } }, reply);

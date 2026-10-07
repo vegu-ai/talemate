@@ -712,6 +712,8 @@ export default {
       favicon: null,
       sceneActive: false,
       drawer: false,
+      // the scene-only writer's state, shared by every host that writes through it
+      sceneOverrideWriterState: { busy: false, error: null },
       sceneDrawer: true,
       debugDrawer: false,
       directorConsoleDrawer: false,
@@ -1107,10 +1109,11 @@ export default {
       getAgents: () => this.getAgents(),
       toggleAgentAction: (agentName, actionName) => this.toggleAgentAction(agentName, actionName),
       toggleAgentConfig: (agentName, actionName, configName) => this.toggleAgentConfig(agentName, actionName, configName),
-      applyAgentValues: (agentName, actionName, values, reply) => this.applyAgentValues(agentName, actionName, values, reply),
+      applyAgentValues: (agentName, actionName, values, reply, label) => this.applyAgentValues(agentName, actionName, values, reply, label),
       applySceneAgentValues: (entries, label, reply) => this.applySceneAgentValues(entries, label, reply),
       clearSceneAgentValues: (entries, reply) => this.clearSceneAgentValues(entries, reply),
-      sceneOverridesState: () => this.$refs.aiAgent?.overridesState || { busy: false, error: null },
+      patchSceneAgentValues: (patch, label, reply) => this.patchSceneAgentValues(patch, label, reply),
+      sceneOverridesState: () => this.sceneOverrideWriterState,
       requestSceneSave: () => this.$refs.sceneSaveDialog.open(),
       retrySceneOverrides: () => this.$refs.aiAgent?.overrides?.retrySave(),
       discardSceneOverrides: () => this.$refs.aiAgent?.overrides?.discardPendingSave(),
@@ -1869,10 +1872,10 @@ export default {
       this.$refs.aiAgent.toggleAction(agent, actionName, action);
       return true;
     },
-    applyAgentValues(agentName, actionName, values, reply = null) {
+    applyAgentValues(agentName, actionName, values, reply = null, label = null) {
       const agent = this.getAgents().find((candidate) => candidate.name === agentName);
       if (!agent?.actions?.[actionName]) return false;
-      return this.$refs.aiAgent.applyActionValues(agent, actionName, values, reply);
+      return this.$refs.aiAgent.applyActionValues(agent, actionName, values, reply, label);
     },
     // The scene-only writer outside the settings page: sparse patches against
     // the scene overlay, never the global agent values.
@@ -1883,6 +1886,10 @@ export default {
     clearSceneAgentValues(entries, reply = null) {
       if (!this.$refs.aiAgent) return reply?.onError('The agents are not available.');
       this.$refs.aiAgent.clearSceneAgentValues(entries, reply);
+    },
+    patchSceneAgentValues(patch, label, reply = null) {
+      if (!this.$refs.aiAgent) return reply?.onError('The agents are not available.');
+      this.$refs.aiAgent.patchSceneAgentValues(patch, label, reply);
     },
     toggleAgentConfig(agentName, actionName, configName) {
       const agent = this.getAgents().find((candidate) => candidate.name === agentName);

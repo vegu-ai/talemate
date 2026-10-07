@@ -56,7 +56,7 @@ Click the chip to open the [knowledge hub](/talemate/user-guide/world-state/#kno
 
 For example, when a long conversation starts to feel slow, open the chip and drag the slider from **Thorough** down to **Minimal** without opening the World State panel.
 
-The chip's explanation also names the state the settings are in: while the agents have not reported yet, while another knowledge settings change is being applied, and while one waits for a scene save. A change that waits for a scene save, for example because you cancelled the **Save Scene** dialog of a story that has no save file yet, offers **Save and apply** and **Discard change** in the popup itself. When a change could not be saved, the explanation names the reason.
+The chip's explanation also names the state the settings are in: while the agents have not reported yet, while a scene override change is being applied, and while one waits for a scene save. Scene override changes from other places, such as the agent panel chips or the visualizer menu, count too; a waiting change is named, for example "Character portraits: On". A change that waits for a scene save, for example because you cancelled the **Save Scene** dialog of a story that has no save file yet, offers **Save and apply** and **Discard change** in the popup itself. When a change could not be saved, the explanation names the reason.
 
 ##### :material-account-eye-outline: Knowledge mode
 

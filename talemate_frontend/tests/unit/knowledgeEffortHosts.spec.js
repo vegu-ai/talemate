@@ -90,22 +90,31 @@ describe('the Scene Settings switch queues the stop too', () => {
 describe('the drawer writes a batch in one save', () => {
     function drawer(agent) {
         return {
-            saveAgent: vi.fn(), saveSceneOverrideSlice: vi.fn(),
+            saveAgent: vi.fn(), writeSceneOverride: vi.fn(),
             isEnabledOverridden: vi.fn(() => false), isConfigOverridden: vi.fn((a, action, key) => key === 'memory_pass'),
             sceneOverlay: () => ({ actions: { character_knowledge: { enabled: true, config: { memory_pass: { value: false } } } } }),
             state: { agents: [agent] },
         };
     }
-    it('sets base values with one saveAgent and overridden keys through the override slice', () => {
+    it('sets base values with one saveAgent and overridden keys as a sparse scene-only entry', () => {
         const applyActionValues = lift(aiAgent, 'applyActionValues', 'AIAgent.vue', { replyAfterAll });
         const agent = standardAgents()[0];
         const self = drawer(agent);
         expect(applyActionValues.call(self, agent, 'character_knowledge', { config: { perspective_filter: false, memory_pass: true, unknown: true } })).toBe(true);
         expect(agent.actions.character_knowledge.config.perspective_filter.value).toBe(false);
         expect(self.saveAgent).toHaveBeenCalledTimes(1);
-        expect(self.saveSceneOverrideSlice).toHaveBeenCalledWith(agent, 'character_knowledge',
-            expect.objectContaining({ config: expect.objectContaining({ memory_pass: { value: true } }) }), null);
+        expect(self.writeSceneOverride).toHaveBeenCalledWith(agent,
+            { action: 'character_knowledge', config: { memory_pass: true } }, expect.any(String), null);
         expect(applyActionValues.call(self, agent, 'missing', { enabled: false })).toBe(false);
+    });
+    it('names the scene-only change with the caller\'s label, or the agent and action', () => {
+        const applyActionValues = lift(aiAgent, 'applyActionValues', 'AIAgent.vue', { replyAfterAll });
+        const agent = { ...standardAgents()[0], label: 'Conversation' };
+        const self = drawer(agent);
+        applyActionValues.call(self, agent, 'character_knowledge', { config: { memory_pass: true } }, null, 'Memory pass: On');
+        expect(self.writeSceneOverride.mock.calls[0][2]).toBe('Memory pass: On');
+        applyActionValues.call(self, agent, 'character_knowledge', { config: { memory_pass: true } });
+        expect(self.writeSceneOverride.mock.calls[1][2]).toBe(`Conversation: ${agent.actions.character_knowledge.label || 'character_knowledge'}`);
     });
     it('saves nothing when every value already matches', () => {
         const applyActionValues = lift(aiAgent, 'applyActionValues', 'AIAgent.vue', { replyAfterAll });
@@ -221,14 +230,14 @@ describe('the drawer writes a batch in one save', () => {
         const applyActionValues = lift(aiAgent, 'applyActionValues', 'AIAgent.vue', { replyAfterAll });
         const agent = standardAgents()[0];
         const self = {
-            saveAgent: vi.fn(), saveSceneOverrideSlice: vi.fn(),
+            saveAgent: vi.fn(), writeSceneOverride: vi.fn(),
             isEnabledOverridden: () => true, isConfigOverridden: () => false,
             sceneOverlay: () => ({ actions: { character_knowledge: { enabled: true, config: {} } } }),
         };
         applyActionValues.call(self, agent, 'character_knowledge', { enabled: true });
-        expect(self.saveSceneOverrideSlice).not.toHaveBeenCalled();
+        expect(self.writeSceneOverride).not.toHaveBeenCalled();
         applyActionValues.call(self, agent, 'character_knowledge', { enabled: false });
-        expect(self.saveSceneOverrideSlice).toHaveBeenCalledWith(agent, 'character_knowledge', expect.objectContaining({ enabled: false }), null);
+        expect(self.writeSceneOverride).toHaveBeenCalledWith(agent, { action: 'character_knowledge', config: {}, enabled: false }, expect.any(String), null);
     });
 });
 
@@ -287,11 +296,11 @@ describe('the app delegates the batch write', () => {
         const drawerRef = { applyActionValues: vi.fn(() => true) };
         const self = { getAgents: () => [agent], $refs: { aiAgent: drawerRef } };
         expect(applyAgentValues.call(self, 'conversation', 'character_knowledge', { config: { memory_pass: true } })).toBe(true);
-        expect(drawerRef.applyActionValues).toHaveBeenCalledWith(agent, 'character_knowledge', { config: { memory_pass: true } }, null);
+        expect(drawerRef.applyActionValues).toHaveBeenCalledWith(agent, 'character_knowledge', { config: { memory_pass: true } }, null, null);
         expect(applyAgentValues.call(self, 'narrator', 'character_knowledge', {})).toBe(false);
     });
     it('provides both entry points to the tree', () => {
-        expect(talemateApp).toContain('applyAgentValues: (agentName, actionName, values, reply) => this.applyAgentValues(agentName, actionName, values, reply),');
+        expect(talemateApp).toContain('applyAgentValues: (agentName, actionName, values, reply, label) => this.applyAgentValues(agentName, actionName, values, reply, label),');
         expect(talemateApp).toContain('queueKnowledgeEffort: (stop, mode, options) => this.$refs.aiAgent.queueEffort(stop, mode, options),');
     });
 });

@@ -46,5 +46,7 @@ This sub-tab edits the Visualizer agent's **per-scene overrides** for [Prompt Fi
 
 Click the :material-link-variant-off: icon next to a field to activate an override for the scene, then edit and **Save**. Overrides are stored in the scene's agent-settings file; if the scene doesn't have one linked yet, it is created with the default name on first save.
 
+**Save** writes only the fields you changed. Say you are editing the finalization instructions here while you switch Automatic Generation for the scene in the agent panel: saving keeps that switch.
+
 !!! note
     The scene must have been saved to disk at least once, and must not have opted out of per-scene agent settings (see [Scene Settings](/talemate/user-guide/world-editor/scene/settings)) for overrides to be editable here.

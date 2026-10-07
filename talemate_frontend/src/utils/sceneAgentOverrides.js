@@ -137,7 +137,27 @@ export class SceneAgentOverridesCoordinator {
      * change, once; `unknown` when a sent patch lost its answer and may be stored.
      */
     applySceneAgentValues(entries, label = null, reply = null) {
-        this.enqueueGroups(entries, (group, entry) => {
+        this.patchSceneAgentValues({ set: entries }, label, reply);
+    }
+
+    /** entries: [{ agent, action, config? }] — no config clears the enable override. */
+    clearSceneAgentValues(entries, reply = null) {
+        this.patchSceneAgentValues({ clear: entries }, null, reply);
+    }
+
+    /**
+     * Sets and clears of one change, one patch per agent.
+     * set: [{ agent, action, enabled?, config: { key: value } }]
+     * clear: [{ agent, action, config? }]
+     */
+    patchSceneAgentValues({ set = [], clear = [] } = {}, label = null, reply = null) {
+        const groups = new Map();
+        const groupOf = (agent) => {
+            if (!groups.has(agent)) groups.set(agent, { set: { actions: {} }, clear: [] });
+            return groups.get(agent);
+        };
+        for (const entry of set) {
+            const group = groupOf(entry.agent);
             const action = { config: {} };
             if (entry.enabled !== undefined) action.enabled = entry.enabled;
             for (const [key, value] of Object.entries(entry.config || {})) action.config[key] = { value };
@@ -147,31 +167,32 @@ export class SceneAgentOverridesCoordinator {
                 ...action,
                 config: { ...(existing.config || {}), ...action.config },
             };
-        }, label, reply);
+        }
+        for (const entry of clear) {
+            groupOf(entry.agent).clear.push(entry.config ? { action: entry.action, config: entry.config } : { action: entry.action });
+        }
+        this.enqueueGroups(groups, label, reply);
     }
 
-    /** entries: [{ agent, action, config? }] — no config clears the enable override. */
-    clearSceneAgentValues(entries, reply = null) {
-        this.enqueueGroups(entries, (group, entry) => {
-            group.clear.push(entry.config ? { action: entry.action, config: entry.config } : { action: entry.action });
-        }, null, reply);
+    refuse(message, reply) {
+        this.report(message);
+        reply?.onError(message);
     }
 
-    enqueueGroups(entries, add, label = null, reply = null) {
+    enqueueGroups(groups, label = null, reply = null) {
         const scene = this.getScene();
         if (!sceneCanPersist(scene) && !this.requestSave) {
-            this.report('Save the scene to change its scene overrides.');
-            reply?.onError('Save the scene to change its scene overrides.');
+            this.refuse('Save the scene to change its scene overrides.', reply);
             return;
         }
         const identity = sceneIdentityOf(scene);
         if (this.saveRequired) {
-            reply?.onError('An earlier change is waiting for the scene to be saved.');
+            this.refuse('An earlier change is waiting for the scene to be saved.', reply);
             return;
         }
         if (this.identity === null) this.identity = identity;
         if (!identity || identity !== this.identity) {
-            reply?.onError('The scene changed before the change was saved.');
+            this.refuse('The scene changed before the change was saved.', reply);
             return;
         }
 
@@ -180,12 +201,6 @@ export class SceneAgentOverridesCoordinator {
         this.failed = false;
         this.report(null);
 
-        const groups = new Map();
-        for (const entry of entries || []) {
-            const group = groups.get(entry.agent) || { set: { actions: {} }, clear: [] };
-            add(group, entry);
-            groups.set(entry.agent, group);
-        }
         const answer = replyAfterAll(reply, groups.size);
         for (const [agent, patch] of groups) {
             this.queue.push({ agent, patch, identity, label, reply: answer, requestId: nextRequestId() });

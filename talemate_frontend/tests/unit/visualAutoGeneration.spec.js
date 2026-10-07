@@ -108,7 +108,7 @@ describe("scene tool menu wiring", () => {
 
     it("writes through the drawer's layer-aware writer", () => {
         expect(source).toContain("'applyAgentValues'");
-        expect(rows).toContain("this.applyAgentValues('visual', '_config', { config: { automatic_generation: on } })");
+        expect(rows).toContain("this.applyAgentValues('visual', '_config', { config: { automatic_generation: on } }, automatic.overridden ? this.writeReply() : null, `Automatic generation: ${on ? 'On' : 'Off'}`)");
         expect(rows).toContain("this.setGeneration('avatars', portraits, 'Character portraits', on)");
         expect(rows).toContain("this.setGeneration('backgrounds', backgrounds, 'Backgrounds', on)");
     });
@@ -125,6 +125,15 @@ describe("scene tool menu wiring", () => {
         expect(rows.indexOf("if (!automatic.on) return rows;")).toBeLessThan(rows.indexOf("generationState(worldState, 'avatars')"));
     });
 
+    it("shows the shared pending scene save and the menu's own refusal under the rows", () => {
+        const block = source.slice(source.indexOf('<div v-if="pendingSave || writeError"'), source.indexOf("<v-divider></v-divider>"));
+        expect(block).toContain('v-if="pendingSave || writeError"');
+        expect(block).toContain("<SceneOverridePendingSave v-if=\"pendingSave\" />");
+        expect(block).toContain("text-body-small text-error");
+        expect(source).toContain("'sceneOverridesState'");
+        expect(source.indexOf('v-for="row in generationRows"')).toBeLessThan(source.indexOf('data-testid="auto-generation-feedback"'));
+    });
+
     it("disables the toggles without a ready image backend and leaves the reason to the menu's alert", () => {
         expect(source).toContain(':disabled="!visualAgentReady"');
         expect(rows).not.toContain("No image backend ready");
@@ -135,11 +144,18 @@ describe("scene tool menu wiring", () => {
 describe("a portrait or background row writes the layer its mark promises", () => {
     const source = readSource(fileURLToPath(new URL("../../src/components/SceneToolsVisual.vue", import.meta.url)));
     const setGeneration = lift(source, "setGeneration", "SceneToolsVisual.vue", { generationValues });
-    const host = (agent) => ({
-        drawerAgent: () => agent,
-        applyAgentValues: vi.fn(),
-        applySceneAgentValues: vi.fn(),
-    });
+    const writeReply = lift(source, "writeReply", "SceneToolsVisual.vue");
+    const host = (agent) => {
+        const self = {
+            drawerAgent: () => agent,
+            applyAgentValues: vi.fn(),
+            applySceneAgentValues: vi.fn(),
+            writeError: null,
+        };
+        self.writeReply = writeReply.bind(self);
+        return self;
+    };
+    const anyReply = expect.objectContaining({ onComplete: expect.any(Function), onError: expect.any(Function) });
 
     it("only the frequency overridden, off: generate_new goes to the scene, not global", () => {
         const agent = worldState({ generateNew: true, frequency: 1, overlay: overlayFor({ selection_frequency: { value: 2 } }) });
@@ -149,6 +165,7 @@ describe("a portrait or background row writes the layer its mark promises", () =
         expect(self.applySceneAgentValues).toHaveBeenCalledWith(
             [{ agent: "world_state", action: "avatars", config: { generate_new: false } }],
             "Character portraits: Off",
+            anyReply,
         );
     });
 
@@ -160,7 +177,20 @@ describe("a portrait or background row writes the layer its mark promises", () =
         expect(self.applySceneAgentValues).toHaveBeenCalledWith(
             [{ agent: "world_state", action: "avatars", config: { generate_new: true, selection_frequency: 1 } }],
             "Character portraits: On",
+            anyReply,
         );
+    });
+
+    it("shows why a scene-only change was not saved, and clears it on the next change", () => {
+        const agent = worldState({ generateNew: false, frequency: 1, overlay: overlayFor({ generate_new: { value: false } }) });
+        const self = host(agent);
+        setGeneration.call(self, "avatars", generationState(agent, "avatars"), "Character portraits", true);
+        self.applySceneAgentValues.mock.calls[0][2].onError("An earlier change is waiting for the scene to be saved.");
+        expect(self.writeError).toBe("An earlier change is waiting for the scene to be saved.");
+        setGeneration.call(self, "avatars", generationState(agent, "avatars"), "Character portraits", true);
+        expect(self.writeError).toBe(null);
+        self.applySceneAgentValues.mock.calls[1][2].onComplete();
+        expect(self.writeError).toBe(null);
     });
 
     it("no override: both fields go through the drawer's global write", () => {

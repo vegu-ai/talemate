@@ -62,7 +62,19 @@ export function writtenValues(reported, agent) {
 }
 
 export function isEmptyWrite(held) {
-    return !('enabled' in held) && !Object.keys(held.actions || {}).length && !held.scene_overrides;
+    return !('enabled' in held) && !Object.keys(held.actions || {}).length && !held.scene_overrides && !held.scene_overrides_set;
+}
+
+// Sparse scene-override values over the agent's overlay: what another writer
+// changed meanwhile stays.
+function mergeSceneOverrides(overlay, set) {
+    const actions = { ...(overlay?.actions || {}) };
+    for (const [name, slice] of Object.entries(set.actions || {})) {
+        const current = actions[name] || {};
+        actions[name] = { ...current, config: { ...(current.config || {}), ...clone(slice.config || {}) } };
+        if ('enabled' in slice) actions[name].enabled = slice.enabled;
+    }
+    return { ...(overlay || {}), actions };
 }
 
 /**
@@ -83,5 +95,8 @@ export function applyHeldValues(agent, held) {
     }
     if (held.scene_overrides) {
         agent.data = { ...agent.data, scene_overrides: clone(held.scene_overrides) };
+    }
+    if (held.scene_overrides_set) {
+        agent.data = { ...agent.data, scene_overrides: mergeSceneOverrides(agent.data?.scene_overrides, held.scene_overrides_set) };
     }
 }

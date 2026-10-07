@@ -296,3 +296,62 @@ describe('the answer to one change', () => {
         expect(answer.onError).toHaveBeenCalledTimes(1);
     });
 });
+
+describe('one change with sets and clears', () => {
+    it('sends one patch per agent carrying both', () => {
+        const { sent, coordinator, done } = harness();
+        coordinator.patchSceneAgentValues({
+            set: [setEntry('visual', '_prompt_finalization', { mode: 'b' })],
+            clear: [{ agent: 'visual', action: '_prompt_finalization', config: 'instructions' }, { agent: 'memory', action: 'retrieval' }],
+        });
+        expect(sent).toHaveLength(1);
+        expect(sent[0].agent_type).toBe('visual');
+        expect(sent[0].patch).toEqual({
+            set: { actions: { _prompt_finalization: { config: { mode: { value: 'b' } } } } },
+            clear: [{ action: '_prompt_finalization', config: 'instructions' }],
+        });
+        done({ request_id: sent[0].request_id });
+        expect(sent[1]).toMatchObject({ agent_type: 'memory', patch: { set: { actions: {} }, clear: [{ action: 'retrieval' }] } });
+    });
+});
+
+describe('a refused change is never silent', () => {
+    function pendingHarness() {
+        const scene = { data: { id: 'scene-1', project_name: 'p', filename: null } };
+        const sent = [];
+        const state = { busy: false, error: null };
+        let resolveSave;
+        const coordinator = new SceneAgentOverridesCoordinator({
+            getWebsocket: () => ({ send: (payload) => sent.push(JSON.parse(payload)) }),
+            scene: () => scene,
+            state,
+            requestSave: () => new Promise((resolve) => { resolveSave = resolve; }),
+        });
+        return { coordinator, state, sent, cancelSave: () => resolveSave({ status: 'cancelled' }) };
+    }
+
+    it('reports a change refused behind a pending save on the shared state, with or without a reply', async () => {
+        const { coordinator, state, sent, cancelSave } = pendingHarness();
+        coordinator.applySceneAgentValues([setEntry('world_state', 'avatars', { generate_new: true })], 'Character portraits: On');
+        cancelSave();
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(state.pendingSave).toBe(true);
+        expect(state.pendingLabel).toBe('Character portraits: On');
+        expect(state.error).toBe('Save cancelled. Your change is still pending.');
+
+        coordinator.applySceneAgentValues([setEntry('world_state', 'avatars', { generate_new: false })], 'Character portraits: Off');
+        expect(state.error).toBe('An earlier change is waiting for the scene to be saved.');
+        const answer = { onComplete: vi.fn(), onError: vi.fn() };
+        coordinator.applySceneAgentValues([setEntry('world_state', 'backgrounds', { generate_new: true })], 'Backgrounds: On', answer);
+        expect(answer.onError).toHaveBeenCalledWith('An earlier change is waiting for the scene to be saved.');
+        expect(state.pendingLabel).toBe('Character portraits: On');
+        expect(sent).toEqual([]);
+    });
+
+    it('reports a change for a scene that cannot save on the shared state', () => {
+        const { coordinator, state } = harness({ scene: { data: {} } });
+        coordinator.applySceneAgentValues([setEntry('summarizer', 'manage_scene_history', { format: 'chat' })]);
+        expect(state.error).toBe('Save the scene to change its scene overrides.');
+    });
+});

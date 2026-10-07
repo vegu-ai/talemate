@@ -32,9 +32,10 @@ export default {
             if (currentEffort(this.agents, this.mode).stop === null) {
                 reasons.push('Waiting for the agents to report.');
             } else if (this.overrides.pendingSave) {
-                reasons.push('A knowledge settings change waits for a scene save. Open this to save and apply it, or to discard it.');
+                const change = this.overrides.pendingLabel ? `A scene override change (${this.overrides.pendingLabel})` : 'A scene override change';
+                reasons.push(`${change} waits for a scene save. Open this to save and apply it, or to discard it.`);
             } else if (this.overrides.busy) {
-                reasons.push('A knowledge settings change is being applied.');
+                reasons.push('A scene override change is being applied.');
             }
             if (this.overrides.error) reasons.push(this.overrides.error);
             return reasons.join(' ') || null;

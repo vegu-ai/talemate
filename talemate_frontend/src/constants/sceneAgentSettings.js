@@ -120,6 +120,33 @@ export function setActionOverrideSlice(actions, actionKey, perActionOverride) {
 }
 
 /**
+ * The sparse patch that turns one action's override slice `before` into
+ * `after`, as scene-only writer entries: `{ set: [...], clear: [...] }`.
+ * Keys equal in both are left out, so a concurrent write to them survives.
+ */
+export function actionOverridePatch(agent, actionKey, before, after) {
+  const set = { agent, action: actionKey, config: {} };
+  const clear = [];
+  if (hasEnabledOverride(after)) {
+    if (!hasEnabledOverride(before) || !!before.enabled !== !!after.enabled) set.enabled = !!after.enabled;
+  } else if (hasEnabledOverride(before)) {
+    clear.push({ agent, action: actionKey });
+  }
+  const beforeConfig = before?.config || {};
+  const afterConfig = after?.config || {};
+  for (const [key, entry] of Object.entries(afterConfig)) {
+    if (!(key in beforeConfig) || JSON.stringify(beforeConfig[key]?.value) !== JSON.stringify(entry?.value)) {
+      set.config[key] = entry?.value;
+    }
+  }
+  for (const key of Object.keys(beforeConfig)) {
+    if (!(key in afterConfig)) clear.push({ agent, action: actionKey, config: key });
+  }
+  const changed = 'enabled' in set || Object.keys(set.config).length > 0;
+  return { set: changed ? [set] : [], clear };
+}
+
+/**
  * Resolve a condition attribute (e.g. "character_creation.config.fast") to the
  * value scene mode should judge it by: the overlay first, the agent's global
  * action values second. The sparse overlay mirrors the actions map shape, so

@@ -200,28 +200,13 @@
       "registry": "core/Switch",
       "base_type": "core/Node"
     },
-    "d0a17fce-67dc-4605-8844-9839255adcf0": {
-      "title": "GET obj.0",
-      "id": "d0a17fce-67dc-4605-8844-9839255adcf0",
-      "properties": {
-        "attribute": "0"
-      },
-      "x": 1629,
-      "y": 2415,
-      "width": 210,
-      "height": 98,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/Get",
-      "base_type": "core/Node"
-    },
     "641c0896-2241-4f44-9c15-2dbad9b0446c": {
       "title": "SET obj.title",
       "id": "641c0896-2241-4f44-9c15-2dbad9b0446c",
       "properties": {
         "attribute": "title"
       },
-      "x": 2189,
+      "x": 1560,
       "y": 2325,
       "width": 210,
       "height": 98,
@@ -236,7 +221,7 @@
       "properties": {
         "stage": 5
       },
-      "x": 2459,
+      "x": 1830,
       "y": 2335,
       "width": 210,
       "height": 118,
@@ -249,7 +234,7 @@
       "title": "Scene",
       "id": "8208d05c-1822-4f4a-ba75-cfd18d2de8ca",
       "properties": {},
-      "x": 1989,
+      "x": 1360,
       "y": 2335,
       "width": 140,
       "height": 106,
@@ -258,58 +243,24 @@
       "registry": "scene/GetSceneState",
       "base_type": "core/Node"
     },
-    "1ee8f77b-5272-4f8e-94cf-56dbc2e7a12e": {
-      "title": "Trim",
-      "id": "1ee8f77b-5272-4f8e-94cf-56dbc2e7a12e",
+    "84d29f89-30b3-47fb-82a7-4a1033e5e4e6": {
+      "title": "Generate Scene Title",
+      "id": "84d29f89-30b3-47fb-82a7-4a1033e5e4e6",
       "properties": {
-        "mode": "both",
-        "chars": "\"'*"
-      },
-      "x": 1899,
-      "y": 2415,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/Trim",
-      "base_type": "core/Node"
-    },
-    "88089c22-453d-4406-904f-6c9aa83d41a1": {
-      "title": "Split",
-      "id": "88089c22-453d-4406-904f-6c9aa83d41a1",
-      "properties": {
-        "delimiter": "\\n",
-        "max_splits": 1
-      },
-      "x": 1359,
-      "y": 2415,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/Split",
-      "base_type": "core/Node"
-    },
-    "1b4e25bf-3d5b-467c-bc0c-69d107a7de6b": {
-      "title": "Contextual Generate",
-      "id": "1b4e25bf-3d5b-467c-bc0c-69d107a7de6b",
-      "properties": {
-        "context_type": "scene",
-        "context_name": "title",
-        "instructions": "Create a fitting title for the simulated scenario that the user has requested. You response MUST be a short but exciting, descriptive title.",
-        "length": 20,
-        "character": null,
-        "uid": null,
-        "context_aware": true,
-        "history_aware": true
+        "agent": "creator",
+        "function_name": "generate_scene_title",
+        "arguments": {
+          "instructions": "Create a fitting title for the simulated scenario that the user has requested. You response MUST be a short but exciting, descriptive title.",
+          "length": 20
+        }
       },
       "x": 1014,
       "y": 2189,
       "width": 276,
-      "height": 406,
+      "height": 162,
       "collapsed": false,
       "inherited": false,
-      "registry": "agents/creator/ContextualGenerate",
+      "registry": "agents/CallAgentFunctionConditional",
       "base_type": "core/Node"
     },
     "4de520a6-3543-43cb-9c45-17b2f3f91368": {
@@ -632,25 +583,13 @@
       "51f77586-711a-4cd9-89cd-386e7a6a822f.value"
     ],
     "51f77586-711a-4cd9-89cd-386e7a6a822f.yes": [
-      "1b4e25bf-3d5b-467c-bc0c-69d107a7de6b.state"
-    ],
-    "d0a17fce-67dc-4605-8844-9839255adcf0.value": [
-      "1ee8f77b-5272-4f8e-94cf-56dbc2e7a12e.string"
+      "84d29f89-30b3-47fb-82a7-4a1033e5e4e6.state"
     ],
     "641c0896-2241-4f44-9c15-2dbad9b0446c.value": [
       "a2ced2d6-c941-4dae-bd63-417b60e56835.state"
     ],
     "8208d05c-1822-4f4a-ba75-cfd18d2de8ca.scene": [
       "641c0896-2241-4f44-9c15-2dbad9b0446c.object"
-    ],
-    "1ee8f77b-5272-4f8e-94cf-56dbc2e7a12e.result": [
-      "641c0896-2241-4f44-9c15-2dbad9b0446c.value"
-    ],
-    "88089c22-453d-4406-904f-6c9aa83d41a1.parts": [
-      "d0a17fce-67dc-4605-8844-9839255adcf0.object"
-    ],
-    "1b4e25bf-3d5b-467c-bc0c-69d107a7de6b.text": [
-      "88089c22-453d-4406-904f-6c9aa83d41a1.string"
     ],
     "4de520a6-3543-43cb-9c45-17b2f3f91368.agent_enabled": [
       "ed17c926-7636-42a9-877b-cdd1757afaae.a"
@@ -700,6 +639,9 @@
     ],
     "6ef94917-f9b1-4c18-af15-617430e50cfe.state": [
       "f4cd34d9-0628-4145-a3da-ec1215cd356c.state"
+    ],
+    "84d29f89-30b3-47fb-82a7-4a1033e5e4e6.result": [
+      "641c0896-2241-4f44-9c15-2dbad9b0446c.value"
     ]
   },
   "groups": [
@@ -757,8 +699,8 @@
       "title": "Set title",
       "x": -1,
       "y": 2006,
-      "width": 2618,
-      "height": 637,
+      "width": 2081,
+      "height": 497,
       "color": "#8AA",
       "font_size": 24,
       "inherited": false
@@ -770,13 +712,6 @@
       "x": 666,
       "y": 463,
       "width": 200,
-      "inherited": false
-    },
-    {
-      "text": "Some times the AI will produce more text after the title, we only care about the title on the first line.",
-      "x": 1359,
-      "y": 2315,
-      "width": 471,
       "inherited": false
     }
   ],

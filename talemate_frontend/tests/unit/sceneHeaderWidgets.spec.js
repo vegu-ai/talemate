@@ -48,11 +48,16 @@ describe('the header knowledge effort control', () => {
 
     it('names the states that lock the popup, and a failed write', () => {
         expect(headerEffort({ overrides: { busy: true, error: null } }).notice)
-            .toBe('A knowledge settings change is being applied.');
+            .toBe('A scene override change is being applied.');
         expect(headerEffort({ overrides: { busy: true, pendingSave: true, error: null } }).notice)
-            .toBe('A knowledge settings change waits for a scene save. Open this to save and apply it, or to discard it.');
+            .toBe('A scene override change waits for a scene save. Open this to save and apply it, or to discard it.');
         expect(headerEffort({ overrides: { busy: false, error: 'The scene override could not be saved.' } }).notice)
             .toBe('The scene override could not be saved.');
+    });
+
+    it('names a pending change from any scene-only writer by its own label', () => {
+        expect(headerEffort({ overrides: { busy: true, pendingSave: true, pendingLabel: 'Character portraits: On', error: null } }).notice)
+            .toBe('A scene override change (Character portraits: On) waits for a scene save. Open this to save and apply it, or to discard it.');
     });
 });
 

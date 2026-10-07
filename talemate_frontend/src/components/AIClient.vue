@@ -289,6 +289,7 @@ import TokenBudgetInput from './TokenBudgetInput.vue';
 import { createPresetGroupForClient, groupNameError, pinnedPanelClient, presetGroupItems } from '@/utils/inferencePresets';
 import { agentsRequiringClient } from '@/utils/agentAssignments';
 import { createClientSaveState } from '@/utils/clientSaveState';
+import { reasonTokensOnEnable } from '@/utils/clientReasoning';
 
 export default {
   props: {
@@ -480,6 +481,9 @@ export default {
     toggleReasoning(index) {
       let client = this.state.clients[index];
       client.reason_enabled = !client.reason_enabled;
+      if (client.reason_enabled) {
+        client.reason_tokens = reasonTokensOnEnable(client.reason_tokens, client.min_reason_tokens);
+      }
       // the backend decides which reasoning control to show, so only turning
       // reasoning off can update the row before the saved status returns
       if (!client.reason_enabled) {

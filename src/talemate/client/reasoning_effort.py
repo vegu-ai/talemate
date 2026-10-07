@@ -7,6 +7,8 @@ from .context import client_context_attribute
 from .effort import EFFORT_LEVELS, EffortLevel
 
 __all__ = [
+    "COMPLETION_TOKEN_PARAMETER_CHOICES",
+    "EFFORT_FORMAT_CHOICES",
     "EFFORT_LEVELS",
     "EffortLevel",
     "ReasoningEffortConfig",
@@ -15,6 +17,42 @@ __all__ = [
 ]
 
 EffortFormat = Literal["none", "reasoning_effort", "reasoning"]
+
+EFFORT_FORMAT_CHOICES = [
+    {
+        "label": "none",
+        "value": "none",
+        "description": "Sends no effort field; the server uses its own default.",
+    },
+    {
+        "label": "reasoning_effort",
+        "value": "reasoning_effort",
+        "description": 'Sends "reasoning_effort": "<effort>" (OpenAI, llama.cpp, most servers).',
+    },
+    {
+        "label": "reasoning",
+        "value": "reasoning",
+        "description": 'Sends "reasoning": {"effort": "<effort>"} (OpenRouter-style servers).',
+    },
+]
+
+COMPLETION_TOKEN_PARAMETER_CHOICES = [
+    {
+        "label": "max_tokens",
+        "value": "max_tokens",
+        "description": "The traditional limit; most servers and text completions.",
+    },
+    {
+        "label": "max_completion_tokens",
+        "value": "max_completion_tokens",
+        "description": "OpenAI chat completions and servers that require it.",
+    },
+]
+
+EFFORT_LEVEL_DESCRIPTIONS = {
+    "default": "Sends no effort setting; the model decides.",
+    "none": "Asks for no reasoning, where the model supports it.",
+}
 
 
 class ReasoningEffortConfig(pydantic.BaseModel):
@@ -27,7 +65,18 @@ def reasoning_effort_extra_fields() -> dict[str, ExtraField]:
             name="effort_level",
             type="text",
             label="Reasoning Effort",
-            choices=EFFORT_LEVELS,
+            choices=[
+                {
+                    "label": level,
+                    "value": level,
+                    **(
+                        {"description": EFFORT_LEVEL_DESCRIPTIONS[level]}
+                        if level in EFFORT_LEVEL_DESCRIPTIONS
+                        else {}
+                    ),
+                }
+                for level in EFFORT_LEVELS
+            ],
             description="Controls reasoning depth. Supported levels depend on the model. 'default' sends no effort setting; 'none' requests no reasoning where supported. Unsupported levels may be rejected by the server. Sent only while Reasoning is on.",
             group=FieldGroup(name="reasoning", label="Reasoning", icon="mdi-brain"),
             required=False,

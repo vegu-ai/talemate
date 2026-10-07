@@ -66,6 +66,9 @@
     density="compact"
     class="mt-3"
   >
+    <template v-slot:item="{ props: itemProps, internalItem: item }">
+      <v-list-item v-bind="itemProps" :title="item.raw.label" :subtitle="item.raw.description" :lines="item.raw.description ? 'two' : 'one'"></v-list-item>
+    </template>
     <template v-if="$slots.prepend" v-slot:prepend><slot name="prepend" /></template>
   </v-autocomplete>
 
@@ -124,6 +127,9 @@
     density="compact"
     class="mt-3"
   >
+    <template v-slot:item="{ props: itemProps, internalItem: item }">
+      <v-list-item v-bind="itemProps" :title="item.raw.label" :subtitle="item.raw.description" :lines="item.raw.description ? 'two' : 'one'"></v-list-item>
+    </template>
     <template v-if="$slots.prepend" v-slot:prepend><slot name="prepend" /></template>
   </v-select>
 

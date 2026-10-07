@@ -70,6 +70,10 @@ Each parameter has its own toggle:
 
 All three are enabled by default. Turning a toggle off omits that parameter from the request completely (it is not sent as a zero value). Leave them enabled unless the service you are connecting to errors when it receives one of them.
 
+### Streaming
+
+**Stream** is on by default: the server sends the response as it is generated, so the tokens-per-second figure on the client card moves while it works. Until the first token arrives the card shows *waiting…*, which is normal while a long prompt is processed. Turn **Stream** off, under **Parameters**, if your server does not support streaming; the card then shows the speed once the whole response is in.
+
 ### Reasoning
 
 Enable **Reasoning** in the client editor for a reasoning model. Choose **Reasoning Effort** and the **Reasoning Effort Format** your server accepts:
@@ -95,6 +99,8 @@ The choice applies whenever the response token cap is enabled, even with reasoni
 
 **Extra Completion Tokens** retains your saved **Reasoning Tokens** value. It adds headroom to the selected total completion limit when reasoning and the response token cap are enabled, and remains available to prompt templates as `reasoning_tokens`. It does not send a separate thinking budget. Use **Reasoning Effort** to control depth instead. Choosing an effort or a completion token parameter does not change this allowance.
 
+With **API handles prompt template** enabled, servers such as llama.cpp (`llama-server --jinja`) return the reasoning separately from the answer, and Talemate reads it from there, shows it with the prompt in the prompt viewer and ignores the strip pattern. If the server leaves the reasoning in the answer instead, Talemate strips it with your [reasoning pattern](/talemate/user-guide/clients/reasoning/#response-pattern-configuration); in this mode a response without a matching pattern is used as it is, unless you set a validation pattern or a reason prefill, which mean the reasoning started and make an unclosed block follow **Pattern Not Found Behavior**. Without **API handles prompt template**, Talemate looks for the reasoning in the response text and needs a pattern that matches your model.
+
 When a sending format is selected, the client card shows the chosen effort in a dropdown, where you can change it quickly. With format `none`, it shows a field for the extra completion allowance instead. With Reasoning off, a **Reasoning Disabled** chip takes the place of the dropdown or the field. Turning Talemate reasoning off, globally or for an agent action, omits the effort setting and padding; the server may still reason according to its own defaults. Keep your existing [reasoning patterns](/talemate/user-guide/clients/reasoning/#response-pattern-configuration) if your model includes thinking in its response text.
 
 ### Ready to use
@@ -110,6 +116,10 @@ Once it is added, the client should appear in the clients list and should displa
 #### Generations are weird / bad
 
 Make sure the [correct prompt template is assigned](/talemate/user-guide/clients/prompt-templates/).
+
+#### The error names a different problem than expected
+
+When a request fails before the server answers, for example a refused connection or a rejected key, the error dialog shows the actual cause. A server that needs no key can be left with an empty **API Key**.
 
 #### Could not connect
 

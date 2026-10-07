@@ -291,5 +291,5 @@ def test_anthropic_thinking_mode_select_migrated_to_choices():
     meta = CLIENT_CLASSES["anthropic"].Meta().model_dump()
     thinking_mode = meta["extra_fields"]["thinking_mode"]
     assert thinking_mode["type"] == "text"
-    assert {"label": "budget", "value": "budget"} in thinking_mode["choices"]
-    assert {"label": "adaptive", "value": "adaptive"} in thinking_mode["choices"]
+    assert [c["value"] for c in thinking_mode["choices"]] == ["budget", "adaptive"]
+    assert all(c["description"] for c in thinking_mode["choices"])

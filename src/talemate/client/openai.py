@@ -15,10 +15,12 @@ from talemate.client.base import (
 )
 from talemate.client.registry import register
 from talemate.client.reasoning_effort import (
+    COMPLETION_TOKEN_PARAMETER_CHOICES,
     ReasoningEffortConfig,
     ReasoningEffortMixin,
     reasoning_effort_extra_fields,
 )
+from talemate.client.streaming import StreamingConfig, streaming_extra_fields
 from talemate.client.toggleable_parameters import (
     PARAMETERS_FIELD_GROUP,
     ToggleableParametersMixin,
@@ -105,8 +107,7 @@ ToggleableParametersConfig = toggleable_parameters_config(
 )
 
 
-class OpenAIRequestConfig(pydantic.BaseModel):
-    stream: bool = True
+class OpenAIRequestConfig(StreamingConfig):
     send_system_message: bool = True
     completion_token_parameter: Literal["max_tokens", "max_completion_tokens"] = (
         "max_completion_tokens"
@@ -168,6 +169,7 @@ class OpenAIClient(
         defaults: Defaults = Defaults()
         extra_fields: dict[str, ExtraField] = reasoning_effort_extra_fields()
         extra_fields.update(toggleable_parameters_extra_fields(TOGGLEABLE_PARAMETERS))
+        extra_fields.update(streaming_extra_fields())
         extra_fields.update(
             send_system_message=ExtraField(
                 name="send_system_message",
@@ -177,19 +179,11 @@ class OpenAIClient(
                 group=PARAMETERS_FIELD_GROUP,
                 required=False,
             ),
-            stream=ExtraField(
-                name="stream",
-                type="bool",
-                label="Stream",
-                description="Stream responses as they arrive. Disable if your organization or server does not support streaming for the selected model.",
-                group=PARAMETERS_FIELD_GROUP,
-                required=False,
-            ),
             completion_token_parameter=ExtraField(
                 name="completion_token_parameter",
                 type="text",
                 label="Completion Token Parameter",
-                choices=["max_tokens", "max_completion_tokens"],
+                choices=COMPLETION_TOKEN_PARAMETER_CHOICES,
                 description="Choose the parameter your server accepts for the total completion limit. Keep 'max_completion_tokens' for OpenAI; an Override Base URL server may need 'max_tokens'. Includes extra completion tokens when reasoning is enabled.",
                 group=FieldGroup(name="reasoning", label="Reasoning", icon="mdi-brain"),
                 required=False,

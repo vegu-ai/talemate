@@ -1,5 +1,5 @@
 import random
-from typing import Literal, get_args
+from typing import Literal
 
 from openai import AsyncOpenAI
 
@@ -10,20 +10,27 @@ from talemate.client.api_handles import (
 )
 from talemate.client.base import ClientBase, ExtraField, FieldGroup
 from talemate.client.reasoning_effort import (
+    COMPLETION_TOKEN_PARAMETER_CHOICES,
+    EFFORT_FORMAT_CHOICES,
     EffortFormat,
     ReasoningEffortConfig,
     ReasoningEffortMixin,
     reasoning_effort_extra_fields,
 )
 from talemate.client.registry import register
+from talemate.client.streaming import StreamingConfig, streaming_extra_fields
 from talemate.client.toggleable_parameters import (
     ToggleableParametersMixin,
     toggleable_parameters_config,
     toggleable_parameters_extra_fields,
 )
 from talemate.config.schema import Client as BaseClientConfig
+from talemate.exceptions import ReasoningResponseError
 
 EXPERIMENTAL_DESCRIPTION = """Use this client if you want to connect to a service implementing an OpenAI-compatible API. Success is going to depend on the level of compatibility. Use the actual OpenAI client if you want to connect to OpenAI's API."""
+
+# The SDK refuses to build a client without a key; local servers need none.
+KEYLESS_PLACEHOLDER = "not-needed"
 
 # Sampler parameters whose inclusion in the request payload is user-toggleable.
 # Some OpenAI-compatible APIs hard-error when these are sent for certain models,
@@ -42,6 +49,7 @@ class CompatibleReasoningConfig(ReasoningEffortConfig):
 
 class Defaults(
     CompatibleReasoningConfig,
+    StreamingConfig,
     ToggleableParametersConfig,
     ApiHandlesPromptTemplateConfig,
 ):
@@ -55,11 +63,23 @@ class Defaults(
 
 class ClientConfig(
     CompatibleReasoningConfig,
+    StreamingConfig,
     ToggleableParametersConfig,
     ApiHandlesPromptTemplateConfig,
     BaseClientConfig,
 ):
     pass
+
+
+def reasoning_text(message) -> str | None:
+    """Reasoning a chat-completions server returns beside the content.
+
+    llama.cpp and vLLM name the field `reasoning_content`; OpenRouter-style
+    servers name it `reasoning`. The SDK keeps both as extra attributes.
+    """
+    return getattr(message, "reasoning_content", None) or getattr(
+        message, "reasoning", None
+    )
 
 
 @register()
@@ -88,12 +108,13 @@ class OpenAICompatibleClient(
                 description="The API handles the prompt template, meaning your choice in the UI for the prompt template below will be ignored. This is not recommended and should only be used if the API does not support the `completions` andpoint or you don't know which prompt template to use.",
             ),
             **toggleable_parameters_extra_fields(TOGGLEABLE_PARAMETERS),
+            **streaming_extra_fields(),
             **reasoning_effort_extra_fields(),
             "reasoning_effort_format": ExtraField(
                 name="reasoning_effort_format",
                 type="text",
                 label="Reasoning Effort Format",
-                choices=list(get_args(EffortFormat)),
+                choices=EFFORT_FORMAT_CHOICES,
                 description="Choose what your server accepts: 'reasoning_effort' sends a field, 'reasoning' sends an object with effort, and 'none' sends neither. Applies to both chat and text completions. Omitting effort leaves the server's default behavior.",
                 group=FieldGroup(name="reasoning", label="Reasoning", icon="mdi-brain"),
                 required=False,
@@ -102,7 +123,7 @@ class OpenAICompatibleClient(
                 name="completion_token_parameter",
                 type="text",
                 label="Completion Token Parameter",
-                choices=["max_tokens", "max_completion_tokens"],
+                choices=COMPLETION_TOKEN_PARAMETER_CHOICES,
                 description="Choose the parameter your server accepts for the total completion limit. OpenAI chat completions use 'max_completion_tokens'; other servers and text completions commonly use 'max_tokens'. Includes extra completion tokens when reasoning is enabled.",
                 group=FieldGroup(name="reasoning", label="Reasoning", icon="mdi-brain"),
                 required=False,
@@ -118,6 +139,10 @@ class OpenAICompatibleClient(
         self,
     ) -> Literal["max_tokens", "max_completion_tokens"]:
         return self.client_config.completion_token_parameter
+
+    @property
+    def stream(self) -> bool:
+        return self.client_config.stream
 
     @property
     def experimental(self):
@@ -136,7 +161,8 @@ class OpenAICompatibleClient(
         return self.model
 
     def make_client(self) -> AsyncOpenAI:
-        return AsyncOpenAI(base_url=self.require_api_url(), api_key=self.api_key)
+        api_key = self.api_key or KEYLESS_PLACEHOLDER
+        return AsyncOpenAI(base_url=self.require_api_url(), api_key=api_key)
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
@@ -182,12 +208,33 @@ class OpenAICompatibleClient(
             response = await client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,
-                stream=False,
+                stream=self.stream,
                 **parameters,
             )
-            if not response.choices:
-                return ""
-            return self.record_whole_response(response.choices[0].message.content)
+            if not self.stream:
+                if not response.choices:
+                    return ""
+                message = response.choices[0].message
+                reasoning = reasoning_text(message)
+                self._record_reasoning(reasoning)
+                return self.record_whole_response(message.content, reasoning)
+
+            content = ""
+            reasoning = ""
+            async for chunk in response:
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta
+                if not delta:
+                    continue
+                if reasoning_chunk := reasoning_text(delta):
+                    reasoning += reasoning_chunk
+                    self.update_request_tokens(self.count_tokens(reasoning_chunk))
+                if delta.content:
+                    content += delta.content
+                    self.update_request_tokens(self.count_tokens(delta.content))
+            self._record_reasoning(reasoning)
+            return content
         else:
             # Talemate handles prompt template
             # Use the completions endpoint
@@ -198,11 +245,39 @@ class OpenAICompatibleClient(
             )
             parameters["prompt"] = prompt
             response = await client.completions.create(
-                model=self.model_name, stream=False, **parameters
+                model=self.model_name, stream=self.stream, **parameters
             )
-            if not response.choices:
-                return ""
-            return self.record_whole_response(response.choices[0].text)
+            if not self.stream:
+                if not response.choices:
+                    return ""
+                return self.record_whole_response(response.choices[0].text)
+
+            text = ""
+            async for chunk in response:
+                if not chunk.choices or not chunk.choices[0].text:
+                    continue
+                text += chunk.choices[0].text
+                self.update_request_tokens(self.count_tokens(chunk.choices[0].text))
+            return text
+
+    def strip_reasoning(self, response: str) -> tuple[str, str | None]:
+        if not self.api_handles_prompt_template:
+            return super().strip_reasoning(response)
+        # Chat servers may return the reasoning in its own field or leave it in
+        # the content. A missing pattern only fails when reasoning is known to
+        # have started: a validation pattern matched or the prompt was prefilled.
+        if self._reasoning_response:
+            return response, None
+        try:
+            return super().strip_reasoning(response)
+        except ReasoningResponseError:
+            if self.reason_prefill or self.reason_validation_pattern:
+                raise
+            return response, None
+
+    def _record_reasoning(self, reasoning: str | None):
+        if reasoning:
+            self._reasoning_response = reasoning
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """

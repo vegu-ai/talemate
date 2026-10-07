@@ -14,6 +14,7 @@ from talemate.client.context import ClientContext
 from talemate.client.model_prompts import model_prompt
 from talemate.client.toggleable_parameters import PARAMETERS_FIELD_GROUP
 from talemate.config.schema import Config
+from talemate.exceptions import ReasoningResponseError
 
 
 @pytest.fixture
@@ -69,24 +70,39 @@ def compatible_choices(chat: bool, content: str | None) -> list[dict]:
 
 
 @pytest.fixture
-async def wire(monkeypatch, wire_choice_overrides):
+def wire_stream_deltas():
+    return [{"content": "answer"}]
+
+
+@pytest.fixture
+async def wire(monkeypatch, wire_choice_overrides, wire_stream_deltas):
     requests = []
 
     def respond(request):
         body = json.loads(request.content)
         requests.append((request.url.path, body))
         if body.get("stream"):
-            chunk = {
-                "id": "test",
-                "object": "chat.completion.chunk",
-                "created": 0,
-                "model": body["model"],
-                "choices": [{"index": 0, "delta": {"content": "answer"}}],
-            }
+            if request.url.path.endswith("/chat/completions"):
+                object_type = "chat.completion.chunk"
+                choices = [{"index": 0, "delta": delta} for delta in wire_stream_deltas]
+            else:
+                object_type = "text_completion"
+                choices = [{"index": 0, "text": "<think>thought</think>answer"}]
+            chunks = [
+                {
+                    "id": "test",
+                    "object": object_type,
+                    "created": 0,
+                    "model": body["model"],
+                    "choices": [choice],
+                }
+                for choice in choices
+            ]
             return httpx.Response(
                 200,
                 headers={"content-type": "text/event-stream"},
-                text=f"data: {json.dumps(chunk)}\n\ndata: [DONE]\n\n",
+                text="".join(f"data: {json.dumps(chunk)}\n\n" for chunk in chunks)
+                + "data: [DONE]\n\n",
             )
         return httpx.Response(
             200,
@@ -186,6 +202,7 @@ async def test_openai_compatible_empty_choices_use_empty_response_retry(
         api_handles_prompt_template=chat,
         reason_enabled=False,
         retry_empty_response=1,
+        stream=False,
     )
     wire_choice_overrides.extend([[], compatible_choices(chat, "answer")])
     prompt_error = AsyncMock(return_value="ignore")
@@ -201,7 +218,9 @@ async def test_openai_compatible_empty_choices_use_empty_response_retry(
 async def test_openai_compatible_null_response_ignore(
     clients, wire, wire_choice_overrides, chat, monkeypatch
 ):
-    client = clients(api_handles_prompt_template=chat, reason_enabled=False)
+    client = clients(
+        api_handles_prompt_template=chat, reason_enabled=False, stream=False
+    )
     wire_choice_overrides.append(compatible_choices(chat, None))
     ignore = AsyncMock(return_value="ignore")
     monkeypatch.setattr(client, "_prompt_generation_error", ignore)
@@ -217,7 +236,9 @@ async def test_openai_compatible_null_response_ignore(
 async def test_openai_compatible_response_records_whole_response_tokens(
     clients, wire, wire_choice_overrides, chat
 ):
-    client = clients(api_handles_prompt_template=chat, reason_enabled=False)
+    client = clients(
+        api_handles_prompt_template=chat, reason_enabled=False, stream=False
+    )
     wire_choice_overrides.append(compatible_choices(chat, "answer"))
     with ClientContext(requires_active_scene=False):
         assert await client.send_prompt("hello") == "answer"
@@ -234,10 +255,8 @@ async def test_openai_compatible_response_records_whole_response_tokens(
 async def test_whole_response_rate_uses_full_request_duration(
     clients, wire, wire_choice_overrides, client_type, chat, monkeypatch
 ):
-    kwargs = {"reason_enabled": False}
-    if client_type == "openai":
-        kwargs["stream"] = False
-    else:
+    kwargs = {"reason_enabled": False, "stream": False}
+    if client_type != "openai":
         kwargs["api_handles_prompt_template"] = chat
     client = clients(client_type, **kwargs)
     monkeypatch.setattr(client, "count_tokens", lambda content: 200)
@@ -832,7 +851,7 @@ def test_status_describes_effort_and_completion_allowance(clients, client_type, 
     assert client.Meta().reason_tokens_as_allowance
     field = client.Meta().extra_fields["effort_level"]
     assert field.group.name == "reasoning"
-    assert {"label": "default", "value": "default"} in field.choices
+    assert "default" in [choice["value"] for choice in field.choices]
     assert client.Meta().defaults.effort_level == "default"
     assert data["reasoning_override_applies"]
     display = data["reasoning_display"]
@@ -883,3 +902,249 @@ async def test_send_prompt_reaches_wire_and_preserves_extraction(
         assert body["reasoning"] == {"effort": "high"}
         if not chat:
             assert client.reasoning_response == "<think>thought</think>"
+
+
+def chat_reasoning_choices(content: str | None, reasoning_field: str) -> list[dict]:
+    return [
+        {
+            "index": 0,
+            "finish_reason": "stop",
+            "message": {
+                "role": "assistant",
+                "content": content,
+                reasoning_field: "worked it out",
+            },
+        }
+    ]
+
+
+@pytest.mark.parametrize("chat", [True, False], ids=["chat", "text"])
+def test_compatible_reasoning_pattern_stays_configurable_in_both_modes(clients, chat):
+    client = clients(api_handles_prompt_template=chat)
+    assert client.requires_reasoning_pattern is True
+
+
+def inline_choices(content: str) -> list[dict]:
+    return compatible_choices(True, content)
+
+
+@pytest.mark.parametrize("stream", [False, True], ids=["whole", "stream"])
+async def test_compatible_chat_strips_reasoning_left_in_the_content(
+    clients, wire, wire_choice_overrides, wire_stream_deltas, stream
+):
+    client = clients(api_handles_prompt_template=True, stream=stream)
+    text = "<think>secret plan</think>The story continues."
+    wire_choice_overrides.append(inline_choices(text))
+    wire_stream_deltas[:] = [{"content": text}]
+    with ClientContext(requires_active_scene=False):
+        assert await client.send_prompt("hello") == "The story continues."
+    assert client.reasoning_response == "<think>secret plan</think>"
+
+
+@pytest.mark.parametrize("behavior", ["fail", "ignore"])
+async def test_compatible_chat_without_any_reasoning_never_fails_on_the_pattern(
+    clients, wire, wire_choice_overrides, behavior
+):
+    client = clients(
+        api_handles_prompt_template=True, stream=False, reason_failure_behavior=behavior
+    )
+    wire_choice_overrides.append(inline_choices("The story continues."))
+    with ClientContext(requires_active_scene=False):
+        assert await client.send_prompt("hello") == "The story continues."
+    assert client.reasoning_response is None
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [{"reason_validation_pattern": "<think>"}, {"reason_prefill": "<think>"}],
+    ids=["validation-pattern", "prefill"],
+)
+def test_compatible_chat_unclosed_reasoning_is_not_the_answer(clients, extra):
+    client = clients(api_handles_prompt_template=True, **extra)
+    text = (
+        "<think>long reasoning cut off"
+        if "reason_validation_pattern" in extra
+        else "reasoning cut off"
+    )
+    with pytest.raises(ReasoningResponseError):
+        client.strip_reasoning(text)
+
+
+def test_compatible_chat_separate_reasoning_skips_the_pattern(clients):
+    client = clients(api_handles_prompt_template=True)
+    client._reasoning_response = "r"
+    assert client.strip_reasoning("<think>x</think>Ans") == (
+        "<think>x</think>Ans",
+        None,
+    )
+    client._reasoning_response = None
+    assert client.strip_reasoning("<think>x</think>Ans") == ("Ans", "<think>x</think>")
+
+
+async def test_compatible_text_mode_still_requires_the_pattern(
+    clients, wire, wire_choice_overrides, monkeypatch
+):
+    client = clients(
+        api_handles_prompt_template=False,
+        stream=False,
+        reason_failure_behavior="fail",
+    )
+    wire_choice_overrides.append(compatible_choices(False, "no reasoning here"))
+    dialog = AsyncMock(return_value="ignore")
+    monkeypatch.setattr(client, "_prompt_generation_error", dialog)
+    with ClientContext(requires_active_scene=False):
+        await client.send_prompt("hello")
+    assert "pattern not found" in dialog.call_args.args[0]
+
+
+async def test_whole_chat_response_with_reasoning_reports_the_request_rate(
+    clients, wire, wire_choice_overrides, monkeypatch
+):
+    client = clients(api_handles_prompt_template=True, stream=False)
+    monkeypatch.setattr(client, "count_tokens", lambda content: 100)
+    wire_choice_overrides.append(chat_reasoning_choices("answer", "reasoning_content"))
+    with ClientContext(requires_active_scene=False):
+        assert await client.send_prompt("hello") == "answer"
+    info = client.request_information
+    assert info.tokens == 200
+    assert info.first_token_time is None
+    info.start_time = 100.0
+    info.end_time = 102.0
+    assert info.rate == 100.0
+
+
+@pytest.mark.parametrize("field", ["reasoning_content", "reasoning"])
+@pytest.mark.parametrize("stream", [False, True], ids=["whole", "stream"])
+async def test_compatible_chat_reasoning_comes_from_the_response_field(
+    clients, wire, wire_choice_overrides, wire_stream_deltas, field, stream
+):
+    client = clients(api_handles_prompt_template=True, stream=stream)
+    wire_choice_overrides.append(chat_reasoning_choices("answer", field))
+    wire_stream_deltas[:] = [
+        {field: "worked "},
+        {field: "it out"},
+        {"content": "answer"},
+    ]
+    with ClientContext(requires_active_scene=False):
+        assert await client.send_prompt("hello") == "answer"
+    assert client.reasoning_response == "worked it out"
+    assert len(wire) == 1
+
+
+async def test_compatible_chat_reasoning_ignores_the_strip_pattern(
+    clients, wire, wire_choice_overrides
+):
+    client = clients(
+        api_handles_prompt_template=True,
+        stream=False,
+        reason_failure_behavior="fail",
+        reason_response_pattern=".*?</never>",
+    )
+    wire_choice_overrides.append(chat_reasoning_choices("answer", "reasoning_content"))
+    with ClientContext(requires_active_scene=False):
+        assert await client.send_prompt("hello") == "answer"
+    assert client.reasoning_response == "worked it out"
+
+
+async def test_compatible_chat_with_only_reasoning_is_an_empty_response(
+    clients, wire, wire_choice_overrides, monkeypatch
+):
+    client = clients(api_handles_prompt_template=True, stream=False)
+    wire_choice_overrides.append(chat_reasoning_choices(None, "reasoning_content"))
+    dialog = AsyncMock(return_value="ignore")
+    monkeypatch.setattr(client, "_prompt_generation_error", dialog)
+    with ClientContext(requires_active_scene=False):
+        assert await client.send_prompt("hello") == ""
+    assert dialog.call_args.args[0] == EMPTY_RESPONSE_MESSAGE
+
+
+@pytest.mark.parametrize("chat", [True, False], ids=["chat", "text"])
+async def test_compatible_streams_by_default_and_counts_tokens_as_they_arrive(
+    clients, wire, chat
+):
+    client = clients(api_handles_prompt_template=chat, reason_enabled=False)
+    with ClientContext(requires_active_scene=False):
+        assert (await client.send_prompt("hello")).endswith("answer")
+    assert wire[0][1]["stream"] is True
+    info = client.request_information
+    assert info.tokens > 0
+    assert info.first_token_time is not None
+
+
+async def test_compatible_stream_counts_reasoning_tokens(
+    clients, wire, wire_stream_deltas
+):
+    client = clients(api_handles_prompt_template=True)
+    wire_stream_deltas[:] = [
+        {"reasoning_content": "one two three"},
+        {"content": ""},
+        {"content": "ok"},
+    ]
+    with ClientContext(requires_active_scene=False):
+        await client.send_prompt("hello")
+    assert client.request_information.tokens == client.count_tokens(
+        "one two three"
+    ) + client.count_tokens("ok")
+
+
+async def test_compatible_stream_can_be_disabled(clients, wire):
+    client = clients(api_handles_prompt_template=True, stream=False)
+    with ClientContext(requires_active_scene=False):
+        await client.send_prompt("hello")
+    assert wire[0][1]["stream"] is False
+
+
+def test_compatible_stream_is_a_setting_with_a_default(clients):
+    meta = openai_compat.OpenAICompatibleClient.Meta()
+    assert meta.defaults.stream is True
+    assert meta.extra_fields["stream"].type == "bool"
+    assert clients(stream=False).stream is False
+
+
+@pytest.mark.parametrize(
+    "api_key,expected",
+    [("", openai_compat.KEYLESS_PLACEHOLDER), ("secret-key", "secret-key")],
+)
+def test_compatible_client_builds_without_an_api_key(clients, api_key, expected):
+    client = clients(api_key=api_key)
+    sdk = openai_compat.OpenAICompatibleClient.make_client(client)
+    assert sdk.api_key == expected
+
+
+@pytest.mark.parametrize(
+    "client_cls,name",
+    [
+        (openai_compat.OpenAICompatibleClient, "reasoning_effort_format"),
+        (openai_compat.OpenAICompatibleClient, "completion_token_parameter"),
+        (openai.OpenAIClient, "completion_token_parameter"),
+    ],
+)
+def test_identifier_choices_explain_themselves(client_cls, name):
+    choices = client_cls.Meta().extra_fields[name].choices
+    assert choices
+    assert all(choice["description"] for choice in choices)
+
+
+def test_effort_level_choices_explain_default_and_none():
+    field = openai_compat.OpenAICompatibleClient.Meta().extra_fields["effort_level"]
+    described = {c["value"] for c in field.choices if c.get("description")}
+    assert described == {"default", "none"}
+    assert [c["value"] for c in field.choices] == [
+        "default",
+        "none",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+    ]
+
+
+@pytest.mark.parametrize(
+    "client_type", ["openai_compat", "groq", "openai", "textgenwebui"]
+)
+def test_new_clients_start_with_a_reasoning_budget(client_type):
+    from talemate.server.config import client_model_defaults
+
+    assert client_model_defaults(client_type)["reason_tokens"] >= 1024

@@ -20,6 +20,7 @@ import pytest
 import talemate.config.state as config_state
 from talemate.agents.context import ActiveAgent
 from talemate.client.base import (
+    EMPTY_RESPONSE_MESSAGE,
     ClientBase,
     _generation_error_futures,
     resolve_generation_error,
@@ -160,6 +161,31 @@ async def test_default_zero_prompts_user_immediately(scripted_env):
     assert client.calls == 1
     assert dialog.await_count == 1
     assert not auto_retry_events(emissions)
+
+
+@pytest.mark.asyncio
+async def test_exception_without_status_shows_its_own_message(scripted_env):
+    make_client, _, _ = scripted_env
+    client = make_client([RuntimeError("Missing credentials. Pass an api_key.")])
+
+    dialog = AsyncMock(return_value="ignore")
+    with patch.object(client, "_prompt_generation_error", dialog):
+        await client.send_prompt("hello", kind="analyze_freeform")
+
+    assert dialog.await_args.args[0] == "Missing credentials. Pass an api_key."
+    assert dialog.await_args.args[0] != EMPTY_RESPONSE_MESSAGE
+
+
+@pytest.mark.asyncio
+async def test_empty_response_still_shows_the_empty_response_message(scripted_env):
+    make_client, _, _ = scripted_env
+    client = make_client([""])
+
+    dialog = AsyncMock(return_value="ignore")
+    with patch.object(client, "_prompt_generation_error", dialog):
+        await client.send_prompt("hello", kind="analyze_freeform")
+
+    assert dialog.await_args.args[0] == EMPTY_RESPONSE_MESSAGE
 
 
 @pytest.mark.asyncio

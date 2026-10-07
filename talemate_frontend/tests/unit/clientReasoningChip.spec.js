@@ -38,13 +38,14 @@ function status(name, reasoning) {
     };
 }
 
-let app, host, handler;
+let app, host, handler, updates;
 
 beforeEach(() => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
     host = document.createElement('div');
     document.body.appendChild(host);
-    app = createApp(AIClient, { immutableConfig: {}, appConfig: {} });
+    updates = [];
+    app = createApp(AIClient, { immutableConfig: {}, appConfig: {}, onClientsUpdated: (clients) => updates.push(clients) });
     for (const tag of VUETIFY_TAGS) app.component(tag, stub(tag));
     app.component('VBtn', ButtonStub);
     app.provide('getWebsocket', () => ({ send: () => {} }));
@@ -128,5 +129,23 @@ describe('the client card reasoning row', () => {
         await show('toggle', REASONING_ON);
         expect(chips()).toEqual([]);
         expect(controls()).toBe(2);
+    });
+
+    it('lifts a budget of 0 to 1024 when the brain button turns reasoning on', async () => {
+        vi.useFakeTimers();
+        await show('zero', { ...REASONING_OFF, reason_tokens: 0 });
+        await clickBrain();
+        vi.advanceTimersByTime(SAVE_DELAY_MS);
+        const saved = updates.at(-1).find((client) => client.name === 'zero');
+        expect(saved.reason_enabled).toBe(true);
+        expect(saved.reason_tokens).toBe(1024);
+    });
+
+    it('keeps a budget the user already chose when reasoning is turned on', async () => {
+        vi.useFakeTimers();
+        await show('chosen', { ...REASONING_OFF, reason_tokens: 4096 });
+        await clickBrain();
+        vi.advanceTimersByTime(SAVE_DELAY_MS);
+        expect(updates.at(-1).find((client) => client.name === 'chosen').reason_tokens).toBe(4096);
     });
 });

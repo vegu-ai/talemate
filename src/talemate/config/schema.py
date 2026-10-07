@@ -72,7 +72,7 @@ class Client(pydantic.BaseModel):
     # add extra allowance for response tokens
     # this is useful for when the model generates visible thinking
     # tokens.
-    reason_tokens: int = 0
+    reason_tokens: int = 1024
 
     # regex to strip from the response if the model is reasoning
     reason_response_pattern: str | None = None

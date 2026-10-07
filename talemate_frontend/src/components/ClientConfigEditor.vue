@@ -72,8 +72,8 @@
             :model-value="values[field.name]" @update:model-value="(v) => setValue(field.name, v)" :app-config="config" />
 
           <v-row class="mt-1">
-            <v-col cols="4" data-setting-anchor="max_token_length">
-              <v-number-input v-model="values.max_token_length" label="Context Length" :rules="rulesMaxTokenLength" :step="64"></v-number-input>
+            <v-col cols="12" data-setting-anchor="max_token_length">
+              <v-number-input v-model="values.max_token_length" label="Context Length" :rules="rulesMaxTokenLength" :step="64" density="compact" class="context-length-field"></v-number-input>
             </v-col>
             <v-col v-if="contextLengthWarning" cols="12" class="pt-0">
               <v-alert type="warning" variant="tonal" density="compact" icon="mdi-alert-outline">{{ contextLengthWarning }}</v-alert>
@@ -88,7 +88,7 @@
             </v-col>
 
             <!-- PROMPT TEMPLATE -->
-            <v-col cols="8" v-if="promptTemplateAvailable" data-setting-anchor="prompt_template">
+            <v-col cols="12" v-if="promptTemplateAvailable" data-setting-anchor="prompt_template">
               <v-autocomplete ref="promptTemplateComboBox" :label="'Prompt Template for ' + modelName"
                 :model-value="templateInfo.template_file" @update:model-value="setPromptTemplate" :items="promptTemplates">
                 <template #selection="{ item }">
@@ -357,6 +357,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { markRaw } from 'vue';
 import { conditionMet } from '@/utils/uxConditions';
 import { countOverrides } from '@/utils/agentActionOverrides';
+import { reasonTokensOnEnable } from '@/utils/clientReasoning';
 import { contextLengthHint, contextLengthWarning } from '@/constants/modelExpectations';
 import AppConfigPresetsSystemPrompts from './AppConfigPresetsSystemPrompts.vue';
 import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
@@ -519,7 +520,11 @@ export default {
         return this.reasonLocked || this.values.reason_enabled;
       },
       set(value) {
-        if (!this.reasonLocked) this.values.reason_enabled = value;
+        if (this.reasonLocked) return;
+        this.values.reason_enabled = value;
+        if (value) {
+          this.values.reason_tokens = reasonTokensOnEnable(this.values.reason_tokens, this.minReasonTokens);
+        }
       },
     },
     overrideCount() {
@@ -809,6 +814,10 @@ export default {
 </script>
 
 <style scoped>
+.context-length-field {
+  max-width: 260px;
+}
+
 .reasoning-pattern-fields {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

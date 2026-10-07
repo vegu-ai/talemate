@@ -103,6 +103,19 @@ describe('selected client template status', () => {
         expect(ctx.config.clients.Local.effort_level).toBe('low');
     });
 
+    it('gives a zero reasoning budget the 1024 minimum when reasoning is turned on', async () => {
+        const ctx = await mount('openai_compat', { reason_enabled: false, reason_tokens: 0 });
+        ctx.editor.reasonEnabled = true;
+        expect(ctx.config.clients.Local.reason_enabled).toBe(true);
+        expect(ctx.config.clients.Local.reason_tokens).toBe(1024);
+    });
+
+    it('fills a missing reasoning budget when reasoning is turned on', async () => {
+        const ctx = await mount('openai_compat', { reason_enabled: false });
+        ctx.editor.reasonEnabled = true;
+        expect(ctx.config.clients.Local.reason_tokens).toBe(1024);
+    });
+
     it.each(['llamacpp', 'tabbyapi', 'textgenwebui', 'openai_compat', 'lmstudio', 'koboldcpp', 'ollama'])(
         '%s follows fallback and recovery after a manual template reply without resetting drafts', async type => {
             const ctx = await mount(type);

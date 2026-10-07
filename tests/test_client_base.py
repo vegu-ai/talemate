@@ -40,6 +40,7 @@ from talemate.client.base import (
     RequestInformation,
     _generation_error_futures,
     clean_client_name,
+    describe_exception,
     get_error_message,
     locked_model_template,
     resolve_generation_error,
@@ -127,8 +128,32 @@ class TestErrorMessages:
         for code, msg in HTTP_ERROR_MESSAGES.items():
             assert get_error_message(code) == msg
 
-    def test_none_status_yields_empty_response_message(self):
-        assert get_error_message(None) == EMPTY_RESPONSE_MESSAGE
+    def test_exception_without_status_describes_itself(self):
+        assert describe_exception(RuntimeError("Missing credentials")) == (
+            "Missing credentials"
+        )
+
+    def test_exception_without_message_falls_back_to_its_type(self):
+        assert describe_exception(RuntimeError()) == "RuntimeError"
+
+    def test_exception_cause_follows_the_message(self):
+        try:
+            try:
+                raise OSError("All connection attempts failed")
+            except OSError as cause:
+                raise RuntimeError("Connection error.") from cause
+        except RuntimeError as exc:
+            assert describe_exception(exc) == (
+                "Connection error. (All connection attempts failed)"
+            )
+
+    def test_user_message_wins_over_status_and_text(self):
+        exc = RuntimeError("raw")
+        exc.user_message = "shown to the user"
+        assert describe_exception(exc, 429) == "shown to the user"
+
+    def test_status_text_wins_over_exception_text(self):
+        assert describe_exception(RuntimeError("raw"), 429) == HTTP_ERROR_MESSAGES[429]
 
     def test_unmapped_5xx_falls_through_to_generic_5xx_message(self):
         assert (
@@ -198,8 +223,12 @@ class TestResolveGenerationError:
 class TestRequestInformation:
     def test_pending_status_when_only_started(self):
         info = RequestInformation(start_time=time.time())
-        # in-progress / pending until duration > 1 with rate==0
-        assert info.status in ("in progress", "pending")
+        assert info.status == "in progress"
+
+    def test_waiting_for_the_first_token_is_not_stopped(self):
+        info = RequestInformation(start_time=time.time() - 30)
+        assert info.tokens == 0
+        assert info.status == "in progress"
 
     def test_completed_status_after_end(self):
         now = time.time()

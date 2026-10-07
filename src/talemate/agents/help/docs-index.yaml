@@ -532,7 +532,8 @@
   summary: 'Configure OpenAI Compatible APIs such as DeepInfra: API URL/key, manual model, context length and chat versus
     text prompt templates. Covers temperature, top_p and presence_penalty toggles, Reasoning Effort Format (none, reasoning_effort
     or reasoning object), Completion Token Parameter (max_tokens or max_completion_tokens), direct OpenAI setup, Extra Completion
-    Tokens, reasoning patterns and per-action overrides; distinguishes empty URL from generation failures.'
+    Tokens, reasoning patterns and per-action overrides; distinguishes empty URL from generation failures. Also Stream and
+    chat-mode reasoning.'
 - path: user-guide/clients/types/openai.md
   title: OpenAI Client
   summary: Configure OpenAI API key, manual models, fallback token estimates, context length, Concurrent Inference; Reasoning

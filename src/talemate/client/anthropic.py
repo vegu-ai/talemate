@@ -119,7 +119,18 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
                 name="thinking_mode",
                 type="text",
                 label="Thinking Mode",
-                choices=["budget", "adaptive"],
+                choices=[
+                    {
+                        "label": "budget",
+                        "value": "budget",
+                        "description": "A fixed token budget (legacy).",
+                    },
+                    {
+                        "label": "adaptive",
+                        "value": "adaptive",
+                        "description": "The model decides when to think; required on Opus 4.7+.",
+                    },
+                ],
                 description="'budget' uses fixed token budget (legacy), 'adaptive' lets the model decide when to think. Adaptive is recommended for Opus 4.6+ and required for Opus 4.7+ (budget mode is ignored on those models).",
                 group=FieldGroup(
                     name="reasoning",

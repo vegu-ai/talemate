@@ -160,15 +160,32 @@ EMPTY_RESPONSE_MESSAGE = "The model returned an empty response. This can happen 
 AUTO_RETRY_MAX_BACKOFF = 30
 
 
-def get_error_message(status_code: int | None) -> str:
+def get_error_message(status_code: int) -> str:
     """Get a human-friendly error message for an HTTP status code."""
-    if status_code is None:
-        return EMPTY_RESPONSE_MESSAGE
     if status_code in HTTP_ERROR_MESSAGES:
         return HTTP_ERROR_MESSAGES[status_code]
     if 500 <= status_code < 600:
         return "The API server is experiencing issues. This is usually temporary."
     return f"The API returned an unexpected error (HTTP {status_code})."
+
+
+def describe_exception(exc: BaseException, status_code: int | None = None) -> str:
+    """The text a generation error dialog shows for an exception.
+
+    A message the exception carries for the user wins, then the text for its
+    HTTP status, then the exception's own message and the cause beneath it.
+    """
+    user_message = getattr(exc, "user_message", None)
+    if user_message:
+        return user_message
+    if status_code is not None:
+        return get_error_message(status_code)
+    message = str(exc).strip() or type(exc).__name__
+    cause = exc.__cause__
+    cause_message = str(cause).strip() if cause else ""
+    if cause_message and cause_message not in message:
+        message = f"{message} ({cause_message})"
+    return message
 
 
 # Registry of pending generation error resolutions.
@@ -302,8 +319,6 @@ class RequestInformation(pydantic.BaseModel):
         if self.end_time:
             return "stopped" if self.cancelled else "completed"
         elif self.start_time:
-            if self.duration > 1 and self.rate == 0:
-                return "stopped"
             return "in progress"
         else:
             return "pending"
@@ -1713,12 +1728,7 @@ class ClientBase:
                 except Exception as e:
                     self.log.error("generation error", e=traceback.format_exc())
                     status_code = self._extract_status_code(e)
-                    # exceptions may carry a user-presentable message that is more
-                    # accurate than the generic per-status text (e.g. clients whose
-                    # transport reports errors without HTTP status codes)
-                    error_message = getattr(
-                        e, "user_message", None
-                    ) or get_error_message(status_code)
+                    error_message = describe_exception(e, status_code)
                     action = await self._auto_retry_or_prompt(
                         "rate_limit",
                         error_message,
@@ -1845,10 +1855,14 @@ class ClientBase:
             ):
                 self.request_information.first_token_time = time.time()
 
-    def record_whole_response(self, response: str | None) -> str:
+    def record_whole_response(
+        self, response: str | None, reasoning: str | None = None
+    ) -> str:
         response = response or ""
-        if response and self.request_information:
-            self.request_information.tokens += self.count_tokens(response)
+        if self.request_information:
+            for text in (response, reasoning):
+                if text:
+                    self.request_information.tokens += self.count_tokens(text)
         return response
 
     def strip_coercion_prompt(self, response: str, coercion_prompt: str = None) -> str:
@@ -1983,10 +1997,8 @@ class ClientBase:
         except Exception as exc:
             if request.data:
                 request.data.status = "failed"
-                request.data.error = getattr(exc, "user_message", None) or (
-                    get_error_message(self._extract_status_code(exc))
-                    if self._extract_status_code(exc) is not None
-                    else type(exc).__name__
+                request.data.error = describe_exception(
+                    exc, self._extract_status_code(exc)
                 )
             raise
         finally:

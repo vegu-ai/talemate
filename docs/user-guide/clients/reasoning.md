@@ -15,7 +15,7 @@ To enable reasoning support for a client:
 
 The [OpenAI](types/openai.md#reasoning-effort), [OpenAI Compatible](types/openai-compatible.md#reasoning) and [OpenRouter](types/openrouter.md#reasoning) clients offer **Reasoning Effort** to control thinking depth. Their token field is called **Extra Completion Tokens**: it adds headroom to the total completion limit, rather than setting a separate thinking budget. Existing saved token values are preserved. Compatible servers also need a **Reasoning Effort Format** selection before an effort is sent. The OpenAI and OpenAI Compatible clients offer a **Completion Token Parameter** choice: native OpenAI defaults to `max_completion_tokens`, while OpenAI Compatible defaults to `max_tokens`. The native OpenAI client locks Reasoning on for model names starting with `gpt-5` or `gpt-6`, including during per-action overrides. For other models, and for OpenAI Compatible and OpenRouter clients, the effort and the allowance follow your Reasoning setting: with Reasoning off, neither is sent. On OpenRouter, the `default` effort only asks the model to think (`{"enabled": true}`), so the model uses its own default effort. Saved token and effort values are preserved.
 
-Once reasoning is enabled, you can set **Reasoning Tokens** (or **Extra Completion Tokens** on clients with Reasoning Effort) in its number field:
+Turning reasoning on gives a budget of 1024 tokens if the client had none; new clients start with 1024. Once reasoning is enabled, you can set **Reasoning Tokens** (or **Extra Completion Tokens** on clients with Reasoning Effort) in its number field:
 
 ![Reasoning tokens configuration](/talemate/img/0.40.0/client-reasoning.png)
 

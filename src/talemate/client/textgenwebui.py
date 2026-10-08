@@ -13,6 +13,7 @@ from talemate.client.api_handles import (
     ApiHandlesPromptTemplateConfig,
     ApiHandlesPromptTemplateMixin,
     api_handles_prompt_template_extra_fields,
+    strip_echoed_prefill,
 )
 from talemate.client.base import ClientBase, Defaults
 from talemate.client.registry import register
@@ -99,8 +100,6 @@ class TextGeneratorWebuiClient(
             "max_tokens",
             "stream",
             "do_sample",
-            # arethese needed?
-            "max_new_tokens",
             "stop",
             "xtc_threshold",
             "xtc_probability",
@@ -119,8 +118,6 @@ class TextGeneratorWebuiClient(
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
         parameters["stopping_strings"] = self.build_stopping_strings(parameters)
-        # is this needed?
-        parameters["max_new_tokens"] = parameters["max_tokens"]
         parameters["stop"] = parameters["stopping_strings"]
 
         # if min_p is set, do_sample should be True
@@ -193,15 +190,26 @@ class TextGeneratorWebuiClient(
             )
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
+        # without the key the completions endpoint stops at 512 tokens; null
+        # lets text-generation-webui fill the remaining context
+        parameters.setdefault("max_tokens", None)
         if self.api_handles_prompt_template:
             messages, coercion_prompt = self.chat_messages_for_coercion(prompt, kind)
             return await asyncio.to_thread(
-                self._generate_chat, messages, coercion_prompt, parameters
+                self._generate_chat,
+                messages,
+                coercion_prompt,
+                parameters,
+                self.reason_enabled,
             )
         return await asyncio.to_thread(self._generate, prompt, parameters, kind)
 
     def _generate_chat(
-        self, messages: list[dict], coercion_prompt: str | None, parameters: dict
+        self,
+        messages: list[dict],
+        coercion_prompt: str | None,
+        parameters: dict,
+        enable_thinking: bool,
     ):
         """
         Generates text via the chat/completions endpoint, letting
@@ -212,6 +220,8 @@ class TextGeneratorWebuiClient(
         if coercion_prompt:
             parameters["continue_"] = True
 
+        # hybrid reasoning templates think unless told not to
+        parameters["enable_thinking"] = enable_thinking
         parameters["mode"] = "instruct"
         parameters["messages"] = messages
         parameters["stream"] = True
@@ -245,11 +255,7 @@ class TextGeneratorWebuiClient(
         if reasoning_response:
             self._reasoning_response = reasoning_response
 
-        # the API echoes the coercion pre-fill back at the start of the
-        # response - strip it so coerced responses match the completions
-        # endpoint behavior (continuation only)
-        if coercion_prompt and response.startswith(coercion_prompt):
-            response = response[len(coercion_prompt) :]
+        response = strip_echoed_prefill(response, coercion_prompt)
 
         return response
 

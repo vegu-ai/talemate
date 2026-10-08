@@ -4,6 +4,7 @@ A unified client base, based on the openai API
 
 import ipaddress
 import logging
+import math
 import os
 import re
 import random
@@ -64,6 +65,15 @@ STOPPING_STRINGS = ["<|im_end|>", "</s>"]
 
 # disable smart quotes until text rendering is refactored
 REPLACE_SMART_QUOTES = True
+
+# count_tokens is an estimate (tiktoken, GPT-4 encoding); over-count the prompt
+# so a request that fills the remaining context stays inside the server's limit.
+# Measured on real Talemate prompts (conversation, narrator, world state,
+# director, summarizer, creator; 0.1k-11k tokens) rendered with each model's
+# own template, the real/estimate ratio peaked at 1.018 for Qwen3.5, 1.023 for
+# Gemma 4 and 1.122 for Mistral v0.3 (32k vocabulary); 1.15 covers the
+# worst case with a small margin.
+PROMPT_TOKEN_SAFETY_FACTOR = 1.15
 
 
 INDIRECT_COERCION_PROMPT = "\nStart your response with: "
@@ -2268,6 +2278,44 @@ class ClientBase:
 
     def count_tokens(self, content: str):
         return util.count_tokens(content)
+
+    async def server_prompt_tokens(self, prompt: str) -> int | None:
+        """The prompt's token count from the server's own tokenizer, or None
+        when the server offers no way to count."""
+        return None
+
+    async def uncapped_completion_tokens(self, prompt: str) -> int | None:
+        """Completion limit for an uncapped request to an endpoint that needs
+        one: the room left in the configured context after the prompt.
+
+        None means send no limit: the padded estimate leaves no room, but only
+        a count from the server proves the prompt does not fit.
+        """
+        measured = await self.server_prompt_tokens(prompt)
+        if measured is not None:
+            remaining = self.max_token_length - measured
+            if remaining <= 0:
+                raise GenerationProcessingError(
+                    f"The prompt ({measured} tokens) leaves no room for a response "
+                    f"within the client's Context Length ({self.max_token_length}). "
+                    "Raise Context Length if the server allows more, or choose a "
+                    "response length setting that caps tokens."
+                )
+            return remaining
+
+        estimate = self.count_tokens(prompt)
+        remaining = self.max_token_length - math.ceil(
+            estimate * PROMPT_TOKEN_SAFETY_FACTOR
+        )
+        if remaining <= 0:
+            self.log.warning(
+                "uncapped request sent without a limit, the estimated prompt "
+                "leaves no room and the server cannot count it",
+                estimated_prompt_tokens=estimate,
+                max_token_length=self.max_token_length,
+            )
+            return None
+        return remaining
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """

@@ -39,7 +39,7 @@ This will cause requests to go to the `chat/completions` API instead and Text-Ge
 
 This is **off by default**. It is a trade-off: keep it disabled for full control of the prompt template in Talemate, or enable it to trust that the template configured on the remote end is correct — useful when you don't know which prompt template to pick. While it is enabled, Talemate's own prompt template selection for the client has no effect.
 
-With reasoning models, Text-Generation-WebUI separates the thinking from the response on its end, so no reasoning pattern is needed in this mode — the reasoning is captured automatically. Note that the model spends tokens on thinking either way, so make sure response budgets account for it.
+With reasoning models, Text-Generation-WebUI separates the thinking from the response on its end, so no reasoning pattern is needed in this mode — the reasoning is captured automatically. Talemate also tells the model's template whether to think, following the client's **Reasoning** setting, so models with switchable thinking (such as Qwen3 and Qwen3.5) answer directly while reasoning is off.
 
 ##### Context Length
 

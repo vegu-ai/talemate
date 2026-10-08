@@ -507,9 +507,9 @@
     Save/ready status and manually entering model names absent from the dropdown.
 - path: user-guide/clients/types/koboldcpp.md
   title: KoboldCpp Client
-  summary: KoboldCpp connection setup, United API versus /v1 OpenAI mode, sampler support including XTC/DRY/Adaptive-P, and
-    prompt-template troubleshooting. Explains automatic Visual Agent setup and capability-based TTS backend registration,
-    disable/re-enable lifecycle, preserved settings and Automatic Setup opt-out.
+  summary: KoboldCpp connection setup, United API versus /v1 OpenAI mode, sampler support including XTC/DRY/Adaptive-P, default
+    generation length, and prompt-template troubleshooting. Explains automatic Visual Agent setup and capability-based TTS backend
+    registration, disable/re-enable lifecycle, preserved settings and Automatic Setup opt-out.
 - path: user-guide/clients/types/llamacpp.md
   title: llama.cpp Client
   summary: Connect to llama-server at port 8080 with API authentication, context length and local prompt templates.
@@ -529,11 +529,11 @@
     Covers API handles prompt template, Allow thinking, missing-model/offline indicators and template troubleshooting.
 - path: user-guide/clients/types/openai-compatible.md
   title: OpenAI Compatible Client
-  summary: 'Configure OpenAI Compatible APIs such as DeepInfra: API URL/key, manual model, context length and chat versus
-    text prompt templates. Covers temperature, top_p and presence_penalty toggles, Reasoning Effort Format (none, reasoning_effort
-    or reasoning object), Completion Token Parameter (max_tokens or max_completion_tokens), direct OpenAI setup, Extra Completion
-    Tokens, reasoning patterns and per-action overrides; distinguishes empty URL from generation failures. Also Stream and
-    chat-mode reasoning.'
+  summary: 'Configure OpenAI Compatible APIs such as DeepInfra or vLLM: API URL/key, manual model, context length and chat versus
+    text prompt templates. Covers temperature, top_p, presence_penalty and Send stop toggles, Send enable_thinking, the text-completion
+    limit, Reasoning Effort Format (none, reasoning_effort or reasoning object), Completion Token Parameter (max_tokens or max_completion_tokens),
+    direct OpenAI setup, Extra Completion Tokens, reasoning patterns and per-action overrides; clients saved before 0.40. Also
+    Stream and chat-mode reasoning.'
 - path: user-guide/clients/types/openai.md
   title: OpenAI Client
   summary: Configure OpenAI API key, manual models, fallback token estimates, context length, Concurrent Inference; Reasoning
@@ -554,13 +554,14 @@
     model/thinking/concurrency settings, Docker persistence, and stream tracing.
 - path: user-guide/clients/types/tabbyapi.md
   title: TabbyAPI Client
-  summary: Connect a TabbyAPI server with URL, API key and context length. Covers optional API handles prompt template for
-    chat/completions, Talemate template control, model readiness and connection troubleshooting including incorrect credentials.
+  summary: Connect a TabbyAPI server with URL, API key and context length. Covers optional API handles prompt template for chat/completions
+    with reasoning and thinking, automatic prompt template detection from the model folder name, Talemate template control,
+    model readiness and connection troubleshooting including incorrect credentials.
 - path: user-guide/clients/types/text-generation-webui.md
   title: Text-Generation-WebUI Client
   summary: Connect Text-Generation-WebUI/ooba with URL, optional API key and context length. API handles prompt template enables
-    chat/completions with continue_ coercion and automatic reasoning extraction; covers missing models, template quality and
-    connection failures.
+    chat/completions with continue_ coercion, automatic reasoning extraction and thinking that follows Reasoning; covers missing
+    models, template quality and connection failures.
 - path: user-guide/debug-tools.md
   title: Debug Tools
   summary: 'Debug Tools prompt log: Active requests, Completed/Failed/Cancelled outcomes, grouped retries, Clear, Dump to file

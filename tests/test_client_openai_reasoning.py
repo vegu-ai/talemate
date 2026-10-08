@@ -1,20 +1,22 @@
 import json
+import math
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import httpx
 import pytest
 from openai import AsyncOpenAI
+from structlog.testing import capture_logs
 
 import talemate.config.state as config_state
 from talemate.agents.context import ActiveAgent
 from talemate.client import openai, openai_compat
-from talemate.client.base import EMPTY_RESPONSE_MESSAGE
+from talemate.client.base import EMPTY_RESPONSE_MESSAGE, PROMPT_TOKEN_SAFETY_FACTOR
 from talemate.client.context import ClientContext
 from talemate.client.model_prompts import model_prompt
 from talemate.client.toggleable_parameters import PARAMETERS_FIELD_GROUP
 from talemate.config.schema import Config
-from talemate.exceptions import ReasoningResponseError
+from talemate.exceptions import GenerationProcessingError, ReasoningResponseError
 
 
 @pytest.fixture
@@ -725,6 +727,190 @@ async def test_compatible_serializes_selected_format(
     else:
         assert body["reasoning_effort"] == effort
         assert "reasoning" not in body
+
+
+@pytest.mark.parametrize("token_parameter", ["max_tokens", "max_completion_tokens"])
+@pytest.mark.parametrize("fill", [0.1, 0.8, 0.95, 0.99])
+async def test_uncapped_text_completion_uses_server_prompt_count(
+    clients, wire, monkeypatch, token_parameter, fill
+):
+    client = clients(
+        api_handles_prompt_template=False,
+        enforce_response_length="instructions",
+        completion_token_parameter=token_parameter,
+        max_token_length=8192,
+    )
+    counted = int(8192 * fill)
+    monkeypatch.setattr(client, "server_prompt_tokens", AsyncMock(return_value=counted))
+
+    await client.generate("hello " * counted, {}, "conversation")
+
+    path, body = wire[-1]
+    assert path == "/v1/completions"
+    assert body[token_parameter] == 8192 - counted
+
+
+async def test_uncapped_text_completion_falls_back_to_estimate(
+    clients, wire, monkeypatch
+):
+    client = clients(
+        api_handles_prompt_template=False,
+        enforce_response_length="instructions",
+        max_token_length=4096,
+    )
+    monkeypatch.setattr(client, "server_prompt_tokens", AsyncMock(return_value=None))
+    prompt = "hello " * 100
+    expected = 4096 - math.ceil(
+        client.count_tokens(prompt) * PROMPT_TOKEN_SAFETY_FACTOR
+    )
+
+    await client.generate(prompt, {}, "conversation")
+
+    assert wire[-1][1]["max_tokens"] == expected
+
+
+@pytest.mark.parametrize("token_parameter", ["max_tokens", "max_completion_tokens"])
+@pytest.mark.parametrize("fill", [0.8, 0.95])
+async def test_uncapped_text_completion_without_estimated_room_sends_no_limit(
+    clients, wire, monkeypatch, token_parameter, fill
+):
+    client = clients(
+        api_handles_prompt_template=False,
+        enforce_response_length="instructions",
+        completion_token_parameter=token_parameter,
+        max_token_length=8192,
+    )
+    monkeypatch.setattr(client, "server_prompt_tokens", AsyncMock(return_value=None))
+    words = 1
+    while client.count_tokens("hello " * words) < 8192 * fill:
+        words *= 2
+    prompt = "hello " * words
+
+    with capture_logs() as logs:
+        await client.generate(prompt, {}, "conversation")
+
+    path, body = wire[-1]
+    assert path == "/v1/completions"
+    assert not ({"max_tokens", "max_completion_tokens"} & body.keys())
+    assert "extra_body" not in body
+    warning = next(e for e in logs if e["log_level"] == "warning")
+    assert "without a limit" in warning["event"]
+    assert warning["estimated_prompt_tokens"] == client.count_tokens(prompt)
+    assert warning["max_token_length"] == 8192
+
+
+@pytest.mark.parametrize("counted", [8192, 9000])
+async def test_uncapped_text_completion_without_measured_room_raises(
+    clients, wire, monkeypatch, counted
+):
+    client = clients(
+        api_handles_prompt_template=False,
+        enforce_response_length="instructions",
+        max_token_length=8192,
+    )
+    monkeypatch.setattr(client, "server_prompt_tokens", AsyncMock(return_value=counted))
+
+    with pytest.raises(
+        GenerationProcessingError,
+        match=f"The prompt \\({counted} tokens\\) leaves no room",
+    ):
+        await client.generate("hello", {}, "conversation")
+    assert not wire
+
+
+@pytest.mark.parametrize(
+    "reply, expected",
+    [
+        ({"count": 7, "max_model_len": 16384}, 7),
+        ({"tokens": [1, 2, 3]}, 3),
+        ({}, None),
+        ([1, 2, 3], None),
+        (None, None),
+        ({"count": -1}, None),
+        ({"count": True}, None),
+    ],
+    ids=["vllm", "llama.cpp", "unknown", "array", "null", "negative", "boolean"],
+)
+async def test_server_prompt_tokens_reads_tokenize(
+    clients, monkeypatch, reply, expected
+):
+    client = clients(api_url="http://server.test:8000/v1")
+    seen = []
+
+    def handler(request):
+        seen.append((request.url.path, json.loads(request.content)))
+        return httpx.Response(200, content=json.dumps(reply).encode())
+
+    native_client = httpx.AsyncClient
+
+    class _MockClient(native_client):
+        def __init__(self, **kwargs):
+            super().__init__(transport=httpx.MockTransport(handler), **kwargs)
+
+    monkeypatch.setattr(openai_compat.httpx, "AsyncClient", _MockClient)
+
+    assert await client.server_prompt_tokens("text") == expected
+    assert seen[0][0] == "/tokenize"
+    assert seen[0][1]["prompt"] == seen[0][1]["content"] == "text"
+    assert seen[0][1]["add_special"] is True
+
+
+@pytest.mark.parametrize("chat", [False, True])
+@pytest.mark.parametrize("reason_enabled", [False, True])
+@pytest.mark.parametrize("send_enable_thinking", [False, True])
+async def test_compatible_chat_sends_enable_thinking(
+    clients, wire, chat, reason_enabled, send_enable_thinking
+):
+    client = clients(
+        api_handles_prompt_template=chat,
+        reason_enabled=reason_enabled,
+        send_enable_thinking=send_enable_thinking,
+    )
+    await client.generate("hello", {"max_tokens": 256}, "conversation")
+    body = wire[-1][1]
+    if chat and send_enable_thinking:
+        assert body["chat_template_kwargs"] == {"enable_thinking": reason_enabled}
+    else:
+        assert "chat_template_kwargs" not in body
+
+
+@pytest.mark.parametrize("chat", [False, True])
+@pytest.mark.parametrize("send_stop", [False, True])
+async def test_compatible_sends_stop_sequences(clients, wire, chat, send_stop):
+    client = clients(
+        api_handles_prompt_template=chat,
+        reason_enabled=False,
+        send_stop=send_stop,
+    )
+    parameters = {"max_tokens": 256, "extra_stopping_strings": ["Bob:"]}
+    client.tune_prompt_parameters(parameters, "test")
+    client.clean_prompt_parameters(parameters)
+    await client.generate("hello", parameters, "conversation")
+    body = wire[-1][1]
+    if send_stop:
+        assert body["stop"][-1] == "Bob:"
+    else:
+        assert "stop" not in body
+
+
+@pytest.mark.parametrize("stream", [False, True])
+async def test_compatible_chat_strips_echoed_prefill(
+    clients, wire, wire_choice_overrides, wire_stream_deltas, stream
+):
+    wire_stream_deltas[:] = [{"content": "The room is"}, {"content": " dark."}]
+    wire_choice_overrides.append(compatible_choices(True, "The room is dark."))
+    client = clients(
+        api_handles_prompt_template=True, reason_enabled=False, stream=stream
+    )
+    response = await client.generate(
+        "Describe the room.<|BOT|>The room is", {"max_tokens": 64}, "conversation"
+    )
+    assert response == " dark."
+    assert wire[-1][1]["messages"][-1] == {
+        "role": "assistant",
+        "content": "The room is",
+        "prefix": True,
+    }
 
 
 @pytest.mark.parametrize(

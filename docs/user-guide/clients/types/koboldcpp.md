@@ -67,8 +67,8 @@ When using the United API (the default), the following parameters are supported:
 | Smoothing | Applies quadratic smoothing to the token probability distribution. |
 | Adaptive-P | Dynamically adjusts the sampling threshold based on token probabilities. |
 
-!!! note "API Mode Affects Available Parameters"
-    The full set of parameters is only available when using the United API (the default). If you append `/v1` to your API URL to use the OpenAI-compatible mode, only a limited subset of parameters (temperature, top_p, presence_penalty, max_tokens) will be sent.
+!!! note "Both API modes send the full set"
+    The United API (the default) and the OpenAI-compatible mode (`/v1` appended to the URL) send the same parameters, stop sequences included, and both stream the response and can be stopped mid-generation. When your [response length setting](/talemate/user-guide/clients/response-length/) sends no token cap, Talemate lets the response use the rest of the Context Length, counted with KoboldCpp's own tokenizer, instead of KoboldCpp's default limit (`--defaultgenamt`). A KoboldAI United server cannot count, so Talemate estimates the prompt with some headroom, and sends no limit when the prompt is near Context Length.
 
 ### TTS auto-setup
 

@@ -37,17 +37,21 @@ If the TabbyAPI instance requires an API key, you can set it here.
 
 This will cause requests to go to the chat/completions API instead and TabbyAPI will be in control of the prompt template. This means if you enable this TabbyAPI needs to be configured correctly and Talemate will also lose control of the prompt template, causing a likely loss in quality.
 
+In this mode TabbyAPI can return a reasoning model's thinking separately, and Talemate then captures it without a reasoning pattern. If the thinking stays in the answer instead (TabbyAPI's reasoning parser is off, or the model uses tags it does not detect), Talemate strips it with your [reasoning pattern](/talemate/user-guide/clients/reasoning/#response-pattern-configuration). A response without a matching pattern is used as it is, unless you set a validation pattern or a reason prefill. Talemate also tells the model's template whether to think, following the client's **Reasoning** setting.
+
 This setting is recommended to keep disabled.
 
 ##### Context Length
 
 The number of tokens to use as context when generating text. Defaults to `16384`.
 
+When your [response length setting](/talemate/user-guide/clients/response-length/) sends no token cap, TabbyAPI lets the response use the rest of the context the model was loaded with, which can be more than this setting.
+
 ### Common issues
 
 #### Generations are weird / bad
 
-Make sure the [correct prompt template is assigned](/talemate/user-guide/clients/prompt-templates/).
+Talemate tries to pick the prompt template automatically from the model name TabbyAPI reports (the model's folder name), so keep the folder name close to the model's Hugging Face name. Make sure the [correct prompt template is assigned](/talemate/user-guide/clients/prompt-templates/).
 
 #### Could not connect
 

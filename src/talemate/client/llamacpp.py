@@ -20,6 +20,7 @@ from talemate.client.base import (
 from talemate.client.model_probe import OpenAIModelListProbeMixin
 from talemate.client.model_prompts import model_prompt
 from talemate.client.registry import register
+from talemate.client.utils import dry_sequence_breakers_list
 from talemate.client.remote import (
     ConcurrentInference,
     ConcurrentInferenceMixin,
@@ -427,16 +428,10 @@ class LlamaCppClient(
         if model is not None:
             payload["model"] = model
 
-        # dry_sequence_breakers in Talemate presets is stored as a string like:
-        #   '"\\n", ":", "\\\"", "*"'
-        # llama.cpp expects an array of strings.
-        dsb = payload.get("dry_sequence_breakers")
-        if isinstance(dsb, str):
-            try:
-                payload["dry_sequence_breakers"] = json.loads(f"[{dsb}]")
-            except Exception:
-                # Fall back to a conservative default on parse errors
-                payload["dry_sequence_breakers"] = ["\n", ":", '"', "*"]
+        if "dry_sequence_breakers" in payload:
+            payload["dry_sequence_breakers"] = dry_sequence_breakers_list(
+                payload["dry_sequence_breakers"]
+            )
 
         try:
             response = ""

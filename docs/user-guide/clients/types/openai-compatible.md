@@ -67,8 +67,12 @@ Each parameter has its own toggle:
 - **Send temperature**
 - **Send top_p**
 - **Send presence_penalty**
+- **Send stop**: the stop sequences, such as the other characters' names in a conversation, so the server stops before writing their lines.
 
-All three are enabled by default. Turning a toggle off omits that parameter from the request completely (it is not sent as a zero value). Leave them enabled unless the service you are connecting to errors when it receives one of them.
+All four are enabled for a new client. Turning a toggle off omits that parameter from the request completely (it is not sent as a zero value). Leave them enabled unless the service you are connecting to errors when it receives one of them. OpenAI itself accepts at most four stop sequences; turn **Send stop** off if a service rejects the list.
+
+!!! note "Clients saved before 0.40"
+    **Send stop** and **Send enable_thinking** are new in 0.40. A client saved by an earlier version keeps sending the request it sent before: both start off. Turn them on in the client's settings to use them.
 
 ### Streaming
 
@@ -95,11 +99,15 @@ These settings apply to both chat completions (**API handles prompt template** e
 | `max_tokens` (initial setting) | Servers using the traditional completion limit, including most text-completion endpoints. Existing saved clients keep this choice. |
 | `max_completion_tokens` | OpenAI chat completions and compatible servers that require this parameter. |
 
-The choice applies whenever the response token cap is enabled, even with reasoning disabled. It changes only the field name, not the limit. For direct OpenAI at `https://api.openai.com/v1`, enable **API handles prompt template**, choose `reasoning_effort` and `max_completion_tokens`, and disable any sampler parameters the selected model rejects. OpenAI chat completions reject the `reasoning` object with HTTP 400; that format is for other servers that accept it.
+With **API handles prompt template** disabled, text completions carry a limit even when your response length setting sends no cap, because text-completion servers such as vLLM otherwise stop after 16 tokens. Talemate asks the server to count the prompt (vLLM and llama.cpp can, at `/tokenize`) and sends the room left in Context Length. If the counted prompt fills Context Length, the generation fails with an error such as "The prompt (2346 tokens) leaves no room for a response within the client's Context Length (2048)": raise Context Length if the server allows more, or choose a response length setting that caps tokens. For a server that cannot count, such as LM Studio or Ollama, Talemate estimates the prompt with some headroom; when the prompt is near Context Length, it sends no limit and the server's own default applies.
+
+The choice applies whenever the response token cap is enabled, even with reasoning disabled. It changes only the field name, not the limit. For direct OpenAI at `https://api.openai.com/v1`, enable **API handles prompt template**, choose `reasoning_effort` and `max_completion_tokens`, turn off **Send enable_thinking** and **Send stop** (OpenAI rejects unknown request fields and more than four stop sequences), and disable any sampler parameters the selected model rejects. The dedicated OpenAI client needs none of this. OpenAI chat completions reject the `reasoning` object with HTTP 400; that format is for other servers that accept it.
 
 **Extra Completion Tokens** retains your saved **Reasoning Tokens** value. It adds headroom to the selected total completion limit when reasoning and the response token cap are enabled, and remains available to prompt templates as `reasoning_tokens`. It does not send a separate thinking budget. Use **Reasoning Effort** to control depth instead. Choosing an effort or a completion token parameter does not change this allowance.
 
 With **API handles prompt template** enabled, servers such as llama.cpp (`llama-server --jinja`) return the reasoning separately from the answer, and Talemate reads it from there, shows it with the prompt in the prompt viewer and ignores the strip pattern. If the server leaves the reasoning in the answer instead, Talemate strips it with your [reasoning pattern](/talemate/user-guide/clients/reasoning/#response-pattern-configuration); in this mode a response without a matching pattern is used as it is, unless you set a validation pattern or a reason prefill, which mean the reasoning started and make an unclosed block follow **Pattern Not Found Behavior**. Without **API handles prompt template**, Talemate looks for the reasoning in the response text and needs a pattern that matches your model.
+
+**Send enable_thinking** (on for a new client) tells the server's chat template whether to think, following the **Reasoning** setting: with reasoning off, models with switchable thinking such as Qwen3 and Qwen3.5 answer directly instead of spending the response on thinking. It applies with **API handles prompt template** enabled and is understood by llama.cpp, vLLM and SGLang. Turn it off for a service that rejects unknown request fields.
 
 When a sending format is selected, the client card shows the chosen effort in a dropdown, where you can change it quickly. With format `none`, it shows a field for the extra completion allowance instead. With Reasoning off, a **Reasoning Disabled** chip takes the place of the dropdown or the field. Turning Talemate reasoning off, globally or for an agent action, omits the effort setting and padding; the server may still reason according to its own defaults. Keep your existing [reasoning patterns](/talemate/user-guide/clients/reasoning/#response-pattern-configuration) if your model includes thinking in its response text.
 

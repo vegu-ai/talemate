@@ -22,6 +22,7 @@ from talemate.client.base import (
     ClientEmbeddingsStatus,
 )
 from talemate.client.registry import register
+from talemate.client.utils import dry_sequence_breakers_list
 from talemate.client.vision import VisionConfig, vision_extra_fields, OpenAIVisionMixin
 from talemate.config.schema import Client as BaseClientConfig
 import talemate.emit.async_signals as async_signals
@@ -37,6 +38,10 @@ log = structlog.get_logger("talemate.client.koboldcpp")
 # cap lower, newer versions allow more.
 MAX_STOPPING_STRINGS = 16
 
+# koboldcpp names its embeddings model only in an embeddings response, so the
+# name probe runs a real embedding - a large model on the CPU takes seconds
+EMBEDDINGS_PROBE_TIMEOUT = 120
+
 
 class KoboldCppClientDefaults(Defaults):
     api_url: str = "http://localhost:5001"
@@ -48,12 +53,15 @@ class ClientConfig(VisionConfig, BaseClientConfig):
 
 
 class KoboldEmbeddingFunction(EmbeddingFunction):
-    def __init__(self, api_url: str, model_name: str = None):
+    def __init__(
+        self, api_url: str, model_name: str = None, headers: dict | None = None
+    ):
         """
         Initialize the embedding function with the KoboldCPP API endpoint.
         """
         self.api_url = api_url
         self.model_name = model_name
+        self.headers = headers or {}
 
     def __call__(self, texts: Documents) -> Embeddings:
         """
@@ -72,7 +80,7 @@ class KoboldEmbeddingFunction(EmbeddingFunction):
             payload["model"] = self.model_name  # e.g. the model's name/ID if needed
 
         # Send POST request to the local KoboldCPP embeddings endpoint
-        response = requests.post(self.api_url, json=payload)
+        response = requests.post(self.api_url, json=payload, headers=self.headers)
         response.raise_for_status()  # Throw an error if the request failed (e.g., connection issue)
 
         # Parse the JSON response to extract embedding vectors
@@ -153,72 +161,64 @@ class KoboldCppClient(OpenAIVisionMixin, ClientBase):
             return urljoin(self.api_url.replace("v1", "extra"), "generate/stream")
 
     @property
-    def max_tokens_param_name(self):
-        if self.is_openai:
-            return "max_tokens"
-        else:
-            return "max_length"
-
-    @property
     def supported_parameters(self):
-        if not self.is_openai:
-            # koboldcpp united api
-
-            return [
+        # koboldcpp reads its native sampler names from /v1/completions
+        # requests too; only the token limit and stop names differ
+        if self.is_openai:
+            mode_parameters = [
+                "max_tokens",
+                ParameterReroute(
+                    talemate_parameter="stopping_strings", client_parameter="stop"
+                ),
+            ]
+        else:
+            mode_parameters = [
                 ParameterReroute(
                     talemate_parameter="max_tokens", client_parameter="max_length"
                 ),
                 "max_context_length",
                 ParameterReroute(
-                    talemate_parameter="repetition_penalty", client_parameter="rep_pen"
-                ),
-                ParameterReroute(
-                    talemate_parameter="repetition_penalty_range",
-                    client_parameter="rep_pen_range",
-                ),
-                "top_p",
-                "top_k",
-                ParameterReroute(
                     talemate_parameter="stopping_strings",
                     client_parameter="stop_sequence",
                 ),
-                "xtc_threshold",
-                "xtc_probability",
-                "dry_multiplier",
-                "dry_base",
-                "dry_allowed_length",
-                "dry_sequence_breakers",
-                "smoothing_factor",
-                "temperature",
-                "adaptive_target",
-                "adaptive_decay",
-                "min_p",
-                "frequency_penalty",
-                "presence_penalty",
             ]
 
-        else:
-            # openai api
-
-            return [
-                "max_tokens",
-                "presence_penalty",
-                "top_p",
-                "temperature",
-            ]
+        return mode_parameters + [
+            ParameterReroute(
+                talemate_parameter="repetition_penalty", client_parameter="rep_pen"
+            ),
+            ParameterReroute(
+                talemate_parameter="repetition_penalty_range",
+                client_parameter="rep_pen_range",
+            ),
+            "top_p",
+            "top_k",
+            "xtc_threshold",
+            "xtc_probability",
+            "dry_multiplier",
+            "dry_base",
+            "dry_allowed_length",
+            "dry_sequence_breakers",
+            "smoothing_factor",
+            "temperature",
+            "adaptive_target",
+            "adaptive_decay",
+            "min_p",
+            "frequency_penalty",
+            "presence_penalty",
+        ]
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
 
-        if self.is_openai:
-            # openai mode's supported parameters carry no stopping_strings
-            # reroute, so a built list would be dropped at clean - whether
-            # that mode should gain native stop is a separate scope decision
-            return
-
         parameters["stopping_strings"] = self.build_stopping_strings(
             parameters, cap=MAX_STOPPING_STRINGS
         )
+
+        if "dry_sequence_breakers" in parameters:
+            parameters["dry_sequence_breakers"] = dry_sequence_breakers_list(
+                parameters["dry_sequence_breakers"]
+            )
 
     @property
     def supports_embeddings(self) -> bool:
@@ -233,7 +233,9 @@ class KoboldCppClient(OpenAIVisionMixin, ClientBase):
 
     @property
     def embeddings_function(self):
-        return KoboldEmbeddingFunction(self.embeddings_url, self.embeddings_model_name)
+        return KoboldEmbeddingFunction(
+            self.embeddings_url, self.embeddings_model_name, self.request_headers
+        )
 
     @property
     def default_prompt_template(self) -> str:
@@ -268,25 +270,25 @@ class KoboldCppClient(OpenAIVisionMixin, ClientBase):
         self._visual_setup_lock: asyncio.Lock = asyncio.Lock()
         self._tts_setup_task: asyncio.Task | None = None
         self._tts_setup_lock: asyncio.Lock = asyncio.Lock()
+        self._embeddings_probe_task: asyncio.Task | None = None
+        self._probed_embeddings_model_name: str | None = None
 
     async def get_embeddings_model_name(self):
-        # if self._embeddings_model_name is set, return it
         if self.embeddings_model_name:
             return self.embeddings_model_name
 
-        # otherwise, get the model name by doing a request to
-        # the embeddings endpoint with a single character
+        if self._probed_embeddings_model_name is None:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    self.embeddings_url,
+                    json={"input": ["test"]},
+                    timeout=EMBEDDINGS_PROBE_TIMEOUT,
+                    headers=self.request_headers,
+                )
+            response.raise_for_status()
+            self._probed_embeddings_model_name = response.json().get("model")
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                self.embeddings_url,
-                json={"input": ["test"]},
-                timeout=2,
-                headers=self.request_headers,
-            )
-
-        response_data = response.json()
-        self._embeddings_model_name = response_data.get("model")
+        self._embeddings_model_name = self._probed_embeddings_model_name
         return self._embeddings_model_name
 
     async def get_embeddings_status(self):
@@ -296,30 +298,59 @@ class KoboldCppClient(OpenAIVisionMixin, ClientBase):
             response_data = response.json()
             self._embeddings_status = response_data.get("embeddings", False)
 
-            if not self.embeddings_status or self.embeddings_model_name:
-                return
+        if not self.embeddings_status or self.embeddings_model_name:
+            return
 
+        # the probe must not hold up or fail the status check it runs from
+        if self._embeddings_probe_task is None or self._embeddings_probe_task.done():
+            self._embeddings_probe_task = asyncio.create_task(
+                self._suggest_embeddings()
+            )
+
+    async def _suggest_embeddings(self):
+        try:
             await self.get_embeddings_model_name()
-
-            log.debug(
-                "KoboldCpp embeddings are enabled, suggesting embeddings",
-                model_name=self.embeddings_model_name,
+        except Exception as exc:
+            log.warning(
+                "KoboldCpp embeddings model probe failed",
+                client=self.name,
+                error=repr(exc),
             )
+            return
 
-            await self.set_embeddings()
+        log.debug(
+            "KoboldCpp embeddings are enabled, suggesting embeddings",
+            model_name=self.embeddings_model_name,
+        )
 
-            emission = ClientEmbeddingsStatus(
-                client=self,
-                embedding_name=self.embeddings_model_name,
-            )
+        await self.set_embeddings()
 
-            await async_signals.get("client.embeddings_available").send(emission)
+        emission = ClientEmbeddingsStatus(
+            client=self,
+            embedding_name=self.embeddings_model_name,
+        )
 
-            if not emission.seen:
-                # the suggestion has not been seen by the memory agent
-                # yet, so we unset the embeddings model name so it will
-                # get suggested again
-                self._embeddings_model_name = None
+        await async_signals.get("client.embeddings_available").send(emission)
+
+        if not emission.seen:
+            # the suggestion has not been seen by the memory agent
+            # yet, so we unset the embeddings model name so it will
+            # get suggested again
+            self._embeddings_model_name = None
+
+    async def _cancel_embeddings_probe(self):
+        if self._embeddings_probe_task and not self._embeddings_probe_task.done():
+            self._embeddings_probe_task.cancel()
+            await asyncio.gather(self._embeddings_probe_task, return_exceptions=True)
+
+    async def reset_embeddings(self):
+        await self._cancel_embeddings_probe()
+        self._probed_embeddings_model_name = None
+        await super().reset_embeddings()
+
+    async def destroy(self):
+        await self._cancel_embeddings_probe()
+        await super().destroy()
 
     async def get_model_name(self):
         self.ensure_api_endpoint_specified()
@@ -334,6 +365,7 @@ class KoboldCppClient(OpenAIVisionMixin, ClientBase):
                 )
         except Exception:
             self._embeddings_model_name = None
+            self._probed_embeddings_model_name = None
             raise
 
         if response.status_code == 404:
@@ -355,43 +387,45 @@ class KoboldCppClient(OpenAIVisionMixin, ClientBase):
 
         return model_name
 
+    async def server_tokencount(self, content: str) -> int | None:
+        """
+        KoboldCpp's own token count for the content, or None when the server
+        cannot count (KoboldAI United has no tokencount endpoint)
+        """
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                response = await client.post(
+                    f"{self.url}/api/extra/tokencount",
+                    json={"prompt": content},
+                    headers=self.request_headers,
+                )
+            response.raise_for_status()
+            data = response.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            log.debug("koboldcpp token count unavailable", error=repr(exc))
+            return None
+        count = data.get("value") if isinstance(data, dict) else None
+        return count if type(count) is int and count >= 0 else None
+
+    async def server_prompt_tokens(self, prompt: str) -> int | None:
+        count = await self.server_tokencount(prompt)
+        # generate sends this exact prompt, so the count is also the
+        # request's prompt token statistic and need not be fetched again
+        self._returned_prompt_tokens = count
+        return count
+
     async def tokencount(self, content: str) -> int:
         """
-        KoboldCpp has a tokencount endpoint we can use to count tokens
-        for the prompt and response
-
-        If the endpoint is not available, we will use the default token count estimate
+        Token count for the prompt and response statistics, from KoboldCpp's
+        tokencount endpoint, or the default estimate when it is not available
         """
-
-        # extract scheme and host from api url
-
-        parts = urlparse(self.api_url)
-
-        url_tokencount = f"{parts.scheme}://{parts.netloc}/api/extra/tokencount"
-
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                url_tokencount,
-                json={"prompt": content},
-                timeout=None,
-                headers=self.request_headers,
-            )
-
-            if response.status_code == 404:
-                # kobold united doesn't have tokencount endpoint
-                return util.count_tokens(content)
-
-            tokencount = len(response.json().get("ids", []))
-            return tokencount
+        count = await self.server_tokencount(content)
+        return util.count_tokens(content) if count is None else count
 
     async def abort_generation(self):
         """
         Trigger the stop generation endpoint
         """
-        if self.is_openai:
-            # openai api endpoint doesn't support abort
-            return
-
         parts = urlparse(self.api_url)
         url_abort = f"{parts.scheme}://{parts.netloc}/api/extra/abort"
         async with httpx.AsyncClient() as client:
@@ -404,6 +438,12 @@ class KoboldCppClient(OpenAIVisionMixin, ClientBase):
         """
         Generates text from the given prompt and parameters.
         """
+        limit_key = "max_tokens" if self.is_openai else "max_length"
+        if limit_key not in parameters:
+            # without a limit koboldcpp stops at its --defaultgenamt
+            limit = await self.uncapped_completion_tokens(prompt.strip(" "))
+            if limit is not None:
+                parameters[limit_key] = limit
         if self.is_openai:
             return await self._generate_openai(prompt, parameters, kind)
         else:
@@ -446,24 +486,34 @@ class KoboldCppClient(OpenAIVisionMixin, ClientBase):
         """
 
         parameters["prompt"] = prompt.strip(" ")
+        parameters["stream"] = True
 
-        self._returned_prompt_tokens = await self.tokencount(parameters["prompt"])
+        if self._returned_prompt_tokens is None:
+            self._returned_prompt_tokens = await self.tokencount(parameters["prompt"])
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
+        response_text = ""
+        async with httpx.AsyncClient(timeout=None) as client:
+            async with client.stream(
+                "POST",
                 self.api_url_for_generation,
                 json=parameters,
-                timeout=None,
                 headers=self.request_headers,
-            )
-            response_data = response.json()
-            if self.is_openai:
-                response_text = response_data["choices"][0]["text"]
-            else:
-                response_text = response_data["results"][0]["text"]
+            ) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[len("data:") :].strip()
+                    if data == "[DONE]":
+                        break
+                    choices = json.loads(data).get("choices") or [{}]
+                    chunk = choices[0].get("text") or ""
+                    if chunk:
+                        response_text += chunk
+                        self.update_request_tokens(self.count_tokens(chunk))
 
-            self._returned_response_tokens = await self.tokencount(response_text)
-            return response_text
+        self._returned_response_tokens = await self.tokencount(response_text)
+        return response_text
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """

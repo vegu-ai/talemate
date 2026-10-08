@@ -19,6 +19,7 @@ from talemate.client.openai_compat import (
     OpenAICompatibleClient,
     TOGGLEABLE_PARAMETERS as OPENAI_COMPAT_TOGGLEABLE_PARAMETERS,
 )
+from talemate.config.schema import Config
 from talemate.client.openrouter import (
     ClientConfig as OpenRouterClientConfig,
     OpenRouterClient,
@@ -114,16 +115,21 @@ def test_openai_compat_gating_unchanged(monkeypatch):
         "temperature",
         "top_p",
         "presence_penalty",
+        "stop",
     )
 
     config = OpenAICompatClientConfig(
-        name="test_openai_compat", type="openai_compat", send_top_p=False
+        name="test_openai_compat",
+        type="openai_compat",
+        send_top_p=False,
+        send_stop=True,
     )
     client = make_client(monkeypatch, OpenAICompatibleClient, config)
 
     assert "top_p" not in client.supported_parameters
     assert "temperature" in client.supported_parameters
     assert "presence_penalty" in client.supported_parameters
+    assert "stop" in client.supported_parameters
     assert "max_tokens" in client.supported_parameters
 
 
@@ -192,3 +198,35 @@ def test_openai_compat_meta_exposes_toggle_fields():
         assert field.type == "bool"
         assert field.group.name == "parameters"
         assert getattr(meta.defaults, f"send_{param}") is True
+
+
+class TestOpenAICompatSavedRequestShape:
+    """Clients saved before Send stop / Send enable_thinking existed keep the
+    request they sent; new clients start from Meta.defaults."""
+
+    def _load(self, client: dict) -> OpenAICompatClientConfig:
+        config = Config.model_validate({"clients": {client["name"]: client}})
+        return config.clients[client["name"]]
+
+    def test_saved_client_without_keys_loads_both_off(self):
+        saved = {"type": "openai_compat", "name": "old", "model": "m"}
+        loaded = self._load(saved)
+        assert loaded.send_stop is False
+        assert loaded.send_enable_thinking is False
+
+    def test_new_client_from_defaults_saves_both_on(self):
+        defaults = OpenAICompatibleClient.Meta().model_dump()["defaults"]
+        new = {**defaults, "type": "openai_compat", "name": "new"}
+        loaded = self._load(new)
+        assert loaded.send_stop is True
+        assert loaded.send_enable_thinking is True
+        reloaded = self._load(loaded.model_dump())
+        assert (reloaded.send_stop, reloaded.send_enable_thinking) == (True, True)
+
+    def test_resaved_old_client_keeps_the_users_choice(self):
+        loaded = self._load({"type": "openai_compat", "name": "old", "model": "m"})
+        edited = loaded.model_dump()
+        edited["send_stop"] = True
+        reloaded = self._load(edited)
+        assert reloaded.send_stop is True
+        assert reloaded.send_enable_thinking is False

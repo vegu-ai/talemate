@@ -761,6 +761,17 @@ class TestTemplateIdentifiers:
         [
             ("<|im_start|>system\n{{ system }}<|im_end|>", "ChatML"),
             (
+                "<|im_start|>assistant\\n' }}"
+                "{%- if enable_thinking is defined and enable_thinking is false %}"
+                "{{- '<think>\\n\\n</think>\\n\\n' }}{%- endif %}<|im_end|>",
+                "Qwen3.5",
+            ),
+            (
+                "{%- set content = content.split('</think>')[-1] %}"
+                "<|im_start|>assistant\n<think>\n<|im_end|>",
+                "ChatML",
+            ),
+            (
                 "<|start_header_id|>system<|end_header_id|>\n{{ sys }}<|eot_id|>",
                 "Llama3",
             ),
@@ -1031,6 +1042,32 @@ class TestQueryHFTemplateSuggestion:
             model_prompt.query_hf_for_prompt_template_suggestion("some-model")
             == "Muse-Glimmer.jinja2"
         )
+
+    @pytest.mark.parametrize(
+        "model_name, searches",
+        [
+            ("Qwen3.5-4B-Q4_K_M.gguf", ["Qwen3.5-4B", "Qwen3.5-4B-GGUF"]),
+            ("Qwen3.5-4B-Q4_K_M", ["Qwen3.5-4B", "Qwen3.5-4B-GGUF"]),
+            ("Qwen3.5-4B-UD-Q4_K_XL", ["Qwen3.5-4B", "Qwen3.5-4B-GGUF"]),
+            ("llama-2-7b.Q5_K_S", ["llama-2-7b", "llama-2-7b-GGUF"]),
+            ("Model-7B-BF16.gguf", ["Model-7B", "Model-7B-GGUF"]),
+            ("Model-7B-custom.gguf", ["Model-7B", "Model-7B-GGUF"]),
+            ("Qwen3.5-4B-exl3-4.00bpw", ["Qwen3.5-4B-exl3-4.00bpw"]),
+        ],
+    )
+    def test_search_name_drops_gguf_quant_suffix(
+        self, model_prompt, monkeypatch, model_name, searches
+    ):
+        seen = []
+
+        def _list_models(*args, search=None, **kwargs):
+            seen.append(search)
+            return iter([])
+
+        monkeypatch.setattr(huggingface_hub.HfApi, "list_models", _list_models)
+
+        assert model_prompt.query_hf_for_prompt_template_suggestion(model_name) is None
+        assert seen == searches
 
     def test_jinja2_takes_priority(self, model_prompt, monkeypatch):
         """chat_template.jinja2 wins over chat_template.jinja when both exist."""

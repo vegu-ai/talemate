@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import re
 import shutil
 import tempfile
 import pydantic
@@ -55,6 +56,12 @@ TALEMATE_TEMPLATE_PATH = os.path.join(BASE_TEMPLATE_PATH, "talemate")
 USER_TEMPLATE_PATH = os.path.join(BASE_TEMPLATE_PATH, "user")
 
 DEFAULT_TEMPLATE = "default.jinja2"
+
+# GGUF quantization tag at the end of a model name (-Q4_K_M, -IQ3_XS, -UD-Q4_K_XL,
+# -BF16, ...); servers like KoboldCpp report the name without the .gguf extension
+GGUF_QUANT_SUFFIX = re.compile(
+    r"[-.](?:UD-)?(?:I?Q\d+(?:_[A-Z0-9]+)*|BF16|F16|F32)$", re.IGNORECASE
+)
 
 TEMPLATE_IDENTIFIERS = []
 
@@ -360,12 +367,14 @@ class ModelPrompt:
 
         log.debug("query_hf_for_prompt_template_suggestion", model_name=model_name)
 
-        # if file ends with .gguf, split - and remove the last part
-        if model_name.endswith(".gguf"):
-            model_name = model_name.rsplit("-", 1)[0]
-            model_name_alt = f"{model_name}-GGUF"
-        else:
-            model_name_alt = None
+        is_gguf = model_name.endswith(".gguf")
+        model_name = model_name.removesuffix(".gguf")
+        base_name = GGUF_QUANT_SUFFIX.sub("", model_name)
+        if is_gguf and base_name == model_name:
+            # unrecognized quant tag: drop the last dash-separated part
+            base_name = model_name.rsplit("-", 1)[0]
+        model_name_alt = f"{base_name}-GGUF" if base_name != model_name else None
+        model_name = base_name
 
         log.debug("query_hf_for_prompt_template_suggestion", model_name=model_name)
 
@@ -447,6 +456,24 @@ class Llama3Identifier(TemplateIdentifier):
 
     def __call__(self, content: str):
         return "<|start_header_id|>" in content and "<|end_header_id|>" in content
+
+
+@register_template_identifier
+class Qwen35Identifier(TemplateIdentifier):
+    """
+    ChatML with hybrid reasoning: the template turns thinking off with an
+    empty think block when `enable_thinking` is false. Must be checked
+    before ChatML, which matches the same markers.
+    """
+
+    template_str = "Qwen3.5"
+
+    def __call__(self, content: str):
+        return (
+            "<|im_start|>" in content
+            and "enable_thinking" in content
+            and bool(re.search(r"<think>(?:\\n|\n)+</think>", content))
+        )
 
 
 @register_template_identifier

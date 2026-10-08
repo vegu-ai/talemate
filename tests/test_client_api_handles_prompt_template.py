@@ -380,7 +380,9 @@ class TestTextGenWebuiChatGenerate:
             {"role": "user", "content": "Describe the room."},
             {"role": "assistant", "content": "The room is"},
         ]
-        response = client._generate_chat(messages, "The room is", {"temperature": 0.7})
+        response = client._generate_chat(
+            messages, "The room is", {"temperature": 0.7}, False
+        )
 
         assert response == " dark and quiet."
 
@@ -390,6 +392,7 @@ class TestTextGenWebuiChatGenerate:
         assert payload["mode"] == "instruct"
         assert payload["continue_"] is True
         assert payload["stream"] is True
+        assert payload["enable_thinking"] is False
         messages = payload["messages"]
         assert [m["role"] for m in messages] == ["system", "user", "assistant"]
         assert messages[0]["content"] == "SYS"
@@ -415,7 +418,7 @@ class TestTextGenWebuiChatGenerate:
             {"role": "system", "content": "SYS"},
             {"role": "user", "content": "Describe the room."},
         ]
-        response = client._generate_chat(messages, None, {"temperature": 0.7})
+        response = client._generate_chat(messages, None, {"temperature": 0.7}, False)
 
         assert response == "The room is dark."
         assert client._reasoning_response == "Thinking about the room."
@@ -441,13 +444,55 @@ class TestTextGenWebuiChatGenerate:
             {"role": "system", "content": "SYS"},
             {"role": "user", "content": "Describe the room."},
         ]
-        response = client._generate_chat(messages, None, {"temperature": 0.7})
+        response = client._generate_chat(messages, None, {"temperature": 0.7}, False)
 
         assert response == "The room is dark."
 
         payload = fake_tgw_transport[0]["json"]
         assert "continue_" not in payload
         assert [m["role"] for m in payload["messages"]] == ["system", "user"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("reason_enabled", [False, True])
+    async def test_generate_sends_enable_thinking_from_reasoning_setting(
+        self, cfg_isolation, fake_tgw_transport, reason_enabled
+    ):
+        _register_textgenwebui(
+            "tgw_think",
+            api_handles_prompt_template=True,
+            reason_enabled=reason_enabled,
+        )
+        client = TextGeneratorWebuiClient(name="tgw_think")
+        _FakeSSEClient.chunks = [_chat_chunk("The room is dark."), "[DONE]"]
+
+        await client.generate("Describe the room.", {"temperature": 0.7}, "narrate")
+
+        assert fake_tgw_transport[0]["json"]["enable_thinking"] is reason_enabled
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("chat", [False, True])
+    @pytest.mark.parametrize("max_tokens", [None, 300])
+    async def test_uncapped_request_sends_null_max_tokens(
+        self, cfg_isolation, fake_tgw_transport, chat, max_tokens
+    ):
+        _register_textgenwebui("tgw_cap", api_handles_prompt_template=chat)
+        client = TextGeneratorWebuiClient(name="tgw_cap")
+        _FakeSSEClient.chunks = [
+            _chat_chunk("dark.")
+            if chat
+            else json.dumps({"choices": [{"text": "dark."}]}),
+            "[DONE]",
+        ]
+        parameters = {"temperature": 0.7}
+        if max_tokens:
+            parameters["max_tokens"] = max_tokens
+
+        await client.generate("Describe the room.", parameters, "narrate")
+
+        payload = fake_tgw_transport[0]["json"]
+        assert "max_tokens" in payload
+        assert payload["max_tokens"] == max_tokens
+        assert "max_new_tokens" not in payload
 
     @pytest.mark.asyncio
     async def test_generate_resolves_personas_across_executor_boundary(

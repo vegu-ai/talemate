@@ -1,12 +1,16 @@
 import random
 from typing import Literal
 
+import httpx
+import pydantic
 from openai import AsyncOpenAI
 
 from talemate.client.api_handles import (
     ApiHandlesPromptTemplateConfig,
     ApiHandlesPromptTemplateMixin,
+    ChatReasoningMixin,
     api_handles_prompt_template_extra_fields,
+    strip_echoed_prefill,
 )
 from talemate.client.base import ClientBase, ExtraField, FieldGroup
 from talemate.client.reasoning_effort import (
@@ -25,17 +29,20 @@ from talemate.client.toggleable_parameters import (
     toggleable_parameters_extra_fields,
 )
 from talemate.config.schema import Client as BaseClientConfig
-from talemate.exceptions import ReasoningResponseError
 
 EXPERIMENTAL_DESCRIPTION = """Use this client if you want to connect to a service implementing an OpenAI-compatible API. Success is going to depend on the level of compatibility. Use the actual OpenAI client if you want to connect to OpenAI's API."""
 
 # The SDK refuses to build a client without a key; local servers need none.
 KEYLESS_PLACEHOLDER = "not-needed"
 
-# Sampler parameters whose inclusion in the request payload is user-toggleable.
+# Request parameters whose inclusion in the payload is user-toggleable.
 # Some OpenAI-compatible APIs hard-error when these are sent for certain models,
 # so they need to be omitted entirely (not just zeroed out).
-TOGGLEABLE_PARAMETERS = ("temperature", "top_p", "presence_penalty")
+TOGGLEABLE_PARAMETERS = ("temperature", "top_p", "presence_penalty", "stop")
+
+# Request toggles added in 0.40. A client saved before 0.40 lacks them and
+# keeps sending what it sent before; new clients get them on from Defaults.
+REQUEST_TOGGLES_ADDED_IN_0_40 = ("send_enable_thinking", "send_stop")
 
 ToggleableParametersConfig = toggleable_parameters_config(TOGGLEABLE_PARAMETERS)
 
@@ -45,6 +52,7 @@ class CompatibleReasoningConfig(ReasoningEffortConfig):
     completion_token_parameter: Literal["max_tokens", "max_completion_tokens"] = (
         "max_tokens"
     )
+    send_enable_thinking: bool = True
 
 
 class Defaults(
@@ -68,7 +76,12 @@ class ClientConfig(
     ApiHandlesPromptTemplateConfig,
     BaseClientConfig,
 ):
-    pass
+    @pydantic.model_validator(mode="before")
+    @classmethod
+    def keep_saved_request_shape(cls, data):
+        if isinstance(data, dict):
+            data = {**{key: False for key in REQUEST_TOGGLES_ADDED_IN_0_40}, **data}
+        return data
 
 
 def reasoning_text(message) -> str | None:
@@ -85,6 +98,7 @@ def reasoning_text(message) -> str | None:
 @register()
 class OpenAICompatibleClient(
     ReasoningEffortMixin,
+    ChatReasoningMixin,
     ApiHandlesPromptTemplateMixin,
     ToggleableParametersMixin,
     ClientBase,
@@ -119,6 +133,14 @@ class OpenAICompatibleClient(
                 group=FieldGroup(name="reasoning", label="Reasoning", icon="mdi-brain"),
                 required=False,
             ),
+            "send_enable_thinking": ExtraField(
+                name="send_enable_thinking",
+                type="bool",
+                label="Send enable_thinking",
+                description='With API handles prompt template on, send `chat_template_kwargs: {"enable_thinking": ...}` following the Reasoning setting, so hybrid reasoning models (Qwen3, Qwen3.5, ...) only think when reasoning is enabled. Understood by llama.cpp, vLLM and SGLang; disable it for servers that reject unknown fields.',
+                group=FieldGroup(name="reasoning", label="Reasoning", icon="mdi-brain"),
+                required=False,
+            ),
             "completion_token_parameter": ExtraField(
                 name="completion_token_parameter",
                 type="text",
@@ -143,6 +165,14 @@ class OpenAICompatibleClient(
     @property
     def stream(self) -> bool:
         return self.client_config.stream
+
+    @property
+    def send_enable_thinking(self) -> bool:
+        return self.client_config.send_enable_thinking
+
+    def tune_prompt_parameters(self, parameters: dict, kind: str):
+        super().tune_prompt_parameters(parameters, kind)
+        parameters["stop"] = self.build_stopping_strings(parameters)
 
     @property
     def experimental(self):
@@ -170,6 +200,13 @@ class OpenAICompatibleClient(
         """
 
         client = self.make_client()
+
+        if not self.api_handles_prompt_template and "max_tokens" not in parameters:
+            # text completions read an absent (or null) max_tokens as 16 tokens
+            # (OpenAI spec, vLLM); fill the remaining context instead
+            limit = await self.uncapped_completion_tokens(prompt)
+            if limit is not None:
+                parameters["max_tokens"] = limit
 
         if (
             self.completion_token_parameter == "max_completion_tokens"
@@ -205,6 +242,11 @@ class OpenAICompatibleClient(
                 # continue the pre-fill via the (non-standard) prefix flag
                 messages[-1]["prefix"] = True
 
+            if self.send_enable_thinking:
+                parameters.setdefault("extra_body", {})["chat_template_kwargs"] = {
+                    "enable_thinking": self.reason_enabled
+                }
+
             response = await client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,
@@ -217,7 +259,8 @@ class OpenAICompatibleClient(
                 message = response.choices[0].message
                 reasoning = reasoning_text(message)
                 self._record_reasoning(reasoning)
-                return self.record_whole_response(message.content, reasoning)
+                content = self.record_whole_response(message.content, reasoning)
+                return strip_echoed_prefill(content, coercion_prompt)
 
             content = ""
             reasoning = ""
@@ -234,7 +277,7 @@ class OpenAICompatibleClient(
                     content += delta.content
                     self.update_request_tokens(self.count_tokens(delta.content))
             self._record_reasoning(reasoning)
-            return content
+            return strip_echoed_prefill(content, coercion_prompt)
         else:
             # Talemate handles prompt template
             # Use the completions endpoint
@@ -260,20 +303,37 @@ class OpenAICompatibleClient(
                 self.update_request_tokens(self.count_tokens(chunk.choices[0].text))
             return text
 
-    def strip_reasoning(self, response: str) -> tuple[str, str | None]:
-        if not self.api_handles_prompt_template:
-            return super().strip_reasoning(response)
-        # Chat servers may return the reasoning in its own field or leave it in
-        # the content. A missing pattern only fails when reasoning is known to
-        # have started: a validation pattern matched or the prompt was prefilled.
-        if self._reasoning_response:
-            return response, None
+    async def server_prompt_tokens(self, prompt: str) -> int | None:
+        # llama.cpp and vLLM both serve /tokenize at the server root, with the
+        # text under different keys ("content" and "prompt"); llama.cpp leaves
+        # out BOS unless asked, completions tokenize with it
+        root = self.require_api_url().rstrip("/").removesuffix("/v1")
+        headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
         try:
-            return super().strip_reasoning(response)
-        except ReasoningResponseError:
-            if self.reason_prefill or self.reason_validation_pattern:
-                raise
-            return response, None
+            async with httpx.AsyncClient(timeout=10) as http:
+                response = await http.post(
+                    f"{root}/tokenize",
+                    json={
+                        "model": self.model_name,
+                        "prompt": prompt,
+                        "content": prompt,
+                        "add_special": True,
+                    },
+                    headers=headers,
+                )
+            response.raise_for_status()
+            data = response.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            self.log.debug("server prompt token count unavailable", error=repr(exc))
+            return None
+        if not isinstance(data, dict):
+            return None
+        count = data.get("count")
+        if type(count) is int and count >= 0:
+            return count
+        if isinstance(data.get("tokens"), list):
+            return len(data["tokens"])
+        return None
 
     def _record_reasoning(self, reasoning: str | None):
         if reasoning:

@@ -11,6 +11,8 @@ from talemate.agents.context import ActiveAgent
 from talemate.agents.memory.schema import MemoryDocument
 from talemate.character import Character
 from talemate.config import get_config
+import talemate.emit.async_signals as async_signals
+from talemate.exceptions import GenerationCancelled
 from talemate.history import ArchiveEntry
 from talemate.instance import get_agent
 from talemate.knowledge.disclosures import grant_disclosure
@@ -618,7 +620,9 @@ async def configure_cached_rag(rag, monkeypatch, mode, viewer, method):
     return None if viewer == "author" else scene.character_data["Elmer"]
 
 
-async def cached_reply_turn(rag, monkeypatch, mode, *, archive_during_push=False):
+async def cached_reply_turn(
+    rag, monkeypatch, mode, *, archive_during_push=False, retrieved=None
+):
     scene, memory, _, conversation = rag
     character = await configure_cached_rag(
         rag, monkeypatch, mode, "character", "queries"
@@ -632,7 +636,8 @@ async def cached_reply_turn(rag, monkeypatch, mode, *, archive_during_push=False
         conversation,
         "semantic_context",
         AsyncMock(
-            return_value=[
+            return_value=retrieved
+            or [
                 MemoryDocument(
                     "The harbor closes at dusk.",
                     {"typ": "world_state"},
@@ -707,15 +712,125 @@ async def cached_reply_turn(rag, monkeypatch, mode, *, archive_during_push=False
 
 
 @pytest.mark.parametrize("mode", ["legacy", "perception"])
+async def test_reply_carries_its_memory_pass(rag, monkeypatch, mode):
+    original, _, _, _ = await cached_reply_turn(rag, monkeypatch, mode)
+
+    result = original.memory_pass
+    assert result.status == "kept"
+    assert result.candidates == 2
+    assert [item.model_dump() for item in result.kept] == [
+        {
+            "text": "The harbor will close at dusk.",
+            "retrieved": "The harbor closes at dusk.",
+            "kind": "world",
+            "subject": None,
+            "in_scene": False,
+        }
+    ]
+    assert [(item.text, item.kind) for item in result.dropped] == [
+        ("The tide is rising.", "insight")
+    ]
+    assert original.versions_payload()["memory_pass"] == result.model_dump(mode="json")
+
+
+async def test_reply_without_the_pass_carries_none(rag, monkeypatch):
+    scene, _, _, conversation = rag
+    await cached_reply_turn(rag, monkeypatch, "legacy")
+    monkeypatch.setattr(
+        conversation.actions["character_knowledge"].config["memory_pass"],
+        "value",
+        False,
+    )
+
+    reply = (await conversation.converse(scene.get_character("Elmer").actor))[0]
+    assert reply.memory_pass is None
+    assert "memory_pass" not in reply.versions_payload()
+
+
+async def test_regenerated_version_keeps_its_own_memory_pass(rag, monkeypatch):
+    scene, _, _, conversation = rag
+    original, _, _, _ = await cached_reply_turn(rag, monkeypatch, "legacy")
+    first = original.memory_pass
+    monkeypatch.setattr(
+        conversation.actions["character_knowledge"].config["memory_pass"],
+        "value",
+        False,
+    )
+
+    assert await regenerate(scene) == [original]
+    assert original.active_version == 1
+    assert original.memory_pass is None
+    original.set_active_version(0)
+    assert original.memory_pass is first
+
+
+async def test_reply_record_leaves_out_views_already_in_its_history(rag, monkeypatch):
+    scene, _, message, _ = rag
+    views(scene, message)
+    view = MemoryDocument(
+        "The harbor closes at dusk.",
+        {
+            "typ": "history",
+            "knowledge_kind": "message",
+            "knowledge_id": str(message.id),
+        },
+        "view",
+        "The harbor closes at dusk.",
+    )
+    original, _, _, dialogue_prompts = await cached_reply_turn(
+        rag, monkeypatch, "perception", retrieved=[view]
+    )
+
+    # the pass kept the view, but the reply's history already shows the message
+    assert "The harbor will close at dusk." not in dialogue_prompts[0]
+    result = original.memory_pass
+    assert result.status == "kept"
+    assert result.kept == []
+    assert [(item.text, item.kind, item.in_scene) for item in result.dropped] == [
+        ("The harbor will close at dusk.", "story", True),
+        ("The tide is rising.", "insight", False),
+    ]
+
+
+async def test_aborted_regenerate_leaves_no_memory_pass_behind(rag, monkeypatch):
+    scene, _, _, conversation = rag
+    original, _, _, _ = await cached_reply_turn(rag, monkeypatch, "legacy")
+    first = original.memory_pass
+    monkeypatch.setattr(
+        conversation.actions["character_knowledge"].config["memory_pass"],
+        "value",
+        False,
+    )
+
+    async def stop(emission):
+        raise GenerationCancelled()
+
+    signal = async_signals.get("regenerate.msg.character")
+    signal.connect(stop)
+    try:
+        with pytest.raises(GenerationCancelled):
+            await regenerate(scene)
+    finally:
+        signal.disconnect(stop)
+
+    assert len(original.versions) == 1
+    scene.append_message_version(original.id, "Elmer: Reply 1. And more.", "continue")
+    assert original.memory_pass is first
+
+
+@pytest.mark.parametrize("mode", ["legacy", "perception"])
 async def test_regenerate_reuses_query_and_memory_pass(rag, monkeypatch, mode):
     scene, _, _, _ = rag
     original, query, calls, dialogue_prompts = await cached_reply_turn(
         rag, monkeypatch, mode
     )
+    first = original.memory_pass
 
     assert await regenerate(scene) == [original]
     assert query.await_count == 1
     assert calls["conversation.memory-pass"] == 1
+    assert original.active_version == 1
+    assert original.memory_pass == first
     assert len(dialogue_prompts) == 2
     assert all(
         "The harbor will close at dusk." in prompt for prompt in dialogue_prompts

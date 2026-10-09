@@ -73,8 +73,8 @@
 - path: user-guide/agents/conversation/settings.md
   title: Settings
   summary: 'Conversation settings: generation format moved to Summarizer; instructions, scene intent, writing style and long-term
-    memory. Character Knowledge offers effort presets, presence-filtered history and optional AI memory refinement; return
-    bridges and Arrival Notes add no request.'
+    memory. Character Knowledge offers effort presets, presence-filtered history and optional AI memory refinement (Memories
+    button); return bridges and Arrival Notes add no request.'
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
   summary: Autocomplete partial text with Ctrl/Cmd+Enter in dialogue, message editing, attributes, details, descriptions,

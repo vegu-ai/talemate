@@ -13,6 +13,7 @@ from talemate.agents.base import (
 )
 from talemate.agents.context import active_agent
 from talemate.agents.conversation.response_specs import MEMORY_PASS_SPEC
+from talemate.agents.memory.rag import context_history_message_ids
 from talemate.agents.memory.schema import MemoryDocument
 from talemate.client import presets
 from talemate.instance import get_agent
@@ -20,6 +21,7 @@ from talemate.knowledge.bucket import KnowledgeIndex
 from talemate.knowledge.mode import (
     character_knowledge_enabled as perception_mode_enabled,
 )
+from talemate.memory_pass import MemoryPassResult, memory_pass_item
 from talemate.prompts import Prompt
 
 if TYPE_CHECKING:
@@ -115,6 +117,29 @@ class CharacterKnowledgeMixin:
         return self.character_knowledge_enabled and bool(
             self.resolve_config("character_knowledge", "memory_pass")
         )
+
+    def clear_memory_pass_record(self):
+        self.set_context_states(memory_pass=None)
+
+    def take_memory_pass_record(self) -> MemoryPassResult | None:
+        result = self.get_context_state("memory_pass")
+        self.set_context_states(memory_pass=None)
+        return result
+
+    def _record_memory_pass(self, result: MemoryPassResult):
+        self.set_context_states(memory_pass=result)
+
+    async def rag_exclude_context_history(
+        self, context: list[str], context_history: list[str]
+    ) -> list[str]:
+        # the reply's prompt leaves out the views of messages its history
+        # already shows; the record must not list them as kept
+        result = self.get_context_state("memory_pass")
+        if result is not None:
+            self._record_memory_pass(
+                result.without_messages(context_history_message_ids(context_history))
+            )
+        return await super().rag_exclude_context_history(context, context_history)
 
     @property
     def knowledge_analysis_client(self):
@@ -257,7 +282,9 @@ class CharacterKnowledgeMixin:
         processed = rag_cache.get("processed", {}) if rag_cache is not None else {}
         if cache_key in processed:
             log.debug("Using cached memory pass", character=character.name)
-            return list(processed[cache_key])
+            passed, result = processed[cache_key]
+            self._record_memory_pass(result)
+            return list(passed)
 
         _, extracted = await Prompt.request(
             "conversation.memory-pass",
@@ -276,19 +303,26 @@ class CharacterKnowledgeMixin:
             and re.match(r"^none\b", answer, re.IGNORECASE)
         ):
             log.debug("memory pass: none", character=character.name)
-            passed = []
+            result = MemoryPassResult(
+                status="none",
+                candidates=len(candidates),
+                dropped=[memory_pass_item(candidate) for candidate in candidates],
+            )
+            self._record_memory_pass(result)
             current_cache = (
                 self.rag_cache_entry(character) if self.long_term_memory_cache else None
             )
             if current_cache is rag_cache and current_cache is not None:
-                current_cache.setdefault("processed", {})[cache_key] = passed
-            return passed
+                current_cache.setdefault("processed", {})[cache_key] = ([], result)
+            return []
         # the number alone says keep and where
         passed = []
+        kept = {}
         for number, text in items:
             if not 1 <= number <= len(candidates):
                 continue
             candidate = candidates[number - 1]
+            kept[number] = memory_pass_item(candidate, text)
             if text and isinstance(candidate, MemoryDocument):
                 passed.append(
                     MemoryDocument(
@@ -310,6 +344,23 @@ class CharacterKnowledgeMixin:
                 items=items,
             )
             passed = candidates
+            result = MemoryPassResult(
+                status="fallback",
+                candidates=len(candidates),
+                kept=[memory_pass_item(candidate) for candidate in candidates],
+            )
+        else:
+            result = MemoryPassResult(
+                status="kept",
+                candidates=len(candidates),
+                kept=list(kept.values()),
+                dropped=[
+                    memory_pass_item(candidate)
+                    for number, candidate in enumerate(candidates, start=1)
+                    if number not in kept
+                ],
+            )
+        self._record_memory_pass(result)
         log.debug(
             "memory pass",
             character=character.name,
@@ -321,5 +372,8 @@ class CharacterKnowledgeMixin:
             self.rag_cache_entry(character) if self.long_term_memory_cache else None
         )
         if current_cache is rag_cache and current_cache is not None:
-            current_cache.setdefault("processed", {})[cache_key] = list(passed)
+            current_cache.setdefault("processed", {})[cache_key] = (
+                list(passed),
+                result,
+            )
         return passed

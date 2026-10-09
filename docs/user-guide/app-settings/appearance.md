@@ -77,6 +77,10 @@ For each markup type, you can set:
 !!! tip "Color Override"
     The **Color** checkbox for markup styles controls whether that markup uses its own dedicated color or inherits from the message type it appears in. This is useful when you want quotes to stand out in a different color, or when you prefer a more uniform look where all text within a message shares the same color.
 
+### Memories button on character replies
+
+Below the table, **Memories button on character replies** shows or hides the **Memories** button in a character reply's toolbar. The button lists the memories [Refine memories with AI](/talemate/user-guide/agents/conversation/settings/#see-what-a-character-recalled) chose for that reply. On by default.
+
 ### Live Preview
 
 As you adjust your settings, the preview panel on the left side of the settings window shows you exactly how your messages will look. The preview includes examples of:

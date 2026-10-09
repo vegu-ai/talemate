@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 import numpy as np
 
+from talemate.agents.context import ActiveAgent
 from talemate.agents.conversation.knowledge import (
     pass_items,
 )
@@ -26,6 +27,7 @@ from talemate.character import Character
 from talemate.context import ActiveScene
 from talemate.instance import get_agent
 from talemate.knowledge.bucket import KnowledgeIndex
+from talemate.memory_pass import MemoryPassItem
 
 DAY = 86400
 from talemate.prompts import Prompt
@@ -772,6 +774,94 @@ class TestMemoryPass:
                 {"answer": "", "items": items((9, "nine"), (2, ""), (1, "one"))},
             )
             assert await conversation.rag_build(character=alice) == ["b", "one"]
+
+    async def test_result_records_kept_and_dropped_memories(self, scene, opt_ins):
+        conversation, alice = opt_ins
+        enable(conversation, "memory_pass")
+
+        async def semantic(**kwargs):
+            return [
+                MemoryDocument(
+                    "Edwin: Mara owes me two kroner.",
+                    {"typ": "history", "knowledge_kind": "message"},
+                    "m1",
+                    "",
+                ),
+                MemoryDocument(
+                    "Edwin keeps the light.",
+                    {"typ": "details", "character": "Edwin", "detail": "role"},
+                    "d1",
+                    "",
+                ),
+                "The tide turns at six.",
+            ]
+
+        conversation.semantic_context = semantic
+        with (
+            ActiveScene(scene),
+            ActiveAgent(conversation, conversation.converse),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+        ):
+            request.return_value = (
+                "",
+                {
+                    "answer": "",
+                    "items": items(
+                        (3, "The tide turns at six."),
+                        (1, "Alice heard that Mara owes Edwin two kroner."),
+                    ),
+                },
+            )
+            await conversation.rag_build(character=alice)
+            result = conversation.take_memory_pass_record()
+            assert conversation.take_memory_pass_record() is None
+        assert result.status == "kept"
+        assert result.candidates == 3
+        assert result.model_dump()["kept"] == [
+            MemoryPassItem(text="The tide turns at six.", kind="insight").model_dump(),
+            MemoryPassItem(
+                text="Alice heard that Mara owes Edwin two kroner.",
+                retrieved="Edwin: Mara owes me two kroner.",
+                kind="story",
+            ).model_dump(),
+        ]
+        assert result.model_dump()["dropped"] == [
+            MemoryPassItem(
+                text="Edwin keeps the light.", kind="character", subject="Edwin"
+            ).model_dump()
+        ]
+
+    @pytest.mark.parametrize(
+        "answer, blocks, status, kept, dropped",
+        [
+            ("none", [], "none", [], ["a", "b", "c"]),
+            ("I would keep the first one.", [], "fallback", ["a", "b", "c"], []),
+        ],
+    )
+    async def test_result_records_none_and_fallback(
+        self, scene, opt_ins, answer, blocks, status, kept, dropped
+    ):
+        conversation, alice = opt_ins
+        enable(conversation, "memory_pass")
+        with (
+            ActiveScene(scene),
+            ActiveAgent(conversation, conversation.converse),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+        ):
+            request.return_value = ("", {"answer": answer, "items": blocks})
+            await conversation.rag_build(character=alice)
+            result = conversation.take_memory_pass_record()
+        assert result.status == status
+        assert result.candidates == 3
+        assert [item.text for item in result.kept] == kept
+        assert [item.text for item in result.dropped] == dropped
+        assert {item.kind for item in result.kept + result.dropped} == {"insight"}
+
+    async def test_no_record_without_the_pass(self, scene, opt_ins):
+        conversation, alice = opt_ins
+        with ActiveScene(scene), ActiveAgent(conversation, conversation.converse):
+            await conversation.rag_build(character=alice)
+            assert conversation.take_memory_pass_record() is None
 
     async def test_only_for_a_speaker(self, scene, opt_ins):
         conversation, alice = opt_ins

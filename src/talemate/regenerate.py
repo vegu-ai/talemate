@@ -1,4 +1,6 @@
 import asyncio
+import contextlib
+import pydantic
 import structlog
 from typing import TYPE_CHECKING
 from talemate.instance import get_agent
@@ -8,6 +10,7 @@ import talemate.emit.async_signals as async_signals
 from talemate.agents.editor.revision import RevisionContext
 from talemate.context import regeneration_context
 from talemate.exceptions import GenerationCancelled
+from talemate.memory_pass import MemoryPassResult
 from talemate.world_state.snapshot_revision import regeneration_snapshot
 from talemate.scene_message import (
     SceneMessage,
@@ -293,12 +296,19 @@ async def regenerate_message(
     return messages
 
 
+class InplaceRegeneration(pydantic.BaseModel):
+    versions: list[tuple[str, VersionSource]]
+    # the regenerated reply's memory pass, for the versions once appended
+    memory_pass: MemoryPassResult | None = None
+
+
 async def _regenerate_inplace(
     message: SceneMessage, scene: "Scene"
-) -> list[tuple[str, VersionSource]] | None:
+) -> InplaceRegeneration | None:
     """
     Run the agent path for ``message`` and return the version(s) the
-    caller should append onto the existing message's revision stack.
+    caller should append onto the existing message's revision stack,
+    with the regenerated reply's memory pass.
 
     This does NOT push the new message to history nor emit any
     ``character``/``narrator`` message — the caller is expected to
@@ -306,7 +316,7 @@ async def _regenerate_inplace(
     calling ``scene.append_message_version`` for each entry so the slot
     keeps its id and grows its stack with the regen output.
 
-    Returned shape, in append order:
+    ``versions``, in append order:
     - ``[(raw_regen, "regenerate")]`` — auto-revision did not rewrite the
       regen output, so the canonical is the raw regenerate text.
     - ``[(raw_regen, "regenerate"), (polished, "revision")]`` —
@@ -373,7 +383,12 @@ async def _regenerate_inplace(
             )
         )
 
-    return versions_to_append
+    return InplaceRegeneration(
+        versions=versions_to_append,
+        memory_pass=new_message.memory_pass
+        if isinstance(new_message, CharacterMessage)
+        else None,
+    )
 
 
 async def _restore_history_after_failed_regenerate(
@@ -508,14 +523,17 @@ async def _regenerate(scene: "Scene") -> list[SceneMessage]:
         )
         return regenerated_messages
 
-    versions_to_append = outcome
-
     # Re-append with the same id so the slot keeps its frontend
     # revision stack; each call below pushes one entry onto the stack,
     # with the last one becoming the active canonical.
     scene.history.append(message)
-    for text, source in versions_to_append:
-        scene.append_message_version(message.id, text, source=source)
+    with (
+        message.regenerated_memory_pass(outcome.memory_pass)
+        if isinstance(message, CharacterMessage)
+        else contextlib.nullcontext()
+    ):
+        for text, source in outcome.versions:
+            scene.append_message_version(message.id, text, source=source)
 
     try:
         if isinstance(message, CharacterMessage):

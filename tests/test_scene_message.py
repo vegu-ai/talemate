@@ -2,6 +2,7 @@
 
 import pytest
 
+from talemate.memory_pass import MemoryPassItem, MemoryPassResult
 from talemate.scene_message import (
     CharacterMessage,
     ContextInvestigationMessage,
@@ -305,6 +306,52 @@ class TestCharacterMessage:
         m = CharacterMessage(message="Alice: hi")
         assert m.source == "ai"
         assert m.typ == "character"
+
+    def test_memory_pass_follows_the_version_it_belongs_to(self):
+        m = CharacterMessage(message="Alice: hi")
+        result = MemoryPassResult(
+            status="kept",
+            candidates=2,
+            kept=[MemoryPassItem(text="Bob owes her a coin.", kind="story")],
+            dropped=[MemoryPassItem(text="The tide turns.", kind="insight")],
+        )
+        m.set_memory_pass(result)
+
+        m.append_version("Alice: hi there", source="revision")
+        assert m.memory_pass is result
+        m.append_version("Alice: hello", source="regenerate")
+        assert m.memory_pass is None
+        assert "memory_pass" not in m.versions_payload()
+        m.append_version("Alice: hello, Bob", source="continue")
+        assert m.memory_pass is None
+
+        m.set_active_version(1)
+        assert m.memory_pass is result
+        assert m.versions_payload()["memory_pass"] == result.model_dump(mode="json")
+
+    def test_regenerated_versions_carry_the_regenerated_memory_pass(self):
+        m = CharacterMessage(message="Alice: hi")
+        first = MemoryPassResult(status="none", candidates=1)
+        regenerated = MemoryPassResult(status="none", candidates=2)
+        m.set_memory_pass(first)
+
+        with m.regenerated_memory_pass(regenerated):
+            # a revision-only regenerate has no raw version before it
+            m.append_version("Alice: hello", source="revision")
+        assert m.memory_pass is regenerated
+        m.append_version("Alice: hello, Bob", source="continue")
+        assert m.memory_pass is regenerated
+
+        m.set_active_version(0)
+        m.append_version("Alice: hi, Bob", source="continue")
+        assert m.memory_pass is first
+
+    def test_memory_pass_is_never_saved(self):
+        m = CharacterMessage(message="Alice: hi")
+        m.set_memory_pass(MemoryPassResult(status="none", candidates=3))
+        data = m.to_dict()
+        assert "memory_pass" not in str(data)
+        assert CharacterMessage(**data).memory_pass is None
 
 
 # ---------------------------------------------------------------------------

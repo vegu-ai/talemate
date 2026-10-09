@@ -78,7 +78,10 @@
           :can-copy-unsaved="canCopyUnsaved"
           :immutable-save="immutableSave"
         :show-illustration-menu="illustrationMenuAvailable"
+        :memory-pass="memoryPass"
+        :memory-pass-character="character"
         @open-illustration-menu="openIllustrationMenu"
+        @open-memory-pass="memoryPassOpen = true"
       >
         <template #extra-actions>
           <v-chip size="x-small" class="ml-2" label color="primary" v-if="!continuing && isLastMessage" variant="tonal" @click="continueConversation" :disabled="uxLocked || appBusy">
@@ -95,6 +98,15 @@
     <div v-else style="height:24px">
 
     </div>
+    <MessageMemoryPass
+      v-if="memoryPass"
+      v-model="memoryPassOpen"
+      :result="memoryPass"
+      :character="character"
+      :text="text"
+      :color="color"
+      :appearance-config="appearanceConfig"
+    />
   </v-alert>
 </template>
   
@@ -110,6 +122,7 @@ import RevisionNav from './RevisionNav.vue';
 import MessageToolbar from './MessageToolbar.vue';
 import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
 import HistoryEditNotice from './HistoryEditNotice.vue';
+import MessageMemoryPass from './MessageMemoryPass.vue';
 export default {
   components: {
     MessageAssetImage,
@@ -117,6 +130,7 @@ export default {
     MessageToolbar,
     AutocompleteRedoChip,
     HistoryEditNotice,
+    MessageMemoryPass,
   },
   mixins: [MessageAssetMixin],
   props: {
@@ -220,6 +234,10 @@ export default {
       type: Array,
       default: () => [],
     },
+    memoryPass: {
+      type: Object,
+      default: null,
+    },
   },
   emits: ['navigate-revision', 'keep-revision'],
   inject: [
@@ -295,6 +313,7 @@ export default {
       continuing: false,
       editing_text: "",
       hovered: false,
+      memoryPassOpen: false,
       autocompleteField: null,
     }
   },

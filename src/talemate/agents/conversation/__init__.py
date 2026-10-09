@@ -392,8 +392,10 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
 
         self.set_generation_overrides()
 
+        self.clear_memory_pass_record()
         prompt = await self.build_prompt(character, instruction=instruction)
         response, extracted = await prompt.send(self.client, kind="conversation")
+        memory_pass = self.take_memory_pass_record()
         result = extracted["response"]
 
         result = self.clean_result(result, character)
@@ -482,6 +484,7 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
             extra["asset_type"] = "avatar"
         messages = [CharacterMessage(emission.response, **extra)]
         messages[0]._avatar_pending = emit_signals
+        messages[0].set_memory_pass(memory_pass)
         return messages
 
     async def finalize_message_avatar(self, message: CharacterMessage):

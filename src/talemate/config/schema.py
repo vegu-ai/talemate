@@ -717,6 +717,9 @@ class SceneAppearance(pydantic.BaseModel):
     # drop shadow on message text over the scene backdrop
     backdrop_text_shadow: bool = True
 
+    # Memories button on character replies refined by the memory pass
+    show_memory_pass: bool = True
+
     @pydantic.field_validator("message_assets", mode="after")
     @classmethod
     def ensure_default_message_asset_entries(cls, value):

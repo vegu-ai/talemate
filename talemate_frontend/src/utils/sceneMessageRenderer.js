@@ -517,6 +517,21 @@ export class SceneTextParser {
 // Export a default instance for backward compatibility
 export const defaultParser = new SceneTextParser();
 
+// Text about the story rather than a line of it (a character's view of a
+// message, a memory) takes the narrator styles
+export function narratorTextParser(appearanceConfig) {
+    const sceneConfig = appearanceConfig?.scene || {};
+    const narratorStyles = sceneConfig.narrator_messages || {};
+    return new SceneTextParser({
+        quotes: sceneConfig.quotes,
+        emphasis: sceneConfig.emphasis || narratorStyles,
+        parentheses: sceneConfig.parentheses || narratorStyles,
+        brackets: sceneConfig.brackets || narratorStyles,
+        default: narratorStyles,
+        messageType: 'narrator',
+    });
+}
+
 // Export parse function for simple usage
 export function parseSceneText(text, config = {}) {
     const parser = new SceneTextParser(config);

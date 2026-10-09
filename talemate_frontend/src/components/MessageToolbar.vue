@@ -59,6 +59,17 @@
       <v-progress-circular v-if="ttsBusy" class="ml-2" size="14" indeterminate="disable-shrink" color="secondary"></v-progress-circular>
     </v-chip>
 
+    <!-- memories the memory pass gave this reply -->
+    <v-tooltip v-if="memoryPass" :text="memoryPassTooltip" location="top">
+      <template #activator="{ props }">
+        <v-chip v-bind="props" size="x-small" class="ml-2" label color="primary" variant="tonal" data-testid="memory-pass-chip" @click="$emit('open-memory-pass')">
+          <v-icon class="mr-1">mdi-head-lightbulb-outline</v-icon>
+          Memories
+          <span class="ml-1 text-medium-emphasis">{{ memoryPass.kept.length }}</span>
+        </v-chip>
+      </template>
+    </v-tooltip>
+
     <!-- insert time passage -->
     <v-chip v-if="showTimePassage" size="x-small" class="ml-2" label color="time" variant="tonal" @click="insertTimePassage(messageId)" :disabled="uxLocked || appBusy">
       <v-icon class="mr-1">mdi-clock-plus-outline</v-icon>
@@ -68,6 +79,8 @@
 </template>
 
 <script>
+import { memoryPassChipTooltip } from '@/utils/memoryPass';
+
 // Short chip labels for the editor agent's revision methods. Values mirror
 // `revision_method` choices in src/talemate/agents/editor/revision.py.
 const REVISION_METHOD_LABELS = {
@@ -163,6 +176,15 @@ export default {
       type: Boolean,
       default: false,
     },
+    // the memory pass result of the active version; null shows no chip
+    memoryPass: {
+      type: Object,
+      default: null,
+    },
+    memoryPassCharacter: {
+      type: String,
+      default: '',
+    },
     // offer the illustration asset menu (used when the message's image is
     // the active scene backdrop, where no inline image is rendered to click on)
     showIllustrationMenu: {
@@ -170,7 +192,7 @@ export default {
       default: false,
     },
   },
-  emits: ['open-illustration-menu'],
+  emits: ['open-illustration-menu', 'open-memory-pass'],
   inject: [
     'createPin',
     'reviseMessage',
@@ -190,6 +212,9 @@ export default {
     },
     revisionLabel() {
       return REVISION_METHOD_LABELS[this.editorRevisionMethod] || 'Revise';
+    },
+    memoryPassTooltip() {
+      return memoryPassChipTooltip(this.memoryPass, this.memoryPassCharacter);
     },
   },
 }

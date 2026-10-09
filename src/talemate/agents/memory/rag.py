@@ -26,7 +26,16 @@ from talemate.util.dedupe import compile_sentences_to_length, compile_text_to_se
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
 
-__all__ = ["MemoryRAGMixin"]
+__all__ = ["MemoryRAGMixin", "context_history_message_ids"]
+
+
+def context_history_message_ids(context_history: list) -> set[str]:
+    """The ids of the scene messages a rendered history shows."""
+    return {
+        str(part.message_id)
+        for part in context_history
+        if isinstance(part, ContextHistoryMessage)
+    }
 
 
 def knowledge_retrieval_filter(scene: "Scene", viewer: str | None):
@@ -469,11 +478,7 @@ class MemoryRAGMixin:
     async def rag_exclude_context_history(
         context: list[str], context_history: list[str]
     ) -> list[str]:
-        message_ids = {
-            str(part.message_id)
-            for part in context_history
-            if isinstance(part, ContextHistoryMessage)
-        }
+        message_ids = context_history_message_ids(context_history)
         filtered = []
         for item in context:
             meta = getattr(item, "meta", {})

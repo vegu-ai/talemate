@@ -45,7 +45,7 @@
 </template>
 
 <script>
-import { SceneTextParser } from '@/utils/sceneMessageRenderer';
+import { narratorTextParser } from '@/utils/sceneMessageRenderer';
 import { insertNewlineAtCursor } from '@/utils/textAreaUtils';
 import { perspectiveDependentsHint, perspectiveEmptyReason } from '@/utils/messagePerspective';
 
@@ -91,18 +91,8 @@ export default {
     };
   },
   computed: {
-    // a perspective is narration about the message, so it takes the narrator styles
     parser() {
-      const sceneConfig = this.appearanceConfig?.scene || {};
-      const narratorStyles = sceneConfig.narrator_messages || {};
-      return new SceneTextParser({
-        quotes: sceneConfig.quotes,
-        emphasis: sceneConfig.emphasis || narratorStyles,
-        parentheses: sceneConfig.parentheses || narratorStyles,
-        brackets: sceneConfig.brackets || narratorStyles,
-        default: narratorStyles,
-        messageType: 'narrator',
-      });
+      return narratorTextParser(this.appearanceConfig);
     },
     renderedText() {
       return this.parser.parse(this.view.text);

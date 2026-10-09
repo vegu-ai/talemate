@@ -322,7 +322,7 @@
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :data-message-type="message.type" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="revisionIsLatestMessage(message)" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :rev="message.rev ?? null" :can-copy-unsaved="!scene?.data?.filename" :immutable-save="!!scene?.data?.immutable_save" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" :disable_avatar_fallback="message.disable_avatar_fallback || false" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="revisionBusyState(message)" :revisionUncommitted="message.revision_uncommitted || false" :revisionRefresh="message.revision_refresh" @keep-revision="commitRevision(message.id)" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="revisionIsLatestMessage(message)" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :rev="message.rev ?? null" :can-copy-unsaved="!scene?.data?.filename" :immutable-save="!!scene?.data?.immutable_save" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" :disable_avatar_fallback="message.disable_avatar_fallback || false" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="revisionBusyState(message)" :revisionUncommitted="message.revision_uncommitted || false" :revisionRefresh="message.revision_refresh" @keep-revision="commitRevision(message.id)" :entityMentions="getEntityMentionsForMessage(message.id)" :memoryPass="showMemoryPass ? message.memory_pass : null" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -740,6 +740,9 @@ export default {
         },
         sceneBackdropTextShadow() {
             return this.appearanceConfig?.scene?.backdrop_text_shadow ?? true;
+        },
+        showMemoryPass() {
+            return this.appearanceConfig?.scene?.show_memory_pass ?? true;
         },
         assetViewSrc() {
             return this.assetDataUrl(this.assetViewAssetId);
@@ -2361,6 +2364,7 @@ export default {
                             data.revision_refresh,
                             data.revision_uncommitted,
                         );
+                        msg.memory_pass = data.memory_pass || null;
                         // Any in-flight spinner (manual editor revision or
                         // in-place regenerate) clears on the echo — the
                         // server has now produced the new canonical.
@@ -2444,7 +2448,8 @@ export default {
                         asset_id: finalAssetId,
                         asset_type: finalAssetType,
                         disable_avatar_fallback: disableAvatarFallback,
-                        rev: data.rev ?? null
+                        rev: data.rev ?? null,
+                        memory_pass: data.memory_pass || null,
                     };
                     this.revisionApplyServerState(charMsg, data.versions, data.active_version, data.revision_refresh, data.revision_uncommitted);
                     this.messages.push(charMsg);

@@ -1,3 +1,4 @@
+import contextlib
 import enum
 import hashlib
 import json
@@ -7,6 +8,7 @@ from typing import ClassVar, Literal
 
 import pydantic
 from talemate.knowledge.perspective_models import PerspectiveSourceModel
+from talemate.memory_pass import MemoryPassResult
 from talemate.scene_signals import (
     message_changed,
     message_versions_extras,
@@ -578,6 +580,14 @@ class SceneMessage(PerspectiveSourceModel):
 class CharacterMessage(SceneMessage):
     _avatar_pending: bool = pydantic.PrivateAttr(default=False)
     _supports_versions: ClassVar[bool] = True
+    # per version index; for inspection only, never saved
+    _memory_passes: dict[int, MemoryPassResult | None] = pydantic.PrivateAttr(
+        default_factory=dict
+    )
+    # set while a regenerate appends its versions
+    _regenerated_memory_pass: tuple[MemoryPassResult | None] | None = (
+        pydantic.PrivateAttr(default=None)
+    )
 
     typ: str = "character"
     source: str = "ai"
@@ -587,6 +597,48 @@ class CharacterMessage(SceneMessage):
 
     def __str__(self):
         return self.message
+
+    @property
+    def memory_pass(self) -> MemoryPassResult | None:
+        return self._memory_passes.get(self.active_version)
+
+    def set_memory_pass(self, result: MemoryPassResult | None) -> None:
+        self._memory_passes[self.active_version] = result
+
+    @contextlib.contextmanager
+    def regenerated_memory_pass(self, result: MemoryPassResult | None):
+        """Versions appended inside carry `result`, the regenerated reply's."""
+        self._regenerated_memory_pass = (result,)
+        try:
+            yield
+        finally:
+            self._regenerated_memory_pass = None
+
+    def append_version(
+        self,
+        message: str,
+        source: VersionSource,
+        reason: str | None = None,
+    ) -> MessageVersion:
+        current = self.memory_pass
+        version = super().append_version(message, source, reason)
+        if self._regenerated_memory_pass is not None:
+            (result,) = self._regenerated_memory_pass
+        elif source == "regenerate":
+            result = None
+        else:
+            # a revision or continuation of the same reply was written from
+            # the same memories
+            result = current
+        self._memory_passes[self.active_version] = result
+        return version
+
+    def versions_payload(self) -> dict:
+        payload = super().versions_payload()
+        memory_pass = self.memory_pass
+        if memory_pass is None:
+            return payload
+        return {**payload, "memory_pass": memory_pass.model_dump(mode="json")}
 
     @staticmethod
     def with_name_prefix(name: str, body: str) -> str:

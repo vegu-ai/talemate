@@ -3,7 +3,7 @@ import asyncio
 import json
 from pathlib import Path
 from talemate.knowledge.status import knowledge_sync
-from talemate.regenerate import regenerate
+from talemate.regenerate import InplaceRegeneration, regenerate
 from talemate.tale_mate import Actor
 from talemate.server.scene_message import SceneMessagePlugin
 from types import SimpleNamespace
@@ -484,10 +484,12 @@ async def test_regeneration_analyzes_only_final_version_in_original_slot(
     monkeypatch.setattr(
         "talemate.regenerate._regenerate_inplace",
         AsyncMock(
-            return_value=[
-                ("Alice: Raw.", "regenerate"),
-                ("Alice: Polished.", "revision"),
-            ]
+            return_value=InplaceRegeneration(
+                versions=[
+                    ("Alice: Raw.", "regenerate"),
+                    ("Alice: Polished.", "revision"),
+                ]
+            )
         ),
     )
     await regenerate(scene)

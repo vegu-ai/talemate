@@ -102,6 +102,18 @@ client settings or resolved inference preset runs it again. Standard semantic-on
 retrieval does not publish a shared cached result, so there is no refinement to reuse
 in that configuration.
 
+###### See what a character recalled
+
+When this refinement shapes a reply, hover the reply and click **Memories** in its toolbar. The window lists the memories the character drew on, most useful first and as the AI rewrote them. **Show original** under a memory shows the text that was retrieved, and **Left out** lists the memories the AI set aside.
+
+For example, after Edwin answers Mara's question about the tally on the oil store wall, **Memories** might show that he recalled his dislike of questions asked out on the landing, while Mara's dive logs were left out. When the AI kept nothing for a reply, the window says so. When its answer could not be read, the window says the memories were used as retrieved.
+
+In Character perspectives mode, the AI can pick a memory of something the character already sees in the recent scene, such as their view of a message a few lines up. The reply gets that moment from the scene itself, not as a memory, so **Left out** lists it marked **Already in the scene**.
+
+Each regenerated version of a reply keeps its own list. The list is not saved with the scene: replies from before the scene was loaded have no **Memories** button. To hide the button, turn off **Memories button on character replies** in Settings → Appearance → Messages.
+
+![Memories window for a character reply](/talemate/img/0.40.0/conversation-memory-pass-popup.png)
+
 ## Long Term Memory
 
 --8<-- "docs/snippets/tips.md:agent_long_term_memory_settings"

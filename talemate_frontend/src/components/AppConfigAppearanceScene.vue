@@ -65,6 +65,16 @@
                 </template>
             </tbody>
         </v-table>
+        <div class="mt-4 px-3" data-setting-anchor="show-memory-pass">
+            <v-switch
+                v-model="config.show_memory_pass"
+                color="primary"
+                density="compact"
+                label="Memories button on character replies"
+                hint="When Refine memories with AI shapes a reply, its toolbar offers a Memories button listing what the character drew on. Available for replies generated since the scene was loaded."
+                persistent-hint
+            ></v-switch>
+        </div>
     </div>
     <v-row class="ma-5" no-gutters>
         <v-col cols="8" class="pr-3">
@@ -173,6 +183,7 @@ export default {
                 this.hydrateMarkupStyle(sceneConfig, 'brackets', { italic: true });
                 this.hydrateMarkupStyle(sceneConfig, 'emphasis', { italic: true });
                 this.hydrateMarkupStyle(sceneConfig, 'entities');
+                sceneConfig.show_memory_pass ??= true;
                 this.config = sceneConfig;
                 
                 // Re-enable changed events after hydration completes

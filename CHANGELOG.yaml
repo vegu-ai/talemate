@@ -17,6 +17,7 @@
   - "Story and World: Finished passages appear while follow-up summaries and voice preparation continue. In Character perspectives mode, new passages are analyzed before the next generation; an edit flags the perspectives and summaries it affects as out of sync, and Repair in the bar above the message input rebuilds them."
   - "Story and World: Editing or deleting earlier passages warns when later story details may become inconsistent."
   - "Memory: Tune retrieval for recency, variety and relevance, with optional local reranking or AI refinement; OpenRouter embeddings are also available."
+  - "Memory: With Refine memories with AI on, a Memories button on a character reply shows the memories the character drew on, as rewritten and most useful first, and the ones left out. The list is kept until the scene is reloaded and can be hidden in Settings → Appearance → Messages."
   - "Director: Reject a proposed action with instructions for a correction, and see which actions in a batch were applied."
   - "Settings and Clients: Client and agent settings share the Settings tab's Save and Discard controls, including scene overrides and assigning one client to all agents."
   - "Settings and Clients: Pin inference parameters beside the client list and enter exact sampling, context and reasoning values."

@@ -43,12 +43,14 @@ function mount(overrides = {}, { asset = { meta: { name: 'Harbour at night' } },
 describe('scene backdrop message', () => {
     it('names the backdrop it changed to', () => {
         const { host } = mount();
-        expect(host.querySelector('.v-chip').textContent).toBe('mdi-image-filter-hdrBackdrop: Harbour at night');
+        expect(host.querySelector('.collapsed-row__kind').textContent).toBe('Backdrop');
+        expect(host.querySelector('.collapsed-row__label').textContent).toBe('Harbour at night');
     });
 
     it('shows a generating state without a remove button while pending', () => {
         const { host } = mount({ backdrop: null, pending: true });
-        expect(host.querySelector('.v-chip').textContent).toBe('Generating background…');
+        expect(host.querySelector('.collapsed-row__kind').textContent).toBe('Backdrop');
+        expect(host.querySelector('.collapsed-row__label').textContent).toBe('Generating background…');
         expect(host.querySelector('.v-progress-circular')).not.toBeNull();
         expect(host.querySelector('button')).toBeNull();
     });
@@ -58,17 +60,18 @@ describe('scene backdrop message', () => {
         message.backdrop = 'night';
         message.pending = false;
         await nextTick();
-        expect(host.querySelector('.v-chip').textContent).toContain('Backdrop: Harbour at night');
+        expect(host.querySelector('.collapsed-row__kind').textContent).toBe('Backdrop');
+        expect(host.querySelector('.collapsed-row__label').textContent).toBe('Harbour at night');
     });
 
     it('says when the backdrop image was removed from the library', () => {
         const { host } = mount({}, { asset: null });
-        expect(host.querySelector('.v-chip').textContent).toContain('Backdrop: image removed');
+        expect(host.querySelector('.collapsed-row__label').textContent).toBe('Image removed');
     });
 
     it('calls an image without a name untitled rather than removed', () => {
         const { host } = mount({}, { asset: { meta: { name: null } } });
-        expect(host.querySelector('.v-chip').textContent).toContain('Backdrop: Untitled');
+        expect(host.querySelector('.collapsed-row__label').textContent).toBe('Untitled');
     });
 
     it('previews the image on click and asks for it when not cached', async () => {

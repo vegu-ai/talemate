@@ -21,7 +21,9 @@ function mount(overrides = {}) {
     const props = reactive({ message, locked: false });
     const app = createApp({ render: () => h(Transition, props) });
     app.provide('getWebsocket', () => ({ send: value => sent.push(JSON.parse(value)) }));
-    app.component('VChip', defineComponent({ inheritAttrs: false, props: ['link', 'closable'],
+    app.component('VTooltip', defineComponent({ props: ['text'],
+        setup: (_, { slots }) => () => h('div', { class: 'v-tooltip' }, slots.activator?.({ props: {} })) }));
+    app.component('VChip', defineComponent({ inheritAttrs: false, props: ['link', 'closable', 'color'],
         setup: (chipProps, { slots, attrs }) => () => {
             chips.push({ ...chipProps });
             return h('span', { ...attrs, class: ['v-chip', attrs.class] }, slots.default?.());
@@ -65,7 +67,8 @@ describe('character transition chip', () => {
         expect(chip.querySelector('.v-icon').textContent).toBe('mdi-account-arrow-right');
         expect(chip.style.color).toBe('cornflowerblue');
         expect(chip.getAttribute('aria-expanded')).toBe('false');
-        expect(activated.chips.at(-1)).toEqual({ link: true, closable: undefined });
+        expect(activated.chips.at(-1)).toEqual({ link: true, closable: undefined, color: undefined });
+        expect(activated.host.querySelector('.message-close-button')).toBeNull();
         expect(activated.host.querySelector('hr.v-divider, v-divider')).toBeNull();
 
         const deactivated = mount({ kind: 'deactivated' });

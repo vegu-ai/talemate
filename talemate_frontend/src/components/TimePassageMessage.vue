@@ -4,9 +4,7 @@
 
     <v-alert color="time" icon="mdi-clock-outline" variant="text" @dblclick="!editing && startEdit()">
       <template v-slot:close>
-        <v-btn v-if="!editing" size="small" icon variant="text" class="close-button" @click="deletePassage" :disabled="uxLocked">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
+        <MessageCloseButton v-if="!editing" label="Delete this time passage" :disabled="uxLocked" @click="deletePassage" />
       </template>
       <span v-if="!editing">
         <span v-if="title" class="time-title mr-2">{{ title }}</span>
@@ -39,9 +37,11 @@
 <script>
 import { secondsToAmountUnit } from '@/utils/time';
 import HistoryEditNotice from './HistoryEditNotice.vue';
+import MessageCloseButton from './MessageCloseButton.vue';
 
 export default {
   components: {
+    MessageCloseButton,
     HistoryEditNotice,
   },
   data() {
@@ -128,16 +128,5 @@ export default {
 <style scoped>
 .time-title {
   font-weight: 600;
-}
-
-.close-button {
-  opacity: 0.4;
-  color: rgba(var(--v-theme-on-surface), 0.6) !important;
-  transition: opacity 0.2s ease;
-}
-
-.close-button:hover {
-  opacity: 1;
-  color: rgba(var(--v-theme-on-surface), 0.9) !important;
 }
 </style>

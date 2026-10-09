@@ -1,31 +1,20 @@
 <template>
-    <div class="reinforcement-container" @mouseenter="hovered = true" @mouseleave="hovered = false">
-        <v-tooltip :text="tooltip" location="top" max-width="420">
-            <template #activator="{ props }">
-                <v-chip
-                    v-bind="props"
-                    class="reinforcement-chip clickable"
-                    link
-                    :color="getMessageColor('reinforcement')"
-                    :aria-expanded="String(expanded)"
-                    @click="toggle">
-                    <v-icon class="mr-2">mdi-image-auto-adjust</v-icon>
-                    <span class="reinforcement-kind">State Update</span>
-                    <span class="reinforcement-separator">·</span>
-                    <span class="reinforcement-label">{{ label }}</span>
-                    <v-icon class="ml-1" size="small">{{ expanded ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
-                </v-chip>
-            </template>
-        </v-tooltip>
-        <v-btn
-            v-show="hovered"
-            class="ml-1"
-            size="x-small"
-            variant="text"
-            icon="mdi-close"
-            :disabled="locked"
-            aria-label="Remove this state reinforcement from the history"
-            @click="remove" />
+    <CollapsedMessageRow
+        class="reinforcement-row"
+        icon="mdi-image-auto-adjust"
+        kind="State Update"
+        :label="label"
+        :color="getMessageColor('reinforcement')"
+        :tooltip="tooltip"
+        expandable
+        :expanded="expanded"
+        removable
+        remove-label="Remove this state reinforcement from the history"
+        :locked="locked"
+        @toggle="toggle"
+        @remove="remove"
+        @mouseenter="hovered = true"
+        @mouseleave="hovered = false">
         <div v-if="expanded" class="reinforcement-details">
             <div v-if="editing">
                 <v-textarea
@@ -71,16 +60,18 @@
                 </div>
             </template>
         </div>
-    </div>
+    </CollapsedMessageRow>
 </template>
 
 <script>
 import HistoryEditNotice from './HistoryEditNotice.vue';
+import CollapsedMessageRow from './CollapsedMessageRow.vue';
 
 export default {
     name: 'ReinforcementMessage',
     components: {
         HistoryEditNotice,
+        CollapsedMessageRow,
     },
     props: {
         message: { type: Object, required: true },
@@ -173,32 +164,7 @@ export default {
 </script>
 
 <style scoped>
-.clickable { cursor: pointer; }
-.reinforcement-container { margin-bottom: 14px; }
-.reinforcement-chip { margin-left: 10px; max-width: calc(100% - 48px); }
-.reinforcement-chip :deep(.v-chip__content) {
-    min-width: 0;
-    overflow: hidden;
-}
-.reinforcement-kind {
-    flex-shrink: 0;
-    font-weight: 600;
-    font-size: 0.75em;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-.reinforcement-separator {
-    flex-shrink: 0;
-    margin: 0 6px;
-    opacity: 0.6;
-}
-.reinforcement-label {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 0;
-}
-.reinforcement-details { margin: 6px 10px 0 22px; }
+.reinforcement-details { margin: 6px 16px 0 28px; }
 .reinforcement-text {
     white-space: pre-wrap;
     overflow-wrap: anywhere;

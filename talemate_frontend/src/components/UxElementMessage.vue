@@ -1,14 +1,11 @@
 <template>
   <v-alert
     variant="text"
-    :closable="isClosable"
     class="ux-element-message"
     :color="resolvedColor || alertColor"
   >
     <template v-if="isClosable" v-slot:close>
-      <v-btn size="x-small" icon @click="cancel">
-        <v-icon>mdi-close</v-icon>
-      </v-btn>
+      <MessageCloseButton label="Close" @click="cancel" />
     </template>
 
     <v-card variant="text" class="ux-element-card">
@@ -114,6 +111,7 @@
 <script>
 import UxElementChoice from "./UxElementChoice.vue";
 import UxElementTextInput from "./UxElementTextInput.vue";
+import MessageCloseButton from "./MessageCloseButton.vue";
 import { SceneTextParser } from "@/utils/sceneMessageRenderer.js";
 import { isSpecialMessageColor } from "@/utils/messageColors.js";
 import { parseBlock as parsePlainMarkdown } from "@/utils/markdownRenderer.js";
@@ -123,6 +121,7 @@ export default {
   components: {
     UxElementChoice,
     UxElementTextInput,
+    MessageCloseButton,
   },
   props: {
     element: {

@@ -1,9 +1,7 @@
 <template>
   <v-alert variant="text" color="narrator" elevation="0" density="compact" :style="{ opacity: revisionBusy ? 0.65 : 1, transition: 'opacity 0.2s ease' }" @mouseover="hovered=true" @mouseleave="hovered=false">
     <template v-slot:close>
-      <v-btn size="small" icon variant="text" class="close-button" :class="{ 'close-button--none': message_id == null }" @click="deleteMessage" :disabled="uxLocked">
-        <v-icon>mdi-close</v-icon>
-      </v-btn>
+      <MessageCloseButton :placeholder="message_id == null" :disabled="uxLocked" @click="deleteMessage" />
     </template>
     <!-- Scene illustration (big) renders above message -->
     <MessageAssetImage 
@@ -114,8 +112,10 @@ import RevisionNav from './RevisionNav.vue';
 import MessageToolbar from './MessageToolbar.vue';
 import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
 import HistoryEditNotice from './HistoryEditNotice.vue';
+import MessageCloseButton from './MessageCloseButton.vue';
 export default {
   components: {
+    MessageCloseButton,
     MessageAssetImage,
     RevisionNav,
     MessageToolbar,
@@ -422,19 +422,4 @@ export default {
   color: rgb(var(--v-theme-muted));
   background-color: transparent;
 }
-
-.close-button {
-  opacity: 0.4;
-  color: rgba(var(--v-theme-on-surface), 0.6) !important;
-  transition: opacity 0.2s ease;
-}
-
-.close-button:hover {
-  opacity: 1;
-  color: rgba(var(--v-theme-on-surface), 0.9) !important;
-}
-
-/* the intro has no id to delete; the button keeps its space so the text width matches other rows */
-.close-button--none {
-  visibility: hidden;
-}</style>
+</style>

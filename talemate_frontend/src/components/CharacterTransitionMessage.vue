@@ -1,15 +1,12 @@
 <template>
-    <div class="transition-container">
-        <v-chip
-            class="transition-chip"
-            :class="{ clickable: activated }"
-            :link="activated"
-            :style="{ color: message.color || undefined }"
-            :aria-expanded="activated ? String(expanded) : undefined"
-            @click="toggle">
-            <v-icon class="mr-2">{{ activated ? 'mdi-account-arrow-right' : 'mdi-account-arrow-left' }}</v-icon>
-            <span>{{ label }}</span>
-        </v-chip>
+    <CollapsedMessageRow
+        :icon="activated ? 'mdi-account-arrow-right' : 'mdi-account-arrow-left'"
+        kind="Character"
+        :label="label"
+        :text-color="message.color || undefined"
+        :expandable="activated"
+        :expanded="expanded"
+        @toggle="toggle">
         <div v-if="activated && expanded" class="transition-details">
             <p class="text-medium-emphasis">{{ status }}</p>
             <p v-if="participants" class="text-medium-emphasis">Present at entry: {{ participants }}</p>
@@ -30,13 +27,16 @@
                     @blur="onBlur" />
             </template>
         </div>
-    </div>
+    </CollapsedMessageRow>
 </template>
 
 <script>
+import CollapsedMessageRow from './CollapsedMessageRow.vue';
+
 const NOTE_SAVE_DELAY = 500;
 
 export default {
+    components: { CollapsedMessageRow },
     props: {
         message: { type: Object, required: true },
         locked: Boolean,
@@ -122,9 +122,6 @@ export default {
 </script>
 
 <style scoped>
-.clickable { cursor: pointer; }
-.transition-container { margin-bottom: 8px; }
-.transition-chip { margin-left: 10px; }
-.transition-details { margin: 8px 10px 0; }
+.transition-details { margin: 6px 16px 0 28px; }
 .transition-details p { margin-bottom: 4px; }
 </style>

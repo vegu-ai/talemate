@@ -1,9 +1,7 @@
 <template>
     <v-alert color="muted" variant="text">
         <template v-slot:close>
-            <v-btn size="x-small" icon @click="cancel">
-                <v-icon>mdi-close</v-icon>
-            </v-btn>
+            <MessageCloseButton label="Dismiss these suggestions" @click="cancel" />
         </template>
         <v-card-title class="text-body-large">
             The
@@ -34,9 +32,13 @@
 </template>
 
 <script>
+import MessageCloseButton from './MessageCloseButton.vue';
 
 export default {
     name: 'PlayerChoiceMessage',
+    components: {
+        MessageCloseButton,
+    },
     props: {
         choices: Array,
         character: String,

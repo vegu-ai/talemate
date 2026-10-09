@@ -1,31 +1,18 @@
 <template>
-    <div class="backdrop-container" @mouseenter="hovered = true" @mouseleave="hovered = false">
-        <v-tooltip :text="tooltip" location="top" max-width="320">
-            <template #activator="{ props }">
-                <v-chip
-                    v-bind="props"
-                    class="backdrop-chip"
-                    :class="{ clickable: previewable }"
-                    :link="previewable"
-                    color="mutedheader"
-                    :aria-expanded="previewable ? String(expanded) : undefined"
-                    @click="toggle">
-                    <v-progress-circular v-if="message.pending" class="mr-2" indeterminate size="14" width="2" />
-                    <v-icon v-else class="mr-2">mdi-image-filter-hdr</v-icon>
-                    <span>{{ label }}</span>
-                </v-chip>
-            </template>
-        </v-tooltip>
-        <v-btn
-            v-if="!message.pending"
-            v-show="hovered"
-            class="ml-1"
-            size="x-small"
-            variant="text"
-            icon="mdi-close"
-            :disabled="locked"
-            aria-label="Remove this backdrop change from the history"
-            @click="remove" />
+    <CollapsedMessageRow
+        icon="mdi-image-filter-hdr"
+        kind="Backdrop"
+        :label="label"
+        color="mutedheader"
+        :tooltip="tooltip"
+        :pending="message.pending"
+        :expandable="previewable"
+        :expanded="expanded"
+        :removable="!message.pending"
+        remove-label="Remove this backdrop change from the history"
+        :locked="locked"
+        @toggle="toggle"
+        @remove="remove">
         <div v-if="expanded && previewable && thumbnail" class="backdrop-details">
             <v-img :src="thumbnail" :aspect-ratio="16 / 9" max-width="280" cover rounded="lg" />
         </div>
@@ -35,14 +22,15 @@
                 asset_type="scene_illustration"
                 :display_size="displaySize" />
         </div>
-    </div>
+    </CollapsedMessageRow>
 </template>
 
 <script>
 import MessageAssetImage from './MessageAssetImage.vue';
+import CollapsedMessageRow from './CollapsedMessageRow.vue';
 
 export default {
-    components: { MessageAssetImage },
+    components: { MessageAssetImage, CollapsedMessageRow },
     props: {
         message: { type: Object, required: true },
         // the backdrop's Visual Library entry; null once the image was removed
@@ -58,7 +46,6 @@ export default {
     data() {
         return {
             expanded: false,
-            hovered: false,
         };
     },
     computed: {
@@ -73,9 +60,9 @@ export default {
         },
         label() {
             if (this.message.pending) return 'Generating background…';
-            if (!this.message.backdrop) return 'Backdrop cleared';
-            if (!this.asset) return 'Backdrop: image removed';
-            return `Backdrop: ${this.asset.meta?.name || 'Untitled'}`;
+            if (!this.message.backdrop) return 'Cleared';
+            if (!this.asset) return 'Image removed';
+            return this.asset.meta?.name || 'Untitled';
         },
         tooltip() {
             if (this.message.pending) return 'A new scene background is being generated. It becomes the backdrop when it is ready.';
@@ -106,9 +93,6 @@ export default {
 </script>
 
 <style scoped>
-.clickable { cursor: pointer; }
-.backdrop-container { margin-bottom: 8px; }
-.backdrop-chip { margin-left: 10px; }
-.backdrop-details { margin: 8px 10px 0; }
-.backdrop-inline { padding: 8px 10px 0; overflow: hidden; }
+.backdrop-details { margin: 6px 16px 0 28px; }
+.backdrop-inline { padding: 8px 16px 0; overflow: hidden; }
 </style>

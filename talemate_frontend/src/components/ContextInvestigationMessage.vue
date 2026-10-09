@@ -1,9 +1,7 @@
 <template>
   <v-alert  v-if="show" @mouseover="hovered=true" @mouseleave="hovered=false" @click="toggle()" class="clickable" variant="text" density="compact" :style="{ opacity: revisionBusy ? 0.65 : 1, transition: 'opacity 0.2s ease' }" :color="getMessageColor('context_investigation')">
     <template v-slot:close>
-      <v-btn size="small" icon variant="text" class="close-button" @click="deleteMessage" :disabled="uxLocked">
-        <v-icon>mdi-close</v-icon>
-      </v-btn>
+      <MessageCloseButton :disabled="uxLocked" @click="deleteMessage" />
     </template>
     <v-alert-title v-if="title !== ''" class="muted-title text-body-small">{{ title }}</v-alert-title>
     
@@ -92,10 +90,12 @@ import RevisionNav from './RevisionNav.vue';
 import MessageToolbar from './MessageToolbar.vue';
 import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
 import HistoryEditNotice from './HistoryEditNotice.vue';
+import MessageCloseButton from './MessageCloseButton.vue';
 
 export default {
   name: 'ContextInvestigationMessage',
   components: {
+    MessageCloseButton,
     MessageAssetImage,
     RevisionNav,
     MessageToolbar,
@@ -336,16 +336,5 @@ export default {
 
 :deep(.scene-paragraph:last-child) {
   margin-bottom: 0;
-}
-
-.close-button {
-  opacity: 0.4;
-  color: rgba(var(--v-theme-on-surface), 0.6) !important;
-  transition: opacity 0.2s ease;
-}
-
-.close-button:hover {
-  opacity: 1;
-  color: rgba(var(--v-theme-on-surface), 0.9) !important;
 }
 </style>

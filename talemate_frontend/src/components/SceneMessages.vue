@@ -312,9 +312,9 @@
 
     <div class="message-container mb-8" ref="messageContainer" :class="{ 'no-text-shadow': !sceneBackdropTextShadow }" :style="{ '--scene-backdrop-panel-opacity': sceneBackdropPanelOpacity }" style="flex-grow: 1; overflow-y: auto;" @click="onSceneAreaClick" @mouseup="onMessageContainerMouseUp">
         <div v-for="(message, index) in visibleMessages" :key="message.id != null ? `${message.type}-${message.id}` : `idx-${index}`" class="message-wrapper" :class="{ 'message-wrapper--split': perspectiveCharacter }">
-          <div class="message-cell">
+          <div class="message-cell" :class="{ 'message-cell--backdrop': isSceneBackdropMessage(message) }">
             <!-- marks the message whose illustration is the active backdrop -->
-            <v-tooltip v-if="sceneBackdrop && message.id != null && message.id === sceneBackdrop.messageId" text="This image is the current scene background" location="left">
+            <v-tooltip v-if="isSceneBackdropMessage(message)" text="This image is the current scene background" location="left">
                 <template v-slot:activator="{ props }">
                     <v-icon v-bind="props" class="backdrop-indicator" size="small" color="primary" @click.stop="openBackdropIndicatorMenu($event, message)">mdi-image-area</v-icon>
                 </template>
@@ -885,6 +885,10 @@ export default {
         // when their message type is hidden in the appearance settings
         messageRowRendered(message) {
             return ALWAYS_RENDERED_MESSAGE_TYPES.includes(message.type) || !this.getMessageTypeHidden(message.type);
+        },
+
+        isSceneBackdropMessage(message) {
+            return !!this.sceneBackdrop && message.id != null && message.id === this.sceneBackdrop.messageId;
         },
 
         requestPerspectives() {
@@ -2735,9 +2739,6 @@ export default {
     backdrop-filter: blur(4px);
     border-radius: 6px;
     margin-bottom: 8px;
-    /* slim right gutter so the backdrop indicator sits beside the panel,
-       not over the message content */
-    margin-right: 28px;
     /* tight, dense shadow so message text of every type stays legible
        over the backdrop */
     text-shadow: 1px 1px 2px rgb(var(--v-theme-surface)), 0 0 6px rgba(var(--v-theme-surface), 0.85);
@@ -2775,12 +2776,12 @@ export default {
 }
 
 /* small always-on marker for the message that set the active backdrop;
-   sits in the right gutter beside the message panel (over the backdrop
-   image, hence the shadow) */
+   sits left of the message's close button, in the alert's close column,
+   which is widened for this message so the marker never covers its text */
 .backdrop-indicator {
     position: absolute;
-    top: 6px;
-    right: 0;
+    top: 10px;
+    right: 40px;
     z-index: 2;
     cursor: pointer;
     opacity: 0.8;
@@ -2789,6 +2790,10 @@ export default {
 
 .backdrop-indicator:hover {
     opacity: 1;
+}
+
+.message-cell--backdrop > .message > div > :deep(.v-alert > .v-alert__close) {
+    margin-inline-start: 40px;
 }
 
 .message {

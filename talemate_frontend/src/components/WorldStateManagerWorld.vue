@@ -94,12 +94,14 @@ export default {
         reselectActive() {
             try {
                 if (this.tab === 'entries') {
-                    const id = this.$refs.entries?.entry?.id;
+                    const entry = this.$refs.entries?.entry;
+                    const id = entry && !entry.isNew ? entry.id : null;
                     if (id && this.$refs.entries?.select) {
                         this.$nextTick(() => this.$refs.entries.select(id));
                     }
                 } else if (this.tab === 'states') {
-                    const q = this.$refs.states?.state?.question;
+                    const state = this.$refs.states?.state;
+                    const q = state && !state.isNew ? state.question : null;
                     if (q && this.$refs.states?.select) {
                         this.$nextTick(() => this.$refs.states.select(q));
                     }

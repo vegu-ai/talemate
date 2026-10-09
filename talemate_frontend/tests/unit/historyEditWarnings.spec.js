@@ -350,12 +350,12 @@ describe('time passage delete', () => {
 describe('scene intro row', () => {
     it('hides the close button but keeps its space, because the intro has no id to delete', () => {
         const { host } = mountRow(NarratorMessage, { text: 'The lamp turns.', message_id: null, uxLocked: false, appBusy: false });
-        expect(host.querySelector('.close-button').classList).toContain('close-button--none');
-        expect(readSource('src/components/NarratorMessage.vue')).toMatch(/\.close-button--none \{\s*visibility: hidden;\s*\}/);
+        expect(host.querySelector('.message-close-button').classList).toContain('message-close-button--none');
+        expect(readSource('src/components/MessageCloseButton.vue')).toMatch(/\.message-close-button--none \{\s*visibility: hidden;\s*\}/);
     });
 
     it('keeps the close button visible on a history row', () => {
         const { host } = mountRow(NarratorMessage, { text: 'Rain falls.', message_id: 3, uxLocked: false, appBusy: false });
-        expect(host.querySelector('.close-button').classList).not.toContain('close-button--none');
+        expect(host.querySelector('.message-close-button').classList).not.toContain('message-close-button--none');
     });
 });

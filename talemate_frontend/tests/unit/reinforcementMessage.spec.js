@@ -76,8 +76,8 @@ async function editTo(host, text) {
 describe('reinforcement message', () => {
     it('names the character and the tracked question, collapsed', () => {
         const { host } = mount();
-        expect(host.querySelector('.reinforcement-kind').textContent).toBe('State Update');
-        expect(host.querySelector('.reinforcement-label').textContent).toBe('Bob — What is Bob doing?');
+        expect(host.querySelector('.collapsed-row__kind').textContent).toBe('State Update');
+        expect(host.querySelector('.collapsed-row__label').textContent).toBe('Bob — What is Bob doing?');
         expect(host.querySelector('.v-tooltip').dataset.text).toBe('State Update for Bob: What is Bob doing? Click to show the answer.');
         expect(host.querySelector('.v-chip').getAttribute('aria-expanded')).toBe('false');
         expect(host.querySelector('.reinforcement-text')).toBeNull();
@@ -85,7 +85,7 @@ describe('reinforcement message', () => {
 
     it('names the world for a world state', () => {
         const { host } = mount({ character: null, question: 'What is the weather?' });
-        expect(host.querySelector('.reinforcement-label').textContent).toBe('World — What is the weather?');
+        expect(host.querySelector('.collapsed-row__label').textContent).toBe('World — What is the weather?');
     });
 
     it('shows the answer when expanded and hides it again', async () => {
@@ -102,7 +102,7 @@ describe('reinforcement message', () => {
         await expand(open.host);
         const hint = () => open.host.querySelector('.reinforcement-edit-hint');
         expect(hint().style.display).toBe('none');
-        open.host.querySelector('.reinforcement-container').dispatchEvent(new MouseEvent('mouseenter'));
+        open.host.querySelector('.collapsed-row').dispatchEvent(new MouseEvent('mouseenter'));
         await nextTick();
         expect(hint().style.display).toBe('');
         expect(hint().textContent).toContain('Double-click to edit.');
@@ -228,13 +228,13 @@ describe('reinforcement message', () => {
         host.querySelector('.reinforcement-text').dispatchEvent(new MouseEvent('dblclick'));
         await nextTick();
         expect(host.querySelector('textarea')).toBeNull();
-        expect(host.querySelector('button[data-icon="mdi-close"]').disabled).toBe(true);
+        expect(host.querySelector('.message-close-button').disabled).toBe(true);
         expect(deleted).toEqual([]);
     });
 
     it('asks to delete the message', () => {
         const { host, deleted } = mount();
-        host.querySelector('button[data-icon="mdi-close"]').click();
+        host.querySelector('.message-close-button').click();
         expect(deleted).toEqual([9]);
     });
 });

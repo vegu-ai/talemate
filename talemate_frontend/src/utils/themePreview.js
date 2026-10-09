@@ -85,6 +85,7 @@ export const THEME_PREVIEW_ELEMENTS = {
     'messages.director': { group: 'messages', slot: 'director', icon: 'mdi-bullhorn-outline' },
     'messages.time': { group: 'messages', slot: 'time', icon: 'mdi-clock-outline' },
     'messages.context_investigation': { group: 'messages', slot: 'context_investigation', icon: 'mdi-text-search' },
+    'messages.reinforcement': { group: 'messages', slot: 'reinforcement', icon: 'mdi-image-auto-adjust' },
     'messages.information': { group: 'messages', slot: 'information', icon: 'mdi-information-outline' },
     'messages.quotes': { group: 'messages', slot: 'quotes' },
     'messages.parentheses': { group: 'messages', slot: 'parentheses' },

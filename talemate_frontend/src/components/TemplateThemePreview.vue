@@ -350,7 +350,7 @@ const APP_HIGHLIGHTS = ['app.highlight1', 'app.highlight2', 'app.highlight3', 'a
 const APP_ALERTS = ['app.success', 'app.info', 'app.warning', 'app.error'];
 const APP_TILES = ['app.module_selected', 'app.module_locked_selected'];
 const SURFACE_SWATCHES = ['surfaces.background', 'surfaces.surface', 'surfaces.surface_bright', 'surfaces.surface_light', 'surfaces.surface_variant'];
-const MESSAGE_LINES = ['messages.narrator', 'messages.actor', 'messages.director', 'messages.time', 'messages.context_investigation', 'messages.information'];
+const MESSAGE_LINES = ['messages.narrator', 'messages.actor', 'messages.director', 'messages.time', 'messages.context_investigation', 'messages.reinforcement', 'messages.information'];
 const DCHAT_BUBBLES = ['chats.dchat_msg_director', 'chats.dchat_msg_action_result', 'chats.dchat_msg_compaction'];
 const HCHAT_BUBBLES = ['chats.hchat_msg_help', 'chats.hchat_msg_doc_result'];
 
@@ -363,6 +363,7 @@ const PARSER_SAMPLES = {
 const MESSAGE_SAMPLES = {
     director: 'Director instructs: stop looking at the fox.',
     time: '3 days later',
+    reinforcement: 'State Update · Elmer — How does Elmer feel right now?',
     information: 'A heads-up or system notice for the player.',
 };
 

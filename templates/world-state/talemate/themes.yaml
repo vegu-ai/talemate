@@ -48,6 +48,10 @@ templates:
         italic: false
         override_color: true
         show: true
+      reinforcement:
+        bold: false
+        italic: false
+        show: true
       time:
         bold: false
         italic: false
@@ -100,6 +104,7 @@ templates:
         parentheses: '#DB9DC2'
         play_audio: '#FBC02D'
         quotes: '#FFFFFF'
+        reinforcement: '#80CBC4'
         time: '#FFECB3'
       surfaces:
         background: '#121212'
@@ -163,6 +168,10 @@ templates:
         italic: false
         override_color: true
         show: true
+      reinforcement:
+        bold: false
+        italic: false
+        show: true
       time:
         bold: false
         italic: false
@@ -215,6 +224,7 @@ templates:
         parentheses: '#A23C7A'
         play_audio: '#B38104'
         quotes: '#212121'
+        reinforcement: '#2F6B66'
         time: '#674D00'
       surfaces:
         background: '#F6F1E9'

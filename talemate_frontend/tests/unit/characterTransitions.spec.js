@@ -193,6 +193,7 @@ describe('character transition chip', () => {
         state.handleForkSceneMessage = SceneMessages.methods.handleForkSceneMessage.bind(state);
         state.handleDeleteConfirmMessages = SceneMessages.methods.handleDeleteConfirmMessages.bind(state);
         state.handleEditNoticeMessages = SceneMessages.methods.handleEditNoticeMessages.bind(state);
+        state.upsertRow = SceneMessages.methods.upsertRow.bind(state);
         SceneMessages.methods.handleMessage.call(state, { type: 'character_transition', id: 2, kind: 'activated', arrival_note: 'After' });
         expect(state.messages.map(message => message.id)).toEqual([1, 2, 3]);
         expect(state.messages[1].arrival_note).toBe('After');

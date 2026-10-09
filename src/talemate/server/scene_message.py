@@ -23,7 +23,11 @@ import pydantic
 import structlog
 
 import talemate.instance as instance
-from talemate.scene_message import VersionSource, CharacterTransitionMessage
+from talemate.scene_message import (
+    VersionSource,
+    CharacterTransitionMessage,
+    ReinforcementMessage,
+)
 from talemate.knowledge.message_views import (
     character_message_views,
     edit_character_view,
@@ -275,6 +279,8 @@ class SceneMessagePlugin(Plugin):
 
         with defer_revision_work():
             self.scene.edit_message(payload.id, new_text)
+        if isinstance(message, ReinforcementMessage):
+            await self.scene.world_state.reinforcement_message_edited(message)
         await self.scene.attempt_auto_save()
         self.scene.emit_status()
         await self.signal_operation_done(signal_only=True)

@@ -905,6 +905,7 @@ class Scene(Emitter):
 
         for message in to_remove:
             self.remove_message_at(self.history.index(message))
+            emit("remove_message", "", id=message.id)
 
         # History changed — keep tail-dependent UI affordances (e.g. the
         # regenerate buttons) in sync. emit_status is debounced.

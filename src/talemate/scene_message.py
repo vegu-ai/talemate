@@ -537,7 +537,8 @@ class SceneMessage(PerspectiveSourceModel):
 
     @property
     def meta_hash(self) -> int:
-        return hash(str(self.meta))
+        # a loaded message's meta keeps the saved (sorted) key order
+        return hash(json.dumps(self.meta, sort_keys=True, default=str))
 
     def hide(self):
         self.flags |= Flags.HIDDEN

@@ -402,16 +402,10 @@ class WorldStateReinforcementsMixin:
 
         self.scene.world_state.emit()
         if reinforcement.insert == "sequential":
-            await self.scene.push_history(message)
+            await self.scene.push_history(message, emit_message=True)
 
         if not perception:
-            if reinforcement.character:
-                character = self.scene.get_character(reinforcement.character)
-                await character.set_detail(reinforcement.question, answer)
-            else:
-                await self.scene.world_state_manager.save_world_entry(
-                    reinforcement.question, reinforcement.as_context_line, {}
-                )
+            await self.scene.world_state.store_reinforcement_answer(reinforcement)
         self.scene.world_state.emit()
 
         return message

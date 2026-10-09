@@ -11,13 +11,14 @@ export const SPECIAL_MESSAGE_COLORS = [
   "director",
   "time",
   "context_investigation",
+  "reinforcement",
   "information",
 ];
 
 // Canonical default colors used as the last-resort resolution fallback (no
 // user color and no theme) and as the reset target in the appearance config
 // UI. Keyed by bare type name — both message types (narrator, actor,
-// director, time, context_investigation, information) and markup types
+// director, time, context_investigation, reinforcement, information) and markup types
 // (quotes, parentheses, brackets, emphasis, entities).
 export const DEFAULT_APPEARANCE_COLORS = {
   narrator: "#A180AE",
@@ -25,6 +26,7 @@ export const DEFAULT_APPEARANCE_COLORS = {
   director: "#FF5722",
   time: "#FFECB3",
   context_investigation: "#D5C0A1",
+  reinforcement: "#80CBC4",
   information: "#BA8574",
   quotes: "#FFFFFF",
   parentheses: "#DB9DC2",

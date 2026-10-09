@@ -22,7 +22,7 @@
             </thead>
             <tbody>
                 <template v-for="(styleConfig, typ) in config" :key="typ">
-                    <tr v-if="typ.endsWith('_messages') || ['quotes', 'parentheses', 'brackets', 'emphasis', 'entities'].includes(typ)" :style="colorPickerTarget === typ ? 'background-color: rgba(128, 128, 128, 0.1);' : ''">
+                    <tr v-if="typ.endsWith('_messages') || ['quotes', 'parentheses', 'brackets', 'emphasis', 'entities'].includes(typ)" :data-setting-anchor="typAnchorMap[typ]" :style="colorPickerTarget === typ ? 'background-color: rgba(128, 128, 128, 0.1);' : ''">
                         <td style="padding: 4px 12px;">
                             <div class="d-flex align-center">
                                 <div class="text-body-small font-weight-medium">{{ typLabelMap[typ] || typ }}</div>
@@ -113,6 +113,15 @@
                             <v-icon class="mr-2" :color="getColor('context_investigation_messages', config.context_investigation_messages?.color)">mdi-text-search</v-icon>
                             <span v-html="renderedContextInvestigationPreview">
                             </span>
+                        </div>
+                        <div class="mt-3">
+                            <v-chip :color="getColor('reinforcement_messages', config.reinforcement_messages?.color)">
+                                <v-icon class="mr-2">mdi-image-auto-adjust</v-icon>
+                                <span>State Update · Elmer — How does Elmer feel right now?</span>
+                            </v-chip>
+                            <div class="mt-1 ml-3" :style="buildCssStyles('reinforcement_messages', config.reinforcement_messages)">
+                                Wary but hopeful; the blast door held, and the conduit chamber is still dark.
+                            </div>
                         </div>
                         <div class="mt-3 d-flex align-center" :style="buildCssStyles('information_messages', config.information_messages)">
                             <v-icon class="mr-2" :color="getColor('information_messages', config.information_messages?.color)">mdi-information-outline</v-icon>
@@ -306,12 +315,17 @@ export default {
                 "director_messages": "Director Messages",
                 "time_messages": "Time Messages",
                 "context_investigation_messages": "Context Investigations",
+                "reinforcement_messages": "State Reinforcements",
                 "information_messages": "Information Messages",
                 "quotes": "Quotes",
                 "parentheses": "Parentheses",
                 "brackets": "Brackets",
                 "emphasis": "Emphasis",
                 "entities": "Entity Highlights",
+            },
+            // rows the settings search links to (appSettingsRegistry.js)
+            typAnchorMap: {
+                "reinforcement_messages": "reinforcement-messages",
             },
             config: {
                 scene: {}
@@ -322,6 +336,7 @@ export default {
                 "actor_messages": true,
                 "director_messages": true,
                 "context_investigation_messages": true,
+                "reinforcement_messages": true,
                 "information_messages": true,
                 "quotes": true,
                 "parentheses": true,
@@ -336,6 +351,7 @@ export default {
                 "director_messages": true,
                 "time_messages": true,
                 "context_investigation_messages": true,
+                "reinforcement_messages": true,
                 "information_messages": true,
                 "quotes": true,
                 "parentheses": true,

@@ -513,6 +513,19 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             }
         )
 
+    def handle_reinforcement(self, emission: Emission):
+        message = emission.message_object
+        self.queue_put(
+            {
+                "type": "reinforcement",
+                "id": message.id,
+                "message": message.message,
+                "question": message.question,
+                "character": message.source_arguments.get("character"),
+                "flags": int(message.flags),
+            }
+        )
+
     def handle_context_investigation(self, emission: Emission):
         message_obj = emission.message_object
         asset_id = None

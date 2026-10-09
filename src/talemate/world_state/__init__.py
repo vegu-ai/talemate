@@ -483,7 +483,7 @@ class WorldState(BaseModel):
         character: str = None,
         instructions: str = None,
         interval: int = 10,
-        answer: str = "",
+        answer: str | None = None,
         insert: str = "sequential",
         require_active: bool = True,
         *,
@@ -497,7 +497,7 @@ class WorldState(BaseModel):
         - character: The character to whom the reinforcement is linked. If None, it applies globally.
         - instructions: Instructions related to the reinforcement.
         - interval: The interval for reinforcement repetition.
-        - answer: The answer to the reinforcement question.
+        - answer: The answer to the reinforcement question. None (a template or node that sets no answer) keeps a World state's current answer; an empty string clears it.
         - insert: The method of inserting the reinforcement into the context.
         - answer_confirmed: False for configuration-only saves; an unchanged answer keeps its age.
         """
@@ -512,7 +512,16 @@ class WorldState(BaseModel):
 
             reinforcement.instructions = instructions
             reinforcement.interval = interval
-            reinforcement.set_answer(self.scene, answer, confirmed=answer_confirmed)
+            # A caller with no answer (a state template, the StateReinforcement
+            # node) leaves a World state's answer and entry as they are. A
+            # re-applied character template still starts blank, which the help
+            # agent's template guard relies on.
+            answer_given = answer is not None or character is not None
+            if answer_given:
+                reinforcement.set_answer(
+                    self.scene, answer or "", confirmed=answer_confirmed
+                )
+            answer = reinforcement.answer
             reinforcement.require_active = require_active
 
             old_insert_method = reinforcement.insert
@@ -534,8 +543,8 @@ class WorldState(BaseModel):
                         typ="reinforcement", meta_hash=message.meta_hash, all=True
                     )
 
-                elif message:
-                    message.message = answer
+                elif message and message.message != answer:
+                    self.scene.edit_message(message.id, answer)
             elif insert == "sequential":
                 # if it used to be something else and is now sequential, we need to run the state
                 # next loop
@@ -545,9 +554,8 @@ class WorldState(BaseModel):
                 source = prepare_reinforcement_source(self.scene, reinforcement)
                 await write_reinforcement_entry(self.scene, reinforcement, source)
                 self.emit()
-            elif character:
-                character = self.agent.scene.get_character(character)
-                await character.set_detail(question, answer)
+            elif answer_given:
+                await self.store_reinforcement_answer(reinforcement)
 
             return reinforcement
 
@@ -566,7 +574,7 @@ class WorldState(BaseModel):
             character=character,
             instructions=instructions,
             interval=interval,
-            answer=answer,
+            answer=answer or "",
             updated_ts=self.scene.ts if answer else None,
             insert=insert,
             require_active=require_active,
@@ -577,6 +585,44 @@ class WorldState(BaseModel):
         self.emit()
 
         return reinforcement
+
+    async def store_reinforcement_answer(self, reinforcement: Reinforcement):
+        """
+        Without Character perspectives the answer lives in the character's
+        detail, or for a World state in its world entry. An empty answer
+        removes either, so no question-only line is recalled.
+        """
+        if reinforcement.character:
+            character = self.scene.get_character(reinforcement.character)
+            await character.set_detail(reinforcement.question, reinforcement.answer)
+        elif reinforcement.answer:
+            await self.scene.world_state_manager.save_world_entry(
+                reinforcement.question, reinforcement.as_context_line, {}
+            )
+        elif reinforcement.question in self.manual_context:
+            await self.scene.world_state_manager.delete_context_db_entry(
+                reinforcement.question
+            )
+
+    async def reinforcement_message_edited(self, message: ReinforcementMessage):
+        """
+        A hand edit of a tracked state's newest sequential message becomes the
+        state's answer; an edit of an older one only changes that message.
+        """
+        _, reinforcement = await self.find_reinforcement(
+            message.question, message.source_arguments.get("character")
+        )
+        if reinforcement is None or reinforcement.source_for(self.scene) is not message:
+            return
+        await self.scene.world_state_manager.add_detail_reinforcement(
+            reinforcement.character,
+            reinforcement.question,
+            reinforcement.instructions,
+            reinforcement.interval,
+            message.message,
+            reinforcement.insert,
+            require_active=reinforcement.require_active,
+        )
 
     async def find_reinforcement(self, question: str, character: str = None):
         """

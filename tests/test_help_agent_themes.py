@@ -206,7 +206,7 @@ class TestReadTheme:
         assert payload["name"] == "Midnight"
         assert payload["colors"]["app"]["primary"] == "#123456"
         slots = sum(len(group) for group in payload["colors"].values())
-        assert slots == 51
+        assert slots == 52
         assert payload["appearance"]["narrator"] == {"italic": False, "bold": False}
         assert payload["code_editor"] == "one-dark"
 

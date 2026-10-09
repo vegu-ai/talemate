@@ -45,12 +45,13 @@ Configure the appearance of each type of message that appears in your scene:
 | **Director Messages** | Instructions and guidance from the director agent |
 | **Time Messages** | Indicators showing the passage of time |
 | **Context Investigations** | Results from context investigation queries |
+| **State Reinforcements** | Answers of [tracked states](/talemate/user-guide/tracking-a-state/#sequential) that use the Sequential method |
 
 For each message type, you can configure:
 
 - **Italic** - Display the message text in italics
 - **Bold** - Display the message text in bold
-- **Show** - Toggle visibility of certain message types (available for Director Messages and Context Investigations)
+- **Show** - Toggle visibility of certain message types (available for Director Messages, Context Investigations and State Reinforcements). Hiding a message type only changes what you see; the AI still receives those messages.
 - **Color** - Set a custom color for the message type
 
 ### Text Markup Styling

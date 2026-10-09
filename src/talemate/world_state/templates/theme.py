@@ -104,6 +104,7 @@ class MessageColors(ColorGroup):
     director: str = "#FF5722"
     time: str = "#FFECB3"
     context_investigation: str = "#D5C0A1"
+    reinforcement: str = "#80CBC4"
     information: str = "#BA8574"
     quotes: str = "#FFFFFF"
     parentheses: str = "#DB9DC2"
@@ -165,6 +166,9 @@ class ThemeAppearance(pydantic.BaseModel):
     )
     time: ThemeMessageStyle = pydantic.Field(default_factory=ThemeMessageStyle)
     context_investigation: HidableThemeMessageStyle = pydantic.Field(
+        default_factory=HidableThemeMessageStyle
+    )
+    reinforcement: HidableThemeMessageStyle = pydantic.Field(
         default_factory=HidableThemeMessageStyle
     )
     information: ThemeMessageStyle = pydantic.Field(default_factory=ThemeMessageStyle)

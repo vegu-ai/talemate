@@ -76,6 +76,7 @@ THEME_APPEARANCE_MAP = {
     "director": "director_messages",
     "time": "time_messages",
     "context_investigation": "context_investigation_messages",
+    "reinforcement": "reinforcement_messages",
     "information": "information_messages",
     "quotes": "quotes",
     "parentheses": "parentheses",
@@ -606,7 +607,7 @@ class WorldStateManager:
         question: str,
         instructions: str = None,
         interval: int = 10,
-        answer: str = "",
+        answer: str | None = None,
         insert: str = "sequential",
         run_immediately: bool = False,
         require_active: bool = True,
@@ -621,7 +622,7 @@ class WorldStateManager:
             question: The query/question to be reinforced.
             instructions: Optional instructions related to the reinforcement.
             interval: The frequency at which the reinforcement is applied.
-            answer: The expected answer for the question; defaults to an empty string.
+            answer: The expected answer for the question; None keeps the current answer of an existing World state.
             insert: The insertion mode for the reinforcement; defaults to 'sequential'.
             run_immediately: A flag to run the reinforcement immediately; defaults to False.
             answer_confirmed: False when saving only state configuration.

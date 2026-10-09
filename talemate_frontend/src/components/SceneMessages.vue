@@ -382,6 +382,11 @@
                     <SceneBackdropMessage :message="message" :asset="assetsMap[message.backdrop] || null" :immersive="scene?.data?.assets?.backdrop_enabled !== false" :display-size="messageAssetsConfig?.scene_background?.size || 'big'" :show-image="messageAssetsConfig?.scene_background?.cadence !== 'never'" :locked="uxLocked || appBusy || revealCount !== null" />
                 </div>
             </div>
+            <div v-else-if="message.type === 'reinforcement' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
+                <div class="reinforcement-message" :id="`message-${message.id}`" :data-message-type="message.type">
+                    <ReinforcementMessage :message="message" :latest="latestReinforcementIds.has(message.id)" :locked="uxLocked || appBusy || revealCount !== null" />
+                </div>
+            </div>
             <div v-else-if="message.type === 'time'" :class="`message ${message.type}`">
                 <div class="time-message"  :id="`message-${message.id}`" :data-message-type="message.type">
                     <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" :title="message.title" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === visibleMessages.length - 1" />
@@ -444,6 +449,7 @@ import DirectorMessage from './DirectorMessage.vue';
 import TimePassageMessage from './TimePassageMessage.vue';
 import CharacterTransitionMessage from './CharacterTransitionMessage.vue';
 import SceneBackdropMessage from './SceneBackdropMessage.vue';
+import ReinforcementMessage from './ReinforcementMessage.vue';
 import StatusMessage from './StatusMessage.vue';
 import RequestInput from './RequestInput.vue';
 import PlayerChoiceMessage from './PlayerChoiceMessage.vue';
@@ -566,6 +572,8 @@ const ASSET_SELECT_TYPES = {
 
 const ASSET_SELECT_DIALOG_KEYS = Object.values(ASSET_SELECT_TYPES).map(t => t.dialogKey)
 
+// history rows that are not story text: Dynamic Actions choices answer the story, not these rows
+const FEED_ROW_TYPES = ['reinforcement', 'scene_backdrop', 'character_transition'];
 const ALWAYS_RENDERED_MESSAGE_TYPES = ['character', 'processing_input', 'request_input', 'system', 'status', 'narrator', 'character_transition', 'scene_backdrop', 'time', 'player_choice', 'ux']
 
 // frames after which a character's views may differ although the rows stay
@@ -619,6 +627,7 @@ export default {
         TimePassageMessage,
         CharacterTransitionMessage,
         SceneBackdropMessage,
+        ReinforcementMessage,
         StatusMessage,
         RequestInput,
         PlayerChoiceMessage,
@@ -726,6 +735,15 @@ export default {
 
         visibleMessages() {
             return visibleMessages(this.messages, this.revealCount);
+        },
+        latestReinforcementIds() {
+            const latest = new Map();
+            for (const message of this.messages) {
+                if (message.type === 'reinforcement') {
+                    latest.set(JSON.stringify([message.character, message.question]), message.id);
+                }
+            }
+            return new Set(latest.values());
         },
         // the rows by identity: a frame that pops one row and pushes another
         // leaves the length as it was
@@ -2183,6 +2201,46 @@ export default {
             ws.send(JSON.stringify(message));
         },
 
+        upsertRow(entry) {
+            const existing = this.messages.findIndex(message => message.type === entry.type && message.id === entry.id);
+            if (existing !== -1) {
+                this.messages.splice(existing, 1, entry);
+                return;
+            }
+            // the choices row stays last: it answers the story, not these rows
+            const last = this.messages.length - 1;
+            if (last >= 0 && this.messages[last].type === 'player_choice') this.messages.splice(last, 0, entry);
+            else this.messages.push(entry);
+        },
+
+        reorderRows(ids) {
+            // the rows after a regenerated reply, in history order: they take the
+            // place of the first of them, and rows the server did not list stay put
+            const listed = new Set(ids);
+            const isListed = message => FEED_ROW_TYPES.includes(message.type) && listed.has(message.id);
+            const start = this.messages.findIndex(isListed);
+            if (start === -1) return;
+            const byId = new Map(this.messages.filter(isListed).map(message => [message.id, message]));
+            const rest = this.messages.filter(message => !isListed(message));
+            rest.splice(start, 0, ...ids.filter(id => byId.has(id)).map(id => byId.get(id)));
+            this.messages = rest;
+        },
+
+        upsertReinforcement(data) {
+            if (data.flags & MESSAGE_FLAGS.HIDDEN) {
+                const existing = this.messages.findIndex(message => message.type === 'reinforcement' && message.id === data.id);
+                if (existing !== -1) this.messages.splice(existing, 1);
+                return;
+            }
+            this.upsertRow({
+                id: data.id,
+                type: 'reinforcement',
+                text: data.message || '',
+                question: data.question,
+                character: data.character || null,
+            });
+        },
+
         handleMessage(data) {
             this.handleDeleteConfirmMessages(data);
             this.handleEditNoticeMessages(data);
@@ -2200,10 +2258,16 @@ export default {
                     if (existing !== -1) this.messages.splice(existing, 1, { ...transition });
                 }
             }
+            if (data.type === 'reinforcement') {
+                this.upsertReinforcement(data);
+                return;
+            }
+            if (data.type === 'reorder_messages') {
+                this.reorderRows(data.ids || []);
+                return;
+            }
             if (data.type === 'character_transition' || data.type === 'scene_backdrop') {
-                const existing = this.messages.findIndex(message => message.type === data.type && message.id === data.id);
-                if (existing === -1) this.messages.push({ ...data });
-                else this.messages.splice(existing, 1, { ...data });
+                this.upsertRow({ ...data });
                 return;
             }
             this.handleRevisionCommit(data);
@@ -2264,7 +2328,9 @@ export default {
                 // and the second to last message is the message to remove
                 // also remove the player_choice message
 
-                if (this.messages.length > 1 && this.messages[this.messages.length - 1].type === 'player_choice' && this.messages[this.messages.length - 2].id === data.id) {
+                // (a state update, backdrop or transition row is not the story the choices answer)
+                const beforeLast = this.messages[this.messages.length - 2];
+                if (this.messages.length > 1 && this.messages[this.messages.length - 1].type === 'player_choice' && beforeLast.id === data.id && !FEED_ROW_TYPES.includes(beforeLast.type)) {
                     this.messages.pop();
                 }
 

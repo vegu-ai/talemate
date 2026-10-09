@@ -255,6 +255,7 @@ export const SETTINGS_GROUPS = [
                 entries: [
                     { label: 'Restore from theme', anchor: 'restore-from-theme', keywords: ['theme', 'reset', 'restore', 'colors', 'styling'] },
                     { label: 'Message styles', keywords: ['color', 'italic', 'bold', 'narrator', 'character', 'director', 'font'] },
+                    { label: 'State reinforcement messages', anchor: 'reinforcement-messages', keywords: ['reinforcement', 'state update', 'state updates', 'tracked state', 'world state', 'hide', 'show'] },
                     { label: 'Quotes / emphasis styling', keywords: ['quotes', 'parentheses', 'brackets', 'emphasis', 'entities', 'highlight'] },
                     { label: 'Memories button on character replies', anchor: 'show-memory-pass', keywords: ['memories', 'memory', 'refine', 'recall', 'character knowledge'] },
                 ],

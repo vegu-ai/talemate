@@ -366,9 +366,9 @@
     to access models through OpenRouter.
 - path: user-guide/app-settings/appearance.md
   title: Appearance
-  summary: Appearance settings for theme application/app-bar switching, message and markup colors, italic/bold/visibility,
-    live preview and Restore from theme. Covers portrait render cadence, visual display sizes, auto-attach, Auto Backdrop,
-    Immersive and backdrop panel opacity/text shadow.
+  summary: Appearance settings for theme application/app-bar switching, message and markup colors, italic/bold/visibility
+    (for example hide State Reinforcements, the State Update rows), live preview and Restore from theme. Covers portrait
+    render cadence, visual display sizes, auto-attach, Auto Backdrop, Immersive and backdrop panel opacity/text shadow.
 - path: user-guide/app-settings/application.md
   title: Connections
   summary: Connections settings group links Clients, Decision Model and Agents, centralizes API keys and shared HuggingFace
@@ -1138,9 +1138,9 @@
     years, summarization boundaries and cleared actor directions.
 - path: user-guide/tracking-a-state.md
   title: Tracked states
-  summary: Tracked states periodically reinforce character or world facts such as physical condition, location or time of
-    day. Covers editor access, value inspection and favorite templates, plus Passive relevance, Sequential history, Conversation
-    Context and All Context attachment methods.
+  summary: Tracked states periodically reinforce character or world facts such as condition, location or time of day. Covers
+    editor access, favorite templates, Passive, Sequential, Conversation Context and All Context attachment, and the State
+    Update rows of Sequential answers in the scene, where you read, edit, remove or hide State Reinforcements.
 - path: user-guide/visual-library.md
   title: Visual Library
   summary: Visual Library manages generated images in Queue and shared Scene Assets, with Prompt/Instruct modes, reference

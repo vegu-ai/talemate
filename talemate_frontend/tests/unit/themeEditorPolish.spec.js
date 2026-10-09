@@ -33,6 +33,7 @@ function appearance() {
         narrator: { italic: false, bold: false },
         director: { italic: false, bold: false, show: true },
         context_investigation: { italic: false, bold: false, show: true },
+        reinforcement: { italic: false, bold: false, show: true },
         quotes: { italic: false, bold: false, override_color: true, show: true },
         parentheses: { italic: false, bold: false, override_color: false, show: true },
         brackets: { italic: false, bold: false, override_color: true, show: true },
@@ -396,6 +397,7 @@ describe("the styling flags have one home", () => {
         expect(HIDEABLE_APPEARANCE_TYPES).toEqual([
             "director",
             "context_investigation",
+            "reinforcement",
             "parentheses",
             "brackets",
             "entities",
@@ -424,6 +426,7 @@ describe("the styling flags have one home", () => {
         expect(data().canSetShowOn).toEqual({
             director_messages: true,
             context_investigation_messages: true,
+            reinforcement_messages: true,
             parentheses: true,
             brackets: true,
             entities: true,
@@ -447,6 +450,7 @@ describe("the styling flags have one home", () => {
         expect(HIDEABLE_APPEARANCE_TYPES.map((typ) => THEME_APPEARANCE_MAP[typ])).toEqual([
             "director_messages",
             "context_investigation_messages",
+            "reinforcement_messages",
             "parentheses",
             "brackets",
             "entities",

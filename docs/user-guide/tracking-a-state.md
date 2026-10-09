@@ -57,6 +57,14 @@ A new answer replaces the previous answer only when the previous answer is among
 
 This is the default for character states.
 
+Each answer shows in the scene as a compact **State Update** row that names the character (or World) and the question, for example **State Update · Mara — What is Mara's current mood?**. Click the row to read the answer, and click it again to fold it away. A long answer shows its first lines with **Show more**.
+
+![A tracked state row in the scene, folded and unfolded](/talemate/img/0.40.0/tracked-state-scene-row.png)
+
+- **Edit**: hover the unfolded row to see **Double-click to edit.**, then double-click the answer, change it and press Enter (Shift+Enter starts a new line, Esc cancels). Later generations use your text. Editing the newest row of a state also makes it the state's current answer, the one you see in the World Editor; editing an older row changes only that row. When later messages follow the row, a note warns that they may no longer match it.
+- **Remove**: hover the row and click :material-close:. This removes that answer from the scene history; the state stays tracked.
+- **Hide**: switch off **Show** for **State Reinforcements** in [Settings → Appearance → Messages](/talemate/user-guide/app-settings/appearance/). Hidden rows still reach the AI.
+
 ##### Conversation Context
 
 The state is ALWAYS inserted as an important part of the context during the character's dialogue generation. This is useful for states that are important for the AI to know about during conversation.

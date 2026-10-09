@@ -89,6 +89,7 @@ SPECIAL_COLOR_NAMES = [
     "director",
     "time",
     "context_investigation",
+    "reinforcement",
     "information",
 ]
 

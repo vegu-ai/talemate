@@ -54,6 +54,7 @@ const vuetify = createVuetify({
           director: colors.deepOrange.base,
           time: colors.amber.lighten4,
           context_investigation: colors.orange.lighten4,
+          reinforcement: colors.teal.lighten3,
           information: '#BA8574',
           quotes: colors.shades.white,
           parentheses: '#DB9DC2',

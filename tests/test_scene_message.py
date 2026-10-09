@@ -1,5 +1,7 @@
 """Unit tests for talemate.scene_message message models and helpers."""
 
+import json
+
 import pytest
 
 from talemate.memory_pass import MemoryPassItem, MemoryPassResult
@@ -211,6 +213,17 @@ class TestSceneMessageBase:
         m.set_meta(x=1)
         h2 = m.meta_hash
         assert h1 != h2
+
+    def test_meta_hash_matches_a_loaded_message(self):
+        fresh = SceneMessage(message="hi")
+        fresh.set_source(
+            "world_state", "update_reinforcement", question="Q", character="Bob"
+        )
+        loaded = SceneMessage(
+            **json.loads(json.dumps(fresh.model_dump(), sort_keys=True))
+        )
+        assert list(loaded.meta) != list(fresh.meta)
+        assert loaded.meta_hash == fresh.meta_hash
 
     def test_fingerprint_is_stable_for_same_message(self):
         a = SceneMessage(message="same")

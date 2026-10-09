@@ -418,6 +418,7 @@ async def regenerate(scene: "Scene") -> list[SceneMessage]:
     if message is None or not can_regenerate(scene):
         return []
     boundary = next(i for i, item in enumerate(scene.history) if item is message)
+    shown_tail = [item.id for item in scene.history[boundary + 1 :]]
     transitions = [
         (i, item)
         for i, item in enumerate(scene.history)
@@ -442,6 +443,33 @@ async def regenerate(scene: "Scene") -> list[SceneMessage]:
                     continue
                 scene.history.insert(min(index, len(scene.history)), transition)
                 scene.emit_history_message(transition)
+            _sync_tail_order(scene, message, shown_tail)
+
+
+def _sync_tail_order(scene: "Scene", message: SceneMessage, shown: list[int]) -> None:
+    """
+    The feed keeps the rows after ``message`` it already showed in place and
+    appends a re-run answer at its end, so the answer can land below a
+    restored transition. When that differs from the history, send the
+    history order of those rows.
+    """
+    start = next(
+        (i + 1 for i, item in enumerate(scene.history) if item is message), None
+    )
+    if start is None:
+        return
+    tail = [item.id for item in scene.history[start:]]
+    kept, known = set(tail), set(shown)
+    feed = [row for row in shown if row in kept] + [
+        row for row in tail if row not in known
+    ]
+    if feed != tail:
+        emit(
+            "reorder_messages",
+            "",
+            websocket_passthrough=True,
+            kwargs={"ids": tail},
+        )
 
 
 async def _regenerate(scene: "Scene") -> list[SceneMessage]:
@@ -545,6 +573,10 @@ async def _regenerate(scene: "Scene") -> list[SceneMessage]:
         raise
 
     regenerated_messages.append(message)
+
+    # every popped answer is out of history now, also when a re-run below raises
+    for reinforcement_message in popped_reinforcement_messages:
+        emit("remove_message", "", id=reinforcement_message.id)
 
     for reinforcement_message in popped_reinforcement_messages:
         new_messages = await regenerate_message(reinforcement_message, scene)

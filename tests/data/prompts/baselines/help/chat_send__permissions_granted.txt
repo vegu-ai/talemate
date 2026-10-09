@@ -835,6 +835,7 @@ messages.actor - Character dialogue text; also the user's own bubbles in the dir
 messages.director - Director instruction message text and the director console heading.
 messages.time - Time passage message text and its chips.
 messages.context_investigation - Context investigation message text.
+messages.reinforcement - Tracked state (state reinforcement) rows in the scene feed: the collapsed chip and the expanded answer text.
 messages.information - Information message text; also timeline rebase notes.
 messages.quotes - Quoted speech inside message text, while quotes carry their own color.
 messages.parentheses - Parenthesized text inside messages, while parentheses carry their own color.
@@ -849,7 +850,7 @@ chats.dchat_msg_action_result - Director chat bubbles reporting an action result
 chats.dchat_msg_compaction - The tonal tint of the card carrying a compaction notice. The notice text itself is drawn in muted, so this slot paints no text.
 chats.hchat_msg_help - Help chat bubbles from the help agent (this chat).
 chats.hchat_msg_doc_result - Help chat bubbles carrying a documentation or tool result.
-appearance: narrator, actor, director, time, context_investigation, information, quotes, parentheses, brackets, emphasis, entities, backdrop_panel_opacity, backdrop_text_shadow
+appearance: narrator, actor, director, time, context_investigation, reinforcement, information, quotes, parentheses, brackets, emphasis, entities, backdrop_panel_opacity, backdrop_text_shadow
 
 ## Chat history - this is what you respond to
 [#1] [user] Turn off auto save for me.

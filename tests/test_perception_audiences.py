@@ -48,7 +48,7 @@ def complete_response(context):
             ]
         }
     )
-    return text, {"response": text}
+    return text, {"perceptions": text}
 
 
 @pytest.fixture

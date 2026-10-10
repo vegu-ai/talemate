@@ -226,7 +226,7 @@ async def test_ai_rewritten_candidate_retains_source_for_post_filter(cast, monke
         return_value=(
             "",
             {
-                "answer": "items",
+                "none": None,
                 "items": [
                     {"type": "item", "n": "1", "content": "Rewritten recent memory"},
                     {"type": "item", "n": "2", "content": "Rewritten old memory"},

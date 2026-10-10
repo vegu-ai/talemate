@@ -43,7 +43,7 @@ Every node available in the node editor, grouped by category. Each page lists th
 | [Perspective Nodes](scene-perspectives.md) | 2 | Character Perspectives: read and replace one character's view of a message. |
 | [Prompt Nodes](prompt.md) | 7 | Build prompts and control generation: prompt construction, defaults and inference settings. |
 | [Question Nodes](ask-questions.md) | 3 | Ask the decision model a yes/no, choice or score question and branch on the answer's probability, with an uncertain route when no answer comes. |
-| [Response Parsing Nodes](response.md) | 9 | Parse LLM responses: extractors for anchors, lists, movie-script dialogue and structured data. |
+| [Response Parsing Nodes](response.md) | 10 | Parse LLM responses: extractors for anchors, lists, movie-script dialogue and structured data. |
 | [Scene Character Nodes](scene-characters.md) | 18 | Characters in the scene: get, make, activate/deactivate, remove and read/write attributes, details and descriptions. |
 | [Scene Header Control Nodes](scene-header-controls.md) | 2 | Game state variables shown as scene header controls or in Debug Tools: read a variable's control settings and pin or unpin it. |
 | [Scene History Nodes](scene-history.md) | 13 | Scene message history: query, summarize and manage archive entries and character activity. |

@@ -517,7 +517,7 @@ async def test_retrieval_projects_owned_history(cast, monkeypatch):
     )
     expected = "sapphire is hidden in her boot"
 
-    request = AsyncMock(return_value=("", {"answer": "none", "items": []}))
+    request = AsyncMock(return_value=("", {"none": "<NONE/>", "items": []}))
     monkeypatch.setattr(Prompt, "request", request)
     memory = get_agent("memory")
     monkeypatch.setattr(

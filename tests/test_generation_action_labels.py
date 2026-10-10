@@ -48,7 +48,7 @@ async def test_memory_pass_owns_context_and_restores_outer_action(
         assert conversation.meta["current_action"] == "memory_pass"
         if failure:
             raise failure("request failed")
-        return "", {"answer": "none", "items": []}
+        return "", {"none": "<NONE/>", "items": []}
 
     monkeypatch.setattr(
         "talemate.agents.conversation.knowledge.Prompt.request", request

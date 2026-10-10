@@ -12,7 +12,12 @@ from unittest.mock import AsyncMock
 import pytest
 
 from _perception_response_helpers import exclude_passage, excluding_passage
-from talemate.agents.summarize.perceptions import parse_perceptions, perception_context
+from talemate.agents.summarize.perceptions import (
+    PerceptionValidationError,
+    parse_perceptions,
+    perception_context,
+)
+from talemate.agents.summarize.response_specs import PERCEPTIONS_SPEC
 from talemate.character import Character
 from talemate.client.base import _generation_error_futures, resolve_generation_error
 from talemate.context import ActiveScene
@@ -66,7 +71,7 @@ def result(text=None):
         text = json.dumps(data)
     except (ValueError, AttributeError):
         pass
-    return text, {"response": text}
+    return text, {"perceptions": text}
 
 
 @pytest.fixture
@@ -241,7 +246,11 @@ def test_reject_invalid_analysis(payload):
 
 def test_accept_complete_views_and_explicit_omission():
     views = parse_perceptions(
-        "```json\n" + answer(bob=None, passage=PASSAGE) + "\n```",
+        PERCEPTIONS_SPEC.extract_all(
+            "<PERCEPTIONS>```json\n"
+            + answer(bob=None, passage=PASSAGE)
+            + "\n```</PERCEPTIONS>"
+        )["perceptions"],
         ("Alice", "Bob"),
         PASSAGE,
     )
@@ -539,7 +548,9 @@ async def test_shared_prompt_renders_without_additional_requests(scene, monkeypa
     scene.active_characters = ["Alice", "Bob"]
     client = get_agent("summarizer").client
     passage = "Alice: *A private thought.*"
-    send = AsyncMock(return_value=answer(bob=None, passage=passage))
+    send = AsyncMock(
+        return_value=f"<PERCEPTIONS>{answer(bob=None, passage=passage)}</PERCEPTIONS>"
+    )
     monkeypatch.setattr(client, "send_prompt", send)
     with ActiveScene(scene):
         await push_and_step(scene, CharacterMessage(message=passage))
@@ -643,18 +654,60 @@ async def test_websocket_edit_defers_rebuild_and_saves(setup, monkeypatch):
 @pytest.mark.parametrize(
     "wrap",
     [
-        lambda value: value,
-        lambda value: "Here is the analysis:\n```json\n" + value + "\n```",
-        lambda value: "```JSON\n" + value + "\n```\nDone.",
-        lambda value: "```json\n" + value,
-        lambda value: "```\n" + value + "\n```",
+        lambda value: "<PERCEPTIONS>" + value + "</PERCEPTIONS>",
+        lambda value: "<PERCEPTIONS>\n```json\n" + value + "\n```\n</PERCEPTIONS>",
+        lambda value: "Here is the analysis:\n<PERCEPTIONS>```JSON\n"
+        + value
+        + "\n```\nDone.</PERCEPTIONS>",
+        lambda value: "<PERCEPTIONS>```json\n" + value + "</PERCEPTIONS>",
+        lambda value: "<PERCEPTIONS>```\n" + value + "\n```</PERCEPTIONS>",
+        # cut off before the closing tag
+        lambda value: "<PERCEPTIONS>```json\n" + value + "\n```",
+        lambda value: "<perceptions>" + value,
     ],
 )
 def test_project_code_block_extraction(wrap):
+    extracted = PERCEPTIONS_SPEC.extract_all(wrap(answer(passage=PASSAGE)))
     assert (
-        len(parse_perceptions(wrap(answer(passage=PASSAGE)), ("Alice", "Bob"), PASSAGE))
-        == 2
+        len(parse_perceptions(extracted["perceptions"], ("Alice", "Bob"), PASSAGE)) == 2
     )
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        "",
+        answer(passage=PASSAGE),
+        "```json\n" + answer(passage=PASSAGE) + "\n```",
+    ],
+)
+def test_a_response_without_a_perceptions_block_is_a_miss(response):
+    extracted = PERCEPTIONS_SPEC.extract_all(response)
+    assert extracted["perceptions"] is None
+    with pytest.raises(PerceptionValidationError, match="No <PERCEPTIONS> block"):
+        parse_perceptions(None, ("Alice", "Bob"), PASSAGE, block=extracted["block"])
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        "<PERCEPTIONS>not JSON</PERCEPTIONS>",
+        "<PERCEPTIONS></PERCEPTIONS>",
+        # cut off by the answer budget
+        '<PERCEPTIONS>{"views": [{"audience": ["',
+        '<PERCEPTIONS>{\n  "views":',
+    ],
+)
+def test_an_invalid_or_cut_off_block_reports_its_json_error(response):
+    extracted = PERCEPTIONS_SPEC.extract_all(response)
+    assert extracted["perceptions"] is None
+    with pytest.raises(PerceptionValidationError, match="Invalid perception JSON"):
+        parse_perceptions(
+            extracted["perceptions"],
+            ("Alice", "Bob"),
+            PASSAGE,
+            block=extracted["block"],
+        )
 
 
 @pytest.mark.asyncio
@@ -938,8 +991,11 @@ async def test_drop_unoffered_analytical_input_ids(setup):
     "wrapper", ["{}", "```json\n{}\n```", "Analysis:\n```JSON\n{}\n```\nDone."]
 )
 def test_literal_fences_inside_perception_prose(text, wrapper):
+    response = "<PERCEPTIONS>" + wrapper.format(answer(alice=text, passage=PASSAGE))
     parsed = parse_perceptions(
-        wrapper.format(answer(alice=text, passage=PASSAGE)), ("Alice", "Bob"), PASSAGE
+        PERCEPTIONS_SPEC.extract_all(response + "</PERCEPTIONS>")["perceptions"],
+        ("Alice", "Bob"),
+        PASSAGE,
     )
     assert parsed[0].text == text
 

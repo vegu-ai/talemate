@@ -533,23 +533,38 @@ async def test_generate_character_unified_parses_a_continued_prefill(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "response",
+    "response,name",
     [
         # the model dropped the opening <NAME> and wrote the sections out of
-        # order: the prefilled tag pairs with the closing tag past the
-        # description block, so the name would otherwise be that whole block
-        "<DESCRIPTION>A healer.</DESCRIPTION>\nElena</NAME>",
-        # the model wrote its own opening tag malformed, so the prefilled tag
-        # pairs with the closing one and the name would carry the bad tag
-        "< NAME >Elena</NAME>\n<DESCRIPTION>A healer.</DESCRIPTION>",
+        # order: the prefilled tag ends at the description's opening tag
+        # unclosed, so the name is a miss rather than the description block
+        ("<DESCRIPTION>A healer.</DESCRIPTION>\nElena</NAME>", None),
+        # the model wrote its own opening tag with spaces: the prefilled tag
+        # ends unclosed at it, and the model's own section is the name
+        ("< NAME >Elena</NAME>\n<DESCRIPTION>A healer.</DESCRIPTION>", "Elena"),
+        # a repeated section is not merged: the last complete one wins
+        (
+            "Elena</NAME>\n<NAME>Elena Voss</NAME>\n<DESCRIPTION>A healer.</DESCRIPTION>",
+            "Elena Voss",
+        ),
+        # an unrequested aspect's section nested in the name leaves the name
+        # unclosed: a miss, never the nested text
+        (
+            "Elena<ATTRIBUTES>strength: 9</ATTRIBUTES></NAME>\n"
+            "<DESCRIPTION>A healer.</DESCRIPTION>",
+            None,
+        ),
+        # an unrequested sibling section is ignored
+        (
+            "Elena</NAME>\n<ATTRIBUTES>strength: 9</ATTRIBUTES>\n"
+            "<DESCRIPTION>A healer.</DESCRIPTION>",
+            "Elena",
+        ),
     ],
 )
-async def test_generate_character_unified_swallowed_tag_reads_as_missed(
-    creator, response
+async def test_generate_character_unified_prefilled_tag_pairs_within_its_section(
+    creator, response, name
 ):
-    # a section that carries an aspect opening tag swallowed something that is
-    # not its own content - it reads as a miss for the fill-misses policy,
-    # never as a value
     async with MockClientContext():
         client_responses.get().append(response)
         result = await creator.generate_character_unified(
@@ -560,9 +575,8 @@ async def test_generate_character_unified_swallowed_tag_reads_as_missed(
             )
         )
 
-    assert result.name is None
+    assert result.name == name
     assert result.description == "A healer."
-    assert result.extracted_aspects() == {"description"}
 
 
 @pytest.mark.asyncio

@@ -208,8 +208,8 @@ through Generate Response.
 Other inputs and outputs match Generate Response. The extracted asset_id
 is the picked asset; an empty one from the usual request may ask for a
 new image. The other extracted values come from that request and are
-missing when the decision model decided. An extracted `references` text
-becomes the list of the given assets' ids it names.
+missing when the decision model decided. An extracted `references` list
+keeps only the ids of the given assets.
 
 **Inputs**
 

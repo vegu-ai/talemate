@@ -557,14 +557,36 @@ class TestParsers:
             "I dropped candidate 3 because Mara knows nothing of it.\n</ITEMS>"
         )
         assert pass_items(blocks["items"]) == [(1, "one"), (2, "two")]
+        # a final block cut off before its closing tag is dropped
         blocks = extract('<ITEMS>\n<ITEM n="2">two</ITEM>\n<ITEM n="1">cut off')
         assert pass_items(blocks["items"]) == [(2, "two")]
+        blocks = extract('<ITEMS>\n<ITEM n="1">cut off')
+        assert blocks["items"] == []
+        assert blocks["none"] is None
+        for text in ("<ITEMS><NONE/></ITEMS>", "<ITEMS>\n<none />\n</ITEMS>"):
+            blocks = extract(text)
+            assert blocks["items"] == []
+            assert blocks["none"]
+        # none counts only as the whole <ITEMS> content: a contradictory or
+        # cut-off answer is unreadable, and a <NONE/> outside is not an answer
+        for text in (
+            '<ITEMS><NONE/><ITEM n="1">cut off</ITEMS>',
+            "<ITEMS><NONE/> but maybe 2</ITEMS>",
+            "<ITEMS></ITEMS>\nI could also answer <NONE/>.",
+        ):
+            blocks = extract(text)
+            assert blocks["items"] == []
+            assert blocks["none"] is None
+        # "none" in prose is not the anchor
         for text in ("<ITEMS>none</ITEMS>", "<ITEMS>None - nothing applies</ITEMS>"):
             blocks = extract(text)
             assert blocks["items"] == []
-            assert blocks["answer"].lower().startswith("none")
+            assert blocks["none"] is None
         blocks = extract('<ITEMS>None apply except:\n<ITEM n="3">three</ITEM></ITEMS>')
         assert pass_items(blocks["items"]) == [(3, "three")]
+        # consecutive blocks for one number are one item
+        blocks = extract('<ITEMS><ITEM n="2">two</ITEM><ITEM n="2">more</ITEM></ITEMS>')
+        assert pass_items(blocks["items"]) == [(2, "two\nmore")]
         # whitespace inside a tag, mixed with a well-formed item
         blocks = extract(
             '<ITEMS>\n<ITEM n="1">alpha</ITEM >\n<ITEM  n="2" >beta</ITEM n="2">\n'
@@ -589,10 +611,10 @@ class TestParsers:
             (1, "Mara still owes the harbourmaster.")
         ]
         blocks = extract(
-            '<ITEMS>none</ITEMS>\nFor reference I considered <ITEM n="2">the sextant</ITEM>.'
+            '<ITEMS><NONE/></ITEMS>\nFor reference I considered <ITEM n="2">the sextant</ITEM>.'
         )
         assert blocks["items"] == []
-        assert blocks["answer"].lower().startswith("none")
+        assert blocks["none"]
 
 
 @pytest.fixture
@@ -650,7 +672,7 @@ class TestMemoryPass:
             request.return_value = (
                 "",
                 {
-                    "answer": "...",
+                    "none": None,
                     "items": items((3, "C as Alice knows it"), (1, "A, in short")),
                 },
             )
@@ -682,7 +704,7 @@ class TestMemoryPass:
             ActiveScene(scene),
             patch.object(Prompt, "request", new_callable=AsyncMock) as request,
         ):
-            request.return_value = ("", {"answer": "", "items": items((2, "B"))})
+            request.return_value = ("", {"none": None, "items": items((2, "B"))})
             assert await conversation.rag_build(character=alice) == ["B"]
             assert calls[-1]["perspective"] == "Alice"
             assert calls[-1]["keep_director"] == "Alice"
@@ -692,7 +714,7 @@ class TestMemoryPass:
             scene.rag_cache = {}
             request.return_value = (
                 "",
-                {"answer": "", "items": items((3, "C"), (1, ""))},
+                {"none": None, "items": items((3, "C"), (1, ""))},
             )
             assert await conversation.rag_build(character=alice) == ["C", "a"]
             assert calls[-1]["perspective"] is None
@@ -714,7 +736,7 @@ class TestMemoryPass:
             patch.object(Prompt, "request", new_callable=AsyncMock) as request,
             patch("talemate.agents.conversation.knowledge.active_agent") as agent_var,
         ):
-            request.return_value = ("", {"answer": "", "items": items((1, "A"))})
+            request.return_value = ("", {"none": None, "items": items((1, "A"))})
             agent_var.get.return_value.state = {}
             await conversation.rag_build(character=alice)
             assert calls[-1]["keep_director"] == "Alice"
@@ -730,21 +752,16 @@ class TestMemoryPass:
             ActiveScene(scene),
             patch.object(Prompt, "request", new_callable=AsyncMock) as request,
         ):
-            request.return_value = ("", {"answer": "none", "items": []})
+            request.return_value = ("", {"none": "<NONE/>", "items": []})
             assert await conversation.rag_build(character=alice) == []
+            # an item wins over a stray none anchor
             request.return_value = (
                 "",
-                {"answer": "None apply except:", "items": items((3, "three"))},
+                {"none": "<NONE/>", "items": items((3, "three"))},
             )
             assert await conversation.rag_build(character=alice) == ["three"]
-            # a preamble plus an item the extractor could not read is unreadable
-            request.return_value = (
-                "",
-                {
-                    "answer": 'None apply except:\n<ITEM n="3">Mara was born the year the Sor',
-                    "items": [],
-                },
-            )
+            # no readable item and no none anchor is unreadable
+            request.return_value = ("", {"none": None, "items": []})
             assert await conversation.rag_build(character=alice) == ["a", "b", "c"]
 
     async def test_unreadable_answer_keeps_the_candidates(self, scene, opt_ins):
@@ -754,12 +771,8 @@ class TestMemoryPass:
             ActiveScene(scene),
             patch.object(Prompt, "request", new_callable=AsyncMock) as request,
         ):
-            for answer, blocks in (
-                (None, None),
-                ("I would keep the first one.", []),
-                ("", items((9, "nine"), (0, "zero"))),
-            ):
-                request.return_value = ("", {"answer": answer, "items": blocks})
+            for blocks in (None, [], items((9, "nine"), (0, "zero"))):
+                request.return_value = ("", {"none": None, "items": blocks})
                 assert await conversation.rag_build(character=alice) == ["a", "b", "c"]
 
     async def test_out_of_range_dropped_and_empty_rewrite_kept(self, scene, opt_ins):
@@ -771,7 +784,7 @@ class TestMemoryPass:
         ):
             request.return_value = (
                 "",
-                {"answer": "", "items": items((9, "nine"), (2, ""), (1, "one"))},
+                {"none": None, "items": items((9, "nine"), (2, ""), (1, "one"))},
             )
             assert await conversation.rag_build(character=alice) == ["b", "one"]
 
@@ -805,7 +818,7 @@ class TestMemoryPass:
             request.return_value = (
                 "",
                 {
-                    "answer": "",
+                    "none": None,
                     "items": items(
                         (3, "The tide turns at six."),
                         (1, "Alice heard that Mara owes Edwin two kroner."),
@@ -832,14 +845,14 @@ class TestMemoryPass:
         ]
 
     @pytest.mark.parametrize(
-        "answer, blocks, status, kept, dropped",
+        "none, blocks, status, kept, dropped",
         [
-            ("none", [], "none", [], ["a", "b", "c"]),
-            ("I would keep the first one.", [], "fallback", ["a", "b", "c"], []),
+            ("<NONE/>", [], "none", [], ["a", "b", "c"]),
+            (None, [], "fallback", ["a", "b", "c"], []),
         ],
     )
     async def test_result_records_none_and_fallback(
-        self, scene, opt_ins, answer, blocks, status, kept, dropped
+        self, scene, opt_ins, none, blocks, status, kept, dropped
     ):
         conversation, alice = opt_ins
         enable(conversation, "memory_pass")
@@ -848,7 +861,7 @@ class TestMemoryPass:
             ActiveAgent(conversation, conversation.converse),
             patch.object(Prompt, "request", new_callable=AsyncMock) as request,
         ):
-            request.return_value = ("", {"answer": answer, "items": blocks})
+            request.return_value = ("", {"none": none, "items": blocks})
             await conversation.rag_build(character=alice)
             result = conversation.take_memory_pass_record()
         assert result.status == status
@@ -914,4 +927,5 @@ class TestMemoryPass:
             assert "2. Edwin hid the sextant." in text
             assert "Alice: Hello." in text
             assert '<ITEM n="3">' in text
+            assert "<ITEMS><NONE/></ITEMS>" in text
             assert text.rstrip().endswith("<ITEMS>")

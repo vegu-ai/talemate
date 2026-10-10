@@ -1,6 +1,5 @@
 import hashlib
 import json
-import re
 from typing import TYPE_CHECKING
 
 import structlog
@@ -286,7 +285,7 @@ class CharacterKnowledgeMixin:
             self._record_memory_pass(result)
             return list(passed)
 
-        _, extracted = await Prompt.request(
+        response, extracted = await Prompt.request(
             "conversation.memory-pass",
             client,
             "analyze_long",
@@ -294,14 +293,7 @@ class CharacterKnowledgeMixin:
             response_spec=MEMORY_PASS_SPEC,
         )
         items = pass_items(extracted.get("items"))
-        answer = (extracted.get("answer") or "").strip()
-        # an answer that names an item but yields no readable block is
-        # unreadable, not none
-        if (
-            not items
-            and "<ITEM" not in answer.upper()
-            and re.match(r"^none\b", answer, re.IGNORECASE)
-        ):
+        if not items and extracted.get("none"):
             log.debug("memory pass: none", character=character.name)
             result = MemoryPassResult(
                 status="none",
@@ -340,7 +332,7 @@ class CharacterKnowledgeMixin:
             log.warning(
                 "memory pass: answer not readable, keeping the candidates as retrieved",
                 character=character.name,
-                answer=answer,
+                response=response,
                 items=items,
             )
             passed = candidates

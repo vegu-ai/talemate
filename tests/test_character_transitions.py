@@ -180,7 +180,7 @@ async def test_ui_absence_excludes_player_and_npc_lines_from_return_context(
             assert list(map(str, memories)) == [known_memory]
         else:
             memories = []
-        request = AsyncMock(return_value=("", {"answer": "none", "items": []}))
+        request = AsyncMock(return_value=("", {"none": "<NONE/>", "items": []}))
         monkeypatch.setattr(Prompt, "request", request)
         await conversation.memory_pass(scene.get_character("Nora"), memories)
         assert request.call_args.kwargs["vars"]["candidates"] == memories

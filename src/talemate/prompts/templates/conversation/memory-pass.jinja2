@@ -1,11 +1,9 @@
 {#-
-Extractors:
-  - answer: AnchorExtractor("<ITEMS>", "</ITEMS>")
-  - items: ItemBlockExtractor (agents/conversation/response_specs.py): the
-    <ITEM n="..."></ITEM> blocks inside the <ITEMS> container only
-
-Override example:
-  {{ set_anchor_extractor("answer", "<MY_TAG>", "</MY_TAG>") }}
+Extractors (agents/conversation/response_specs.py):
+  - items: BlockListExtractor: the <ITEM n="..."></ITEM> blocks inside the
+    <ITEMS> container only; a final block cut off before its closing tag is dropped
+  - none: RegexExtractor("<NONE/>"): only when <NONE/> is the whole <ITEMS>
+    content
 -#}
 {% if character_retrieval -%}
 {% if memory_character_context -%}
@@ -43,7 +41,7 @@ Rewrite each candidate to the part that matters for {{ character.name }}'s next 
 {% endif %}
 Drop candidates that add nothing to the next line. Order the rest by how useful each one is for writing the line: what it should react to, recall or build on. The most useful candidate comes first.
 
-Answer inside <ITEMS> tags, one kept candidate per block as <ITEM n="number">rewritten text</ITEM>, in that order, nothing outside the blocks. Answer <ITEMS>none</ITEMS> when none of the candidates should reach the line.
+Answer inside <ITEMS> tags, one kept candidate per block as <ITEM n="number">rewritten text</ITEM>, in that order, nothing outside the blocks. Answer <ITEMS><NONE/></ITEMS> when none of the candidates should reach the line.
 
 Example:
 <ITEMS>

@@ -11,7 +11,11 @@ from talemate.game.engine.nodes.assets import (
 )
 from talemate.game.engine.nodes.core import InputValueError
 from talemate.prompts import Prompt
-from talemate.prompts.response import AnchorExtractor, ResponseSpec
+from talemate.prompts.response import (
+    AnchorExtractor,
+    AnchorListExtractor,
+    ResponseSpec,
+)
 from talemate.scene_assets import Asset, AssetMeta, SceneAssets
 from talemate.scene_message import SceneBackdropMessage
 
@@ -28,8 +32,15 @@ def background(name: str) -> Asset:
 def response_spec() -> ResponseSpec:
     return ResponseSpec(
         extractors={
-            name: AnchorExtractor(left=f"<{name.upper()}>", right=f"</{name.upper()}>")
-            for name in ("asset_id", "instructions", "references")
+            **{
+                name: AnchorExtractor(
+                    left=f"<{name.upper()}>", right=f"</{name.upper()}>"
+                )
+                for name in ("asset_id", "instructions")
+            },
+            "references": AnchorListExtractor(
+                left="<REFERENCES>", right="</REFERENCES>", separator=r"[\s,;]+"
+            ),
         }
     )
 

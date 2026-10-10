@@ -20,6 +20,7 @@ from .registry import register
 from talemate.prompts.response import (
     AsIsExtractor as AsIsExtractorClass,
     AnchorExtractor as AnchorExtractorClass,
+    AnchorListExtractor as AnchorListExtractorClass,
     ComplexAnchorExtractor as ComplexAnchorExtractorClass,
     AfterAnchorExtractor as AfterAnchorExtractorClass,
     RegexExtractor as RegexExtractorClass,
@@ -200,6 +201,89 @@ class AnchorExtractor(ExtractorNodeBase):
             right=self.get_property("right"),
             fallback_to_full=self.get_property("fallback_to_full"),
             trim=self.get_property("trim"),
+        )
+        self.set_extractor_outputs(extractor)
+
+
+@register("response/AnchorListExtractor")
+class AnchorListExtractor(ExtractorNodeBase):
+    """
+    Creates an AnchorListExtractor that extracts the content between anchor
+    tags as a list of items.
+
+    Each item loses surrounding whitespace, a leading list bullet and wrapping
+    quotes or backticks; empty items are dropped. An empty block extracts an
+    empty list, a missing block nothing.
+
+    Properties:
+    - name: Key name for DictCollector
+    - left: Left anchor (e.g., "<REFERENCES>")
+    - right: Right anchor (e.g., "</REFERENCES>")
+    - separator: Regex the items are separated by
+    - fallback_to_full: Read the full response as the block if anchors not found
+
+    Inputs:
+    - name: Optional override for name property
+
+    Outputs:
+    - name: The extractor name (pass-through)
+    - value: The AnchorListExtractor instance
+    - spec: A ResponseSpec containing just this extractor
+    """
+
+    class Fields:
+        name = PropertyField(
+            name="name",
+            description="Extractor name (key for dict collector)",
+            type="str",
+            default="",
+        )
+        left = PropertyField(
+            name="left",
+            description="Left anchor tag (e.g., <REFERENCES>)",
+            type="str",
+            default="",
+        )
+        right = PropertyField(
+            name="right",
+            description="Right anchor tag (e.g., </REFERENCES>)",
+            type="str",
+            default="",
+        )
+        separator = PropertyField(
+            name="separator",
+            description="Regex the items are separated by",
+            type="str",
+            default=r"[,;\n]",
+        )
+        fallback_to_full = PropertyField(
+            name="fallback_to_full",
+            description="Read the full response as the block if anchors not found",
+            type="bool",
+            default=False,
+        )
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(auto_title="Anchor list: {name}")
+
+    def __init__(self, title="Anchor List Extractor", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.setup_name_io()
+        self.set_property("left", "")
+        self.set_property("right", "")
+        self.set_property("separator", r"[,;\n]")
+        self.set_property("fallback_to_full", False)
+
+    async def run(self, state: GraphState):
+        extractor = AnchorListExtractorClass(
+            left=self.get_property("left"),
+            right=self.get_property("right"),
+            separator=self.get_property("separator"),
+            fallback_to_full=self.get_property("fallback_to_full"),
         )
         self.set_extractor_outputs(extractor)
 

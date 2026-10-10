@@ -28,7 +28,7 @@ def analysis(cite_knowledge=True, cite_passages=True):
             for entry in context["cast"]
         ]
         text = json.dumps({"views": views})
-        return text, {"response": text}
+        return text, {"perceptions": text}
 
     return answer
 

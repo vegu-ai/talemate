@@ -15,6 +15,7 @@ import re
 
 from talemate.prompts.response import (
     AnchorExtractor,
+    AnchorListExtractor,
     BlockListExtractor,
     ComplexAnchorExtractor,
     AsIsExtractor,
@@ -405,6 +406,18 @@ Line two
         assert "Line one" in result
         assert "Line two" in result
 
+    def test_container_scopes_the_match(self):
+        extractor = RegexExtractor(
+            pattern=r"<NONE\s*/>",
+            group=0,
+            container=AnchorExtractor(left="<ITEMS>", right="</ITEMS>"),
+        )
+        assert extractor.extract("<ITEMS><NONE/></ITEMS>") == "<NONE/>"
+        assert extractor.extract("<ITEMS></ITEMS>\nI could answer <NONE/>.") is None
+        assert extractor.extract("<NONE/>") is None
+        assert extractor.anchors() == ["<ITEMS>"]
+        assert RegexExtractor(pattern="x").anchors() == []
+
 
 # ============================================================================
 # Tests for StripPrefixExtractor
@@ -732,6 +745,70 @@ Let me think about this more.
 # ============================================================================
 # Tests for ResponseSpec
 # ============================================================================
+
+
+class TestCodeBlockJsonDecoding:
+    """A JSON value is decoded to its own end, so a fence in a string stays."""
+
+    VALUE = '{"text": "He wrote ```code``` on the board.", "n": [1, 2]}'
+
+    @pytest.mark.parametrize(
+        "content",
+        [
+            pytest.param(VALUE, id="bare"),
+            pytest.param("```json\n" + VALUE + "\n```", id="fenced"),
+            pytest.param("```\n" + VALUE + "\n```", id="plain-fence"),
+            pytest.param("Here it is:\n```JSON\n" + VALUE + "\n```\nDone.", id="prose"),
+            pytest.param("```json\n" + VALUE, id="unclosed-fence"),
+        ],
+    )
+    def test_fence_inside_a_json_string_survives(self, content):
+        extractor = CodeBlockExtractor(left="<DATA>", right="</DATA>")
+        assert extractor.extract(f"<DATA>{content}</DATA>") == self.VALUE
+
+    def test_text_after_the_value_falls_back_to_the_fence(self):
+        extractor = CodeBlockExtractor(left="<DATA>", right="</DATA>")
+        text = '<DATA>```json\n{"a": 1}\nnot json\n```</DATA>'
+        assert extractor.extract(text) == '{"a": 1}\nnot json'
+
+    def test_yaml_fence_is_not_decoded_as_json(self):
+        extractor = CodeBlockExtractor(left="<DATA>", right="</DATA>")
+        text = "<DATA>```yaml\nname: Mara\n```</DATA>"
+        assert extractor.extract(text) == "name: Mara"
+
+    @pytest.mark.parametrize(
+        "extractor_class", [CodeBlockExtractor, ComplexCodeBlockExtractor]
+    )
+    @pytest.mark.parametrize(
+        "first_fence", ["```yaml", "```"], ids=["yaml-fence", "plain-fence"]
+    )
+    def test_a_later_json_block_does_not_win_over_the_first(
+        self, extractor_class, first_fence
+    ):
+        extractor = extractor_class(
+            left="<ACTIONS>", right="</ACTIONS>", tracked_tags=["ACTIONS"]
+        )
+        text = (
+            f"<ACTIONS>{first_fence}\n- name: narrate_scene\n"
+            "  instructions: Quiet room\n```\nExample only:\n"
+            '```json\n[{"name": "persist_character"}]\n```</ACTIONS>'
+        )
+        assert extractor.extract(text) == (
+            "- name: narrate_scene\n  instructions: Quiet room"
+        )
+
+    @pytest.mark.parametrize(
+        "extractor_class", [CodeBlockExtractor, ComplexCodeBlockExtractor]
+    )
+    def test_first_json_block_with_a_fence_in_a_string(self, extractor_class):
+        extractor = extractor_class(
+            left="<ACTIONS>", right="</ACTIONS>", tracked_tags=["ACTIONS"]
+        )
+        text = (
+            f"<ACTIONS>```json\n{self.VALUE}\n```\nExample only:\n"
+            '```json\n[{"name": "persist_character"}]\n```</ACTIONS>'
+        )
+        assert extractor.extract(text) == self.VALUE
 
 
 class TestResponseSpec:
@@ -2125,3 +2202,151 @@ class TestBlockListExtractor:
         # Second and Third narrator blocks should be merged
         assert result[2] == {"type": "narrator", "content": "Second.\nThird."}
         assert result[3] == {"type": "character", "name": "A", "content": "Bye."}
+
+
+class TestBlockListExtractorScopeAndTruncation:
+    ITEM = [("item", r'<ITEM\s+n\s*=\s*"(?P<n>\d+)"\s*>', "</ITEM>")]
+
+    def extractor(self, **kwargs):
+        return BlockListExtractor(
+            blocks=self.ITEM,
+            container=AnchorExtractor(left="<ITEMS>", right="</ITEMS>"),
+            **kwargs,
+        )
+
+    def test_blocks_outside_the_container_are_ignored(self):
+        text = (
+            '<ITEMS><ITEM n="1">one</ITEM></ITEMS>\nI left out <ITEM n="2">two</ITEM>.'
+        )
+        assert self.extractor().extract(text) == [
+            {"type": "item", "n": "1", "content": "one"}
+        ]
+
+    def test_open_container_reads_to_the_end(self):
+        assert self.extractor().extract('<ITEMS><ITEM n="1">one</ITEM>') == [
+            {"type": "item", "n": "1", "content": "one"}
+        ]
+
+    def test_missing_container_yields_no_blocks(self):
+        assert self.extractor().extract('<ITEM n="1">one</ITEM>') == []
+
+    def test_container_anchor_is_reported(self):
+        assert self.extractor().anchors() == ["<ITEMS>"]
+        assert BlockListExtractor(blocks=self.ITEM).anchors() == []
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            '<ITEMS><ITEM n="2">two</ITEM><ITEM n="1">cut off',
+            '<ITEMS><ITEM n="2">two</ITEM><ITEM n="1">cut off</ITEMS>',
+        ],
+    )
+    def test_truncated_final_block_is_dropped(self, text):
+        assert self.extractor(unclosed="drop_last").extract(text) == [
+            {"type": "item", "n": "2", "content": "two"}
+        ]
+        assert self.extractor().extract(text)[-1] == {
+            "type": "item",
+            "n": "1",
+            "content": "cut off",
+        }
+
+    def test_unclosed_block_before_the_next_opener_is_kept(self):
+        text = '<ITEMS><ITEM n="3">three<ITEM n="1">one</ITEM></ITEMS>'
+        assert self.extractor(unclosed="drop_last").extract(text) == [
+            {"type": "item", "n": "3", "content": "three"},
+            {"type": "item", "n": "1", "content": "one"},
+        ]
+
+    def test_drop_mode_drops_every_unclosed_block(self):
+        text = (
+            '<ITEMS><ITEM n="3">three<ITEM n="1">one</ITEM><ITEM n="2">cut off</ITEMS>'
+        )
+        assert self.extractor(unclosed="drop").extract(text) == [
+            {"type": "item", "n": "1", "content": "one"}
+        ]
+
+    def test_closing_tag_tolerates_whitespace_and_attributes(self):
+        text = (
+            '<ITEMS><ITEM n="1">alpha</ITEM >\n<ITEM  n="2" >beta</ITEM n="2">\n'
+            '<ITEM n = "3">gamma</ ITEM></ITEMS>'
+        )
+        assert [
+            block["content"]
+            for block in self.extractor(unclosed="drop_last").extract(text)
+        ] == ["alpha", "beta", "gamma"]
+
+    def test_consecutive_blocks_stay_separate_without_merging(self):
+        text = '<ITEMS><ITEM n="2">two</ITEM><ITEM n="2">more</ITEM></ITEMS>'
+        assert self.extractor().extract(text) == [
+            {"type": "item", "n": "2", "content": "two\nmore"}
+        ]
+        assert self.extractor(merge_consecutive=False).extract(text) == [
+            {"type": "item", "n": "2", "content": "two"},
+            {"type": "item", "n": "2", "content": "more"},
+        ]
+
+    def test_non_tag_closer_stays_literal(self):
+        extractor = BlockListExtractor(blocks=[("note", r"\[note\]", "[/note]")])
+        assert extractor.extract("[note]a[/note ][note]b[/note]") == [
+            {"type": "note", "content": "a[/note ]\nb"}
+        ]
+
+
+class TestAnchorListExtractor:
+    def extract(self, text, **kwargs):
+        return AnchorListExtractor(left="<REFS>", right="</REFS>", **kwargs).extract(
+            text
+        )
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ("<REFS>a, b,c</REFS>", ["a", "b", "c"]),
+            ("<REFS>\n- `a`\n* 'b'\n1. \"c\"\n2) d\n</REFS>", ["a", "b", "c", "d"]),
+            ("<REFS>a; b</REFS>", ["a", "b"]),
+            ("<REFS>a, , b,</REFS>", ["a", "b"]),
+            (
+                "<REFS>Harbour at night, Lamp room</REFS>",
+                ["Harbour at night", "Lamp room"],
+            ),
+        ],
+    )
+    def test_splits_and_cleans_items(self, text, expected):
+        assert self.extract(text) == expected
+
+    def test_empty_block_is_an_empty_list(self):
+        assert self.extract("<REFS></REFS>") == []
+        assert self.extract("<REFS> \n </REFS>") == []
+
+    def test_missing_block_is_none(self):
+        assert self.extract("no list here") is None
+        assert self.extract("") is None
+
+    def test_custom_separator(self):
+        assert self.extract("<REFS>a b\tc,d `e`</REFS>", separator=r"[\s,]+") == [
+            "a",
+            "b",
+            "c",
+            "d",
+            "e",
+        ]
+
+    def test_lone_bullet_is_dropped(self):
+        assert self.extract("<REFS>- a - b</REFS>", separator=r"\s+") == ["a", "b"]
+
+    def test_in_a_response_spec(self):
+        spec = ResponseSpec(
+            extractors={
+                "asset_id": AnchorExtractor(left="<ASSET_ID>", right="</ASSET_ID>"),
+                "references": AnchorListExtractor(
+                    left="<REFERENCES>", right="</REFERENCES>"
+                ),
+            },
+            required=["references"],
+        )
+        assert spec.extract_all(
+            "<ASSET_ID></ASSET_ID><REFERENCES>a, b</REFERENCES>"
+        ) == {"asset_id": "", "references": ["a", "b"]}
+        with pytest.raises(ExtractionError):
+            spec.extract_all("<ASSET_ID>x</ASSET_ID>")

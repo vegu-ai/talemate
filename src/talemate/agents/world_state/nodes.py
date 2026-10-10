@@ -1,4 +1,3 @@
-import re
 import structlog
 from typing import ClassVar, TYPE_CHECKING
 from talemate.context import active_scene
@@ -52,8 +51,8 @@ class DetermineVisual(GenerateResponse):
     Other inputs and outputs match Generate Response. The extracted asset_id
     is the picked asset; an empty one from the usual request may ask for a
     new image. The other extracted values come from that request and are
-    missing when the decision model decided. An extracted `references` text
-    becomes the list of the given assets' ids it names.
+    missing when the decision model decided. An extracted `references` list
+    keeps only the ids of the given assets.
     """
 
     class Fields(GenerateResponse.Fields):
@@ -108,12 +107,10 @@ class DetermineVisual(GenerateResponse):
             fallback,
             character=character,
         )
-        if isinstance(extracted.get("references"), str):
+        if isinstance(extracted.get("references"), list):
             ids = {asset.id for asset in assets}
             extracted["references"] = [
-                ref
-                for ref in re.split(r"[\s,`]+", extracted["references"])
-                if ref in ids
+                ref for ref in extracted["references"] if ref in ids
             ]
         self.set_output_values({"extracted": {**extracted, "asset_id": asset_id}})
 

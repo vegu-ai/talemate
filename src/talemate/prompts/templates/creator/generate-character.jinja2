@@ -1,12 +1,11 @@
 {#-
-Extractors (dynamic — one per requested aspect, strict: complete tag pairs
-only, a model that does not close its tags is not viable for consolidated
-generation):
-  - name: StrictAnchorExtractor("<NAME>", "</NAME>")
-  - description: StrictAnchorExtractor("<DESCRIPTION>", "</DESCRIPTION>")
-  - attributes: StrictAnchorExtractor("<ATTRIBUTES>", "</ATTRIBUTES>")
-  - dialogue_instructions: StrictAnchorExtractor("<DIALOGUE_INSTRUCTIONS>", "</DIALOGUE_INSTRUCTIONS>")
-  - example_dialogue: StrictAnchorExtractor("<EXAMPLE_DIALOGUE>", "</EXAMPLE_DIALOGUE>")
+Extractors (agents/creator/character.py, generate_character_unified):
+  - sections: BlockListExtractor with one block per aspect tag (<NAME>,
+    <DESCRIPTION>, <ATTRIBUTES>, <DIALOGUE_INSTRUCTIONS>, <EXAMPLE_DIALOGUE>);
+    only the requested aspects are read. Complete tag pairs only: an unclosed
+    section is a miss, and a model that does not close its tags is not viable
+    for consolidated generation. A repeated section is not merged; the last
+    one wins.
 -#}
 {# DYNAMIC INSTRUCTIONS #}
 {% set dynamic_instructions_text %}

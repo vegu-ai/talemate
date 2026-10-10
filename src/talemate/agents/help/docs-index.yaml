@@ -904,8 +904,8 @@
 - path: user-guide/node-editor/reference/nodes/response.md
   title: Response Parsing Nodes
   summary: Response parsing nodes assemble ResponseSpec dictionaries with required fields and extract LLM content using anchors,
-    after-anchor sections, code blocks, regex, prefix stripping or AsIs. Includes nesting-aware Complex extractors, tracked_tags,
-    trim and fallback_to_full.
+    anchored lists split into items, after-anchor sections, code blocks, regex, prefix stripping or AsIs. Includes nesting-aware
+    Complex extractors, tracked_tags, separator, trim and fallback_to_full.
 - path: user-guide/node-editor/reference/nodes/scene-characters.md
   title: Scene Character Nodes
   summary: Scene character nodes fetch by name or player status, list active/inactive characters, create and remove characters,

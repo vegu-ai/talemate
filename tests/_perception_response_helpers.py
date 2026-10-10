@@ -34,7 +34,7 @@ def excluding_passage(request):
             return text, extracted
         return exclude_passage(text, passage), {
             **extracted,
-            "response": exclude_passage(extracted.get("response"), passage),
+            "perceptions": exclude_passage(extracted.get("perceptions"), passage),
         }
 
     return wrapped

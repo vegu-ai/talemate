@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from typing import Callable, Literal, get_args
 
 import pydantic
@@ -23,7 +22,7 @@ from talemate.character import Character
 from talemate.exceptions import LLMAccuracyError
 from talemate.game import focal
 from talemate.prompts import Prompt
-from talemate.prompts.response import ResponseSpec, StrictAnchorExtractor
+from talemate.prompts.response import BlockListExtractor, ResponseSpec
 from talemate.util.data import parse_attribute_lines
 from talemate.util.strings import replace_smart_quotes
 from talemate.ux.schema import Condition
@@ -108,25 +107,6 @@ def one_shot_prefill_tag(aspects: list[CharacterGenerationAspect]) -> str:
         if aspect in aspects:
             return f"<{aspect.upper()}>"
     return ""
-
-
-_ASPECT_TAG_PATTERNS = [
-    re.compile(rf"<\s*{aspect}\s*>", re.IGNORECASE)
-    for aspect in CHARACTER_GENERATION_ASPECTS
-]
-
-
-def one_shot_section_carries_a_tag(text: str) -> bool:
-    """Whether an extracted one-shot section carries an aspect opening tag.
-
-    The response prefill makes `Prompt.send` glue the first aspect's opening
-    tag onto a response that does not repeat it, and the extractor then pairs
-    that tag with the first unmatched closing tag - which can sit past the
-    sections that follow, or past a malformed opening tag the model wrote
-    itself. A section holding an opening tag swallowed something that is not
-    its own content, so it reads as a miss instead of as a value.
-    """
-    return any(pattern.search(text) for pattern in _ASPECT_TAG_PATTERNS)
 
 
 class AttributeInstructionSpec(TypedDict):
@@ -749,12 +729,19 @@ class CharacterCreatorMixin:
             aspects extracted at all means the response was unprocessable.
         """
         aspects = request.aspects
+        # an unclosed section is a miss; every aspect's tag is a section
+        # boundary, so an unrequested section nested in a requested one leaves
+        # that one unclosed; a repeated section is not merged, the last wins
         response_spec = ResponseSpec(
             extractors={
-                aspect: StrictAnchorExtractor(
-                    left=f"<{aspect.upper()}>", right=f"</{aspect.upper()}>"
+                "sections": BlockListExtractor(
+                    blocks=[
+                        (aspect, rf"<\s*{aspect}\s*>", f"</{aspect.upper()}>")
+                        for aspect in CHARACTER_GENERATION_ASPECTS
+                    ],
+                    unclosed="drop",
+                    merge_consecutive=False,
                 )
-                for aspect in aspects
             },
             required=[],
         )
@@ -804,14 +791,19 @@ class CharacterCreatorMixin:
             response_spec=response_spec,
         )
 
+        sections = {
+            section["type"]: section["content"]
+            for section in extracted.get("sections") or []
+            if section["type"] in aspects
+        }
         log.debug(
             "generate_character_unified",
             aspects=aspects,
-            extracted={k: bool(v) for k, v in extracted.items()},
+            extracted={aspect: bool(sections.get(aspect)) for aspect in aspects},
         )
 
         return self._parse_unified_character_response(
-            extracted,
+            sections,
             aspects,
             fallback_name=request.effective_name,
             max_examples=request.max_examples,
@@ -828,17 +820,10 @@ class CharacterCreatorMixin:
     ) -> CharacterGenerationResult:
         """Normalize the extracted sections into a CharacterGenerationResult.
 
-        Aspects whose section could not be extracted (missing or unclosed
-        tags - see StrictAnchorExtractor), or whose section swallowed a tag
-        (see one_shot_section_carries_a_tag), are left empty for the caller's
-        fill-misses policy.
+        Aspects whose section could not be extracted (missing, or without its
+        closing tag) are left empty for the caller's fill-misses policy.
         """
         result = CharacterGenerationResult()
-        extracted = {
-            aspect: value
-            for aspect, value in extracted.items()
-            if not (isinstance(value, str) and one_shot_section_carries_a_tag(value))
-        }
 
         if "name" in aspects:
             raw_name = (extracted.get("name") or "").strip().strip('"').strip()

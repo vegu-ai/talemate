@@ -41,7 +41,7 @@ def response(names=("Alice", "Bob")):
 
 def result(payload):
     text = json.dumps(payload) if isinstance(payload, dict) else payload
-    return text, {"response": text}
+    return text, {"perceptions": text}
 
 
 @pytest.fixture
@@ -292,6 +292,30 @@ async def test_failed_repair_is_bounded_and_dialog_preserves_valid_views(
         "Bob": "failed",
     }
     downstream.assert_awaited_once()
+
+
+async def test_cut_off_block_reaches_repair_and_dialog_as_its_json_error(
+    scene, monkeypatch
+):
+    # through the real request path: only the client is mocked, so the
+    # PERCEPTIONS_SPEC extraction and its raw block reach parse_perceptions
+    scene.knowledge_eligibility = "perception"
+    scene.character_data = {name: Character(name=name) for name in ("Alice", "Bob")}
+    scene.active_characters = ["Alice", "Bob"]
+    client = get_agent("summarizer").client
+    send = AsyncMock(return_value='<PERCEPTIONS>{"views": [{"audience": ["')
+    dialog = AsyncMock(return_value="cancel")
+    monkeypatch.setattr(client, "send_prompt", send)
+    monkeypatch.setattr(client, "_prompt_generation_error", dialog)
+    with ActiveScene(scene):
+        with pytest.raises(GenerationCancelled):
+            await push_and_step(scene, NarratorMessage(message="A bell rings."))
+    assert send.await_count == 2
+    first, repair = (str(call.args[0]) for call in send.await_args_list)
+    assert "failed validation" not in first
+    assert "The previous response failed validation: Invalid perception JSON" in repair
+    dialog.assert_awaited_once()
+    assert "Reason: Invalid perception JSON" in dialog.await_args.args[0]
 
 
 async def test_transport_error_is_shown_without_validation_repair(analysis):

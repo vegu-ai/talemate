@@ -6,46 +6,32 @@ import re
 
 from talemate.prompts.response import (
     AnchorExtractor,
-    Extractor,
+    BlockListExtractor,
+    RegexExtractor,
     ResponseSpec,
 )
 
 __all__ = [
-    "ItemBlockExtractor",
     "MEMORY_PASS_SPEC",
 ]
 
-ITEMS_CONTAINER = AnchorExtractor(left="<ITEMS>", right="</ITEMS>")
-
-# an item ends at its closing tag or at the next opener; one still open at the
-# end of the container is a truncation and yields no match
-_ITEM_BLOCK = re.compile(
-    r'<ITEM\s+n\s*=\s*"(?P<n>\d+)"\s*>(?P<content>.*?)'
-    r"(?:</\s*ITEM(?:\s[^>]*)?>|(?=<ITEM\s))",
-    re.IGNORECASE | re.DOTALL,
-)
-
-
-class ItemBlockExtractor(Extractor):
-    """
-    `<ITEM n="…">…</ITEM>` blocks read only inside the `<ITEMS>` container, so
-    a tagged aside after `</ITEMS>` is not an item.
-    """
-
-    def extract(self, text: str) -> list[dict]:
-        content = ITEMS_CONTAINER.extract(text or "")
-        if not content:
-            return []
-        return [
-            {"n": match.group("n"), "content": match.group("content").strip()}
-            for match in _ITEM_BLOCK.finditer(content)
-        ]
-
-
+# a truncated last item is dropped: a rewrite cut mid-sentence can state the
+# opposite of its candidate, and it would reach the speaker as knowledge;
+# none counts only as the whole <ITEMS> content, so a contradictory or cut-off
+# answer reads as unreadable and keeps the candidates
 MEMORY_PASS_SPEC = ResponseSpec(
     extractors={
-        "answer": ITEMS_CONTAINER,
-        "items": ItemBlockExtractor(),
+        "items": BlockListExtractor(
+            blocks=[("item", r'<ITEM\s+n\s*=\s*"(?P<n>\d+)"\s*>', "</ITEM>")],
+            container=AnchorExtractor(left="<ITEMS>", right="</ITEMS>"),
+            unclosed="drop_last",
+        ),
+        "none": RegexExtractor(
+            pattern=r"\A\s*<NONE\s*/>\s*\Z",
+            flags=re.IGNORECASE,
+            group=0,
+            container=AnchorExtractor(left="<ITEMS>", right="</ITEMS>"),
+        ),
     },
     required=[],
 )

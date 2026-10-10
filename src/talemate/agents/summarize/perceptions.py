@@ -23,7 +23,6 @@ from talemate.instance import get_agent
 from talemate.emit import emit
 from talemate.client.presets import make_kind
 from talemate.util import count_tokens
-from talemate.prompts.response import CodeBlockExtractorMixin
 from talemate.knowledge.backlog import record_cancel
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.formatting import (
@@ -56,6 +55,7 @@ from talemate.knowledge.perspectives import (
     view_staleness,
 )
 from talemate.prompts import Prompt
+from talemate.agents.summarize.response_specs import PERCEPTIONS_SPEC
 from talemate.scene_message import SceneMessage
 
 if TYPE_CHECKING:
@@ -121,30 +121,6 @@ def warn_perception_regeneration(message: SceneMessage) -> None:
     )
     log.warning(warning, source_id=message.id)
     emit("status", status="warning", message=warning, data={"message_id": message.id})
-
-
-class PerceptionExtractor(CodeBlockExtractorMixin):
-    validate_structured = True
-
-    def _extract_code_block_from_content(self, content: str) -> str | None:
-        if not isinstance(content, str) or not content.strip():
-            return None
-        try:
-            json.loads(content)
-            return content
-        except json.JSONDecodeError:
-            pass
-        opening = re.search(r"```(?:json)?\s*(?=\{)", content, re.IGNORECASE)
-        if opening:
-            candidate = content[opening.end() :]
-            try:
-                _, end = json.JSONDecoder().raw_decode(candidate)
-                suffix = candidate[end:].lstrip()
-                if not suffix or suffix.startswith("```"):
-                    return candidate[:end]
-            except json.JSONDecodeError:
-                pass
-        return super()._extract_code_block_from_content(content)
 
 
 def passage_sentences(passage: str) -> list[tuple[int, int]]:
@@ -367,15 +343,19 @@ def exclusion_errors(
 
 
 def parse_perceptions(
-    response: str,
+    data: str | None,
     audiences: tuple[str, ...],
     passage: str,
+    block: str | None = None,
 ) -> tuple[PerceptionAnalysis, ...]:
-    extracted = PerceptionExtractor()._extract_code_block_from_content(response)
-    if extracted is None:
-        raise PerceptionValidationError("No structured perception response found")
+    """`data` is the extracted JSON; without it, the raw `block` is decoded so
+    a cut-off or invalid answer reports its JSON error."""
+    if data is None:
+        if block is None:
+            raise PerceptionValidationError("No <PERCEPTIONS> block found")
+        data = block
     try:
-        parsed = json.loads(extracted)
+        parsed = json.loads(data)
     except (TypeError, ValueError) as exc:
         raise PerceptionValidationError(f"Invalid perception JSON: {exc}") from exc
     if not isinstance(parsed, dict) or not isinstance(parsed.get("views"), list):
@@ -1114,6 +1094,7 @@ class PerceptionMixin:
                 "validation_error": feedback,
                 "rewrite_hidden_traces": rewrite_hidden_traces,
             },
+            response_spec=PERCEPTIONS_SPEC,
         )
         if not self._perception_current(scene, message, knowledge, context, intention):
             log.info("discarding stale perception response", source_id=message.id)
@@ -1123,9 +1104,10 @@ class PerceptionMixin:
         error = None
         try:
             parsed = parse_perceptions(
-                extracted.get("response"),
+                extracted.get("perceptions"),
                 requested,
                 context["passage"]["text"],
+                block=extracted.get("block"),
             )
         except PerceptionValidationError as exc:
             parsed, error = exc.views, exc

@@ -332,9 +332,17 @@ async def test_a_failed_check_is_reported_and_the_story_continues(case, monkeypa
     ) in statuses
 
 
+@pytest.mark.parametrize(
+    "references",
+    ["harbour-night", "`harbour-night`, `unknown`", "\n- harbour-night\n- moon\n"],
+)
 async def test_named_references_turn_the_generation_into_an_image_edit(
-    case, monkeypatch
+    case, monkeypatch, references
 ):
+    case.selection_reply = SELECTION_REPLY.replace(
+        "<REFERENCES>harbour-night</REFERENCES>",
+        f"<REFERENCES>{references}</REFERENCES>",
+    )
     case.config["decision_model"].value = False
     case.config["generate_new"].value = True
     monkeypatch.setattr(VisualAgent, "can_edit_images", property(lambda s: True))

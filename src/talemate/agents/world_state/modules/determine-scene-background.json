@@ -498,8 +498,8 @@
       "properties": {
         "agent_name": "world_state"
       },
-      "x": 20,
-      "y": 2060,
+      "x": 25,
+      "y": 2130,
       "width": 220,
       "collapsed": false,
       "inherited": false,
@@ -514,8 +514,8 @@
         "name": "state",
         "scope": "local"
       },
-      "x": 20,
-      "y": 2140,
+      "x": 25,
+      "y": 2210,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -530,8 +530,8 @@
         "scope": "world_state",
         "name": "determine-background"
       },
-      "x": 20,
-      "y": 2200,
+      "x": 25,
+      "y": 2270,
       "width": 224,
       "collapsed": false,
       "inherited": false,
@@ -546,8 +546,8 @@
         "name": "content",
         "scope": "local"
       },
-      "x": 20,
-      "y": 2340,
+      "x": 25,
+      "y": 2410,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -562,8 +562,8 @@
         "name": "assets",
         "scope": "local"
       },
-      "x": 20,
-      "y": 2380,
+      "x": 25,
+      "y": 2450,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -578,8 +578,8 @@
         "name": "current",
         "scope": "local"
       },
-      "x": 20,
-      "y": 2420,
+      "x": 25,
+      "y": 2490,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -593,8 +593,8 @@
       "properties": {
         "value": false
       },
-      "x": 20,
-      "y": 2470,
+      "x": 25,
+      "y": 2540,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -609,8 +609,8 @@
         "name": "generation_allowed",
         "scope": "local"
       },
-      "x": 20,
-      "y": 2510,
+      "x": 25,
+      "y": 2580,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -624,8 +624,8 @@
       "properties": {
         "template": ""
       },
-      "x": 290,
-      "y": 2260,
+      "x": 295,
+      "y": 2330,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -673,8 +673,8 @@
         "response_length": 512,
         "technical": false
       },
-      "x": 560,
-      "y": 2060,
+      "x": 565,
+      "y": 2130,
       "width": 304,
       "collapsed": false,
       "inherited": false,
@@ -693,7 +693,7 @@
         "trim": true
       },
       "x": 920,
-      "y": 2060,
+      "y": 2300,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -712,7 +712,7 @@
         "trim": true
       },
       "x": 920,
-      "y": 2100,
+      "y": 2338,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -731,7 +731,7 @@
         "trim": true
       },
       "x": 920,
-      "y": 2140,
+      "y": 2378,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -740,21 +740,21 @@
       "height": 194
     },
     "ba53068f-4b09-4186-86ed-143001b47840": {
-      "title": "Anchor: references",
+      "title": "Anchor list: references",
       "id": "ba53068f-4b09-4186-86ed-143001b47840",
       "properties": {
         "name": "references",
         "left": "<REFERENCES>",
         "right": "</REFERENCES>",
-        "fallback_to_full": false,
-        "trim": true
+        "separator": "[\\s,;]+",
+        "fallback_to_full": false
       },
       "x": 920,
-      "y": 2180,
+      "y": 2418,
       "width": 210,
       "collapsed": true,
       "inherited": false,
-      "registry": "response/AnchorExtractor",
+      "registry": "response/AnchorListExtractor",
       "base_type": "core/Node",
       "height": 194
     },
@@ -762,8 +762,8 @@
       "title": "Dict Collector",
       "id": "dd9ea004-6f34-4cdb-bcea-44139558a63b",
       "properties": {},
-      "x": 1170,
-      "y": 2060,
+      "x": 1185,
+      "y": 2290,
       "width": 140,
       "collapsed": false,
       "inherited": false,
@@ -795,8 +795,8 @@
       "properties": {
         "required": []
       },
-      "x": 1350,
-      "y": 2060,
+      "x": 1375,
+      "y": 2310,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -817,8 +817,8 @@
         "reasoning_effort": "",
         "disable_reasoning": false
       },
-      "x": 1620,
-      "y": 2060,
+      "x": 1625,
+      "y": 2130,
       "width": 270,
       "collapsed": false,
       "inherited": false,
@@ -832,8 +832,8 @@
       "properties": {
         "attribute": "asset_id"
       },
-      "x": 1940,
-      "y": 2060,
+      "x": 1945,
+      "y": 2130,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -847,8 +847,8 @@
       "properties": {
         "value": ""
       },
-      "x": 1940,
-      "y": 2180,
+      "x": 1945,
+      "y": 2250,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -860,8 +860,8 @@
       "title": "Asset id or empty",
       "id": "0d62805f-cfd8-47e2-abb5-3cf0d05e34a1",
       "properties": {},
-      "x": 2190,
-      "y": 2060,
+      "x": 2195,
+      "y": 2130,
       "width": 140,
       "collapsed": false,
       "inherited": false,
@@ -876,8 +876,8 @@
         "mode": "both",
         "chars": "`\" "
       },
-      "x": 2370,
-      "y": 2060,
+      "x": 2375,
+      "y": 2130,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -892,8 +892,8 @@
         "name": "asset_id",
         "scope": "local"
       },
-      "x": 2620,
-      "y": 2060,
+      "x": 2625,
+      "y": 2130,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -907,8 +907,8 @@
       "properties": {
         "attribute": "name"
       },
-      "x": 1940,
-      "y": 2240,
+      "x": 1945,
+      "y": 2310,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -923,8 +923,8 @@
         "name": "name",
         "scope": "local"
       },
-      "x": 2190,
-      "y": 2240,
+      "x": 2195,
+      "y": 2310,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -938,8 +938,8 @@
       "properties": {
         "attribute": "instructions"
       },
-      "x": 1940,
-      "y": 2380,
+      "x": 1945,
+      "y": 2450,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -954,8 +954,8 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 2190,
-      "y": 2380,
+      "x": 2195,
+      "y": 2450,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -969,8 +969,8 @@
       "properties": {
         "attribute": "references"
       },
-      "x": 1940,
-      "y": 2520,
+      "x": 1945,
+      "y": 2590,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -985,8 +985,8 @@
         "name": "references",
         "scope": "local"
       },
-      "x": 2190,
-      "y": 2520,
+      "x": 2195,
+      "y": 2590,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -1000,8 +1000,8 @@
       "properties": {
         "stage": 1
       },
-      "x": 2890,
-      "y": 2280,
+      "x": 2895,
+      "y": 2350,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -1016,8 +1016,8 @@
         "name": "content",
         "scope": "local"
       },
-      "x": 1620,
-      "y": 2540,
+      "x": 1625,
+      "y": 2610,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -1032,8 +1032,8 @@
         "name": "assets",
         "scope": "local"
       },
-      "x": 1620,
-      "y": 2580,
+      "x": 1625,
+      "y": 2650,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -1049,7 +1049,7 @@
         "scope": "local"
       },
       "x": 20,
-      "y": 2760,
+      "y": 2840,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -1064,7 +1064,7 @@
         "pass_through": true
       },
       "x": 290,
-      "y": 2750,
+      "y": 2830,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -1081,7 +1081,7 @@
         "allow_partial": false
       },
       "x": 550,
-      "y": 2750,
+      "y": 2830,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -1094,7 +1094,7 @@
       "id": "aea16265-1cfe-43c8-8d22-ec096d08e9f4",
       "properties": {},
       "x": 810,
-      "y": 2750,
+      "y": 2830,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -1109,7 +1109,7 @@
         "exception": "StopGraphExecution"
       },
       "x": 1080,
-      "y": 2750,
+      "y": 2830,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -1124,7 +1124,7 @@
         "stage": 2
       },
       "x": 1340,
-      "y": 2740,
+      "y": 2820,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -1139,7 +1139,7 @@
         "value": false
       },
       "x": 20,
-      "y": 3060,
+      "y": 3140,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -1155,7 +1155,7 @@
         "scope": "local"
       },
       "x": 20,
-      "y": 3020,
+      "y": 3100,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -1170,7 +1170,7 @@
         "pass_through": false
       },
       "x": 290,
-      "y": 3010,
+      "y": 3090,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -1185,7 +1185,7 @@
         "exception": "StopGraphExecution"
       },
       "x": 550,
-      "y": 3010,
+      "y": 3090,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -1200,7 +1200,7 @@
         "stage": 3
       },
       "x": 810,
-      "y": 2990,
+      "y": 3070,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -1216,7 +1216,7 @@
         "scope": "local"
       },
       "x": 20,
-      "y": 3200,
+      "y": 3280,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -1232,7 +1232,7 @@
         "scope": "local"
       },
       "x": 20,
-      "y": 3240,
+      "y": 3320,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -1247,7 +1247,7 @@
         "value": true
       },
       "x": 20,
-      "y": 3290,
+      "y": 3370,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -1276,7 +1276,7 @@
         "scene_backdrop": true
       },
       "x": 290,
-      "y": 3180,
+      "y": 3260,
       "width": 413,
       "collapsed": false,
       "inherited": false,
@@ -1291,7 +1291,7 @@
         "value": "SCENE_BACKGROUND"
       },
       "x": 760,
-      "y": 3180,
+      "y": 3260,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -1306,7 +1306,7 @@
         "value": "world_state.scene_background"
       },
       "x": 760,
-      "y": 3220,
+      "y": 3300,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -1322,7 +1322,7 @@
         "scope": "local"
       },
       "x": 760,
-      "y": 3260,
+      "y": 3340,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -1338,7 +1338,7 @@
         "scope": "local"
       },
       "x": 760,
-      "y": 3300,
+      "y": 3380,
       "width": 210,
       "collapsed": true,
       "inherited": false,
@@ -1351,7 +1351,7 @@
       "id": "a5f0ddb8-dc44-40f6-bd42-391217919f50",
       "properties": {},
       "x": 1020,
-      "y": 3180,
+      "y": 3260,
       "width": 262,
       "collapsed": false,
       "inherited": false,
@@ -1366,7 +1366,7 @@
         "stage": 4
       },
       "x": 1340,
-      "y": 3180,
+      "y": 3260,
       "width": 210,
       "collapsed": false,
       "inherited": false,
@@ -1568,7 +1568,7 @@
         "scope": "local"
       },
       "x": 760,
-      "y": 3340,
+      "y": 3420,
       "width": 210,
       "height": 122,
       "collapsed": true,
@@ -1896,7 +1896,7 @@
       "x": 0,
       "y": 2000,
       "width": 3140,
-      "height": 660,
+      "height": 737,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1904,7 +1904,7 @@
     {
       "title": "Existing background",
       "x": 0,
-      "y": 2680,
+      "y": 2760,
       "width": 1600,
       "height": 260,
       "color": "#3f789e",
@@ -1914,7 +1914,7 @@
     {
       "title": "Generate new background",
       "x": 0,
-      "y": 2960,
+      "y": 3040,
       "width": 1600,
       "height": 960,
       "color": "#3f789e",
@@ -1966,8 +1966,8 @@
     },
     {
       "text": "The decision model keeps or picks an existing background when it is sure; otherwise the selection request runs.",
-      "x": 1560,
-      "y": 2010,
+      "x": 1110,
+      "y": 2040,
       "width": 300,
       "inherited": false
     }

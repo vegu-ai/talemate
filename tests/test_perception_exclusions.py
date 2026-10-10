@@ -519,7 +519,7 @@ async def test_forbidden_content_repairs_in_both_trace_modes(analysis, enabled):
     edits = [exclusion(SPAN, ["key"], "A clink sounded." if enabled else None)]
     bad = payload(view("Bob", REWRITTEN.replace("a clink", "a key's clink"), edits))
     good = payload(view("Bob", REWRITTEN, edits))
-    request.side_effect = [(bad, {"response": bad}), (good, {"response": good})]
+    request.side_effect = [(bad, {"perceptions": bad}), (good, {"perceptions": good})]
     message = CharacterMessage(message="Alice: " + SOURCE)
     await push_and_step(scene, message)
     assert request.await_count == 2

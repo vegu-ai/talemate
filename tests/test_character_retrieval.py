@@ -314,7 +314,7 @@ async def test_optional_memory_pass_uses_projected_history(rag, monkeypatch):
     monkeypatch.setattr(
         conversation.actions["character_knowledge"].config["memory_pass"], "value", True
     )
-    request = AsyncMock(return_value=("", {"answer": "none", "items": []}))
+    request = AsyncMock(return_value=("", {"none": "<NONE/>", "items": []}))
     monkeypatch.setattr(Prompt, "request", request)
     await conversation.rag_build(scene.character_data["Elmer"])
     variables = request.call_args.kwargs["vars"]
@@ -357,7 +357,7 @@ async def test_rag_retry_budget_covers_queries_and_memory_pass(rag, monkeypatch)
         assert len(calls) <= 4, "RAG exceeded two attempts / four paid requests"
         views(scene, message, public=f"Marie moved her lantern {len(calls)} times.")
         if name == "conversation.memory-pass":
-            return "", {"answer": "none", "items": []}
+            return "", {"none": "<NONE/>", "items": []}
         return "", {"response": "1. lantern"}
 
     monkeypatch.setattr(Prompt, "request", request)
@@ -439,7 +439,7 @@ async def test_retrieval_keeps_only_own_direction_with_configured_format(
     query_text = "\n".join(query.call_args.args[0])
     assert expected in query_text
     assert "PRIVATE DIRECTOR" not in query_text
-    request = AsyncMock(return_value=("", {"answer": "none", "items": []}))
+    request = AsyncMock(return_value=("", {"none": "<NONE/>", "items": []}))
     monkeypatch.setattr(Prompt, "request", request)
     with ActiveAgent(conversation, conversation.memory_pass) as context:
         context.state["director__actor_guidance"] = guidance
@@ -680,7 +680,7 @@ async def cached_reply_turn(
                 }
                 for item in prompt.vars["context"]["cast"]
             ]
-            return json.dumps({"views": views})
+            return f"<PERCEPTIONS>{json.dumps({'views': views})}</PERCEPTIONS>"
         if prompt.uid.startswith("conversation.dialogue-"):
             dialogue_prompts.append(prompt.prompt)
             reply += 1

@@ -647,29 +647,38 @@ export default {
             return states;
         },
         trackedWorldState(question) {
-            // cycle through reinforce and return true if the world has a tracked state for this question
-            // by checking the `character` property of the reinforce object
+            // a null state wins over a 0.39.0 "" state, as in the backend lookup
             question = this.formatWorldStateTemplateString(question, "the characters");
+            let alias = null;
             for(let state of this.reinforce) {
-                if(state.character === null && state.question === question) {
+                if(state.question !== question) {
+                    continue;
+                }
+                if(state.character === null) {
                     return state;
                 }
+                if(!state.character && alias === null) {
+                    alias = state;
+                }
             }
-            return null;
+            return alias;
         },
 
         trackedWorldStates() {
-            // cycle through reinforce and return the states that are tracked for the world
-            // by checking the `character` property of the reinforce object
-            let states = [];
+            // one per question; a 0.39.0 "" state yields to a null state
+            let byQuestion = new Map();
 
             for(let state of this.reinforce) {
-                if(state.character === null) {
-                    states.push(state);
+                if(state.character) {
+                    continue;
+                }
+                const listed = byQuestion.get(state.question);
+                if(listed === undefined || (state.character === null && listed.character !== null)) {
+                    byQuestion.set(state.question, state);
                 }
             }
-            
-            return states;
+
+            return [...byQuestion.values()];
         },
 
         characterSuggestions(name) {
@@ -756,7 +765,7 @@ export default {
 
                 this.hasAnyWorldState = false;
                 for(let state of this.reinforce) {
-                    if(state.character === null) {
+                    if(!state.character) {
                         this.hasAnyWorldState = true;
                         break;
                     }

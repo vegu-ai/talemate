@@ -58,6 +58,7 @@
   - "Saves and History: Static history and shared entries keep their timing across reloads and time changes; deleting messages preserves summary positions."
   - "Saves and History: Shared world entries survive linked-scene loads and new episodes; sequential tracked-state answers accumulate over the story."
   - "Saves and History: After a scene is reloaded, a new sequential tracked-state answer replaces the recent previous answer again instead of adding a second one."
+  - "Saves and History: Applying a World state template to a World state that is already tracked keeps its answer and world entry instead of clearing them and adding a second state, including for states saved by 0.39.0, which the World State sidebar and the World tools menu now also recognise as tracked."
   - "Saves and History: Without Character perspectives, saving a World tracked state's answer in the World Editor now also replaces the old answer in the world entry the AI recalls, and clearing the answer removes that entry."
   - "Saves and History: Pinned context survives loading a scene file from someone else, moving to a new installation, or clearing the local memory cache."
   - "Characters and World: Duplicate character names are refused, failed creation leaves no partial character, and valid character proposals apply without discarding other pending changes."

@@ -2,7 +2,7 @@ import asyncio
 import json
 import os
 import uuid
-from typing import Any, Union
+from typing import Annotated, Any, Union
 import base64
 
 import pydantic
@@ -35,6 +35,11 @@ from .scene_state_reset import SceneStateResetMixin
 from .knowledge import KnowledgeMixin
 
 log = structlog.get_logger("talemate.server.world_state_manager")
+
+EmptyAsNoneCharacterName = Annotated[
+    str | None,
+    pydantic.BeforeValidator(lambda value: None if value == "" else value),
+]
 
 
 class UpdateCharacterAttributePayload(pydantic.BaseModel):
@@ -93,7 +98,7 @@ class SetWorldEntryReinforcementPayload(pydantic.BaseModel):
     question: str
     instructions: Union[str, None] = None
     interval: int = 10
-    answer: str = ""
+    answer: str | None = None
     update_state: bool = False
     insert: str = "never"
     require_active: bool = True
@@ -147,13 +152,13 @@ class DeleteWorldStateTemplatePayload(pydantic.BaseModel):
 
 class ApplyWorldStateTemplatePayload(pydantic.BaseModel):
     template: world_state_templates.AnnotatedTemplate
-    character_name: str | None = None
+    character_name: EmptyAsNoneCharacterName = None
     run_immediately: bool = False
 
 
 class ApplyWorldStateTemplatesPayload(pydantic.BaseModel):
     templates: list[world_state_templates.AnnotatedTemplate]
-    character_name: str | None = None
+    character_name: EmptyAsNoneCharacterName = None
     run_immediately: bool = False
     source: str | None = None
     generation_options: world_state_templates.GenerationOptions | None = None
@@ -867,7 +872,7 @@ class WorldStateManagerPlugin(
 
         result = await self.world_state_manager.apply_template(
             template=payload.template,
-            character_name=payload.character_name or "",
+            character_name=payload.character_name,
             run_immediately=payload.run_immediately,
         )
 

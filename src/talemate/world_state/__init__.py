@@ -631,14 +631,18 @@ class WorldState(BaseModel):
         Arguments:
         - question: The question associated with the reinforcement to find.
         - character: The character to whom the reinforcement is linked. Use None for global reinforcements.
+
+        Scenes saved before 0.40.0 can hold a global reinforcement with the character "" instead of None. An exact match wins; only without one does a global lookup fall back to the other form, so a saved pair keeps resolving to the state asked for.
         """
+        alias = (None, None)
         for idx, reinforcement in enumerate(self.reinforce):
-            if (
-                reinforcement.question == question
-                and reinforcement.character == character
-            ):
+            if reinforcement.question != question:
+                continue
+            if reinforcement.character == character:
                 return idx, reinforcement
-        return None, None
+            if alias[1] is None and not reinforcement.character and not character:
+                alias = (idx, reinforcement)
+        return alias
 
     def reinforcements_for_character(self, character: str):
         """

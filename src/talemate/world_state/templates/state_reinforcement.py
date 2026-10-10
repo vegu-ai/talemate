@@ -32,7 +32,7 @@ DEFAULT_STATE_TYPE = "npc"
 class GeneratedStateReinforcement(pydantic.BaseModel):
     query: str
     reinforcement: "Reinforcement"
-    character: str
+    character: str | None
     template: "StateReinforcement"
 
 

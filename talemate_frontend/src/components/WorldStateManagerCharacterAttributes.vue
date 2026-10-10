@@ -94,6 +94,13 @@
                             @redo="attributeAutocompleteField.redo()"
                             @undo="attributeAutocompleteField.undo()" />
                     </div>
+                    <EntryVisibilitySelect
+                        class="mt-3"
+                        :model-value="selectedVisibility"
+                        :character-names="otherCharacterNames"
+                        :owner-label="character.name"
+                        :disabled="busy"
+                        @update:model-value="setVisibility(selected, $event)" />
                 </v-card-text>
                 <v-card-actions>
                     <ConfirmActionInline
@@ -111,13 +118,6 @@
                             Remove this attribute from the shared world context.
                         </v-tooltip>
                         Unshare from world</v-btn>
-                    <v-spacer></v-spacer>
-                    <EntryVisibilitySelect
-                        :model-value="selectedVisibility"
-                        :character-names="otherCharacterNames"
-                        :owner-label="character.name"
-                        :disabled="busy"
-                        @update:model-value="setVisibility(selected, $event)" />
                 </v-card-actions>
             </v-card>
         </v-col>

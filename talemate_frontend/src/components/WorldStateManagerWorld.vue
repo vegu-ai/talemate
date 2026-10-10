@@ -12,6 +12,7 @@
                     :immutable-entries="entries"
                     :templates="templates" 
                     :pins="pins"
+                    :character-list="characterList"
                     :generation-options="generationOptions" />
                 </v-tabs-window-item>
                 <v-tabs-window-item value="states">
@@ -56,6 +57,7 @@ export default {
         entries: Object,
         states: Object,
         pins: Object,
+        characterList: Object,
     },
     data() {
         return {

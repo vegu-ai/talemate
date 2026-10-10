@@ -34,7 +34,7 @@
 
     <SpiceAppliedNotification :uids="['wsm.character_description']"></SpiceAppliedNotification>
 
-    <div class="d-flex justify-end mt-2">
+    <div class="mt-3">
         <EntryVisibilitySelect
             :model-value="visibility"
             :character-names="otherCharacterNames"

@@ -59,6 +59,23 @@ describe('Known by on a static history entry', () => {
         expect(mount({}, { perceptionMode: true }).stub()).toBeNull();
     });
 
+    it('stays editable while the app is busy with the save it just sent, so a menu stays open across picks', () => {
+        const disabled = (props) => {
+            const value = JSON.parse(mount({ present: ['Alice'] }, props).stub().dataset.props).disabled;
+            app.unmount();
+            host.remove();
+            return value;
+        };
+        expect(disabled({ appBusy: true })).toBe(false);
+        expect(disabled({})).toBe(false);
+        expect(disabled({ appReady: false })).toBe(true);
+        expect(disabled({ busy: true })).toBe(true);
+    });
+
+    it('still locks the entry actions while the app is busy', () => {
+        expect(mount({}, { appBusy: true }).vm.locked).toBe(true);
+    });
+
     it('reads the stored audience: unset is everyone, empty is nobody', () => {
         const knownBy = (present) => HistoryEntry.computed.savedKnownBy.call({ entry: { present } });
         expect(knownBy(undefined)).toEqual({ mode: 'everyone', characters: [] });

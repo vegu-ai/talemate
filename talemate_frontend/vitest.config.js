@@ -15,5 +15,6 @@ export default defineConfig({
     root: fileURLToPath(new URL(".", import.meta.url)),
     environment: "node",
     include: ["tests/unit/**/*.spec.js"],
+    server: { deps: { inline: ["vuetify"] } },
   },
 });

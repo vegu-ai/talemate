@@ -97,6 +97,13 @@
                             @redo="detailAutocompleteField.redo()"
                             @undo="detailAutocompleteField.undo()" />
                     </div>
+                    <EntryVisibilitySelect
+                        class="mt-3"
+                        :model-value="selectedVisibility"
+                        :character-names="otherCharacterNames"
+                        :owner-label="character.name"
+                        :disabled="busy"
+                        @update:model-value="setVisibility(selected, $event)" />
 
                 </v-card-text>
 
@@ -117,14 +124,6 @@
                     
                     <v-btn v-if="entryHasPin" @click="$emit('load-pin', selectedPinId)" color="primary" prepend-icon="mdi-pin">View pin</v-btn>
                     <v-btn v-else @click="$emit('add-pin', selectedPinId)" color="primary" prepend-icon="mdi-pin">Add pin</v-btn>
-                    <v-spacer></v-spacer>
-                    <EntryVisibilitySelect
-                        :model-value="selectedVisibility"
-                        :character-names="otherCharacterNames"
-                        :owner-label="character.name"
-                        :disabled="busy"
-                        @update:model-value="setVisibility(selected, $event)" />
-
                     <v-spacer></v-spacer>
                     <v-btn v-if="character.reinforcements[selected]" @click.stop="viewCharacterStateReinforcer(selected)" color="primary" prepend-icon="mdi-image-auto-adjust">Manage auto state</v-btn>
                     <v-btn v-else @click.stop="viewCharacterStateReinforcer(selected)" color="primary" prepend-icon="mdi-image-auto-adjust">Setup auto state</v-btn>

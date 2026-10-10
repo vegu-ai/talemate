@@ -23,7 +23,7 @@
             </div>
             <v-textarea v-else rows="1" auto-grow v-model="entry.text" @blur="setEditing(false)" @keydown.esc="setEditing(false)" ref="textarea" hint="Press Escape to cancel, Shift+Enter for new line, Enter to save" @keydown.enter="handleEnter" />
             <div v-if="knownByEditable" class="mt-3 static-known-by">
-                <EntryVisibilitySelect :model-value="knownBy" owner-label="nobody" :character-names="characterNames" :disabled="locked" @update:model-value="setKnownBy" />
+                <EntryVisibilitySelect :model-value="knownBy" owner-label="nobody" :character-names="characterNames" :disabled="knownByLocked" @update:model-value="setKnownBy" />
             </div>
 
         </v-card-text>
@@ -172,6 +172,9 @@ export default {
         },
         locked() {
             return this.appBusy || !this.appReady || this.busy;
+        },
+        knownByLocked() {
+            return !this.appReady || this.busy;
         },
         hasSourceEntries() {
             return this.entry.start !== null && this.entry.end !== null;

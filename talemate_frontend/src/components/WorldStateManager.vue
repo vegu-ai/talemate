@@ -78,6 +78,7 @@
                 @load-pin="onLoadPin"
                 @add-pin="onAddPin"
                 :generation-options="generationOptions"
+                :character-list="characterList"
                 :entries="worldEntries"
                 :states="worldStates"
                 :pins="pins"

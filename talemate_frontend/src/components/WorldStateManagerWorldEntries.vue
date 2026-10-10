@@ -54,6 +54,13 @@
                                 'This entry may be included via automatic relevancy matching.'
                             )"
                             @change="save()"></v-checkbox>
+                            <div v-if="!isNewEntry" class="pl-3">
+                                <EntryVisibilitySelect
+                                    :model-value="entry.visibility"
+                                    :character-names="characterNames"
+                                    owner-label="nobody"
+                                    @update:model-value="setVisibility" />
+                            </div>
                         </v-col>
                         <v-col cols="12" md="6" v-if="!isNewEntry">
                             <v-card class="mt-2" elevation="2" :color="entry.shared ? 'highlight6' : 'muted'" variant="tonal">
@@ -61,12 +68,6 @@
                                     <v-checkbox v-model="entry.shared" label="Shared to World Context" @change="save()"  messages="Share this entry with other scenes linked to the same shared context."></v-checkbox>
                                 </v-card-text>
                             </v-card>
-                        </v-col>
-                        <v-col cols="12" v-if="!isNewEntry">
-                            <EntryVisibilitySelect
-                                :model-value="entry.visibility"
-                                owner-label="nobody"
-                                @update:model-value="setVisibility" />
                         </v-col>
                     </v-row>
 
@@ -121,8 +122,12 @@ export default {
         templates: Object,
         generationOptions: Object,
         immutableEntries: Object,
+        characterList: Object,
     },
     computed: {
+        characterNames() {
+            return Object.keys(this.characterList?.characters || {});
+        },
         isNewEntry() {
             return this.entry && this.entry.isNew;
         },

@@ -878,7 +878,7 @@ export default {
             return instructions;
         },
     },
-    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets', 'openVisualLibraryWithAsset', 'openSceneRevisions', 'isConnected'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets', 'openVisualLibraryWithAsset', 'openSceneRevisions', 'isConnected', 'sceneScroller'],
     provide() {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
@@ -1012,35 +1012,24 @@ export default {
             this.$emit('playthrough-advance');
         },
 
-        // How much of the top of the window the app bar covers. Vuetify keeps
-        // its layout offsets in custom properties, which inherit down to here.
-        appBarOffset() {
-            const container = this.$refs.messageContainer;
-            if (!container) {
-                return 0;
-            }
-            const offset = getComputedStyle(container).getPropertyValue('--v-layout-top');
-            return parseFloat(offset) || 0;
-        },
-
         scrollRevealIntoView() {
             const revealed = this.$refs.messageContainer?.lastElementChild;
+            const scroller = this.sceneScroller();
             if (!revealed) {
                 return;
             }
-            const appBar = this.appBarOffset();
-            // scroll the page to its end rather than aligning the message: at
-            // the document end the sticky playthrough toolbar sits in its own
-            // place below the message instead of over it
-            window.scrollTo({ top: document.documentElement.scrollHeight });
-            const top = revealed.getBoundingClientRect().top;
-            if (top < appBar) {
-                // it does not fit between the app bar and the toolbar, so its
-                // opening lines ended up off the top of the screen - start
-                // reading it at its top instead. Measured rather than derived
-                // from the message's height: what is left of the screen depends
-                // on the toolbar, the app bar and the margins around them
-                window.scrollTo({ top: window.scrollY + top - appBar });
+            // scroll the story to its end rather than aligning the message: at
+            // the end the sticky playthrough toolbar sits in its own place below
+            // the message instead of over it
+            scroller.scrollTop = scroller.scrollHeight;
+            const top = revealed.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+            if (top < 0) {
+                // it does not fit above the toolbar, so its opening lines ended
+                // up off the top of the scroller - start reading it at its top
+                // instead. Measured rather than derived from the message's
+                // height: what is left of the screen depends on the toolbar and
+                // the margins around it
+                scroller.scrollTop += top;
             }
         },
 

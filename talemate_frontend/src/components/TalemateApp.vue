@@ -231,7 +231,7 @@
 
       <v-container fluid style="height: 100%;">
 
-        <v-tabs-window v-model="tab" style="height: 100%;" :class="{ 'scene-scrollport': (playthroughActive || sceneHeaderVisible) && tab === 'main' }">
+        <v-tabs-window v-model="tab" style="height: 100%;">
           <!-- HOME -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
             <SceneLanding
@@ -248,147 +248,147 @@
           </v-tabs-window-item>
           <!-- SCENE -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main" style="height: 100%;" eager>
-            <v-row no-gutters class="position-relative">
-              <v-col ref="nodeEditorContainer" v-resize="onNodeEditorContainerResize" :xl="creativeMode ? (showSceneView ? 8 : 12) : 0" :cols="creativeMode ? (showSceneView ? 6 : 12) : 0" :class="{ 'd-none': !creativeMode }" class="position-relative">
-                  <NodeEditor
-                    :scene="scene"
-                    :busy="busy"
-                    :app-config="appConfig"
-                    :templates="worldStateTemplates"
-                    :is-visible="creativeMode"
-                    :scene-view-visible="showSceneView"
-                    @toggle-scene-view="toggleSceneView"
-                    ref="nodeEditor"
-                    v-if="sceneActive && scene.environment === 'creative'"
-                  >
-                  </NodeEditor>  
-              </v-col>
-              <v-col :cols="creativeMode ? (showSceneView ? 6 : 0) : 12"  :xl="creativeMode ? (showSceneView ? 4 : 12) : 12" :class="{ 'pl-2': creativeMode && showSceneView, 'd-none': creativeMode && !showSceneView, 'scene-backdrop-active': !!sceneBackdropSrc, 'playthrough-active': playthroughActive }" :style="sceneBackdropStyle">
-                <div class="scene-column" style="display: flex; flex-direction: column; height: 100%">
+            <!-- hidden with the tab change itself: the window item stays laid out
+                 for the frames its leave transition takes -->
+            <div v-show="tab === 'main'" ref="sceneScroller" class="scene-scroller">
+              <v-row no-gutters class="position-relative">
+                <v-col ref="nodeEditorContainer" v-resize="onNodeEditorContainerResize" :xl="creativeMode ? (showSceneView ? 8 : 12) : 0" :cols="creativeMode ? (showSceneView ? 6 : 12) : 0" :class="{ 'd-none': !creativeMode }" class="position-relative">
+                    <NodeEditor
+                      :scene="scene"
+                      :busy="busy"
+                      :app-config="appConfig"
+                      :templates="worldStateTemplates"
+                      :is-visible="creativeMode"
+                      :scene-view-visible="showSceneView"
+                      @toggle-scene-view="toggleSceneView"
+                      ref="nodeEditor"
+                      v-if="sceneActive && scene.environment === 'creative'"
+                    >
+                    </NodeEditor>  
+                </v-col>
+                <v-col :cols="creativeMode ? (showSceneView ? 6 : 0) : 12"  :xl="creativeMode ? (showSceneView ? 4 : 12) : 12" :class="{ 'pl-2': creativeMode && showSceneView, 'd-none': creativeMode && !showSceneView, 'scene-backdrop-active': !!sceneBackdropSrc, 'playthrough-active': playthroughActive }" :style="sceneBackdropStyle">
+                  <div class="scene-column" style="display: flex; flex-direction: column; height: 100%">
 
-                  <SceneHeader
-                    v-if="sceneHeaderVisible"
-                    :scene="scene"
-                    :agent-status="agentStatus"
-                    :templates="worldStateTemplates"
-                    :settings="appConfig.game.scene_header"
-                    :over-backdrop="!!sceneBackdropSrc"
-                    :title-only="playthroughActive"
-                    :perspective-character="playthroughActive ? null : perspectiveCharacter"
-                    @close-perspective="perspectiveCharacter = null"
-                  />
+                    <SceneHeader
+                      v-if="sceneHeaderVisible"
+                      :scene="scene"
+                      :agent-status="agentStatus"
+                      :templates="worldStateTemplates"
+                      :settings="appConfig.game.scene_header"
+                      :over-backdrop="!!sceneBackdropSrc"
+                      :title-only="playthroughActive"
+                      :perspective-character="playthroughActive ? null : perspectiveCharacter"
+                      @close-perspective="perspectiveCharacter = null"
+                    />
 
-                  <div class="scene-container">
+                    <div class="scene-container">
 
-                    <div v-if="sceneActive && scene.environment === 'creative' && !scene.data.intro">
-                      <v-alert color="muted" class="mb-2" variant="text">
-                        <v-alert-title>New Scene</v-alert-title>
-                        You're editing a new scene. Select the <v-btn @click="onOpenWorldStateManager('scene')" variant="text" size="small" color="primary" prepend-icon="mdi-earth-box">World Editor</v-btn> to add characters and scene details. You are currently operating in the creative environment. Once you have added at least one player character you may switch back and forth between creative and gameplay mode at any point using the <v-icon color="primary" size="small">mdi-gamepad-square</v-icon> button at the bottom.
-                        <p class="mt-4">
-                          You can still use the world editor while in gameplay mode as well.
-                        </p>
-                      </v-alert>
+                      <div v-if="sceneActive && scene.environment === 'creative' && !scene.data.intro">
+                        <v-alert color="muted" class="mb-2" variant="text">
+                          <v-alert-title>New Scene</v-alert-title>
+                          You're editing a new scene. Select the <v-btn @click="onOpenWorldStateManager('scene')" variant="text" size="small" color="primary" prepend-icon="mdi-earth-box">World Editor</v-btn> to add characters and scene details. You are currently operating in the creative environment. Once you have added at least one player character you may switch back and forth between creative and gameplay mode at any point using the <v-icon color="primary" size="small">mdi-gamepad-square</v-icon> button at the bottom.
+                          <p class="mt-4">
+                            You can still use the world editor while in gameplay mode as well.
+                          </p>
+                        </v-alert>
+                      </div>
+
+                      <div v-show="showSceneView" class="scene-view">
+                        <SceneMessages
+                          ref="sceneMessages"
+                          :appearance-config="effectiveAppearanceConfig"
+                          :theme-colors="effectiveThemeColors"
+                          :ux-locked="uxLocked"
+                          :app-busy="busy"
+                          :agent-status="agentStatus"
+                          :audio-played-for-message-id="audioPlayedForMessageId"
+                          :scene="scene"
+                          :reveal-count="playthroughActive ? playthroughRevealCount : null"
+                          :perspective-character="playthroughActive ? null : perspectiveCharacter"
+                          @messages-changed="onSceneMessagesChanged"
+                          @playthrough-advance="advancePlaythrough"
+                          @cancel-audio-queue="onCancelAudioQueue"
+                          @configure-entity-highlights="onConfigureEntityHighlights"
+                          @scene-backdrop="sceneBackdropSrc = $event"
+                          @scene-backdrop-candidate="sceneBackdropCandidate = $event"
+                        />
+                      </div>
+
+                      <div ref="sceneToolsContainer" class="scene-controls" :class="{ 'scene-controls--locked': uxInteractionActive }">
+                        <AgentActivityBar v-if="appConfig?.game?.general?.show_agent_activity_bar !== false" :agent-status="agentStatus" />
+                        <PlaythroughTools
+                          v-if="playthroughActive"
+                          :message-count="playthroughMessageCount"
+                          :reveal-count="playthroughRevealCount"
+                          :chapters="playthroughChapters"
+                          :auto-advance="playthroughAutoAdvance"
+                          :narration="playthroughNarration"
+                          :tts-available="playthroughTtsReady"
+                          :busy="busy"
+                          :fork-target="playthroughForkTarget()"
+                          :scene-rev="scene.data?.rev || 0"
+                          :shared-context="!!scene.data?.shared_context"
+                          :immutable-save="!!scene.data?.immutable_save"
+                          :fork-pending="!!playthroughForkRequestId"
+                          :fork-error="playthroughForkError"
+                          @advance="advancePlaythrough"
+                          @toggle-narration="togglePlaythroughNarration"
+                          @jump="jumpPlaythrough"
+                          @fork="forkPlaythrough"
+                          @fork-prompt="promptPlaythroughFork"
+                          @fork-cancelled="cancelPlaythroughFork"
+                          @restart="restartPlaythrough"
+                          @toggle-auto-advance="togglePlaythroughAutoAdvance"
+                          @exit="stopPlaythrough" />
+                        <template v-else>
+                        <GameStateControls :scene="scene" :disabled="busy || !ready" />
+                        <SceneTools 
+                          @open-world-state-manager="onOpenWorldStateManager"
+                          @open-agent-messages="onOpenAgentMessages"
+                          @cancel-audio-queue="onCancelAudioQueue"
+                          :messageInput="messageInput"
+                          :agent-status="agentStatus"
+                          :app-busy="busy"
+                          :app-ready="ready"
+                          :worldStateTemplates="worldStateTemplates"
+                          :playerCharacterName="getPlayerCharacterName()"
+                          :passiveCharacters="passiveCharacters"
+                          :inactiveCharacters="inactiveCharacters"
+                          :scene="scene"
+                          :activeCharacters="activeCharacters"
+                          :visual-agent-ready="visualAgentReady"
+                          :scene-backdrop-candidate="sceneBackdropCandidate"
+                          :audioPlayedForMessageId="audioPlayedForMessageId"
+                          v-model:perspective-character="perspectiveCharacter" />
+                        <SceneMessageInput
+                          ref="sceneMessageInput"
+                          v-model="messageInput"
+                          v-model:act-as="actAs"
+                          :busy="busy"
+                          :ready="ready"
+                          :ux-interaction-active="uxInteractionActive"
+                          :input-disabled="isInputDisabled()"
+                          :waiting-for-input="waitingForInput"
+                          :input-request-info="inputRequestInfo"
+                          :scene-active="sceneActive"
+                          :scene-environment="scene.environment"
+                          :character-colors="scene.data?.character_colors"
+                          :player-character-name="getPlayerCharacterName()"
+                          :active-characters="activeCharacters"
+                          :direction-available="directionAvailable"
+                          @send="onInputSend"
+                          @autocomplete-start="onAutocompleteStart"
+                          @autocomplete-end="onAutocompleteEnd" />
+                        </template>
+                      </div>
                     </div>
 
-                    <div v-show="showSceneView" class="scene-view">
-                      <SceneMessages
-                        ref="sceneMessages"
-                        :appearance-config="effectiveAppearanceConfig"
-                        :theme-colors="effectiveThemeColors"
-                        :ux-locked="uxLocked"
-                        :app-busy="busy"
-                        :agent-status="agentStatus"
-                        :audio-played-for-message-id="audioPlayedForMessageId"
-                        :scene="scene"
-                        :reveal-count="playthroughActive ? playthroughRevealCount : null"
-                        :perspective-character="playthroughActive ? null : perspectiveCharacter"
-                        @messages-changed="onSceneMessagesChanged"
-                        @playthrough-advance="advancePlaythrough"
-                        @cancel-audio-queue="onCancelAudioQueue"
-                        @configure-entity-highlights="onConfigureEntityHighlights"
-                        @scene-backdrop="sceneBackdropSrc = $event"
-                        @scene-backdrop-candidate="sceneBackdropCandidate = $event"
-                      />
-                    </div>
-
-                    <div ref="sceneToolsContainer" class="scene-controls" :class="{ 'scene-controls--locked': uxInteractionActive }">
-                      <AgentActivityBar v-if="appConfig?.game?.general?.show_agent_activity_bar !== false" :agent-status="agentStatus" />
-                      <PlaythroughTools
-                        v-if="playthroughActive"
-                        :message-count="playthroughMessageCount"
-                        :reveal-count="playthroughRevealCount"
-                        :chapters="playthroughChapters"
-                        :auto-advance="playthroughAutoAdvance"
-                        :narration="playthroughNarration"
-                        :tts-available="playthroughTtsReady"
-                        :busy="busy"
-                        :fork-target="playthroughForkTarget()"
-                        :scene-rev="scene.data?.rev || 0"
-                        :shared-context="!!scene.data?.shared_context"
-                        :immutable-save="!!scene.data?.immutable_save"
-                        :fork-pending="!!playthroughForkRequestId"
-                        :fork-error="playthroughForkError"
-                        @advance="advancePlaythrough"
-                        @toggle-narration="togglePlaythroughNarration"
-                        @jump="jumpPlaythrough"
-                        @fork="forkPlaythrough"
-                        @fork-prompt="promptPlaythroughFork"
-                        @fork-cancelled="cancelPlaythroughFork"
-                        @restart="restartPlaythrough"
-                        @toggle-auto-advance="togglePlaythroughAutoAdvance"
-                        @exit="stopPlaythrough" />
-                      <template v-else>
-                      <GameStateControls :scene="scene" :disabled="busy || !ready" />
-                      <SceneTools 
-                        @open-world-state-manager="onOpenWorldStateManager"
-                        @open-agent-messages="onOpenAgentMessages"
-                        @cancel-audio-queue="onCancelAudioQueue"
-                        :messageInput="messageInput"
-                        :agent-status="agentStatus"
-                        :app-busy="busy"
-                        :app-ready="ready"
-                        :worldStateTemplates="worldStateTemplates"
-                        :playerCharacterName="getPlayerCharacterName()"
-                        :passiveCharacters="passiveCharacters"
-                        :inactiveCharacters="inactiveCharacters"
-                        :scene="scene"
-                        :activeCharacters="activeCharacters"
-                        :visual-agent-ready="visualAgentReady"
-                        :scene-backdrop-candidate="sceneBackdropCandidate"
-                        :audioPlayedForMessageId="audioPlayedForMessageId"
-                        v-model:perspective-character="perspectiveCharacter" />
-                      <SceneMessageInput
-                        ref="sceneMessageInput"
-                        v-model="messageInput"
-                        v-model:act-as="actAs"
-                        :busy="busy"
-                        :ready="ready"
-                        :ux-interaction-active="uxInteractionActive"
-                        :input-disabled="isInputDisabled()"
-                        :waiting-for-input="waitingForInput"
-                        :input-request-info="inputRequestInfo"
-                        :scene-active="sceneActive"
-                        :scene-environment="scene.environment"
-                        :character-colors="scene.data?.character_colors"
-                        :player-character-name="getPlayerCharacterName()"
-                        :active-characters="activeCharacters"
-                        :direction-available="directionAvailable"
-                        @send="onInputSend"
-                        @autocomplete-start="onAutocompleteStart"
-                        @autocomplete-end="onAutocompleteEnd" />
-                      </template>
-                    </div>
                   </div>
-
-                </div>
     
                 
-              </v-col>
-            </v-row>
-
-
-
-
+                </v-col>
+              </v-row>
+            </div>
           </v-tabs-window-item>
           <!-- WORLD -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
@@ -566,6 +566,7 @@ import { createConfigSaveQueue } from '../utils/configSaveQueue.js';
 import { applyAppConfigTheme } from '../utils/appTheme.js';
 import { buildNameKeyedPayload, hasOwnName } from '../utils/nameKeyedMap.js';
 import { pinnedPanelClient } from '../utils/inferencePresets.js';
+import { forwardsScrollKey, forwardsWheel, offsetAtBottom, scrollByKey, scrollByWheel, setBottomOffset } from '../utils/sceneScroll.js';
 
 export default {
   components: {
@@ -631,12 +632,7 @@ export default {
           title: () => { return 'Story' },
           condition: () => { return this.sceneActive },
           icon: () => { return 'mdi-script' },
-          click: () => {
-            // on next tick, scroll to the bottom of the message list
-            this.$nextTick(() => {
-              this.$refs.sceneMessageInput?.scrollIntoView(false);
-            });
-          },
+          click: () => this.onStoryTabClick(),
           value: 'main'
         },
         { 
@@ -765,7 +761,9 @@ export default {
       templatesSelectedGroups: [],
       templatesSelected: null,
       pendingTemplateSelection: null,
-      mainTabScrollPosition: null,
+      // distance from the bottom of the story when it was left at the bottom,
+      // null when it was left anywhere else
+      sceneBottomOffset: null,
       // Scene assets requester (initialized when websocket is available)
       _sceneAssetsRequester: null,
       // Track active UX interaction IDs (for disabling scene controls during UX interactions)
@@ -841,26 +839,16 @@ export default {
           });
         }
 
-        // Save scroll position when leaving main tab
-        if(oldTab === 'main' && this.sceneActive) {
-          this.mainTabScrollPosition = window.scrollY;
+        if(oldTab === 'main') {
+          this.rememberSceneBottom();
         }
-        
-        // Restore scroll position when entering main tab
+
+        document.documentElement.classList.toggle('story-shown', newTab === 'main');
+
         if(newTab === 'main') {
           this.$nextTick(() => {
             debounce(this.onNodeEditorContainerResize, 250)();
-            if(this.sceneActive) {
-              setTimeout(() => {
-                if(this.mainTabScrollPosition !== null) {
-                  // Restore saved scroll position
-                  window.scrollTo({ top: this.mainTabScrollPosition, behavior: 'smooth' });
-                } else if(this.$refs.sceneMessageInput) {
-                  // No saved position, scroll input field into view
-                  this.$refs.sceneMessageInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-              }, 100);
-            }
+            this.followSceneBottom();
           });
         }
       }
@@ -1073,8 +1061,15 @@ export default {
   mounted() {
     this.connect();
     this.favicon = document.querySelector('link[rel="icon"]');
+    document.addEventListener('keydown', this.onDocumentKeydown);
+    document.addEventListener('mousedown', this.onDocumentMousedown, true);
+    document.addEventListener('wheel', this.onDocumentWheel, { passive: true });
   },
   beforeUnmount() {
+    document.documentElement.classList.remove('story-shown');
+    document.removeEventListener('keydown', this.onDocumentKeydown);
+    document.removeEventListener('mousedown', this.onDocumentMousedown, true);
+    document.removeEventListener('wheel', this.onDocumentWheel, { passive: true });
     // Cleanup scene assets requester (flushes any pending requests)
     if (this._sceneAssetsRequester) {
       this._sceneAssetsRequester.cleanup({ flush: true });
@@ -1101,6 +1096,7 @@ export default {
       isWaitingForInput: () => this.waitingForInput,
       setWaitingForInput: (waiting) => this.waitingForInput = waiting,
       isConnected: () => this.connected,
+      sceneScroller: () => this.$refs.sceneScroller,
       isPlaythroughActive: () => this.playthroughActive,
       startPlaythrough: () => this.startPlaythrough(),
       stopPlaythrough: () => this.stopPlaythrough(),
@@ -1377,7 +1373,6 @@ export default {
           this.setPlaythroughActive(false);
           this.actAs = null;
           this.showSceneView = true;
-          this.mainTabScrollPosition = null; // Reset scroll position memory for new scene
           this.newSceneNavigationPending = true; // Allow one-time new-scene navigation on next scene_status
           this.clearUxInteractions(); // Clear any active UX interactions when loading a new scene
           this.clearPrompts(); // Clear prompts when loading a new scene
@@ -1387,6 +1382,7 @@ export default {
           this.requestPromptOverrideCheck();
           this.$nextTick(() => {
             this.tab = 'main';
+            this.scrollInputIntoView();
             debounce(this.onNodeEditorContainerResize, 500)();
           });
         } else if(data.id === 'scene.load_failure' || data.id === 'scene.closed') {
@@ -1666,6 +1662,52 @@ export default {
       this.websocket.send(JSON.stringify({ type: 'interact', text, act_as: actAs }));
       this.inputDisabled = true;
       this.waitingForInput = false;
+    },
+
+    // Runs while the story is still shown: a hidden scroller reads 0.
+    rememberSceneBottom() {
+      this.sceneBottomOffset = offsetAtBottom(this.$refs.sceneScroller);
+    },
+
+    // Runs before the browser paints the story again.
+    followSceneBottom() {
+      if(this.sceneBottomOffset !== null) {
+        setBottomOffset(this.$refs.sceneScroller, this.sceneBottomOffset);
+      }
+      this.sceneBottomOffset = null;
+    },
+
+    onDocumentMousedown(event) {
+      this._lastPressed = event.target;
+    },
+
+    onDocumentKeydown(event) {
+      const scroller = this.$refs.sceneScroller;
+      const options = { spaceTaken: this.playthroughTakesSpace, pressed: this._lastPressed };
+      if(this.tab !== 'main' || !forwardsScrollKey(event, scroller, options)) {
+        return;
+      }
+      event.preventDefault();
+      scrollByKey(scroller, event);
+    },
+
+    onDocumentWheel(event) {
+      const scroller = this.$refs.sceneScroller;
+      if(this.tab === 'main' && forwardsWheel(event, scroller)) {
+        scrollByWheel(scroller, event);
+      }
+    },
+
+    onStoryTabClick() {
+      // committedTab still holds the tab the click came from: a click while on
+      // the story jumps to the newest message, a click from another tab keeps
+      // the story where it was left
+      if(this.committedTab !== 'main') {
+        return;
+      }
+      this.$nextTick(() => {
+        this.$refs.sceneMessageInput?.scrollIntoView(false);
+      });
     },
 
     scrollInputIntoView() {
@@ -2151,7 +2193,6 @@ export default {
       // scene it belongs to; a sender that forgets loses it, and `scene.loaded`
       // then ends the mode without one.
       this.stopPlaythrough();
-      this.mainTabScrollPosition = null; // Reset scroll position memory when starting to load a new scene
 
       if(this.$refs.sceneMessages)
         this.$refs.sceneMessages.clear();
@@ -2272,6 +2313,38 @@ export default {
   scrollbar-gutter: stable;
 }
 
+/* fixed over v-main via the layout offsets: an in-flow scroller shifts during
+   the window item's leave frames */
+.scene-scroller {
+  position: fixed;
+  top: var(--v-layout-top);
+  left: var(--v-layout-left);
+  right: var(--v-layout-right);
+  bottom: var(--v-layout-bottom);
+  overflow-y: auto;
+  /* a story keeps its track before it overflows, so its text does not reflow
+     when it first does */
+  scrollbar-gutter: stable;
+  /* covers the tab being left while it stays in the page */
+  z-index: 1;
+  background-color: rgb(var(--v-theme-background));
+  transition-property: left, right;
+  transition-duration: 0.2s;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-scroller {
+    transition: none;
+  }
+}
+
+/* the v-container's padding, on the content rather than the scroller: a
+   scroller's padding would hold the sticky header and toolbar off its edges */
+.scene-scroller > .v-row {
+  padding: 16px;
+}
+
 .scene-container {
   flex-shrink: 0;
   max-width: 1600px;
@@ -2310,7 +2383,7 @@ export default {
    reveal would otherwise leave the toolbar halfway up the column. The message
    list grows and the tools/input hug the bottom of the screen.
    --v-layout-top is set by vuetify on v-main (app bar offset); the 32px
-   accounts for the v-container's vertical padding. */
+   accounts for the vertical padding around the scene. */
 .scene-backdrop-active .scene-column,
 .playthrough-active .scene-column {
   min-height: calc(100dvh - var(--v-layout-top, 64px) - 32px);
@@ -2331,19 +2404,16 @@ export default {
   min-height: 0;
 }
 
-/* A sticky toolbar sticks inside the nearest scrolling ancestor, and these two
-   are scroll containers that never scroll - so it would not stick to the screen
-   at all. The base .scene-container rule sets overflow-x, which alone makes an
-   element a scrollport; the tabs window (vuetify's .v-window root) clips for
-   tab transitions, which are turned off here. */
-.playthrough-active .scene-container,
-.scene-scrollport {
+/* A sticky toolbar sticks inside the nearest scrolling ancestor, and this is a
+   scroll container that never scrolls - so it would not stick to the screen at
+   all. The base .scene-container rule sets overflow-x, which alone makes an
+   element a scrollport. */
+.playthrough-active .scene-container {
   overflow: visible;
 }
 
-/* the page scrolls in playthrough as it does in normal mode; the toolbar stays
-   at the foot of the screen so the scrubber does not walk out from under the
-   cursor mid-drag */
+/* the toolbar stays at the foot of the screen so the scrubber does not walk
+   out from under the cursor mid-drag */
 .playthrough-active .scene-controls {
   position: sticky;
   bottom: 0;
@@ -2365,6 +2435,19 @@ export default {
 </style>
 
 <style>
+/* The page keeps the scrollbar track vuetify's reset reserves on every tab, so
+   the app bar and drawers keep their width across tab switches; while the
+   story (which has its own scroller) is shown, that empty track is painted as
+   background. body takes the colour back, so no scroller inside inherits it. */
+html.story-shown {
+  scrollbar-color: transparent transparent;
+  background-color: rgb(var(--v-theme-background));
+}
+
+html.story-shown body {
+  scrollbar-color: auto;
+}
+
 /* dialogs opt into this while the help chat drawer is open - shifts them
    left so the drawer stays visible and usable next to them */
 .v-overlay__content.yield-to-help-drawer {

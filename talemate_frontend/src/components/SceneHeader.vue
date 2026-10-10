@@ -178,7 +178,7 @@ export default {
 <style scoped>
 .scene-header-anchor {
     position: sticky;
-    top: var(--v-layout-top, 64px);
+    top: 0;
     z-index: 3;
     max-width: 1600px;
     margin: 0 auto 12px auto;

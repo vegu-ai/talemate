@@ -16,6 +16,7 @@
  *  - `$refs.audioQueue` — `stopAndClear()`, to drop audio the cursor moved on
  *    from
  *  - `agentStatus.tts` — whether there is a voice to narrate with
+ *  - `busy` — the app's busy state, which PlaythroughTools also gets
  *  - `scene.data.playthrough_progress` — the position a previous playthrough
  *    of this scene was left on
  *  - `scrollInputIntoView()` — the app's own "put the input back in view" on
@@ -77,6 +78,12 @@ export default {
     computed: {
         playthroughTtsReady() {
             return !!this.agentStatus.tts?.available;
+        },
+
+        // the gate PlaythroughTools puts on Space before it advances
+        playthroughTakesSpace() {
+            return this.playthroughActive && !this.busy
+                && this.playthroughRevealCount < this.playthroughMessageCount;
         },
     },
 

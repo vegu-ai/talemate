@@ -25,6 +25,7 @@ from .style import StyleMixin
 from .finalize import PromptFinalizationMixin
 from .generation import GenerationMixin
 from .analyze import AnalysisMixin
+from .reference import REFERENCE_TARGETS, ReferenceMixin
 from .backends.comfyui import ComfyUIMixin
 from .backends.automatic1111 import Automatic1111Mixin
 from .backends.google_image import GoogleImageMixin
@@ -57,6 +58,7 @@ class VisualAgent(
     PromptFinalizationMixin,
     GenerationMixin,
     AnalysisMixin,
+    ReferenceMixin,
     ComfyUIMixin,
     Automatic1111Mixin,
     SDNextMixin,
@@ -311,6 +313,11 @@ class VisualAgent(
         # resolved (scene overrides included) — lets the frontend warn when
         # character-level finalizers are edited while the feature is off
         meta["prompt_finalization_enabled"] = self.prompt_finalization_enabled
+
+        meta["reference_targets"] = {
+            str(vis_type): [str(target) for target in targets]
+            for vis_type, targets in REFERENCE_TARGETS.items()
+        }
 
         return meta
 

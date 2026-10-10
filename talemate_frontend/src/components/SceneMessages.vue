@@ -39,6 +39,14 @@
             >
                 <v-list-item-title>Open in Visual Library</v-list-item-title>
             </v-list-item>
+            <v-list-item
+                :disabled="uxLocked || appBusy || revealCount !== null || ['running', 'marked', 'unavailable'].includes(assetMenuReference.status)"
+                prepend-icon="mdi-bookmark-plus-outline"
+                @click="handleMarkAsReference"
+            >
+                <v-list-item-title>Mark as reference</v-list-item-title>
+                <v-list-item-subtitle class="text-wrap">{{ assetMenuReferenceHint }}</v-list-item-subtitle>
+            </v-list-item>
             <v-divider v-if="assetSupportsRegeneration"></v-divider>
             <v-list-item
                 v-if="assetSupportsRegeneration"
@@ -46,7 +54,7 @@
                 prepend-icon="mdi-image-refresh"
                 @click="handleRegenerateIllustration"
             >
-                <v-list-item-title>Regenerate Illustration</v-list-item-title>
+                <v-list-item-title>Regenerate {{ assetMenuNoun }}</v-list-item-title>
                 <v-list-item-subtitle v-if="visualAgentReady">Shift+click</v-list-item-subtitle>
                 <v-list-item-subtitle v-else>Visual agent not ready</v-list-item-subtitle>
             </v-list-item>
@@ -66,7 +74,7 @@
                 prepend-icon="mdi-image-edit"
                 @click="handleOpenRegenerateAssetDialog"
             >
-                <v-list-item-title>Edit Illustration</v-list-item-title>
+                <v-list-item-title>Edit {{ assetMenuNoun }}</v-list-item-title>
                 <v-list-item-subtitle v-if="!visualAgentReady">Visual agent not ready</v-list-item-subtitle>
             </v-list-item>
             <v-list-item
@@ -110,7 +118,7 @@
             </v-list-item>
             <v-divider v-if="assetMenu.context.asset_type === 'scene_illustration'"></v-divider>
             <v-list-item
-                v-if="assetMenu.context.asset_type === 'scene_illustration'"
+                v-if="assetMenu.context.asset_type === 'scene_illustration' && !assetMenu.context.backdrop"
                 prepend-icon="mdi-image-multiple"
                 @click="handleOpenIllustrationSelect"
             >
@@ -121,12 +129,13 @@
             </v-list-item>
             <v-list-item
                 v-if="assetMenu.context.asset_type === 'scene_illustration'"
+                :disabled="assetMenuIsSceneBackdrop"
                 prepend-icon="mdi-image-area"
                 @click="handleSetSceneBackdrop"
             >
                 <v-list-item-title>Set as scene backdrop</v-list-item-title>
                 <v-list-item-subtitle class="text-wrap">
-                    Render this image behind the scene text
+                    {{ assetMenuIsSceneBackdrop ? 'This image is the scene backdrop' : 'Render this image behind the scene text' }}
                 </v-list-item-subtitle>
             </v-list-item>
             <v-divider v-if="assetMenu.context.asset_type === 'card'"></v-divider>
@@ -146,7 +155,7 @@
                     <v-icon color="delete">mdi-image-remove</v-icon>
                 </template>
                 <v-list-item-title>Clear Image</v-list-item-title>
-                <v-list-item-subtitle>Remove image from this message</v-list-item-subtitle>
+                <v-list-item-subtitle>{{ assetMenu.context.backdrop ? 'Remove this backdrop change from the history' : 'Remove image from this message' }}</v-list-item-subtitle>
             </v-list-item>
             <v-list-item @click="handleDeleteImage">
                 <template v-slot:prepend>
@@ -312,13 +321,16 @@
 
     <div class="message-container mb-8" ref="messageContainer" :class="{ 'no-text-shadow': !sceneBackdropTextShadow }" :style="{ '--scene-backdrop-panel-opacity': sceneBackdropPanelOpacity }" style="flex-grow: 1; overflow-y: auto;" @click="onSceneAreaClick" @mouseup="onMessageContainerMouseUp">
         <div v-for="(message, index) in visibleMessages" :key="message.id != null ? `${message.type}-${message.id}` : `idx-${index}`" class="message-wrapper" :class="{ 'message-wrapper--split': perspectiveCharacter }">
-          <div class="message-cell" :class="{ 'message-cell--backdrop': isSceneBackdropMessage(message) }">
+          <div class="message-cell" :class="{ 'message-cell--backdrop': isSceneBackdropMessage(message), 'message-cell--backdrop-status': isSceneBackdropMessage(message) && !!backdropIndicatorReference(message) }">
             <!-- marks the message whose illustration is the active backdrop -->
             <v-tooltip v-if="isSceneBackdropMessage(message)" text="This image is the current scene background" location="left">
                 <template v-slot:activator="{ props }">
                     <v-icon v-bind="props" class="backdrop-indicator" size="small" color="primary" @click.stop="openBackdropIndicatorMenu($event, message)">mdi-image-area</v-icon>
                 </template>
             </v-tooltip>
+            <div v-if="isSceneBackdropMessage(message) && backdropIndicatorReference(message)" class="backdrop-indicator-reference" @click.stop>
+                <ReferenceCandidateControl :state="backdropIndicatorReference(message)" compact :disabled="isFeedLocked()" @use="markAsReference(message.asset_id, message.id)" />
+            </div>
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :data-message-type="message.type" :style="{ borderColor: message.color }">
                 <div class="character-message">
@@ -461,11 +473,13 @@ import { perspectiveForMessage } from '@/utils/messagePerspective';
 import VisualReferenceCarousel from './VisualReferenceCarousel.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import AssetView from './AssetView.vue';
+import ReferenceCandidateControl from './ReferenceCandidateControl.vue';
 import EntityHighlightMixin from './EntityHighlightMixin.js';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import RevisionStackMixin from './RevisionStackMixin.js';
 import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { isVisualAgentReady, VIS_TYPE } from '@/constants/visual';
+import { REFERENCE_DONE_MS, referenceState, referenceStatusVisible, referenceTargets } from '@/utils/referenceCandidate';
 import {
     DELETE_EARLIER_TEXT,
     DELETE_EARLIER_TITLE,
@@ -637,6 +651,7 @@ export default {
         VisualReferenceCarousel,
         ConfirmActionPrompt,
         AssetView,
+        ReferenceCandidateControl,
     },
     emits: ['cancel-audio-queue', 'configure-entity-highlights', 'scene-backdrop', 'scene-backdrop-candidate', 'messages-changed', 'playthrough-advance'],
     data() {
@@ -672,6 +687,8 @@ export default {
             },
             // Track which message IDs are currently processing asset operations
             processingAssetMessageIds: new Set(),
+            // asset id -> latest mark_as_reference_progress frame
+            referenceProgress: {},
             // Context-investigation messages awaiting a freshly requested visual.
             // Drives the toolbar "Visualize" spinner until the asset attaches
             // (message_asset_update) or the visual operation finishes.
@@ -828,6 +845,25 @@ export default {
                 position: 'fixed',
             };
         },
+        assetMenuNoun() {
+            return this.assetMenu.context.backdrop ? 'Background' : 'Illustration';
+        },
+        assetMenuIsSceneBackdrop() {
+            return !!this.assetMenu.context.backdrop && this.assetMenu.context.asset_id === this.sceneBackdropAssetId;
+        },
+        assetMenuReference() {
+            const assetId = this.assetMenu.context.asset_id;
+            const meta = this.assetsMap[assetId]?.meta;
+            return referenceState(meta, this.referenceProgress[assetId], this.referenceTargetsFor(meta?.vis_type));
+        },
+        assetMenuReferenceHint() {
+            const state = this.assetMenuReference;
+            if (state.status === 'running') return state.label;
+            if (state.status === 'marked') return state.warning ? state.tooltip : 'This image is already marked as a reference';
+            if (state.status === 'failed') return state.tooltip;
+            if (state.status === 'unavailable') return state.tooltip;
+            return 'Analyze and tag it for later generations';
+        },
         assetSupportsRegeneration() {
             // Check if the current asset menu context supports regeneration
             const assetType = this.assetMenu.context.asset_type;
@@ -871,6 +907,11 @@ export default {
             // Active backdrop asset id — message components hide the inline
             // image for the asset currently rendered as the backdrop
             getSceneBackdropAssetId: () => this.sceneBackdropAssetId,
+            getReferenceProgress: (assetId) => this.referenceProgress[assetId] || null,
+            getReferenceTargets: this.referenceTargetsFor,
+            getAssetMeta: (assetId) => this.assetsMap[assetId]?.meta || null,
+            isFeedLocked: this.isFeedLocked,
+            markAsReference: this.markAsReference,
         }
     },
     methods: {
@@ -1726,8 +1767,9 @@ export default {
          * scene background becomes a Backdrop entry (or only goes to the
          * library), so its message never gets the update that ends the mark.
          */
-        markAssetProcessing(messageId, assetId = null) {
+        markAssetProcessing(messageId, assetId = null, visType = null) {
             if (!messageId) return;
+            if (visType === VIS_TYPE.SCENE_BACKGROUND) return;
             if (assetId && this.assetsMap[assetId]?.meta?.vis_type === VIS_TYPE.SCENE_BACKGROUND) return;
             this.processingAssetMessageIds.add(messageId);
         },
@@ -1784,6 +1826,63 @@ export default {
                 asset_id: assetId,
                 enabled: true,
             }));
+        },
+
+        referenceTargetsFor(visType) {
+            return referenceTargets(this.agentStatus?.visual?.meta, visType);
+        },
+
+        // messageId names the message whose image started it from the menu
+        markAsReference(assetId, messageId = null) {
+            if (!assetId) return;
+            this.referenceProgress = {
+                ...this.referenceProgress,
+                [assetId]: { asset_id: assetId, step: null, finished: false, errors: [], message_id: messageId },
+            };
+            this.getWebsocket().send(JSON.stringify({
+                type: 'visual',
+                action: 'mark_as_reference',
+                asset_id: assetId,
+            }));
+        },
+
+        applyReferenceFrame(frame) {
+            // a frame from a run started before this scene loaded has no entry
+            const started = this.referenceProgress[frame.asset_id];
+            if (!started) return;
+            this.referenceProgress = {
+                ...this.referenceProgress,
+                [frame.asset_id]: { ...frame, message_id: started.message_id },
+            };
+            if (frame.finished) {
+                setTimeout(() => this.quietReferenceProgress(frame.asset_id), REFERENCE_DONE_MS);
+            }
+        },
+
+        quietReferenceProgress(assetId) {
+            const entry = this.referenceProgress[assetId];
+            if (!entry?.finished) return;
+            this.referenceProgress = { ...this.referenceProgress, [assetId]: { ...entry, quiet: true } };
+        },
+
+        // the status of a run started from the menu of the message whose
+        // illustration is the backdrop, which has no inline image to show it
+        backdropIndicatorReference(message) {
+            const progress = this.referenceProgress[message.asset_id];
+            if (!progress || progress.message_id !== message.id) return null;
+            const meta = this.assetsMap[message.asset_id]?.meta;
+            const state = referenceState(meta, progress, this.referenceTargetsFor(meta?.vis_type));
+            return referenceStatusVisible(state, progress) ? state : null;
+        },
+
+        isFeedLocked() {
+            return this.uxLocked || this.appBusy || this.revealCount !== null;
+        },
+
+        handleMarkAsReference() {
+            this.assetMenu.show = false;
+            const ctx = this.assetMenu.context;
+            this.markAsReference(ctx.asset_id, ctx.backdrop ? null : ctx.message_id);
         },
 
         /**
@@ -1959,12 +2058,12 @@ export default {
             cfg.reset(dialog);
         },
 
-        sendRevisualizeAsset({ assetId, messageId, instructions = null, deleteOld = false }) {
+        sendRevisualizeAsset({ assetId, messageId, instructions = null, deleteOld = false, visType = null }) {
             if (!assetId || !messageId) {
                 return;
             }
 
-            this.markAssetProcessing(messageId, assetId);
+            this.markAssetProcessing(messageId, assetId, visType);
 
             const ws = this.getWebsocket();
             const message = {
@@ -1984,7 +2083,15 @@ export default {
                 message.instructions = instructions;
             }
 
+            if (visType) {
+                message.vis_type = visType;
+            }
+
             ws.send(JSON.stringify(message));
+        },
+
+        assetMenuVisType() {
+            return this.assetMenu.context.backdrop ? VIS_TYPE.SCENE_BACKGROUND : null;
         },
 
         openRevisualizeInstructionsDialog({ deleteOld = false } = {}) {
@@ -2002,6 +2109,7 @@ export default {
                     asset_id: ctx.asset_id,
                     message_id: ctx.message_id,
                     deleteOld: deleteOld,
+                    visType: this.assetMenuVisType(),
                 });
             }
         },
@@ -2031,6 +2139,7 @@ export default {
                 assetId: ctx.asset_id,
                 messageId: ctx.message_id,
                 deleteOld: false,
+                visType: this.assetMenuVisType(),
             });
         },
 
@@ -2049,6 +2158,7 @@ export default {
                 assetId: ctx.asset_id,
                 messageId: ctx.message_id,
                 deleteOld: true,
+                visType: this.assetMenuVisType(),
             });
         },
 
@@ -2078,6 +2188,7 @@ export default {
                 messageId: params.message_id,
                 instructions: instructions,
                 deleteOld: !!params.deleteOld,
+                visType: params.visType || null,
             });
         },
 
@@ -2152,6 +2263,12 @@ export default {
             
             const ctx = this.assetMenu.context;
             if (!ctx.message_id) {
+                return;
+            }
+
+            // a backdrop entry has no image to clear: the image is the change
+            if (ctx.backdrop) {
+                this.requestDeleteMessage(ctx.message_id);
                 return;
             }
 
@@ -2252,6 +2369,11 @@ export default {
                 && ['scene.loading', 'scene.closed', 'scene.load_failure'].includes(data.id)) {
                 this.resetForkScene();
                 this.resetHistoryPositionRequests();
+                this.referenceProgress = {};
+            }
+            if (data.type === 'visual' && data.action === 'mark_as_reference_progress') {
+                this.applyReferenceFrame(data);
+                return;
             }
             if (this.handleForkSceneMessage(data)) {
                 return;
@@ -2615,6 +2737,15 @@ export default {
         }
     },
     watch: {
+        // a finished frame stands in for the reference mark until the scene
+        // status carrying the asset meta it wrote arrives
+        assetsMap() {
+            for (const [assetId, progress] of Object.entries(this.referenceProgress)) {
+                if (progress.finished && !progress.settled) {
+                    this.referenceProgress[assetId] = { ...progress, settled: true };
+                }
+            }
+        },
         perspectiveCharacter() {
             this.perspectives = null;
             this.requestPerspectives();
@@ -2792,8 +2923,26 @@ export default {
     opacity: 1;
 }
 
+.backdrop-indicator-reference {
+    position: absolute;
+    top: 4px;
+    right: 64px;
+    z-index: 2;
+    display: flex;
+    border-radius: 14px;
+    background: rgba(var(--v-theme-surface), 0.85);
+}
+
+.backdrop-indicator-reference :deep(.reference-control) {
+    margin-left: 0;
+}
+
 .message-cell--backdrop > .message > div > :deep(.v-alert > .v-alert__close) {
     margin-inline-start: 40px;
+}
+
+.message-cell--backdrop-status > .message > div > :deep(.v-alert > .v-alert__close) {
+    margin-inline-start: 72px;
 }
 
 .message {

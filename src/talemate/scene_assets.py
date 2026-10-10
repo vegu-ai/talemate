@@ -304,6 +304,18 @@ class AssetMeta(pydantic.BaseModel):
         self.format = self.determine_format(width, height)
         self.resolution = self.resolution_from_size(width, height)
 
+    def add_tags(self, tags: list[str]):
+        known = {tag.lower() for tag in self.tags}
+        for tag in tags:
+            if tag.lower() not in known:
+                self.tags.append(tag)
+                known.add(tag.lower())
+
+    def add_reference(self, vis_types: list[VIS_TYPE]):
+        self.reference += [
+            vis_type for vis_type in vis_types if vis_type not in self.reference
+        ]
+
 
 class AssetTransfer(pydantic.BaseModel):
     """Describes an asset transfer from another scene."""
@@ -1801,6 +1813,54 @@ class SceneAssets:
         else:
             tail.backdrop = backdrop
             self.scene.emit_history_message(tail)
+
+    async def delete_backdrop_message(
+        self, message: scene_message.SceneBackdropMessage
+    ):
+        """
+        Deletes a backdrop message on the user's request. When it set the
+        current backdrop, the backdrop winds back to the one the remaining
+        history ends with, as a replay of that history would show it.
+        """
+        latest = next(
+            (
+                entry
+                for entry in reversed(self.scene.history)
+                if isinstance(entry, scene_message.SceneBackdropMessage)
+                and not entry.pending
+            ),
+            None,
+        )
+        self.scene.delete_message(message.id)
+        if message is not latest:
+            return
+        restored = self._backdrop_after_rollback(message)
+        if restored is None:
+            await self.set_scene_backdrop(clear=True, record=False)
+        else:
+            await self.set_scene_backdrop(asset_id=restored, record=False)
+
+    def _backdrop_after_rollback(
+        self, deleted: scene_message.SceneBackdropMessage
+    ) -> str | None:
+        """
+        The latest remaining backdrop whose image still exists; a remaining
+        entry that cleared the backdrop ends the search.
+        """
+        remaining = [
+            entry
+            for entry in self.scene.history
+            if isinstance(entry, scene_message.SceneBackdropMessage)
+            and not entry.pending
+        ]
+        candidates = [entry.backdrop for entry in reversed(remaining)]
+        candidates.append(
+            remaining[0].previous_backdrop if remaining else deleted.previous_backdrop
+        )
+        for asset_id in candidates:
+            if asset_id is None or self.validate_asset_id(asset_id):
+                return asset_id
+        return None
 
     async def begin_generated_backdrop(self, ctx: AssetAttachmentContext):
         """

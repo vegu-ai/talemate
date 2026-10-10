@@ -98,6 +98,7 @@ Click on any inline visual to open a context menu with options:
 
 - **View Image**: Open a full-size view of the image (also available with Ctrl+click)
 - **Open in Visual Library**: View and manage the image in the Visual Library
+- **Mark as reference**: Prepare the image as a reference for later generations — see [Mark as reference](#mark-as-reference)
 - **Regenerate Illustration**: Create a new version of the image (Shift+click shortcut)
 - **Regenerate and Delete**: Replace the current image with a new one (Alt+click shortcut)
 - **Edit Illustration**: Regenerate with custom editing instructions
@@ -105,6 +106,28 @@ Click on any inline visual to open a context menu with options:
 - **Set as scene backdrop**: Render this image behind the scene text — see [Scene Backdrop](#scene-backdrop)
 - **Clear Image**: Remove the image from this message (keeps the image in your library)
 - **Delete Image**: Permanently remove the image
+
+### Mark as reference
+
+Most image generation uses only the images marked as references for it: a new background looks for images marked for backgrounds, a new scene illustration for images marked for scene illustrations, and so on. New portraits also fall back to the character's existing portraits, but prefer marked ones. Images the story generated are not marked. **Mark as reference** in an image's menu (and the :material-bookmark-plus-outline: button on a Backdrop entry, shown when you hover over it) prepares the image in one step:
+
+1. If a vision backend is set up for image analysis and the image has no analysis yet, the image is analyzed.
+2. Tags are added from the analysis.
+3. The image is marked as a reference for the kinds of images it can help with, keeping any reference types it already had.
+
+Which kinds those are follows the image's own type. A reference informs character likeness first, then environment, then style, so an image is only marked where what it shows is useful — a portrait never becomes a reference for backgrounds:
+
+| Image type | Marked as a reference for |
+|---|---|
+| Character portrait | character portraits, character cards, scene cards, scene illustrations |
+| Character card | character portraits, character cards, scene cards, scene illustrations |
+| Scene background | scene backgrounds, scene illustrations, character cards |
+| Scene illustration | scene illustrations, scene cards |
+| Scene card | scene cards, scene illustrations |
+| Object illustration | object illustrations, scene illustrations |
+| Unspecified | not offered — give the image a type in the Visual Library first (the Backdrop entry's button stays greyed out and says so) |
+
+An image without an analysis is usually analyzed and tagged in one request; an image that already has one needs one request for its tags. If the response carries no usable keywords, tagging takes one more request, so this can take a moment. While it runs, a Backdrop entry shows each step on its row; an image in a message shows a small spinner in its corner (hover it for the step), or next to the :material-image-area: marker when that image is the current backdrop. When it is done, a Backdrop entry keeps a :material-bookmark-check: marker, an image in a message shows it for a moment, and the menu entry is disabled; to unmark the image, use the Reference tab in the Visual Library. If a step fails, the image is still marked with what already worked, and the marker turns amber and stays: its tooltip, and the menu entry, name the step that failed. If marking itself fails, a :material-alert-circle-outline: button lets you try again. Loading another scene before the action finishes stops it without marking the image. Without a vision backend, an image with no analysis is only marked.
 
 ### Quick Actions
 
@@ -146,6 +169,19 @@ There are several ways to set the backdrop:
 - **By generating a background** — **Visualize Scene (Background)** in the scene tools, **Visualize** on an Add Detail message about a place, or a Director Chat request for a scene background, while **Auto-attach visuals** is on. A **Generating background…** entry appears right away and becomes the backdrop when the image is ready; if the generation fails or is cancelled, the entry goes away
 - **Automatically** — enable **Auto Backdrop** for Scene Illustrations in the [Appearance Settings](app-settings/appearance.md#visuals); newly generated illustrations then become the backdrop as they arrive
 - **As the story moves** — enable [Scene Backgrounds](agents/world-state/settings.md#scene-backgrounds) in the World State agent settings; the agent picks or generates a background that fits the current place and time of day
+
+### Backdrop entries
+
+Click the image of a Backdrop entry (the preview in Immersive mode, or the image in the story while Immersive is off) to open its image menu. It offers the actions that make sense for a background:
+
+- **View Image** (also Ctrl+click) and **Open in Visual Library**
+- **Regenerate Background** and **Edit Background**: the new image is always made as a scene background, even when the entry shows a scene illustration, and arrives as a new Backdrop entry at the end of the story
+- **Set as scene backdrop**: makes an older entry's image the backdrop again
+- **Mark as reference**: also a :material-bookmark-plus-outline: button on the entry itself — see [Mark as reference](#mark-as-reference)
+- **Clear Image**: removes the backdrop change, the same as the entry's :material-close: button
+- **Delete Image**: permanently removes the image
+
+Removing the entry that set the current backdrop winds the backdrop back. Say the harbour scene changed to a stormy night and you remove that entry: the backdrop returns to the harbour at dusk from the entry before it, or to no backdrop when there was none. If that earlier image was deleted from the Visual Library, the backdrop goes back to the last earlier image that still exists. Removing an older entry leaves the current backdrop alone.
 
 ### The Immersive toggle
 

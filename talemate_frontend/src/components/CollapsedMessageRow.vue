@@ -23,6 +23,7 @@
                     </v-chip>
                 </template>
             </v-tooltip>
+            <slot name="actions" />
             <MessageCloseButton
                 v-if="removable"
                 class="collapsed-row__remove"
@@ -132,6 +133,24 @@ export default {
 
 .collapsed-row .collapsed-row__remove.message-close-button.v-btn:hover,
 .collapsed-row .collapsed-row__remove.message-close-button.v-btn:focus-visible {
+    opacity: 1;
+}
+</style>
+
+<style>
+/* actions-slot control shown only while the row is hovered or focused */
+.collapsed-row .collapsed-row__hover-control {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.collapsed-row:hover .collapsed-row__hover-control,
+.collapsed-row:focus-within .collapsed-row__hover-control {
+    opacity: 0.4;
+}
+
+.collapsed-row .collapsed-row__hover-control:hover,
+.collapsed-row .collapsed-row__hover-control:focus-visible {
     opacity: 1;
 }
 </style>

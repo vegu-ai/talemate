@@ -27,6 +27,7 @@ from talemate.agents.visual.schema import (
     AssetAttachmentContext,
     AnalysisRequest,
 )
+from talemate.agents.visual.analyze import DEFAULT_ANALYSIS_PROMPT
 from talemate.context import active_scene
 from talemate.exceptions import ControlFlowException, GenerationCancelled
 from talemate.util.async_tools import bounded_gather
@@ -1091,7 +1092,7 @@ class AnalyzeImages(AgentNode):
             name="prompt",
             type="text",
             description="The prompt to use for image analysis",
-            default="Describe this image in detail. (3 paragraphs max.)",
+            default=DEFAULT_ANALYSIS_PROMPT,
         )
         save = PropertyField(
             name="save",
@@ -1111,9 +1112,7 @@ class AnalyzeImages(AgentNode):
         self.add_input("save", socket_type="bool", optional=True)
 
         self.set_property("missing_only", True)
-        self.set_property(
-            "prompt", "Describe this image in detail. (3 paragraphs max.)"
-        )
+        self.set_property("prompt", DEFAULT_ANALYSIS_PROMPT)
         self.set_property("save", True)
 
         self.add_output("state")
@@ -1212,5 +1211,60 @@ class AnalyzeImages(AgentNode):
                 "analyzed_ids": analyzed_ids,
                 "skipped_ids": skipped_ids,
                 "failed_ids": failed_ids,
+            }
+        )
+
+
+@register("agents/visual/MarkAsReference")
+class MarkAsReference(AgentNode):
+    """
+    Prepares an image as a reference candidate for later generations:
+    analyses it when a vision backend is available and it has no analysis
+    yet, tags it from its analysis, and marks it as a reference for the
+    generation types its own type can serve (a portrait for portraits, cards,
+    scene cards and scene illustrations, a background for backgrounds, scene
+    illustrations and character cards). A failed step does not stop the
+    next. An image without a type is not marked; `errors` says so.
+
+    Inputs:
+    - state: graph state (required)
+    - asset_id: the image to prepare
+
+    Outputs:
+    - state: graph state (passed through)
+    - asset_id: the image (passed through)
+    - marked: whether the image is now marked as a reference
+    - analyzed: whether an analysis was added
+    - tagged: whether tags were added
+    - errors: the failed steps, each as a dict with step and message
+    """
+
+    _agent_name: ClassVar[str] = "visual"
+
+    def __init__(self, title="Mark As Reference", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("asset_id", socket_type="str")
+
+        self.add_output("state")
+        self.add_output("asset_id", socket_type="str")
+        self.add_output("marked", socket_type="bool")
+        self.add_output("analyzed", socket_type="bool")
+        self.add_output("tagged", socket_type="bool")
+        self.add_output("errors", socket_type="list")
+
+    async def run(self, state: GraphState):
+        asset_id = self.require_input("asset_id")
+        progress = await self.agent.mark_as_reference(asset_id)
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "asset_id": asset_id,
+                "marked": progress.marked,
+                "analyzed": progress.analyzed,
+                "tagged": progress.tagged,
+                "errors": [error.model_dump() for error in progress.errors],
             }
         )

@@ -13,14 +13,28 @@
         :locked="locked"
         @toggle="toggle"
         @remove="remove">
-        <div v-if="expanded && previewable && thumbnail" class="backdrop-details">
-            <v-img :src="thumbnail" :aspect-ratio="16 / 9" max-width="280" cover rounded="lg" />
+        <template v-if="referenceable" #actions>
+            <ReferenceCandidateControl
+                :state="referenceState"
+                :disabled="locked"
+                idle-class="collapsed-row__hover-control"
+                @use="markAsReference(message.backdrop)" />
+        </template>
+        <div v-if="expanded && previewable" class="backdrop-details">
+            <MessageAssetImage
+                :asset_id="message.backdrop"
+                asset_type="scene_illustration"
+                :size="280"
+                :message_id="message.id"
+                backdrop />
         </div>
         <div v-if="showsInline" class="backdrop-inline">
             <MessageAssetImage
                 :asset_id="message.backdrop"
                 asset_type="scene_illustration"
-                :display_size="displaySize" />
+                :display_size="displaySize"
+                :message_id="message.id"
+                backdrop />
         </div>
     </CollapsedMessageRow>
 </template>
@@ -28,9 +42,11 @@
 <script>
 import MessageAssetImage from './MessageAssetImage.vue';
 import CollapsedMessageRow from './CollapsedMessageRow.vue';
+import ReferenceCandidateControl from './ReferenceCandidateControl.vue';
+import { referenceState } from '@/utils/referenceCandidate';
 
 export default {
-    components: { MessageAssetImage, CollapsedMessageRow },
+    components: { MessageAssetImage, CollapsedMessageRow, ReferenceCandidateControl },
     props: {
         message: { type: Object, required: true },
         // the backdrop's Visual Library entry; null once the image was removed
@@ -42,7 +58,7 @@ export default {
         showImage: { type: Boolean, default: true },
         locked: Boolean,
     },
-    inject: ['requestDeleteMessage', 'getAssetFromCache', 'requestSceneAssets'],
+    inject: ['requestDeleteMessage', 'getReferenceProgress', 'getReferenceTargets', 'markAsReference'],
     data() {
         return {
             expanded: false,
@@ -72,18 +88,20 @@ export default {
             }
             return 'The scene backdrop changed here. Replay shows this backdrop from this point on. Click to preview.';
         },
-        thumbnail() {
-            const asset = this.message.backdrop ? this.getAssetFromCache(this.message.backdrop) : null;
-            return asset ? `data:${asset.mediaType};base64,${asset.base64}` : null;
+        referenceTargets() {
+            return this.getReferenceTargets(this.asset?.meta?.vis_type);
+        },
+        referenceable() {
+            return this.hasImage && !!this.asset;
+        },
+        referenceState() {
+            return referenceState(this.asset?.meta, this.getReferenceProgress(this.message.backdrop), this.referenceTargets);
         },
     },
     methods: {
         toggle() {
             if (!this.previewable) return;
             this.expanded = !this.expanded;
-            if (this.expanded && !this.thumbnail) {
-                this.requestSceneAssets([this.message.backdrop]);
-            }
         },
         remove() {
             this.requestDeleteMessage(this.message.id);
@@ -93,6 +111,6 @@ export default {
 </script>
 
 <style scoped>
-.backdrop-details { margin: 6px 16px 0 28px; }
+.backdrop-details { margin: 6px 16px 0 28px; display: flow-root; }
 .backdrop-inline { padding: 8px 16px 0; overflow: hidden; }
 </style>

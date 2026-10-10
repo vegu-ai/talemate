@@ -447,6 +447,7 @@ class AnalysisRequest(pydantic.BaseModel):
     id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
     asset_id: str
     save: bool = False
+    generate_tags: bool = False
 
     @property
     def reference_bytes(self) -> list[bytes]:
@@ -459,6 +460,7 @@ class AnalysisRequest(pydantic.BaseModel):
 
 class AnalysisResponse(pydantic.BaseModel):
     analysis: str | None = None
+    tags: list[str] = pydantic.Field(default_factory=list)
     request: AnalysisRequest | None = None
     id: str | None = None
     backend_name: str | None = None

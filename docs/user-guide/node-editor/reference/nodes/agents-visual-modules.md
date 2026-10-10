@@ -190,6 +190,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/visual/modu
 | `asset_ctx` | `asset_attachment_context` | (optional) |
 | `instructions` | `str` | (optional) |
 | `callback` | `function` | (optional) |
+| `vis_type` | `str` | (optional) |
 
 **Outputs**
 

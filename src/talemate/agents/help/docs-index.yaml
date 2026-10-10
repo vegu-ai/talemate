@@ -631,10 +631,10 @@
     a fresh premise.
 - path: user-guide/inline-visuals.md
   title: Inline Visuals
-  summary: Generate and manage inline scene illustrations, backgrounds, cards and character portraits, including Visualize
-    on context-investigation messages and image click shortcuts. Covers auto-attachment, render cadence/size, Scene Backdrop,
-    Auto Backdrop and the Immersive toggle. Backdrop entries record each backdrop change; Scene Backgrounds set it as the
-    story moves.
+  summary: Generate and manage inline scene illustrations, backgrounds, cards and character portraits; Visualize on
+    context-investigation messages and image click shortcuts. Covers auto-attachment, render cadence/size, Scene Backdrop,
+    Auto Backdrop and Immersive toggle. Mark images as references; Backdrop entries record each backdrop change; Scene
+    Backgrounds set it as the story moves.
 - path: user-guide/integrations/runpod.md
   title: Runpod
   summary: 'Legacy RunPod integration guide for remotely hosted Text-Generation-WebUI: API keys, Community/Secure Cloud, storage,
@@ -803,7 +803,8 @@
   title: Visualizer Agent Prompt Nodes
   summary: Visualizer prompt node reference for Prompt/Prompt Part, Apply Style versus configured Apply Styles, Finalize Prompt,
     enums and unpacking positive/negative strings. Covers keyword/descriptive formats, implied negatives, character finalizers,
-    required state gating and UNSPECIFIED style behavior. Generation Running checks a generation purpose.
+    required state gating and UNSPECIFIED style behavior. Generation Running checks a generation purpose; Mark As Reference
+    marks an image as a reference.
 - path: user-guide/node-editor/reference/nodes/agents-world-state.md
   title: World State Agent Nodes
   summary: World-state node reference for time advancement/chapter titles, character progression suggestions, presence checks,

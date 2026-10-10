@@ -86,3 +86,56 @@ async def test_revisualize_without_a_passage_attaches_to_the_latest(scene, monke
     )
 
     assert ctx.message_ids == []
+
+
+async def run_revisualize_to_generation(scene, monkeypatch, data: dict):
+    ensure_registry_loaded()
+    handler = get_node("agents/visual/wshRegenerateVisualAsset")()
+    requests = []
+
+    async def capture(node, state):
+        requests.append(node.get_input_value("generation_request"))
+
+    monkeypatch.setattr(get_node("agents/visual/GenerateImage"), "run", capture)
+    with ActiveScene(scene):
+        await FunctionWrapper(handler, handler, GraphState())(
+            websocket_router=None, data=data
+        )
+    assert len(requests) == 1
+    return requests[0]
+
+
+@pytest.mark.parametrize(
+    "override, vis_type, message_ids",
+    [
+        (None, VIS_TYPE.SCENE_ILLUSTRATION, [7]),
+        ("SCENE_BACKGROUND", VIS_TYPE.SCENE_BACKGROUND, []),
+    ],
+)
+async def test_revisualize_can_generate_as_another_vis_type(
+    scene, monkeypatch, override, vis_type, message_ids
+):
+    scene.assets.save_asset(
+        Asset(
+            id="clicked",
+            file_type="png",
+            media_type="image/png",
+            meta=AssetMeta(
+                vis_type=VIS_TYPE.SCENE_ILLUSTRATION, prompt="harbour at night"
+            ),
+        )
+    )
+
+    request = await run_revisualize_to_generation(
+        scene,
+        monkeypatch,
+        {
+            "asset_id": "clicked",
+            "asset_allow_auto_attach": True,
+            "message_ids": [7],
+            "vis_type": override,
+        },
+    )
+
+    assert request.vis_type == vis_type
+    assert request.asset_attachment_context.message_ids == message_ids

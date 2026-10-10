@@ -446,6 +446,66 @@
       "inherited": false,
       "registry": "state/GetState",
       "base_type": "core/Node"
+    },
+    "b32942d2-f7a7-4d8d-861e-e61df47463cf": {
+      "title": "GET obj.vis_type",
+      "id": "b32942d2-f7a7-4d8d-861e-e61df47463cf",
+      "properties": {
+        "attribute": "vis_type"
+      },
+      "x": 300,
+      "y": 1515,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "a4b30e54-0438-4d1a-83a4-a109c7a9a12e": {
+      "title": "Coallesce",
+      "id": "a4b30e54-0438-4d1a-83a4-a109c7a9a12e",
+      "properties": {},
+      "x": 1360,
+      "y": 1545,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "746e0d19-e833-44fc-9fb4-1a389d19defe": {
+      "title": "SET local.vis_type",
+      "id": "746e0d19-e833-44fc-9fb4-1a389d19defe",
+      "properties": {
+        "name": "vis_type",
+        "scope": "local"
+      },
+      "x": 1910,
+      "y": 1595,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "c501d57a-2b38-434c-af75-0e240264fa59": {
+      "title": "GET local.vis_type",
+      "id": "c501d57a-2b38-434c-af75-0e240264fa59",
+      "properties": {
+        "name": "vis_type",
+        "scope": "local"
+      },
+      "x": 1230,
+      "y": 200,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -513,11 +573,9 @@
     "5de4af69-5181-41ef-a5a8-f61745c252be.meta": [
       "2d67428c-9f21-41fe-bae1-dd1b3f97a4f7.meta"
     ],
-    "2d67428c-9f21-41fe-bae1-dd1b3f97a4f7.vis_type": [
-      "f8b0ccb0-5402-47e5-b119-5f910ac8980a.string"
-    ],
     "aade4e26-aa8e-4dc2-8506-c24e7770862b.object": [
-      "e690cdfb-e2cd-4ba3-a797-206c936ff1bb.object"
+      "e690cdfb-e2cd-4ba3-a797-206c936ff1bb.object",
+      "b32942d2-f7a7-4d8d-861e-e61df47463cf.object"
     ],
     "f8b0ccb0-5402-47e5-b119-5f910ac8980a.result": [
       "5ee36a23-c2f6-4128-bef0-c2c6654e43e0.check"
@@ -536,6 +594,22 @@
     ],
     "fcad2dd8-6e04-4065-9c01-4ff14d7bab9c.value": [
       "16877a6f-303f-4b58-b0c1-ff41fc3cf895.message_ids"
+    ],
+    "b32942d2-f7a7-4d8d-861e-e61df47463cf.value": [
+      "a4b30e54-0438-4d1a-83a4-a109c7a9a12e.a"
+    ],
+    "2d67428c-9f21-41fe-bae1-dd1b3f97a4f7.vis_type": [
+      "a4b30e54-0438-4d1a-83a4-a109c7a9a12e.b"
+    ],
+    "a4b30e54-0438-4d1a-83a4-a109c7a9a12e.value": [
+      "f8b0ccb0-5402-47e5-b119-5f910ac8980a.string",
+      "746e0d19-e833-44fc-9fb4-1a389d19defe.value"
+    ],
+    "746e0d19-e833-44fc-9fb4-1a389d19defe.value": [
+      "17ccf0ec-6854-42aa-b778-498727a62244.state_b"
+    ],
+    "c501d57a-2b38-434c-af75-0e240264fa59.value": [
+      "94bf57a0-7e1b-4272-89f9-9762ea881014.vis_type"
     ]
   },
   "groups": [
@@ -554,7 +628,7 @@
       "x": 2,
       "y": 1265,
       "width": 2393,
-      "height": 380,
+      "height": 480,
       "color": "#b58b2a",
       "font_size": 24,
       "inherited": false

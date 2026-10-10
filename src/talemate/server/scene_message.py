@@ -27,6 +27,7 @@ from talemate.scene_message import (
     VersionSource,
     CharacterTransitionMessage,
     ReinforcementMessage,
+    SceneBackdropMessage,
 )
 from talemate.knowledge.message_views import (
     character_message_views,
@@ -233,7 +234,11 @@ class SceneMessagePlugin(Plugin):
         Remove a scene message from history.
         """
         payload = MessageIdPayload(**data)
-        self.scene.delete_message(payload.id)
+        message = self.scene.get_message(payload.id)
+        if isinstance(message, SceneBackdropMessage):
+            await self.scene.assets.delete_backdrop_message(message)
+        else:
+            self.scene.delete_message(payload.id)
         await self.scene.attempt_auto_save()
 
     async def handle_edit(self, data: dict):

@@ -59,7 +59,7 @@ Every node available in the node editor, grouped by category. Each page lists th
 | [Validation Nodes](validation.md) | 7 | Validate values: characters, asset IDs, context IDs, containment and set/unset checks. |
 | [Visualizer Agent Generation Nodes](agents-visual-generation.md) | 7 | Visual generation: generation requests, image generation, backend selection/status and image analysis. |
 | [Visualizer Agent Modules](agents-visual-modules.md) | 10 | Ready-made visual generation flows: generate visual assets, avatars, portraits, image edits and regenerations. |
-| [Visualizer Agent Prompt Nodes](agents-visual.md) | 9 | Visual prompt building: prompt parts, styles, finalization and unpacking. |
+| [Visualizer Agent Prompt Nodes](agents-visual.md) | 10 | Visual prompt building: prompt parts, styles, finalization and unpacking. |
 | [Voice Agent Nodes](agents-tts.md) | 8 | Text-to-speech: get and unpack voices, generate speech and read or rewrite generation text through the voice agent. |
 | [Websocket Nodes](websocket.md) | 4 | Websocket plumbing: routers, responses and operation done/failed signals. |
 | [World Entry Nodes](scene-world-state.md) | 8 | World entries (get, save, unpack, remove) and generation options: spices and writing styles. |

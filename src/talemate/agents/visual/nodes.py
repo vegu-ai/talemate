@@ -632,7 +632,12 @@ class SelectBackend(AgentNode):
 
     async def run(self, state: GraphState):
         vis_type = self.normalized_input_value("vis_type")
-        reference_assets = self.normalized_input_value("reference_assets") or []
+        scene = active_scene.get()
+        reference_assets = [
+            asset_id
+            for asset_id in self.normalized_input_value("reference_assets") or []
+            if scene.assets.validate_asset_id(asset_id)
+        ]
 
         gen_type: GEN_TYPE = GEN_TYPE.TEXT_TO_IMAGE
 

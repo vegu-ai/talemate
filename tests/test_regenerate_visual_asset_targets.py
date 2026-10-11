@@ -1,5 +1,6 @@
 """Revisualize attaches the new image to the clicked passage, except for a
-scene background, which becomes a Backdrop entry at the end of the story."""
+scene background, which becomes a Backdrop entry at the end of the story; a
+replace keeps the clicked Backdrop entry, so the new image can take its place."""
 
 import pytest
 
@@ -35,16 +36,18 @@ async def run_revisualize(scene, monkeypatch, data: dict):
 
 
 @pytest.mark.parametrize(
-    "vis_type, expected",
+    "vis_type, delete_old, expected",
     [
-        (VIS_TYPE.SCENE_ILLUSTRATION, [7]),
-        (VIS_TYPE.CHARACTER_PORTRAIT, [7]),
-        (VIS_TYPE.CHARACTER_CARD, [7]),
-        (VIS_TYPE.SCENE_BACKGROUND, []),
+        (VIS_TYPE.SCENE_ILLUSTRATION, True, [7]),
+        (VIS_TYPE.CHARACTER_PORTRAIT, True, [7]),
+        (VIS_TYPE.CHARACTER_CARD, True, [7]),
+        (VIS_TYPE.SCENE_ILLUSTRATION, False, [7]),
+        (VIS_TYPE.SCENE_BACKGROUND, False, []),
+        (VIS_TYPE.SCENE_BACKGROUND, True, [7]),
     ],
 )
 async def test_revisualize_targets_the_clicked_passage(
-    scene, monkeypatch, vis_type, expected
+    scene, monkeypatch, vis_type, delete_old, expected
 ):
     scene.assets.save_asset(
         Asset(
@@ -62,13 +65,14 @@ async def test_revisualize_targets_the_clicked_passage(
             "asset_id": "clicked",
             "asset_allow_override": True,
             "asset_allow_auto_attach": True,
-            "asset_delete_old": True,
+            "asset_delete_old": delete_old,
             "message_ids": [7],
         },
     )
 
     assert ctx.message_ids == expected
-    assert ctx.allow_override and ctx.allow_auto_attach and ctx.delete_old
+    assert ctx.allow_override and ctx.allow_auto_attach
+    assert ctx.delete_old is delete_old
 
 
 async def test_revisualize_without_a_passage_attaches_to_the_latest(scene, monkeypatch):

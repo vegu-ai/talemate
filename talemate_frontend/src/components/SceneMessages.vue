@@ -21,6 +21,7 @@
         :style="assetMenuStyle"
         :location="assetMenu.location"
         :target="assetMenu.target"
+        width="500"
         min-width="500"
         max-width="500"
     >
@@ -59,14 +60,14 @@
                 <v-list-item-subtitle v-else>Visual agent not ready</v-list-item-subtitle>
             </v-list-item>
             <v-list-item
-                v-if="assetSupportsRegeneration && !assetMenu.context.backdrop"
-                :disabled="!visualAgentReady"
+                v-if="assetSupportsRegeneration"
+                :disabled="!!assetMenuReplaceBlock"
                 prepend-icon="mdi-image-refresh-outline"
+                class="asset-menu-replace"
                 @click="handleRegenerateAndDeleteIllustration"
             >
                 <v-list-item-title>Regenerate (replace)</v-list-item-title>
-                <v-list-item-subtitle v-if="visualAgentReady" class="text-wrap">Alt+click · Replaces this image; the original is deleted</v-list-item-subtitle>
-                <v-list-item-subtitle v-else>Visual agent not ready</v-list-item-subtitle>
+                <v-list-item-subtitle class="text-wrap">{{ assetMenuReplaceBlock || `Alt+click · ${assetMenuReplaceHint}` }}</v-list-item-subtitle>
             </v-list-item>
             <v-list-item
                 v-if="assetSupportsRegeneration"
@@ -78,14 +79,14 @@
                 <v-list-item-subtitle v-if="!visualAgentReady">Visual agent not ready</v-list-item-subtitle>
             </v-list-item>
             <v-list-item
-                v-if="assetSupportsRegeneration && !assetMenu.context.backdrop"
-                :disabled="!visualAgentReady"
+                v-if="assetSupportsRegeneration"
+                :disabled="!!assetMenuReplaceBlock"
                 prepend-icon="mdi-image-edit-outline"
+                class="asset-menu-replace"
                 @click="handleOpenRegenerateAndDeleteAssetDialog"
             >
                 <v-list-item-title>Edit (replace)</v-list-item-title>
-                <v-list-item-subtitle v-if="visualAgentReady" class="text-wrap">Replaces this image; the original is deleted</v-list-item-subtitle>
-                <v-list-item-subtitle v-else>Visual agent not ready</v-list-item-subtitle>
+                <v-list-item-subtitle class="text-wrap">{{ assetMenuReplaceBlock || assetMenuReplaceHint }}</v-list-item-subtitle>
             </v-list-item>
             <v-divider v-if="assetMenu.context.asset_type === 'avatar'"></v-divider>
             <v-list-item
@@ -503,6 +504,7 @@ import { primaryModifierLabel } from '@/utils/keyboardModifiers';
 import { base64ToObjectUrl } from '@/utils/objectUrl.js';
 import { chapterBoundaries, playthroughBackdrop, visibleMessages } from '@/utils/playthrough.js';
 import { newUuid } from '@/utils/uuid';
+import { assetTarget, enableSceneBackdropMessage, setAssetMessage } from '@/utils/assetTargets';
 import {
     getMessageColor as resolveMessageColor,
     getMessageStyle as resolveMessageStyle,
@@ -521,14 +523,11 @@ const ASSET_SELECT_TYPES = {
             const avatars = vm.getCharacterAssets(ctx.character, VIS_TYPE.CHARACTER_PORTRAIT);
             return avatars.map(a => a.id);
         },
-        buildUpdateMessage(dialog) {
-            return {
-                type: 'scene_assets',
-                action: 'update_message_asset',
-                asset_id: dialog.selectedAssetId,
-                message_id: dialog.messageId,
-                character_name: dialog.characterName,
-            };
+        targets(dialog) {
+            return [
+                assetTarget.message(dialog.messageId, { overrideCadence: true }),
+                assetTarget.characterAvatar(dialog.characterName, 'current'),
+            ];
         },
         reset(dialog) {
             dialog.show = false;
@@ -550,13 +549,8 @@ const ASSET_SELECT_TYPES = {
                 })
                 .map(([id]) => id);
         },
-        buildUpdateMessage(dialog) {
-            return {
-                type: 'scene_assets',
-                action: 'update_message_asset',
-                asset_id: dialog.selectedAssetId,
-                message_id: dialog.messageId,
-            };
+        targets(dialog) {
+            return [assetTarget.message(dialog.messageId, { overrideCadence: true })];
         },
         reset(dialog) {
             dialog.show = false;
@@ -574,13 +568,8 @@ const ASSET_SELECT_TYPES = {
                 .filter(([, asset]) => asset?.meta?.vis_type === VIS_TYPE.SCENE_BACKGROUND)
                 .map(([id]) => id);
         },
-        buildUpdateMessage(dialog) {
-            return {
-                type: 'scene_assets',
-                action: 'update_backdrop_message_asset',
-                asset_id: dialog.selectedAssetId,
-                message_id: dialog.messageId,
-            };
+        targets(dialog) {
+            return [assetTarget.backdropEntry(dialog.messageId)];
         },
         reset(dialog) {
             dialog.show = false;
@@ -601,13 +590,8 @@ const ASSET_SELECT_TYPES = {
                 })
                 .map(([id]) => id);
         },
-        buildUpdateMessage(dialog) {
-            return {
-                type: 'scene_assets',
-                action: 'update_message_asset',
-                asset_id: dialog.selectedAssetId,
-                message_id: dialog.messageId,
-            };
+        targets(dialog) {
+            return [assetTarget.message(dialog.messageId, { overrideCadence: true })];
         },
         reset(dialog) {
             dialog.show = false;
@@ -725,6 +709,8 @@ export default {
                     message_id: null,
                 },
             },
+            // where the menu's image is used besides its message, from the server
+            assetMenuUses: { asset_id: null, message_id: null, reasons: null },
             // Track which message IDs are currently processing asset operations
             processingAssetMessageIds: new Set(),
             // asset id -> latest mark_as_reference_progress frame
@@ -889,7 +875,28 @@ export default {
             };
         },
         assetMenuNoun() {
-            return this.assetMenu.context.backdrop ? 'Background' : 'Illustration';
+            if (this.assetMenu.context.backdrop) return 'Background';
+            return this.assetMenu.context.asset_type === 'avatar' ? 'Portrait' : 'Illustration';
+        },
+        assetMenuReplaceHint() {
+            return this.assetMenu.context.backdrop
+                ? 'Replaces this background, also where the story reuses it; the original is deleted unless something else uses it'
+                : 'Replaces this image; the original is deleted unless something else uses it';
+        },
+        assetMenuReplaceBlock() {
+            if (!this.visualAgentReady) return 'Visual agent not ready';
+            const ctx = this.assetMenu.context;
+            if (ctx.backdrop) return null;
+            if (this.assetsMap?.[ctx.asset_id]?.meta?.vis_type === VIS_TYPE.SCENE_BACKGROUND) {
+                return 'A background on a story message is not replaced: Regenerate makes a new background instead';
+            }
+            // only a portrait needs this message to be its only use
+            if (ctx.asset_type !== 'avatar') return null;
+            const uses = this.assetMenuUses;
+            if (uses.asset_id !== ctx.asset_id || uses.message_id !== ctx.message_id || !uses.reasons) {
+                return 'Checking where this image is used…';
+            }
+            return uses.reasons.join(' · ') || null;
         },
         illustrationSelectCopy() {
             return ILLUSTRATION_SELECT_COPY[this.illustrationSelectDialog.assetType];
@@ -912,8 +919,7 @@ export default {
         },
         assetSupportsRegeneration() {
             // Check if the current asset menu context supports regeneration
-            const assetType = this.assetMenu.context.asset_type;
-            return assetType === 'card' || assetType === 'scene_illustration';
+            return ['card', 'scene_illustration', 'avatar'].includes(this.assetMenu.context.asset_type);
         },
         forkInstructions() {
             let instructions = "Copy the scene up to this message. World state and character details use their current values.";
@@ -1132,6 +1138,12 @@ export default {
                 });
             }
             
+            if (data.type === 'asset_uses'
+                && data.asset_id === this.assetMenuUses.asset_id
+                && data.message_id === this.assetMenuUses.message_id) {
+                this.assetMenuUses = { ...this.assetMenuUses, reasons: data.reasons || [] };
+            }
+
             // Handle message_asset_update - update a message's asset_id dynamically
             if (data.type === 'message_asset_update' && data.message_id) {
                 const msg = this.messages.find(m => m.id === data.message_id);
@@ -1783,12 +1795,25 @@ export default {
         showAssetMenu(event, context) {
             // Store the context (asset_id, asset_type, character, etc.)
             this.assetMenu.context = { ...context };
+            this.requestAssetMenuUses();
             
             // Set the target element for positioning
             this.assetMenu.target = event.currentTarget || event.target;
             
             // Show the menu
             this.assetMenu.show = true;
+        },
+
+        requestAssetMenuUses() {
+            const ctx = this.assetMenu.context;
+            this.assetMenuUses = { asset_id: ctx.asset_id, message_id: ctx.message_id, reasons: null };
+            if (ctx.asset_type !== 'avatar' || ctx.backdrop || !ctx.asset_id || !ctx.message_id) return;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'scene_assets',
+                action: 'asset_uses',
+                asset_id: ctx.asset_id,
+                message_id: ctx.message_id,
+            }));
         },
 
         /**
@@ -1856,12 +1881,8 @@ export default {
             if (!assetId) {
                 return;
             }
-            this.getWebsocket().send(JSON.stringify({
-                type: 'scene_assets',
-                action: 'set_scene_backdrop',
-                asset_id: assetId,
-                enabled: true,
-            }));
+            this.getWebsocket().send(JSON.stringify(setAssetMessage(assetId, [assetTarget.sceneBackdrop()])));
+            this.getWebsocket().send(JSON.stringify(enableSceneBackdropMessage()));
         },
 
         referenceTargetsFor(visType) {
@@ -2077,7 +2098,7 @@ export default {
             }
 
             const ws = this.getWebsocket();
-            ws.send(JSON.stringify(cfg.buildUpdateMessage(dialog)));
+            ws.send(JSON.stringify(setAssetMessage(assetId, cfg.targets(dialog))));
 
             this.closeAssetSelectDialog(assetType);
         },
@@ -2161,7 +2182,7 @@ export default {
         },
 
         /**
-         * Handle "Regenerate Illustration" menu option for card and scene_illustration
+         * Handle the "Regenerate" menu option (Shift+click)
          */
         handleRegenerateIllustration() {
             // Close the menu
@@ -2180,7 +2201,7 @@ export default {
         },
 
         /**
-         * Handle "Regenerate (replace)" menu option for card and scene_illustration
+         * Handle the "Regenerate (replace)" menu option (Alt+click)
          */
         handleRegenerateAndDeleteIllustration() {
             // Close the menu
@@ -2199,14 +2220,14 @@ export default {
         },
 
         /**
-         * Handle "Regenerate Illustration" with custom instructions (Ctrl+click)
+         * Handle the "Edit" menu option: regenerate with instructions
          */
         handleOpenRegenerateAssetDialog() {
             this.openRevisualizeInstructionsDialog({ deleteOld: false });
         },
 
         /**
-         * Handle "Edit (replace)" menu option
+         * Handle the "Edit (replace)" menu option
          */
         handleOpenRegenerateAndDeleteAssetDialog() {
             this.openRevisualizeInstructionsDialog({ deleteOld: true });
@@ -2906,6 +2927,21 @@ export default {
 </script>
 
 <style scoped>
+/* a blocked replace entry keeps its reason readable: only the icon and title dim */
+.asset-menu-replace.v-list-item--disabled {
+    opacity: 1;
+}
+.asset-menu-replace.v-list-item--disabled :deep(.v-list-item__prepend),
+.asset-menu-replace.v-list-item--disabled :deep(.v-list-item-title) {
+    opacity: var(--v-disabled-opacity);
+}
+.asset-menu-replace.v-list-item--disabled :deep(.v-list-item-subtitle) {
+    opacity: var(--v-medium-emphasis-opacity);
+}
+.asset-menu-replace :deep(.v-list-item-subtitle) {
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+}
 .message-container {
     overflow-y: auto;
 }

@@ -1,6 +1,5 @@
 import base64
 import io
-from typing import Literal
 
 import pydantic
 import structlog
@@ -9,6 +8,8 @@ from PIL import Image
 from talemate.server.websocket_plugin import Plugin
 from talemate.scene_assets import (
     AssetMeta,
+    AssetTarget,
+    AssetTargetError,
     CoverBBox,
     TAG_MATCH_MODE,
 )
@@ -42,25 +43,15 @@ class EditAssetMetaPayload(pydantic.BaseModel):
     cover_bbox: CoverBBox = pydantic.Field(default_factory=CoverBBox)
 
 
-class SetSceneCoverImagePayload(pydantic.BaseModel):
-    asset_id: str
-
-
 class SetSceneBackdropPayload(pydantic.BaseModel):
-    asset_id: str | None = None
     enabled: bool | None = None
     clear: bool = False
 
 
-class SetCharacterCoverImagePayload(pydantic.BaseModel):
+class SetAssetPayload(pydantic.BaseModel):
     asset_id: str
-    character_name: str
-
-
-class SetCharacterAvatarPayload(pydantic.BaseModel):
-    asset_id: str
-    character_name: str
-    avatar_type: Literal["default", "current"] = "default"
+    targets: list[AssetTarget]
+    replace: bool = False
 
 
 class SearchAssetsPayload(pydantic.BaseModel):
@@ -70,18 +61,12 @@ class SearchAssetsPayload(pydantic.BaseModel):
     reference_vis_types: list[str] | None = None
 
 
-class UpdateMessageAssetPayload(pydantic.BaseModel):
-    asset_id: str
-    message_id: int
-    character_name: str | None = None
-
-
-class UpdateBackdropMessageAssetPayload(pydantic.BaseModel):
-    asset_id: str
-    message_id: int
-
-
 class ClearMessageAssetPayload(pydantic.BaseModel):
+    message_id: int
+
+
+class AssetUsesPayload(pydantic.BaseModel):
+    asset_id: str
     message_id: int
 
 
@@ -210,121 +195,39 @@ class SceneAssetsPlugin(Plugin):
         self.scene.emit_status()
         await self.signal_operation_done(signal_only=True)
 
-    async def handle_set_scene_cover_image(self, data: dict):
-        payload = SetSceneCoverImagePayload(**data)
-        asset_id = payload.asset_id
-
+    async def handle_set_asset(self, data: dict):
+        """
+        Show an asset on one or more targets: a message, a backdrop entry,
+        the scene backdrop or cover, a character's cover or avatar.
+        """
         try:
-            if not self.scene.assets.validate_asset_id(asset_id):
-                await self.signal_operation_failed("Invalid asset_id")
-                return
+            payload = SetAssetPayload(**data)
+            for target in payload.targets:
+                await self.scene.assets.set_asset(
+                    target, payload.asset_id, replace=payload.replace
+                )
+        except (AssetTargetError, pydantic.ValidationError) as e:
+            await self.signal_operation_failed(f"Failed to set the image: {e}")
+            return
 
-            await self.scene.assets.set_scene_cover_image(asset_id, override=True)
-
-            # Request the asset for frontend
-            self.websocket_handler.request_scene_assets([asset_id])
-
-            await self.scene.attempt_auto_save()
-            await self.signal_operation_done()
-        except Exception as e:
-            log.error("set_scene_cover_image_failed", error=e)
-            await self.signal_operation_failed(f"Failed to set scene cover image: {e}")
+        self.websocket_handler.request_scene_assets([payload.asset_id])
+        await self.scene.attempt_auto_save()
+        await self.signal_operation_done()
 
     async def handle_set_scene_backdrop(self, data: dict):
+        """Turn the scene backdrop on or off (Immersive), or clear it."""
         payload = SetSceneBackdropPayload(**data)
 
         try:
-            if payload.asset_id is not None and not self.scene.assets.validate_asset_id(
-                payload.asset_id
-            ):
-                await self.signal_operation_failed("Invalid asset_id")
-                return
-
             await self.scene.assets.set_scene_backdrop(
-                asset_id=payload.asset_id,
                 enabled=payload.enabled,
                 clear=payload.clear,
             )
-
-            # Request the asset for frontend
-            if payload.asset_id:
-                self.websocket_handler.request_scene_assets([payload.asset_id])
-
             await self.scene.attempt_auto_save()
             await self.signal_operation_done()
         except Exception as e:
             log.error("set_scene_backdrop_failed", error=e)
             await self.signal_operation_failed(f"Failed to set scene backdrop: {e}")
-
-    async def handle_set_character_cover_image(self, data: dict):
-        payload = SetCharacterCoverImagePayload(**data)
-        asset_id = payload.asset_id
-        character_name = payload.character_name
-
-        try:
-            if not self.scene.assets.validate_asset_id(asset_id):
-                await self.signal_operation_failed("Invalid asset_id")
-                return
-
-            character = self.scene.get_character(character_name)
-            if not character:
-                await self.signal_operation_failed(
-                    f"Character not found: {character_name}"
-                )
-                return
-
-            await self.scene.assets.set_character_cover_image(
-                character, asset_id, override=True
-            )
-
-            # Request the asset for frontend
-            self.websocket_handler.request_scene_assets([asset_id])
-
-            await self.scene.attempt_auto_save()
-            await self.signal_operation_done()
-        except Exception as e:
-            log.error("set_character_cover_image_failed", error=e)
-            await self.signal_operation_failed(
-                f"Failed to set character cover image: {e}"
-            )
-
-    async def handle_set_character_avatar(self, data: dict):
-        payload = SetCharacterAvatarPayload(**data)
-        asset_id = payload.asset_id
-        character_name = payload.character_name
-        avatar_type = payload.avatar_type
-
-        try:
-            if not self.scene.assets.validate_asset_id(asset_id):
-                await self.signal_operation_failed("Invalid asset_id")
-                return
-
-            character = self.scene.get_character(character_name)
-            if not character:
-                await self.signal_operation_failed(
-                    f"Character not found: {character_name}"
-                )
-                return
-
-            if avatar_type == "current":
-                await self.scene.assets.set_character_current_avatar(
-                    character, asset_id, override=True
-                )
-            else:
-                await self.scene.assets.set_character_avatar(
-                    character, asset_id, override=True
-                )
-
-            # Request the asset for frontend
-            self.websocket_handler.request_scene_assets([asset_id])
-
-            await self.scene.attempt_auto_save()
-            await self.signal_operation_done()
-        except Exception as e:
-            log.error("set_character_avatar_failed", error=e, avatar_type=avatar_type)
-            await self.signal_operation_failed(
-                f"Failed to set character {avatar_type} avatar: {e}"
-            )
 
     async def handle_search(self, data: dict):
         """
@@ -386,85 +289,23 @@ class SceneAssetsPlugin(Plugin):
                 }
             )
 
-    async def handle_update_message_asset(self, data: dict):
+    async def handle_asset_uses(self, data: dict):
         """
-        Update a message's asset.
-
-        If character_name is provided, also updates the character's current avatar.
-        This handles both avatar selection (with character_name) and generic asset
-        selection for scene illustrations and cards (without character_name).
+        Reports why an image on a message is also used elsewhere, which is
+        what blocks replacing it.
         """
-        payload = UpdateMessageAssetPayload(**data)
-        asset_id = payload.asset_id
-        message_id = payload.message_id
-        character_name = payload.character_name
-
-        try:
-            # Validate asset exists
-            if not self.scene.assets.validate_asset_id(asset_id):
-                await self.signal_operation_failed("Invalid asset_id")
-                return
-
-            # If character_name is provided, get the character and validate it
-            character = None
-            if character_name:
-                character = self.scene.get_character(character_name)
-                if not character:
-                    await self.signal_operation_failed(
-                        f"Character not found: {character_name}"
-                    )
-                    return
-
-            # Update the message's asset
-            message = await self.scene.assets.update_message_asset(
-                message_id, asset_id, override_cadence=True
-            )
-            if message is None:
-                await self.signal_operation_failed(
-                    f"Message not found or invalid: {message_id}"
-                )
-                return
-
-            # If we have a character and the asset is a portrait, set the character's current avatar
-            if character:
-                asset = self.scene.assets.get_asset(asset_id)
-                if asset.meta.vis_type == VIS_TYPE.CHARACTER_PORTRAIT:
-                    await self.scene.assets.set_character_current_avatar(
-                        character, asset_id, override=True
-                    )
-
-            # Request the asset for frontend
-            self.websocket_handler.request_scene_assets([asset_id])
-
-            await self.scene.attempt_auto_save()
-            await self.signal_operation_done()
-        except Exception as e:
-            log.error("update_message_asset_failed", error=e)
-            await self.signal_operation_failed(f"Failed to update message asset: {e}")
-
-    async def handle_update_backdrop_message_asset(self, data: dict):
-        """
-        Swap the image of a backdrop entry for another scene background.
-        """
-        payload = UpdateBackdropMessageAssetPayload(**data)
-
-        try:
-            message = await self.scene.assets.update_backdrop_message_asset(
-                payload.message_id, payload.asset_id
-            )
-            if message is None:
-                await self.signal_operation_failed(
-                    f"Message not found or invalid: {payload.message_id}"
-                )
-                return
-
-            self.websocket_handler.request_scene_assets([payload.asset_id])
-
-            await self.scene.attempt_auto_save()
-            await self.signal_operation_done()
-        except Exception as e:
-            log.error("update_backdrop_message_asset_failed", error=e)
-            await self.signal_operation_failed(f"Failed to update backdrop entry: {e}")
+        payload = AssetUsesPayload(**data)
+        reasons = self.scene.assets.replace_blockers(
+            payload.asset_id, besides_message_id=payload.message_id
+        )
+        self.websocket_handler.queue_put(
+            {
+                "type": "asset_uses",
+                "asset_id": payload.asset_id,
+                "message_id": payload.message_id,
+                "reasons": reasons,
+            }
+        )
 
     async def handle_clear_message_asset(self, data: dict):
         """

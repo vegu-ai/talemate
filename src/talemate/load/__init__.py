@@ -63,7 +63,11 @@ from talemate.shared_context import SharedContext
 from talemate.scene_agent_settings import AGENT_SETTINGS_DIRNAME, resolve_link_on_load
 from talemate.load.character_card import CharacterCardImportOptions
 from talemate.load.creation_agent_settings import CreationAgentSettings
-from talemate.scene_assets import AssetTransfer
+from talemate.scene_assets import (
+    AssetTransfer,
+    CharacterAvatarTarget,
+    CharacterCoverTarget,
+)
 
 # Import character card functions
 from talemate.load.character_card import (
@@ -863,9 +867,7 @@ async def transfer_character_cover_image(
         return None
 
     # Set the character's cover image
-    await scene.assets.set_character_cover_image(
-        character, source_asset_id, override=True
-    )
+    await scene.assets.set_asset(CharacterCoverTarget.of(character), source_asset_id)
 
     return source_asset_id
 
@@ -885,7 +887,9 @@ async def transfer_character_avatar_assets(
     if character.avatar:
         asset_id = await _transfer_asset(scene, source_scene, character.avatar)
         if asset_id:
-            await scene.assets.set_character_avatar(character, asset_id, override=True)
+            await scene.assets.set_asset(
+                CharacterAvatarTarget.of(character, slot="default"), asset_id
+            )
         else:
             # Asset couldn't be transferred, clear the reference
             character.avatar = None
@@ -899,8 +903,8 @@ async def transfer_character_avatar_assets(
     if character.current_avatar:
         asset_id = await _transfer_asset(scene, source_scene, character.current_avatar)
         if asset_id:
-            await scene.assets.set_character_current_avatar(
-                character, asset_id, override=True
+            await scene.assets.set_asset(
+                CharacterAvatarTarget.of(character, slot="current"), asset_id
             )
         else:
             # Asset couldn't be transferred, clear the reference

@@ -30,7 +30,7 @@ from talemate.util import (
 from talemate.util.colors import unique_random_colors
 from talemate.agents.base import DynamicInstruction
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
-from talemate.scene_assets import AssetTransfer
+from talemate.scene_assets import AssetTransfer, CharacterCoverTarget, SceneCoverTarget
 from talemate.scene_agent_settings import resolve_link_on_load
 from talemate.world_state import ManualContext
 from talemate.agents.visual.schema import VIS_TYPE
@@ -922,8 +922,10 @@ async def _setup_character_assets_from_icon_data_url(
         scene.assets.save_library()
 
         # Set as cover images
-        await scene.assets.set_scene_cover_image(asset.id)
-        await scene.assets.set_character_cover_image(character, asset.id)
+        await scene.assets.set_asset(SceneCoverTarget(), asset.id, override=False)
+        await scene.assets.set_asset(
+            CharacterCoverTarget.of(character), asset.id, override=False
+        )
 
         log.info(
             "icon_asset_set",
@@ -970,8 +972,10 @@ async def _setup_character_assets(
                 VIS_TYPE.SCENE_ILLUSTRATION,
             ]
         scene.assets.save_library()
-        await scene.assets.set_scene_cover_image(asset.id)
-        await scene.assets.set_character_cover_image(character, asset.id)
+        await scene.assets.set_asset(SceneCoverTarget(), asset.id, override=False)
+        await scene.assets.set_asset(
+            CharacterCoverTarget.of(character), asset.id, override=False
+        )
 
 
 async def _generate_story_intent(scene, loading_status: LoadingStatus) -> None:

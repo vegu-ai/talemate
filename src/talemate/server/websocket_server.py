@@ -21,7 +21,13 @@ from talemate.exceptions import ControlFlowException
 from talemate.files import list_scenes_directory, list_scenes_tree
 from talemate.game.engine.nodes.run import stop_test_module
 from talemate.load import load_scene, SceneInitialization
-from talemate.scene_assets import Asset, get_media_type_from_file_path, VIS_TYPE
+from talemate.scene_assets import (
+    Asset,
+    CharacterCoverTarget,
+    SceneCoverTarget,
+    get_media_type_from_file_path,
+    VIS_TYPE,
+)
 from talemate.scene_message import versions_payload_for
 from talemate.server import (
     agent_config,
@@ -921,30 +927,21 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         asset.meta.vis_type = asset_upload.vis_type or VIS_TYPE.UNSPECIFIED
         asset.meta.character_name = asset_upload.character_name
 
+        targets = []
         if asset_upload.scene_cover_image:
-            self.scene.assets.cover_image = asset.id
-            self.scene.saved = False
-            self.scene.emit_status()
+            targets.append(SceneCoverTarget())
         if asset_upload.character_cover_image:
             character = self.scene.get_character(asset_upload.character_cover_image)
-            old_cover_image = character.cover_image
-            character.cover_image = asset.id
-            if (
-                not self.scene.assets.cover_image
-                or old_cover_image == self.scene.assets.cover_image
-            ):
-                self.scene.assets.cover_image = asset.id
+            targets.append(CharacterCoverTarget.of(character))
+            # the scene cover follows the character cover it still shows
+            if self.scene.assets.cover_image in (None, character.cover_image):
+                targets.append(SceneCoverTarget())
+        for target in targets:
+            await self.scene.assets.set_asset(target, asset.id)
+        if targets:
             self.scene.saved = False
             self.scene.emit_status()
-            self.request_scene_assets([character.cover_image])
-            self.queue_put(
-                {
-                    "type": "scene_asset_character_cover_image",
-                    "asset_id": asset.id,
-                    "media_type": asset.media_type,
-                    "character": character.name,
-                }
-            )
+            self.request_scene_assets([asset.id])
 
     def handle_character_card_upload(self, image_data_url: str, filename: str) -> str:
         image_data = base64.b64decode(image_data_url.split(",")[1])

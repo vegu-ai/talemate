@@ -19,6 +19,7 @@ from talemate.client.context import (
 from talemate.exceptions import ControlFlowException
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage
+from talemate.scene_assets import MessageTarget
 from talemate.agents.utils import handle_empty_response_limit
 from talemate.ux.schema import Action
 
@@ -509,7 +510,9 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
             if self.scene is not scene or scene.get_message(message.id) is not message:
                 return
             if emission.avatar and emission.avatar != message.asset_id:
-                await scene.assets.update_message_asset(message.id, emission.avatar)
+                await scene.assets.set_asset(
+                    MessageTarget(message_id=message.id), emission.avatar
+                )
         except ControlFlowException:
             raise
         except Exception:

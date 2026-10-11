@@ -9,7 +9,7 @@ import json
 import asyncio
 import contextlib
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Literal
 
 import pydantic
 from PIL import Image
@@ -34,7 +34,7 @@ from talemate.agents.visual.schema import (
     Resolution,
     AssetAttachmentContext,
 )
-from talemate.files import MEDIA_TYPES
+from talemate.files import EXCLUDED_PROJECT_SUBDIRS, MEDIA_TYPES
 from talemate.path import SCENES_DIR
 
 async_signals.register(
@@ -54,6 +54,17 @@ __all__ = [
     "CoverImageChangedPayload",
     "SceneAssets",
     "AssetMeta",
+    "AssetUses",
+    "AssetTarget",
+    "AssetTargetError",
+    "AssetTargetNotFound",
+    "AssetSetResult",
+    "MessageTarget",
+    "BackdropEntryTarget",
+    "SceneBackdropTarget",
+    "SceneCoverTarget",
+    "CharacterCoverTarget",
+    "CharacterAvatarTarget",
     "AssetSelectionContext",
     "CoverBBox",
     "TAG_MATCH_MODE",
@@ -317,6 +328,130 @@ class AssetMeta(pydantic.BaseModel):
         ]
 
 
+class AssetUses(pydantic.BaseModel):
+    """Every place in the scene that shows an asset."""
+
+    message_ids: list[int] = pydantic.Field(default_factory=list)
+    backdrop_entry_ids: list[int] = pydantic.Field(default_factory=list)
+    previous_backdrop_entry_ids: list[int] = pydantic.Field(default_factory=list)
+    scene_backdrop: bool = False
+    scene_cover: bool = False
+    default_avatar_of: list[str] = pydantic.Field(default_factory=list)
+    current_avatar_of: list[str] = pydantic.Field(default_factory=list)
+    cover_of: list[str] = pydantic.Field(default_factory=list)
+    # marked as a reference for generating other images
+    marked_reference: bool = False
+    # other assets generated with it as a reference
+    reference_of: list[str] = pydantic.Field(default_factory=list)
+    # other scene files of the project, which share its asset library
+    other_saves: list[str] = pydantic.Field(default_factory=list)
+
+    def reasons(
+        self,
+        besides_message_id: int | None = None,
+        besides_asset_id: str | None = None,
+    ) -> list[str]:
+        """
+        Where the asset is used, leaving out the message `besides_message_id`
+        and the asset `besides_asset_id` made from it.
+        """
+        reasons = []
+        if any(mid != besides_message_id for mid in self.message_ids):
+            reasons.append("Used by other messages")
+        if self.default_avatar_of:
+            reasons.append("Character's default avatar")
+        if self.current_avatar_of:
+            reasons.append("Character's current avatar")
+        if self.cover_of:
+            reasons.append("Character's cover image")
+        if self.scene_cover:
+            reasons.append("Scene cover image")
+        if (
+            self.scene_backdrop
+            or self.backdrop_entry_ids
+            or self.previous_backdrop_entry_ids
+        ):
+            reasons.append("Scene backdrop")
+        if self.marked_reference:
+            reasons.append("Marked as reference")
+        if any(aid != besides_asset_id for aid in self.reference_of):
+            reasons.append("Reference for other images")
+        if self.other_saves:
+            reasons.append("Used by another save of this scene")
+        return reasons
+
+
+class MessageTarget(pydantic.BaseModel):
+    """The image on a character, narrator or context investigation message."""
+
+    kind: Literal["message"] = "message"
+    message_id: int
+    # an explicit choice shows regardless of the avatar cadence
+    override_cadence: bool = False
+
+
+class BackdropEntryTarget(pydantic.BaseModel):
+    kind: Literal["backdrop_entry"] = "backdrop_entry"
+    message_id: int
+
+
+class SceneBackdropTarget(pydantic.BaseModel):
+    kind: Literal["scene_backdrop"] = "scene_backdrop"
+
+
+class SceneCoverTarget(pydantic.BaseModel):
+    kind: Literal["scene_cover"] = "scene_cover"
+
+
+class _CharacterTarget(pydantic.BaseModel):
+    character_name: str
+    # a character that is not part of the scene yet, while it is loaded
+    _character: "Character | None" = pydantic.PrivateAttr(default=None)
+
+    @classmethod
+    def of(cls, character: "Character", **kwargs):
+        target = cls(character_name=character.name, **kwargs)
+        target._character = character
+        return target
+
+
+class CharacterCoverTarget(_CharacterTarget):
+    kind: Literal["character_cover"] = "character_cover"
+
+
+class CharacterAvatarTarget(_CharacterTarget):
+    kind: Literal["character_avatar"] = "character_avatar"
+    slot: Literal["default", "current"] = "default"
+
+
+AssetTarget = Annotated[
+    MessageTarget
+    | BackdropEntryTarget
+    | SceneBackdropTarget
+    | SceneCoverTarget
+    | CharacterCoverTarget
+    | CharacterAvatarTarget,
+    pydantic.Field(discriminator="kind"),
+]
+
+
+class AssetTargetError(ValueError):
+    """An asset cannot be set on a target."""
+
+
+class AssetTargetNotFound(AssetTargetError):
+    """The target (message or character) does not exist."""
+
+
+class AssetSetResult(pydantic.BaseModel):
+    asset_id: str
+    previous_asset_id: str | None = None
+    changed: bool = False
+    # replace only: the original was deleted, or kept for the given reason
+    deleted_asset_id: str | None = None
+    kept_reason: str | None = None
+
+
 class AssetTransfer(pydantic.BaseModel):
     """Describes an asset transfer from another scene."""
 
@@ -420,55 +555,43 @@ async def _handle_asset_saved(payload: AssetSavedPayload):
         and asset.meta.vis_type == VIS_TYPE.SCENE_ILLUSTRATION
         and config.appearance.scene.message_assets["scene_illustration"].auto_backdrop
     ):
-        await scene.assets.set_scene_backdrop(asset_id=asset.id)
+        await scene.assets.set_asset(SceneBackdropTarget(), asset.id)
 
-    # cover image (scene and character)
+    # cover image (scene and character) and character avatar / portrait
 
+    character = (
+        scene.character_data.get(asset.meta.character_name)
+        if asset.meta.character_name
+        else None
+    )
+    targets: list[tuple[AssetTarget, bool]] = []
     if asset_attachment_context.scene_cover:
-        await scene.assets.set_scene_cover_image(
-            asset.id, override=asset_attachment_context.override_scene_cover
+        targets.append(
+            (SceneCoverTarget(), asset_attachment_context.override_scene_cover)
         )
-
-    if asset_attachment_context.character_cover:
-        character = (
-            scene.character_data.get(asset.meta.character_name)
-            if asset.meta.character_name
-            else None
-        )
-        if character:
-            await scene.assets.set_character_cover_image(
-                character,
-                asset.id,
-                override=asset_attachment_context.override_character_cover,
+    if character and asset_attachment_context.character_cover:
+        targets.append(
+            (
+                CharacterCoverTarget.of(character),
+                asset_attachment_context.override_character_cover,
             )
-
-    # character avatar / portrait
-
-    if asset_attachment_context.default_avatar:
-        character = (
-            scene.character_data.get(asset.meta.character_name)
-            if asset.meta.character_name
-            else None
         )
-        if character:
-            await scene.assets.set_character_avatar(
-                character,
-                asset.id,
-                override=asset_attachment_context.override_default_avatar,
+    if character and asset_attachment_context.default_avatar:
+        targets.append(
+            (
+                CharacterAvatarTarget.of(character, slot="default"),
+                asset_attachment_context.override_default_avatar,
             )
-
-    if asset_attachment_context.current_avatar:
-        character = (
-            scene.character_data.get(asset.meta.character_name)
-            if asset.meta.character_name
-            else None
         )
-        if character:
-            await scene.assets.set_character_current_avatar(
-                character,
-                asset.id,
-                override=asset_attachment_context.override_current_avatar,
+    if character and asset_attachment_context.current_avatar:
+        targets.append(
+            (
+                CharacterAvatarTarget.of(character, slot="current"),
+                asset_attachment_context.override_current_avatar,
             )
+        )
+    for target, override in targets:
+        await scene.assets.set_asset(target, asset.id, override=override)
 
     # emit scene status here so visual library is reloaded on the frontend
 
@@ -507,6 +630,10 @@ class SceneAssets:
         # generated images waiting while a history edit holds backdrop
         # messages out of the history (see backdrops_lifted)
         self._lifted_backdrops: list[tuple[AssetAttachmentContext, str]] | None = None
+        # replaced assets whose delete check waits for the same history edit
+        self._held_retirements: list[tuple[AssetTarget, str, AssetSetResult]] | None = (
+            None
+        )
 
     def _fire_signal(self, name: str, payload: pydantic.BaseModel):
         """Fire an async signal from a synchronous context."""
@@ -1204,6 +1331,78 @@ class SceneAssets:
 
         return cleaned
 
+    def asset_uses(self, asset_id: str, *, other_saves: bool = True) -> AssetUses:
+        uses = AssetUses(
+            scene_backdrop=self.backdrop == asset_id,
+            scene_cover=self.cover_image == asset_id,
+        )
+        for message in self.scene.history:
+            if isinstance(message, scene_message.SceneBackdropMessage):
+                if message.backdrop == asset_id:
+                    uses.backdrop_entry_ids.append(message.id)
+                if message.previous_backdrop == asset_id:
+                    uses.previous_backdrop_entry_ids.append(message.id)
+            elif getattr(message, "asset_id", None) == asset_id:
+                uses.message_ids.append(message.id)
+        for character in self.scene.character_data.values():
+            if character.avatar == asset_id:
+                uses.default_avatar_of.append(character.name)
+            if character.current_avatar == asset_id:
+                uses.current_avatar_of.append(character.name)
+            if character.cover_image == asset_id:
+                uses.cover_of.append(character.name)
+        for other_id, asset in self.assets.items():
+            if other_id == asset_id:
+                uses.marked_reference = bool(asset.meta.reference)
+            elif asset_id in asset.meta.reference_assets:
+                uses.reference_of.append(other_id)
+        if other_saves:
+            uses.other_saves = self._other_saves_using(asset_id)
+        return uses
+
+    def replace_blockers(
+        self,
+        asset_id: str,
+        besides_message_id: int | None = None,
+        besides_asset_id: str | None = None,
+    ) -> list[str]:
+        """
+        Why replacing the asset must keep it (see AssetUses.reasons). The
+        project's other saves are only read when nothing in the scene does.
+        """
+        uses = self.asset_uses(asset_id, other_saves=False)
+        reasons = uses.reasons(besides_message_id, besides_asset_id)
+        if reasons:
+            return reasons
+        uses.other_saves = self._other_saves_using(asset_id)
+        return uses.reasons(besides_message_id, besides_asset_id)
+
+    def _other_saves_using(self, asset_id: str) -> list[str]:
+        """
+        The project's other scene files that mention the asset. A locked
+        scene's own file counts too, and so does a file that cannot be read.
+        """
+        if not self.scene.project_name:
+            return []
+        project_dir = self.scene.save_dir
+        own = None if self.scene.immutable_save else self.scene.full_path
+        found = []
+        for dirpath, dirnames, filenames in os.walk(project_dir):
+            dirnames[:] = [d for d in dirnames if d not in EXCLUDED_PROJECT_SUBDIRS]
+            for filename in filenames:
+                path = os.path.join(dirpath, filename)
+                if not filename.endswith(".json") or path == own:
+                    continue
+                try:
+                    with open(path, encoding="utf-8") as f:
+                        mentioned = asset_id in f.read()
+                except (OSError, UnicodeDecodeError) as exc:
+                    log.warning("asset_uses.unreadable_save", path=path, error=str(exc))
+                    mentioned = True
+                if mentioned:
+                    found.append(os.path.relpath(path, project_dir))
+        return found
+
     def remove_asset(self, asset_id: str):
         """
         Removes the asset with the given id.
@@ -1211,6 +1410,11 @@ class SceneAssets:
 
         current_assets = self.assets
         asset = current_assets.pop(asset_id)
+        for other in current_assets.values():
+            if asset_id in other.meta.reference_assets:
+                other.meta.reference_assets = [
+                    ref for ref in other.meta.reference_assets if ref != asset_id
+                ]
 
         # Save updated library
         self.assets = current_assets
@@ -1383,76 +1587,6 @@ class SceneAssets:
 
         return matched_asset_ids
 
-    async def set_character_avatar(
-        self, character: "Character", asset_id: str, override: bool = False
-    ) -> str | None:
-        """
-        Sets the character's default avatar.
-        """
-        log.debug(
-            "set_character_avatar",
-            character=character,
-            asset_id=asset_id,
-            override=override,
-        )
-        if not self.validate_asset_id(asset_id):
-            log.error("Invalid asset id", asset_id=asset_id)
-            return None
-        if not override and character.avatar:
-            return character.avatar
-        character.avatar = asset_id
-
-        # Emit event for websocket passthrough
-        asset = self.get_asset(asset_id)
-        emit(
-            "scene_asset_character_avatar",
-            scene=self.scene,
-            websocket_passthrough=True,
-            kwargs={
-                "asset_id": asset_id,
-                "asset": self.get_asset_bytes_as_base64(asset_id),
-                "media_type": asset.media_type,
-                "character": character.name,
-            },
-        )
-
-        return asset_id
-
-    async def set_character_current_avatar(
-        self, character: "Character", asset_id: str, override: bool = False
-    ) -> str | None:
-        """
-        Sets the character's current avatar (used to set message.asset_id).
-        """
-        log.debug(
-            "set_character_current_avatar",
-            character=character,
-            asset_id=asset_id,
-            override=override,
-        )
-        if not self.validate_asset_id(asset_id):
-            log.error("Invalid asset id", asset_id=asset_id)
-            return None
-        if not override and character.current_avatar:
-            return character.current_avatar
-        character.current_avatar = asset_id
-
-        # Emit event for websocket passthrough
-        asset = self.get_asset(asset_id)
-        emit(
-            "scene_asset_character_current_avatar",
-            scene=self.scene,
-            websocket_passthrough=True,
-            kwargs={
-                "asset_id": asset_id,
-                "asset": self.get_asset_bytes_as_base64(asset_id),
-                "media_type": asset.media_type,
-                "character": character.name,
-            },
-        )
-
-        return asset_id
-
     async def smart_attach_asset(
         self,
         asset_id: str,
@@ -1519,17 +1653,11 @@ class SceneAssets:
                 if character and character.name != message_character_name:
                     continue
 
-            # Delete the old asset if requested and there is one
-            if delete_old and allow_override and message.asset_id:
-                old_asset_id = message.asset_id
-                log.debug(
-                    "smart_attach_asset - Deleting old asset",
-                    old_asset_id=old_asset_id,
-                    message_id=message.id,
-                )
-                self.remove_asset(old_asset_id)
-
-            await self.update_message_asset(message.id, asset_id)
+            await self.set_asset(
+                MessageTarget(message_id=message.id),
+                asset_id,
+                replace=delete_old and allow_override,
+            )
 
         return messages
 
@@ -1595,41 +1723,71 @@ class SceneAssets:
 
         return message
 
-    async def update_message_asset(
+    async def set_asset(
         self,
-        message_id: int,
+        target: AssetTarget,
         asset_id: str,
         *,
-        override_cadence: bool = False,
-    ) -> scene_message.SceneMessage | None:
+        override: bool = True,
+        replace: bool = False,
+    ) -> AssetSetResult:
         """
-        Update the asset_id and asset_type of a message in the scene history.
+        Shows the asset on the target. Without override a target that
+        already shows an asset keeps it.
 
-        Args:
-            message_id: The ID of the message to update
-            asset_id: The new asset ID
-            override_cadence: Explicit manual selection may override avatar cadence
-
-        Returns:
-            The updated message object, or None if message not found
+        With replace, the asset the target showed before is deleted once
+        nothing else shows it; a backdrop entry first moves the other backdrop
+        history that showed it to the new asset. Otherwise the original is
+        kept and the result says why.
 
         Raises:
-            ValueError: If the asset_id is invalid or message type doesn't support assets
+            AssetTargetNotFound: the message or character does not exist
+            AssetTargetError: the asset is unknown or does not fit the target
         """
         log.debug(
-            "update_message_asset",
-            message_id=message_id,
+            "set_asset",
+            target=target,
             asset_id=asset_id,
+            override=override,
+            replace=replace,
         )
+        if not self.validate_asset_id(asset_id):
+            raise AssetTargetError(f"Invalid asset_id: {asset_id}")
+        apply = {
+            MessageTarget: self._apply_message,
+            BackdropEntryTarget: self._apply_backdrop_entry,
+            SceneBackdropTarget: self._apply_scene_backdrop,
+            SceneCoverTarget: self._apply_scene_cover,
+            CharacterCoverTarget: self._apply_character_cover,
+            CharacterAvatarTarget: self._apply_character_avatar,
+        }[type(target)]
+        previous = await apply(target, asset_id, override)
+        applied = override or not previous
+        result = AssetSetResult(
+            asset_id=asset_id if applied else previous,
+            previous_asset_id=previous,
+            changed=applied and previous != asset_id,
+        )
+        if replace and result.changed and previous:
+            await self._retire_replaced(target, previous, result)
+        return result
 
-        # Get the message
-        message = self.scene.get_message(message_id)
+    def _character_for(self, target: _CharacterTarget) -> "Character":
+        character = (
+            target._character
+            or self.scene.character_data.get(target.character_name)
+            or self.scene.get_character(target.character_name)
+        )
+        if not character:
+            raise AssetTargetNotFound(f"Character not found: {target.character_name}")
+        return character
 
+    async def _apply_message(
+        self, target: MessageTarget, asset_id: str, override: bool
+    ) -> str | None:
+        message = self.scene.get_message(target.message_id)
         if message is None:
-            log.error("Message not found", message_id=message_id)
-            return None
-
-        # Validate that the message supports assets
+            raise AssetTargetNotFound(f"Message not found: {target.message_id}")
         if not isinstance(
             message,
             (
@@ -1638,99 +1796,93 @@ class SceneAssets:
                 scene_message.ContextInvestigationMessage,
             ),
         ):
-            raise ValueError(
+            raise AssetTargetError(
                 f"Message type '{message.typ}' does not support assets. "
                 f"Only CharacterMessage, NarratorMessage and ContextInvestigationMessage support assets."
             )
-
-        # Validate asset_id
-        if not self.validate_asset_id(asset_id):
-            raise ValueError(f"Invalid asset_id: {asset_id}")
-
         asset = self.get_asset(asset_id)
         asset_type = VIS_TYPE_TO_ASSET_TYPE.get(asset.meta.vis_type, None)
-
         if asset_type is None:
-            raise ValueError(
+            raise AssetTargetError(
                 f"Asset type not valid for message attachement: {asset_id}"
             )
-
-        # Update the message's asset properties
+        previous = message.asset_id
+        if previous and not override:
+            return previous
         message.asset_id = asset_id
         message.asset_type = asset_type
-
-        # Emit signal with websocket_passthrough
         emit(
             "message_asset_update",
             "",
             websocket_passthrough=True,
             kwargs={
-                "message_id": message_id,
+                "message_id": message.id,
                 "asset_id": asset_id,
                 "asset_type": asset_type,
-                "override_cadence": override_cadence,
+                "override_cadence": target.override_cadence,
             },
         )
+        return previous
 
-        log.debug(
-            "Message asset updated",
-            message_id=message_id,
-            asset_id=asset_id,
-            asset_type=asset_type,
-        )
-
-        return message
-
-    async def set_scene_cover_image_from_bytes(
-        self, bytes: bytes, override: bool = False
-    ) -> str:
-        """
-        Sets the scene cover image from bytes.
-        """
-        asset = await self.add_asset(bytes, "png", "image/png")
-        await self.set_scene_cover_image(asset.id, override)
-        return asset.id
-
-    async def set_scene_cover_image_from_image_data(
-        self, image_data: str, override: bool = False
-    ) -> str:
-        """
-        Sets the scene cover image from an image data.
-        """
-        asset = await self.add_asset_from_image_data(image_data)
-        await self.set_scene_cover_image(asset.id, override)
-        return asset.id
-
-    async def set_scene_cover_image_from_file_path(
-        self, file_path: str, override: bool = False
-    ) -> str:
-        """
-        Sets the scene cover image from a file path.
-        """
-        asset = await self.add_asset_from_file_path(file_path)
-        await self.set_scene_cover_image(asset.id, override)
-        return asset.id
-
-    async def set_scene_cover_image(
-        self, asset_id: str, override: bool = False
+    async def _apply_backdrop_entry(
+        self, target: BackdropEntryTarget, asset_id: str, override: bool
     ) -> str | None:
+        message = self.scene.get_message(target.message_id)
+        if message is None:
+            raise AssetTargetNotFound(f"Message not found: {target.message_id}")
+        if (
+            not isinstance(message, scene_message.SceneBackdropMessage)
+            or message.pending
+        ):
+            raise AssetTargetError(
+                f"Message {target.message_id} is not a backdrop entry"
+            )
+        if self.get_asset(asset_id).meta.vis_type != VIS_TYPE.SCENE_BACKGROUND:
+            raise AssetTargetError(f"Asset is not a scene background: {asset_id}")
+        previous = message.backdrop
+        if previous and not override:
+            return previous
+        await self._show_on_backdrop_entry(message, asset_id)
+        return previous
+
+    async def _show_on_backdrop_entry(
+        self, message: scene_message.SceneBackdropMessage, asset_id: str
+    ):
         """
-        Sets the scene cover image.
+        A backdrop entry shows another image. When it set the current
+        backdrop, the scene backdrop follows without a new backdrop entry.
         """
-        log.debug("set_scene_cover_image", asset_id=asset_id, override=override)
-        if not self.validate_asset_id(asset_id):
-            log.error("Invalid asset id", asset_id=asset_id)
-            return None
-        if not override and self.cover_image:
-            return self.cover_image
+        message.backdrop = asset_id
+        later_index = self._next_backdrop_index(self._history_index(message))
+        await self._propagate_backdrop(
+            self.scene.history[later_index] if later_index is not None else None,
+            asset_id,
+        )
+        self.scene.emit_history_message(message)
+        self.scene._mark_scene_unsaved()
+
+    async def _apply_scene_backdrop(
+        self, target: SceneBackdropTarget, asset_id: str, override: bool
+    ) -> str | None:
+        previous = self.backdrop
+        if previous and not override:
+            return previous
+        await self.set_scene_backdrop(asset_id=asset_id)
+        return previous
+
+    async def _apply_scene_cover(
+        self, target: SceneCoverTarget, asset_id: str, override: bool
+    ) -> str | None:
+        previous = self.cover_image
+        if previous and not override:
+            return previous
+        asset = self.get_asset(asset_id)
         self.cover_image = asset_id
 
         # Only emit status if scene is active, otherwise it will be emitted when scene starts
         if self.scene.active:
             self.scene.emit_status()
 
-        # Emit event for websocket passthrough (always emit, even if scene isn't active yet)
-        asset = self.get_asset(asset_id)
         emit(
             "scene_asset_scene_cover_image",
             scene=self.scene,
@@ -1740,12 +1892,101 @@ class SceneAssets:
                 "media_type": asset.media_type,
             },
         )
-
         await async_signals.get("scene.cover_image_changed").send(
             CoverImageChangedPayload(asset=asset)
         )
+        return previous
 
-        return asset_id
+    async def _apply_character_cover(
+        self, target: CharacterCoverTarget, asset_id: str, override: bool
+    ) -> str | None:
+        character = self._character_for(target)
+        previous = character.cover_image
+        if previous and not override:
+            return previous
+        asset = self.get_asset(asset_id)
+        character.cover_image = asset_id
+        emit(
+            "scene_asset_character_cover_image",
+            scene=self.scene,
+            websocket_passthrough=True,
+            kwargs={
+                "asset_id": asset_id,
+                "media_type": asset.media_type,
+                "character": character.name,
+            },
+        )
+        await async_signals.get("character.cover_image_changed").send(
+            CoverImageChangedPayload(asset=asset, character_name=character.name)
+        )
+        return previous
+
+    async def _apply_character_avatar(
+        self, target: CharacterAvatarTarget, asset_id: str, override: bool
+    ) -> str | None:
+        character = self._character_for(target)
+        field = "current_avatar" if target.slot == "current" else "avatar"
+        previous = getattr(character, field)
+        if previous and not override:
+            return previous
+        asset = self.get_asset(asset_id)
+        setattr(character, field, asset_id)
+        emit(
+            f"scene_asset_character_{field}",
+            scene=self.scene,
+            websocket_passthrough=True,
+            kwargs={
+                "asset_id": asset_id,
+                "asset": self.get_asset_bytes_as_base64(asset_id),
+                "media_type": asset.media_type,
+                "character": character.name,
+            },
+        )
+        return previous
+
+    async def _retire_replaced(
+        self, target: AssetTarget, previous: str, result: AssetSetResult
+    ):
+        """
+        Deletes a replaced asset that nothing uses any more. While a history
+        edit holds messages out of the history, this waits until they are back.
+        """
+        if self._held_retirements is not None:
+            self._held_retirements.append((target, previous, result))
+            return
+        if isinstance(target, BackdropEntryTarget):
+            await self._move_backdrop_history(previous, result.asset_id)
+        if previous not in self.assets:
+            # deleted meanwhile, for example by an earlier held retirement
+            return
+        reasons = self.replace_blockers(previous, besides_asset_id=result.asset_id)
+        if reasons:
+            result.kept_reason = ", ".join(reasons)
+            emit(
+                "status",
+                message=f"Kept the original image: {result.kept_reason}",
+                status="info",
+            )
+            return
+        self.remove_asset(previous)
+        result.deleted_asset_id = previous
+
+    async def _move_backdrop_history(self, old: str, new: str):
+        """Backdrop entries and the live backdrop that showed `old` show `new`."""
+        for message in self.scene.history:
+            if not isinstance(message, scene_message.SceneBackdropMessage):
+                continue
+            moved = False
+            if message.backdrop == old:
+                message.backdrop = new
+                moved = True
+            if message.previous_backdrop == old:
+                message.previous_backdrop = new
+                moved = True
+            if moved:
+                self.scene.emit_history_message(message)
+        if self.backdrop == old:
+            await self.set_scene_backdrop(asset_id=new, record=False)
 
     async def set_scene_backdrop(
         self,
@@ -1840,42 +2081,6 @@ class SceneAssets:
         else:
             await self.set_scene_backdrop(asset_id=restored, record=False)
 
-    async def update_backdrop_message_asset(
-        self, message_id: int, asset_id: str
-    ) -> scene_message.SceneBackdropMessage | None:
-        """
-        Swaps the image of a backdrop message for another scene background.
-        When the message set the current backdrop, the scene backdrop follows
-        without a new backdrop message.
-
-        Raises:
-            ValueError: If the message is not a finished backdrop message, or
-                the asset is not a scene background
-        """
-        message = self.scene.get_message(message_id)
-        if message is None:
-            log.error("Message not found", message_id=message_id)
-            return None
-        if (
-            not isinstance(message, scene_message.SceneBackdropMessage)
-            or message.pending
-        ):
-            raise ValueError(f"Message {message_id} is not a backdrop entry")
-        if not self.validate_asset_id(asset_id):
-            raise ValueError(f"Invalid asset_id: {asset_id}")
-        if self.get_asset(asset_id).meta.vis_type != VIS_TYPE.SCENE_BACKGROUND:
-            raise ValueError(f"Asset is not a scene background: {asset_id}")
-
-        message.backdrop = asset_id
-        later_index = self._next_backdrop_index(self._history_index(message))
-        await self._propagate_backdrop(
-            self.scene.history[later_index] if later_index is not None else None,
-            asset_id,
-        )
-        self.scene.emit_history_message(message)
-        self.scene._mark_scene_unsaved()
-        return message
-
     def _next_backdrop_index(self, index: int) -> int | None:
         """The history position of the first finished backdrop message after `index`."""
         return next(
@@ -1932,9 +2137,21 @@ class SceneAssets:
         Records a pending backdrop message for an image whose generation
         starts now; the saved image fills it in. With message ids it goes
         right after the latest of those messages and the backdrop messages
-        that follow it, otherwise at the end.
+        that follow it, otherwise at the end. A replace only follows a
+        backdrop entry: a background on a story message gets a new entry at
+        the end.
         """
-        index = self._backdrop_insert_index(ctx.message_ids)
+        message_ids = ctx.message_ids
+        if ctx.delete_old:
+            message_ids = [
+                message_id
+                for message_id in message_ids
+                if isinstance(
+                    self.scene.get_message(message_id),
+                    scene_message.SceneBackdropMessage,
+                )
+            ]
+        index = self._backdrop_insert_index(message_ids)
         if index is None:
             message = scene_message.SceneBackdropMessage(
                 pending=True, previous_backdrop=self.backdrop
@@ -1995,7 +2212,8 @@ class SceneAssets:
         reset), or a later backdrop change follows it with only backdrop
         messages between. A backdrop message right before the filled one is
         merged into it. The image becomes the live backdrop only when no
-        later backdrop change follows. While a history edit holds backdrop
+        later backdrop change follows. A replace puts the image on the entry
+        it was made from instead. While a history edit holds backdrop
         messages out of the history, the fill waits until they are back.
         """
         if not self.scene.active:
@@ -2011,6 +2229,9 @@ class SceneAssets:
         message = self.pending_backdrops.pop(ctx.backdrop_message_id, None)
         index = self._history_index(message) if message is not None else -1
         if index < 0:
+            return
+        if await self._replace_backdrop_entry(ctx, asset_id):
+            self.scene.delete_message(message.id)
             return
         history = self.scene.history
         later_index = self._next_backdrop_index(index)
@@ -2036,6 +2257,34 @@ class SceneAssets:
         self.scene.emit_history_message(message)
         self.scene._mark_scene_unsaved()
 
+    async def _replace_backdrop_entry(
+        self, ctx: AssetAttachmentContext, asset_id: str
+    ) -> bool:
+        """
+        A replace puts the generated image on the backdrop entry it was made
+        from, wherever that entry sits. False when there is no such entry
+        any more, so the image fills its own pending entry.
+        """
+        if not (ctx.delete_old and ctx.allow_override):
+            return False
+        for message_id in ctx.message_ids:
+            source = self.scene.get_message(message_id)
+            if (
+                isinstance(source, scene_message.SceneBackdropMessage)
+                and not source.pending
+            ):
+                try:
+                    await self.set_asset(
+                        BackdropEntryTarget(message_id=source.id),
+                        asset_id,
+                        replace=True,
+                    )
+                except AssetTargetError as exc:
+                    log.warning("replace_backdrop_entry.refused", error=str(exc))
+                    return False
+                return True
+        return False
+
     def abandon_generated_backdrop(self, ctx: AssetAttachmentContext):
         message = self.pending_backdrops.pop(ctx.backdrop_message_id, None)
         if (
@@ -2056,87 +2305,23 @@ class SceneAssets:
     async def backdrops_lifted(self):
         """
         Wraps a history edit that takes backdrop messages out of the history
-        and puts them back: generated images that arrive meanwhile are applied
-        once the outermost one ends.
+        and puts them back: generated images that arrive meanwhile are applied,
+        and replaced assets checked for deletion, once the outermost one ends.
         """
         if self._lifted_backdrops is not None:
             yield
             return
         self._lifted_backdrops = []
+        self._held_retirements = []
         try:
             yield
         finally:
             held, self._lifted_backdrops = self._lifted_backdrops, None
+            retirements, self._held_retirements = self._held_retirements, None
             for ctx, asset_id in held:
                 await self.finish_generated_backdrop(ctx, asset_id)
-
-    async def set_character_cover_image_from_bytes(
-        self, character: "Character", bytes: bytes, override: bool = False
-    ) -> str:
-        """
-        Sets the character cover image from bytes.
-        """
-        asset = await self.add_asset(bytes, "png", "image/png")
-        await self.set_character_cover_image(character, asset.id, override)
-        return asset.id
-
-    async def set_character_cover_image_from_image_data(
-        self, character: "Character", image_data: str, override: bool = False
-    ) -> str:
-        """
-        Sets the character cover image from an image data.
-        """
-        asset = await self.add_asset_from_image_data(image_data)
-        await self.set_character_cover_image(character, asset.id, override)
-        return asset.id
-
-    async def set_character_cover_image_from_file_path(
-        self, character: "Character", file_path: str, override: bool = False
-    ) -> str:
-        """
-        Sets the character cover image from a file path.
-        """
-        asset = await self.add_asset_from_file_path(file_path)
-        await self.set_character_cover_image(character, asset.id, override)
-        return asset.id
-
-    async def set_character_cover_image(
-        self, character: "Character", asset_id: str, override: bool = False
-    ) -> str | None:
-        """
-        Sets the character cover image.
-        """
-        log.debug(
-            "set_character_cover_image",
-            character=character,
-            asset_id=asset_id,
-            override=override,
-        )
-        if not self.validate_asset_id(asset_id):
-            log.error("Invalid asset id", asset_id=asset_id)
-            return None
-        if not override and character.cover_image:
-            return character.cover_image
-        character.cover_image = asset_id
-
-        # Emit event for websocket passthrough
-        asset = self.get_asset(asset_id)
-        emit(
-            "scene_asset_character_cover_image",
-            scene=self.scene,
-            websocket_passthrough=True,
-            kwargs={
-                "asset_id": asset_id,
-                "media_type": asset.media_type,
-                "character": character.name,
-            },
-        )
-
-        await async_signals.get("character.cover_image_changed").send(
-            CoverImageChangedPayload(asset=asset, character_name=character.name)
-        )
-
-        return asset_id
+            for target, previous, result in retirements:
+                await self._retire_replaced(target, previous, result)
 
 
 def migrate_scene_assets_to_library(root: Path | str | None = None) -> None:

@@ -145,7 +145,7 @@ export default {
     },
     supportsRegeneration() {
       // Check if this asset type supports regeneration
-      return this.asset_type === 'card' || this.asset_type === 'scene_illustration';
+      return ['card', 'scene_illustration', 'avatar'].includes(this.asset_type);
     },
     sizeMap() {
       const maps = {
@@ -203,16 +203,15 @@ export default {
         return;
       }
       
-      // Shift+click to regenerate (for card and scene_illustration)
+      // Shift+click to regenerate
       if (event.shiftKey && this.imageSrc && this.supportsRegeneration) {
         this.regenerateIllustration(false);
         return;
       }
       
-      // Alt+click to regenerate and replace (for card and scene_illustration);
-      // a new background never replaces the one it came from, so a Backdrop entry only regenerates
+      // Alt+click to regenerate and replace; the server keeps an original that is used elsewhere
       if (event.altKey && this.imageSrc && this.supportsRegeneration) {
-        this.regenerateIllustration(!this.backdrop);
+        this.regenerateIllustration(true);
         return;
       }
       

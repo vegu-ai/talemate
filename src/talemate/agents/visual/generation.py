@@ -250,7 +250,31 @@ class GenerationMixin:
             await self._generation_failed(request, exc, cancelled=False)
             raise
 
+    def _drop_missing_references(self, request: GenerationRequest):
+        scene = active_scene.get()
+        if not scene or not request.reference_assets:
+            return
+        missing = [
+            asset_id
+            for asset_id in request.reference_assets
+            if not scene.assets.validate_asset_id(asset_id)
+        ]
+        if not missing:
+            return
+        request.reference_assets = [
+            asset_id for asset_id in request.reference_assets if asset_id not in missing
+        ]
+        log.warning("generate.missing_references_dropped", missing=missing)
+        if (
+            request.gen_type == GEN_TYPE.IMAGE_EDIT
+            and not request.reference_assets
+            and not request.inline_reference
+            and self.can_generate_images
+        ):
+            request.gen_type = GEN_TYPE.TEXT_TO_IMAGE
+
     async def _generate(self, request: GenerationRequest) -> GenerationResponse:
+        self._drop_missing_references(request)
         await self.finalize_prompt_request(request)
 
         response = GenerationResponse(

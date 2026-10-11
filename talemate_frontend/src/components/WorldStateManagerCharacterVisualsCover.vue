@@ -181,6 +181,7 @@
 
 <script>
 import { newUuid } from '@/utils/uuid';
+import { assetTarget, setAssetMessage } from '@/utils/assetTargets';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import AssetViewMixin from './AssetViewMixin.js';
 import VisualAssetGenerateMixin from './VisualAssetGenerateMixin.js';
@@ -310,12 +311,9 @@ export default {
         setCoverImageForAsset(assetId) {
             if (!assetId) return;
 
-            this.getWebsocket().send(JSON.stringify({
-                type: 'scene_assets',
-                action: 'set_character_cover_image',
-                asset_id: assetId,
-                character_name: this.character.name,
-            }));
+            this.getWebsocket().send(JSON.stringify(
+                setAssetMessage(assetId, [assetTarget.characterCover(this.character.name)]),
+            ));
 
             // Request character details to sync up the UI after setting cover image
             this.requestCharacterDetails();
@@ -324,11 +322,7 @@ export default {
         setSceneCoverImage(assetId) {
             if (!assetId) return;
 
-            this.getWebsocket().send(JSON.stringify({
-                type: 'scene_assets',
-                action: 'set_scene_cover_image',
-                asset_id: assetId,
-            }));
+            this.getWebsocket().send(JSON.stringify(setAssetMessage(assetId, [assetTarget.sceneCover()])));
         },
 
         startGenerateNew() {

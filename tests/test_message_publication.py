@@ -493,7 +493,7 @@ async def test_no_portrait_decision_preserves_regenerated_message_asset(
     message._avatar_pending = True
     scene.history.append(message)
     update = AsyncMock()
-    monkeypatch.setattr(scene.assets, "update_message_asset", update)
+    monkeypatch.setattr(scene.assets, "set_asset", update)
     await get_agent("conversation").finalize_message_avatar(message)
     update.assert_not_awaited()
     assert message.asset_id == "recorded-avatar"

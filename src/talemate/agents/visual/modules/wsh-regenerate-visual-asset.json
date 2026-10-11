@@ -506,6 +506,64 @@
       "inherited": false,
       "registry": "state/GetState",
       "base_type": "core/Node"
+    },
+    "9d6e1c42-3b7a-4f0e-8a51-2c4e7b9f1a03": {
+      "title": "GET obj.asset_delete_old",
+      "id": "9d6e1c42-3b7a-4f0e-8a51-2c4e7b9f1a03",
+      "properties": {
+        "attribute": "asset_delete_old"
+      },
+      "x": 570,
+      "y": 1690,
+      "width": 238,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "5a2f8e17-c94d-4b6a-9e03-71d4f2a8b6c5": {
+      "title": "As Bool",
+      "id": "5a2f8e17-c94d-4b6a-9e03-71d4f2a8b6c5",
+      "properties": {
+        "default": false
+      },
+      "x": 870,
+      "y": 1720,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "c3b71f9e-2d58-4a6e-b0f4-8e19a5d7c2f1": {
+      "title": "Passage to replace",
+      "id": "c3b71f9e-2d58-4a6e-b0f4-8e19a5d7c2f1",
+      "properties": {},
+      "x": 1640,
+      "y": 1700,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitch",
+      "base_type": "core/Node"
+    },
+    "e1f4a7c2-6b39-4d85-a0e2-9c7b5f3d1a48": {
+      "title": "GET obj.message_ids",
+      "id": "e1f4a7c2-6b39-4d85-a0e2-9c7b5f3d1a48",
+      "properties": {
+        "attribute": "message_ids"
+      },
+      "x": 870,
+      "y": 1810,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -587,7 +645,7 @@
       "5ee36a23-c2f6-4128-bef0-c2c6654e43e0.no"
     ],
     "5ee36a23-c2f6-4128-bef0-c2c6654e43e0.value": [
-      "5f922488-5bbe-40dc-a2c9-34127702c01f.value"
+      "c3b71f9e-2d58-4a6e-b0f4-8e19a5d7c2f1.no"
     ],
     "5f922488-5bbe-40dc-a2c9-34127702c01f.value": [
       "17ccf0ec-6854-42aa-b778-498727a62244.state"
@@ -610,6 +668,24 @@
     ],
     "c501d57a-2b38-434c-af75-0e240264fa59.value": [
       "94bf57a0-7e1b-4272-89f9-9762ea881014.vis_type"
+    ],
+    "c3b71f9e-2d58-4a6e-b0f4-8e19a5d7c2f1.value": [
+      "5f922488-5bbe-40dc-a2c9-34127702c01f.value"
+    ],
+    "b32942d2-f7a7-4d8d-861e-e61df47463cf.object": [
+      "9d6e1c42-3b7a-4f0e-8a51-2c4e7b9f1a03.object"
+    ],
+    "9d6e1c42-3b7a-4f0e-8a51-2c4e7b9f1a03.value": [
+      "5a2f8e17-c94d-4b6a-9e03-71d4f2a8b6c5.value"
+    ],
+    "5a2f8e17-c94d-4b6a-9e03-71d4f2a8b6c5.value": [
+      "c3b71f9e-2d58-4a6e-b0f4-8e19a5d7c2f1.check"
+    ],
+    "9d6e1c42-3b7a-4f0e-8a51-2c4e7b9f1a03.object": [
+      "e1f4a7c2-6b39-4d85-a0e2-9c7b5f3d1a48.object"
+    ],
+    "e1f4a7c2-6b39-4d85-a0e2-9c7b5f3d1a48.value": [
+      "c3b71f9e-2d58-4a6e-b0f4-8e19a5d7c2f1.yes"
     ]
   },
   "groups": [
@@ -628,7 +704,7 @@
       "x": 2,
       "y": 1265,
       "width": 2393,
-      "height": 480,
+      "height": 680,
       "color": "#b58b2a",
       "font_size": 24,
       "inherited": false

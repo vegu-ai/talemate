@@ -165,6 +165,7 @@
 
 <script>
 import VisualImageView from './VisualImageView.vue';
+import { assetTarget, enableSceneBackdropMessage, setAssetMessage } from '@/utils/assetTargets';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import VisualLibraryUpload from './VisualLibraryUpload.vue';
 import VisualAssetsTree from './VisualAssetsTree.vue';
@@ -373,20 +374,12 @@ export default {
     },
     onSetSceneCoverImage(payload) {
       if (!payload || !payload.assetId) return;
-      this.getWebsocket().send(JSON.stringify({
-        type: 'scene_assets',
-        action: 'set_scene_cover_image',
-        asset_id: payload.assetId,
-      }));
+      this.getWebsocket().send(JSON.stringify(setAssetMessage(payload.assetId, [assetTarget.sceneCover()])));
     },
     onSetSceneBackdrop(payload) {
       if (!payload || !payload.assetId) return;
-      this.getWebsocket().send(JSON.stringify({
-        type: 'scene_assets',
-        action: 'set_scene_backdrop',
-        asset_id: payload.assetId,
-        enabled: true,
-      }));
+      this.getWebsocket().send(JSON.stringify(setAssetMessage(payload.assetId, [assetTarget.sceneBackdrop()])));
+      this.getWebsocket().send(JSON.stringify(enableSceneBackdropMessage()));
     },
     saveMeta() {
       const ref = this.$refs.visualImageView;

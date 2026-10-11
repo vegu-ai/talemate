@@ -209,6 +209,7 @@
 
 <script>
 import { newUuid } from '@/utils/uuid';
+import { assetTarget, setAssetMessage } from '@/utils/assetTargets';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import AssetViewMixin from './AssetViewMixin.js';
 import VisualAssetGenerateMixin from './VisualAssetGenerateMixin.js';
@@ -383,13 +384,9 @@ export default {
         setDefaultAvatarForAsset(assetId) {
             if (!assetId) return;
 
-            this.getWebsocket().send(JSON.stringify({
-                type: 'scene_assets',
-                action: 'set_character_avatar',
-                asset_id: assetId,
-                character_name: this.character.name,
-                avatar_type: 'default',
-            }));
+            this.getWebsocket().send(JSON.stringify(
+                setAssetMessage(assetId, [assetTarget.characterAvatar(this.character.name, 'default')]),
+            ));
 
             // Request character details to sync up the UI after setting default avatar
             this.requestCharacterDetails();
@@ -398,13 +395,9 @@ export default {
         setCurrentAvatarForAsset(assetId) {
             if (!assetId) return;
 
-            this.getWebsocket().send(JSON.stringify({
-                type: 'scene_assets',
-                action: 'set_character_avatar',
-                asset_id: assetId,
-                character_name: this.character.name,
-                avatar_type: 'current',
-            }));
+            this.getWebsocket().send(JSON.stringify(
+                setAssetMessage(assetId, [assetTarget.characterAvatar(this.character.name, 'current')]),
+            ));
         },
 
         startGenerateNew() {

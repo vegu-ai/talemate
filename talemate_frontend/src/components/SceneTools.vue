@@ -289,6 +289,7 @@
 
 <script>
 import SceneToolsDirector from './SceneToolsDirector.vue';
+import { assetTarget, setAssetMessage } from '@/utils/assetTargets';
 import SceneToolsNarrator from './SceneToolsNarrator.vue';
 import SceneToolsActor from './SceneToolsActor.vue';
 import SceneToolsCreative from './SceneToolsCreative.vue';
@@ -500,7 +501,9 @@ export default {
             if (this.sceneBackdropAssetId) {
                 message.enabled = !this.immersiveActive;
             } else if (this.sceneBackdropCandidate) {
-                message.asset_id = this.sceneBackdropCandidate;
+                this.getWebsocket().send(JSON.stringify(
+                    setAssetMessage(this.sceneBackdropCandidate, [assetTarget.sceneBackdrop()]),
+                ));
                 message.enabled = true;
             } else {
                 return;

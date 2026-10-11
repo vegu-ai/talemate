@@ -631,9 +631,9 @@
     a fresh premise.
 - path: user-guide/inline-visuals.md
   title: Inline Visuals
-  summary: Generate and manage inline scene illustrations, backgrounds, cards and character portraits; Visualize on
-    context-investigation messages and image click shortcuts. Covers auto-attachment, render cadence/size, Scene Backdrop,
-    Auto Backdrop and Immersive toggle. Mark images as references; Backdrop entries record each backdrop change; Scene
+  summary: Generate, manage and replace inline scene illustrations, backgrounds, cards and character portraits; Visualize
+    on context-investigation messages, image click shortcuts; auto-attachment, render cadence/size, Scene Backdrop,
+    Auto Backdrop, Immersive toggle. Mark images as references; Backdrop entries record each backdrop change; Scene
     Backgrounds set it as the story moves.
 - path: user-guide/integrations/runpod.md
   title: Runpod

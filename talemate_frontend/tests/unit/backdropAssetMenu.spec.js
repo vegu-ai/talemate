@@ -264,7 +264,7 @@ describe('Select background in the asset menu of a backdrop entry', () => {
         });
         vm.illustrationSelectDialog.selectedAssetId = 'dusk';
         vm.confirmIllustrationSelection();
-        expect(sent).toEqual([{ type: 'scene_assets', action: 'update_backdrop_message_asset', asset_id: 'dusk', message_id: 9 }]);
+        expect(sent).toEqual([{ type: 'scene_assets', action: 'set_asset', asset_id: 'dusk', targets: [{ kind: 'backdrop_entry', message_id: 9 }] }]);
     });
 
     it('swaps the entry image through the backdrop action, not the message action', () => {
@@ -272,7 +272,7 @@ describe('Select background in the asset menu of a backdrop entry', () => {
         vm.handleOpenBackgroundSelect();
         vm.illustrationSelectDialog.selectedAssetId = 'dusk';
         vm.confirmIllustrationSelection();
-        expect(sent).toEqual([{ type: 'scene_assets', action: 'update_backdrop_message_asset', asset_id: 'dusk', message_id: 7 }]);
+        expect(sent).toEqual([{ type: 'scene_assets', action: 'set_asset', asset_id: 'dusk', targets: [{ kind: 'backdrop_entry', message_id: 7 }] }]);
         expect(vm.illustrationSelectDialog.show).toBe(false);
     });
 
@@ -291,7 +291,7 @@ describe('Select background in the asset menu of a backdrop entry', () => {
         expect(vm.illustrationSelectDialog.assetIds).toEqual(['illustration', 'dawn', 'dusk']);
         vm.illustrationSelectDialog.selectedAssetId = 'illustration';
         vm.confirmIllustrationSelection();
-        expect(sent).toEqual([{ type: 'scene_assets', action: 'update_message_asset', asset_id: 'illustration', message_id: 7 }]);
+        expect(sent).toEqual([{ type: 'scene_assets', action: 'set_asset', asset_id: 'illustration', targets: [{ kind: 'message', message_id: 7, override_cadence: true }] }]);
     });
 });
 
@@ -302,17 +302,22 @@ describe('the replace entries of the asset menu', () => {
         expect(sceneMessagesSource).toContain('<v-list-item-title>Edit (replace)</v-list-item-title>');
     });
 
-    it('keeps the replace entries off Backdrop entries, where a new background never deletes the old one', () => {
-        expect(sceneMessagesSource).toMatch(/v-if="assetSupportsRegeneration && !assetMenu\.context\.backdrop"\s+:disabled="!visualAgentReady"\s+prepend-icon="mdi-image-refresh-outline"/);
-        expect(sceneMessagesSource).toMatch(/v-if="assetSupportsRegeneration && !assetMenu\.context\.backdrop"\s+:disabled="!visualAgentReady"\s+prepend-icon="mdi-image-edit-outline"/);
+    it('offers the replace entries on Backdrop entries, unblocked while the visual agent is ready', () => {
+        expect(sceneMessagesSource).toMatch(/v-if="assetSupportsRegeneration"\s+:disabled="!!assetMenuReplaceBlock"\s+prepend-icon="mdi-image-refresh-outline"/);
+        expect(sceneMessagesSource).toMatch(/v-if="assetSupportsRegeneration"\s+:disabled="!!assetMenuReplaceBlock"\s+prepend-icon="mdi-image-edit-outline"/);
+        const block = (visualAgentReady) => SceneMessages.computed.assetMenuReplaceBlock.call({
+            visualAgentReady, assetMenu: { context: backdropContext }, assetMenuUses: { asset_id: null, message_id: null, reasons: null },
+        });
+        expect(block(true)).toBeNull();
+        expect(block(false)).toBe('Visual agent not ready');
     });
 
-    it('turns Alt+click on a Backdrop entry image into a plain regenerate', () => {
+    it('replaces from Alt+click on a Backdrop entry image like on any other image', () => {
         const calls = [];
         const vm = { imageSrc: 'data:', supportsRegeneration: true, backdrop: true, regenerateIllustration: (deleteOld) => calls.push(deleteOld) };
         MessageAssetImage.methods.handleClick.call(vm, { altKey: true });
         MessageAssetImage.methods.handleClick.call({ ...vm, backdrop: false }, { altKey: true });
-        expect(calls).toEqual([false, true]);
+        expect(calls).toEqual([true, true]);
     });
 
     it('offers Select background to backdrop rows only', () => {

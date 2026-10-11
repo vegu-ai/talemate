@@ -2,7 +2,7 @@
 
 Covers pydantic schemas (CoverBBox, AssetMeta, AssetSelectionContext, Asset),
 SceneAssets CRUD against library.json, asset transfer/dedupe, MIME helpers,
-search/select, cover-image and avatar setters, cleanup helpers,
+search/select, set_asset targets, cleanup helpers,
 add_asset_from_image_data / file path / generation response, and
 migrate_scene_assets_to_library.
 
@@ -28,6 +28,12 @@ import talemate.scene_assets as scene_assets
 from talemate.scene_assets import (
     Asset,
     AssetMeta,
+    AssetTargetError,
+    AssetTargetNotFound,
+    CharacterAvatarTarget,
+    CharacterCoverTarget,
+    MessageTarget,
+    SceneCoverTarget,
     AssetSavedPayload,
     AssetSelectionContext,
     AssetTransfer,
@@ -57,6 +63,13 @@ from talemate.scene_message import (
     reset_message_id,
 )
 from talemate.tale_mate import Scene
+
+
+CHARACTER_TARGETS = [
+    (CharacterCoverTarget, {}, "cover_image"),
+    (CharacterAvatarTarget, {"slot": "default"}, "avatar"),
+    (CharacterAvatarTarget, {"slot": "current"}, "current_avatar"),
+]
 
 
 # ---------------------------------------------------------------------------
@@ -803,30 +816,32 @@ class TestSelectAssets:
 class TestSceneCoverImage:
     async def test_set_cover_image_with_valid_id(self, scene):
         a = await scene.assets.add_asset(b"x", "png", "image/png")
-        result = await scene.assets.set_scene_cover_image(a.id)
-        assert result == a.id
+        result = await scene.assets.set_asset(SceneCoverTarget(), a.id)
+        assert result.asset_id == a.id
+        assert result.changed
         assert scene.assets.cover_image == a.id
 
-    async def test_set_cover_image_invalid_returns_none(self, scene):
-        result = await scene.assets.set_scene_cover_image("nope")
-        assert result is None
+    async def test_set_cover_image_invalid_raises(self, scene):
+        with pytest.raises(AssetTargetError):
+            await scene.assets.set_asset(SceneCoverTarget(), "nope")
         assert scene.assets.cover_image is None
 
     async def test_set_cover_image_no_override_keeps_existing(self, scene):
         a = await scene.assets.add_asset(b"a", "png", "image/png")
         b = await scene.assets.add_asset(b"b", "png", "image/png")
-        await scene.assets.set_scene_cover_image(a.id)
-        # Non-override returns the existing value, doesn't update
-        result = await scene.assets.set_scene_cover_image(b.id, override=False)
-        assert result == a.id
+        await scene.assets.set_asset(SceneCoverTarget(), a.id)
+        result = await scene.assets.set_asset(SceneCoverTarget(), b.id, override=False)
+        assert result.asset_id == a.id
+        assert not result.changed
         assert scene.assets.cover_image == a.id
 
     async def test_set_cover_image_override_replaces(self, scene):
         a = await scene.assets.add_asset(b"a", "png", "image/png")
         b = await scene.assets.add_asset(b"b", "png", "image/png")
-        await scene.assets.set_scene_cover_image(a.id)
-        result = await scene.assets.set_scene_cover_image(b.id, override=True)
-        assert result == b.id
+        await scene.assets.set_asset(SceneCoverTarget(), a.id)
+        result = await scene.assets.set_asset(SceneCoverTarget(), b.id)
+        assert result.asset_id == b.id
+        assert result.previous_asset_id == a.id
         assert scene.assets.cover_image == b.id
 
 
@@ -884,141 +899,62 @@ class TestSceneBackdrop:
             assert data["backdrop_enabled"] is True
 
 
-class TestSceneCoverImageFromSources:
-    async def test_from_bytes(self, scene):
-        rid = await scene.assets.set_scene_cover_image_from_bytes(_png_bytes())
-        assert scene.assets.cover_image == rid
-        assert rid in scene.assets.assets
-
-    async def test_from_image_data(self, scene):
-        rid = await scene.assets.set_scene_cover_image_from_image_data(_png_data_url())
-        assert scene.assets.cover_image == rid
-
-    async def test_from_file_path(self, scene, tmp_path):
-        png = tmp_path / "input.png"
-        png.write_bytes(_png_bytes())
-        rid = await scene.assets.set_scene_cover_image_from_file_path(str(png))
-        assert scene.assets.cover_image == rid
-
-
-class TestCharacterCoverImage:
-    async def test_set_character_cover_image_valid(self, scene):
+@pytest.mark.parametrize(
+    "target_cls, options, field",
+    CHARACTER_TARGETS,
+    ids=[field for *_, field in CHARACTER_TARGETS],
+)
+class TestCharacterImages:
+    async def test_valid(self, scene, target_cls, options, field):
         char = Character(name="Alice")
         a = await scene.assets.add_asset(b"a", "png", "image/png")
-        result = await scene.assets.set_character_cover_image(char, a.id)
-        assert result == a.id
-        assert char.cover_image == a.id
+        result = await scene.assets.set_asset(target_cls.of(char, **options), a.id)
+        assert result.asset_id == a.id
+        assert getattr(char, field) == a.id
 
-    async def test_set_character_cover_image_invalid(self, scene):
+    async def test_invalid(self, scene, target_cls, options, field):
         char = Character(name="Alice")
-        result = await scene.assets.set_character_cover_image(char, "nope")
-        assert result is None
-        assert char.cover_image is None
+        with pytest.raises(AssetTargetError):
+            await scene.assets.set_asset(target_cls.of(char, **options), "nope")
+        assert getattr(char, field) is None
 
-    async def test_no_override_preserves_existing_cover(self, scene):
+    async def test_no_override_keeps_existing(self, scene, target_cls, options, field):
         char = Character(name="Alice")
         a = await scene.assets.add_asset(b"a", "png", "image/png")
         b = await scene.assets.add_asset(b"b", "png", "image/png")
-        await scene.assets.set_character_cover_image(char, a.id)
-        result = await scene.assets.set_character_cover_image(char, b.id)
-        assert result == a.id
-        assert char.cover_image == a.id
-
-    async def test_override_replaces(self, scene):
-        char = Character(name="Alice")
-        a = await scene.assets.add_asset(b"a", "png", "image/png")
-        b = await scene.assets.add_asset(b"b", "png", "image/png")
-        await scene.assets.set_character_cover_image(char, a.id)
-        result = await scene.assets.set_character_cover_image(char, b.id, override=True)
-        assert result == b.id
-        assert char.cover_image == b.id
-
-    async def test_from_bytes_helper(self, scene):
-        char = Character(name="Alice")
-        rid = await scene.assets.set_character_cover_image_from_bytes(
-            char, _png_bytes()
+        await scene.assets.set_asset(target_cls.of(char, **options), a.id)
+        result = await scene.assets.set_asset(
+            target_cls.of(char, **options), b.id, override=False
         )
-        assert char.cover_image == rid
+        assert result.asset_id == a.id
+        assert getattr(char, field) == a.id
 
-    async def test_from_image_data_helper(self, scene):
-        char = Character(name="Alice")
-        rid = await scene.assets.set_character_cover_image_from_image_data(
-            char, _png_data_url()
-        )
-        assert char.cover_image == rid
-
-    async def test_from_file_path_helper(self, scene, tmp_path):
-        png = tmp_path / "in.png"
-        png.write_bytes(_png_bytes())
-        char = Character(name="Alice")
-        rid = await scene.assets.set_character_cover_image_from_file_path(
-            char, str(png)
-        )
-        assert char.cover_image == rid
-
-
-class TestCharacterAvatars:
-    async def test_set_character_avatar_valid(self, scene):
-        char = Character(name="Alice")
-        a = await scene.assets.add_asset(b"a", "png", "image/png")
-        result = await scene.assets.set_character_avatar(char, a.id)
-        assert result == a.id
-        assert char.avatar == a.id
-
-    async def test_set_character_avatar_invalid(self, scene):
-        char = Character(name="Alice")
-        result = await scene.assets.set_character_avatar(char, "nope")
-        assert result is None
-        assert char.avatar is None
-
-    async def test_set_character_avatar_no_override(self, scene):
+    async def test_override_replaces(self, scene, target_cls, options, field):
         char = Character(name="Alice")
         a = await scene.assets.add_asset(b"a", "png", "image/png")
         b = await scene.assets.add_asset(b"b", "png", "image/png")
-        await scene.assets.set_character_avatar(char, a.id)
-        result = await scene.assets.set_character_avatar(char, b.id)
-        assert result == a.id
-        assert char.avatar == a.id
+        await scene.assets.set_asset(target_cls.of(char, **options), a.id)
+        result = await scene.assets.set_asset(target_cls.of(char, **options), b.id)
+        assert result.asset_id == b.id
+        assert getattr(char, field) == b.id
 
-    async def test_set_character_avatar_override(self, scene):
+    async def test_resolves_a_scene_character_by_name(
+        self, scene, target_cls, options, field
+    ):
         char = Character(name="Alice")
+        scene.character_data["Alice"] = char
         a = await scene.assets.add_asset(b"a", "png", "image/png")
-        b = await scene.assets.add_asset(b"b", "png", "image/png")
-        await scene.assets.set_character_avatar(char, a.id)
-        result = await scene.assets.set_character_avatar(char, b.id, override=True)
-        assert result == b.id
-        assert char.avatar == b.id
+        target = target_cls(character_name="Alice", **options)
+        await scene.assets.set_asset(target, a.id)
+        assert getattr(char, field) == a.id
 
-    async def test_set_character_current_avatar_valid(self, scene):
-        char = Character(name="Alice")
+    async def test_unknown_character_is_not_found(
+        self, scene, target_cls, options, field
+    ):
         a = await scene.assets.add_asset(b"a", "png", "image/png")
-        result = await scene.assets.set_character_current_avatar(char, a.id)
-        assert result == a.id
-        assert char.current_avatar == a.id
-
-    async def test_set_character_current_avatar_invalid(self, scene):
-        char = Character(name="Alice")
-        result = await scene.assets.set_character_current_avatar(char, "nope")
-        assert result is None
-        assert char.current_avatar is None
-
-    async def test_set_character_current_avatar_no_override(self, scene):
-        char = Character(name="Alice")
-        a = await scene.assets.add_asset(b"a", "png", "image/png")
-        b = await scene.assets.add_asset(b"b", "png", "image/png")
-        await scene.assets.set_character_current_avatar(char, a.id)
-        result = await scene.assets.set_character_current_avatar(char, b.id)
-        assert result == a.id
-
-    async def test_set_character_current_avatar_override(self, scene):
-        char = Character(name="Alice")
-        a = await scene.assets.add_asset(b"a", "png", "image/png")
-        b = await scene.assets.add_asset(b"b", "png", "image/png")
-        await scene.assets.set_character_current_avatar(char, a.id)
-        result = await scene.assets.set_character_current_avatar(
-            char, b.id, override=True
-        )
-        assert result == b.id
+        target = target_cls(character_name="Nobody", **options)
+        with pytest.raises(AssetTargetNotFound):
+            await scene.assets.set_asset(target, a.id)
 
 
 # ---------------------------------------------------------------------------
@@ -1046,7 +982,7 @@ class TestRemoveAsset:
 
     async def test_remove_asset_clears_dangling_scene_cover(self, scene):
         a = await scene.assets.add_asset(b"x", "png", "image/png")
-        await scene.assets.set_scene_cover_image(a.id)
+        await scene.assets.set_asset(SceneCoverTarget(), a.id)
         scene.assets.remove_asset(a.id)
         assert scene.assets.cover_image is None
 
@@ -1133,11 +1069,11 @@ class TestCleanupMessageAvatars:
 
 
 # ---------------------------------------------------------------------------
-# update_message_asset / clear_message_asset / smart_attach_asset
+# MessageTarget / clear_message_asset / smart_attach_asset
 # ---------------------------------------------------------------------------
 
 
-class TestUpdateMessageAsset:
+class TestMessageTarget:
     async def test_updates_character_message(self, scene):
         a = await scene.assets.add_asset(
             b"x",
@@ -1147,8 +1083,8 @@ class TestUpdateMessageAsset:
         )
         msg = CharacterMessage(message="Alice: hi")
         scene.history = [msg]
-        result = await scene.assets.update_message_asset(msg.id, a.id)
-        assert result is msg
+        result = await scene.assets.set_asset(MessageTarget(message_id=msg.id), a.id)
+        assert result.changed
         assert msg.asset_id == a.id
         assert msg.asset_type == "avatar"
 
@@ -1161,26 +1097,26 @@ class TestUpdateMessageAsset:
         )
         msg = NarratorMessage(message="The scene")
         scene.history = [msg]
-        await scene.assets.update_message_asset(msg.id, a.id)
+        await scene.assets.set_asset(MessageTarget(message_id=msg.id), a.id)
         assert msg.asset_type == "scene_illustration"
 
-    async def test_unknown_message_returns_none(self, scene):
+    async def test_unknown_message_is_not_found(self, scene):
         a = await scene.assets.add_asset(b"x", "png", "image/png")
-        result = await scene.assets.update_message_asset(99999, a.id)
-        assert result is None
+        with pytest.raises(AssetTargetNotFound):
+            await scene.assets.set_asset(MessageTarget(message_id=99999), a.id)
 
     async def test_unsupported_message_type_raises(self, scene):
         a = await scene.assets.add_asset(b"x", "png", "image/png")
         msg = SceneMessage(message="generic")
         scene.history = [msg]
-        with pytest.raises(ValueError, match="does not support assets"):
-            await scene.assets.update_message_asset(msg.id, a.id)
+        with pytest.raises(AssetTargetError, match="does not support assets"):
+            await scene.assets.set_asset(MessageTarget(message_id=msg.id), a.id)
 
     async def test_invalid_asset_id_raises(self, scene):
         msg = CharacterMessage(message="Alice: hi")
         scene.history = [msg]
-        with pytest.raises(ValueError, match="Invalid asset_id"):
-            await scene.assets.update_message_asset(msg.id, "ghost")
+        with pytest.raises(AssetTargetError, match="Invalid asset_id"):
+            await scene.assets.set_asset(MessageTarget(message_id=msg.id), "ghost")
 
     async def test_unspecified_vis_type_raises(self, scene):
         a = await scene.assets.add_asset(
@@ -1188,8 +1124,8 @@ class TestUpdateMessageAsset:
         )
         msg = CharacterMessage(message="Alice: hi")
         scene.history = [msg]
-        with pytest.raises(ValueError, match="Asset type not valid"):
-            await scene.assets.update_message_asset(msg.id, a.id)
+        with pytest.raises(AssetTargetError, match="Asset type not valid"):
+            await scene.assets.set_asset(MessageTarget(message_id=msg.id), a.id)
 
 
 class TestClearMessageAsset:
@@ -1532,9 +1468,9 @@ class TestAssetSignals:
         a = await scene.assets.add_asset(b"a", "png", "image/png")
         b = await scene.assets.add_asset(b"b", "png", "image/png")
 
-        await scene.assets.set_scene_cover_image(a.id)
+        await scene.assets.set_asset(SceneCoverTarget(), a.id)
         # non-override keeps the existing cover and must not fire
-        await scene.assets.set_scene_cover_image(b.id, override=False)
+        await scene.assets.set_asset(SceneCoverTarget(), b.id, override=False)
 
         assert len(received) == 1
         assert received[0].asset.id == a.id
@@ -1545,7 +1481,7 @@ class TestAssetSignals:
         a = await scene.assets.add_asset(b"a", "png", "image/png")
         character = Character(name="Alice")
 
-        await scene.assets.set_character_cover_image(character, a.id)
+        await scene.assets.set_asset(CharacterCoverTarget.of(character), a.id)
 
         assert len(received) == 1
         assert received[0].asset.id == a.id

@@ -20,6 +20,13 @@ from talemate.context import active_scene
 from talemate.scene_assets import (
     AssetMeta,
     AssetSelectionContext,
+    AssetTargetError,
+    AssetTargetNotFound,
+    CharacterAvatarTarget,
+    CharacterCoverTarget,
+    MessageTarget,
+    SceneBackdropTarget,
+    SceneCoverTarget,
     TAG_MATCH_MODE,
     AssetAttachmentContext,
 )
@@ -1403,16 +1410,16 @@ class SetCoverImage(Node):
         scene: "Scene" = active_scene.get()
         override_scene = self.normalized_input_value("override_scene")
         override_character = self.normalized_input_value("override_character")
+        targets = []
         if set_on_scene:
-            await scene.assets.set_scene_cover_image(
-                asset_id=asset_id, override=override_scene
-            )
+            targets.append((SceneCoverTarget(), override_scene))
         if character:
-            await scene.assets.set_character_cover_image(
-                character=character,
-                asset_id=asset_id,
-                override=override_character,
-            )
+            targets.append((CharacterCoverTarget.of(character), override_character))
+        for target, override in targets:
+            try:
+                await scene.assets.set_asset(target, asset_id, override=override)
+            except AssetTargetError as e:
+                raise InputValueError(self, "asset_id", str(e))
 
         self.set_output_values(
             {
@@ -1473,14 +1480,13 @@ class SetSceneBackdrop(Node):
         scene: "Scene" = active_scene.get()
         if not scene.assets.validate_asset_id(asset_id):
             raise InputValueError(self, "asset_id", f"No asset with id {asset_id}.")
-        prior = scene.assets.backdrop
-        await scene.assets.set_scene_backdrop(asset_id=asset_id)
+        result = await scene.assets.set_asset(SceneBackdropTarget(), asset_id)
 
         self.set_output_values(
             {
                 "state": self.get_input_value("state"),
                 "asset_id": asset_id,
-                "changed": scene.assets.backdrop != prior,
+                "changed": result.changed,
             }
         )
 
@@ -1556,15 +1562,9 @@ class SetAvatarImage(Node):
                 f"Invalid avatar_type: {avatar_type}. Must be 'default' or 'current'",
             )
 
-        # Set the avatar based on type
-        if avatar_type == "current":
-            await scene.assets.set_character_current_avatar(
-                character=character, asset_id=asset_id, override=True
-            )
-        else:
-            await scene.assets.set_character_avatar(
-                character=character, asset_id=asset_id, override=True
-            )
+        await scene.assets.set_asset(
+            CharacterAvatarTarget.of(character, slot=avatar_type), asset_id
+        )
 
         scene.emit_status()
 
@@ -1649,16 +1649,18 @@ class UpdateMessageAsset(Node):
         messages = []
         for message_id in message_ids:
             try:
-                message = await scene.assets.update_message_asset(
-                    message_id=message_id,
-                    asset_id=asset_id,
-                    override_cadence=self.get_input_value("override_cadence"),
+                await scene.assets.set_asset(
+                    MessageTarget(
+                        message_id=message_id,
+                        override_cadence=bool(self.get_input_value("override_cadence")),
+                    ),
+                    asset_id,
                 )
-                # Skip messages that aren't found
-                if message is not None:
-                    messages.append(message)
-            except ValueError as e:
+            except AssetTargetNotFound:
+                continue
+            except AssetTargetError as e:
                 raise InputValueError(self, "asset_id", str(e))
+            messages.append(scene.get_message(message_id))
 
         self.set_output_values(
             {

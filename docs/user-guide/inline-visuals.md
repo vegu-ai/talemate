@@ -99,10 +99,10 @@ Click on any inline visual to open a context menu with options:
 - **View Image**: Open a full-size view of the image (also available with Ctrl+click)
 - **Open in Visual Library**: View and manage the image in the Visual Library
 - **Mark as reference**: Prepare the image as a reference for later generations — see [Mark as reference](#mark-as-reference)
-- **Regenerate Illustration**: Create a new version of the image (Shift+click shortcut)
-- **Regenerate (replace)**: Generate a new image and delete the original, so the new one takes its place (Alt+click shortcut). Not offered on Backdrop entries
-- **Edit Illustration**: Regenerate with custom editing instructions
-- **Edit (replace)**: Regenerate with custom editing instructions and delete the original, so the new image takes its place. Not offered on Backdrop entries
+- **Regenerate Illustration** (**Regenerate Portrait** on a portrait): Create a new version of the image for this message (Shift+click shortcut)
+- **Regenerate (replace)**: Generate a new image that takes the original's place (Alt+click shortcut). The original is deleted, unless something else still shows it — see [Replacing an image](#replacing-an-image)
+- **Edit Illustration** (**Edit Portrait** on a portrait): Regenerate with custom editing instructions
+- **Edit (replace)**: Regenerate with custom editing instructions; the new image takes the original's place, as with Regenerate (replace)
 - **Select illustration**: Choose from existing scene illustrations
 - **Select background**: On a Backdrop entry, choose from the scene's existing backgrounds. The entry swaps its image, and if it set the current backdrop, the scene backdrop changes with it without a new Backdrop entry
 - **Set as scene backdrop**: Render this image behind the scene text — see [Scene Backdrop](#scene-backdrop)
@@ -139,16 +139,30 @@ For faster workflow, inline visuals support several keyboard shortcuts when clic
 |--------|----------|
 | View full image | Ctrl+click |
 | Regenerate | Shift+click |
-| Regenerate (replace) | Alt+click (on a Backdrop entry's image this only regenerates) |
+| Regenerate (replace) | Alt+click |
 
-The new image replaces the one on the message you clicked, even when that message is further back in the story.
+The shortcuts work on illustrations, cards, portraits and Backdrop entry images. The new image replaces the one on the message you clicked, even when that message is further back in the story.
 
-Regenerating a scene background that an older story attached to a message does not replace it on the message. The new background becomes the [scene backdrop](#scene-backdrop) through a new Backdrop entry at the end of the story, and the message keeps its image.
+### Replacing an image
+
+**Regenerate (replace)** and **Edit (replace)** never leave a gap anywhere else in the scene. Once the new image is ready, the original is deleted only if nothing else uses it. The original stays, and a notification names where it is still used, when any of these still uses it:
+
+- another message, a character's avatar or cover, the scene cover or the scene backdrop
+- the [reference](#mark-as-reference) search, because it is marked as a reference
+- another image that was generated with it as a reference (the new image a replace makes does not count)
+- another save of the same scene, such as a fork or a Save As copy, which shares the scene's images. A locked save's own file counts too, and so does a save that cannot be read
+
+If the generation fails or is cancelled, the original stays where it was.
+
+A portrait is usually shared: by the character's default and current avatar and by many messages. On a portrait, the two (replace) entries are only available when this message is the portrait's only use. Otherwise they are greyed out and say why, for example *Used by other messages* or *Character's current avatar*. Say Edwin's portrait on one reply looks off: if no other message shows it and it is not his avatar, Regenerate (replace) swaps it for a new one and deletes the old. If his other replies show it too, use **Regenerate Portrait**, which puts the new portrait on this message only and keeps the old one for the others. Illustrations and cards are not greyed out: replacing a shared one puts the new image on this message and keeps the original for the others.
+
+Regenerating a scene background that an older story attached to a message does not replace it on the message: the message keeps its image. With **Auto-attach visuals** on, the new background becomes the [scene backdrop](#scene-backdrop) through a new Backdrop entry at the end of the story; with it off, the new background only goes to the Visual Library. For such a background, the two (replace) entries are greyed out, and Alt+click works like Regenerate.
 
 ### Managing Portraits
 
 For character portraits (avatars), you have additional options:
 
+- **Regenerate Portrait** and **Edit Portrait**, with their (replace) variants: see [Replacing an image](#replacing-an-image)
 - **Auto-select portrait**: Let the AI determine the best portrait for this message
 - **Generate new portrait**: Create a new portrait based on the current scene context
 - **Select portrait**: Choose from existing portraits for this character
@@ -178,6 +192,7 @@ Click the image of a Backdrop entry (the preview in Immersive mode, or the image
 
 - **View Image** (also Ctrl+click) and **Open in Visual Library**
 - **Regenerate Background** and **Edit Background**: the new image is always made as a scene background, even when the entry shows a scene illustration, and arrives as a new Backdrop entry at the end of the story
+- **Regenerate (replace)** (also Alt+click) and **Edit (replace)**: the new background takes this entry's place. Every other Backdrop entry that showed the same image, for example a return to the harbour you picked with Select background, and the scene backdrop switch to the new image too. The original is then deleted, unless something else, such as the scene cover or an image on a message, still uses it (see [Replacing an image](#replacing-an-image)). If the generation fails or is cancelled, the entry keeps its image
 - **Select background**: choose another of the scene's backgrounds for this entry. The entry shows the chosen image from then on. When it set the current backdrop, the scene backdrop changes too, without a new Backdrop entry. An entry whose image was deleted reads **Image removed**; hover it and click :material-image-multiple: to pick a background for it
 - **Set as scene backdrop**: makes an older entry's image the backdrop again
 - **Mark as reference**: also a :material-bookmark-plus-outline: button on the entry itself — see [Mark as reference](#mark-as-reference)

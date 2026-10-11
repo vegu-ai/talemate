@@ -206,6 +206,7 @@
 
 <script>
 import { newUuid } from '@/utils/uuid';
+import { assetTarget, setAssetMessage } from '@/utils/assetTargets';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import AssetViewMixin from './AssetViewMixin.js';
 import VisualAssetGenerateMixin from './VisualAssetGenerateMixin.js';
@@ -353,19 +354,18 @@ export default {
         setSceneCoverImage(assetId) {
             if (!assetId) return;
 
-            this.getWebsocket().send(JSON.stringify({
-                type: 'scene_assets',
-                action: 'set_scene_cover_image',
-                asset_id: assetId,
-            }));
+            this.getWebsocket().send(JSON.stringify(setAssetMessage(assetId, [assetTarget.sceneCover()])));
         },
 
         setBackdrop({ assetId = null, enabled = null, clear = false }) {
+            if (assetId && !clear) {
+                this.getWebsocket().send(JSON.stringify(setAssetMessage(assetId, [assetTarget.sceneBackdrop()])));
+            }
+            if (enabled === null && !clear) return;
             const payload = {
                 type: 'scene_assets',
                 action: 'set_scene_backdrop',
             };
-            if (assetId) payload.asset_id = assetId;
             if (enabled !== null) payload.enabled = enabled;
             if (clear) payload.clear = true;
             this.getWebsocket().send(JSON.stringify(payload));

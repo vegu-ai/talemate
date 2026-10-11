@@ -8,7 +8,7 @@ import pytest
 from talemate.agents.visual.schema import VIS_TYPE
 from talemate.context import active_scene
 from talemate.emit.async_signals import get as get_signal
-from talemate.scene_assets import AssetMeta
+from talemate.scene_assets import AssetMeta, AssetTargetNotFound, BackdropEntryTarget
 from talemate.scene_message import NarratorMessage, SceneBackdropMessage
 from talemate.server.scene_assets import SceneAssetsPlugin
 from talemate.server.scene_message import SceneMessagePlugin
@@ -51,6 +51,12 @@ async def change_backdrop(scene, asset_id):
     )
 
 
+async def swap(scene, message_id, asset_id):
+    return await scene.assets.set_asset(
+        BackdropEntryTarget(message_id=message_id), asset_id
+    )
+
+
 def entries(scene) -> list[SceneBackdropMessage]:
     return [m for m in scene.history if isinstance(m, SceneBackdropMessage)]
 
@@ -61,7 +67,7 @@ async def test_swapping_the_latest_entry_sets_the_scene_backdrop(active, changes
     latest = await change_backdrop(active, night)
     changes.clear()
 
-    await active.assets.update_backdrop_message_asset(latest.id, dusk)
+    await swap(active, latest.id, dusk)
 
     assert [m.backdrop for m in entries(active)] == [day, dusk]
     assert active.assets.backdrop == dusk
@@ -73,7 +79,7 @@ async def test_swapping_does_not_write_a_new_entry(active):
     latest = await change_backdrop(active, day)
     count = len(active.history)
 
-    await active.assets.update_backdrop_message_asset(latest.id, night)
+    await swap(active, latest.id, night)
 
     assert len(active.history) == count
     assert len(entries(active)) == 1
@@ -85,7 +91,7 @@ async def test_swapping_an_older_entry_keeps_the_current_backdrop(active, change
     latest = await change_backdrop(active, night)
     changes.clear()
 
-    await active.assets.update_backdrop_message_asset(older.id, dusk)
+    await swap(active, older.id, dusk)
 
     assert older.backdrop == dusk
     assert active.assets.backdrop == night
@@ -98,7 +104,7 @@ async def test_swapping_keeps_the_enabled_state(active):
     latest = await change_backdrop(active, day)
     await active.assets.set_scene_backdrop(enabled=False)
 
-    await active.assets.update_backdrop_message_asset(latest.id, night)
+    await swap(active, latest.id, night)
 
     assert active.assets.backdrop == night
     assert active.assets.backdrop_enabled is False
@@ -109,15 +115,16 @@ async def test_the_swap_marks_the_scene_unsaved(active):
     latest = await change_backdrop(active, day)
     active.saved = True
 
-    await active.assets.update_backdrop_message_asset(latest.id, night)
+    await swap(active, latest.id, night)
 
     assert active.saved is False
 
 
-async def test_an_unknown_message_returns_none(active):
+async def test_an_unknown_message_is_not_found(active):
     day = await add_asset(active, b"a")
 
-    assert await active.assets.update_backdrop_message_asset(99999, day) is None
+    with pytest.raises(AssetTargetNotFound):
+        await swap(active, 99999, day)
 
 
 async def test_a_message_without_a_finished_backdrop_is_refused(active):
@@ -127,9 +134,9 @@ async def test_a_message_without_a_finished_backdrop_is_refused(active):
     active.history.extend([story, pending])
 
     with pytest.raises(ValueError, match="not a backdrop entry"):
-        await active.assets.update_backdrop_message_asset(story.id, day)
+        await swap(active, story.id, day)
     with pytest.raises(ValueError, match="not a backdrop entry"):
-        await active.assets.update_backdrop_message_asset(pending.id, day)
+        await swap(active, pending.id, day)
 
 
 async def test_only_a_scene_background_can_be_chosen(active):
@@ -138,9 +145,9 @@ async def test_only_a_scene_background_can_be_chosen(active):
     latest = await change_backdrop(active, day)
 
     with pytest.raises(ValueError, match="not a scene background"):
-        await active.assets.update_backdrop_message_asset(latest.id, illustration)
+        await swap(active, latest.id, illustration)
     with pytest.raises(ValueError, match="Invalid asset_id"):
-        await active.assets.update_backdrop_message_asset(latest.id, "ghost")
+        await swap(active, latest.id, "ghost")
 
     assert latest.backdrop == day
     assert active.assets.backdrop == day
@@ -154,8 +161,11 @@ async def test_the_websocket_action_swaps_the_image(active):
     )
     plugin = SceneAssetsPlugin(handler)
 
-    await plugin.handle_update_backdrop_message_asset(
-        {"asset_id": night, "message_id": latest.id}
+    await plugin.handle_set_asset(
+        {
+            "asset_id": night,
+            "targets": [{"kind": "backdrop_entry", "message_id": latest.id}],
+        }
     )
 
     assert latest.backdrop == night
@@ -173,8 +183,11 @@ async def test_the_websocket_action_reports_a_refused_swap(active):
     )
     plugin = SceneAssetsPlugin(handler)
 
-    await plugin.handle_update_backdrop_message_asset(
-        {"asset_id": illustration, "message_id": latest.id}
+    await plugin.handle_set_asset(
+        {
+            "asset_id": illustration,
+            "targets": [{"kind": "backdrop_entry", "message_id": latest.id}],
+        }
     )
 
     assert latest.backdrop == day
@@ -195,7 +208,7 @@ async def test_deleting_a_swapped_latest_entry_restores_the_entry_before(active)
     day, night, dusk = [await add_asset(active, bytes([i])) for i in range(3)]
     await change_backdrop(active, day)
     latest = await change_backdrop(active, night)
-    await active.assets.update_backdrop_message_asset(latest.id, dusk)
+    await swap(active, latest.id, dusk)
 
     await delete(active, latest)
 
@@ -209,7 +222,7 @@ async def test_deleting_the_latest_entry_after_swapping_an_older_one_keeps_the_s
     day, night, dusk = [await add_asset(active, bytes([i])) for i in range(3)]
     older = await change_backdrop(active, day)
     latest = await change_backdrop(active, night)
-    await active.assets.update_backdrop_message_asset(older.id, dusk)
+    await swap(active, older.id, dusk)
 
     await delete(active, latest)
 

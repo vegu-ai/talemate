@@ -15,6 +15,9 @@
                 @error="onImageError"
             />
         </v-card-text>
+        <div v-else-if="assetRemoved" class="asset-removed text-body-small text-medium-emphasis">
+            <v-icon size="small" start>mdi-image-off-outline</v-icon>Image removed
+        </div>
         <v-skeleton-loader v-else type="image" :width="maxWidth" :height="maxHeight" class="asset-image-skeleton"></v-skeleton-loader>
         
         <v-dialog v-model="showDialog" width="auto">
@@ -56,7 +59,12 @@ export default {
             default: '',
         },
     },
-    inject: ['requestSceneAssets', 'registerMessageHandler', 'unregisterMessageHandler'],
+    inject: {
+        requestSceneAssets: {},
+        registerMessageHandler: {},
+        unregisterMessageHandler: {},
+        scene: { default: () => () => null },
+    },
     data() {
         return {
             assetImageSrc: null,
@@ -68,6 +76,10 @@ export default {
         };
     },
     computed: {
+        assetRemoved() {
+            const assets = this.scene()?.data?.assets?.assets;
+            return !!assets && !assets[this.assetId];
+        },
         previewWidth() {
              // vertical / square
              const isVertical = this.imageWidth < this.imageHeight;
@@ -131,6 +143,9 @@ export default {
     justify-content: center;
     margin-top: 8px;
     background-color:rgb(var(--v-theme-mutedbg));
+}
+.asset-removed {
+    padding: 8px 16px;
 }
 .asset-image {
     cursor: pointer;

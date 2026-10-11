@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import SceneMessages from '@/components/SceneMessages.vue';
+import sceneMessagesSource from '../../src/components/SceneMessages.vue?raw';
 import MessageAssetImage from '@/components/MessageAssetImage.vue';
 import { VIS_TYPE } from '@/constants/visual';
 import { isReferenceCandidate, referenceState } from '@/utils/referenceCandidate';
@@ -15,7 +16,15 @@ function menu(context) {
         assetMenu: { show: true, context },
         processingAssetMessageIds: new Set(),
         referenceProgress: {},
-        assetsMap: { illustration: { meta: { vis_type: VIS_TYPE.SCENE_ILLUSTRATION } } },
+        assetsMap: {
+            illustration: { meta: { vis_type: VIS_TYPE.SCENE_ILLUSTRATION } },
+            dawn: { meta: { vis_type: VIS_TYPE.SCENE_BACKGROUND } },
+            dusk: { meta: { vis_type: VIS_TYPE.SCENE_BACKGROUND } },
+        },
+        assetCache: { dawn: { base64: 'ZGF3bg==' } },
+        requested: [],
+        requestSceneAssets(ids) { this.requested.push(...ids); },
+        illustrationSelectDialog: { show: false, assetType: 'scene_illustration', messageId: null, assetIds: [], selectedAssetId: null, base64ById: {} },
         getWebsocket: () => ({ send: (frame) => sent.push(JSON.parse(frame)) }),
         requestDeleteMessage: (id) => deleted.push(id),
     };
@@ -23,7 +32,9 @@ function menu(context) {
         'markAssetProcessing', 'sendRevisualizeAsset', 'assetMenuVisType', 'handleRegenerateIllustration',
         'handleRegenerateAndDeleteIllustration', 'handleRegenerateAssetWithInstructions', 'handleClearImage',
         'markAsReference', 'handleMarkAsReference', 'applyReferenceFrame', 'quietReferenceProgress',
-        'backdropIndicatorReference',
+        'backdropIndicatorReference', 'handleOpenBackgroundSelect', 'handleOpenIllustrationSelect',
+        'openAssetSelectDialog', 'confirmAssetSelection', 'closeAssetSelectDialog',
+        'confirmIllustrationSelection', 'closeIllustrationSelectDialog', 'openBackgroundSelectForEntry',
     ]) {
         vm[name] = SceneMessages.methods[name].bind(vm);
     }
@@ -223,5 +234,88 @@ describe('the status of a run on the message whose illustration is the backdrop'
         vm.markAsReference('illustration', 12);
         vi.advanceTimersByTime(3000);
         expect(vm.referenceProgress.illustration.quiet).toBeUndefined();
+    });
+});
+
+describe('Select background in the asset menu of a backdrop entry', () => {
+    it('opens the illustration picker filtered to the scene backgrounds', () => {
+        const { vm } = menu(backdropContext);
+        vm.handleOpenBackgroundSelect();
+        expect(vm.assetMenu.show).toBe(false);
+        expect(vm.illustrationSelectDialog).toMatchObject({
+            show: true, assetType: 'scene_background', messageId: 7, assetIds: ['dawn', 'dusk'], selectedAssetId: 'dawn',
+        });
+        expect(vm.illustrationSelectDialog.base64ById).toEqual({ dawn: 'ZGF3bg==' });
+        expect(vm.requested).toEqual(['dusk']);
+        expect(SceneMessages.computed.illustrationSelectCopy.call(vm)).toMatchObject({ title: 'Select Scene Background', label: 'Background:' });
+    });
+
+    it('starts on the entry image when it is one of the backgrounds', () => {
+        const { vm } = menu({ ...backdropContext, asset_id: 'dusk' });
+        vm.handleOpenBackgroundSelect();
+        expect(vm.illustrationSelectDialog.selectedAssetId).toBe('dusk');
+    });
+
+    it('opens the picker for an entry whose image was removed, without a menu', () => {
+        const { vm, sent } = menu({});
+        vm.openBackgroundSelectForEntry({ id: 9, backdrop: 'gone' });
+        expect(vm.illustrationSelectDialog).toMatchObject({
+            show: true, assetType: 'scene_background', messageId: 9, assetIds: ['dawn', 'dusk'], selectedAssetId: 'dawn',
+        });
+        vm.illustrationSelectDialog.selectedAssetId = 'dusk';
+        vm.confirmIllustrationSelection();
+        expect(sent).toEqual([{ type: 'scene_assets', action: 'update_backdrop_message_asset', asset_id: 'dusk', message_id: 9 }]);
+    });
+
+    it('swaps the entry image through the backdrop action, not the message action', () => {
+        const { vm, sent } = menu(backdropContext);
+        vm.handleOpenBackgroundSelect();
+        vm.illustrationSelectDialog.selectedAssetId = 'dusk';
+        vm.confirmIllustrationSelection();
+        expect(sent).toEqual([{ type: 'scene_assets', action: 'update_backdrop_message_asset', asset_id: 'dusk', message_id: 7 }]);
+        expect(vm.illustrationSelectDialog.show).toBe(false);
+    });
+
+    it('cancels without sending anything', () => {
+        const { vm, sent } = menu(backdropContext);
+        vm.handleOpenBackgroundSelect();
+        vm.closeIllustrationSelectDialog();
+        expect(sent).toEqual([]);
+        expect(vm.illustrationSelectDialog.show).toBe(false);
+    });
+
+    it('leaves Select illustration on its own filter and action', () => {
+        const { vm, sent } = menu({ ...backdropContext, backdrop: false });
+        vm.handleOpenIllustrationSelect();
+        expect(vm.illustrationSelectDialog.assetType).toBe('scene_illustration');
+        expect(vm.illustrationSelectDialog.assetIds).toEqual(['illustration', 'dawn', 'dusk']);
+        vm.illustrationSelectDialog.selectedAssetId = 'illustration';
+        vm.confirmIllustrationSelection();
+        expect(sent).toEqual([{ type: 'scene_assets', action: 'update_message_asset', asset_id: 'illustration', message_id: 7 }]);
+    });
+});
+
+describe('the replace entries of the asset menu', () => {
+    it('name what they do instead of a second delete action', () => {
+        expect(sceneMessagesSource).not.toMatch(/Regenerate and Delete|Edit and Delete/);
+        expect(sceneMessagesSource).toContain('<v-list-item-title>Regenerate (replace)</v-list-item-title>');
+        expect(sceneMessagesSource).toContain('<v-list-item-title>Edit (replace)</v-list-item-title>');
+    });
+
+    it('keeps the replace entries off Backdrop entries, where a new background never deletes the old one', () => {
+        expect(sceneMessagesSource).toMatch(/v-if="assetSupportsRegeneration && !assetMenu\.context\.backdrop"\s+:disabled="!visualAgentReady"\s+prepend-icon="mdi-image-refresh-outline"/);
+        expect(sceneMessagesSource).toMatch(/v-if="assetSupportsRegeneration && !assetMenu\.context\.backdrop"\s+:disabled="!visualAgentReady"\s+prepend-icon="mdi-image-edit-outline"/);
+    });
+
+    it('turns Alt+click on a Backdrop entry image into a plain regenerate', () => {
+        const calls = [];
+        const vm = { imageSrc: 'data:', supportsRegeneration: true, backdrop: true, regenerateIllustration: (deleteOld) => calls.push(deleteOld) };
+        MessageAssetImage.methods.handleClick.call(vm, { altKey: true });
+        MessageAssetImage.methods.handleClick.call({ ...vm, backdrop: false }, { altKey: true });
+        expect(calls).toEqual([false, true]);
+    });
+
+    it('offers Select background to backdrop rows only', () => {
+        expect(sceneMessagesSource).toMatch(/v-if="assetMenu\.context\.asset_type === 'scene_illustration' && assetMenu\.context\.backdrop"[^>]*\s+prepend-icon="mdi-image-multiple"\s+@click="handleOpenBackgroundSelect"/);
     });
 });

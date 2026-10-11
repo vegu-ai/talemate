@@ -1840,6 +1840,71 @@ class SceneAssets:
         else:
             await self.set_scene_backdrop(asset_id=restored, record=False)
 
+    async def update_backdrop_message_asset(
+        self, message_id: int, asset_id: str
+    ) -> scene_message.SceneBackdropMessage | None:
+        """
+        Swaps the image of a backdrop message for another scene background.
+        When the message set the current backdrop, the scene backdrop follows
+        without a new backdrop message.
+
+        Raises:
+            ValueError: If the message is not a finished backdrop message, or
+                the asset is not a scene background
+        """
+        message = self.scene.get_message(message_id)
+        if message is None:
+            log.error("Message not found", message_id=message_id)
+            return None
+        if (
+            not isinstance(message, scene_message.SceneBackdropMessage)
+            or message.pending
+        ):
+            raise ValueError(f"Message {message_id} is not a backdrop entry")
+        if not self.validate_asset_id(asset_id):
+            raise ValueError(f"Invalid asset_id: {asset_id}")
+        if self.get_asset(asset_id).meta.vis_type != VIS_TYPE.SCENE_BACKGROUND:
+            raise ValueError(f"Asset is not a scene background: {asset_id}")
+
+        message.backdrop = asset_id
+        later_index = self._next_backdrop_index(self._history_index(message))
+        await self._propagate_backdrop(
+            self.scene.history[later_index] if later_index is not None else None,
+            asset_id,
+        )
+        self.scene.emit_history_message(message)
+        self.scene._mark_scene_unsaved()
+        return message
+
+    def _next_backdrop_index(self, index: int) -> int | None:
+        """The history position of the first finished backdrop message after `index`."""
+        return next(
+            (
+                position
+                for position, entry in enumerate(
+                    self.scene.history[index + 1 :], index + 1
+                )
+                if isinstance(entry, scene_message.SceneBackdropMessage)
+                and not entry.pending
+            ),
+            None,
+        )
+
+    async def _propagate_backdrop(
+        self,
+        later: scene_message.SceneBackdropMessage | None,
+        asset_id: str,
+    ):
+        """
+        Carries a backdrop message's new image on: the live backdrop when no
+        backdrop message follows, otherwise the follower's previous backdrop.
+        """
+        if later is None:
+            await self.set_scene_backdrop(asset_id=asset_id, record=False)
+        else:
+            later.previous_backdrop = asset_id
+            self.scene.emit_history_message(later)
+
     def _backdrop_after_rollback(
         self, deleted: scene_message.SceneBackdropMessage
     ) -> str | None:
@@ -1948,15 +2013,7 @@ class SceneAssets:
         if index < 0:
             return
         history = self.scene.history
-        later_index = next(
-            (
-                position
-                for position, entry in enumerate(history[index + 1 :], index + 1)
-                if isinstance(entry, scene_message.SceneBackdropMessage)
-                and not entry.pending
-            ),
-            None,
-        )
+        later_index = self._next_backdrop_index(index)
         later = history[later_index] if later_index is not None else None
         if later is not None and all(
             isinstance(entry, scene_message.SceneBackdropMessage)
@@ -1975,11 +2032,7 @@ class SceneAssets:
         ):
             message.previous_backdrop = before.previous_backdrop
             self.scene.delete_message(before.id)
-        if later is None:
-            await self.set_scene_backdrop(asset_id=asset_id, record=False)
-        else:
-            later.previous_backdrop = asset_id
-            self.scene.emit_history_message(later)
+        await self._propagate_backdrop(later, asset_id)
         self.scene.emit_history_message(message)
         self.scene._mark_scene_unsaved()
 

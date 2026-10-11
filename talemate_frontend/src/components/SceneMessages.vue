@@ -59,13 +59,13 @@
                 <v-list-item-subtitle v-else>Visual agent not ready</v-list-item-subtitle>
             </v-list-item>
             <v-list-item
-                v-if="assetSupportsRegeneration"
+                v-if="assetSupportsRegeneration && !assetMenu.context.backdrop"
                 :disabled="!visualAgentReady"
                 prepend-icon="mdi-image-refresh-outline"
                 @click="handleRegenerateAndDeleteIllustration"
             >
-                <v-list-item-title>Regenerate and Delete</v-list-item-title>
-                <v-list-item-subtitle v-if="visualAgentReady">Alt+click</v-list-item-subtitle>
+                <v-list-item-title>Regenerate (replace)</v-list-item-title>
+                <v-list-item-subtitle v-if="visualAgentReady" class="text-wrap">Alt+click · Replaces this image; the original is deleted</v-list-item-subtitle>
                 <v-list-item-subtitle v-else>Visual agent not ready</v-list-item-subtitle>
             </v-list-item>
             <v-list-item
@@ -78,13 +78,14 @@
                 <v-list-item-subtitle v-if="!visualAgentReady">Visual agent not ready</v-list-item-subtitle>
             </v-list-item>
             <v-list-item
-                v-if="assetSupportsRegeneration"
+                v-if="assetSupportsRegeneration && !assetMenu.context.backdrop"
                 :disabled="!visualAgentReady"
                 prepend-icon="mdi-image-edit-outline"
                 @click="handleOpenRegenerateAndDeleteAssetDialog"
             >
-                <v-list-item-title>Edit and Delete</v-list-item-title>
-                <v-list-item-subtitle v-if="!visualAgentReady">Visual agent not ready</v-list-item-subtitle>
+                <v-list-item-title>Edit (replace)</v-list-item-title>
+                <v-list-item-subtitle v-if="visualAgentReady" class="text-wrap">Replaces this image; the original is deleted</v-list-item-subtitle>
+                <v-list-item-subtitle v-else>Visual agent not ready</v-list-item-subtitle>
             </v-list-item>
             <v-divider v-if="assetMenu.context.asset_type === 'avatar'"></v-divider>
             <v-list-item
@@ -125,6 +126,16 @@
                 <v-list-item-title>Select illustration</v-list-item-title>
                 <v-list-item-subtitle class="text-wrap">
                     Choose from existing scene illustrations
+                </v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item
+                v-if="assetMenu.context.asset_type === 'scene_illustration' && assetMenu.context.backdrop"
+                prepend-icon="mdi-image-multiple"
+                @click="handleOpenBackgroundSelect"
+            >
+                <v-list-item-title>Select background</v-list-item-title>
+                <v-list-item-subtitle class="text-wrap">
+                    Choose from existing scene backgrounds
                 </v-list-item-subtitle>
             </v-list-item>
             <v-list-item
@@ -200,14 +211,14 @@
         </v-card>
     </v-dialog>
 
-    <!-- Scene Illustration Selection Dialog -->
+    <!-- Scene Illustration / Background Selection Dialog -->
     <v-dialog v-model="illustrationSelectDialog.show" max-width="500">
         <v-card>
-            <v-card-title>Select Scene Illustration</v-card-title>
+            <v-card-title>{{ illustrationSelectCopy.title }}</v-card-title>
             <v-card-text>
                 <div v-if="illustrationSelectDialog.assetIds.length === 0" class="text-center text-medium-emphasis py-8">
                     <v-icon size="48" color="muted">mdi-image-off-outline</v-icon>
-                    <p class="mt-2">No scene illustrations available</p>
+                    <p class="mt-2">{{ illustrationSelectCopy.empty }}</p>
                 </div>
                 <VisualReferenceCarousel
                     v-else
@@ -216,7 +227,7 @@
                     :assets-map="assetsMap"
                     :base64-by-id="illustrationSelectDialog.base64ById"
                     aspect="wide"
-                    label="Illustration:"
+                    :label="illustrationSelectCopy.label"
                 />
             </v-card-text>
             <v-card-actions>
@@ -555,6 +566,30 @@ const ASSET_SELECT_TYPES = {
             dialog.base64ById = {};
         },
     },
+    scene_background: {
+        dialogKey: 'illustrationSelectDialog',
+        requiresCharacter: false,
+        getAssetIds(vm) {
+            return Object.entries(vm.assetsMap)
+                .filter(([, asset]) => asset?.meta?.vis_type === VIS_TYPE.SCENE_BACKGROUND)
+                .map(([id]) => id);
+        },
+        buildUpdateMessage(dialog) {
+            return {
+                type: 'scene_assets',
+                action: 'update_backdrop_message_asset',
+                asset_id: dialog.selectedAssetId,
+                message_id: dialog.messageId,
+            };
+        },
+        reset(dialog) {
+            dialog.show = false;
+            dialog.messageId = null;
+            dialog.assetIds = [];
+            dialog.selectedAssetId = null;
+            dialog.base64ById = {};
+        },
+    },
     card: {
         dialogKey: 'cardSelectDialog',
         requiresCharacter: false,
@@ -584,7 +619,12 @@ const ASSET_SELECT_TYPES = {
     },
 }
 
-const ASSET_SELECT_DIALOG_KEYS = Object.values(ASSET_SELECT_TYPES).map(t => t.dialogKey)
+const ILLUSTRATION_SELECT_COPY = {
+    scene_illustration: { title: 'Select Scene Illustration', empty: 'No scene illustrations available', label: 'Illustration:' },
+    scene_background: { title: 'Select Scene Background', empty: 'No scene backgrounds available', label: 'Background:' },
+}
+
+const ASSET_SELECT_DIALOG_KEYS = [...new Set(Object.values(ASSET_SELECT_TYPES).map(t => t.dialogKey))]
 
 // history rows that are not story text: Dynamic Actions choices answer the story, not these rows
 const FEED_ROW_TYPES = ['reinforcement', 'scene_backdrop', 'character_transition'];
@@ -696,6 +736,7 @@ export default {
             // Avatar selection dialog state
             avatarSelectDialog: {
                 show: false,
+                assetType: 'avatar',
                 characterName: null,
                 messageId: null,
                 assetIds: [],
@@ -705,6 +746,7 @@ export default {
             // Scene illustration selection dialog state
             illustrationSelectDialog: {
                 show: false,
+                assetType: 'scene_illustration',
                 messageId: null,
                 assetIds: [],
                 selectedAssetId: null,
@@ -713,6 +755,7 @@ export default {
             // Card selection dialog state
             cardSelectDialog: {
                 show: false,
+                assetType: 'card',
                 messageId: null,
                 assetIds: [],
                 selectedAssetId: null,
@@ -848,6 +891,9 @@ export default {
         assetMenuNoun() {
             return this.assetMenu.context.backdrop ? 'Background' : 'Illustration';
         },
+        illustrationSelectCopy() {
+            return ILLUSTRATION_SELECT_COPY[this.illustrationSelectDialog.assetType];
+        },
         assetMenuIsSceneBackdrop() {
             return !!this.assetMenu.context.backdrop && this.assetMenu.context.asset_id === this.sceneBackdropAssetId;
         },
@@ -882,6 +928,7 @@ export default {
     provide() {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
+            openBackgroundSelect: this.openBackgroundSelectForEntry,
             requestEditNotice: this.requestEditNotice,
             requestRegenerateLastMessage: this.requestRegenerateLastMessage,
             createPin: this.createPin,
@@ -1962,13 +2009,12 @@ export default {
             ws.send(JSON.stringify(message));
         },
 
-        openAssetSelectDialog(assetType) {
+        openAssetSelectDialog(assetType, ctx = this.assetMenu.context) {
             const cfg = ASSET_SELECT_TYPES[assetType];
             if (!cfg) {
                 return;
             }
 
-            const ctx = this.assetMenu.context;
             if (!ctx?.message_id) {
                 return;
             }
@@ -1985,11 +2031,12 @@ export default {
 
             // Populate dialog state
             dialog.messageId = ctx.message_id;
+            dialog.assetType = assetType;
             if (cfg.requiresCharacter) {
                 dialog.characterName = ctx.character;
             }
             dialog.assetIds = assetIds;
-            dialog.selectedAssetId = ctx.asset_id || (assetIds.length > 0 ? assetIds[0] : null);
+            dialog.selectedAssetId = assetIds.includes(ctx.asset_id) ? ctx.asset_id : (assetIds[0] || null);
 
             // Load base64 for items already in cache
             const base64ById = {};
@@ -2133,7 +2180,7 @@ export default {
         },
 
         /**
-         * Handle "Delete and Regenerate" menu option for card and scene_illustration
+         * Handle "Regenerate (replace)" menu option for card and scene_illustration
          */
         handleRegenerateAndDeleteIllustration() {
             // Close the menu
@@ -2159,7 +2206,7 @@ export default {
         },
 
         /**
-         * Handle "Delete and Regenerate" with custom instructions (Ctrl+click)
+         * Handle "Edit (replace)" menu option
          */
         handleOpenRegenerateAndDeleteAssetDialog() {
             this.openRevisualizeInstructionsDialog({ deleteOld: true });
@@ -2205,18 +2252,30 @@ export default {
             this.openAssetSelectDialog('scene_illustration');
         },
 
-        /**
-         * Confirm illustration selection
-         */
-        confirmIllustrationSelection() {
-            this.confirmAssetSelection('scene_illustration');
+        handleOpenBackgroundSelect() {
+            this.assetMenu.show = false;
+            this.openAssetSelectDialog('scene_background');
+        },
+
+        openBackgroundSelectForEntry(message) {
+            this.openAssetSelectDialog('scene_background', {
+                message_id: message.id,
+                asset_id: message.backdrop,
+            });
         },
 
         /**
-         * Close illustration select dialog
+         * Confirm illustration or background selection
+         */
+        confirmIllustrationSelection() {
+            this.confirmAssetSelection(this.illustrationSelectDialog.assetType);
+        },
+
+        /**
+         * Close illustration or background select dialog
          */
         closeIllustrationSelectDialog() {
-            this.closeAssetSelectDialog('scene_illustration');
+            this.closeAssetSelectDialog(this.illustrationSelectDialog.assetType);
         },
 
         /**

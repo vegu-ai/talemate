@@ -94,15 +94,17 @@ Once an image appears in your scene feed, you can interact with it in several wa
 
 Click on any inline visual to open a context menu with options:
 
-![Inline visual context menu](/talemate/img/0.35.0/inline-visual-context-menu.png)
+![Inline visual context menu](/talemate/img/0.40.0/inline-visual-context-menu.png)
 
 - **View Image**: Open a full-size view of the image (also available with Ctrl+click)
 - **Open in Visual Library**: View and manage the image in the Visual Library
 - **Mark as reference**: Prepare the image as a reference for later generations — see [Mark as reference](#mark-as-reference)
 - **Regenerate Illustration**: Create a new version of the image (Shift+click shortcut)
-- **Regenerate and Delete**: Replace the current image with a new one (Alt+click shortcut)
+- **Regenerate (replace)**: Generate a new image and delete the original, so the new one takes its place (Alt+click shortcut). Not offered on Backdrop entries
 - **Edit Illustration**: Regenerate with custom editing instructions
+- **Edit (replace)**: Regenerate with custom editing instructions and delete the original, so the new image takes its place. Not offered on Backdrop entries
 - **Select illustration**: Choose from existing scene illustrations
+- **Select background**: On a Backdrop entry, choose from the scene's existing backgrounds. The entry swaps its image, and if it set the current backdrop, the scene backdrop changes with it without a new Backdrop entry
 - **Set as scene backdrop**: Render this image behind the scene text — see [Scene Backdrop](#scene-backdrop)
 - **Clear Image**: Remove the image from this message (keeps the image in your library)
 - **Delete Image**: Permanently remove the image
@@ -137,7 +139,7 @@ For faster workflow, inline visuals support several keyboard shortcuts when clic
 |--------|----------|
 | View full image | Ctrl+click |
 | Regenerate | Shift+click |
-| Regenerate and delete old | Alt+click |
+| Regenerate (replace) | Alt+click (on a Backdrop entry's image this only regenerates) |
 
 The new image replaces the one on the message you clicked, even when that message is further back in the story.
 
@@ -176,6 +178,7 @@ Click the image of a Backdrop entry (the preview in Immersive mode, or the image
 
 - **View Image** (also Ctrl+click) and **Open in Visual Library**
 - **Regenerate Background** and **Edit Background**: the new image is always made as a scene background, even when the entry shows a scene illustration, and arrives as a new Backdrop entry at the end of the story
+- **Select background**: choose another of the scene's backgrounds for this entry. The entry shows the chosen image from then on. When it set the current backdrop, the scene backdrop changes too, without a new Backdrop entry. An entry whose image was deleted reads **Image removed**; hover it and click :material-image-multiple: to pick a background for it
 - **Set as scene backdrop**: makes an older entry's image the backdrop again
 - **Mark as reference**: also a :material-bookmark-plus-outline: button on the entry itself — see [Mark as reference](#mark-as-reference)
 - **Clear Image**: removes the backdrop change, the same as the entry's :material-close: button

@@ -76,6 +76,11 @@ class UpdateMessageAssetPayload(pydantic.BaseModel):
     character_name: str | None = None
 
 
+class UpdateBackdropMessageAssetPayload(pydantic.BaseModel):
+    asset_id: str
+    message_id: int
+
+
 class ClearMessageAssetPayload(pydantic.BaseModel):
     message_id: int
 
@@ -436,6 +441,30 @@ class SceneAssetsPlugin(Plugin):
         except Exception as e:
             log.error("update_message_asset_failed", error=e)
             await self.signal_operation_failed(f"Failed to update message asset: {e}")
+
+    async def handle_update_backdrop_message_asset(self, data: dict):
+        """
+        Swap the image of a backdrop entry for another scene background.
+        """
+        payload = UpdateBackdropMessageAssetPayload(**data)
+
+        try:
+            message = await self.scene.assets.update_backdrop_message_asset(
+                payload.message_id, payload.asset_id
+            )
+            if message is None:
+                await self.signal_operation_failed(
+                    f"Message not found or invalid: {payload.message_id}"
+                )
+                return
+
+            self.websocket_handler.request_scene_assets([payload.asset_id])
+
+            await self.scene.attempt_auto_save()
+            await self.signal_operation_done()
+        except Exception as e:
+            log.error("update_backdrop_message_asset_failed", error=e)
+            await self.signal_operation_failed(f"Failed to update backdrop entry: {e}")
 
     async def handle_clear_message_asset(self, data: dict):
         """

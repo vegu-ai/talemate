@@ -209,9 +209,10 @@ export default {
         return;
       }
       
-      // Alt+click to delete and regenerate (for card and scene_illustration)
+      // Alt+click to regenerate and replace (for card and scene_illustration);
+      // a new background never replaces the one it came from, so a Backdrop entry only regenerates
       if (event.altKey && this.imageSrc && this.supportsRegeneration) {
-        this.regenerateIllustration(true);
+        this.regenerateIllustration(!this.backdrop);
         return;
       }
       

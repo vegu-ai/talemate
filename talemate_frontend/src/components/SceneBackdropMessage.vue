@@ -13,12 +13,28 @@
         :locked="locked"
         @toggle="toggle"
         @remove="remove">
-        <template v-if="referenceable" #actions>
+        <template v-if="referenceable || repairable" #actions>
             <ReferenceCandidateControl
+                v-if="referenceable"
                 :state="referenceState"
                 :disabled="locked"
                 idle-class="collapsed-row__hover-control"
                 @use="markAsReference(message.backdrop)" />
+            <v-tooltip v-else text="Select background" location="top">
+                <template #activator="{ props: tooltipProps }">
+                    <v-btn
+                        v-bind="tooltipProps"
+                        class="backdrop-select collapsed-row__hover-control"
+                        size="x-small"
+                        icon
+                        variant="text"
+                        :disabled="locked"
+                        aria-label="Select background"
+                        @click.stop="openBackgroundSelect(message)">
+                        <v-icon size="18">mdi-image-multiple</v-icon>
+                    </v-btn>
+                </template>
+            </v-tooltip>
         </template>
         <div v-if="expanded && previewable" class="backdrop-details">
             <MessageAssetImage
@@ -58,7 +74,7 @@ export default {
         showImage: { type: Boolean, default: true },
         locked: Boolean,
     },
-    inject: ['requestDeleteMessage', 'getReferenceProgress', 'getReferenceTargets', 'markAsReference'],
+    inject: ['requestDeleteMessage', 'getReferenceProgress', 'getReferenceTargets', 'markAsReference', 'openBackgroundSelect'],
     data() {
         return {
             expanded: false,
@@ -94,6 +110,9 @@ export default {
         referenceable() {
             return this.hasImage && !!this.asset;
         },
+        repairable() {
+            return this.hasImage && !this.asset;
+        },
         referenceState() {
             return referenceState(this.asset?.meta, this.getReferenceProgress(this.message.backdrop), this.referenceTargets);
         },
@@ -111,6 +130,7 @@ export default {
 </script>
 
 <style scoped>
-.backdrop-details { margin: 6px 16px 0 28px; display: flow-root; }
+.backdrop-select { margin-left: 4px; flex-shrink: 0; }
+.backdrop-details { margin: 6px 16px 0 16px; display: flow-root; }
 .backdrop-inline { padding: 8px 16px 0; overflow: hidden; }
 </style>

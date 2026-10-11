@@ -19,6 +19,7 @@ function mount(overrides = {}, { asset = { meta: { name: 'Harbour at night', vis
     const requested = [];
     const referenced = [];
     const menus = [];
+    const picked = [];
     const message = reactive({
         id: 7, type: 'scene_backdrop', backdrop: 'night', previous_backdrop: 'day', pending: false, ...overrides,
     });
@@ -32,6 +33,7 @@ function mount(overrides = {}, { asset = { meta: { name: 'Harbour at night', vis
     app.provide('getReferenceProgress', () => progress);
     app.provide('getReferenceTargets', (visType) => TARGETS[visType] || []);
     app.provide('markAsReference', (assetId) => referenced.push(assetId));
+    app.provide('openBackgroundSelect', (entry) => picked.push(entry.id));
     app.provide('isAssetProcessing', () => false);
     app.provide('getAssetMeta', () => asset?.meta || null);
     app.provide('markAssetProcessing', () => {});
@@ -49,7 +51,7 @@ function mount(overrides = {}, { asset = { meta: { name: 'Harbour at night', vis
     document.body.appendChild(host);
     app.mount(host);
     mounted.push([app, host]);
-    return { host, message, props, deleted, requested, referenced, menus };
+    return { host, message, props, deleted, requested, referenced, menus, picked };
 }
 
 describe('scene backdrop message', () => {
@@ -79,6 +81,17 @@ describe('scene backdrop message', () => {
     it('says when the backdrop image was removed from the library', () => {
         const { host } = mount({}, { asset: null });
         expect(host.querySelector('.collapsed-row__label').textContent).toBe('Image removed');
+    });
+
+    it('offers Select background on an entry whose image was removed, and only then', () => {
+        const removed = mount({}, { asset: null });
+        const button = removed.host.querySelector('button[aria-label="Select background"]');
+        button.click();
+        expect(removed.picked).toEqual([7]);
+
+        expect(mount().host.querySelector('button[aria-label="Select background"]')).toBeNull();
+        expect(mount({ backdrop: null }, { asset: null }).host.querySelector('button[aria-label="Select background"]')).toBeNull();
+        expect(mount({ backdrop: null, pending: true }, { asset: null }).host.querySelector('button[aria-label="Select background"]')).toBeNull();
     });
 
     it('calls an image without a name untitled rather than removed', () => {

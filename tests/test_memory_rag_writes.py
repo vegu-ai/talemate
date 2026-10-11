@@ -9,6 +9,8 @@ import pytest
 from talemate.agents.memory import MemoryAgent
 from talemate.agents.memory.exceptions import MemoryShutdownRefused
 
+METADATA = [{"id": "S1", "meta": {"typ": "history", "presence_known": False}}]
+
 
 @pytest.fixture
 def memory():
@@ -277,3 +279,74 @@ def test_cancelled_write_completion_consumes_exception(memory, monkeypatch):
     memory.invalidate_audience_writes.assert_called_once_with(
         objects, scene=memory.scene
     )
+
+
+@pytest.mark.parametrize("fails", [False, True])
+def test_metadata_update_advances_revision_and_invalidates(memory, fails):
+    memory.db = object()
+    memory._update_metadata = Mock(
+        side_effect=RuntimeError("partial write") if fails else None
+    )
+
+    if fails:
+        with pytest.raises(RuntimeError, match="partial write"):
+            memory.update_metadata(METADATA)
+    else:
+        assert memory.update_metadata(METADATA) is True
+
+    memory._update_metadata.assert_called_once_with(METADATA)
+    assert memory.scene.memory_revision == 2
+    assert memory.scene.memory_writes_in_flight == 0
+    memory.invalidate_audience_writes.assert_called_once_with(
+        METADATA, scene=memory.scene
+    )
+
+
+@pytest.mark.parametrize(
+    "objects,state",
+    [
+        ([], {}),
+        (METADATA, {"db": None}),
+        (METADATA, {"_ready_to_add": False}),
+        (METADATA, {"_refuse_memory_work": True}),
+    ],
+)
+def test_metadata_update_without_a_writable_store_is_not_written(
+    memory, objects, state
+):
+    memory.db = object()
+    memory._update_metadata = Mock()
+    for name, value in state.items():
+        setattr(memory, name, value)
+
+    assert memory.update_metadata(objects) is False
+
+    memory._update_metadata.assert_not_called()
+    assert memory.scene.memory_revision == 0
+    memory.invalidate_audience_writes.assert_not_called()
+
+
+def test_metadata_update_for_a_released_scene_is_not_written(memory):
+    from talemate.agents.memory import _expected_write_scene
+
+    memory.db = object()
+    memory._update_metadata = Mock()
+    token = _expected_write_scene.set(SimpleNamespace())
+    try:
+        assert memory.update_metadata(METADATA) is False
+    finally:
+        _expected_write_scene.reset(token)
+
+    memory._update_metadata.assert_not_called()
+    memory.invalidate_audience_writes.assert_not_called()
+
+
+def test_metadata_update_while_readonly_is_not_written(memory, monkeypatch):
+    monkeypatch.setattr(MemoryAgent, "readonly", property(lambda self: True))
+    memory.db = object()
+    memory._update_metadata = Mock()
+
+    assert memory.update_metadata(METADATA) is False
+
+    memory._update_metadata.assert_not_called()
+    memory.invalidate_audience_writes.assert_not_called()

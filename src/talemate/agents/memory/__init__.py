@@ -691,6 +691,30 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         """
         raise NotImplementedError()
 
+    def update_metadata(self, objects: list[dict]) -> bool:
+        """Synchronous, so a caller can read its source state and write it with
+        no await in between. Each `meta` is merged into the stored metadata;
+        nothing is re-embedded."""
+        scene = _expected_write_scene.get() or self.scene
+        if not objects or not self.audience_index_writable(scene):
+            return False
+
+        try:
+            completed = self._run_memory_operation(
+                self._write_memory, scene, self._update_metadata, objects
+            )
+        except MemoryShutdownRefused:
+            return False
+        except BaseException:
+            self.invalidate_audience_writes(objects, scene=scene)
+            raise
+        if completed:
+            self.invalidate_audience_writes(objects, scene=scene)
+        return completed
+
+    def _update_metadata(self, objects: list[dict]):
+        raise NotImplementedError()
+
     @set_processing
     async def delete(self, meta: dict):
         """
@@ -1713,6 +1737,12 @@ class ChromaDBMemoryAgent(MemoryAgent):
             ids.append(uid)
 
         self.db.upsert(documents=documents, metadatas=metadatas, ids=ids)
+
+    def _update_metadata(self, objects: list[dict]):
+        self.db.update(
+            ids=[obj["id"] for obj in objects],
+            metadatas=[obj["meta"] for obj in objects],
+        )
 
     def _delete(self, meta: dict):
         if "ids" in meta:

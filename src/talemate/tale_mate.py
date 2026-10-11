@@ -56,6 +56,7 @@ from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
 from talemate.game.state import GameStatePathSettings
 from talemate.scene.schema import ScenePerspectives
+from talemate.agents.memory import memory_write_scene
 from talemate.history import (
     emit_archive_add,
     ArchiveEntry,
@@ -2307,14 +2308,8 @@ class Scene(Emitter):
         config.recent_scenes.push(self)
         await config.set_dirty()
 
-    async def commit_to_memory(self):
-        # will recommit scene to long term memory
-
-        memory = get_agent("memory")
-        memory.drop_db()
-        await memory.set_db()
-
-        archive_entries = []
+    def _archive_memory_documents(self) -> list[dict]:
+        documents = []
 
         for ah in self.archived_history:
             if ah.get("ts") is None:
@@ -2325,8 +2320,7 @@ class Scene(Emitter):
 
             entry = ArchiveEntry(**ah)
 
-            # await emit_archive_add(self, entry)
-            archive_entries.append(
+            documents.append(
                 {
                     "id": entry.id,
                     "text": entry.text,
@@ -2338,8 +2332,31 @@ class Scene(Emitter):
                 }
             )
 
-        if archive_entries:
-            await memory.add_many(archive_entries)
+        return documents
+
+    async def commit_to_memory(self):
+        # will recommit scene to long term memory
+
+        memory = get_agent("memory")
+        memory.drop_db()
+        await memory.set_db()
+
+        archive_entries = self._archive_memory_documents()
+
+        if archive_entries and await memory.add_many(archive_entries):
+            # A Known by change during the bulk write writes its own document,
+            # and the bulk write can land after it with this snapshot. No await
+            # separates this read from the update, so the current state wins.
+            written = {document["id"]: document["meta"] for document in archive_entries}
+            with memory_write_scene(self):
+                memory.update_metadata(
+                    [
+                        document
+                        for document in self._archive_memory_documents()
+                        if document["id"] in written
+                        and document["meta"] != written[document["id"]]
+                    ]
+                )
 
         for character in self.characters:
             await character.commit_to_memory(memory)

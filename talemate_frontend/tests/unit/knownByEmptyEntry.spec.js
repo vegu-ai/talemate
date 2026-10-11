@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import Details from '@/components/WorldStateManagerCharacterDetails.vue';
 import Attributes from '@/components/WorldStateManagerCharacterAttributes.vue';
 import { readSource } from './helpers/liftMethod';
+import { optionsHost } from './helpers/optionsHost';
 
 // The Known by bindings, read from the host's own template so the spec runs
 // what the user can actually reach.
@@ -27,28 +28,7 @@ function knownByBindings(path) {
     };
 }
 
-// A host instance without a renderer: data, methods and computed bound to one object.
-function host(component) {
-    const sent = [];
-    const vm = {
-        $refs: { detail: { focus() {} }, attribute: { focus() {} } },
-        $nextTick: (fn) => fn(),
-        $emit() {},
-        getWebsocket: () => ({ send: (value) => sent.push(JSON.parse(value)) }),
-        autocompleteRequest: (params, done) => { vm.pendingCompletion = done; },
-    };
-    const parts = [...(component.mixins || []), component];
-    for (const part of parts) Object.assign(vm, part.data ? part.data.call(vm) : {});
-    vm.source = 'wsm.test';
-    for (const part of parts) {
-        for (const [key, method] of Object.entries(part.methods || {})) vm[key] = method.bind(vm);
-        for (const [key, getter] of Object.entries(part.computed || {})) {
-            Object.defineProperty(vm, key, { get: () => getter.call(vm), configurable: true });
-        }
-    }
-    component.created?.call(vm);
-    return { vm, sent };
-}
+const host = (component) => optionsHost(component, { detail: { focus() {} }, attribute: { focus() {} } });
 
 const kinds = [
     { name: 'Details', component: Details, path: 'src/components/WorldStateManagerCharacterDetails.vue', values: 'details', field: 'detail', updateAction: 'update_character_detail', ackAction: 'character_detail_updated', key: (name) => `detail.${name}` },

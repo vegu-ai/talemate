@@ -261,7 +261,12 @@ export default {
         this.introAutocompleteField = createAutocompleteField({
             autocompleteRequest: this.autocompleteRequest,
             getValue: () => this.scene?.data?.intro || '',
-            setValue: (v) => { if (this.scene?.data) this.scene.data.intro = v; },
+            setValue: (v) => {
+                if (this.scene?.data) {
+                    this.scene.data.intro = v;
+                    this.setFieldDirty('intro');
+                }
+            },
             buildParams: () => ({
                 partial: this.scene.data.intro,
                 context: "scene intro:scene intro",

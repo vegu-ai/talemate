@@ -94,7 +94,12 @@ export default {
         this.descriptionAutocompleteField = createAutocompleteField({
             autocompleteRequest: this.autocompleteRequest,
             getValue: () => this.character?.description || '',
-            setValue: (v) => { if (this.character) this.character.description = v; },
+            setValue: (v) => {
+                if (this.character) {
+                    this.character.description = v;
+                    this.dirty = true;
+                }
+            },
             buildParams: () => ({
                 partial: this.character.description,
                 context: `character detail:description`,

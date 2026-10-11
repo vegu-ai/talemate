@@ -9,6 +9,7 @@ import asyncio
 import copy
 import json
 import os
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -74,6 +75,27 @@ REQUEST_MS = 140.0
 ACTION_MS = 820.0
 
 
+class UnhurriedService(DecisionService):
+    """
+    A service whose requests have no deadline. The scenarios describe frames,
+    not deadlines, and the real one is wall-clock time: a starved worker would
+    turn a slow answer into a timeout failure and change the frames.
+    """
+
+    timeout_seconds = property(lambda self: None, lambda self, value: None)
+
+
+async def settle(awaitable, turns=10_000):
+    """Waits for the awaitable by event-loop turns, which a stalled worker cannot shorten."""
+    task = asyncio.ensure_future(awaitable)
+    for _ in range(turns):
+        if task.done():
+            return task.result()
+        await asyncio.sleep(0)
+    task.cancel()
+    raise AssertionError(f"Still pending after {turns} event-loop turns")
+
+
 class Route:
     """The websocket route, so a fixture frame is what the browser receives."""
 
@@ -91,7 +113,7 @@ class Route:
 @pytest.fixture
 def stage(policy_factory, provider, monkeypatch):
     def start(max_finished=50, enabled=True):
-        service = DecisionService(
+        service = UnhurriedService(
             provider, enabled=enabled, log=DecisionLog(max_finished=max_finished)
         )
         return service, Route(monkeypatch, service.log)
@@ -284,10 +306,10 @@ async def concurrent(stage):
     first = stage.create(uid="editor.concurrent-a", source=TEMPLATE, service=service)
     second = stage.create(uid="editor.concurrent-b", source=TEMPLATE, service=service)
     task = asyncio.create_task(first.run())
-    await asyncio.wait_for(started.wait(), 2)
-    await asyncio.wait_for(second.run(), 2)
+    await settle(started.wait())
+    await settle(second.run())
     release.set()
-    await asyncio.wait_for(task, 2)
+    await settle(task)
     stage.provider.handler = None
     await route.send("snapshot")
     return route.frames
@@ -305,7 +327,7 @@ async def cancelled(stage):
     task = asyncio.create_task(
         stage.create(uid="editor.cancelled", source=TEMPLATE, service=service).run()
     )
-    await asyncio.wait_for(started.wait(), 2)
+    await settle(started.wait())
     task.cancel()
     await asyncio.gather(task, return_exceptions=True)
     stage.provider.handler = None
@@ -350,10 +372,10 @@ async def clear_keeps_a_pending_action(stage):
     task = asyncio.create_task(
         stage.create(uid="editor.acting", source=TEMPLATE, service=service).run()
     )
-    await asyncio.wait_for(started.wait(), 2)
+    await settle(started.wait())
     await route.send("clear")
     release.set()
-    await asyncio.wait_for(task, 2)
+    await settle(task)
     stage.editor.revision_rewrite.side_effect = None
     await route.send("snapshot")
     return route.frames
@@ -696,3 +718,17 @@ async def test_frontend_fixtures_still_match_the_framework(stage):
         "The decision log emits frames the frontend fixtures no longer describe. "
         "Regenerate them with TALEMATE_UPDATE_DECISION_FIXTURE=1 and review the diff."
     )
+
+
+async def test_a_stalled_worker_does_not_change_the_frames(stage):
+    """A provider answer that arrives after the service's default deadline."""
+    answer = stage.provider.respond
+
+    def stalled(request):
+        time.sleep(DecisionService().timeout_seconds + 0.1)
+        return answer(request)
+
+    stage.provider.respond = stalled
+    frames = normalize(await no_reason(stage))
+    expected = json.loads(FIXTURE.read_text())["scenarios"]["no_reason"]
+    assert frames == expected

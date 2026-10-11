@@ -99,7 +99,8 @@
                         :model-value="selectedVisibility"
                         :character-names="otherCharacterNames"
                         :owner-label="character.name"
-                        :disabled="busy"
+                        :disabled="busy || !selectedHasText"
+                        :disabled-hint="selectedHasText ? null : 'Add text to this entry first, then choose who knows it.'"
                         @update:model-value="setVisibility(selected, $event)" />
                 </v-card-text>
                 <v-card-actions>
@@ -182,6 +183,7 @@ export default {
             setValue: (v) => {
                 if (this.selected && this.character?.base_attributes) {
                     this.character.base_attributes[this.selected] = v;
+                    this.dirty = true;
                 }
             },
             buildParams: () => ({
@@ -241,6 +243,9 @@ export default {
             if (!this.character || !this.selected) return null;
             return (this.character.visibility || {})[this.selected] || null;
         },
+        selectedHasText() {
+            return Boolean(this.character?.base_attributes?.[this.selected]);
+        },
         otherCharacterNames() {
             return this.characterNames.filter(name => name !== this.character?.name);
         },
@@ -267,6 +272,8 @@ export default {
     },
     methods: {
         setVisibility(name, visibility) {
+            // a Ctrl+Enter completion can be pending without a blur; messages are handled in order
+            this.update(name, true);
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'set_character_entry_visibility',

@@ -735,10 +735,7 @@ class Character(pydantic.BaseModel):
         updates.pop("base_attributes", None)
         updates.pop("details", None)
         updates.pop("reinforcement_entries", None)
-        updates["visibility"] = {
-            key: EntryVisibility.model_validate(value)
-            for key, value in updates["visibility"].items()
-        }
+        updates.pop("visibility", None)
         updates["visual_finalizers"] = [
             VisualPromptFinalizer.model_validate(value)
             for value in updates["visual_finalizers"]
@@ -762,6 +759,28 @@ class Character(pydantic.BaseModel):
             if self.details.get(detail) != other_character.details[detail]:
                 self.reinforcement_entries.pop(detail, None)
             self.details[detail] = other_character.details[detail]
+
+        # A shared entry's Known by travels with its text; every other record
+        # stays the receiving character's own.
+        transferred = (
+            ["description"]
+            + [
+                a
+                for a in self.shared_attributes
+                if a in other_character.base_attributes
+            ]
+            + [
+                f"detail.{d}"
+                for d in self.shared_details
+                if d in other_character.details
+            ]
+        )
+        for key in transferred:
+            record = other_character.visibility.get(key)
+            if record is None:
+                self.visibility.pop(key, None)
+            else:
+                self.visibility[key] = record.model_copy(deep=True)
 
         self.memory_dirty = True
         self._signal_changed()

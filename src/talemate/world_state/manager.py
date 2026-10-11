@@ -27,7 +27,11 @@ from talemate.instance import get_agent
 from talemate.emit import emit
 from talemate.util import replace_smart_quotes
 from talemate.knowledge.disclosures import grant_disclosure
-from talemate.knowledge.entry import _item_from_id, SHEET_KINDS
+from talemate.knowledge.entry import (
+    _item_from_id,
+    character_entry_exists,
+    SHEET_KINDS,
+)
 from talemate.knowledge.perspective_models import Disclosure
 from talemate.knowledge.mode import KnowledgeEligibility, character_knowledge_enabled
 from talemate.knowledge.perspectives import clear_perspective_records
@@ -712,7 +716,11 @@ class WorldStateManager:
     async def set_world_entry_visibility(
         self, entry_id: str, visibility: EntryVisibility
     ):
-        entry = self.world_state.manual_context[entry_id]
+        entry = self.world_state.manual_context.get(entry_id)
+        if entry is None:
+            raise ValueError(
+                f"There is no world entry `{entry_id}` to set Known by on."
+            )
         previous = entry.visibility
         entry.visibility = visibility
         invalidate_memory_audiences(self.scene)
@@ -805,9 +813,17 @@ class WorldStateManager:
         """
         `key` is the memory storage key of the entry: "description", an
         attribute name, or "detail.<name>". An `everyone` setting is the
-        default and is removed rather than stored.
+        default and is removed rather than stored. Only an existing entry can
+        carry a setting: an empty detail or attribute is deleted, so a record
+        written for one would apply to any later entry of that name.
         """
         character = self.scene.get_character(character_name)
+        if character is None:
+            raise ValueError(f"There is no character `{character_name}`.")
+        if not character_entry_exists(character, key):
+            raise ValueError(
+                f"{character.name} has no entry `{key}` to set Known by on. Add text to it first."
+            )
         previous = character.visibility.get(key)
         if visibility.mode == "everyone":
             character.visibility.pop(key, None)

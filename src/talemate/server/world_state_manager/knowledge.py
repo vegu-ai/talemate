@@ -114,16 +114,28 @@ class KnowledgeMixin:
 
     async def handle_set_character_entry_visibility(self, data):
         payload = CharacterEntryVisibilityPayload(**data)
-        await self.world_state_manager.set_character_entry_visibility(
-            payload.name, payload.key, payload.visibility
-        )
+        try:
+            await self.world_state_manager.set_character_entry_visibility(
+                payload.name, payload.key, payload.visibility
+            )
+        except ValueError as exc:
+            await self.signal_operation_failed(
+                str(exc), failed_action="set_character_entry_visibility"
+            )
+            return
         await self.handle_get_character_details({"name": payload.name})
         await self.signal_operation_done()
 
     async def handle_set_world_entry_visibility(self, data):
         payload = WorldEntryVisibilityPayload(**data)
-        await self.world_state_manager.set_world_entry_visibility(
-            payload.entry_id, payload.visibility
-        )
+        try:
+            await self.world_state_manager.set_world_entry_visibility(
+                payload.entry_id, payload.visibility
+            )
+        except ValueError as exc:
+            await self.signal_operation_failed(
+                str(exc), failed_action="set_world_entry_visibility"
+            )
+            return
         await self.handle_get_world({})
         await self.signal_operation_done()

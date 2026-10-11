@@ -138,14 +138,20 @@ def _sheet_item(character, key: str) -> KnowledgeItem:
     )
 
 
-def _sheet_key(character, key: str) -> str:
-    """A key that names a real attribute or detail is taken literally; only
-    then does a `description.<n>` suffix count as a description paragraph."""
-    if (
+def character_entry_exists(character, key: str) -> bool:
+    """Whether `key` (`description`, an attribute name or `detail.<name>`)
+    names an entry the character holds; the description always exists."""
+    return (
         key == "description"
         or key in character.base_attributes
         or (key.startswith("detail.") and key[len("detail.") :] in character.details)
-    ):
+    )
+
+
+def _sheet_key(character, key: str) -> str:
+    """A key that names a real attribute or detail is taken literally; only
+    then does a `description.<n>` suffix count as a description paragraph."""
+    if character_entry_exists(character, key):
         return key
     return canonical_entry_id(f"{character.name}.{key}")[len(character.name) + 1 :]
 

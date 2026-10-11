@@ -89,4 +89,4 @@ Depending on how many details are generated, this can take a moment.
 
 ## Known by
 
-Every detail has a **Known by** setting: **Everyone** (the default), **Only [character]**, or **Specific characters**. Other characters cannot draw on an entry they may not know; the character always can. See [Visibility](/talemate/user-guide/world-editor/knowledge/#visibility) and [Character knowledge: flow reference](/talemate/user-guide/world-editor/knowledge-how-it-works/).
+Every detail has a **Known by** setting: **Everyone** (the default), **Only [character]**, or **Specific characters**. Other characters cannot draw on an entry they may not know; the character always can. Known by is available once the detail has text: a new, empty detail is not saved yet, so write its text first, then choose who knows it. See [Visibility](/talemate/user-guide/world-editor/knowledge/#visibility) and [Character knowledge: flow reference](/talemate/user-guide/world-editor/knowledge-how-it-works/).

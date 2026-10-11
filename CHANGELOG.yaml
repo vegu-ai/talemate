@@ -70,6 +70,7 @@
   - "Characters and World: Regenerating a snapshot's source restores an earlier snapshot or clears it with a notice; introductions and emphasized text show world highlights."
   - "Characters and World: Editing memories refreshes remembered context, and character replies avoid repeating passages already in their story context."
   - "Characters and World: A new world entry or tracked state is saved only when you click Create; ticking Include only when pinned or changing the Context Attachment Method no longer saves the draft early. After Create, Add pin works on the first click, shows that it is working, and says so when a pin is refused."
+  - "Characters and World: Text that Ctrl+Enter completes in a character detail or attribute is saved when you leave the field, as typed text is; it was lost unless you typed in the field afterwards."
   - "Story and World: Story messages reach the right edge of the scene in Immersive mode, and every message's close button sits in its corner. The marker on the message whose image is the backdrop sits beside that button."
   - "Story and World: A director message stays visible until you confirm its deletion, and Cancel leaves it in place. Collapsed director messages, Backdrop entries, State Update rows and character arrival and departure entries share one row style, and an expanded director instruction can be deleted too."
   - "Settings and Clients: An agent quick-toggle chip no longer undoes a change made a moment earlier on another agent when an agent status update arrives in between."

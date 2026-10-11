@@ -51,6 +51,7 @@ export default {
             default: 'the owner',
         },
         disabled: Boolean,
+        disabledHint: String,
     },
     emits: ['update:modelValue'],
     computed: {
@@ -75,6 +76,7 @@ export default {
             }[this.mode];
         },
         hint() {
+            if (this.disabled && this.disabledHint) return this.disabledHint;
             return {
                 everyone: 'Every character can draw on this entry.',
                 owner: this.ownerLabel === 'nobody'

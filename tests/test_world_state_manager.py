@@ -1231,6 +1231,118 @@ class TestKnowledge:
         )
         assert world_state.manual_context["w1"].visibility.characters == ["Alice"]
 
+    @pytest.mark.parametrize("key", ["detail.flaw", "flaw"])
+    async def test_known_by_refused_for_an_entry_that_was_never_stored(
+        self, manager, scene, key
+    ):
+        from talemate.knowledge.schema import EntryVisibility
+
+        character = make_actor(scene, "Alice")
+        with pytest.raises(ValueError, match="Add text to it first"):
+            await manager.set_character_entry_visibility(
+                "Alice", key, EntryVisibility(mode="list", characters=["Bob"])
+            )
+        assert character.visibility == {}
+
+    async def test_known_by_refused_after_an_empty_result_removed_the_entry(
+        self, manager, scene
+    ):
+        from talemate.knowledge.schema import EntryVisibility
+
+        character = make_actor(scene, "Alice")
+        await character.set_detail("Likes", "Tea.")
+        await character.set_base_attribute("Likes", "Charts.")
+        for key in ("detail.Likes", "Likes"):
+            await manager.set_character_entry_visibility(
+                "Alice", key, EntryVisibility(mode="owner")
+            )
+        assert set(character.visibility) == {"detail.Likes", "Likes"}
+
+        await character.set_detail("Likes", "")
+        await character.set_base_attribute("Likes", "")
+        assert character.visibility == {}
+        for key in ("detail.Likes", "Likes"):
+            with pytest.raises(ValueError):
+                await manager.set_character_entry_visibility(
+                    "Alice", key, EntryVisibility(mode="owner")
+                )
+        assert character.visibility == {}
+
+    async def test_shared_context_carries_known_by_only_with_shared_entries(self):
+        from talemate.character import Character
+        from talemate.knowledge.schema import EntryVisibility
+
+        edwin = EntryVisibility(mode="list", characters=["Edwin"])
+        owner = EntryVisibility(mode="owner")
+        a = Character(
+            name="Mara",
+            base_attributes={"age": "30", "Likes": "Sunshine"},
+            shared_attributes=["age"],
+            visibility={"age": owner, "Likes": edwin, "detail.gone": owner},
+        )
+        b = Character(
+            name="Mara",
+            base_attributes={"age": "29", "Likes": "Rain", "Secret": "x"},
+            shared_attributes=["age"],
+            visibility={"Secret": owner, "Likes": owner},
+        )
+
+        shared = Character(name="Mara")
+        await shared.apply_shared_context(a)
+        assert shared.base_attributes == {"age": "30"}
+        assert shared.visibility == {"age": owner}
+
+        await b.apply_shared_context(shared)
+        assert b.base_attributes["age"] == "30"
+        assert b.visibility == {"age": owner, "Secret": owner, "Likes": owner}
+
+        a.visibility.pop("age")
+        shared = Character(name="Mara")
+        await shared.apply_shared_context(a)
+        await b.apply_shared_context(shared)
+        assert b.visibility == {"Secret": owner, "Likes": owner}
+
+    async def test_known_by_accepted_for_stored_entries_and_description(
+        self, manager, scene
+    ):
+        from talemate.knowledge.schema import EntryVisibility
+
+        character = make_actor(scene, "Alice")
+        character.base_attributes = {"age": "30", "detail.odd": "an attribute"}
+        for key in ("description", "age", "detail.odd"):
+            await manager.set_character_entry_visibility(
+                "Alice", key, EntryVisibility(mode="owner")
+            )
+        assert set(character.visibility) == {"description", "age", "detail.odd"}
+
+    async def test_known_by_refused_for_a_missing_world_entry(
+        self, manager, world_state
+    ):
+        from talemate.knowledge.schema import EntryVisibility
+
+        with pytest.raises(ValueError, match="no world entry"):
+            await manager.set_world_entry_visibility(
+                "missing", EntryVisibility(mode="owner")
+            )
+        assert "missing" not in world_state.manual_context
+
+    async def test_refused_known_by_does_not_resend_the_entries(self, scene):
+        make_actor(scene, "Alice")
+        handler = MagicMock(scene=scene)
+        plugin = WorldStateManagerPlugin(handler)
+        await plugin.handle_set_character_entry_visibility(
+            {"name": "Alice", "key": "detail.flaw", "visibility": {"mode": "owner"}}
+        )
+        await plugin.handle_set_world_entry_visibility(
+            {"entry_id": "missing", "visibility": {"mode": "owner"}}
+        )
+        messages = [call.args[0] for call in handler.queue_put.call_args_list]
+        assert [(m["action"], m.get("failed_action")) for m in messages] == [
+            ("operation_done", "set_character_entry_visibility"),
+            ("operation_done", "set_world_entry_visibility"),
+        ]
+        assert "Add text to it first" in messages[0]["error"]["message"]
+
     async def test_targets_catalogue(self, manager, scene, world_state):
         character = make_actor(scene, "Alice")
         character.base_attributes = {"age": "30", "_hidden": "x"}

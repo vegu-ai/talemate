@@ -102,7 +102,7 @@ export default {
                     "items": [
                         {
                             "title": "Scene Revisions",
-                            "description": "Browse a story's saved states with one row per message, filter them by date or search their text, and fork a new save from any past revision. The new save keeps the inherited revisions and the fork point."
+                            "description": "Browse a story's saved states with one row per message, filter them by date or search their text, and fork a new save from any past revision. The new save keeps the inherited revisions and the fork point. Revisions replace the Timeline, which was meant to do the same but never worked reliably."
                         },
                         {
                             "title": "Character Knowledge",
@@ -110,11 +110,11 @@ export default {
                         },
                         {
                             "title": "Character Perspectives",
-                            "description": "New stories can give each character their own account of events, carried into their memories and summaries. Read and edit those accounts beside the full story, and share selected information as disclosures. This optional mode needs a strong model and adds analysis requests; choose it before the story has history. Views keep the passage's tense and style, and a character who sees a whisper but cannot hear it keeps the visible exchange without its words. Analyze player perspective is off by default; enable it in Settings → Agents → Summarizer → Character Perspectives to limit the player's view independently of effort."
+                            "description": "New stories can give each character their own account of events, carried into their memories and summaries. Read and edit those accounts beside the full story, and share selected information as disclosures. This optional mode needs a strong model and adds analysis requests; choose it before the story has history. An edit marks the views and summaries it affects as out of sync, and Repair rebuilds them. Views keep the passage's tense and style, and a character who sees a whisper but cannot hear it keeps the visible exchange without its words. Analyze player perspective is off by default; enable it in Settings → Agents → Summarizer → Character Perspectives to limit the player's view independently of effort."
                         },
                         {
                             "title": "Decision Model",
-                            "description": "An optional decision model answers quick questions about your story with a probability instead of prose, through OpenRouter or a SystemOne-compatible server. It can answer pin conditions and queries, skip unchanged tracked states, choose existing portraits, recognize characters named by pronoun or nickname, and run the Editor decision checks. A Decision Log shows every answer, and nothing is sent while the model is off."
+                            "description": "An optional decision model answers quick questions about your story with a probability instead of prose, through OpenRouter or a SystemOne-compatible server. It can answer pin conditions and queries, skip unchanged tracked states, choose existing portraits and scene backgrounds, recognize characters named by pronoun or nickname, and run the Editor decision checks. A Decision Log shows every answer, and nothing is sent while the model is off."
                         },
                         {
                             "title": "Themes",
@@ -129,8 +129,12 @@ export default {
                             "description": "Customize the scene header with story statistics, character portraits, knowledge mode and effort, and quick access to the scene's writing and visual styles. Add reusable shortcuts to scene tools and pin game variables as labelled sliders, choices or toggles for use during play."
                         },
                         {
+                            "title": "Scene Backgrounds",
+                            "description": "The World State agent can keep the scene backdrop fitting the story, picking one of the scene's backgrounds or generating a new one. Every backdrop change, including backgrounds you generate for the story, is recorded as a Backdrop entry in the history, and Replay shows each passage with its backdrop. It is off by default."
+                        },
+                        {
                             "title": "Help Chat",
-                            "description": "Ask the Help agent to create or change themes and templates, adjust settings and edit inference presets. Settings and template changes each require your permission, with both permissions off by default."
+                            "description": "Ask the Help agent to create or change themes and templates, adjust settings and edit inference presets. Settings and template changes each require your permission, with both permissions off by default. The theme editor can start a help chat that sets up a theme from your description."
                         },
                         {
                             "title": "Chatterbox Turbo",
@@ -151,14 +155,17 @@ export default {
                                         "Add a selected person, object or place from the story to the world snapshot and keep it tracked.",
                                         "Character arrivals and departures appear in history, with arrival notes and optional narration when moving characters into or out of the scene.",
                                         "Prose perspective presets include examples, and the Director can help choose perspectives or reassess the scene's intent.",
-                                        "Finished passages appear while follow-up summaries and voice preparation continue. In Character perspectives mode, new passages are analyzed before the next generation; an edit flags the perspectives and summaries it affects as out of sync, and Repair in the bar above the message input rebuilds them.",
+                                        "Finished passages appear while follow-up summaries and voice preparation continue.",
+                                        "The story keeps its place when you switch to another tab and back.",
+                                        "Sequential tracked-state answers appear in the story as State Update rows you can read, edit or remove.",
                                         "Editing or deleting earlier passages warns when later story details may become inconsistent."
                                     ]
                                 },
                                 {
                                     "title": "Memory",
                                     "items": [
-                                        "Tune retrieval for recency, variety and relevance, with optional local reranking or AI refinement; OpenRouter embeddings are also available."
+                                        "Tune retrieval for recency, variety and relevance, with optional local reranking or AI refinement; OpenRouter embeddings are also available.",
+                                        "With Refine memories with AI on, a Memories button on character replies shows the memories the character drew on."
                                     ]
                                 },
                                 {
@@ -172,9 +179,10 @@ export default {
                                     "items": [
                                         "Client and agent settings share the Settings tab's Save and Discard controls, including scene overrides and assigning one client to all agents.",
                                         "Pin inference parameters beside the client list and enter exact sampling, context and reasoning values.",
-                                        "OpenAI, OpenRouter and compatible clients offer reasoning effort and completion-token options; OpenAI also offers sampling, system-message and streaming controls.",
+                                        "OpenAI, OpenRouter and compatible clients offer reasoning effort and completion-token options; OpenAI adds sampling and system-message controls, and OpenAI and compatible clients can stream.",
                                         "llama.cpp Router mode lets each client choose its model, including for vision and server prompt templates.",
                                         "New clients default to at least 16k context; supported hosted clients enable concurrent requests by default, while saved configurations retain their values.",
+                                        "New OpenAI-compatible clients send stop sequences and thinking preferences, each with its own toggle; saved clients keep their current requests.",
                                         "Muse Glimmer prompt formatting and newer Hugging Face template files are supported."
                                     ]
                                 },
@@ -190,7 +198,10 @@ export default {
                                     "title": "Images",
                                     "items": [
                                         "OpenRouter supports image-only generation and editing models, with model and provider suggestions and clearer errors for unsupported requests.",
-                                        "Paste images from the clipboard, choose megapixel resolution presets, and use the Qwen image-reference prompt preset."
+                                        "Paste images from the clipboard, choose megapixel resolution presets, and use the Qwen image-reference prompt preset.",
+                                        "Mark as reference prepares any image for later generations, analyzing and tagging it when a vision backend is available.",
+                                        "Regenerate (replace) and Edit (replace) put the new image in the original's place, deleting the original only when nothing else uses it.",
+                                        "The Visualizer scene tool switches automatic generation, new portraits and new backgrounds on and off."
                                     ]
                                 },
                                 {
@@ -212,7 +223,7 @@ export default {
                                     "items": [
                                         "Rewrite spoken text without changing the story, and use newline and tab escapes in String Join and Split delimiters.",
                                         "Added or edited command and agent modules become available automatically without a manual sync.",
-                                        "New nodes and events cover the decision model, character knowledge and disclosures, game state, arrivals and departures, the world snapshot and reasoning effort per request."
+                                        "New nodes and events cover the decision model, character knowledge and disclosures, game state, arrivals and departures, the world snapshot, reasoning effort per request and preparing images as references."
                                     ]
                                 },
                                 {
@@ -240,7 +251,9 @@ export default {
                                         "Revision forks preserve all recorded scene sections, including world state. A damaged snapshot reports an error without substituting another state.",
                                         "Failed revision-history writes stop the save with an error instead of leaving a save with incomplete history.",
                                         "Static history and shared entries keep their timing across reloads and time changes; deleting messages preserves summary positions.",
-                                        "Shared world entries survive linked-scene loads and new episodes; sequential tracked-state answers accumulate over the story.",
+                                        "Shared world entries survive linked-scene loads and new episodes.",
+                                        "Sequential tracked-state answers accumulate over the story without duplicates after a reload, and re-applying a template keeps a tracked state and its answer.",
+                                        "Without Character Perspectives, saving or clearing a World tracked state's answer in the World Editor updates what the AI recalls.",
                                         "Pinned context survives loading a scene file from someone else, moving to a new installation, or clearing the local memory cache."
                                     ]
                                 },
@@ -249,7 +262,16 @@ export default {
                                     "items": [
                                         "Duplicate character names are refused, failed creation leaves no partial character, and valid character proposals apply without discarding other pending changes.",
                                         "Regenerating a snapshot's source restores an earlier snapshot or clears it with a notice; introductions and emphasized text show world highlights.",
-                                        "Editing memories refreshes remembered context, and character replies avoid repeating passages already in their story context."
+                                        "Editing memories refreshes remembered context, and character replies avoid repeating passages already in their story context.",
+                                        "New world entries and tracked states are saved only when you click Create, and Add pin works on the first click.",
+                                        "Text completed with Ctrl+Enter in character and scene fields is saved when you leave the field."
+                                    ]
+                                },
+                                {
+                                    "title": "Story and Scenes",
+                                    "items": [
+                                        "Director messages stay visible until you confirm their deletion, and story messages fill the scene width in Immersive mode.",
+                                        "Simulation Suite V2 names new simulations with a proper scene title."
                                     ]
                                 },
                                 {
@@ -267,11 +289,22 @@ export default {
                                     ]
                                 },
                                 {
-                                    "title": "Clients and Images",
+                                    "title": "Settings and Clients",
                                     "items": [
+                                        "Agent quick-toggle chips and scene overrides no longer undo a change made moments earlier elsewhere, and overrides waiting for a save show Save and Discard.",
                                         "OpenRouter respects disabled reasoning and per-action overrides; OpenAI-compatible clients handle empty replies and report non-streamed generation speed correctly.",
                                         "Local clients refuse blank server URLs, unavailable clients remain visible, and Ollama honors stopping strings.",
-                                        "Image uploads work over plain HTTP, OpenRouter images are stored as PNG, and ComfyUI prompt inputs and workflow lists resolve correctly."
+                                        "Compatible clients in chat mode read separately returned reasoning, work without an API key, and name the real cause of a failed generation.",
+                                        "Qwen3 and Qwen3.5 models get a matching prompt template automatically, so turning Reasoning off keeps their thinking out of the story.",
+                                        "KoboldCpp, Text-Generation-WebUI, TabbyAPI and OpenAI-compatible servers receive all sampler and stop settings, honor Reasoning off and no longer cut responses short."
+                                    ]
+                                },
+                                {
+                                    "title": "Images",
+                                    "items": [
+                                        "Image uploads work over plain HTTP, OpenRouter images are stored as PNG, and ComfyUI prompt inputs and workflow lists resolve correctly.",
+                                        "Automatic image generations follow the Visualizer's Automatic Generation setting, and regenerating or editing an image updates the message you clicked.",
+                                        "Deleting an image removes it from other images' references; generations no longer fail on it, and Director Chat shows it as removed."
                                     ]
                                 },
                                 {

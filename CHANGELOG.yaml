@@ -90,7 +90,6 @@
   - "Shared Worlds: Back up older shared worlds before upgrading. Missing shared entries can be recovered from a linked scene only until 0.40 first writes that world, so load the scene holding them first. Entries intentionally removed in an older version may also return. Recover overwritten text from older revisions in 0.39.0 before upgrading, or from a backup of `<project>/changelog/`."
   - "Scene Context Format: The scene context format (Screenplay, Chat, Narrative, AI Aware) moved from the Conversation agent's Generation settings to the Summarizer agent's Scene History settings. A format set on the Conversation agent in an earlier version is not carried over: the format starts at Screenplay, so set it again in Scene History if you used another one."
   - "Scene Backgrounds: Auto Backdrop for scene backgrounds is removed: backgrounds generated for the story always become the backdrop, and Visual Library backgrounds only go to the library. Backgrounds already attached to messages keep showing."
-  - "Python Scene Scripting: The legacy Python scene scripting API (a scene's `game.py`) is deprecated and no longer maintained. Build new scene logic with node modules."
   - "Visual Styles: Shipped visual styles moved into Talemate's template group. Back up edits to templates/world-state/visual-styles.yaml before updating; if they block the update, stash them or restore the tracked file."
 0.39.0.dev:
   features:

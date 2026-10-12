@@ -4,4 +4,5 @@ nav:
     - 3. Model expectations: model-expectations.md
     - 4. Connect a client: connect-a-client.md
     - 5. Load a scene: load-a-scene.md
+    - 6. Upgrade Notes: upgrading.md
     - ...

@@ -118,7 +118,7 @@
                     <v-icon icon="mdi-brain" size="small" class="mr-1" color="primary"></v-icon>
                   </template>
                   <div class="text-body-medium">
-                    Google's Gemini 3.7 Flash model will be selected by default. Since it's a reasoning model, reasoning will be enabled automatically. If you change to a non-reasoning model in the next  setup step (or at a later point), you should turn reasoning off in the client settings.
+                    Google's Gemini 3.8 Flash model will be selected by default. Since it's a reasoning model, reasoning will be enabled automatically. If you change to a non-reasoning model in the next  setup step (or at a later point), you should turn reasoning off in the client settings.
                   </div>
                 </v-alert>
               </v-col>

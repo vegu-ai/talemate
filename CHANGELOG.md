@@ -34,10 +34,6 @@ The scene context format (Screenplay, Chat, Narrative, AI Aware) moved from the 
 
 Auto Backdrop for scene backgrounds is removed: backgrounds generated for the story always become the backdrop, and Visual Library backgrounds only go to the library. Backgrounds already attached to messages keep showing.
 
-#### Python Scene Scripting
-
-The legacy Python scene scripting API (a scene's `game.py`) is deprecated and no longer maintained. Build new scene logic with node modules.
-
 #### Visual Styles
 
 Shipped visual styles moved into Talemate's template group. Back up edits to templates/world-state/visual-styles.yaml before updating; if they block the update, stash them or restore the tracked file.

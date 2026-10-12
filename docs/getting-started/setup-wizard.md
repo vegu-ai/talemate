@@ -44,7 +44,7 @@ A one-line pointer above the settings links to the [Model expectations](model-ex
 Once the client has been created, the wizard will automatically advance to the next step.
 
 !!! info "Reasoning Models"
-    If you are using a reasoning model (like DeepSeek R1 or GLM), you will need to enable reasoning in the client settings after setup. For OpenRouter users, new clients have reasoning on by default at the model's default effort, so the default model selected during the wizard (Gemini 3.7 Flash) and other reasoning models work out of the box. If you switch to a model that does not reason, you can turn reasoning off in the client settings.
+    If you are using a reasoning model (like DeepSeek R1 or GLM), you will need to enable reasoning in the client settings after setup. For OpenRouter users, new clients have reasoning on by default at the model's default effort, so the default model selected during the wizard (Gemini 3.8 Flash) and other reasoning models work out of the box. If you switch to a model that does not reason, you can turn reasoning off in the client settings.
 
 !!! info "Context size"
     Talemate is made to work well with smaller context sizes: its summarization layers keep the story context compact, so 16k to 48k is usually enough. A larger context works, but is usually not needed. See [Model expectations](model-expectations.md).

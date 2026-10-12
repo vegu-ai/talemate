@@ -61,6 +61,9 @@
   summary: First-run Setup Wizard for selecting hosted or self-hosted AI, adding a client, choosing Better/Standard embeddings
     and CPU/CUDA, and optionally configuring Google/OpenRouter visuals. Covers the model-expectations panel, Apply & finish,
     skipping setup, reasoning defaults and where to change settings later.
+- path: getting-started/upgrading.md
+  title: Upgrading
+  summary: Release-by-release upgrade notes, newest first - what to review, back up or change when updating a version.
 - path: index.md
   title: Talemate Documentation
   summary: Talemate documentation landing page for AI roleplay with narration and world/game-state tracking, linking Windows,

@@ -19,9 +19,7 @@
         "message_type": "character",
         "max_iterations": 100,
         "stop_on_time_passage": false,
-        "filters": {
-          "source": "player"
-        }
+        "filters": {}
       },
       "x": 42,
       "y": 103,
@@ -787,7 +785,7 @@
   ],
   "comments": [
     {
-      "text": "Obtain the last user action, by searching for character messages where source is \"player\"",
+      "text": "Newest character message: Process Input pushes the player's line, typed or generated, before it fires this event",
       "x": 410,
       "y": 210,
       "width": 200,

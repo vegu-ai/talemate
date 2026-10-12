@@ -271,7 +271,8 @@ export default {
                                     "title": "Story and Scenes",
                                     "items": [
                                         "Director messages stay visible until you confirm their deletion, and story messages fill the scene width in Immersive mode.",
-                                        "Simulation Suite V2 names new simulations with a proper scene title."
+                                        "Simulation Suite V2 names new simulations with a proper scene title.",
+                                        "Simulation Suite V2 reacts when a Director dynamic action writes your request to the computer."
                                     ]
                                 },
                                 {

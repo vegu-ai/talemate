@@ -191,17 +191,23 @@ Decision Checks is an experimental Editor option, **off by default**. Enable the
 [Decision Model](../../app-settings/decision-model.md), enable **Revision**, choose
 **Targeted Rewrite** or **Unslop**, then switch on **Decision checks** inside
 **Revision**. Select a [writing style with decision checks](../../templates/writing-style.md#decision-checks)
-in the scene settings. This does not
+in the scene settings. While a scene is loaded, a note under **Decision checks** says
+when there is nothing to check: the scene has no writing style, or its writing style
+has no active decision checks. The revision then runs the usual way, and the
+Decision Log records why. This does not
 enable automatic revision or change its selected targets. Automatic revision
 continues to exclude player input. Dedupe is unchanged.
 
 Each eligible invocation is one evaluation, recorded as one Decision Log entry. It
-carries the complete current text, numbered passages, preceding story messages from
-**Repetition Range** (15 by default), and the applicable writing style and active prose
-rules. Under tight [input limits](../../app-settings/decision-model.md#advanced) it
+carries the current text once, as numbered passages, preceding story messages from
+**Repetition Range** (15 by default), the applicable writing style and active prose
+rules, and for a character's line that character's acting instructions, so a check does not
+flag a phrase the instructions ask for. Under tight [input limits](../../app-settings/decision-model.md#advanced) it
 carries fewer preceding messages, and its questions can go out as several requests. Generated context includes its
-existing task instructions and source information; summaries use their supplied
-source history. This does not generate additional context with an LLM.
+existing task instructions and source information; summaries carry the earlier
+summaries, as many as the Summarizer's
+[Use preceeding summaries to strengthen context](../summarizer/settings.md) setting
+(6 by default). This does not generate additional context with an LLM.
 
 The writing style owns the list of checks, their questions, true/false criteria,
 correction instructions and probability thresholds. Open its template editor to

@@ -9,7 +9,9 @@ import {
     applyDecisionFrame,
     createDecisionLog,
     decisionRows,
+    formatTokenCount,
     outcomeSummary,
+    writingStyleNote,
     questionGroups,
 } from '@/utils/decisionLog';
 import { PROMPT_STATUSES } from '@/utils/promptLog';
@@ -419,5 +421,21 @@ describe('the number and the order come from the entries themselves', () => {
     it('forgets the number of an entry the backend removed', () => {
         const log = play('retention');
         expect(log.seen).not.toHaveProperty('request-1');
+    });
+});
+
+describe('token counts', () => {
+    it('reads compact at a glance', () => {
+        expect([842, 1000, 1812, 9960, 21340].map(formatTokenCount)).toEqual(['842', '1k', '1.8k', '10k', '21k']);
+    });
+});
+
+describe('writing style notes', () => {
+    it('tells a missing style from a style without active checks', () => {
+        expect(writingStyleNote([{ action: 'no_action', reason: 'no_writing_style', details: {} }]))
+            .toBe('No writing style set for this scene; decision checks need one.');
+        expect(writingStyleNote([{ action: 'no_action', reason: 'no_active_checks', details: { writing_style: 'Roleplay' } }]))
+            .toBe("Writing style 'Roleplay' has no active decision checks. Add them in its template.");
+        expect(writingStyleNote([{ action: 'no_action', reason: 'below_threshold', details: {} }])).toBe(null);
     });
 });

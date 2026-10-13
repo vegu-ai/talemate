@@ -31,14 +31,20 @@ class VisualSelectionMixin:
             for asset in assets
         }
 
+        def current_asset(asset_id):
+            # the one place the current asset's name and tags go out, so the
+            # question about it can read them in every request part
+            if asset_id not in options:
+                return None
+            return {"id": asset_id, **options[asset_id]}
+
         if kind == "portrait":
             current = character.current_avatar
             uid, action, slot = "world_state.decision-avatar", "avatars", "avatar"
             state = {
                 "character": character.name,
                 "content": content,
-                "current_avatar": current if current in options else None,
-                "portraits": options,
+                "current_avatar": current_asset(current),
             }
 
             def unchanged():
@@ -53,8 +59,7 @@ class VisualSelectionMixin:
             )
             state = {
                 "content": content,
-                "current_background": current if current in options else None,
-                "backgrounds": options,
+                "current_background": current_asset(current),
             }
 
             def unchanged():
@@ -67,7 +72,8 @@ class VisualSelectionMixin:
             uid,
             enabled=self.resolve_config(action, "decision_model"),
             candidates={slot: list(options)},
-            variables=lambda: {"state": state},
+            # the other assets go out once, as the options of the choice question
+            variables=lambda: {"state": state, "assets": options},
             fallback=fallback,
             is_current=lambda: self.scene is scene and unchanged(),
         )

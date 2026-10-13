@@ -113,11 +113,12 @@ the limit it was started with. Changing the model name does not change these lim
 
 Talemate fits each request to these limits before it sends it:
 
-- The text a feature sends is shortened so that it fits in one request with all of the
-  feature's questions. Story history loses its oldest messages first, so the most
-  recent part of the story is always what the model reads. For a tracked state, the
-  update prompt is rebuilt with less history; the full prompt is still used if the
-  usual request has to run.
+- Each feature sends only the part of the story its decision needs, such as the Editor's
+  **Repetition Range** or the messages since a tracked state's last update. Larger
+  limits never make it send more.
+- That text is shortened so that it fits in one request with all of the feature's
+  questions. Story history loses its oldest messages first, so the most recent part of
+  the story is always what the model reads.
 - When the questions alone fill the limit, or the part of the text that cannot be
   shortened (such as the passage being checked and your writing style) does not fit
   beside all of them, the text is shortened to fit beside the largest question instead,

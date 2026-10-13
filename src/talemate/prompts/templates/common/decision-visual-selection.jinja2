@@ -6,7 +6,11 @@ model is confident about, otherwise leaves the choice to the usual request.
 {% macro select(label, state, slot, kind, current, assets, threshold, fits_current, which, none_fits) %}
 {% set options = {} %}
 {% for id, asset in assets.items() %}
-    {% set _ = options.update({id: (asset.name or id) ~ ": " ~ (asset.tags | join(", "))}) %}
+    {% if id == current %}
+        {% set _ = options.update({id: "The current " ~ kind ~ ", described in the state as current_" ~ slot}) %}
+    {% else %}
+        {% set _ = options.update({id: (asset.name or id) ~ ": " ~ (asset.tags | join(", "))}) %}
+    {% endif %}
 {% endfor %}
 {% set answers = ask(label, state=state, questions={
     "fits_current": yes_no(fits_current, threshold=threshold),

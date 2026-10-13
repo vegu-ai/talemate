@@ -23,7 +23,7 @@ from talemate.character import (
     set_character_is_player,
     set_voice,
 )
-from talemate.instance import get_agent
+from talemate.instance import AGENTS, get_agent
 from talemate.emit import emit
 from talemate.util import replace_smart_quotes
 from talemate.knowledge.disclosures import grant_disclosure
@@ -1214,6 +1214,17 @@ class WorldStateManager:
         collection = self.template_collection
         return collection.typed(types=types)
 
+    async def _templates_changed(self):
+        world_state_templates.invalidate_theme_cache()
+        await self._refresh_editor_settings()
+
+    @staticmethod
+    async def _refresh_editor_settings():
+        # the Editor settings note on its decision checks reads the writing style
+        editor = AGENTS.get("editor")
+        if editor:
+            await editor.emit_status()
+
     async def save_template_group(self, group: world_state_templates.Group):
         """
         Adds / Updates a new template group to the scene configuration.
@@ -1229,7 +1240,7 @@ class WorldStateManager:
             # saves back to the file it was loaded from (`update` copies the
             # fields, never the path)
             exists.update(group)
-            world_state_templates.invalidate_theme_cache()
+            await self._templates_changed()
             return
 
         # an unknown group derives its file from its name - taking the inbound
@@ -1248,7 +1259,7 @@ class WorldStateManager:
 
         self.template_collection.groups.append(group)
         group.save(world_state_templates.TEMPLATE_PATH)
-        world_state_templates.invalidate_theme_cache()
+        await self._templates_changed()
 
     @staticmethod
     def _disk_locks(group: world_state_templates.Group | None) -> dict[str, bool]:
@@ -1287,7 +1298,7 @@ class WorldStateManager:
                 f"Template group '{existing.name}' contains locked templates and cannot be deleted"
             )
         self.template_collection.remove(group)
-        world_state_templates.invalidate_theme_cache()
+        await self._templates_changed()
 
     async def save_template(self, template: world_state_templates.AnnotatedTemplate):
         """
@@ -1314,7 +1325,7 @@ class WorldStateManager:
             if sibling is not None:
                 sibling.locked = locked
         group.update_template(template)
-        world_state_templates.invalidate_theme_cache()
+        await self._templates_changed()
         if getattr(template, "auto_create", False):
             await self.auto_apply_template(template)
 
@@ -1328,7 +1339,7 @@ class WorldStateManager:
                 f"Template '{template.name}' is locked and cannot be deleted"
             )
         group.delete_template(template)
-        world_state_templates.invalidate_theme_cache()
+        await self._templates_changed()
 
     async def apply_all_auto_create_templates(self):
         """
@@ -1776,6 +1787,7 @@ class WorldStateManager:
             scene.experimental = experimental
         if writing_style_template is not _UNSET:
             scene.writing_style_template = writing_style_template
+            await self._refresh_editor_settings()
         if visual_style_template is not _UNSET:
             scene.visual_style_template = visual_style_template
         if (

@@ -780,6 +780,29 @@ class TestSceneSettings:
         assert scene.visual_style_template == "vs-uid"
 
     @pytest.mark.asyncio
+    async def test_writing_style_changes_refresh_the_editor_settings(
+        self, scene, manager, tmp_path, monkeypatch
+    ):
+        from talemate.instance import get_agent
+        from talemate.world_state.templates.base import Group
+
+        emit = AsyncMock()
+        monkeypatch.setattr(get_agent("editor"), "emit_status", emit)
+        await manager.update_scene_settings(immutable_save=True)
+        emit.assert_not_awaited()
+        await manager.update_scene_settings(writing_style_template="ws-uid")
+        emit.assert_awaited_once()
+
+        monkeypatch.setattr(
+            "talemate.world_state.templates.TEMPLATE_PATH", str(tmp_path)
+        )
+        scene._world_state_templates = type(manager.template_collection)(groups=[])
+        await manager.save_template_group(
+            Group(author="me", name="g1", description="x", uid="g1-uid")
+        )
+        assert emit.await_count == 2
+
+    @pytest.mark.asyncio
     async def test_update_scene_settings_agent_persona_templates(self, scene, manager):
         await manager.update_scene_settings(
             agent_persona_templates={"director": "uid-1"}

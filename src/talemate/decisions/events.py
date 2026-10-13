@@ -6,7 +6,7 @@ from typing import Any, Literal
 from uuid import uuid4
 
 import structlog
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from talemate.util.dialogue import TextScope
 
@@ -57,6 +57,28 @@ class QuestionPresentation(BaseModel):
     threshold: Probability
 
 
+class RequestTokens(BaseModel):
+    """
+    The context one request sent, by the service's own count. `budget` is
+    the state budget the feature sized its state to; a state the feature
+    built at a fixed size is not `sized`. `reported` is the provider's input
+    count over all parts, when every part reported one.
+    """
+
+    state: int
+    questions: int
+    parts: int = 1
+    sized: bool = False
+    budget: int | None = None
+    reported: int | None = None
+
+    @computed_field
+    @property
+    def sent(self) -> int:
+        # every part carries the whole state beside its share of the questions
+        return self.state * self.parts + self.questions
+
+
 class RequestRecord(BaseModel):
     invocation_id: str
     template_uid: str
@@ -71,6 +93,7 @@ class RequestRecord(BaseModel):
     state: object = None
     questions: dict = Field(default_factory=dict)
     presentation: dict[str, QuestionPresentation] = Field(default_factory=dict)
+    tokens: RequestTokens | None = None
     status: RequestStatus = "pending"
     dispatched: bool = False
     elapsed_ms: float | None = None

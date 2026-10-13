@@ -6,7 +6,8 @@ import structlog
 
 import talemate.emit.async_signals
 from talemate.events import GameLoopEvent
-from talemate.decisions.budget import state_tokens
+from talemate.decisions.budget import fit_list
+from talemate.decisions.characters import short_description
 from talemate.decisions.gate import decision_gate, decision_gate_enabled
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.reinforcements import (
@@ -17,6 +18,7 @@ from talemate.prompts import Prompt
 from talemate.agents.world_state.response_specs import REINFORCEMENT_ANSWER_SPEC
 from talemate.scene_message import ReinforcementMessage
 from talemate.util.async_tools import bounded_gather_apply
+from talemate.util.prompt import condensed
 
 from talemate.agents.base import (
     AgentAction,
@@ -29,11 +31,23 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Character
     from talemate.world_state import Reinforcement
 
-FIT_MIN_CUT = 128
+REINFORCEMENT_HISTORY_TYPES = ("character", "narrator", "time")
+REINFORCEMENT_LEAD_IN = 3
+# fits the default interval's 23 messages at about 175 tokens each
+REINFORCEMENT_HISTORY_CAP = 4096
+REINFORCEMENT_PINS_CAP = 512
 
 log = structlog.get_logger("talemate.agents.world_state")
 
 talemate.emit.async_signals.register("agent.world_state.reinforcement.skipped")
+
+
+def reinforcement_history_window(interval: int) -> int:
+    """
+    Story messages a tracked-state decision reads: about `interval` rounds of
+    two messages, plus a lead-in from before the last update.
+    """
+    return 2 * max(interval, 1) + REINFORCEMENT_LEAD_IN
 
 
 class ReinforcementSkippedEmission(AgentEmission):
@@ -252,6 +266,55 @@ class WorldStateReinforcementsMixin:
 
         return message
 
+    def reinforcement_decision_history(
+        self, reinforcement: "Reinforcement"
+    ) -> list[str]:
+        window = reinforcement_history_window(reinforcement.interval)
+        history = []
+        for message in reversed(self.scene.history):
+            if message.typ not in REINFORCEMENT_HISTORY_TYPES or message.hidden:
+                continue
+            history.insert(0, str(message))
+            if len(history) >= window:
+                break
+        return history
+
+    def reinforcement_decision_state(
+        self, reinforcement: "Reinforcement", budget: int | None
+    ) -> dict:
+        scene = self.scene
+        character = (
+            scene.get_character(reinforcement.character)
+            if reinforcement.character
+            else None
+        )
+        pins = [
+            f"{pin.title}: {condensed(pin.time_aware_text)}"
+            for pin in scene.active_pins
+        ]
+        state = {
+            "question": reinforcement.question,
+            "character": reinforcement.character,
+            "character_description": short_description(character)
+            if character
+            else None,
+            "instructions": reinforcement.instructions,
+            "previous_answer": reinforcement.answer,
+            "last_updated_ts": reinforcement.updated_ts,
+            "current_ts": scene.ts,
+            "pins": fit_list({}, "pins", pins, REINFORCEMENT_PINS_CAP)["pins"],
+            # the window messages the caps left out; fitted with the largest
+            # count so the real one cannot push the state past the budget
+            "history_left_out": 0,
+            "history": [],
+        }
+        window = self.reinforcement_decision_history(reinforcement)
+        capped = fit_list({}, "history", window, REINFORCEMENT_HISTORY_CAP)["history"]
+        fitted = fit_list(
+            {**state, "history_left_out": len(window)}, "history", capped, budget
+        )
+        return {**fitted, "history_left_out": len(window) - len(fitted["history"])}
+
     @set_processing
     async def generate_reinforcement(
         self,
@@ -279,74 +342,32 @@ class WorldStateReinforcementsMixin:
             "answer": (reinforcement.answer if not reset else None) or "",
             "reinforcement": reinforcement,
         }
-        response_spec = REINFORCEMENT_ANSWER_SPEC
-        if not decision_gate_enabled(decision_model) or not reinforcement.answer:
+
+        async def request_update() -> str:
             _, extracted = await Prompt.request(
                 "world_state.update-reinforcements",
                 self.client,
                 kind,
                 vars=variables,
-                response_spec=response_spec,
+                response_spec=REINFORCEMENT_ANSWER_SPEC,
             )
             return extracted["response"]
 
-        def update_prompt(max_tokens: int) -> Prompt:
-            return Prompt.get(
-                "world_state.update-reinforcements",
-                vars={
-                    **variables,
-                    "max_tokens": max_tokens,
-                    "decensor": self.client.decensor_enabled,
-                },
-            )
-
-        # a render at the client's full size is reused by the fallback, so
-        # memory retrieval runs once when the decision budget does not bind
-        full_prompt: Prompt | None = None
-
-        def decision_state(budget: int | None) -> dict:
-            nonlocal full_prompt
-            state = {
-                "question": reinforcement.question,
-                "character": reinforcement.character,
-                "instructions": reinforcement.instructions,
-                "previous_answer": reinforcement.answer,
-                "last_updated_ts": reinforcement.updated_ts,
-                "current_ts": scene.ts,
-                "context": "",
-            }
-            size = self.client.max_token_length
-            if budget is not None:
-                size = min(size, budget - state_tokens(state))
-            prompt = update_prompt(size)
-            context = prompt.prepare(self.client)
-            if size == self.client.max_token_length:
-                full_prompt = prompt
-            # the scene history is built from whole summaries and messages, so
-            # a cut by the overshoot alone can leave the render unchanged; the
-            # cut grows until a render fits or the size reaches zero
-            cut = 0
-            while budget is not None and size > 0:
-                overshoot = state_tokens({**state, "context": context}) - budget
-                if overshoot <= 0:
-                    break
-                cut = max(overshoot, cut * 2, FIT_MIN_CUT)
-                size = max(size - cut, 0)
-                context = update_prompt(size).prepare(self.client)
-            return {**state, "context": context}
+        if not decision_gate_enabled(decision_model) or not reinforcement.answer:
+            return await request_update()
 
         async def fallback(ids):
-            prompt = full_prompt or update_prompt(self.client.max_token_length)
-            _, extracted = await prompt.send(
-                self.client, kind, response_spec=response_spec
-            )
-            return {"state": extracted["response"]}
+            return {"state": await request_update()}
 
         result = await decision_gate(
             "world_state.decision-reinforcement",
             enabled=True,
             candidates={"state": [False]},
-            variables=lambda: {"state": decision_state},
+            variables=lambda: {
+                "state": lambda budget: self.reinforcement_decision_state(
+                    reinforcement, budget
+                )
+            },
             fallback=fallback,
             is_current=lambda: self.scene is scene
             and reinforcement in scene.world_state.reinforce,

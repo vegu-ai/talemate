@@ -1,13 +1,24 @@
 import asyncio
-from unittest.mock import Mock
+import json
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
 from talemate.agents.base import DynamicInstruction
 from talemate.agents.context import ActiveAgent
+from talemate.agents.world_state.reinforcements import (
+    REINFORCEMENT_HISTORY_CAP,
+    reinforcement_history_window,
+)
 from talemate.character import Character
+from talemate.decisions import ProviderCapabilities
+from talemate.decisions.budget import state_tokens
 from talemate.prompts import Prompt
-from talemate.scene_message import NarratorMessage
+from talemate.scene_message import (
+    DirectorMessage,
+    NarratorMessage,
+    ReinforcementMessage,
+)
 from talemate.world_state import ContextPin, Reinforcement
 from talemate.world_state.manager import AnnotatedContextPin
 
@@ -74,52 +85,104 @@ async def test_gate_sees_authoritative_changes_outside_history(
             == "In the chest."
         )
 
-    before, after = [call.state["context"] for call in c.provider.calls]
-    assert before != after
-    assert changed_text not in before and changed_text in after
-    for context in (before, after):
-        assert "Key location" in context
-        assert "Mara wears" in context
-        assert "Mara remembers the key's old hiding place." in context
-        assert "Use the latest known location." in context
-        assert "Track the key's current location." in context
-        assert "The weather is pleasant." in context
+    before, after = [call.state for call in c.provider.calls]
+    if changed_source == "pin":
+        assert before["pins"] == ["Key location: The key is in the drawer."]
+        assert after["pins"] == ["Key location: The key is in the chest."]
+    else:
+        assert before["character_description"] == "Mara wears a blue coat."
+        assert after["character_description"] == changed_text
+    for state in (before, after):
+        assert state["character"] == "Mara"
+        assert state["instructions"] == "Track the key's current location."
+        assert state["previous_answer"] == "In the drawer."
+        assert state["history"] == ["The weather is pleasant."]
+        serialized = json.dumps(state)
+        assert "Mara remembers the key's old hiding place." not in serialized
+        assert "Use the latest known location." not in serialized
     assert [str(message) for message in c.scene.history] == ["The weather is pleasant."]
-    assert sent == [after]
-    assert (
-        memory.call_count == 2
-    )  # One retrieval per update, never repeated on fallback.
+    (prompt,) = sent
+    assert changed_text in prompt
+    assert "Mara remembers the key's old hiding place." in prompt
+    # the decision state never queries memory; only the update request does
+    assert memory.call_count == 1
 
 
-async def test_gate_uses_updates_full_history_budget(gate_case, monkeypatch):
+@pytest.mark.parametrize("interval", [1, 10, 30])
+async def test_gate_history_is_the_window_since_the_last_update(
+    gate_case, monkeypatch, interval
+):
     c = gate_case
-    reinforcement = Reinforcement(question="Where is the key?", answer="In the drawer.")
+    reinforcement = Reinforcement(
+        question="Where is the key?", answer="In the drawer.", interval=interval
+    )
     c.scene.world_state.reinforce = [reinforcement]
-    c.scene.history = [NarratorMessage("Mara moved the key into the locked chest.")]
-    c.scene.history.extend(
-        NarratorMessage(f"Weather report {number}: " + "The rain falls steadily. " * 25)
-        for number in range(25)
-    )
+    c.scene.history = [
+        NarratorMessage(f"Report {number}: the fog rolls over the sound.")
+        for number in range(400)
+    ]
+    c.scene.history.insert(-1, ReinforcementMessage("Internal note."))
+    c.scene.history.insert(-1, DirectorMessage("Director note."))
     monkeypatch.setattr(
-        type(c.agent.client), "max_token_length", property(lambda _: 8192)
+        type(c.agent.client), "max_token_length", property(lambda _: 32768)
     )
-    monkeypatch.setattr(Prompt, "query_memory", lambda *args, **kwargs: [])
-    assert "locked chest" not in "\n".join(c.scene.context_history(budget=2048))
-    sent = []
+    llm = AsyncMock()
+    monkeypatch.setattr(c.agent.client, "send_prompt", llm)
+    c.provider.answers = {"changed": {"type": "noul", "p_true": 0.01}}
+    window = reinforcement_history_window(interval)
+    expected = [
+        f"Report {number}: the fog rolls over the sound."
+        for number in range(400 - window, 400)
+    ]
 
-    async def send(prompt, **kwargs):
-        sent.append(str(prompt))
-        return "<ANSWER>In the locked chest.</ANSWER>"
+    states = []
+    for question_limit in (None, 32000, 128000):
+        c.provider.capabilities = ProviderCapabilities(
+            max_question_input_tokens=question_limit
+        )
+        c.provider.calls.clear()
+        assert (
+            await c.agent.generate_reinforcement(
+                reinforcement, False, decision_model=True
+            )
+            is False
+        )
+        (request,) = c.provider.calls
+        states.append(request.state)
+        record = list(c.service.log.records.values())[-1]
+        assert record.tokens.sized
+        assert record.tokens.state == state_tokens(request.state)
+        assert (record.tokens.budget is None) == (question_limit is None)
 
-    monkeypatch.setattr(c.agent.client, "send_prompt", send)
-    assert (
-        await c.agent.generate_reinforcement(reinforcement, False, decision_model=True)
-        == "In the locked chest."
+    assert window == 2 * interval + 3
+    assert all(state == states[0] for state in states)
+    assert states[0]["history"] == expected
+    assert states[0]["history_left_out"] == 0
+    llm.assert_not_awaited()
+
+
+async def test_gate_history_is_capped(gate_case, monkeypatch):
+    c = gate_case
+    reinforcement = Reinforcement(
+        question="Where is the key?", answer="In the drawer.", interval=10
     )
-    context = c.provider.calls[0].state["context"]
-    assert "Mara moved the key into the locked chest." in context
-    assert "Weather report 24" in context
-    assert sent == [context]
+    c.scene.world_state.reinforce = [reinforcement]
+    c.scene.history = [
+        NarratorMessage(f"Report {number}: " + "The fog rolls over the sound. " * 60)
+        for number in range(100)
+    ]
+    c.provider.answers = {"changed": {"type": "noul", "p_true": 0.01}}
+
+    await c.agent.generate_reinforcement(reinforcement, False, decision_model=True)
+
+    (request,) = c.provider.calls
+    history = request.state["history"]
+    assert state_tokens({"history": history}) <= REINFORCEMENT_HISTORY_CAP
+    assert history[-1].startswith("Report 99:")
+    assert len(history) < reinforcement_history_window(10)
+    assert request.state["history_left_out"] == (
+        reinforcement_history_window(10) - len(history)
+    )
 
 
 @pytest.mark.parametrize("concurrent", [False, True])

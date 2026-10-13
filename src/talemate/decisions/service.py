@@ -9,7 +9,13 @@ from talemate.exceptions import ControlFlowException
 from talemate.util.logging import serialize_log_value
 
 from .budget import state_tokens
-from .events import DecisionLog, Failure, QuestionPresentation, RequestRecord
+from .events import (
+    DecisionLog,
+    Failure,
+    QuestionPresentation,
+    RequestRecord,
+    RequestTokens,
+)
 from .models import DecisionRequest, ProviderResponse, Question, validate_answers
 from .ownership import Ownership
 from .provider import DecisionError, DecisionProvider, FailureCode
@@ -50,7 +56,12 @@ def _largest_state(caps, question_tokens: list[int]) -> int:
     return tokens
 
 
-def _request_parts(request: DecisionRequest, provider: DecisionProvider):
+def _request_parts(
+    request: DecisionRequest,
+    provider: DecisionProvider,
+    size: int,
+    question_tokens: dict[str, int],
+):
     """
     The question sets to send, in order: one when the request fits the limits,
     otherwise the questions packed into as few parts as fit. Each part carries
@@ -59,8 +70,6 @@ def _request_parts(request: DecisionRequest, provider: DecisionProvider):
     caps = provider.capabilities
     if caps.max_input_tokens is None and caps.max_question_input_tokens is None:
         return [request.questions]
-    size = state_tokens(request.state)
-    question_tokens = _question_tokens(provider, request.questions)
     if not _within_limits(caps, size, [max(question_tokens.values())]):
         raise DecisionError(FailureCode.OVERSIZE)
     parts = [{}]
@@ -70,6 +79,18 @@ def _request_parts(request: DecisionRequest, provider: DecisionProvider):
             parts.append({})
         parts[-1][key] = question
     return parts
+
+
+def _reported_input_tokens(bodies: list) -> int | None:
+    """The provider's input count over all parts; None unless every part has one."""
+    total = 0
+    for body in bodies:
+        usage = body.get("usage") if isinstance(body, dict) else None
+        count = usage.get("input_tokens") if isinstance(usage, dict) else None
+        if not isinstance(count, int) or isinstance(count, bool):
+            return None
+        total += count
+    return total if bodies else None
 
 
 PRESENTATION = TypeAdapter(dict[str, QuestionPresentation])
@@ -170,7 +191,13 @@ class DecisionService:
         source_group=None,
         ownership=None,
         presentation=None,
+        state_budget: int | None = None,
+        sized: bool = False,
     ) -> DecisionHandle | Unavailable:
+        """
+        `sized` says the caller fitted the state to `state_budget` (None: no
+        limit); the log shows it beside the tokens the request sent.
+        """
         ownership = ownership or Ownership()
         record = self.new_record(
             invocation_id,
@@ -182,7 +209,14 @@ class DecisionService:
         self.log.add(record)
         try:
             answers, raw = await ownership.wait(
-                self._request(record, label, state, questions, presentation),
+                self._request(
+                    record,
+                    label,
+                    state,
+                    questions,
+                    presentation,
+                    sizing=(sized, state_budget),
+                ),
                 self.timeout_seconds,
             )
             record.answers = {
@@ -215,7 +249,9 @@ class DecisionService:
             request_id=record.id, invocation_id=invocation_id, failure=record.failure
         )
 
-    async def _request(self, record, label, state, questions, presentation=None):
+    async def _request(
+        self, record, label, state, questions, presentation=None, sizing=(False, None)
+    ):
         try:
             request = DecisionRequest(
                 invocation_id=record.invocation_id,
@@ -241,7 +277,17 @@ class DecisionService:
         provider = self.provider
         if provider is None or not provider.ready:
             raise DecisionError(FailureCode.UNAVAILABLE)
-        parts = _request_parts(request, provider)
+        size = state_tokens(request.state)
+        question_tokens = _question_tokens(provider, request.questions)
+        sized, budget = sizing
+        record.tokens = RequestTokens(
+            state=size,
+            questions=sum(question_tokens.values()),
+            sized=sized,
+            budget=budget if sized else None,
+        )
+        parts = _request_parts(request, provider, size, question_tokens)
+        record.tokens.parts = len(parts)
         record.dispatched = True
         self.log.update(record)
         answers = {}
@@ -283,6 +329,7 @@ class DecisionService:
                 raise DecisionError(
                     FailureCode.INVALID_RESPONSE, response_body=response_body()
                 ) from None
+        record.tokens.reported = _reported_input_tokens(bodies)
         return answers, response_body()
 
 

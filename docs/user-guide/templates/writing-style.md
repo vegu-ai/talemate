@@ -139,7 +139,8 @@ name, such as **Repeated beats and description reuse (2)**.
 Click **Edit** to change a check's name, **Applies to** scope, threshold and questions. Each question has a
 **Question**, a **Rewrite instruction** and a **Finding type**. Use `{passage_id}` in a
 question or its criteria to refer to the passage being evaluated. The model also receives
-the full current text, preceding history, style instructions and active prose rules.
+the full current text, preceding history, style instructions, active prose rules and,
+for a character's line, that character's acting instructions.
 The token is optional: without it, the Editor names the passage before your question.
 
 **Applies to** chooses what the check judges in each passage:

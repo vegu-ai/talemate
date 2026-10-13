@@ -63,20 +63,22 @@ CHOICE_KEYS = ["none", *ASSETS]
 
 def visual_cases(kind, current_key, uid):
     slot = "avatar" if kind == "portrait" else "background"
-    options = "portraits" if kind == "portrait" else "backgrounds"
 
     def state(current):
         base = {"content": "Dawn breaks over the harbour."}
         if kind == "portrait":
             base["character"] = "Mara"
-        return {**base, current_key: current, options: ASSETS}
+        return {
+            **base,
+            current_key: {"id": current, **ASSETS[current]} if current else None,
+        }
 
     def case(name, current, fits, selected, confidence):
         return (
             f"{slot}-{name}",
             uid,
             {slot: list(ASSETS)},
-            {"state": state(current)},
+            {"state": state(current), "assets": ASSETS},
             {
                 "fits_current": noul(fits),
                 slot: choice(selected, confidence, CHOICE_KEYS),
@@ -123,7 +125,7 @@ GATE_CASES = [
             "pins": PINS,
             "state": {
                 "history": ["The door opens.", "Nobody is asleep."],
-                "previous_states": PINS,
+                "previous_states": {key: pin["state"] for key, pin in PINS.items()},
             },
         },
         {"door": noul(0.95), "sleep": noul(0.05), "rain": noul(0.5)},
@@ -287,15 +289,21 @@ async def test_gate_template_matches_golden(
     check(name, gate_case.service, result, update_baselines, uid)
 
 
+MIXED_PROSE = (
+    'She whispered "nobody" and scanned the empty platform once more. '
+    "A shiver ran down her spine."
+)
+
 EDITOR_CASES = [
-    ("editor-revision", "rewrite", 1, None, None),
-    ("editor-revision-unslop", "unslop", 1, None, None),
-    ("editor-below-thresholds", "rewrite", 1, {}, None),
+    ("editor-revision", "rewrite", 1, None, None, None),
+    ("editor-revision-unslop", "unslop", 1, None, None, None),
+    ("editor-below-thresholds", "rewrite", 1, {}, None, None),
     (
         "editor-below-minimum",
         "rewrite",
         2,
         {"s1_repetition": 0.93, "s1_style": 0.91},
+        None,
         None,
     ),
     (
@@ -304,14 +312,23 @@ EDITOR_CASES = [
         1,
         {"s2_style": 0.8, "s1_repetition": 0.79},
         None,
+        None,
     ),
-    ("editor-nothing-in-scope", "rewrite", 1, None, "dialogue"),
-    ("editor-prose-scope", "rewrite", 1, {"s1_filler": 0.9}, "prose"),
+    ("editor-nothing-in-scope", "rewrite", 1, None, "dialogue", None),
+    ("editor-prose-scope", "rewrite", 1, {"s1_filler": 0.9}, "prose", None),
+    (
+        "editor-prose-scope-mixed",
+        "rewrite",
+        1,
+        {"s1_filler": 0.9},
+        "prose",
+        MIXED_PROSE,
+    ),
 ]
 
 
 @pytest.mark.parametrize(
-    "name,method,minimum,probabilities,scope",
+    "name,method,minimum,probabilities,scope,message",
     EDITOR_CASES,
     ids=[case[0] for case in EDITOR_CASES],
 )
@@ -323,8 +340,11 @@ async def test_editor_template_matches_golden(
     minimum,
     probabilities,
     scope,
+    message,
 ):
     c = editor_case
+    if message is not None:
+        c.current.message = message
     c.editor.actions["revision"].config["revision_method"].value = method
     c.editor.actions["revision"].config["min_issues"].value = minimum
     if probabilities is not None:

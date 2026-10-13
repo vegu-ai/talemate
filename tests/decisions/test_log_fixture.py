@@ -627,6 +627,23 @@ async def outcome_before_request(stage):
     return route.frames
 
 
+async def writing_style_skipped(stage):
+    """The Editor ran a revision without its checks because of the writing style."""
+    from talemate.agents.editor.decision_checks import (
+        DecisionChecksUnavailable,
+        log_decision_checks_unavailable,
+    )
+
+    service, route = stage.start()
+    for unavailable in (
+        DecisionChecksUnavailable(reason="no_writing_style"),
+        DecisionChecksUnavailable(reason="no_active_checks", writing_style="Roleplay"),
+    ):
+        log_decision_checks_unavailable(service.log, unavailable)
+    await route.send("snapshot")
+    return route.frames
+
+
 SCENARIOS = (
     below_threshold,
     per_check_thresholds,
@@ -650,6 +667,7 @@ SCENARIOS = (
     scoped_checks,
     nothing_in_scope,
     outcome_before_request,
+    writing_style_skipped,
 )
 
 

@@ -403,3 +403,83 @@ describe('a decision detail dialog', () => {
         expect(lines.indexOf('Note (checked first)')).toBeLessThan(lines.indexOf('No action (below 0.80)'));
     });
 });
+
+describe('the context a request sent', () => {
+    // the chip's figure; the icon and tooltip render as text without Vuetify
+    function rowTokens(element) {
+        return element.querySelector('[data-testid="decision-row-tokens"]').textContent.trim().split(/\s/)[0];
+    }
+
+    function withTokens(tokens) {
+        replay('below_threshold');
+        const request = decisionLog.requests['request-1'];
+        applyDecisionFrame(decisionLog, { event: 'request', entry: { ...request, tokens } });
+    }
+
+    it('shows one compact figure in the row and the breakdown in the detail', async () => {
+        withTokens({ state: 1500, questions: 312, parts: 1, sized: true, budget: 2400, reported: 1834, sent: 1812 });
+        const element = mount(DebugTools);
+        await nextTick();
+        expect(rowTokens(element)).toBe('1.8k');
+        expect(element.textContent).not.toContain('STATE BUDGET');
+
+        await openDecision(element);
+        const context = element.querySelector('[data-testid="decision-context"]');
+        expect(context.querySelector('[data-testid="decision-tokens-sent"]').textContent).toContain('1,834');
+        expect(context.textContent).toContain('counted by the provider · estimate 1,812');
+        expect(context.querySelector('[data-testid="decision-tokens-budget"]').textContent).toContain('2,400');
+        expect(context.querySelector('[data-testid="decision-tokens-split"]').textContent).toContain('1,500 · 312');
+        expect(context.querySelector('[data-testid="decision-tokens-parts"]').textContent).toContain('one request');
+        expect(context.querySelector('[role=meter]').getAttribute('aria-valuetext')).toBe('1,500 of 2,400 state tokens');
+        expect(context.textContent).toContain('The state uses 63% of its budget.');
+    });
+
+    it('counts the state once per part and says when no limit applied', async () => {
+        withTokens({ state: 900, questions: 400, parts: 2, sized: true, budget: null, reported: null, sent: 2200 });
+        const element = mount(DebugTools);
+        await nextTick();
+        expect(rowTokens(element)).toBe('2.2k');
+        await openDecision(element);
+        const context = element.querySelector('[data-testid="decision-context"]');
+        expect(context.textContent).toContain('estimated by Talemate');
+        expect(context.querySelector('[data-testid="decision-tokens-budget"]').textContent).toContain('No limit');
+        expect(context.querySelector('[data-testid="decision-tokens-parts"]').textContent).toContain('each carries the state');
+        expect(context.querySelector('[role=meter]')).toBe(null);
+    });
+
+    it('marks a state the caller sent as given', async () => {
+        replay('below_threshold');
+        const element = mount(DebugTools);
+        expect(rowTokens(element)).toBe('39');
+        await openDecision(element);
+        expect(element.querySelector('[data-testid="decision-tokens-budget"]').textContent).toContain('Fixed');
+    });
+
+    it('says when a request has no count', async () => {
+        replay('request_not_sent');
+        const element = mount(DebugTools);
+        expect(rowTokens(element)).toBe('—');
+        await openDecision(element);
+        expect(element.querySelector('[data-testid="decision-context"]').textContent).toContain('No token count');
+    });
+});
+
+describe('a revision that skipped its checks because of the writing style', () => {
+    it('says why in the row and in the report', async () => {
+        replay('writing_style_skipped');
+        const element = mount(DebugTools);
+        const rows = [...element.querySelectorAll('[data-entry-id]')];
+        // the icon renders as its name without Vuetify
+        expect(rows.map(row => row.querySelector('.decision-row-result').textContent.replace('mdi-alert-outline', '').trim())).toEqual([
+            "Writing style 'Roleplay' has no active decision checks. Add them in its template.",
+            'No writing style set for this scene; decision checks need one.',
+        ]);
+        expect(rows.every(row => row.querySelector('.decision-row-result').classList.contains('text-warning'))).toBe(true);
+        expect(rows.every(row => !row.querySelector('[data-testid="decision-row-tokens"]'))).toBe(true);
+
+        const text = await openDecision(element, 'invocation-1');
+        expect(text).toContain('No writing style set for this scene; decision checks need one.');
+        expect(text).toContain('No action · the revision ran the usual way, without decision checks');
+        expect(text).not.toContain('The feature asked no questions this time.');
+    });
+});

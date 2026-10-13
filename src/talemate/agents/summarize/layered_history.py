@@ -708,7 +708,8 @@ class LayeredHistoryMixin:
             return []
 
         ts, ts_start, ts_end = self._lh_extract_timestamps(entries)
-        extra_context = self._lh_build_extra_context(next_layer_index)
+        previous_entries = self.compile_layered_history(next_layer_index)
+        extra_context = "\n\n".join(previous_entries)
 
         text_length = util.count_tokens("\n\n".join(e["text"] for e in entries))
 
@@ -730,7 +731,7 @@ class LayeredHistoryMixin:
         )
 
         archive_entry = await self._lh_finalize_archive_entry(
-            archive_entry, extra_context.split("\n\n")
+            archive_entry, previous_entries
         )
 
         return [archive_entry]

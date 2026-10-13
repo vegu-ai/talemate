@@ -44,6 +44,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -80,6 +81,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -116,6 +126,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -161,6 +180,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -229,6 +257,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -315,6 +352,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -399,6 +437,15 @@
               "threshold": 0.76
             }
           },
+          "tokens": {
+            "state": 43,
+            "questions": 408,
+            "parts": 1,
+            "sized": true,
+            "budget": null,
+            "reported": null,
+            "sent": 451
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -482,6 +529,15 @@
               "scope": "all",
               "threshold": 0.76
             }
+          },
+          "tokens": {
+            "state": 43,
+            "questions": 408,
+            "parts": 1,
+            "sized": true,
+            "budget": null,
+            "reported": null,
+            "sent": 451
           },
           "status": "completed",
           "dispatched": true,
@@ -579,6 +635,15 @@
               "scope": "all",
               "threshold": 0.76
             }
+          },
+          "tokens": {
+            "state": 43,
+            "questions": 408,
+            "parts": 1,
+            "sized": true,
+            "budget": null,
+            "reported": null,
+            "sent": 451
           },
           "status": "completed",
           "dispatched": true,
@@ -706,6 +771,15 @@
                 "threshold": 0.76
               }
             },
+            "tokens": {
+              "state": 43,
+              "questions": 408,
+              "parts": 1,
+              "sized": true,
+              "budget": null,
+              "reported": null,
+              "sent": 451
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -802,6 +876,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -937,6 +1012,15 @@
               "threshold": 0.76
             }
           },
+          "tokens": {
+            "state": 79,
+            "questions": 816,
+            "parts": 1,
+            "sized": true,
+            "budget": null,
+            "reported": null,
+            "sent": 895
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -1071,6 +1155,15 @@
               "scope": "all",
               "threshold": 0.76
             }
+          },
+          "tokens": {
+            "state": 79,
+            "questions": 816,
+            "parts": 1,
+            "sized": true,
+            "budget": null,
+            "reported": null,
+            "sent": 895
           },
           "status": "completed",
           "dispatched": true,
@@ -1233,6 +1326,15 @@
               "scope": "all",
               "threshold": 0.76
             }
+          },
+          "tokens": {
+            "state": 79,
+            "questions": 816,
+            "parts": 1,
+            "sized": true,
+            "budget": null,
+            "reported": null,
+            "sent": 895
           },
           "status": "completed",
           "dispatched": true,
@@ -1444,6 +1546,15 @@
               "scope": "all",
               "threshold": 0.76
             }
+          },
+          "tokens": {
+            "state": 79,
+            "questions": 816,
+            "parts": 1,
+            "sized": true,
+            "budget": null,
+            "reported": null,
+            "sent": 895
           },
           "status": "completed",
           "dispatched": true,
@@ -1679,6 +1790,15 @@
               "scope": "all",
               "threshold": 0.76
             }
+          },
+          "tokens": {
+            "state": 79,
+            "questions": 816,
+            "parts": 1,
+            "sized": true,
+            "budget": null,
+            "reported": null,
+            "sent": 895
           },
           "status": "completed",
           "dispatched": true,
@@ -1916,6 +2036,15 @@
                 "threshold": 0.76
               }
             },
+            "tokens": {
+              "state": 79,
+              "questions": 816,
+              "parts": 1,
+              "sized": true,
+              "budget": null,
+              "reported": null,
+              "sent": 895
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -2071,6 +2200,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -2107,6 +2237,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -2143,6 +2282,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -2225,6 +2373,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -2330,6 +2487,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -2436,6 +2602,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -2560,6 +2735,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -2596,6 +2772,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -2632,6 +2817,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -2677,6 +2871,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -2743,6 +2946,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -2827,6 +3039,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -2863,6 +3076,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -2899,6 +3121,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "failed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -2963,6 +3194,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "failed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -3038,6 +3278,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "failed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -3114,6 +3363,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "failed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -3208,6 +3466,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -3244,6 +3503,7 @@
             }
           },
           "presentation": {},
+          "tokens": null,
           "status": "failed",
           "dispatched": false,
           "elapsed_ms": 140.0,
@@ -3308,6 +3568,7 @@
             }
           },
           "presentation": {},
+          "tokens": null,
           "status": "failed",
           "dispatched": false,
           "elapsed_ms": 140.0,
@@ -3383,6 +3644,7 @@
             }
           },
           "presentation": {},
+          "tokens": null,
           "status": "failed",
           "dispatched": false,
           "elapsed_ms": 140.0,
@@ -3459,6 +3721,7 @@
               }
             },
             "presentation": {},
+            "tokens": null,
             "status": "failed",
             "dispatched": false,
             "elapsed_ms": 140.0,
@@ -3553,6 +3816,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -3589,6 +3853,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -3643,6 +3916,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -3679,6 +3953,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -3715,6 +3998,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -3797,6 +4089,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -3902,6 +4203,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -4007,6 +4317,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -4052,6 +4371,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -4120,6 +4448,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -4169,6 +4506,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -4303,6 +4649,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -4339,6 +4686,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -4375,6 +4731,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "cancelled",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -4426,6 +4791,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "cancelled",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -4495,6 +4869,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -4531,6 +4906,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -4567,6 +4951,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -4627,6 +5020,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -4781,6 +5183,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -4817,6 +5220,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -4853,6 +5265,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -4929,6 +5350,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -5023,6 +5453,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -5059,6 +5490,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -5095,6 +5535,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -5140,6 +5589,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -5225,6 +5683,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -5261,6 +5720,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -5297,6 +5765,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -5342,6 +5819,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -5427,6 +5913,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -5463,6 +5950,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -5499,6 +5995,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -5544,6 +6049,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -5622,6 +6136,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -5671,6 +6194,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -5767,6 +6299,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -5803,6 +6336,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -5839,6 +6381,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -5921,6 +6472,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -6026,6 +6586,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -6149,6 +6718,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -6185,6 +6755,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -6221,6 +6800,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -6303,6 +6891,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -6418,6 +7015,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -6524,6 +7130,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -6620,6 +7235,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -6670,6 +7286,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 7,
+            "questions": 102,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 109
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -6720,6 +7345,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 7,
+            "questions": 102,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 109
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -6806,6 +7440,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 7,
+              "questions": 102,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 109
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -6899,6 +7542,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -6935,6 +7579,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -6971,6 +7624,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -7046,6 +7708,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -7137,6 +7808,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -7218,6 +7898,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -7251,6 +7932,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 7,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 32
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -7284,6 +7974,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 7,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 32
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -7360,6 +8059,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -7414,6 +8122,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 7,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 32
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -7508,6 +8225,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -7544,6 +8262,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -7580,6 +8307,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -7655,6 +8391,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -7746,6 +8491,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -7827,6 +8581,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -7860,6 +8615,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 7,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 32
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -7893,6 +8657,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 7,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 32
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -7974,6 +8747,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 7,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 32
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -8115,6 +8897,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -8151,6 +8934,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -8187,6 +8979,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -8260,6 +9061,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -8319,6 +9129,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -8419,6 +9238,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -8529,6 +9357,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -8640,6 +9477,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -8769,6 +9615,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -8805,6 +9652,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -8841,6 +9697,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -8923,6 +9788,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -9031,6 +9905,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -9102,6 +9985,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -9176,6 +10068,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -9296,6 +10197,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -9434,6 +10344,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -9476,7 +10387,7 @@
           "questions": {
             "s2_filler": {
               "type": "noul",
-              "instructions": "Judge only the prose of passage s2 (its `prose` text: everything outside double quotes); ignore its dialogue. Does passage s2 pad the moment?"
+              "instructions": "Does passage s2 pad the moment?"
             }
           },
           "presentation": {
@@ -9489,6 +10400,15 @@
               "scope": "prose",
               "threshold": 0.8
             }
+          },
+          "tokens": {
+            "state": 72,
+            "questions": 26,
+            "parts": 1,
+            "sized": true,
+            "budget": null,
+            "reported": null,
+            "sent": 98
           },
           "status": "pending",
           "dispatched": true,
@@ -9532,7 +10452,7 @@
           "questions": {
             "s2_filler": {
               "type": "noul",
-              "instructions": "Judge only the prose of passage s2 (its `prose` text: everything outside double quotes); ignore its dialogue. Does passage s2 pad the moment?"
+              "instructions": "Does passage s2 pad the moment?"
             }
           },
           "presentation": {
@@ -9545,6 +10465,15 @@
               "scope": "prose",
               "threshold": 0.8
             }
+          },
+          "tokens": {
+            "state": 72,
+            "questions": 26,
+            "parts": 1,
+            "sized": true,
+            "budget": null,
+            "reported": null,
+            "sent": 98
           },
           "status": "completed",
           "dispatched": true,
@@ -9593,7 +10522,7 @@
           "questions": {
             "s2_filler": {
               "type": "noul",
-              "instructions": "Judge only the prose of passage s2 (its `prose` text: everything outside double quotes); ignore its dialogue. Does passage s2 pad the moment?"
+              "instructions": "Does passage s2 pad the moment?"
             }
           },
           "presentation": {
@@ -9606,6 +10535,15 @@
               "scope": "prose",
               "threshold": 0.8
             }
+          },
+          "tokens": {
+            "state": 72,
+            "questions": 26,
+            "parts": 1,
+            "sized": true,
+            "budget": null,
+            "reported": null,
+            "sent": 98
           },
           "status": "completed",
           "dispatched": true,
@@ -9689,7 +10627,7 @@
             "questions": {
               "s2_filler": {
                 "type": "noul",
-                "instructions": "Judge only the prose of passage s2 (its `prose` text: everything outside double quotes); ignore its dialogue. Does passage s2 pad the moment?"
+                "instructions": "Does passage s2 pad the moment?"
               }
             },
             "presentation": {
@@ -9702,6 +10640,15 @@
                 "scope": "prose",
                 "threshold": 0.8
               }
+            },
+            "tokens": {
+              "state": 72,
+              "questions": 26,
+              "parts": 1,
+              "sized": true,
+              "budget": null,
+              "reported": null,
+              "sent": 98
             },
             "status": "completed",
             "dispatched": true,
@@ -9932,6 +10879,7 @@
           "state": null,
           "questions": {},
           "presentation": {},
+          "tokens": null,
           "status": "pending",
           "dispatched": false,
           "elapsed_ms": null,
@@ -9968,6 +10916,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "pending",
           "dispatched": true,
           "elapsed_ms": null,
@@ -10004,6 +10961,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -10049,6 +11015,15 @@
             }
           },
           "presentation": {},
+          "tokens": {
+            "state": 14,
+            "questions": 25,
+            "parts": 1,
+            "sized": false,
+            "budget": null,
+            "reported": null,
+            "sent": 39
+          },
           "status": "completed",
           "dispatched": true,
           "elapsed_ms": 140.0,
@@ -10123,6 +11098,15 @@
               }
             },
             "presentation": {},
+            "tokens": {
+              "state": 14,
+              "questions": 25,
+              "parts": 1,
+              "sized": false,
+              "budget": null,
+              "reported": null,
+              "sent": 39
+            },
             "status": "completed",
             "dispatched": true,
             "elapsed_ms": 140.0,
@@ -10165,6 +11149,133 @@
                 "action": "note",
                 "reason": "checked_first",
                 "details": {}
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "writing_style_skipped": [
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.decision-checks",
+          "source_group": null,
+          "status": "running",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [],
+          "request_count": 0,
+          "outcomes": [
+            {
+              "action": "no_action",
+              "reason": "no_writing_style",
+              "details": {}
+            }
+          ]
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-1",
+          "template_uid": "editor.decision-checks",
+          "source_group": null,
+          "status": "completed",
+          "timestamp": "2026-09-21T09:00:00+00:00",
+          "actions": [],
+          "request_count": 0,
+          "outcomes": [
+            {
+              "action": "no_action",
+              "reason": "no_writing_style",
+              "details": {}
+            }
+          ]
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-2",
+          "template_uid": "editor.decision-checks",
+          "source_group": null,
+          "status": "running",
+          "timestamp": "2026-09-21T09:00:01+00:00",
+          "actions": [],
+          "request_count": 0,
+          "outcomes": [
+            {
+              "action": "no_action",
+              "reason": "no_active_checks",
+              "details": {
+                "writing_style": "Roleplay"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "invocation",
+        "entry": {
+          "id": "invocation-2",
+          "template_uid": "editor.decision-checks",
+          "source_group": null,
+          "status": "completed",
+          "timestamp": "2026-09-21T09:00:01+00:00",
+          "actions": [],
+          "request_count": 0,
+          "outcomes": [
+            {
+              "action": "no_action",
+              "reason": "no_active_checks",
+              "details": {
+                "writing_style": "Roleplay"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "decisions",
+        "event": "snapshot",
+        "requests": [],
+        "invocations": [
+          {
+            "id": "invocation-1",
+            "template_uid": "editor.decision-checks",
+            "source_group": null,
+            "status": "completed",
+            "timestamp": "2026-09-21T09:00:00+00:00",
+            "actions": [],
+            "request_count": 0,
+            "outcomes": [
+              {
+                "action": "no_action",
+                "reason": "no_writing_style",
+                "details": {}
+              }
+            ]
+          },
+          {
+            "id": "invocation-2",
+            "template_uid": "editor.decision-checks",
+            "source_group": null,
+            "status": "completed",
+            "timestamp": "2026-09-21T09:00:01+00:00",
+            "actions": [],
+            "request_count": 0,
+            "outcomes": [
+              {
+                "action": "no_action",
+                "reason": "no_active_checks",
+                "details": {
+                  "writing_style": "Roleplay"
+                }
               }
             ]
           }

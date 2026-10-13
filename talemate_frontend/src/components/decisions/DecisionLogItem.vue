@@ -4,7 +4,13 @@
             <div class="d-flex align-center ga-2">
                 <span class="text-info">#{{ row.num }}</span>
                 <span class="font-weight-medium text-truncate" :title="feature">{{ feature }}</span>
-                <span class="text-muted text-label-small ml-auto flex-shrink-0" :title="row.timestamp">
+                <v-chip v-if="row.request" size="x-small" variant="text" label class="ml-auto flex-shrink-0 decision-tokens"
+                    :color="tokens ? 'primary' : 'muted'" :aria-label="tokensTitle" data-testid="decision-row-tokens">
+                    {{ tokens ? formatTokenCount(tokens.total) : '—' }}
+                    <v-icon size="14" class="ml-1">mdi-arrow-down-bold</v-icon>
+                    <v-tooltip activator="parent" location="top">{{ tokensTitle }}</v-tooltip>
+                </v-chip>
+                <span class="text-muted text-label-small flex-shrink-0" :class="{ 'ml-auto': !row.request }" :title="row.timestamp">
                     {{ time(row.timestamp) }} <v-icon size="12">mdi-clock-outline</v-icon>
                 </span>
             </div>
@@ -12,13 +18,15 @@
         <v-list-item-subtitle class="text-body-small mt-1">
             <v-chip size="x-small" variant="tonal" :color="outcome.color" :prepend-icon="outcome.icon" class="decision-outcome">{{ outcome.label }}</v-chip>
         </v-list-item-subtitle>
-        <v-list-item-subtitle class="text-body-small mt-1 decision-row-result" :title="result">{{ result }}</v-list-item-subtitle>
+        <v-list-item-subtitle class="text-body-small mt-1 decision-row-result" :class="{ 'text-warning': styleNote }" :title="result">
+            <v-icon v-if="styleNote" size="14" class="mr-1">mdi-alert-outline</v-icon>{{ result }}
+        </v-list-item-subtitle>
         <v-divider class="mt-2" />
     </v-list-item>
 </template>
 
 <script>
-import { decisionFeature, decisionOutcome, decisionResult, decisionTime } from '@/utils/decisionLog';
+import { decisionFeature, decisionOutcome, decisionResult, decisionTime, decisionTokens, decisionTokensTitle, formatTokenCount, rowOutcomes, writingStyleNote } from '@/utils/decisionLog';
 
 export default {
     name: 'DecisionLogItem',
@@ -28,13 +36,17 @@ export default {
         feature() { return decisionFeature(this.row); },
         outcome() { return decisionOutcome(this.row); },
         result() { return decisionResult(this.row); },
+        tokens() { return decisionTokens(this.row); },
+        styleNote() { return writingStyleNote(rowOutcomes(this.row)); },
+        tokensTitle() { return decisionTokensTitle(this.tokens); },
     },
-    methods: { time: decisionTime },
+    methods: { time: decisionTime, formatTokenCount },
 }
 </script>
 
 <style scoped>
 .decision-log-item :deep(.v-list-item-subtitle) { opacity: 1; }
 .decision-outcome { max-width: 100%; }
+.decision-tokens { font-variant-numeric: tabular-nums; }
 .decision-outcome :deep(.v-chip__content) { overflow: hidden; text-overflow: ellipsis; }
 </style>

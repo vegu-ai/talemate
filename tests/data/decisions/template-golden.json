@@ -93,36 +93,19 @@
       "type": "choice"
      },
      "fits_current": {
-      "instructions": "Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no.",
+      "instructions": "Does the current avatar still fit this character in this message? Judge the name and tags of current_avatar in the state against the character's appearance and situation. If there is no current avatar, answer no.",
       "type": "noul"
      }
     },
     "state": {
      "character": "Mara",
      "content": "Dawn breaks over the harbour.",
-     "current_avatar": null,
-     "portraits": {
-      "harbour-day": {
-       "name": "Harbour day",
-       "tags": [
-        "harbour",
-        "day"
-       ]
-      },
-      "harbour-night": {
-       "name": null,
-       "tags": [
-        "harbour",
-        "night"
-       ]
-      }
-     }
+     "current_avatar": null
     },
     "state_order": [
      "content",
      "character",
-     "current_avatar",
-     "portraits"
+     "current_avatar"
     ],
     "status": "completed"
    }
@@ -229,36 +212,19 @@
       "type": "choice"
      },
      "fits_current": {
-      "instructions": "Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no.",
+      "instructions": "Does the current avatar still fit this character in this message? Judge the name and tags of current_avatar in the state against the character's appearance and situation. If there is no current avatar, answer no.",
       "type": "noul"
      }
     },
     "state": {
      "character": "Mara",
      "content": "Dawn breaks over the harbour.",
-     "current_avatar": null,
-     "portraits": {
-      "harbour-day": {
-       "name": "Harbour day",
-       "tags": [
-        "harbour",
-        "day"
-       ]
-      },
-      "harbour-night": {
-       "name": null,
-       "tags": [
-        "harbour",
-        "night"
-       ]
-      }
-     }
+     "current_avatar": null
     },
     "state_order": [
      "content",
      "character",
-     "current_avatar",
-     "portraits"
+     "current_avatar"
     ],
     "status": "completed"
    }
@@ -354,43 +320,33 @@
      "avatar": {
       "instructions": "Which existing portrait fits this character in this message? Choose none if none fits well.",
       "options": {
-       "harbour-day": "Harbour day: harbour, day",
+       "harbour-day": "The current portrait, described in the state as current_avatar",
        "harbour-night": "harbour-night: harbour, night",
        "none": "None of the existing portraits fits well; use the usual selection or generation request."
       },
       "type": "choice"
      },
      "fits_current": {
-      "instructions": "Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no.",
+      "instructions": "Does the current avatar still fit this character in this message? Judge the name and tags of current_avatar in the state against the character's appearance and situation. If there is no current avatar, answer no.",
       "type": "noul"
      }
     },
     "state": {
      "character": "Mara",
      "content": "Dawn breaks over the harbour.",
-     "current_avatar": "harbour-day",
-     "portraits": {
-      "harbour-day": {
-       "name": "Harbour day",
-       "tags": [
-        "harbour",
-        "day"
-       ]
-      },
-      "harbour-night": {
-       "name": null,
-       "tags": [
-        "harbour",
-        "night"
-       ]
-      }
+     "current_avatar": {
+      "id": "harbour-day",
+      "name": "Harbour day",
+      "tags": [
+       "harbour",
+       "day"
+      ]
      }
     },
     "state_order": [
      "content",
      "character",
-     "current_avatar",
-     "portraits"
+     "current_avatar"
     ],
     "status": "completed"
    }
@@ -486,43 +442,33 @@
      "avatar": {
       "instructions": "Which existing portrait fits this character in this message? Choose none if none fits well.",
       "options": {
-       "harbour-day": "Harbour day: harbour, day",
+       "harbour-day": "The current portrait, described in the state as current_avatar",
        "harbour-night": "harbour-night: harbour, night",
        "none": "None of the existing portraits fits well; use the usual selection or generation request."
       },
       "type": "choice"
      },
      "fits_current": {
-      "instructions": "Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no.",
+      "instructions": "Does the current avatar still fit this character in this message? Judge the name and tags of current_avatar in the state against the character's appearance and situation. If there is no current avatar, answer no.",
       "type": "noul"
      }
     },
     "state": {
      "character": "Mara",
      "content": "Dawn breaks over the harbour.",
-     "current_avatar": "harbour-day",
-     "portraits": {
-      "harbour-day": {
-       "name": "Harbour day",
-       "tags": [
-        "harbour",
-        "day"
-       ]
-      },
-      "harbour-night": {
-       "name": null,
-       "tags": [
-        "harbour",
-        "night"
-       ]
-      }
+     "current_avatar": {
+      "id": "harbour-day",
+      "name": "Harbour day",
+      "tags": [
+       "harbour",
+       "day"
+      ]
      }
     },
     "state_order": [
      "content",
      "character",
-     "current_avatar",
-     "portraits"
+     "current_avatar"
     ],
     "status": "completed"
    }
@@ -622,43 +568,33 @@
      "avatar": {
       "instructions": "Which existing portrait fits this character in this message? Choose none if none fits well.",
       "options": {
-       "harbour-day": "Harbour day: harbour, day",
+       "harbour-day": "The current portrait, described in the state as current_avatar",
        "harbour-night": "harbour-night: harbour, night",
        "none": "None of the existing portraits fits well; use the usual selection or generation request."
       },
       "type": "choice"
      },
      "fits_current": {
-      "instructions": "Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no.",
+      "instructions": "Does the current avatar still fit this character in this message? Judge the name and tags of current_avatar in the state against the character's appearance and situation. If there is no current avatar, answer no.",
       "type": "noul"
      }
     },
     "state": {
      "character": "Mara",
      "content": "Dawn breaks over the harbour.",
-     "current_avatar": "harbour-day",
-     "portraits": {
-      "harbour-day": {
-       "name": "Harbour day",
-       "tags": [
-        "harbour",
-        "day"
-       ]
-      },
-      "harbour-night": {
-       "name": null,
-       "tags": [
-        "harbour",
-        "night"
-       ]
-      }
+     "current_avatar": {
+      "id": "harbour-day",
+      "name": "Harbour day",
+      "tags": [
+       "harbour",
+       "day"
+      ]
      }
     },
     "state_order": [
      "content",
      "character",
-     "current_avatar",
-     "portraits"
+     "current_avatar"
     ],
     "status": "completed"
    }
@@ -754,43 +690,33 @@
      "avatar": {
       "instructions": "Which existing portrait fits this character in this message? Choose none if none fits well.",
       "options": {
-       "harbour-day": "Harbour day: harbour, day",
+       "harbour-day": "The current portrait, described in the state as current_avatar",
        "harbour-night": "harbour-night: harbour, night",
        "none": "None of the existing portraits fits well; use the usual selection or generation request."
       },
       "type": "choice"
      },
      "fits_current": {
-      "instructions": "Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no.",
+      "instructions": "Does the current avatar still fit this character in this message? Judge the name and tags of current_avatar in the state against the character's appearance and situation. If there is no current avatar, answer no.",
       "type": "noul"
      }
     },
     "state": {
      "character": "Mara",
      "content": "Dawn breaks over the harbour.",
-     "current_avatar": "harbour-day",
-     "portraits": {
-      "harbour-day": {
-       "name": "Harbour day",
-       "tags": [
-        "harbour",
-        "day"
-       ]
-      },
-      "harbour-night": {
-       "name": null,
-       "tags": [
-        "harbour",
-        "night"
-       ]
-      }
+     "current_avatar": {
+      "id": "harbour-day",
+      "name": "Harbour day",
+      "tags": [
+       "harbour",
+       "day"
+      ]
      }
     },
     "state_order": [
      "content",
      "character",
-     "current_avatar",
-     "portraits"
+     "current_avatar"
     ],
     "status": "completed"
    }
@@ -890,43 +816,33 @@
      "avatar": {
       "instructions": "Which existing portrait fits this character in this message? Choose none if none fits well.",
       "options": {
-       "harbour-day": "Harbour day: harbour, day",
+       "harbour-day": "The current portrait, described in the state as current_avatar",
        "harbour-night": "harbour-night: harbour, night",
        "none": "None of the existing portraits fits well; use the usual selection or generation request."
       },
       "type": "choice"
      },
      "fits_current": {
-      "instructions": "Does the current avatar still fit this character in this message? Judge the portrait name and tags against the character's appearance and situation. If there is no current avatar, answer no.",
+      "instructions": "Does the current avatar still fit this character in this message? Judge the name and tags of current_avatar in the state against the character's appearance and situation. If there is no current avatar, answer no.",
       "type": "noul"
      }
     },
     "state": {
      "character": "Mara",
      "content": "Dawn breaks over the harbour.",
-     "current_avatar": "harbour-day",
-     "portraits": {
-      "harbour-day": {
-       "name": "Harbour day",
-       "tags": [
-        "harbour",
-        "day"
-       ]
-      },
-      "harbour-night": {
-       "name": null,
-       "tags": [
-        "harbour",
-        "night"
-       ]
-      }
+     "current_avatar": {
+      "id": "harbour-day",
+      "name": "Harbour day",
+      "tags": [
+       "harbour",
+       "day"
+      ]
      }
     },
     "state_order": [
      "content",
      "character",
-     "current_avatar",
-     "portraits"
+     "current_avatar"
     ],
     "status": "completed"
    }
@@ -1029,34 +945,17 @@
       "type": "choice"
      },
      "fits_current": {
-      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the background name and tags. If there is no current background, answer no.",
+      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the name and tags of current_background in the state. If there is no current background, answer no.",
       "type": "noul"
      }
     },
     "state": {
-     "backgrounds": {
-      "harbour-day": {
-       "name": "Harbour day",
-       "tags": [
-        "harbour",
-        "day"
-       ]
-      },
-      "harbour-night": {
-       "name": null,
-       "tags": [
-        "harbour",
-        "night"
-       ]
-      }
-     },
      "content": "Dawn breaks over the harbour.",
      "current_background": null
     },
     "state_order": [
      "content",
-     "current_background",
-     "backgrounds"
+     "current_background"
     ],
     "status": "completed"
    }
@@ -1163,34 +1062,17 @@
       "type": "choice"
      },
      "fits_current": {
-      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the background name and tags. If there is no current background, answer no.",
+      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the name and tags of current_background in the state. If there is no current background, answer no.",
       "type": "noul"
      }
     },
     "state": {
-     "backgrounds": {
-      "harbour-day": {
-       "name": "Harbour day",
-       "tags": [
-        "harbour",
-        "day"
-       ]
-      },
-      "harbour-night": {
-       "name": null,
-       "tags": [
-        "harbour",
-        "night"
-       ]
-      }
-     },
      "content": "Dawn breaks over the harbour.",
      "current_background": null
     },
     "state_order": [
      "content",
-     "current_background",
-     "backgrounds"
+     "current_background"
     ],
     "status": "completed"
    }
@@ -1286,41 +1168,31 @@
      "background": {
       "instructions": "Which existing scene background fits the place, time of day and situation of this moment? Choose none if none fits well.",
       "options": {
-       "harbour-day": "Harbour day: harbour, day",
+       "harbour-day": "The current background, described in the state as current_background",
        "harbour-night": "harbour-night: harbour, night",
        "none": "None of the existing backgrounds fits well; use the usual selection or generation request."
       },
       "type": "choice"
      },
      "fits_current": {
-      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the background name and tags. If there is no current background, answer no.",
+      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the name and tags of current_background in the state. If there is no current background, answer no.",
       "type": "noul"
      }
     },
     "state": {
-     "backgrounds": {
-      "harbour-day": {
-       "name": "Harbour day",
-       "tags": [
-        "harbour",
-        "day"
-       ]
-      },
-      "harbour-night": {
-       "name": null,
-       "tags": [
-        "harbour",
-        "night"
-       ]
-      }
-     },
      "content": "Dawn breaks over the harbour.",
-     "current_background": "harbour-day"
+     "current_background": {
+      "id": "harbour-day",
+      "name": "Harbour day",
+      "tags": [
+       "harbour",
+       "day"
+      ]
+     }
     },
     "state_order": [
      "content",
-     "current_background",
-     "backgrounds"
+     "current_background"
     ],
     "status": "completed"
    }
@@ -1416,41 +1288,31 @@
      "background": {
       "instructions": "Which existing scene background fits the place, time of day and situation of this moment? Choose none if none fits well.",
       "options": {
-       "harbour-day": "Harbour day: harbour, day",
+       "harbour-day": "The current background, described in the state as current_background",
        "harbour-night": "harbour-night: harbour, night",
        "none": "None of the existing backgrounds fits well; use the usual selection or generation request."
       },
       "type": "choice"
      },
      "fits_current": {
-      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the background name and tags. If there is no current background, answer no.",
+      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the name and tags of current_background in the state. If there is no current background, answer no.",
       "type": "noul"
      }
     },
     "state": {
-     "backgrounds": {
-      "harbour-day": {
-       "name": "Harbour day",
-       "tags": [
-        "harbour",
-        "day"
-       ]
-      },
-      "harbour-night": {
-       "name": null,
-       "tags": [
-        "harbour",
-        "night"
-       ]
-      }
-     },
      "content": "Dawn breaks over the harbour.",
-     "current_background": "harbour-day"
+     "current_background": {
+      "id": "harbour-day",
+      "name": "Harbour day",
+      "tags": [
+       "harbour",
+       "day"
+      ]
+     }
     },
     "state_order": [
      "content",
-     "current_background",
-     "backgrounds"
+     "current_background"
     ],
     "status": "completed"
    }
@@ -1550,41 +1412,31 @@
      "background": {
       "instructions": "Which existing scene background fits the place, time of day and situation of this moment? Choose none if none fits well.",
       "options": {
-       "harbour-day": "Harbour day: harbour, day",
+       "harbour-day": "The current background, described in the state as current_background",
        "harbour-night": "harbour-night: harbour, night",
        "none": "None of the existing backgrounds fits well; use the usual selection or generation request."
       },
       "type": "choice"
      },
      "fits_current": {
-      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the background name and tags. If there is no current background, answer no.",
+      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the name and tags of current_background in the state. If there is no current background, answer no.",
       "type": "noul"
      }
     },
     "state": {
-     "backgrounds": {
-      "harbour-day": {
-       "name": "Harbour day",
-       "tags": [
-        "harbour",
-        "day"
-       ]
-      },
-      "harbour-night": {
-       "name": null,
-       "tags": [
-        "harbour",
-        "night"
-       ]
-      }
-     },
      "content": "Dawn breaks over the harbour.",
-     "current_background": "harbour-day"
+     "current_background": {
+      "id": "harbour-day",
+      "name": "Harbour day",
+      "tags": [
+       "harbour",
+       "day"
+      ]
+     }
     },
     "state_order": [
      "content",
-     "current_background",
-     "backgrounds"
+     "current_background"
     ],
     "status": "completed"
    }
@@ -1680,41 +1532,31 @@
      "background": {
       "instructions": "Which existing scene background fits the place, time of day and situation of this moment? Choose none if none fits well.",
       "options": {
-       "harbour-day": "Harbour day: harbour, day",
+       "harbour-day": "The current background, described in the state as current_background",
        "harbour-night": "harbour-night: harbour, night",
        "none": "None of the existing backgrounds fits well; use the usual selection or generation request."
       },
       "type": "choice"
      },
      "fits_current": {
-      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the background name and tags. If there is no current background, answer no.",
+      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the name and tags of current_background in the state. If there is no current background, answer no.",
       "type": "noul"
      }
     },
     "state": {
-     "backgrounds": {
-      "harbour-day": {
-       "name": "Harbour day",
-       "tags": [
-        "harbour",
-        "day"
-       ]
-      },
-      "harbour-night": {
-       "name": null,
-       "tags": [
-        "harbour",
-        "night"
-       ]
-      }
-     },
      "content": "Dawn breaks over the harbour.",
-     "current_background": "harbour-day"
+     "current_background": {
+      "id": "harbour-day",
+      "name": "Harbour day",
+      "tags": [
+       "harbour",
+       "day"
+      ]
+     }
     },
     "state_order": [
      "content",
-     "current_background",
-     "backgrounds"
+     "current_background"
     ],
     "status": "completed"
    }
@@ -1814,41 +1656,31 @@
      "background": {
       "instructions": "Which existing scene background fits the place, time of day and situation of this moment? Choose none if none fits well.",
       "options": {
-       "harbour-day": "Harbour day: harbour, day",
+       "harbour-day": "The current background, described in the state as current_background",
        "harbour-night": "harbour-night: harbour, night",
        "none": "None of the existing backgrounds fits well; use the usual selection or generation request."
       },
       "type": "choice"
      },
      "fits_current": {
-      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the background name and tags. If there is no current background, answer no.",
+      "instructions": "Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the name and tags of current_background in the state. If there is no current background, answer no.",
       "type": "noul"
      }
     },
     "state": {
-     "backgrounds": {
-      "harbour-day": {
-       "name": "Harbour day",
-       "tags": [
-        "harbour",
-        "day"
-       ]
-      },
-      "harbour-night": {
-       "name": null,
-       "tags": [
-        "harbour",
-        "night"
-       ]
-      }
-     },
      "content": "Dawn breaks over the harbour.",
-     "current_background": "harbour-day"
+     "current_background": {
+      "id": "harbour-day",
+      "name": "Harbour day",
+      "tags": [
+       "harbour",
+       "day"
+      ]
+     }
     },
     "state_order": [
      "content",
-     "current_background",
-     "backgrounds"
+     "current_background"
     ],
     "status": "completed"
    }
@@ -2057,11 +1889,9 @@
      "source_context": null,
      "speaker": null,
      "summarization_history": null,
-     "text": "She scanned the empty platform once more. A shiver ran down her spine.",
      "writing_style": "Use concrete actions. Avoid stock physiological reactions such as a shiver running down a spine."
     },
     "state_order": [
-     "text",
      "speaker",
      "passages",
      "history",
@@ -2242,11 +2072,9 @@
      "source_context": null,
      "speaker": null,
      "summarization_history": null,
-     "text": "She scanned the empty platform once more. A shiver ran down her spine.",
      "writing_style": "Use concrete actions. Avoid stock physiological reactions such as a shiver running down a spine."
     },
     "state_order": [
-     "text",
      "speaker",
      "passages",
      "history",
@@ -2429,11 +2257,9 @@
      "source_context": null,
      "speaker": null,
      "summarization_history": null,
-     "text": "She scanned the empty platform once more. A shiver ran down her spine.",
      "writing_style": "Use concrete actions. Avoid stock physiological reactions such as a shiver running down a spine."
     },
     "state_order": [
-     "text",
      "speaker",
      "passages",
      "history",
@@ -2582,11 +2408,11 @@
     ],
     "questions": {
      "s1_filler": {
-      "instructions": "Judge only the prose of passage s1 (its `prose` text: everything outside double quotes); ignore its dialogue. Does s1 pad the moment?",
+      "instructions": "Does s1 pad the moment?",
       "type": "noul"
      },
      "s2_filler": {
-      "instructions": "Judge only the prose of passage s2 (its `prose` text: everything outside double quotes); ignore its dialogue. Does s2 pad the moment?",
+      "instructions": "Does s2 pad the moment?",
       "type": "noul"
      }
     },
@@ -2599,12 +2425,10 @@
      "passages": [
       {
        "id": "s1",
-       "prose": "She scanned the empty platform once more.",
        "text": "She scanned the empty platform once more."
       },
       {
        "id": "s2",
-       "prose": "A shiver ran down her spine.",
        "text": "A shiver ran down her spine."
       }
      ],
@@ -2620,11 +2444,160 @@
      "source_context": null,
      "speaker": null,
      "summarization_history": null,
-     "text": "She scanned the empty platform once more. A shiver ran down her spine.",
      "writing_style": "Use concrete actions. Avoid stock physiological reactions such as a shiver running down a spine."
     },
     "state_order": [
-     "text",
+     "speaker",
+     "passages",
+     "history",
+     "writing_style",
+     "prose_rules",
+     "context_type",
+     "context_name",
+     "source_context",
+     "summarization_history"
+    ],
+    "status": "completed"
+   }
+  ],
+  "result": "She checked the departure board. Her hands tightened on the ticket."
+ },
+ "editor-prose-scope-mixed": {
+  "invocations": [
+   {
+    "actions": [
+     {
+      "action": "editor.revision_rewrite",
+      "arguments": {
+       "decision_findings": [
+        {
+         "instructions": "Cut the padding. Change only the prose of this passage.",
+         "kind": "style",
+         "p_true": 0.9,
+         "passage_id": "s1",
+         "text": "She whispered \"nobody\" and scanned the empty platform once more."
+        }
+       ],
+       "text": "She whispered \"nobody\" and scanned the empty platform once more. A shiver ran down her spine."
+      },
+      "failure": null,
+      "reason": null,
+      "result": "She checked the departure board. Her hands tightened on the ticket.",
+      "status": "completed"
+     }
+    ],
+    "outcomes": [],
+    "status": "completed"
+   }
+  ],
+  "requests": [
+   {
+    "actions": [
+     {
+      "action": "editor.revision_rewrite",
+      "arguments": {
+       "decision_findings": [
+        {
+         "instructions": "Cut the padding. Change only the prose of this passage.",
+         "kind": "style",
+         "p_true": 0.9,
+         "passage_id": "s1",
+         "text": "She whispered \"nobody\" and scanned the empty platform once more."
+        }
+       ],
+       "text": "She whispered \"nobody\" and scanned the empty platform once more. A shiver ran down her spine."
+      },
+      "failure": null,
+      "reason": null,
+      "result": "She checked the departure board. Her hands tightened on the ticket.",
+      "status": "completed"
+     }
+    ],
+    "label": "editor-checks",
+    "option_order": {},
+    "outcomes": [
+     {
+      "action": "revision_rewrite",
+      "detail_order": [
+       "flagged_question_ids",
+       "skipped_passages"
+      ],
+      "details": {
+       "flagged_question_ids": [
+        "s1_filler"
+       ],
+       "skipped_passages": []
+      },
+      "reason": "flagged_passages"
+     }
+    ],
+    "policy_failure": null,
+    "presentation": {
+     "s1_filler": {
+      "group_id": "filler",
+      "instructions": "Does shown below pad the moment?",
+      "label": "Filler",
+      "passage_id": "s1",
+      "passage_text": "She whispered and scanned the empty platform once more.",
+      "scope": "prose",
+      "threshold": 0.8
+     },
+     "s2_filler": {
+      "group_id": "filler",
+      "instructions": "Does shown below pad the moment?",
+      "label": "Filler",
+      "passage_id": "s2",
+      "passage_text": "A shiver ran down her spine.",
+      "scope": "prose",
+      "threshold": 0.8
+     }
+    },
+    "question_order": [
+     "s1_filler",
+     "s2_filler"
+    ],
+    "questions": {
+     "s1_filler": {
+      "instructions": "Judge only the prose of passage s1 (its `prose` text: everything outside double quotes); ignore its dialogue. Does s1 pad the moment?",
+      "type": "noul"
+     },
+     "s2_filler": {
+      "instructions": "Does s2 pad the moment?",
+      "type": "noul"
+     }
+    },
+    "state": {
+     "context_name": null,
+     "context_type": null,
+     "history": [
+      "Mara looked along the deserted platform."
+     ],
+     "passages": [
+      {
+       "id": "s1",
+       "prose": "She whispered and scanned the empty platform once more.",
+       "text": "She whispered \"nobody\" and scanned the empty platform once more."
+      },
+      {
+       "id": "s2",
+       "text": "A shiver ran down her spine."
+      }
+     ],
+     "prose_rules": [
+      {
+       "active": true,
+       "classification": "unwanted",
+       "instructions": "Replace the stock reaction with a concrete action.",
+       "match_method": "regex",
+       "phrase": "A shiver ran down her spine."
+      }
+     ],
+     "source_context": null,
+     "speaker": null,
+     "summarization_history": null,
+     "writing_style": "Use concrete actions. Avoid stock physiological reactions such as a shiver running down a spine."
+    },
+    "state_order": [
      "speaker",
      "passages",
      "history",
@@ -2855,11 +2828,9 @@
      "source_context": null,
      "speaker": null,
      "summarization_history": null,
-     "text": "She scanned the empty platform once more. A shiver ran down her spine.",
      "writing_style": "Use concrete actions. Avoid stock physiological reactions such as a shiver running down a spine."
     },
     "state_order": [
-     "text",
      "speaker",
      "passages",
      "history",
@@ -3090,11 +3061,9 @@
      "source_context": null,
      "speaker": null,
      "summarization_history": null,
-     "text": "She scanned the empty platform once more. A shiver ran down her spine.",
      "writing_style": "Use concrete actions. Avoid stock physiological reactions such as a shiver running down a spine."
     },
     "state_order": [
-     "text",
      "speaker",
      "passages",
      "history",
@@ -3395,18 +3364,9 @@
       "Nobody is asleep."
      ],
      "previous_states": {
-      "door": {
-       "condition": "Is the door open?",
-       "state": false
-      },
-      "rain": {
-       "condition": "Is it raining?",
-       "state": null
-      },
-      "sleep": {
-       "condition": "Is anybody asleep?",
-       "state": true
-      }
+      "door": false,
+      "rain": null,
+      "sleep": true
      }
     },
     "state_order": [
@@ -3935,7 +3895,7 @@
     ],
     "questions": {
      "changed": {
-      "instructions": "Has the scene since the last update changed this tracked state's answer, or does the previous answer conflict with the current scene? Judge the question for the specified character, or the world when no character is specified. Consider the update instructions.",
+      "instructions": "Has the scene since the last update changed this tracked state's answer, or does the previous answer conflict with the current scene? Judge the question for the specified character, or the world when no character is specified. Consider the update instructions. history_left_out counts the oldest messages since the last update that were left out of the history.",
       "type": "noul"
      }
     },
@@ -4038,7 +3998,7 @@
     ],
     "questions": {
      "changed": {
-      "instructions": "Has the scene since the last update changed this tracked state's answer, or does the previous answer conflict with the current scene? Judge the question for the specified character, or the world when no character is specified. Consider the update instructions.",
+      "instructions": "Has the scene since the last update changed this tracked state's answer, or does the previous answer conflict with the current scene? Judge the question for the specified character, or the world when no character is specified. Consider the update instructions. history_left_out counts the oldest messages since the last update that were left out of the history.",
       "type": "noul"
      }
     },
@@ -4145,7 +4105,7 @@
     ],
     "questions": {
      "changed": {
-      "instructions": "Has the scene since the last update changed this tracked state's answer, or does the previous answer conflict with the current scene? Judge the question for the specified character, or the world when no character is specified. Consider the update instructions.",
+      "instructions": "Has the scene since the last update changed this tracked state's answer, or does the previous answer conflict with the current scene? Judge the question for the specified character, or the world when no character is specified. Consider the update instructions. history_left_out counts the oldest messages since the last update that were left out of the history.",
       "type": "noul"
      }
     },
@@ -4252,7 +4212,7 @@
     ],
     "questions": {
      "changed": {
-      "instructions": "Has the scene since the last update changed this tracked state's answer, or does the previous answer conflict with the current scene? Judge the question for the specified character, or the world when no character is specified. Consider the update instructions.",
+      "instructions": "Has the scene since the last update changed this tracked state's answer, or does the previous answer conflict with the current scene? Judge the question for the specified character, or the world when no character is specified. Consider the update instructions. history_left_out counts the oldest messages since the last update that were left out of the history.",
       "type": "noul"
      }
     },

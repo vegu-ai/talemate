@@ -182,7 +182,13 @@ class WorldStatePinConditionsMixin:
 
         def decision_state(budget):
             return fit_list(
-                {"history": [], "previous_states": pins_to_check},
+                # the conditions go out once, in the questions
+                {
+                    "history": [],
+                    "previous_states": {
+                        key: pin["state"] for key, pin in pins_to_check.items()
+                    },
+                },
                 "history",
                 scene.context_history(
                     budget=min(2048, self.client.max_token_length - 500)

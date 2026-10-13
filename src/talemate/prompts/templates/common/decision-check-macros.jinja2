@@ -11,6 +11,8 @@
     {% for check in decision_checks %}
         {# a caller marks passages whose dialogue/prose split is unreliable; a scoped check judges them as All #}
         {% set scope = "all" if passage.get("no_reliable_split") else check.scope %}
+        {# a part that is the whole passage is asked about the passage itself; callers may leave it out of the state #}
+        {% set whole_passage = scope != "all" and passage[scope] == passage.text %}
         {% set scoped_text = passage.text if scope == "all" else passage[scope] %}
         {% for question in check.questions %}
             {% if not scoped_text %}
@@ -28,7 +30,9 @@
             {% set evaluation_instructions = question.instructions %}
             {% if scope != "all" %}
                 {% set part, meaning, other = scope_notes[scope] %}
+                {% if not whole_passage %}
                 {% set instructions = "Judge only the " ~ part ~ " of passage " ~ passage.id ~ " (its `" ~ part ~ "` text: " ~ meaning ~ "); ignore its " ~ other ~ ". " ~ instructions %}
+                {% endif %}
                 {% set evaluation_instructions = evaluation_instructions ~ " Change only the " ~ part ~ " of this passage." %}
             {% endif %}
             {% set _ = output.questions.update({id: yes_no(

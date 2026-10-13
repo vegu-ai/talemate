@@ -1013,3 +1013,37 @@ class TestCompileLayeredHistory:
 
         assert "L0-A" in result
         assert "L0-B" not in result
+
+
+class TestRegenerationFinalizeHistory:
+    async def test_previous_entries_reach_finalize_whole(self, scene_with_summarizer):
+        """A multi-paragraph summary stays one summarization_history entry."""
+        scene, summarizer = scene_with_summarizer
+        texts = ["Older summary.", "Newer summary.\n\nIts second paragraph."]
+        scene.layered_history = [
+            [
+                {
+                    "text": text,
+                    "start": index * 3,
+                    "end": index * 3 + 2,
+                    "ts": index * 60,
+                    "ts_start": index * 60,
+                    "ts_end": index * 60 + 30,
+                    "id": f"e{index}",
+                }
+                for index, text in enumerate(texts)
+            ]
+        ]
+        finalized = []
+
+        async def finalize(entry, summarization_history=None):
+            finalized.append(summarization_history)
+            return entry
+
+        summarizer._lh_finalize_archive_entry = finalize
+
+        await summarizer.summarize_entries_to_layered_history(
+            [{"text": "Source " * 20, "ts": 0}], 0, 0, 0
+        )
+
+        assert finalized == [texts]

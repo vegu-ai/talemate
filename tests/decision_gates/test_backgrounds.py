@@ -45,6 +45,76 @@ def response_spec() -> ResponseSpec:
     )
 
 
+def assert_current_background_once(request):
+    # the current background's name and tags go out in the state, which every
+    # request part carries; the other backgrounds only as choice options
+    assert request.state == {
+        "content": "Dawn breaks over the harbour.",
+        "current_background": {
+            "id": "harbour-day",
+            "name": "harbour-day",
+            "tags": ["harbour-day"],
+        },
+    }
+    if "background" in request.questions:
+        options = request.questions["background"].options
+        assert options["harbour-night"] == "harbour-night: harbour-night"
+        assert "harbour-day:" not in options["harbour-day"]
+
+
+async def run_background_selection(c):
+    return await run_node(
+        DetermineVisual(),
+        scene=c.scene,
+        inputs={
+            "kind": "background",
+            "state": True,
+            "agent": c.agent,
+            "prompt": Prompt.from_text("Select a background.", vars={}),
+            "content": "Dawn breaks over the harbour.",
+            "assets": [background("harbour-day"), background("harbour-night")],
+            "response_spec": response_spec(),
+        },
+    )
+
+
+async def test_a_split_request_shows_the_current_background_to_its_question(
+    gate_case, monkeypatch
+):
+    import importlib
+
+    from talemate.decisions import ProviderCapabilities
+
+    c = gate_case
+    monkeypatch.setattr(SceneAssets, "validate_asset_id", lambda self, asset_id: True)
+    await c.scene.assets.set_scene_backdrop(asset_id="harbour-day", record=False)
+    # every serialized piece counts 100: the state and both questions do not
+    # fit 299 together, so each question goes out in its own part
+    budget = importlib.import_module("talemate.decisions.budget")
+    monkeypatch.setattr(budget, "count_tokens", lambda text: 100)
+    c.provider.capabilities = ProviderCapabilities(max_input_tokens=299)
+    c.provider.answers = {
+        "fits_current": {"type": "noul", "p_true": 0.99},
+        "background": {
+            "type": "choice",
+            "selected": "harbour-night",
+            "probabilities": {"harbour-day": 0.01, "harbour-night": 0.98, "none": 0.01},
+            "confidence": 0.5,
+        },
+    }
+    monkeypatch.setattr(Prompt, "send", AsyncMock())
+
+    result = await run_background_selection(c)
+
+    assert result["extracted"]["asset_id"] == "harbour-day"
+    assert [list(call.questions) for call in c.provider.calls] == [
+        ["fits_current"],
+        ["background"],
+    ]
+    for request in c.provider.calls:
+        assert_current_background_once(request)
+
+
 @pytest.mark.parametrize(
     "mode,expected",
     [
@@ -103,6 +173,8 @@ async def test_background_selection_uses_the_usual_request_once(
     assert extracted["asset_id"] == expected
     assert send.await_count == (expected == "")
     assert len(c.provider.calls) == (mode != "off")
+    for request in c.provider.calls:
+        assert_current_background_once(request)
     if expected == "":
         assert extracted["instructions"] == "A harbour at dawn"
         assert extracted["references"] == ["harbour-day"]

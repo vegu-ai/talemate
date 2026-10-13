@@ -58,3 +58,14 @@ def fit_text(text: str, budget: int | None) -> str:
             return fitted
         keep -= overshoot
     return ""
+
+
+def fit_text_start(text: str, limit: int) -> str:
+    """The start of `text` within `limit` tokens."""
+    tokens = TIKTOKEN_ENCODING.encode(text)
+    if len(tokens) <= limit:
+        return text
+    # a token boundary can fall inside a character; drop its trailing bytes
+    return TIKTOKEN_ENCODING.decode_bytes(tokens[:limit]).decode(
+        "utf-8", errors="ignore"
+    )

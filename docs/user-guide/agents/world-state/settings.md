@@ -74,7 +74,7 @@ This is checked every turn and if there are any state reinforcements that are du
 
 On by default. With a decision model configured, a due tracked state is checked before its usual LLM update. A confident "no change" keeps the answer and resets its interval. Other answers and failed decisions run the usual update once. Manual refreshes, forced updates and resets still run, as do states that have no answer yet.
 
-The check sees the same context as the update, including active pins, the character's description, instructions, memories and scene history.
+The check sees the question, its instructions and previous answer, the character's description, active pins and the recent story: about two messages for each turn of the state's interval, plus three before them, up to about 4,000 tokens. When long messages make that too much, the oldest ones are left out and the check is told how many. It does not see memories or older history, which keeps it quick on a local decision model. The usual update still reads the full context.
 
 An incorrect "no change" can leave an outdated answer until a later update. Turn this option off or refresh the state manually when needed. The editable policy is `world_state.decision-reinforcement` in **Prompts**.
 

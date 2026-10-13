@@ -144,7 +144,7 @@ async def test_controlled_comparison(editor_case, method, mode):
         ] == [("s1", "repetition"), ("s2", "style")]
         assert "s1 / repetition" in prompt and "s2 / style" in prompt
         assert record.state["history"] == [c.data["previous"]]
-        assert record.state["text"] == c.data["current"]
+        assert "text" not in record.state
         assert record.actions[0].status == "completed"
         assert (
             record.actions[0].elapsed_ms is not None and record.elapsed_ms is not None
@@ -724,7 +724,59 @@ async def test_history_window_without_style_instructions(editor_case, history_ra
         "s2_repetition",
         "s2_description_reuse",
     }
-    assert request.state["text"] == c.data["current"]
+    assert "text" not in request.state
+
+
+@pytest.mark.parametrize(
+    "speaker,instructions",
+    [
+        (None, None),
+        ("Mara", None),
+        ("Mara", "Speaks in clipped sentences and always says 'aye'."),
+    ],
+)
+async def test_speaker_acting_instructions_are_sent_once_when_present(
+    editor_case, speaker, instructions
+):
+    from talemate.agents.editor.revision import RevisionContext, RevisionInformation
+    from talemate.character import Character
+    from talemate.decisions.budget import state_tokens
+
+    c = editor_case
+    character = (
+        Character(name=speaker, dialogue_instructions=instructions) if speaker else None
+    )
+    info = RevisionInformation(text=c.current.message, character=character)
+    checks = c.scene.test_writing_style.decision_checks
+    with RevisionContext(c.current.id):
+        full = c.editor.decision_check_state(info, checks)
+        fitted = c.editor.decision_check_state(info, checks, state_tokens(full) - 20)
+
+    for state in (full, fitted):
+        if instructions:
+            assert state["acting_instructions"] == instructions
+        else:
+            assert "acting_instructions" not in state
+    assert instructions is None or str(full).count(instructions) == 1
+
+
+@pytest.mark.parametrize("separator", ["\n", " "])
+async def test_acting_instructions_have_a_fixed_ceiling(editor_case, separator):
+    from talemate.agents.editor.decision_checks import ACTING_INSTRUCTIONS_CAP
+    from talemate.agents.editor.revision import RevisionInformation
+    from talemate.character import Character
+    from talemate.util import count_tokens
+
+    c = editor_case
+    lines = [f"Rule {number}: never hurry a sentence." for number in range(800)]
+    character = Character(name="Mara", dialogue_instructions=separator.join(lines))
+    info = RevisionInformation(text=c.current.message, character=character)
+    state = c.editor.decision_check_state(
+        info, c.scene.test_writing_style.decision_checks, 1_000_000
+    )
+    sent = state["acting_instructions"]
+    assert sent.startswith("Rule 0:")
+    assert ACTING_INSTRUCTIONS_CAP - 20 < count_tokens(sent) <= ACTING_INSTRUCTIONS_CAP
 
 
 async def test_character_prefix_is_preserved(editor_case):
@@ -741,7 +793,7 @@ async def test_character_prefix_is_preserved(editor_case):
             RevisionInformation(text=message.message, character=character)
         )
     assert result == "Mara: " + c.data["revised"]
-    assert c.provider.calls[0].state["text"] == message.message
+    assert "text" not in c.provider.calls[0].state
     assert (
         c.provider.calls[0].state["passages"][0]["text"]
         == "She scanned the empty platform once more."
@@ -772,6 +824,23 @@ async def test_exact_threshold_and_template_override_comparison(editor_case, tmp
     c.client.send_prompt.assert_not_awaited()
 
 
+def decision_checks_note(editor):
+    field = type(editor).config_options(agent=editor)["actions"]["revision"]["config"][
+        "decision_checks"
+    ]
+    notes = field.get("note_on_value")
+    return notes[True] if notes else None
+
+
+async def test_no_note_with_active_checks_or_without_a_scene(editor_case):
+    c = editor_case
+    assert decision_checks_note(c.editor) is None
+    c.scene.test_writing_style = None
+    assert decision_checks_note(c.editor) is not None
+    c.scene.active = False
+    assert decision_checks_note(c.editor) is None
+
+
 @pytest.mark.parametrize("method", ["rewrite", "unslop"])
 @pytest.mark.parametrize(
     "no_questions", ["all_inactive", "no_style", "empty", "inapplicable"]
@@ -797,6 +866,24 @@ async def test_no_applicable_checks_use_ordinary_revision(
     result, _ = await revise(c)
     assert not c.provider.calls
     assert not c.service.log.records
+    no_style = no_questions == "no_style"
+    (invocation,) = c.service.log.invocations.values()
+    assert invocation.template_uid == "editor.decision-checks"
+    assert invocation.outcomes == [
+        {
+            "action": "no_action",
+            "reason": "no_writing_style" if no_style else "no_active_checks",
+            "details": {} if no_style else {"writing_style": "Plain"},
+        }
+    ]
+    note = decision_checks_note(c.editor)
+    assert note["color"] == "warning"
+    assert note["text"] == (
+        "No writing style set for this scene; decision checks need one."
+        if no_style
+        else "Writing style 'Plain' has no active decision checks. "
+        "Add them in its template."
+    )
     c.editor._revision_evaluate_semantic_similarity.assert_awaited_once()
     decision_path_calls = c.client.send_prompt.await_count
     prose_calls = c.editor.revision_detect_bad_prose.await_count
@@ -804,6 +891,7 @@ async def test_no_applicable_checks_use_ordinary_revision(
     c.editor.revision_detect_bad_prose.reset_mock()
     c.editor.actions["revision"].config["decision_checks"].value = False
     assert (await revise(c))[0] == result
+    assert len(c.service.log.invocations) == 1
     assert c.client.send_prompt.await_count == decision_path_calls
     assert c.editor.revision_detect_bad_prose.await_count == prose_calls
 
@@ -980,20 +1068,23 @@ async def test_unscoped_checks_keep_the_passage_state(editor_case):
 
 async def test_prose_scope_judges_prose_and_skips_dialogue_only_passage(editor_case):
     c = editor_case
-    c.current.message = '"Anyone here?" She scanned the empty platform once more.'
+    c.current.message = '"Anyone here?" She whispered "nobody" and scanned the empty platform once more.'
     c.scene.test_writing_style.decision_checks = [scoped_check("prose")]
     c.provider.probabilities = {"s2_filler": 0.9}
     assert (await revise(c))[0] == c.data["revised"]
     (request,) = c.provider.calls
     assert request.state["passages"] == [
-        {"id": "s1", "text": '"Anyone here?"', "prose": ""},
+        {"id": "s1", "text": '"Anyone here?"'},
         {
             "id": "s2",
-            "text": "She scanned the empty platform once more.",
-            "prose": "She scanned the empty platform once more.",
+            "text": 'She whispered "nobody" and scanned the empty platform once more.',
+            "prose": "She whispered and scanned the empty platform once more.",
         },
     ]
     assert list(request.questions) == ["s2_filler"]
+    assert request.questions["s2_filler"].instructions.startswith(
+        "Judge only the prose of passage s2"
+    )
     record = next(iter(c.service.log.records.values()))
     assert record.presentation["s2_filler"].scope == "prose"
     assert record.outcomes[0]["details"]["skipped_passages"] == [
@@ -1006,7 +1097,30 @@ async def test_prose_scope_judges_prose_and_skips_dialogue_only_passage(editor_c
         }
     ]
     (finding,) = record.actions[0].arguments["decision_findings"]
-    assert finding["text"] == "She scanned the empty platform once more."
+    assert finding["text"] == (
+        'She whispered "nobody" and scanned the empty platform once more.'
+    )
+    assert finding["instructions"] == (
+        "Cut the padding. Change only the prose of this passage."
+    )
+
+
+async def test_prose_scope_sends_a_pure_prose_passage_once(editor_case):
+    c = editor_case
+    c.current.message = "She scanned the empty platform once more. The lights hummed."
+    c.scene.test_writing_style.decision_checks = [scoped_check("prose")]
+    c.provider.probabilities = {"s1_filler": 0.9}
+    assert (await revise(c))[0] == c.data["revised"]
+    (request,) = c.provider.calls
+    assert request.state["passages"] == [
+        {"id": "s1", "text": "She scanned the empty platform once more."},
+        {"id": "s2", "text": "The lights hummed."},
+    ]
+    assert "text" not in request.state
+    assert request.questions["s1_filler"].instructions == ("Does s1 pad the moment?")
+    record = next(iter(c.service.log.records.values()))
+    assert record.presentation["s1_filler"].scope == "prose"
+    (finding,) = record.actions[0].arguments["decision_findings"]
     assert finding["instructions"] == (
         "Cut the padding. Change only the prose of this passage."
     )
@@ -1035,7 +1149,7 @@ async def test_all_default_checks_share_one_request(editor_case):
     c.scene.test_writing_style.decision_checks = default_writing_style_decision_checks()
     await revise(c)
     (request,) = c.provider.calls
-    assert [set(p) for p in request.state["passages"]] == [{"id", "text", "prose"}] * 2
+    assert [set(p) for p in request.state["passages"]] == [{"id", "text"}] * 2
     assert {key.split("_", 1)[1] for key in request.questions} == {
         "repetition",
         "description_reuse",
@@ -1045,8 +1159,8 @@ async def test_all_default_checks_share_one_request(editor_case):
         "overdescription",
     }
     assert len(request.questions) == 12
-    assert request.questions["s1_overdescription"].instructions.startswith(
-        "Judge only the prose of passage s1"
+    assert not request.questions["s1_overdescription"].instructions.startswith(
+        "Judge only"
     )
 
 
@@ -1146,6 +1260,33 @@ async def test_summary_mode_fits_the_previous_summaries(editor_case):
     fitted = c.editor.decision_check_state(info, checks, budget)
 
     assert state_tokens(fitted) <= budget
-    assert full["summarization_history"] == summaries
+    assert full["summarization_history"] == summaries[-6:]
     assert fitted["summarization_history"] == summaries[-3:]
     assert fitted["history"] == []
+
+
+@pytest.mark.parametrize("include_previous", [0, 2, 6])
+async def test_summary_history_keeps_the_newest_whole_summaries(
+    editor_case, monkeypatch, include_previous
+):
+    from talemate.agents.editor.revision import RevisionInformation
+    from talemate.instance import get_agent
+
+    c = editor_case
+    monkeypatch.setattr(
+        get_agent("summarizer").actions["archive"].config["include_previous"],
+        "value",
+        include_previous,
+    )
+    summaries = [
+        f"Summary {number}: the keepers traded watches.\n\n"
+        f"Summary {number}, later: the lamp was lit.\n\nThe fog lifted."
+        for number in range(200)
+    ]
+    info = RevisionInformation(text=c.current.message, summarization_history=summaries)
+    state = c.editor.decision_check_state(
+        info, c.scene.test_writing_style.decision_checks, 1_000_000
+    )
+    assert state["summarization_history"] == (
+        summaries[-include_previous:] if include_previous else []
+    )

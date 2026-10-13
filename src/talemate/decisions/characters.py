@@ -6,11 +6,17 @@ from pydantic import BaseModel
 from .budget import fit_text
 from .gate import decision_gate
 
+DESCRIPTION_CHARS = 512
+
 
 class CharacterReference(BaseModel):
     name: str
     aliases: list[str]
     description: str
+
+
+def short_description(character) -> str:
+    return " ".join((character.description or "").split())[:DESCRIPTION_CHARS]
 
 
 def character_aliases(scene, name: str) -> set[str]:
@@ -61,9 +67,7 @@ async def referenced_characters(
                 CharacterReference(
                     name=name,
                     aliases=sorted(character_aliases(scene, name)),
-                    description=" ".join(
-                        (scene.get_character(name).description or "").split()
-                    )[:512],
+                    description=short_description(scene.get_character(name)),
                 ).model_dump()
                 for name in candidates
             ],

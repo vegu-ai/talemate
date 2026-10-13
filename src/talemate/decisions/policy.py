@@ -340,7 +340,9 @@ class PolicyInvocation(Generic[T]):
         engine_questions = {
             key: question.engine_question() for key, question in questions.items()
         }
-        if callable(state):
+        sized = callable(state)
+        budget = None
+        if sized:
             budget = self.service.state_budget(engine_questions)
             fitted = state(budget)
             if budget is not None and state_tokens(fitted) > budget:
@@ -349,6 +351,7 @@ class PolicyInvocation(Generic[T]):
                 # state the room one part leaves
                 split = self.service.state_budget(engine_questions, split=True)
                 if split != budget:
+                    budget = split
                     fitted = state(split)
             state = fitted
         result = self._ownership.bridge(
@@ -361,6 +364,8 @@ class PolicyInvocation(Generic[T]):
                 source_group=self.source_group,
                 ownership=self._ownership,
                 presentation=presentation,
+                state_budget=budget,
+                sized=sized,
             )
         )
         self._ownership.check()

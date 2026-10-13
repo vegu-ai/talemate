@@ -154,12 +154,56 @@ async def test_questions_that_do_not_fit_together_are_sent_in_parts(
             ["another"],
         ]
         assert record.raw == [provider.raw, provider.raw]
+    assert (record.tokens.state, record.tokens.questions) == (100, 200)
+    assert not record.tokens.sized and record.tokens.budget is None
     if parts:
         assert isinstance(result, DecisionHandle)
         assert set(result.answers) == {"repeats", "another"}
+        assert record.tokens.parts == parts
+        assert record.tokens.sent == 100 * parts + 200
     else:
         assert result.failure.code == FailureCode.OVERSIZE
         assert record.answers is None
+
+
+@pytest.mark.parametrize(
+    "usages,reported",
+    [
+        ([{"input_tokens": 120}, {"input_tokens": 80}], 200),
+        ([{"input_tokens": 120}, {}], None),
+        ([{"input_tokens": True}, {"input_tokens": 80}], None),
+    ],
+)
+async def test_provider_input_tokens_are_summed_over_parts(
+    provider, monkeypatch, usages, reported
+):
+    import importlib
+
+    module = importlib.import_module("talemate.decisions.budget")
+    monkeypatch.setattr(module, "count_tokens", lambda text: 100)
+    provider.capabilities = ProviderCapabilities(
+        max_input_tokens=299, max_question_input_tokens=200
+    )
+    bodies = iter(usages)
+
+    async def answer(request):
+        return ProviderResponse(
+            answers={
+                key: {"type": "noul", "p_true": 0.93} for key in request.questions
+            },
+            response_body={"usage": next(bodies)},
+        )
+
+    provider.handler = answer
+    service = DecisionService(provider, enabled=True)
+    questions = {**QUESTIONS, "another": QUESTIONS["repeats"]}
+
+    result = await evaluate(service, questions=questions, state_budget=150, sized=True)
+
+    tokens = service.log.records[result.request_id].tokens
+    assert tokens.parts == 2
+    assert tokens.reported == reported
+    assert tokens.sized and tokens.budget == 150
 
 
 @pytest.mark.parametrize("question_counts", [[60, 140], [140, 60]])
@@ -236,20 +280,21 @@ async def test_each_state_shape_counts_toward_the_largest_question_limit(
     assert not provider.calls
 
 
-async def test_undeclared_token_limits_do_not_estimate_or_refuse(provider, monkeypatch):
+async def test_undeclared_token_limits_do_not_refuse(provider, monkeypatch):
     import importlib
 
     module = importlib.import_module("talemate.decisions.budget")
+    # the count only describes the request in the log; without limits no
+    # size can refuse it
+    monkeypatch.setattr(module, "count_tokens", lambda text: 10**9)
+    service = DecisionService(provider, enabled=True)
 
-    def unexpected_count(text):
-        pytest.fail("An undeclared token limit should not trigger token counting")
-
-    monkeypatch.setattr(module, "count_tokens", unexpected_count)
-
-    result = await evaluate(DecisionService(provider, enabled=True))
+    result = await evaluate(service)
 
     assert isinstance(result, DecisionHandle)
     assert len(provider.calls) == 1
+    (record,) = service.log.records.values()
+    assert record.tokens.parts == 1 and record.tokens.state == 10**9
 
 
 @pytest.mark.parametrize(

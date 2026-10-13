@@ -47,6 +47,9 @@ async def test_pin_history_keeps_the_newest_messages(gate_case, monkeypatch):
 
     (request,) = c.provider.calls
     assert_within_limit(c, request)
+    # the condition goes out once, in its question
+    assert request.state["previous_states"] == {"fog": False}
+    assert "Is there fog?" in request.questions["fog"].instructions
     history = request.state["history"]
     assert history and history[-1].startswith("Report 39:")
     assert not any(line.startswith("Report 0:") for line in history)
@@ -105,10 +108,12 @@ async def test_character_questions_are_split_and_text_fitted(gate_case):
         )
 
 
-async def test_tracked_state_context_is_rendered_to_the_budget(gate_case, monkeypatch):
+async def test_tracked_state_history_is_fitted_to_the_budget(gate_case, monkeypatch):
     c = gate_case
-    limit(c, question=1500)
-    reinforcement = Reinforcement(question="Where is the key?", answer="In the drawer.")
+    limit(c, question=400)
+    reinforcement = Reinforcement(
+        question="Where is the key?", answer="In the drawer.", interval=10
+    )
     c.scene.world_state.reinforce = [reinforcement]
     c.scene.history = [NarratorMessage("Mara moved the key into the locked chest.")]
     c.scene.history.extend(narration(60))
@@ -131,15 +136,15 @@ async def test_tracked_state_context_is_rendered_to_the_budget(gate_case, monkey
     )
 
     (request,) = c.provider.calls
-    assert_within_limit(c, request, 1500)
-    context = request.state["context"]
-    assert "Report 59:" in context
-    assert "locked chest" not in context
-    assert "Where is the key?" in context
+    assert_within_limit(c, request, 400)
+    history = request.state["history"]
+    assert history and history[-1].startswith("Report 59:")
+    assert len(history) < 23
+    assert request.state["history_left_out"] == 23 - len(history)
+    assert request.state["question"] == "Where is the key?"
     # the fallback renders the update at the client's own size
     (prompt,) = sent
     assert "Mara moved the key into the locked chest." in prompt
-    assert len(prompt) > len(context)
 
 
 async def test_tracked_state_too_large_for_any_history_falls_back(
@@ -169,40 +174,3 @@ async def test_tracked_state_too_large_for_any_history_falls_back(
     assert record.failure.code == "oversize"
     (prompt,) = sent
     assert "Report 4:" in prompt
-
-
-async def test_tracked_state_fits_coarse_history(gate_case, monkeypatch):
-    c = gate_case
-    reinforcement = Reinforcement(question="Where is the key?", answer="In the drawer.")
-    c.scene.world_state.reinforce = [reinforcement]
-    c.scene.history = narration(1)
-    block = "Chapter summary: the keepers trade watches through the storm. " * 80
-    blocks = [f"Block {number}: {block}" for number in range(12)]
-    block_tokens = state_tokens(blocks[0])
-
-    def context_history(self, budget=8192, **kwargs):
-        # whole summaries only, so a cut smaller than the unused rest of the
-        # budget leaves the history unchanged
-        fitting = max(budget, 0) // block_tokens
-        return blocks[-fitting:] if fitting else []
-
-    monkeypatch.setattr(type(c.scene), "context_history", context_history)
-    monkeypatch.setattr(Prompt, "query_memory", lambda *args, **kwargs: [])
-    monkeypatch.setattr(
-        c.agent.client, "send_prompt", AsyncMock(return_value="<ANSWER>x</ANSWER>")
-    )
-    c.provider.answers = {"changed": {"type": "noul", "p_true": 0.01}}
-
-    # one block width in fine steps: some limits leave the last block's slack
-    # just under the template's uncounted sections
-    for question_limit in range(3000, 3000 + block_tokens, 5):
-        limit(c, question=question_limit)
-        c.provider.calls.clear()
-        assert (
-            await c.agent.generate_reinforcement(
-                reinforcement, False, decision_model=True
-            )
-            is False
-        ), question_limit
-        (request,) = c.provider.calls
-        assert_within_limit(c, request, question_limit)

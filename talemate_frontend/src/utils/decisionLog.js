@@ -231,6 +231,44 @@ export function questionGroups(request, outcomes = request?.outcomes || []) {
     return [...groups.values()];
 }
 
+// the Editor records these when the scene's writing style leaves its decision
+// checks nothing to run (agents/editor/decision_checks.py)
+const WRITING_STYLE_NOTES = {
+    no_writing_style: () => 'No writing style set for this scene; decision checks need one.',
+    no_active_checks: details => `Writing style '${details.writing_style}' has no active decision checks. Add them in its template.`,
+};
+
+export function writingStyleNote(outcomes) {
+    const outcome = outcomes.find(item => WRITING_STYLE_NOTES[item.reason]);
+    return outcome ? WRITING_STYLE_NOTES[outcome.reason](outcome.details || {}) : null;
+}
+
+export function formatTokenCount(value) {
+    if (value < 1000) return String(value);
+    const thousands = value / 1000;
+    return `${thousands < 10 ? thousands.toFixed(1).replace(/\.0$/, '') : Math.round(thousands)}k`;
+}
+
+// the provider's own input count when it gave one, else Talemate's estimate
+export function decisionTokens(row) {
+    const tokens = row.request?.tokens;
+    if (!tokens) return null;
+    const reported = tokens.reported != null;
+    return {
+        ...tokens,
+        total: reported ? tokens.reported : tokens.sent,
+        reportedByProvider: reported,
+        dispatched: row.request.dispatched,
+    };
+}
+
+export function decisionTokensTitle(tokens) {
+    if (!tokens) return 'No token count: the request was not prepared for sending';
+    const count = `${tokens.total.toLocaleString()} tokens`;
+    if (!tokens.dispatched) return `${count}, not sent`;
+    return `${count} sent, ${tokens.reportedByProvider ? 'counted by the provider' : 'estimated by Talemate'}`;
+}
+
 export function decisionTime(timestamp) {
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
@@ -256,7 +294,7 @@ export function decisionResult(row) {
     if (questions.length === 1 && questions[0].answer) return answerSummary(questions[0].id, questions[0].answer);
     if (questions.length) return `${questions.length} question${questions.length === 1 ? '' : 's'}${row.request?.status === 'pending' ? ' · waiting for the answer' : ''}`;
     if (groups.some(group => group.skipped.length)) return 'Nothing in scope · every passage skipped';
-    return 'No questions submitted';
+    return writingStyleNote(rowOutcomes(row)) || 'No questions submitted';
 }
 
 export function decisionOutcome(row) {
@@ -293,6 +331,8 @@ function spokenReason(reason, details) {
 export function outcomeSummary(outcome) {
     const label = sentence(words(outcome.action));
     if (outcome.reason === UNSPECIFIED) return `${label}; ${UNSPECIFIED}`;
+    // the row's result already gives the note
+    if (writingStyleNote([outcome])) return `${label} · the revision ran the usual way, without decision checks`;
     const details = outcome.details || {};
     const { text, used } = spokenReason(outcome.reason, details);
     const rest = Object.entries(details)

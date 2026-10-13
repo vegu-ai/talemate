@@ -1,6 +1,6 @@
 {% set threshold = 0.9 %}
 {% set answers = ask("tracked-state-update", state=state, questions={"changed": yes_no(
-    "Has the scene since the last update changed this tracked state's answer, or does the previous answer conflict with the current scene? Judge the question for the specified character, or the world when no character is specified. Consider the update instructions.",
+    "Has the scene since the last update changed this tracked state's answer, or does the previous answer conflict with the current scene? Judge the question for the specified character, or the world when no character is specified. Consider the update instructions. history_left_out counts the oldest messages since the last update that were left out of the history.",
     threshold=threshold
 )}) %}
 {% set unchanged = answers.changed.no %}

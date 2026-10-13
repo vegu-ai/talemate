@@ -34,7 +34,10 @@ including requests made while both of them were closed.
 
 The drawer keeps a compact list: one row per decision request, however many questions it carried.
 Each row shows the feature, for example **Editor checks** or **Tracked state update**, the time, an
-outcome chip and a one-line result. An Editor check might show **Revision rewrite completed** with
+outcome chip and a one-line result. The figure beside the time, such as **1.8k** :material-arrow-down-bold:,
+is the number of tokens the request sent, so a large request stands out; hover it to see whether the
+provider counted it or Talemate estimated it. A dash means the request stopped before Talemate counted it.
+An Editor check might show **Revision rewrite completed** with
 `Flagged s1 · 0.91 (threshold 0.80)`: the flagged passage, its probability and the threshold it
 reached. When nothing reached its threshold, the result starts with **Nothing flagged**. Open the
 row to see the full report in a dialog.
@@ -46,6 +49,13 @@ duration: **answered in** for a completed request, **took** for one that failed 
 lists the feature's explanation and the actions it took, each with its own status and duration.
 A policy that supplies no explanation shows `No action; reason unspecified.` Talemate does not
 read the policy to guess why a branch was not taken.
+
+**Context sent** shows how much the request carried. **Sent** is the provider's own input count
+when it reports one, otherwise Talemate's estimate. **State budget** is the room the feature fitted
+its text to: **No limit** when the decision model declares no input limit, and **Fixed** when the
+feature sends its text as it is. **State · Questions** splits the count between the story text and
+the questions, and **Parts** says into how many requests the questions were split; each part
+carries the whole text again. A bar shows how much of its budget the text used.
 
 For Editor checks, the report groups the questions into cards. Each shared question appears once,
 with the exact checked passage text beside its probability and threshold. The probability bar and
@@ -68,6 +78,9 @@ request**. An action that named another request of the same policy belongs to th
 this one.
 
 A completed action says only that the call returned. It does not say that the text changed.
+
+An Editor checks row with a warning line, such as `No writing style set for this scene; decision
+checks need one.`, means a revision ran without its checks because of the scene's writing style.
 
 A failed or cancelled request stays visible with its own status. The row names the reason in
 plain words, for example "Talemate could not reach the provider". Open a failed row to read the

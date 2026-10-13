@@ -32,6 +32,46 @@
             </div>
         </section>
 
+        <section v-if="request" class="decision-context mb-5" aria-label="Context sent" data-testid="decision-context">
+            <div class="text-body-medium font-weight-medium mb-2">Context sent</div>
+            <div v-if="!tokens" class="d-flex align-center ga-2 text-body-small text-muted">
+                <v-icon size="16">mdi-counter</v-icon>
+                <span>No token count. The request stopped before it was prepared for sending.</span>
+            </div>
+            <template v-else>
+                <div class="decision-context-stats">
+                    <v-sheet border rounded="lg" class="decision-stat" data-testid="decision-tokens-sent">
+                        <div class="text-label-small text-muted">{{ tokens.dispatched ? 'SENT' : 'NOT SENT' }}</div>
+                        <div class="text-body-large font-weight-medium decision-number">{{ tokens.total.toLocaleString() }}</div>
+                        <div class="text-body-small text-muted">{{ sentCaption }}</div>
+                    </v-sheet>
+                    <v-sheet border rounded="lg" class="decision-stat" data-testid="decision-tokens-budget">
+                        <div class="text-label-small text-muted">STATE BUDGET</div>
+                        <div class="text-body-large font-weight-medium decision-number">{{ budgetValue }}</div>
+                        <div class="text-body-small text-muted">{{ budgetCaption }}</div>
+                    </v-sheet>
+                    <v-sheet border rounded="lg" class="decision-stat" data-testid="decision-tokens-split">
+                        <div class="text-label-small text-muted">STATE · QUESTIONS</div>
+                        <div class="text-body-large font-weight-medium decision-number">{{ tokens.state.toLocaleString() }} · {{ tokens.questions.toLocaleString() }}</div>
+                        <div class="text-body-small text-muted">{{ questionCount }} question{{ questionCount === 1 ? '' : 's' }}</div>
+                    </v-sheet>
+                    <v-sheet border rounded="lg" class="decision-stat" data-testid="decision-tokens-parts">
+                        <div class="text-label-small text-muted">PARTS</div>
+                        <div class="text-body-large font-weight-medium decision-number">{{ tokens.parts }}</div>
+                        <div class="text-body-small text-muted">{{ tokens.parts === 1 ? 'one request' : 'each carries the state' }}</div>
+                    </v-sheet>
+                </div>
+                <div v-if="tokens.budget" class="mt-3">
+                    <div class="decision-meter" role="meter" aria-label="State size against its budget"
+                        :aria-valuenow="tokens.state" aria-valuemin="0" :aria-valuemax="tokens.budget"
+                        :aria-valuetext="`${tokens.state.toLocaleString()} of ${tokens.budget.toLocaleString()} state tokens`">
+                        <span class="decision-meter-fill bg-primary" :style="{ width: `${Math.min(100, tokens.state / tokens.budget * 100)}%` }"></span>
+                    </div>
+                    <div class="text-body-small text-muted">The state uses {{ budgetShare }} of its budget.</div>
+                </div>
+            </template>
+        </section>
+
         <v-card v-for="group in groups" :key="group.id" variant="outlined" rounded="lg" class="decision-check mb-4">
             <div class="pa-4">
             <div class="d-flex align-center ga-2 flex-wrap mb-2">
@@ -71,7 +111,7 @@
                 <span>Skipped {{ group.skipped.join(', ') }}: no {{ scope(group).part }} in {{ group.skipped.length === 1 ? 'this passage' : 'these passages' }}.</span>
             </div>
         </v-card>
-        <v-alert v-if="!groups.length" variant="tonal" color="muted" icon="mdi-text-box-outline" class="mb-4">The feature asked no questions this time.</v-alert>
+        <v-alert v-if="!groups.length && !styleNote" variant="tonal" color="muted" icon="mdi-text-box-outline" class="mb-4">The feature asked no questions this time.</v-alert>
 
         <v-sheet border rounded="lg">
         <v-btn block variant="text" size="small" :aria-expanded="rawOpen" data-testid="decision-raw-toggle"
@@ -115,7 +155,7 @@
 import { failureReason } from '@/utils/decisionModelText';
 import { formatProbability } from '@/utils/probability';
 import { decisionCheckScope } from '@/utils/decisionCheckScope';
-import { actionSummary, answerValue, outcomeSummary, questionGroups, questionName, decisionOutcome, decisionResult, rowOutcomes } from '@/utils/decisionLog';
+import { actionSummary, answerValue, outcomeSummary, questionGroups, questionName, decisionOutcome, decisionResult, decisionTokens, rowOutcomes, writingStyleNote } from '@/utils/decisionLog';
 
 export default {
     name: 'DecisionLogDetail',
@@ -139,6 +179,33 @@ export default {
         },
         groups() {
             return questionGroups(this.request, this.outcomes);
+        },
+        styleNote() {
+            return writingStyleNote(this.outcomes);
+        },
+        tokens() {
+            return decisionTokens(this.row);
+        },
+        sentCaption() {
+            const tokens = this.tokens;
+            if (!tokens.reportedByProvider) return 'tokens, estimated by Talemate';
+            return `tokens, counted by the provider · estimate ${tokens.sent.toLocaleString()}`;
+        },
+        budgetValue() {
+            const tokens = this.tokens;
+            if (!tokens.sized) return 'Fixed';
+            return tokens.budget == null ? 'No limit' : tokens.budget.toLocaleString();
+        },
+        budgetCaption() {
+            const tokens = this.tokens;
+            if (!tokens.sized) return 'the caller sent its state as given';
+            return tokens.budget == null ? 'the provider sets no input limit' : 'tokens the state could take';
+        },
+        budgetShare() {
+            return `${Math.round(this.tokens.state / this.tokens.budget * 100)}%`;
+        },
+        questionCount() {
+            return Object.keys(this.request.questions || {}).length;
         },
         emptyOutcome() {
             if (this.row.status === 'active') return 'Waiting for the result.';
@@ -197,6 +264,13 @@ export default {
     min-width: 160px;
 }
 .decision-summary { background: rgba(var(--v-theme-primary), 0.04); }
+.decision-context-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+}
+.decision-stat { padding: 10px 12px; }
+.decision-number { font-variant-numeric: tabular-nums; }
 .decision-check { border-color: rgba(var(--v-border-color), var(--v-border-opacity)); }
 .decision-meter { position: relative; height: 6px; margin-bottom: 8px; border-radius: 3px; background: rgba(var(--v-theme-on-surface), 0.12); }
 .decision-meter-fill { display: block; height: 100%; border-radius: inherit; }

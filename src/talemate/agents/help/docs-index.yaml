@@ -1206,7 +1206,7 @@
   title: Make or Unmark a Player Character
   summary: Make Player Character promotes an existing character, demotes the previous player to AI and activates an inactive
     choice. Unmark as Player hands control back to AI while preserving the character and leaves the scene without a player
-    until one is chosen.
+    until one is chosen. Make Player Character is disabled (greyed out) while an agent is generating.
 - path: user-guide/world-editor/characters/states.md
   title: Tracked states
   summary: Create character tracked states from questions in the States tab with immediate initial generation, update-every-N-turn

@@ -134,9 +134,11 @@
                                 <!-- TOGGLE PLAYER CHARACTER -->
                                 <div>
                                     <v-list-item v-if="!character.is_player">
-                                        <v-tooltip max-width="300" :text="`Mark ${character.name} as the player character. The current player character (if any) will be demoted to an AI actor.`">
+                                        <v-tooltip max-width="300" :text="makePlayerCharacterHint">
                                             <template v-slot:activator="{ props }">
-                                                <v-btn @click.stop="setIsPlayer(true)" v-bind="props" variant="tonal" block color="info" prepend-icon="mdi-account-star">Make Player Character</v-btn>
+                                                <span v-bind="props" class="d-block" tabindex="-1" @focusin="props.onFocus" @focusout="props.onBlur">
+                                                    <v-btn @click.stop="setIsPlayer(true)" :disabled="appBusy" variant="tonal" block color="info" prepend-icon="mdi-account-star">Make Player Character</v-btn>
+                                                </span>
                                             </template>
                                         </v-tooltip>
                                     </v-list-item>
@@ -460,6 +462,12 @@ export default {
         'add-pin',
     ],
     computed: {
+        makePlayerCharacterHint() {
+            if (this.appBusy) {
+                return `Unavailable while an agent is generating. A line that is still being generated could otherwise count as the wrong character's turn.`;
+            }
+            return `Mark ${this.character.name} as the player character. The current player character (if any) will be demoted to an AI actor.`;
+        },
         characterNames() {
             if (!this.characterList || !this.characterList.characters) {
                 return [];

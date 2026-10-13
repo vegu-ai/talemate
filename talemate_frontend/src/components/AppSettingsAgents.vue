@@ -184,6 +184,7 @@
 
 <script>
 import { agentActionConditionMet } from '@/utils/uxConditions';
+import { scrollSettingIntoView } from '@/utils/settingsScroll';
 import { countOverrides } from '@/utils/agentActionOverrides';
 import { hasOwnName } from '@/utils/nameKeyedMap';
 import AgentConfigSection from './AgentConfigSection.vue';
@@ -272,6 +273,7 @@ export default {
         // edited values exist only in the working copy, so the backend would
         // answer for the values the user just replaced.
         dirty: { type: Boolean, default: false },
+        active: { type: Boolean, default: false },
     },
     emits: ['extra-dirty', 'extra-error'],
     inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'getAgents', 'requestTemplates', 'scene', 'isConnected', 'openAgentActionOverrides', 'requestSceneSave'],
@@ -616,6 +618,14 @@ export default {
                 this.selected = agents.length ? [agents[0].name] : [];
             },
         },
+        active: {
+            immediate: true,
+            handler(active) {
+                if (active) {
+                    this.refreshChoices();
+                }
+            },
+        },
         config() {
             // the host swaps the working copy object on adopt (save, discard,
             // external change) — entries materialized against the previous
@@ -623,6 +633,9 @@ export default {
             this.materialized = {};
         },
         selectedName() {
+            if (this.active) {
+                this.refreshChoices();
+            }
             this.openPanels = ['_config'];
             if (this.mode === 'scene' && !this.hasAnyOverridable) {
                 // the newly selected agent has nothing to override — don't
@@ -723,7 +736,7 @@ export default {
                     // the template has two roots, so $el is not the panel
                     const el = this.$refs.settingsContent?.$el?.querySelector(`[data-agent-section="${section}"]`);
                     if (el) {
-                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        scrollSettingIntoView(el);
                     }
                 });
             });
@@ -1109,6 +1122,19 @@ export default {
         dropPendingOps() {
             forgetPendingOps(this.pendingOps, this.registryRepairs);
             this.committingAgents = {};
+        },
+
+        // choices read from files or other components are only as fresh as
+        // the agent's last status emit
+        refreshChoices() {
+            if (!this.selectedName || !this.connectionReady()) {
+                return;
+            }
+            this.getWebsocket().send(JSON.stringify({
+                type: 'agent_config',
+                action: 'refresh_choices',
+                agent_type: this.selectedName,
+            }));
         },
 
         sendRegistryRequest(action, actionKey, extra) {

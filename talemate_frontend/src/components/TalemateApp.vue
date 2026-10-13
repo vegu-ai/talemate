@@ -231,7 +231,7 @@
 
       <v-container fluid style="height: 100%;">
 
-        <v-tabs-window v-model="tab" style="height: 100%;">
+        <v-tabs-window v-model="tab" style="height: 100%;" :class="{ 'settings-pinned-window': tab === 'settings' }">
           <!-- HOME -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
             <SceneLanding
@@ -2311,6 +2311,12 @@ export default {
 /* prompt lists keep their row layout when the drawer becomes scrollable */
 .stable-scrollbar-gutter :deep(.v-navigation-drawer__content) {
   scrollbar-gutter: stable;
+}
+
+/* the window clips with overflow: hidden, which makes it the scroll container
+   of the settings toolbar's sticky position; clip does not */
+.settings-pinned-window {
+  overflow: clip;
 }
 
 /* fixed over v-main via the layout offsets: an in-flow scroller shifts during

@@ -10,6 +10,7 @@ from types import SimpleNamespace
 
 import pytest
 
+import talemate.agents.visual.backends.comfyui as comfyui_backend
 import talemate.agents.visual.backends.talemate_client as talemate_client_backend
 from talemate.agents.visual.agent import VisualAgent
 
@@ -95,3 +96,45 @@ async def test_status_emit_fills_every_backend_choice_list(visual_agent, monkeyp
         .config["client"]
         .choices
     )
+
+
+def test_refresh_choices_lists_a_workflow_added_after_startup(
+    visual_agent, monkeypatch, tmp_path
+):
+    monkeypatch.setattr(comfyui_backend, "WORKFLOW_DIR", tmp_path)
+    (tmp_path / "first.json").write_text("{}")
+    visual_agent.refresh_choices()
+    assert [
+        c["value"] for c in workflow_choices(visual_agent, "comfyui_image_create")
+    ] == ["first.json"]
+
+    (tmp_path / "second.json").write_text("{}")
+    visual_agent.refresh_choices()
+
+    for action_name in ("comfyui_image_create", "comfyui_image_edit"):
+        assert [c["value"] for c in workflow_choices(visual_agent, action_name)] == [
+            "first.json",
+            "second.json",
+        ]
+
+
+def test_refresh_choices_lists_a_vision_client_added_after_startup(
+    visual_agent, monkeypatch
+):
+    clients = [("seeing", SimpleNamespace(supports_vision=True, model_name="a"))]
+    monkeypatch.setattr(
+        talemate_client_backend.instance, "client_instances", lambda: clients
+    )
+    visual_agent.refresh_choices()
+    clients.append(
+        ("also-seeing", SimpleNamespace(supports_vision=True, model_name="b"))
+    )
+
+    visual_agent.refresh_choices()
+
+    choices = (
+        visual_agent.actions["talemate_client_image_analyzation"]
+        .config["client"]
+        .choices
+    )
+    assert [choice["value"] for choice in choices] == ["seeing", "also-seeing"]

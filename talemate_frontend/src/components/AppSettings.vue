@@ -1,24 +1,26 @@
 <template>
-    <v-card variant="text" v-if="app_config !== null">
-        <v-toolbar rounded="md" density="compact" color="mutedbg" class="pl-2 mb-1 app-settings-toolbar">
-            <v-icon class="mr-2" color="primary">{{ currentPage?.icon || 'mdi-cog' }}</v-icon>
-            <span class="text-title-small mr-4">{{ currentPage?.group }} <span class="text-muted">/</span> {{ currentPage?.title }}</span>
-            <v-btn color="primary" variant="text" prepend-icon="mdi-check-circle-outline" :disabled="!canSave" @click="saveConfig">Save</v-btn>
-            <v-btn v-if="dirty" color="muted" variant="text" prepend-icon="mdi-undo" @click="discard">Discard</v-btn>
-            <span v-if="dirty" class="text-muted text-body-small mr-2">Unsaved changes.</span>
-            <v-chip v-if="agentApplyPending && !saveErrorIsApplyFailure" size="small" label color="warning" variant="text" prepend-icon="mdi-alert-circle-outline" class="mr-2">
-                Apply pending — press Save to retry.
-            </v-chip>
-            <v-chip v-if="saveError" size="small" label color="error" variant="text" prepend-icon="mdi-alert-circle-outline" class="mr-2">
-                {{ saveErrorText }}
-                <v-tooltip v-if="saveErrorIsApplyFailure" activator="parent" location="bottom" max-width="400">The settings were stored, but the running clients and agents are still the old ones. Saving again re-applies the stored configuration — no further edits are needed.</v-tooltip>
-            </v-chip>
-            <v-chip v-if="externalChange" size="small" label color="warning" variant="text" prepend-icon="mdi-alert-circle-outline" class="mr-2">
-                Changed outside this view — saving overwrites
-                <v-tooltip activator="parent" location="bottom" max-width="400">The configuration was changed elsewhere (another window or the help agent) while you have unsaved edits here. Discard to load the latest, or save to overwrite.</v-tooltip>
-            </v-chip>
-            <v-spacer></v-spacer>
-        </v-toolbar>
+    <v-card variant="text" v-if="app_config !== null" class="app-settings">
+        <div class="app-settings-toolbar-pin">
+            <v-toolbar rounded="md" density="compact" color="mutedbg" class="pl-2 app-settings-toolbar">
+                <v-icon class="mr-2" color="primary">{{ currentPage?.icon || 'mdi-cog' }}</v-icon>
+                <span class="text-title-small mr-4">{{ currentPage?.group }} <span class="text-muted">/</span> {{ currentPage?.title }}</span>
+                <v-btn color="primary" variant="text" prepend-icon="mdi-check-circle-outline" :disabled="!canSave" @click="saveConfig">Save</v-btn>
+                <v-btn v-if="dirty" color="muted" variant="text" prepend-icon="mdi-undo" @click="discard">Discard</v-btn>
+                <span v-if="dirty" class="text-muted text-body-small mr-2">Unsaved changes.</span>
+                <v-chip v-if="agentApplyPending && !saveErrorIsApplyFailure" size="small" label color="warning" variant="text" prepend-icon="mdi-alert-circle-outline" class="mr-2">
+                    Apply pending — press Save to retry.
+                </v-chip>
+                <v-chip v-if="saveError" size="small" label color="error" variant="text" prepend-icon="mdi-alert-circle-outline" class="mr-2">
+                    {{ saveErrorText }}
+                    <v-tooltip v-if="saveErrorIsApplyFailure" activator="parent" location="bottom" max-width="400">The settings were stored, but the running clients and agents are still the old ones. Saving again re-applies the stored configuration — no further edits are needed.</v-tooltip>
+                </v-chip>
+                <v-chip v-if="externalChange" size="small" label color="warning" variant="text" prepend-icon="mdi-alert-circle-outline" class="mr-2">
+                    Changed outside this view — saving overwrites
+                    <v-tooltip activator="parent" location="bottom" max-width="400">The configuration was changed elsewhere (another window or the help agent) while you have unsaved edits here. Discard to load the latest, or save to overwrite.</v-tooltip>
+                </v-chip>
+                <v-spacer></v-spacer>
+            </v-toolbar>
+        </div>
 
         <!-- surface-colored canvas: the reused editors were designed against the
              old modal's card surface — on the bare viewport background their
@@ -55,7 +57,7 @@
                     <AppSettingsDecisionModel ref="decision-model" :config="app_config" :status="decisionModelStatus" />
                 </v-window-item>
                 <v-window-item value="agents">
-                    <AppSettingsAgents ref="agents" :config="app_config" :dirty="dirty"
+                    <AppSettingsAgents ref="agents" :config="app_config" :dirty="dirty" :active="visible && page === 'agents'"
                         @extra-dirty="(value) => setExtraDirty('agents', value)"
                         @extra-error="(error) => setSaveError(error)" />
                 </v-window-item>
@@ -113,6 +115,7 @@
 </template>
 
 <script>
+import { scrollSettingIntoView } from '@/utils/settingsScroll';
 import AppSettingsPageHeader from './AppSettingsPageHeader.vue';
 import AppSettingsGameplay from './AppSettingsGameplay.vue';
 import AppSettingsPlayerCharacter from './AppSettingsPlayerCharacter.vue';
@@ -318,7 +321,7 @@ export default {
             if (!el) {
                 return;
             }
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            scrollSettingIntoView(el);
             el.classList.remove('setting-flash');
             // restart the animation if it was already applied
             void el.offsetWidth;
@@ -716,9 +719,34 @@ export default {
 </script>
 
 <style scoped>
-.app-settings-toolbar,
+.app-settings-toolbar-pin,
 .app-settings-content {
     max-width: 1200px;
+}
+
+/* the card clips its content (overflow: hidden), which would make it the
+   toolbar's scroll container instead of the page */
+.app-settings {
+    overflow: visible;
+}
+
+/* the toolbar grows to a second row when its buttons and chips do not fit */
+.app-settings-toolbar :deep(.v-toolbar__content) {
+    height: auto !important;
+    min-height: 48px;
+    flex-wrap: wrap;
+    row-gap: 2px;
+    padding-block: 4px;
+}
+
+/* the page scrolls under the app bar; the padding and background keep the
+   content from showing in the gap between the toolbar and the sheet */
+.app-settings-toolbar-pin {
+    position: sticky;
+    top: var(--v-layout-top, 0px);
+    z-index: 3;
+    padding-bottom: 4px;
+    background-color: rgb(var(--v-theme-background));
 }
 </style>
 

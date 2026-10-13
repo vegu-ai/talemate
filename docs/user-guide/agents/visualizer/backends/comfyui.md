@@ -175,7 +175,7 @@ After exporting, place the workflow JSON file in Talemate's `templates/comfyui-w
     Workflow files must be placed in Talemate's `templates/comfyui-workflows` directory, not ComfyUI's workflows directory. Talemate loads workflows from its own templates directory to ensure compatibility and proper integration.
 
 !!! tip "Workflow Not Appearing?"
-    If your workflow file doesn't appear in the agent's settings dropdown after placing it in the correct directory, try reloading the Talemate browser window. The workflow list is refreshed when the page loads.
+    New workflow files appear when you open **Settings → Agents → Visualizer**. If the Visualizer is already open, select another agent and then the Visualizer again.
 
 !!! info "Hot-Reloading Workflows"
     Changes to workflow files are automatically detected and reloaded by the agent. After modifying a workflow file, your changes will be applied to the next image generation without needing to restart Talemate or reload the browser window.

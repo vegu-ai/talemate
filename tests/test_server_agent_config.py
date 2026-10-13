@@ -18,9 +18,13 @@ import asyncio
 
 import pytest
 
+import talemate.agents.base as agents_base
+import talemate.agents.visual.backends.comfyui as comfyui_backend
 import talemate.config.state as config_state
 import talemate.emit.async_signals as async_signals
 import talemate.server.agent_config as server_agent_config
+from talemate.agents.visual.agent import VisualAgent
+from talemate.agents.visual.schema import GEN_TYPE, PROMPT_TYPE
 from talemate.config import Config
 from talemate.config.schema import Agent
 from talemate.server.agent_config import AgentConfigPlugin
@@ -61,6 +65,12 @@ class _FakeAgent:
         self.handler = handler
         self.children: dict[str, str] = {}
         self.status_task: asyncio.Task | None = None
+        self.choice_refreshes = 0
+        self.choices_status_emits = 0
+        self.status_emits = 0
+
+    def refresh_choices(self):
+        self.choice_refreshes += 1
 
     def is_dynamic_registry(self, action_key):
         return action_key == REGISTRY_KEY
@@ -79,9 +89,14 @@ class _FakeAgent:
         config.agents[self.agent_type] = Agent(name=self.agent_type)
         config.dirty = True
 
+    async def emit_choices_status(self):
+        self.choices_status_emits += 1
+        self.handler.queue_put({"type": "agent_status", "name": self.agent_type})
+
     async def emit_status(self, *args, **kwargs):
         """Debounced, like the real one: the status lands on a later loop pass,
         after the completion its caller queues on return."""
+        self.status_emits += 1
         self.status_task = asyncio.create_task(self._emit_status_debounced())
 
     async def _emit_status_debounced(self):
@@ -221,3 +236,65 @@ async def test_request_id_is_optional(plugin):
     completion = _completion(plugin)
     assert completion["action"] == "operation_done"
     assert "request_id" not in completion
+
+
+@pytest.mark.asyncio
+async def test_refresh_choices_rescans_then_emits_the_choices_status(plugin):
+    await plugin.handle({"action": "refresh_choices", "agent_type": "tts"})
+
+    assert plugin.agent.choice_refreshes == 1
+    assert plugin.agent.choices_status_emits == 1
+    # the full status emit runs per-backend hooks that can reach servers
+    assert plugin.agent.status_emits == 0
+    assert _types(plugin) == ["agent_status"]
+
+
+@pytest.mark.asyncio
+async def test_refresh_choices_reaches_no_comfyui_server(plugin, monkeypatch):
+    agent = VisualAgent()
+    backend = comfyui_backend.Backend(
+        api_url="http://127.0.0.1:1",
+        workflow=comfyui_backend.Workflow(nodes={}, mtime=0, path="unused.json"),
+        gen_type=GEN_TYPE.TEXT_TO_IMAGE,
+        prompt_type=PROMPT_TYPE.DESCRIPTIVE,
+    )
+    agent.actions["_config"].config["backend"].value = "comfyui"
+    agent.backend = backend
+    assert agent.comfyui_handler("backend") is not None
+    monkeypatch.setattr(server_agent_config, "AGENTS", {"visual": agent})
+
+    reached = []
+
+    def reached_the_server(*args, **kwargs):
+        reached.append(args)
+        raise RuntimeError("the ComfyUI server was contacted")
+
+    for name in ("ready", "test_connection", "ensure_test_connection_task"):
+        monkeypatch.setattr(
+            comfyui_backend.Backend, name, reached_the_server, raising=False
+        )
+    monkeypatch.setattr(
+        comfyui_backend.Backend, "models", property(reached_the_server), raising=False
+    )
+    emitted = []
+    monkeypatch.setattr(
+        agents_base, "emit", lambda typ, **kwargs: emitted.append((typ, kwargs))
+    )
+
+    await plugin.handle({"action": "refresh_choices", "agent_type": "visual"})
+    await asyncio.sleep(0.2)
+
+    assert reached == []
+    assert [typ for typ, _ in emitted] == ["agent_status"]
+    assert emitted[0][1]["id"] == "visual"
+    assert agent.actions["comfyui_image_create"].config["workflow"].choices
+
+
+@pytest.mark.asyncio
+async def test_refresh_choices_for_an_unknown_agent_is_refused(plugin):
+    await plugin.handle({"action": "refresh_choices", "agent_type": "nonexistent"})
+
+    assert plugin.agent.choice_refreshes == 0
+    assert plugin.websocket_handler.messages[0]["error"]["message"] == (
+        "Agent 'nonexistent' not found"
+    )

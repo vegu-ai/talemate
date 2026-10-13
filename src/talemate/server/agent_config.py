@@ -221,6 +221,20 @@ class AgentConfigPlugin(Plugin):
         agent.rename_dynamic_child_label(action_key, slug, label)
         await self._persist_and_broadcast(agent, data)
 
+    async def handle_refresh_choices(self, data: dict):
+        """Rescan the choices an agent reads from outside itself and re-emit
+        its config schema, for a settings view that is about to show them.
+
+        Required: ``agent_type``.
+        """
+        agent_type = data.get("agent_type")
+        agent = AGENTS.get(agent_type) if agent_type else None
+        if not agent:
+            await self._refuse(data, f"Agent '{agent_type}' not found")
+            return
+        agent.refresh_choices()
+        await agent.emit_choices_status()
+
     # ------------------------------------------------------------------
     # Per-scene agent overrides
     # ------------------------------------------------------------------

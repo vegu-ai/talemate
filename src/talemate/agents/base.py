@@ -1240,6 +1240,14 @@ class Agent(ABC):
         self._emit_status_debounce_task = None
         await self._do_emit_status()
 
+    def refresh_choices(self):
+        """Refill the config choices that are read from outside the agent."""
+
+    async def emit_choices_status(self):
+        """Publish the agent's config schema without a subclass's backend
+        status hooks, which can reach external servers."""
+        await Agent.emit_status(self)
+
     async def emit_status(self, processing: bool = None):
         # should keep a count of processing requests, and when the
         # number is 0 status is "idle", if the number is greater than 0

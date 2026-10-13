@@ -19,6 +19,8 @@ The JSON editor displays the complete game state as a JSON object. You can direc
 2. Click outside the editor to save your changes
 3. If the JSON is invalid, an error message will appear and changes will not be saved
 
+The editor follows the game state while it is open: when the Director, a node graph or the decision model changes a variable, the new value appears without switching tabs. If you have unsaved edits at that moment, they stay as they are and a **Changed outside this view** note appears next to **Refresh**. Click **Refresh** to load the latest state, or keep editing and save to overwrite it.
+
 This is useful for:
 
 - Adding new variables

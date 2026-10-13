@@ -47,6 +47,8 @@
   - "Node Editor: New nodes and events cover the decision model, character knowledge and disclosures, game state, arrivals and departures, the world snapshot, reasoning effort per request and preparing images as references."
   - "Interface: Updated typography, controls and layouts follow Material Design 3."
   - "Bundled Stories: The original Simulation Suite is now hidden from new scene creation to steer new stories to Simulation Suite V2; existing saves stay available. Infinity Quest has a more concrete backstory."
+  - "Editor and Writing Styles: The World Editor's writing style menu has an Edit item that opens the selected style in the Templates tab."
+  - "Story and World: The World Editor's Game State view updates when the Director, nodes or the decision model change the game state, and warns instead of overwriting your unsaved edits."
   fixes:
   - "Saves and History: Save As protects read-only destinations, keeps errors open for correction, and preserves pending scene-settings edits when saving is cancelled."
   - "Saves and History: Unsaved changes trigger a warning before leaving; read-only stories keep their save identity and correctly mark changes autosave cannot write."
@@ -84,6 +86,8 @@
   - "Voice and Startup: Windows installation and frontend startup are repaired; fresh source installs start without configuration, and installed tokenizers need no startup download."
   - "Node Editor: Time nodes have valid defaults, inactive characters have no actor output, and test runs stop when switching scenes."
   - "Node Editor: Request World State outputs the world snapshot after its update."
+  - "Story and World: A new story's World Editor no longer starts with the previous story's writing style, and the templates links in its writing style and spice menus open the Templates tab."
+  - "Story and World: New Files in the prompt editor's scene group with the scene category create a scene-level template that Scene Direction's Instruction template lists."
   - "Security: Generated HTML is displayed safely across story messages, chats and previews."
   migrations:
   - "Scene Revisions (breaking change): Upgrading from 0.39.0 starts revisions from a current save when you first load or save it, in `<project>/data.db`. The new system ignores `<project>/changelog/` and leaves it untouched; you can delete that old directory by hand. Earlier revisions are not converted."

@@ -276,7 +276,7 @@
                             label="Category"
                             required
                             :rules="[v => !!v || 'Category is required']"
-                            hint="Select the category this template belongs to"
+                            :hint="newFileCategoryHint"
                             persistent-hint
                         ></v-select>
                         <v-text-field
@@ -336,6 +336,7 @@ import TemplateStateChip from './TemplateStateChip.vue';
 import TemplateDiffView from './TemplateDiffView.vue';
 import ConfirmActionPrompt from '../ConfirmActionPrompt.vue';
 import { OVERRIDE_STATES, markerKindLabel, overrideState } from '@/utils/templateCompatibility.js';
+import { SCENE_CATEGORY, newTemplateUid, newTemplateCategoryHint } from '@/utils/promptTemplateUid.js';
 
 export default {
     name: 'GroupTab',
@@ -487,16 +488,18 @@ export default {
             }
             return `Remove the ${this.group} copy of ${uid}? Talemate will use the copy in the ${this.fallbackGroup} group, not the shipped default.`;
         },
+        newFileCategoryHint() {
+            return newTemplateCategoryHint(this.newFileAgent, { sceneGroup: this.isScene });
+        },
         // Extract unique agents/categories from templates for the new file dialog
         availableAgents() {
             const agents = new Set();
             for (const t of this.allTemplates) {
-                // Use 'scene' for templates with empty agent
-                agents.add(t.agent || 'scene');
+                if (this.isScene && (t.agent === '' || t.agent === SCENE_CATEGORY)) continue;
+                agents.add(t.agent || SCENE_CATEGORY);
             }
-            // If in scene group and 'scene' is not present, add it explicitly
-            if (this.isScene && !agents.has('scene')) {
-                agents.add('scene');
+            if (this.isScene) {
+                agents.add(SCENE_CATEGORY);
             }
             return Array.from(agents).sort();
         },
@@ -735,7 +738,7 @@ export default {
         createNewFile() {
             if (!this.newFileFormValid || !this.newFileAgent || !this.newFileName) return;
 
-            const uid = `${this.newFileAgent}.${this.newFileName}`;
+            const uid = newTemplateUid(this.newFileAgent, this.newFileName, { sceneGroup: this.isScene });
 
             this.getWebsocket().send(JSON.stringify({
                 type: 'prompts',

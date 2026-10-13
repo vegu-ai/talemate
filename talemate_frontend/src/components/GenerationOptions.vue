@@ -22,6 +22,15 @@
                     <v-list-item-title>{{ template.name }}</v-list-item-title>
                     <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
                 </v-list-item>
+                <template v-if="generationOptions.writing_style">
+                    <v-divider class="mb-1" />
+                    <v-list-item
+                        :title="`Edit ${generationOptions.writing_style.name}`"
+                        prepend-icon="mdi-pencil-outline"
+                        role="menuitem"
+                        @click="editWritingStyle"
+                    />
+                </template>
             </v-list>
         </v-menu>
 
@@ -134,6 +143,10 @@ export default {
         },
         openTemplates() {
             this.showManagerEditor("templates");
+        },
+        editWritingStyle() {
+            const { group, uid } = this.generationOptions.writing_style;
+            this.showManagerEditor("templates", `${group}__${uid}`);
         },
         spiceLevelFormat(value) {
             // render as %

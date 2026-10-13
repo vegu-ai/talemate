@@ -3,7 +3,11 @@
         <v-card variant="text">
             <v-card-text>
                 <div class="d-flex align-center mb-2">
-                    <v-btn size="small" :disabled="busy" color="primary" variant="text" class="mr-2" prepend-icon="mdi-refresh" @click.stop="refresh">Refresh</v-btn>
+                    <v-btn size="small" :disabled="busy" color="primary" variant="text" class="mr-2" prepend-icon="mdi-refresh" @mousedown.prevent @click.stop="refresh">Refresh</v-btn>
+                    <v-chip v-if="externalChange" size="small" label color="warning" variant="text" prepend-icon="mdi-alert-circle-outline" class="mr-2">
+                        Changed outside this view — saving overwrites
+                        <v-tooltip activator="parent" location="bottom" max-width="400">The game state was changed elsewhere while you have unsaved edits here. Refresh to load the latest, or keep editing and save to overwrite.</v-tooltip>
+                    </v-chip>
                     <v-spacer></v-spacer>
                 </div>
 
@@ -80,6 +84,7 @@ export default {
             lastLoadedJSON: '',
             validationError: null,
             gameStatePaths: [],
+            outsideJSON: null,
         };
     },
     computed: {
@@ -95,6 +100,12 @@ export default {
         gameStateVariables() {
             return this.scene?.data?.game_state?.variables || {};
         },
+        dirty() {
+            return this.gameStateJSON !== this.lastLoadedJSON;
+        },
+        externalChange() {
+            return this.dirty && this.outsideJSON !== null;
+        },
     },
     watch: {
         isVisible(visible) {
@@ -107,13 +118,39 @@ export default {
                 if (variables) {
                     const paths = extractGameStatePaths(variables, '', { includeContainers: true });
                     this.gameStatePaths = [...new Set(paths)].sort();
+                    this.onSceneVariables(variables);
                 }
             },
             deep: true,
             immediate: true,
         },
+        dirty(dirty) {
+            if (!dirty && this.outsideJSON !== null) {
+                this.adopt(this.outsideJSON);
+            }
+        },
     },
     methods: {
+        adopt(json) {
+            this.gameStateJSON = json;
+            this.lastLoadedJSON = json;
+            this.outsideJSON = null;
+            this.validationError = null;
+        },
+        onSceneVariables(variables) {
+            // a pending save's own reply replaces the editor
+            if (!this.loaded || this.busy) {
+                return;
+            }
+            const json = JSON.stringify(variables, null, 2);
+            if (json === this.lastLoadedJSON) {
+                this.outsideJSON = null;
+            } else if (this.dirty && json !== this.gameStateJSON) {
+                this.outsideJSON = json;
+            } else {
+                this.adopt(json);
+            }
+        },
         refresh() {
             this.getWebsocket().send(
                 JSON.stringify({ type: 'devtools', action: 'get_game_state' })
@@ -129,6 +166,10 @@ export default {
 
             try {
                 const parsed = JSON.parse(this.gameStateJSON);
+                if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                    this.validationError = 'Game state must be a JSON object';
+                    return;
+                }
                 this.commitChanges(parsed);
             } catch (e) {
                 this.validationError = `Invalid JSON: ${e.message}`;
@@ -146,25 +187,22 @@ export default {
         },
         handleMessage(message) {
             if (message.type === 'devtools') {
-                if (message.action === 'game_state') {
+                if (message.action === 'operation_done' && message.failed_action === 'update_game_state' && this.busy) {
+                    this.busy = false;
+                    this.validationError = message.error.message;
+                } else if (message.action === 'game_state') {
                     this.loaded = true;
                     this.busy = false;
-                    const json = JSON.stringify(message.data.variables || {}, null, 2);
-                    this.gameStateJSON = json;
-                    this.lastLoadedJSON = json;
-                    this.validationError = null;
-                    
+                    this.adopt(JSON.stringify(message.data.variables || {}, null, 2));
+
                     // Extract paths from game state variables
                     const variables = message.data.variables || {};
                     const paths = extractGameStatePaths(variables, '', { includeContainers: true });
                     this.gameStatePaths = [...new Set(paths)].sort();
                 } else if (message.action === 'game_state_updated') {
                     this.busy = false;
-                    const json = JSON.stringify(message.data.variables || {}, null, 2);
-                    this.gameStateJSON = json;
-                    this.lastLoadedJSON = json;
-                    this.validationError = null;
-                    
+                    this.adopt(JSON.stringify(message.data.variables || {}, null, 2));
+
                     // Extract paths from game state variables
                     const variables = message.data.variables || {};
                     const paths = extractGameStatePaths(variables, '', { includeContainers: true });

@@ -175,13 +175,17 @@ class DevToolsPlugin(Plugin):
     async def handle_update_game_state(self, data):
         scene = self.scene
         if not scene:
-            await self.signal_operation_failed("No active scene")
+            await self.signal_operation_failed(
+                "No active scene", failed_action="update_game_state"
+            )
             return
 
         try:
             payload = GameStateVariablesPayload(**data)
         except Exception as exc:
-            await self.signal_operation_failed(str(exc))
+            await self.signal_operation_failed(
+                str(exc), failed_action="update_game_state"
+            )
             return
 
         # Replace variables with provided structure (must be JSON-serializable)

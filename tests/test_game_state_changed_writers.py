@@ -126,6 +126,45 @@ class TestWritePath:
         }
 
     @pytest.mark.asyncio
+    async def test_a_change_emits_the_scene_status(self, scene):
+        with patch.object(type(scene), "emit_status", autospec=True) as emit_status:
+            update_game_state(scene, {"player": {"health": 6, "mana": 2}})
+            set_game_state_value(scene, "weather", "rain")
+            unset_game_state_value(scene, "weather")
+        assert emit_status.call_count == 3
+        emit_status.assert_called_with(scene)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "before, after",
+        [
+            ({}, {"missing": None}),
+            ({"missing": None}, {}),
+            ({}, {"empty": {}}),
+            ({"empty": {}}, {}),
+            ({"player": {"health": 5}}, {"player": {"health": 5, "bag": {}}}),
+        ],
+    )
+    async def test_a_structural_change_emits_the_scene_status_without_leaf_events(
+        self, scene, changes, before, after
+    ):
+        scene.game_state.variables = before
+        with patch.object(type(scene), "emit_status", autospec=True) as emit_status:
+            replace_game_state_variables(scene, after)
+            await settle()
+        emit_status.assert_called_once_with(scene)
+        assert changes == []
+
+    @pytest.mark.asyncio
+    async def test_same_value_emits_no_scene_status(self, scene):
+        with patch.object(type(scene), "emit_status", autospec=True) as emit_status:
+            set_game_state_value(scene, "player/health", 5)
+            replace_game_state_variables(
+                scene, {"player": {"health": 5}, "weather": "sun"}
+            )
+        emit_status.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_event_values_are_copies(self, scene, changes):
         items = ["sword"]
         set_game_state_value(scene, "items", items)

@@ -72,6 +72,7 @@
 <script>
 import TemplateStateChip from './TemplateStateChip.vue';
 import { overrideState, worstState } from '@/utils/templateCompatibility.js';
+import { templateFolder } from '@/utils/promptTemplateUid.js';
 
 export default {
     name: 'TemplateTree',
@@ -115,8 +116,7 @@ export default {
             const agentMap = {};
 
             for (const template of this.templates) {
-                // Use 'scene' as the agent/category when agent is empty (scene templates)
-                const agent = template.agent || 'scene';
+                const agent = templateFolder(template.agent);
                 // For scene templates with empty agent, the UID should be scene.{name}
                 const uid = template.uid || `scene.${template.name}`;
                 const isOverride = this.isOverrideTemplate(template);
@@ -325,7 +325,7 @@ export default {
             const dotIndex = uid.indexOf('.');
             if (dotIndex === -1) return;
 
-            const agent = uid.substring(0, dotIndex);
+            const agent = templateFolder(uid.substring(0, dotIndex));
             const templatePath = uid.substring(dotIndex + 1);
 
             // Collect all folder paths that need to be opened

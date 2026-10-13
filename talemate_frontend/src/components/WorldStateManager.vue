@@ -258,6 +258,10 @@ export default {
         'selected-character',
     ],
     watch: {
+        'scene.data.id'() {
+            this.loadWritingStyleTemplate = true;
+            this.syncWritingStyle();
+        },
         visible(val) {
             if(val) {
                 // When the editor is reopened, refresh the active tab's content
@@ -351,11 +355,20 @@ export default {
         'isInputDisabled',
         'autocompleteRequest',
         'autocompleteInfoMessage',
+        'openWorldStateManager',
     ],
     methods: {
 
         updateGenerationOptions(options) {
             this.generationOptions = options;
+        },
+
+        syncWritingStyle() {
+            if (!this.loadWritingStyleTemplate || !this.templates.by_type || !this.scene?.data) {
+                return;
+            }
+            this.$refs.generationOptions?.loadWritingStyle(this.scene.data.writing_style_template);
+            this.loadWritingStyleTemplate = false;
         },
 
         emitEditorState(tab, meta) {
@@ -403,6 +416,10 @@ export default {
         },
 
         show(tab, sub1, sub2, sub3) {
+            if (tab === 'templates') {
+                this.openWorldStateManager('templates', sub1);
+                return;
+            }
             //this.reset();
             this.requestCharacterList();
             this.requestPins();
@@ -720,12 +737,7 @@ export default {
             }
             else if (message.action == 'templates') {
                 this.templates = message.data;
-                this.$nextTick(() => {
-                    if(this.loadWritingStyleTemplate && this.scene.data && this.scene.data.writing_style_template) {
-                        this.$refs.generationOptions.loadWritingStyle(this.scene.data.writing_style_template);
-                        this.loadWritingStyleTemplate = false;
-                    }
-                });
+                this.$nextTick(() => this.syncWritingStyle());
             }
             else if(message.action === 'character_deleted') {
                 this.requestCharacterList()

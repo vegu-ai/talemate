@@ -651,6 +651,94 @@ class TestPromptsPluginCreateTemplate:
         assert "already exists" in response["data"]["error"]
 
 
+class _TemplateDirScene(Scene):
+    template_dir = None
+
+    def __init__(self, template_dir):
+        super().__init__()
+        self.name = "test-scene"
+        self.template_dir = str(template_dir)
+
+
+class TestPromptsPluginSceneGroupFiles:
+    """Root-level scene files (agent "") against agent subfolders."""
+
+    @pytest.fixture
+    def plugin(self, tmp_path):
+        handler = MockWebsocketHandler(scene=_TemplateDirScene(tmp_path))
+        return PromptsPlugin(handler)
+
+    async def _call(self, plugin, name, **data):
+        plugin.websocket_handler.messages.clear()
+        await getattr(plugin, f"handle_{name}")(data)
+        return plugin.websocket_handler.messages[0]["data"]
+
+    @pytest.mark.asyncio
+    async def test_empty_agent_creates_a_root_level_file(self, plugin, tmp_path):
+        reply = await self._call(
+            plugin,
+            "create_template",
+            uid=".scene-include",
+            group="scene",
+            content="{# new #}",
+        )
+
+        assert reply["success"] is True
+        assert (tmp_path / "scene-include.jinja2").read_text() == "{# new #}"
+        assert not (tmp_path / "scene").exists()
+
+    @pytest.mark.asyncio
+    async def test_an_agent_category_creates_in_its_subfolder(self, plugin, tmp_path):
+        reply = await self._call(
+            plugin,
+            "create_template",
+            uid="director.scene-override",
+            group="scene",
+            content="{# new #}",
+        )
+
+        assert reply["success"] is True
+        assert (tmp_path / "director" / "scene-override.jinja2").exists()
+        assert not (tmp_path / "scene-override.jinja2").exists()
+
+    @pytest.mark.asyncio
+    async def test_root_level_file_opens_saves_and_deletes(self, plugin, tmp_path):
+        uid = ".scene-include"
+        await self._call(
+            plugin, "create_template", uid=uid, group="scene", content="first"
+        )
+
+        opened = await self._call(plugin, "get_template", uid=uid, group="scene")
+        assert opened["content"] == "first"
+        assert opened["group"] == "scene"
+        assert opened["readonly"] is False
+
+        saved = await self._call(
+            plugin, "save_template", uid=uid, group="scene", content="second"
+        )
+        assert saved["success"] is True
+        assert (tmp_path / "scene-include.jinja2").read_text() == "second"
+
+        deleted = await self._call(plugin, "delete_template", uid=uid, group="scene")
+        assert deleted["success"] is True
+        assert not (tmp_path / "scene-include.jinja2").exists()
+
+    @pytest.mark.asyncio
+    async def test_root_level_file_is_listed_with_an_empty_agent(
+        self, plugin, tmp_path
+    ):
+        await self._call(
+            plugin, "create_template", uid=".scene-include", group="scene", content="x"
+        )
+
+        listed = await self._call(plugin, "list_templates")
+
+        [template] = [t for t in listed["templates"] if t["name"] == "scene-include"]
+        assert template["agent"] == ""
+        assert template["uid"] == ".scene-include"
+        assert template["available_in"] == ["scene"]
+
+
 class TestPromptsPluginSetTemplateSource:
     """Tests for handle_set_template_source handler."""
 

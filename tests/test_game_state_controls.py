@@ -242,7 +242,7 @@ async def test_full_game_state_updates_are_persisted(scene):
 
     assert scene.game_state.variables == {"score": 2}
     scene.attempt_auto_save.assert_awaited_once()
-    emit_status.assert_called_once_with(scene)
+    emit_status.assert_called_with(scene)
     plugin.signal_operation_done.assert_awaited_once_with(signal_only=True)
 
 
@@ -262,7 +262,7 @@ async def test_path_scoped_variable_updates_preserve_neighbouring_edits(scene):
     assert scene.game_state.variables == {"player": {"name": "Aria", "health": 9}}
     assert scene.load_active_pins.await_count == 2
     assert scene.attempt_auto_save.await_count == 2
-    assert emit_status.call_count == 2
+    assert emit_status.call_count == 4
     assert plugin.signal_operation_done.await_args_list == [
         call(signal_only=True),
         call(signal_only=True),
@@ -500,3 +500,30 @@ def test_the_constrained_value_type_follows_the_grid():
     fractional = GameStatePathSettings(minimum=0.5, maximum=2.5, step=0.25)
     assert fractional.constrain(1.31) == 1.25
     assert isinstance(fractional.constrain(1.31), float)
+
+
+async def test_a_refused_full_update_names_itself(scene):
+    scene.game_state.variables = {"player": {"health": 8}}
+    plugin = _plugin(scene)
+    plugin.signal_operation_failed = AsyncMock()
+
+    await plugin.handle_update_game_state({"variables": [1]})
+
+    plugin.signal_operation_failed.assert_awaited_once()
+    assert (
+        plugin.signal_operation_failed.await_args.kwargs["failed_action"]
+        == "update_game_state"
+    )
+    assert scene.game_state.variables == {"player": {"health": 8}}
+
+
+async def test_a_full_update_without_a_scene_names_itself(scene):
+    plugin = _plugin(scene)
+    plugin.websocket_handler.scene = None
+    plugin.signal_operation_failed = AsyncMock()
+
+    await plugin.handle_update_game_state({"variables": {"score": 2}})
+
+    plugin.signal_operation_failed.assert_awaited_once_with(
+        "No active scene", failed_action="update_game_state"
+    )

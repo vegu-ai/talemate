@@ -1224,9 +1224,10 @@
     reimport with loss of manually added database-only entries.
 - path: user-guide/world-editor/generation-settings.md
   title: Generation Settings
-  summary: World Editor Generation Settings apply one-off Ctrl/Cmd-click instructions, Alt-click rewrites, Ctrl+Alt guided
-    rewrites and session-remembered length per content type (8–1024 tokens). Covers writing styles, spice collections/chance
-    and history-entry seed instructions, excluding live dialogue/narration.
+  summary: World Editor Generation Settings apply one-off Ctrl/Cmd-click instructions, Alt-click rewrites, Ctrl+Alt
+    guided rewrites and session-remembered length per content type (8–1024 tokens). Covers writing styles (Edit opens
+    one in Templates), spice collections/chance and history-entry seed instructions, excluding live
+    dialogue/narration.
 - path: user-guide/world-editor/history/index.md
   title: History
   summary: Manage static backstory, base summaries and layered history. Covers presence badges, static Known by, perception
@@ -1253,9 +1254,10 @@
     activation, overriding manual toggles, AI checks and decay.
 - path: user-guide/world-editor/scene/direction.md
   title: Direction
-  summary: Scene Direction defines overall story intention, current phase intention and scene type for narrator and director
-    guidance; both intentions are required for autonomous direction. Includes scene-specific Director Instructions versus
-    global Custom Instructions and reusable type templates for style/pacing.
+  summary: Scene Direction defines overall story intention, current phase intention and scene type for narrator and
+    director guidance; both intentions are required for autonomous direction. Includes scene-specific Director
+    Instructions versus global Custom Instructions, an Instruction template field (create the file in Prompts,
+    Template Files, scene, New File) and reusable type templates for style/pacing.
 - path: user-guide/world-editor/scene/export.md
   title: Export
   summary: Export a Talemate scene as JSON or a Complete Scene Package ZIP with assets, nodes, info, templates and per-scene
@@ -1263,9 +1265,10 @@
     included unless progress is reset.
 - path: user-guide/world-editor/scene/game-state.md
   title: Game State
-  summary: Game State JSON editor stores persisted game-scope variables and pins labeled paths to Debug Vars or the scene
-    toolbar. Control settings provide descriptions, order, read-only, numeric min/max/step sliders and string choices, with
-    container inheritance and limits shared by both control surfaces.
+  summary: Game State JSON editor stores persisted game-scope variables, follows outside changes from the Director,
+    nodes or the decision model (a Changed outside this view note keeps unsaved edits; Refresh reloads) and pins
+    labeled paths to Debug Vars or the scene toolbar. Control settings cover descriptions, order, read-only, numeric
+    sliders, string choices and container inheritance.
 - path: user-guide/world-editor/scene/outline.md
   title: Outline
   summary: Scene Outline sets title, content classification, internal description and player introduction with AI generation/autocomplete.

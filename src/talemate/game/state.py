@@ -47,12 +47,10 @@ def _same_value(a: Any, b: Any) -> bool:
     return a == b
 
 
-def _leaves_under(variables: dict, keys: Iterable[str] | None) -> dict[str, Any]:
+def _subset(variables: dict, keys: Iterable[str] | None) -> dict[str, Any]:
     if keys is None:
-        subset = variables
-    else:
-        subset = {key: variables[key] for key in keys if key in variables}
-    return copy.deepcopy(game_state_leaves(subset))
+        return copy.deepcopy(variables)
+    return copy.deepcopy({key: variables[key] for key in keys if key in variables})
 
 
 def _write_game_state(
@@ -67,25 +65,33 @@ def _write_game_state(
     A game_state.changed event goes out for each leaf path whose value
     changed, a removed path with value None. The events are sent in tasks,
     after a template render the write happens in, so no listener runs inside
-    the writer's lock, render or websocket handler.
+    the writer's lock, render or websocket handler. Emits the scene status.
     """
     keys = None if keys is None else list(keys)
-    before = _leaves_under(game_state.variables, keys)
+    before_tree = _subset(game_state.variables, keys)
     result = write(game_state.variables)
-    after = _leaves_under(game_state.variables, keys)
-    _send_changes(scene, before, after)
+    after_tree = _subset(game_state.variables, keys)
+    _send_changes(
+        scene,
+        game_state_leaves(before_tree),
+        game_state_leaves(after_tree),
+        restructured=not _same_value(before_tree, after_tree),
+    )
     return result
 
 
 def _send_changes(
-    scene: "Scene | None", before: dict[str, Any], after: dict[str, Any]
+    scene: "Scene | None",
+    before: dict[str, Any],
+    after: dict[str, Any],
+    restructured: bool = False,
 ) -> None:
     changes = [
         (path, after.get(path), before.get(path))
         for path in {**before, **after}
         if not _same_value(before.get(path), after.get(path))
     ]
-    if not changes or scene is None:
+    if not (changes or restructured) or scene is None:
         return
     try:
         asyncio.get_running_loop()
@@ -95,6 +101,7 @@ def _send_changes(
             paths=[path for path, _, _ in changes],
         )
         return
+    scene.emit_status()
     for path, value, previous_value in changes:
         send_soon_outside_render(
             "game_state.changed",

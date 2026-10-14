@@ -9,7 +9,7 @@ import pytest
 from unittest.mock import AsyncMock
 
 from ..conftest import mock_llm_client  # noqa: F401
-from ..helpers import create_mock_character
+from ..helpers import add_character_knowledge, create_mock_character
 from ..test_summarizer_templates import (  # noqa: F401
     mock_scene,
     mock_conversation_agent,
@@ -144,6 +144,24 @@ class TestSummarizerBaselines:
         )
         baseline_checker(
             capture_prompt(summarizer), AGENT, "analyze_scene_for_conversation"
+        )
+
+    @pytest.mark.asyncio
+    async def test_analyze_scene_for_conversation__with_character_knowledge(
+        self, active_context, mock_scene, baseline_checker
+    ):
+        summarizer = active_context
+        add_character_knowledge(mock_scene)
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="<ANALYSIS>Scene analysis for conversation.</ANALYSIS>"
+        )
+        await summarizer.analyze_scene_for_next_action(
+            typ="conversation", character=mock_scene.get_character("Elena"), length=512
+        )
+        baseline_checker(
+            capture_prompt(summarizer),
+            AGENT,
+            "analyze_scene_for_conversation__with_character_knowledge",
         )
 
     @pytest.mark.asyncio

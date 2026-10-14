@@ -17,6 +17,7 @@ from talemate.agents.editor.revision import RevisionEmission, RevisionInformatio
 from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
 from talemate.knowledge.advice import (
+    AuthoredEvidence,
     advice_context,
     advice_record_metadata,
 )
@@ -36,6 +37,7 @@ from talemate.knowledge.memory import audience_documents
 from talemate.knowledge.perspective_models import PerspectiveOutput
 from talemate.knowledge.snapshot_models import SnapshotPerspectives
 from talemate.knowledge.snapshots import snapshot_for, snapshot_digest
+from talemate.world_state import ManualContext
 from talemate.world_state.templates.content import WritingStyle
 from talemate.agents.director.chat.nodes import DirectorChatAction
 from talemate.agents.director.action_core import utils as action_utils
@@ -486,6 +488,139 @@ async def test_director_function_arguments_receive_character_evidence(advice):
     assert PUBLIC in text
     assert "author planning boundary" in text.lower()
     assert "direct_actor" in text
+
+
+@pytest.mark.parametrize("typ", ["base_attribute", "details", "history", "lore"])
+def test_authored_labels_come_from_the_source_not_editable_meta(advice, typ):
+    scene, _ = advice
+    bob = scene.character_data["Bob"]
+    bob.base_attributes = {
+        "name": "Bob",
+        "description": "a ferryman",
+        "personality": "patient",
+    }
+    bob.details = {"ferry route": "dawn crossing"}
+    scene.world_state.manual_context["harbor"] = ManualContext(
+        id="harbor",
+        text="CONTEXT-DB-ENTRY",
+        meta={"typ": typ, "source": "manual"},
+    )
+    scene.archived_history = [
+        {"id": "static-1", "text": "STATIC-ENTRY", "ts": 0, "start": None, "end": None}
+    ]
+    labels = {
+        item.text: item.label
+        for item in advice_context(scene, scene.character_data["Alice"], 4096)[
+            "authored"
+        ]
+    }
+    assert labels == {
+        "Bob's description: a ferryman": None,
+        "Bob's personality: patient": None,
+        "Bob - ferry route: dawn crossing": None,
+        "CONTEXT-DB-ENTRY": "World entry: harbor",
+        "STATIC-ENTRY": "Static history",
+    }
+
+
+@pytest.mark.parametrize(
+    "authored,history",
+    [
+        ([], []),
+        ([AuthoredEvidence(text="Bob's age: forty")], ["Bob rowed out at dawn."]),
+    ],
+)
+def test_evidence_without_labelled_items_omits_the_label_convention(authored, history):
+    text = Prompt.get(
+        "common.character-evidence-context",
+        vars={
+            "evidence": {
+                "character": "Bob",
+                "authored": authored,
+                "history": history,
+                "snapshot": {"location": None},
+            }
+        },
+    ).render()
+    assert "### Last-known snapshot" in text
+    assert "label" not in text
+    assert "[" not in text
+    assert ("### Authored knowledge" in text) == bool(authored)
+
+
+@pytest.mark.asyncio
+async def test_director_action_evidence_labels_and_delimits_every_item(advice):
+    scene, _ = advice
+    bob = scene.character_data["Bob"]
+    bob.base_attributes = {"name": "Bob", "personality": "BOB-PERSONALITY"}
+    bob.details = {"ferry route": "BOB-ROUTE"}
+    scene.world_state.manual_context["the-lighthouse"] = ManualContext(
+        id="the-lighthouse",
+        text="LIGHTHOUSE-LINE-1\n\nLIGHTHOUSE-LINE-2",
+        meta={"typ": "world_state", "source": "manual"},
+    )
+    later = NarratorMessage(message="LATER-PASSAGE", present=["Alice", "Bob", "Cara"])
+    scene.history.append(later)
+    set_source_perspectives(
+        scene,
+        "message",
+        later.id,
+        [
+            {
+                "audience": ["Alice", "Bob", "Cara"],
+                "status": "ready",
+                "text": "LATER-PASSAGE",
+            }
+        ],
+    )
+    director = get_agent("director")
+    with ActiveAgent(
+        director, test_director_action_evidence_labels_and_delimits_every_item
+    ):
+        evidence = await director.guidance_context(budget=8192 // 3)
+        text = Prompt.get(
+            "director.chat-execute-actions",
+            vars={
+                "scene": scene,
+                "max_tokens": 8192,
+                "history": [],
+                "trim_action_history": reverse_trim_history,
+                "selections": [],
+                "callbacks_unique": [],
+                "focal": SimpleNamespace(render_instructions=lambda: "Call functions."),
+            },
+        ).render(apply_sectioning=False)
+    markers = [line for line in text.splitlines() if "<|" in line]
+    assert all(line.count("<|") == 1 for line in markers)
+    blocks = [
+        block.split("<|CLOSE_SECTION|>", 1)[0]
+        for block in text.split("<|SECTION:CHARACTER EVIDENCE FOR ")[1:]
+    ]
+    assert [block.split("|>", 1)[0] for block in blocks] == ["ALICE", "BOB", "CARA"]
+    expected_authored = {
+        (None, "Bob's personality: BOB-PERSONALITY"),
+        (None, "Bob - ferry route: BOB-ROUTE"),
+        ("World entry: the-lighthouse", "LIGHTHOUSE-LINE-1\n\nLIGHTHOUSE-LINE-2"),
+    }
+    for block, item in zip(blocks, evidence, strict=True):
+        name = item["character"]
+        assert {(entry.label, entry.text) for entry in item["authored"]} == (
+            expected_authored
+        )
+        assert len(item["history"]) == 2
+        assert "LATER-PASSAGE" in item["history"][-1]
+        authored = block.index("### Authored knowledge")
+        history = block.index(f"### {name}'s history, oldest first")
+        snapshot = block.index("### Last-known snapshot")
+        assert authored < history < snapshot
+        for entry in item["authored"]:
+            framed = f"[{entry.label}]\n{entry.text}" if entry.label else entry.text
+            assert f"\n{framed}\n---\n" in block[authored:history]
+        for entry in item["history"]:
+            assert f"\n{entry.strip()}\n---\n" in block[history:snapshot]
+        assert "[#" not in block
+        assert "---\n\n" not in block
+        assert block.count("\n---") == len(item["authored"]) + len(item["history"])
 
 
 @pytest.mark.asyncio

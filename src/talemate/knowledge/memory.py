@@ -47,7 +47,7 @@ def audience_documents(scene, *, groups=None, read=None):
     def wanted(group):
         return groups is None or group in groups
 
-    def add(group, key, text, meta, audience=(), common=False):
+    def add(group, key, text, meta, audience=(), common=False, label=None):
         if not wanted(group):
             return
         if not text or not (common or audience):
@@ -77,8 +77,10 @@ def audience_documents(scene, *, groups=None, read=None):
             "meta": meta,
             "group": group,
         }
+        if label is not None:
+            documents[identity]["label"] = label
 
-    def authored(key, text, meta, visibility, owner=None):
+    def authored(key, text, meta, visibility, owner=None, label=None):
         if entry_binding(scene, key, owner=owner) is not None:
             for name in scene.character_data:
                 if not visibility.allows(name, owner):
@@ -114,6 +116,7 @@ def audience_documents(scene, *, groups=None, read=None):
             if visibility.mode != "everyone"
             else (),
             common=visibility.mode == "everyone",
+            label=label,
         )
 
     for character in scene.character_data.values() if wanted(("authored",)) else ():
@@ -135,7 +138,13 @@ def audience_documents(scene, *, groups=None, read=None):
             for key, value in entry.meta.items()
             if isinstance(value, (str, int, float, bool))
         }
-        authored(entry.id, entry.text, meta, entry.visibility)
+        authored(
+            entry.id,
+            entry.text,
+            meta,
+            entry.visibility,
+            label=f"World entry: {entry.id}",
+        )
 
     for key, owners in read.sources.items():
         if len(owners) != 1:
@@ -151,6 +160,7 @@ def audience_documents(scene, *, groups=None, read=None):
                 source.text,
                 {"typ": "history", "ts": source.owner.get("ts") or 0},
                 EntryVisibility(),
+                label="Static history",
             )
             continue
         if not wanted(key):

@@ -10,6 +10,7 @@ from talemate.character import Character
 from talemate.context import ActiveScene
 from talemate.instance import get_agent
 from talemate.knowledge.perspectives import set_source_perspectives
+from talemate.world_state import ManualContext
 from talemate.knowledge.review import character_context_review
 from talemate.knowledge.readiness import perception_readiness
 from talemate.prompts import Prompt
@@ -234,6 +235,30 @@ async def test_analysis_review_references_history_without_repeating_it(review_sc
         if item["type"] in ("knowledge", "analysis")
     )
     Prompt.request.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("review_scene", ["perception"], indirect=True)
+async def test_analysis_review_labels_authored_evidence(review_scene):
+    bob = review_scene.character_data["Bob"]
+    bob.base_attributes = {"name": "Bob", "age": "forty"}
+    review_scene.world_state.manual_context["harbor"] = ManualContext(
+        id="harbor", text="The harbor freezes in winter.", meta={"source": "manual"}
+    )
+    preview = await character_context_review(review_scene, bob)
+    analysis = next(
+        item for item in preview["sections"] if item["label"] == "Analysis evidence"
+    )
+    assert "Authored evidence: Bob's age: forty" in analysis["entries"]
+    assert (
+        "Authored evidence (World entry: harbor): The harbor freezes in winter."
+        in analysis["entries"]
+    )
+    assert "\nBob's age: forty\n---\n" in analysis["full_evidence"]
+    assert (
+        "[World entry: harbor]\nThe harbor freezes in winter.\n---"
+        in analysis["full_evidence"]
+    )
 
 
 @pytest.mark.asyncio

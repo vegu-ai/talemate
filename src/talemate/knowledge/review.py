@@ -75,7 +75,12 @@ def _analysis_review_section(scene, character, preview, summarizer):
         )
 
     compact = [history_note, f"Analysis budget: {budget} tokens."]
-    compact.extend(f"Authored evidence: {text}" for text in evidence["authored"])
+    compact.extend(
+        f"Authored evidence ({item.label}): {item.text}"
+        if item.label
+        else f"Authored evidence: {item.text}"
+        for item in evidence["authored"]
+    )
     snapshot = evidence["snapshot"]
     if snapshot.get("location") or any(
         snapshot.get(key) for key in ("characters", "items", "places")

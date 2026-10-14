@@ -499,3 +499,45 @@ async def test_tracker_insert_names_its_subject_in_player_prompt(audience_scene)
         and "Bob" in doc["meta"]["knowledge_audience"]
         for doc in docs.values()
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "owner,question,framing",
+    [
+        ("Alice", "Secret destination?", "# Internal note for Alice - "),
+        (None, "Where is the secret poison stash?", "# Internal note - "),
+    ],
+)
+async def test_tracked_state_evidence_never_names_an_excluded_question(
+    audience_scene, owner, question, framing
+):
+    from talemate.knowledge.advice import advice_context
+    from talemate.knowledge.perspectives import edit_message_view
+    from talemate.world_state import Reinforcement
+
+    scene, _, _ = audience_scene
+    for character in scene.character_data.values():
+        actor = Actor(character, get_agent("conversation"))
+        actor.scene = scene
+        scene.actors.append(actor)
+    tracker = Reinforcement(
+        question=question, character=owner, insert="conversation-context"
+    )
+    scene.world_state.reinforce.append(tracker)
+    world = get_agent("world_state")
+    await world._apply_reinforcement(
+        tracker, world._prepare_reinforcement(tracker, False), "In the kitchen.", False
+    )
+    edit_message_view(scene, tracker.source_for(scene).id, "Bob", "In the kitchen.")
+    evidence = advice_context(scene, scene.character_data["Bob"], 4096)
+    tracked = [item for item in evidence["authored"] if "In the kitchen." in item.text]
+    assert [(item.label, item.text) for item in tracked] == [
+        (None, f"{framing}In the kitchen.")
+    ]
+    rendered = Prompt.get(
+        "common.character-evidence-context",
+        vars={"scene": scene, "evidence": evidence},
+    ).render()
+    assert f"\n{framing}In the kitchen.\n---\n" in rendered
+    assert question not in rendered

@@ -3,6 +3,7 @@ import json
 from typing import TYPE_CHECKING, Any, Literal
 from types import EllipsisType
 
+import pydantic
 import structlog
 
 from talemate.agents.context import active_agent
@@ -29,6 +30,11 @@ if TYPE_CHECKING:
 
 KnowledgeAnalysisType = Literal["conversation", "narration"]
 ENTRY_SOURCE_KINDS = {"dialogue": "message", "archived": "summary", "layer": "summary"}
+
+
+class AuthoredEvidence(pydantic.BaseModel):
+    label: str | None = None
+    text: str
 
 
 def advice_character(
@@ -112,7 +118,9 @@ def advice_context(
         size = count_tokens(document["text"])
         if used + size > budget // 3:
             continue
-        authored.append(document["text"])
+        authored.append(
+            AuthoredEvidence(label=document.get("label"), text=document["text"])
+        )
         used += size
     snapshot = snapshot_for(scene, viewer, read=read)
     bounded_snapshot = {"location": None, "characters": [], "items": [], "places": []}
@@ -184,7 +192,10 @@ def analysis_evidence_fingerprint(
     payload = {
         "boundary": boundary,
         "budget": budget,
-        "evidence": evidence,
+        "evidence": {
+            **evidence,
+            "authored": [item.model_dump() for item in evidence["authored"]],
+        },
         "prefix": [
             (
                 message.id,

@@ -14,9 +14,26 @@ from unittest.mock import Mock
 
 import talemate.instance as instance
 from talemate.character import Character
+from talemate.knowledge.perspective_models import PerspectiveOutput
+from talemate.knowledge.perspectives import (
+    select_character_view,
+    set_source_perspectives,
+    source_reference,
+)
+from talemate.knowledge.reinforcements import prepare_reinforcement_source
+from talemate.knowledge.schema import EntryVisibility, ReinforcementEntry
+from talemate.knowledge.snapshot_models import SnapshotPerspectives
+from talemate.knowledge.snapshots import snapshot_digest
 from talemate.prompts.base import Prompt
+from talemate.scene_message import CharacterMessage, NarratorMessage
 from talemate.tale_mate import Actor, Player, Scene
-from talemate.world_state import CharacterState, ObjectState, PlaceState
+from talemate.world_state import (
+    CharacterState,
+    ManualContext,
+    ObjectState,
+    PlaceState,
+    Reinforcement,
+)
 
 
 # Default rendered-history lines returned by ``Scene.context_history``. The real
@@ -164,6 +181,107 @@ def create_scene_with_characters(
     for character in characters:
         add_character(scene, character)
     return scene
+
+
+def add_character_knowledge(scene: Scene) -> None:
+    """Switch a Hero + Elena scene to Character perspectives with every evidence kind.
+
+    Authored: both character sheets, an Elena-only detail, a shared world entry,
+    a static history entry and a tracked state on Elena whose question Hero's
+    view leaves out.
+    History: four passages, the last one witnessed by Elena alone. Snapshot: a
+    location both characters saw.
+    """
+    scene.knowledge_eligibility = "perception"
+    hero, elena = scene.character_data["Hero"], scene.character_data["Elena"]
+    # Prompt dedupe would drop one of two identical descriptions.
+    hero.description = "A traveler searching for the old forest shrine."
+    elena.details["herb cache"] = (
+        "Elena hid a pouch of moonpetal under the roots of the old oak."
+    )
+    elena.visibility["detail.herb cache"] = EntryVisibility(mode="owner")
+    scene.world_state.manual_context["forest-shrine"] = ManualContext(
+        id="forest-shrine",
+        text="An overgrown shrine stands at the north edge of the clearing.",
+        meta={"typ": "world_state", "source": "manual"},
+    )
+
+    both = ["Hero", "Elena"]
+    passages = [
+        (NarratorMessage(message="Mist rolls across the clearing."), both),
+        (CharacterMessage(message='Elena: "You walked a long way, traveler."'), both),
+        (CharacterMessage(message='Hero: "I am looking for the old shrine."'), both),
+        (
+            NarratorMessage(
+                message="Elena glances toward the old oak and says nothing."
+            ),
+            ["Elena"],
+        ),
+    ]
+    scene.archived_history = [
+        {
+            "id": "static-shrine-legend",
+            "text": "Long ago, the forest folk sealed the shrine against travelers.",
+            "ts": 0,
+            "start": None,
+            "end": None,
+        }
+    ]
+    scene.history = []
+    for message, present in passages:
+        message.present = present
+        scene.history.append(message)
+        body = message.message.split(": ", 1)[-1]
+        set_source_perspectives(
+            scene,
+            "message",
+            message.id,
+            [{"audience": [name], "status": "ready", "text": body} for name in present],
+        )
+
+    tracker = Reinforcement(
+        question="What is Elena hiding from Hero?",
+        character="Elena",
+        insert="conversation-context",
+        answer="She is hiding the moonpetal pouch until she trusts him.",
+    )
+    scene.world_state.reinforce.append(tracker)
+    source = prepare_reinforcement_source(scene, tracker)
+    elena.details[tracker.question] = tracker.answer
+    elena.reinforcement_entries[tracker.question] = ReinforcementEntry(
+        source_id=source.id
+    )
+    set_source_perspectives(
+        scene,
+        "message",
+        source.id,
+        [
+            {
+                "audience": ["Elena"],
+                "status": "ready",
+                "text": f"{tracker.question}\n{tracker.answer}",
+            },
+            {"audience": ["Hero"], "status": "ready", "text": tracker.answer},
+        ],
+    )
+
+    location = "A misty forest clearing at dusk."
+    witnessed = source_reference(scene, "message", scene.history[0].id)
+    scene.world_state.location = location
+    scene.world_state.location_perspectives = SnapshotPerspectives(
+        content_digest=snapshot_digest("location", location),
+        views=[
+            PerspectiveOutput(
+                audience=[character.name],
+                status="ready",
+                text=location,
+                sources=[
+                    select_character_view(scene, witnessed, character.name).source
+                ],
+            )
+            for character in (hero, elena)
+        ],
+    )
 
 
 def create_mock_agent(agent_type: str = "narrator") -> Mock:

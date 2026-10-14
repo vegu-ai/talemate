@@ -594,7 +594,7 @@ class GenerateResponse(Node):
     - action_type: Classification of the generated response (optional)
     - response_length: The maximum length of the response (optional)
     - response_spec: Optional ResponseSpec for extracting structured data from response
-    - reasoning_effort: Reasoning effort for this request (optional). Replaces the client's Reasoning Effort while its Reasoning is on; clients with a Reasoning Effort setting only (OpenAI, OpenAI compatible, OpenRouter). `default` lets the model choose.
+    - reasoning_effort: Reasoning effort for this request (optional). Replaces the client's Reasoning Effort while its Reasoning is on; clients with a Reasoning Effort setting only (OpenAI, OpenAI compatible, OpenRouter, MistralAI — ignored for Mistral models that do not accept an effort). `default` lets the model choose.
     - disable_reasoning: Turn reasoning off for this request (optional)
 
     Properties:

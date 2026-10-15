@@ -52,7 +52,7 @@ New stories can give each character their own account of events, carried into th
 
 ### Decision Model
 
-An optional decision model answers quick questions about your story with a probability instead of prose, through OpenRouter or a SystemOne-compatible server. It can answer pin conditions and queries, skip unchanged tracked states, choose existing portraits and scene backgrounds, recognize characters named by pronoun or nickname, and run the Editor decision checks. A Decision Log shows every answer, and nothing is sent while the model is off.
+An optional decision model answers quick questions about your story with a probability instead of prose, through OpenRouter or a SystemOne-compatible server. It can answer pin conditions and queries, skip unchanged tracked states, choose existing portraits and scene backgrounds, recognize characters named by pronoun or nickname, and run the Editor decision checks. Each question sends only the part of the story it needs, so local servers stay quick. A Decision Log shows every answer and its token count, and nothing is sent while the model is off.
 
 ### Themes
 
@@ -92,6 +92,7 @@ Chatterbox Turbo adds an optional voice backend with voice cloning and expressiv
 - Finished passages appear while follow-up summaries and voice preparation continue.
 - The story keeps its place when you switch to another tab and back.
 - Sequential tracked-state answers appear in the story as State Update rows you can read, edit or remove.
+- The World Editor's Game State view follows changes made by the Director, nodes or the decision model, without overwriting your unsaved edits.
 - Editing or deleting earlier passages warns when later story details may become inconsistent.
 
 **Memory**
@@ -106,11 +107,13 @@ Chatterbox Turbo adds an optional voice backend with voice cloning and expressiv
 **Settings and Clients**
 
 - Client and agent settings share the Settings tab's Save and Discard controls, including scene overrides and assigning one client to all agents.
+- The Settings toolbar stays pinned while a long page scrolls.
 - Pin inference parameters beside the client list and enter exact sampling, context and reasoning values.
 - OpenAI, OpenRouter and compatible clients offer reasoning effort and completion-token options; OpenAI adds sampling and system-message controls, and OpenAI and compatible clients can stream.
 - llama.cpp Router mode lets each client choose its model, including for vision and server prompt templates.
 - New clients default to at least 16k context; supported hosted clients enable concurrent requests by default, while saved configurations retain their values.
 - New OpenAI-compatible clients send stop sequences and thinking preferences, each with its own toggle; saved clients keep their current requests.
+- The MistralAI client offers Reasoning Effort for the models that accept it, and new clients default to mistral-large-4.
 - Muse Glimmer prompt formatting and newer Hugging Face template files are supported.
 
 **Editor and Writing Styles**
@@ -118,6 +121,7 @@ Chatterbox Turbo adds an optional voice backend with voice cloning and expressiv
 - Optional Editor decision checks find repeated beats, reused descriptions and unwanted prose, then correct them in one Targeted Rewrite or Unslop call.
 - Writing styles define the checks, their questions and thresholds; Add default checks covers common cases, and each check can judge all text, only dialogue or only prose.
 - Writing styles include a new Polished Prose style, used by Infinity Quest and Simulation Suite, and a rewritten Adventure Game style with a mid-90s point-and-click voice.
+- The World Editor's writing style menu can open the selected style in the Templates tab.
 
 **Images**
 
@@ -172,18 +176,20 @@ Chatterbox Turbo adds an optional voice backend with voice cloning and expressiv
 - Editing memories refreshes remembered context, and character replies avoid repeating passages already in their story context.
 - New world entries and tracked states are saved only when you click Create, and Add pin works on the first click.
 - Text completed with Ctrl+Enter in character and scene fields is saved when you leave the field.
+- Make Player Character is unavailable while an agent is generating, so an unfinished character line cannot count as your turn.
+- A new story's World Editor no longer starts with the previous story's writing style, and its templates links open the Templates tab.
 
 **Story and Scenes**
 
 - Director messages stay visible until you confirm their deletion, and story messages fill the scene width in Immersive mode.
-- Simulation Suite V2 names new simulations with a proper scene title.
-- Simulation Suite V2 reacts when a Director dynamic action writes your request to the computer.
+- Simulation Suite V2 titles new simulations properly, follows requests a Director action writes, and treats only lines starting with the word Computer as requests.
 
 **Director and Help**
 
 - Director requests can update several fields, empty action results explain the outcome, and result summaries display proper line breaks.
 - Cancelled actions stop the remaining calls, and failed settings application can be retried with Save.
 - Director Chat no longer shows the director's reply twice after an action whose follow-up repeats it.
+- Scene-category templates created in the prompt editor appear in Scene Direction's instruction template list.
 
 **Editor**
 
@@ -197,12 +203,14 @@ Chatterbox Turbo adds an optional voice backend with voice cloning and expressiv
 - Compatible clients in chat mode read separately returned reasoning, work without an API key, and name the real cause of a failed generation.
 - Qwen3 and Qwen3.5 models get a matching prompt template automatically, so turning Reasoning off keeps their thinking out of the story.
 - KoboldCpp, Text-Generation-WebUI, TabbyAPI and OpenAI-compatible servers receive all sampler and stop settings, honor Reasoning off and no longer cut responses short.
+- MistralAI streaming works with reasoning models.
 
 **Images**
 
 - Image uploads work over plain HTTP, OpenRouter images are stored as PNG, and ComfyUI prompt inputs and workflow lists resolve correctly.
 - Automatic image generations follow the Visualizer's Automatic Generation setting, and regenerating or editing an image updates the message you clicked.
 - Deleting an image removes it from other images' references; generations no longer fail on it, and Director Chat shows it as removed.
+- Visualizer settings list new ComfyUI workflows, vision clients and OpenRouter models when opened, without saving first.
 
 **Voice and Startup**
 

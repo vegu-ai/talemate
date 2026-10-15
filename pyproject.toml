@@ -1,6 +1,6 @@
 [project]
 name = "talemate"
-version = "0.40.0.dev4"
+version = "0.40.0.dev5"
 description = "AI-backed roleplay and narrative tools"
 authors = [{name = "VeguAITools"}]
 license = {text = "GNU Affero General Public License v3.0"}
@@ -14,7 +14,9 @@ dependencies = [
     "isort>=5.10",
     "jinja2>=3.0",
     "openai>=1",
-    "mistralai>=2.4.0",
+    # 2.10+ closes a streamed response while its byte iterator is still open;
+    # that iterator's cleanup then raises at garbage collection on every request.
+    "mistralai==2.9.4",
     "cohere>=6.0.0",
     "anthropic>=0.19.1",
     "groq>=0.5.0",
@@ -52,8 +54,11 @@ dependencies = [
     "torch>=2.7.1",
     "torchaudio>=2.7.1",
     "sentence_transformers>=2.7.0",
-    # 5.10 closes unsafe model loading and save-path handling; cap before the next major.
-    "transformers>=5.10,<6",
+    # 5.10 closes unsafe model loading and save-path handling. 5.17 removes the
+    # attention-mask helper that the GTE embeddings preset's remote code calls.
+    # 5.17 also fixes CVE-2026-80047 (custom generate code); Talemate does not
+    # reach it.
+    "transformers==5.16.1",
     # TTS
     "elevenlabs>=2.7.1",
     # Local TTS
@@ -130,16 +135,13 @@ line_length = 88
 
 [tool.uv]
 exclude-newer = "1 week"
-# accelerate 1.15 fixes unsafe sharded-checkpoint paths and is newer than the
-# normal window, so allow that security release without opening other packages.
-exclude-newer-package = { accelerate = "2026-09-10T00:00:00Z" }
 override-dependencies = [
   # Chatterbox pins torch 2.6.0, but Talemate validates its newer cu128 runtime.
   "torchaudio>=2.7.1",
   "torch>=2.7.1",
   # Chatterbox 0.1.7 pins vulnerable Transformers 5.2.0. Its stock Llama backend
-  # is compatible through 5.16.1, so retain Talemate's audited security floor.
-  "transformers>=5.10,<6",
+  # is compatible through 5.16.1, so retain Talemate's own pin.
+  "transformers==5.16.1",
   # Chatterbox's pins predate security fixes, including in its Diffusers-based
   # synthesis path and its Gradio demo interface.
   "gradio>=6.16",

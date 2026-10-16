@@ -24,6 +24,7 @@ Vision support is currently available on the following clients:
 
 - KoboldCpp
 - llama.cpp
+- OpenAI Compatible
 - text-generation-webui
 
 ## Setup

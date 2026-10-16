@@ -1402,3 +1402,22 @@ def test_new_clients_start_with_a_reasoning_budget(client_type):
     from talemate.server.config import client_model_defaults
 
     assert client_model_defaults(client_type)["reason_tokens"] >= 1024
+
+
+def test_compatible_vision_is_off_until_enabled(clients):
+    client = clients()
+    assert client.vision_capable
+    assert not client.supports_vision
+    assert "vision_enabled" in openai_compat.OpenAICompatibleClient.Meta().extra_fields
+    assert clients(vision_enabled=True).supports_vision
+
+
+@pytest.mark.parametrize("chat", [False, True])
+async def test_compatible_vision_uses_chat_completions(clients, wire, chat):
+    client = clients(api_handles_prompt_template=chat, vision_enabled=True)
+    assert await client.analyze_image(b"image", "Describe") == "answer"
+    path, body = wire[-1]
+    assert path.endswith("/chat/completions")
+    assert body["model"] == "test-model"
+    image = body["messages"][0]["content"][1]["image_url"]["url"]
+    assert image.startswith("data:image/jpeg;base64,")

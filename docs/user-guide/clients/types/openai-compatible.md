@@ -111,6 +111,12 @@ With **API handles prompt template** enabled, servers such as llama.cpp (`llama-
 
 When a sending format is selected, the client card shows the chosen effort in a dropdown, where you can change it quickly. With format `none`, it shows a field for the extra completion allowance instead. With Reasoning off, a **Reasoning Disabled** chip takes the place of the dropdown or the field. Turning Talemate reasoning off, globally or for an agent action, omits the effort setting and padding; the server may still reason according to its own defaults. Keep your existing [reasoning patterns](/talemate/user-guide/clients/reasoning/#response-pattern-configuration) if your model includes thinking in its response text.
 
+### Vision
+
+Open the **Vision** section of the client editor and turn on **Enable Vision** to let the client analyze images, for example for the Visualizer's [Talemate Client](/talemate/user-guide/agents/visualizer/backends/talemate-client/) image analysis backend. It is off for a new client, and while it is off nothing about the client changes.
+
+Only turn it on when the model behind the endpoint accepts image input. Image analysis is always sent to `/chat/completions`, whatever **API handles prompt template** is set to, so the server needs that endpoint.
+
 ### Ready to use
 
 Click `Save` in the toolbar to add the client.

@@ -28,6 +28,7 @@ from talemate.client.toggleable_parameters import (
     toggleable_parameters_config,
     toggleable_parameters_extra_fields,
 )
+from talemate.client.vision import OpenAIVisionMixin, VisionConfig, vision_extra_fields
 from talemate.config.schema import Client as BaseClientConfig
 from talemate.exceptions import GenerationProcessingError
 
@@ -75,6 +76,7 @@ class ClientConfig(
     StreamingConfig,
     ToggleableParametersConfig,
     ApiHandlesPromptTemplateConfig,
+    VisionConfig,
     BaseClientConfig,
 ):
     @pydantic.model_validator(mode="before")
@@ -102,6 +104,7 @@ class OpenAICompatibleClient(
     ChatReasoningMixin,
     ApiHandlesPromptTemplateMixin,
     ToggleableParametersMixin,
+    OpenAIVisionMixin,
     ClientBase,
 ):
     client_type = "openai_compat"
@@ -124,6 +127,7 @@ class OpenAICompatibleClient(
             ),
             **toggleable_parameters_extra_fields(TOGGLEABLE_PARAMETERS),
             **streaming_extra_fields(),
+            **vision_extra_fields(),
             **reasoning_effort_extra_fields(),
             "reasoning_effort_format": ExtraField(
                 name="reasoning_effort_format",

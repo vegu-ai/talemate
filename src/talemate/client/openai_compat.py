@@ -3,7 +3,7 @@ from typing import Literal
 
 import httpx
 import pydantic
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, NotFoundError
 
 from talemate.client.api_handles import (
     ApiHandlesPromptTemplateConfig,
@@ -29,6 +29,7 @@ from talemate.client.toggleable_parameters import (
     toggleable_parameters_extra_fields,
 )
 from talemate.config.schema import Client as BaseClientConfig
+from talemate.exceptions import GenerationProcessingError
 
 EXPERIMENTAL_DESCRIPTION = """Use this client if you want to connect to a service implementing an OpenAI-compatible API. Success is going to depend on the level of compatibility. Use the actual OpenAI client if you want to connect to OpenAI's API."""
 
@@ -287,9 +288,17 @@ class OpenAICompatibleClient(
                 parameters=parameters,
             )
             parameters["prompt"] = prompt
-            response = await client.completions.create(
-                model=self.model_name, stream=self.stream, **parameters
-            )
+            try:
+                response = await client.completions.create(
+                    model=self.model_name, stream=self.stream, **parameters
+                )
+            except NotFoundError as exc:
+                raise GenerationProcessingError(
+                    f"{exc.request.method} {exc.request.url.path} returned 404: the"
+                    " server has no text completions endpoint or does not know model"
+                    f" '{self.model_name}'. If it only offers chat completions, turn on"
+                    " API handles prompt template."
+                ) from exc
             if not self.stream:
                 if not response.choices:
                     return ""

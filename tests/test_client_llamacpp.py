@@ -542,6 +542,20 @@ async def test_server_generation_errors_retain_meaning(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("path", ["/apply-template", "/completion"])
+async def test_missing_endpoint_error_names_the_request(server, client_factory, path):
+    server.update(error_path=path, error_code=404, error_message="not found")
+    client = client_factory(
+        model=MODEL, api_handles_prompt_template=path == "/apply-template"
+    )
+    with pytest.raises(GenerationProcessingError) as raised:
+        await client.generate("Hi", {}, "narrate")
+    message = str(raised.value)
+    assert f"POST {path} was not found" in message
+    assert "OpenAI Compatible" in message
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["/apply-template", "/completion"])
 async def test_cold_load_can_be_cancelled(server, client_factory, path):
     server.update(pause=path, started=asyncio.Event())
     client = client_factory(

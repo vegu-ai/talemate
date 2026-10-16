@@ -11,7 +11,11 @@ from structlog.testing import capture_logs
 import talemate.config.state as config_state
 from talemate.agents.context import ActiveAgent
 from talemate.client import openai, openai_compat
-from talemate.client.base import EMPTY_RESPONSE_MESSAGE, PROMPT_TOKEN_SAFETY_FACTOR
+from talemate.client.base import (
+    EMPTY_RESPONSE_MESSAGE,
+    PROMPT_TOKEN_SAFETY_FACTOR,
+    describe_exception,
+)
 from talemate.client.context import ClientContext
 from talemate.client.model_prompts import model_prompt
 from talemate.client.toggleable_parameters import PARAMETERS_FIELD_GROUP
@@ -853,6 +857,70 @@ async def test_server_prompt_tokens_reads_tokenize(
     assert seen[0][0] == "/tokenize"
     assert seen[0][1]["prompt"] == seen[0][1]["content"] == "text"
     assert seen[0][1]["add_special"] is True
+
+
+@pytest.mark.asyncio
+async def test_text_completions_404_points_to_chat_completions(clients, monkeypatch):
+    client = clients(api_handles_prompt_template=False)
+
+    def handler(request):
+        return httpx.Response(404, json={"error": "not found"})
+
+    async with AsyncOpenAI(
+        api_key="test-key",
+        base_url="http://server.test:8081/v1",
+        max_retries=0,
+        http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    ) as sdk:
+        monkeypatch.setattr(
+            openai_compat.OpenAICompatibleClient, "make_client", lambda self: sdk
+        )
+        with pytest.raises(GenerationProcessingError) as raised:
+            await client.generate("Hi", {"max_tokens": 16}, "narrate")
+    message = str(raised.value)
+    assert "POST /v1/completions returned 404" in message
+    assert "does not know model 'test-model'" in message
+    assert "API handles prompt template" in message
+
+
+@pytest.mark.asyncio
+async def test_chat_completions_404_dialog_names_the_request(clients, monkeypatch):
+    client = clients(api_handles_prompt_template=True)
+
+    def handler(request):
+        return httpx.Response(404, json={"error": "not found"})
+
+    async with AsyncOpenAI(
+        api_key="test-key",
+        base_url="http://server.test:8081/v1",
+        max_retries=0,
+        http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    ) as sdk:
+        monkeypatch.setattr(
+            openai_compat.OpenAICompatibleClient, "make_client", lambda self: sdk
+        )
+        with pytest.raises(Exception) as raised:
+            await client.generate("Hi", {"max_tokens": 16}, "narrate")
+    exc = raised.value
+    message = describe_exception(exc, client._extract_status_code(exc))
+    assert message.endswith("(POST /v1/chat/completions)")
+
+
+@pytest.mark.asyncio
+async def test_server_prompt_tokens_fails_soft_without_tokenize(clients, monkeypatch):
+    client = clients(api_url="http://server.test:8081/v1")
+    native_client = httpx.AsyncClient
+
+    class _MockClient(native_client):
+        def __init__(self, **kwargs):
+            super().__init__(
+                transport=httpx.MockTransport(lambda request: httpx.Response(404)),
+                **kwargs,
+            )
+
+    monkeypatch.setattr(openai_compat.httpx, "AsyncClient", _MockClient)
+
+    assert await client.server_prompt_tokens("text") is None
 
 
 @pytest.mark.parametrize("chat", [False, True])

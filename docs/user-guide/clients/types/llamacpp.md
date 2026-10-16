@@ -89,6 +89,10 @@ Loading can take time, especially when switching models. If the server disables 
 
 Check the client's API key against the server's authentication settings. A failed authentication check is reported separately from a missing model selection.
 
+#### The error says an endpoint was not found
+
+This client sends generations to the server's `/completion` endpoint, and to `/apply-template` when **API handles prompt template** is enabled. A server that does not implement them answers 404, and the error names the endpoint, for example `POST /completion was not found on the server`. This happens with servers that only offer OpenAI-style chat completions. Use the [OpenAI Compatible](/talemate/user-guide/clients/types/openai-compatible/) client with **API handles prompt template** enabled instead, and put `/v1` at the end of the **API Url**.
+
 #### Generations are weird / bad
 
 Make sure the [correct prompt template is assigned](/talemate/user-guide/clients/prompt-templates/). Talemate will attempt to automatically detect the appropriate prompt template based on the model name, but this does not always work.

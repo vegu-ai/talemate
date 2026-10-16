@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import asyncio
 import time
+from types import SimpleNamespace
 
+import httpx
 import pydantic
 import pytest
 from structlog.testing import capture_logs
@@ -151,6 +153,18 @@ class TestErrorMessages:
         exc = RuntimeError("raw")
         exc.user_message = "shown to the user"
         assert describe_exception(exc, 429) == "shown to the user"
+
+    def test_not_found_names_the_failed_request(self):
+        exc = RuntimeError("raw")
+        exc.response = SimpleNamespace(
+            request=httpx.Request("POST", "http://server.test:8081/v1/completions")
+        )
+        assert describe_exception(exc, 404) == (
+            f"{HTTP_ERROR_MESSAGES[404]} (POST /v1/completions)"
+        )
+
+    def test_not_found_without_a_request_uses_status_text(self):
+        assert describe_exception(RuntimeError("raw"), 404) == HTTP_ERROR_MESSAGES[404]
 
     def test_status_text_wins_over_exception_text(self):
         assert describe_exception(RuntimeError("raw"), 429) == HTTP_ERROR_MESSAGES[429]

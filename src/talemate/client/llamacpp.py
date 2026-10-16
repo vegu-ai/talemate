@@ -399,9 +399,18 @@ class LlamaCppClient(
         )
         status_code = response.status_code
         detail = "Invalid API key" if status_code in (401, 403) else "API error"
-        raise GenerationProcessingError(
-            f"llama.cpp {detail} ({status_code})" + (f" - {message}" if message else "")
+        text = f"llama.cpp {detail} ({status_code})" + (
+            f" - {message}" if message else ""
         )
+        if status_code == 404:
+            request = response.request
+            text += (
+                f": {request.method} {request.url.path} was not found on the server."
+                " If the server does not implement it, use the OpenAI Compatible"
+                " client with API handles prompt template turned on and /v1 at the"
+                " end of its API URL."
+            )
+        raise GenerationProcessingError(text)
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """

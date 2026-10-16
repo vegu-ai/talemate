@@ -129,6 +129,14 @@ Make sure the [correct prompt template is assigned](/talemate/user-guide/clients
 
 When a request fails before the server answers, for example a refused connection or a rejected key, the error dialog shows the actual cause. A server that needs no key can be left with an empty **API Key**.
 
+#### The error says an endpoint returned 404
+
+The error names the request the server rejected, for example `POST /v1/completions returned 404`. The client sends text completions to `/completions` and, with **API handles prompt template** enabled, chat completions to `/chat/completions`, both under the **API Url**. Check three things:
+
+- The **API Url** includes the version path the server expects. A server that serves `/v1/chat/completions` needs a URL ending in `/v1`, such as `http://localhost:8081/v1`. The URL is used as you type it.
+- Some servers only provide chat completions. If `/completions` is the one that fails, enable **API handles prompt template**.
+- The **Model** is one the server serves. vLLM and Ollama also answer 404 for an unknown model, so enabling **API handles prompt template** does not help in that case.
+
 #### Could not connect
 
 The API URL field is empty. This client reports `Could not connect` when it has no URL to send requests to.

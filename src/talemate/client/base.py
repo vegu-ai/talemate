@@ -188,6 +188,10 @@ def describe_exception(exc: BaseException, status_code: int | None = None) -> st
     user_message = getattr(exc, "user_message", None)
     if user_message:
         return user_message
+    if status_code == 404:
+        request = getattr(getattr(exc, "response", None), "request", None)
+        if request is not None:
+            return f"{get_error_message(404)} ({request.method} {request.url.path})"
     if status_code is not None:
         return get_error_message(status_code)
     message = str(exc).strip() or type(exc).__name__

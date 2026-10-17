@@ -2,7 +2,8 @@ import asyncio
 import json
 import threading
 from pathlib import Path
-from unittest.mock import Mock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock
 
 import httpx
 import httpx2
@@ -11,12 +12,16 @@ import pytest_asyncio
 import yaml
 
 import talemate.config.state as config_state
+from talemate.agents.context import ActiveAgent
 from talemate.client import base, llamacpp
 from talemate.client.model_prompts import PromptSpec
+from talemate.client.context import ClientContext
 from talemate.config.schema import Config
 from talemate.exceptions import GenerationProcessingError
 
 MODEL = "team/model:Q4 + special&tag"
+
+CAPTURES = Path(__file__).parent / "data" / "llamacpp_chat"
 
 
 @pytest.fixture
@@ -26,13 +31,23 @@ def server(monkeypatch, cfg_isolation):
         "props_code": 200,
         "models": [{"id": MODEL, "status": {"value": "unloaded"}}, {"id": "second"}],
         "requests": [],
+        "completion_stream": (
+            'data: {"content":"Hello"}\n\n'
+            'data: {"content":" world","stop":true}\n\n'
+            "data: [DONE]\n\n"
+        ),
+        "chat_stream": (
+            'data: {"choices":[{"delta":{"content":"Hello"}}]}\n\n'
+            'data: {"choices":[{"delta":{"content":" world"}}]}\n\n'
+            "data: [DONE]\n\n"
+        ),
     }
     native_client = httpx.AsyncClient
     openai_client = llamacpp.AsyncOpenAI
 
     async def respond(request, response_type):
         state["requests"].append(request)
-        path = request.url.path
+        path = request.url.path.removeprefix(state.get("prefix", ""))
         if state.get("pause") == path:
             state["started"].set()
             try:
@@ -49,14 +64,11 @@ def server(monkeypatch, cfg_isolation):
             return response_type(state["props_code"], json=state["props"])
         if path == "/v1/models":
             return response_type(200, json={"data": state["models"], "object": "list"})
-        if path == "/apply-template":
-            return response_type(200, json={"prompt": "TEMPLATED"})
         if path == "/completion":
-            return response_type(
-                200,
-                text='data: {"content":"Hello"}\n\ndata: {"content":" world","stop":true}\n\ndata: [DONE]\n\n',
-            )
+            return response_type(200, text=state["completion_stream"])
         if path == "/v1/chat/completions":
+            if json.loads(request.content).get("stream") is True:
+                return response_type(200, text=state["chat_stream"])
             return response_type(
                 200,
                 json={
@@ -96,10 +108,10 @@ def server(monkeypatch, cfg_isolation):
 @pytest.fixture
 def client_factory(server):
     def make(name="router", router_mode=True, **kwargs):
+        kwargs.setdefault("api_url", "http://llama.test:8080")
         config_state.CONFIG.clients[name] = llamacpp.ClientConfig(
             name=name,
             type="llamacpp",
-            api_url="http://llama.test:8080",
             router_mode=router_mode,
             **kwargs,
         )
@@ -140,7 +152,7 @@ async def test_only_checkbox_enables_routing_on_detected_router(
         )
     await client.generate("Hi", {}, "narrate")
     posts = [r for r in server["requests"] if r.method == "POST"]
-    assert len(posts) == (2 if remote_template else 1)
+    assert len(posts) == 1
     for request in posts:
         payload = json.loads(request.content)
         if router_mode:
@@ -450,27 +462,39 @@ async def test_native_stream_auth_sampling_and_template_use_exact_model(
     assert (
         await client.generate(
             "Hi<|BOT|>Yes",
-            {"temperature": 0.4, "n_predict": 12, "stop": ["END"]},
+            {
+                "temperature": 0.4,
+                "n_predict": 12,
+                "stop": ["END"],
+                "dry_sequence_breakers": '"\\n", ":"',
+                "xtc_probability": 0.2,
+                "top_k": None,
+            },
             "narrate",
         )
         == "Hello world"
     )
     posts = [r for r in server["requests"] if r.method == "POST"]
-    assert len(posts) == (2 if remote_template else 1)
+    assert len(posts) == 1
     for request in server["requests"]:
         assert request.headers["authorization"] == "Bearer unit-test-key"
-    for request in posts:
-        assert json.loads(request.content)["model"] == MODEL
-    payload = json.loads(posts[-1].content)
+    payload = json.loads(posts[0].content)
+    assert payload["model"] == MODEL
     assert payload["stream"] is True
     assert payload["temperature"] == 0.4
     assert payload["n_predict"] == 12
     assert payload["stop"] == ["END"]
+    assert payload["xtc_probability"] == 0.2
+    assert payload["dry_sequence_breakers"] == ["\n", ":"]
+    assert "top_k" not in payload
     if remote_template:
-        template = json.loads(posts[0].content)
-        assert template["messages"][-1] == {"role": "assistant", "content": "Yes"}
-        assert payload["prompt"] == "TEMPLATED"
-        assert posts[0].extensions["timeout"]["read"] is None
+        assert posts[0].url.path == "/v1/chat/completions"
+        assert payload["messages"][-1] == {"role": "assistant", "content": "Yes"}
+        assert "prompt" not in payload
+    else:
+        assert posts[0].url.path == "/completion"
+        assert payload["prompt"] == "Hi<|BOT|>Yes"
+        assert "messages" not in payload
     assert client._returned_response_tokens > 0
 
 
@@ -485,7 +509,6 @@ async def test_single_model_completion_and_template_payloads_are_unchanged(
     assert await client.generate("Hi", {"n_predict": 8}, "narrate") == "Hello world"
     posts = [r for r in server["requests"] if r.method == "POST"]
     assert all("model" not in json.loads(r.content) for r in posts)
-    assert posts[0].extensions["timeout"]["read"] == llamacpp.APPLY_TEMPLATE_TIMEOUT
     assert client.model_name == "single.gguf"
 
 
@@ -521,9 +544,9 @@ async def test_missing_model_rejected_before_routed_request(
 @pytest.mark.parametrize(
     "path,code,message",
     [
-        ("/apply-template", 400, "model is not loaded"),
-        ("/apply-template", 400, "model not found"),
-        ("/apply-template", 401, "Invalid API key"),
+        ("/v1/chat/completions", 400, "model is not loaded"),
+        ("/v1/chat/completions", 400, "model not found"),
+        ("/v1/chat/completions", 401, "Invalid API key"),
         ("/completion", 400, "model is not loaded"),
         ("/completion", 400, "model not found"),
         ("/completion", 403, "Invalid API key"),
@@ -534,32 +557,37 @@ async def test_server_generation_errors_retain_meaning(
 ):
     server.update(error_path=path, error_code=code, error_message=message)
     client = client_factory(
-        model=MODEL, api_handles_prompt_template=path == "/apply-template"
+        model=MODEL, api_handles_prompt_template=path == "/v1/chat/completions"
     )
     with pytest.raises(GenerationProcessingError, match=message):
         await client.generate("Hi", {}, "narrate")
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("path", ["/apply-template", "/completion"])
+@pytest.mark.parametrize("path", ["/v1/chat/completions", "/completion"])
 async def test_missing_endpoint_error_names_the_request(server, client_factory, path):
     server.update(error_path=path, error_code=404, error_message="not found")
     client = client_factory(
-        model=MODEL, api_handles_prompt_template=path == "/apply-template"
+        model=MODEL, api_handles_prompt_template=path == "/v1/chat/completions"
     )
     with pytest.raises(GenerationProcessingError) as raised:
         await client.generate("Hi", {}, "narrate")
     message = str(raised.value)
     assert f"POST {path} was not found" in message
-    assert "OpenAI Compatible" in message
+    if path == "/completion":
+        assert "OpenAI Compatible" in message
+        assert "turn off API handles" not in message
+    else:
+        assert "turn off API handles prompt template" in message
+        assert "OpenAI Compatible" not in message
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("path", ["/apply-template", "/completion"])
+@pytest.mark.parametrize("path", ["/v1/chat/completions", "/completion"])
 async def test_cold_load_can_be_cancelled(server, client_factory, path):
     server.update(pause=path, started=asyncio.Event())
     client = client_factory(
-        model=MODEL, api_handles_prompt_template=path == "/apply-template"
+        model=MODEL, api_handles_prompt_template=path == "/v1/chat/completions"
     )
     task = asyncio.create_task(client.generate("Hi", {}, "narrate"))
     try:
@@ -583,25 +611,6 @@ async def test_unknown_optional_metadata_does_not_hide_router_role(
     assert client.finalize_status({})["router_detected"]
     assert client.model_name == MODEL
     assert client.finalize_status({})["models_autoload"] is None
-
-
-@pytest.mark.asyncio
-async def test_model_selection_is_snapshotted_across_template_await(
-    server, client_factory, monkeypatch
-):
-    client = client_factory(model=MODEL, api_handles_prompt_template=True)
-    apply_template = client.apply_remote_template
-
-    async def change_selection(prompt, kind, model):
-        rendered = await apply_template(prompt, kind, model)
-        client.client_config.model = "second"
-        return rendered
-
-    monkeypatch.setattr(client, "apply_remote_template", change_selection)
-    await client.generate("Hi", {}, "narrate")
-    posts = [r for r in server["requests"] if r.method == "POST"]
-    assert [json.loads(r.content)["model"] for r in posts] == [MODEL, MODEL]
-    assert client.model == "second"
 
 
 @pytest.mark.asyncio
@@ -860,3 +869,259 @@ def test_single_model_template_lookup_keeps_existing_behavior(
     monkeypatch.setattr(llamacpp.ClientBase, "determine_prompt_template", determine)
     client.determine_prompt_template()
     determine.assert_called_once_with()
+
+
+def capture(name: str) -> str:
+    return (CAPTURES / name).read_text()
+
+
+def stream_text(name: str, field: str = "content") -> str:
+    deltas = [
+        json.loads(line[len("data:") :])["choices"][0]["delta"]
+        for line in capture(name).splitlines()
+        if line.startswith("data:") and "[DONE]" not in line
+    ]
+    return "".join(delta.get(field) or "" for delta in deltas)
+
+
+async def chat_request(server, client, prompt="Hi"):
+    agent = SimpleNamespace(
+        agent_type="narrator",
+        verbose_name="Narrator",
+        allow_repetition_break=lambda *args, **kwargs: False,
+        inject_prompt_paramters=lambda *args: None,
+    )
+    with ActiveAgent(agent, lambda: None), ClientContext(requires_active_scene=False):
+        result = await client.send_prompt(prompt)
+    payload = json.loads(
+        [r for r in server["requests"] if r.url.path == "/v1/chat/completions"][
+            -1
+        ].content
+    )
+    return result, payload
+
+
+@pytest.mark.asyncio
+async def test_chat_reasoning_content_stream_fills_the_reasoning_field(
+    server, client_factory
+):
+    server["chat_stream"] = capture("stream_reasoning_content.sse")
+    client = client_factory(
+        model=MODEL, api_handles_prompt_template=True, reason_enabled=True
+    )
+    result, payload = await chat_request(server, client)
+    assert result == "4"
+    assert client.reasoning_response == stream_text(
+        "stream_reasoning_content.sse", "reasoning_content"
+    )
+    assert client.reasoning_response.startswith("The user is asking")
+    assert payload["chat_template_kwargs"] == {"enable_thinking": True}
+    assert payload["reasoning_format"] == "deepseek"
+    assert payload["stream"] is True
+
+
+@pytest.mark.asyncio
+async def test_chat_reasoning_off_sends_no_reasoning_format(server, client_factory):
+    server["chat_stream"] = capture("stream_no_reasoning.sse")
+    client = client_factory(model=MODEL, api_handles_prompt_template=True)
+    result, payload = await chat_request(server, client)
+    assert result == "4"
+    assert client.reasoning_response is None
+    assert payload["chat_template_kwargs"] == {"enable_thinking": False}
+    assert "reasoning_format" not in payload
+
+
+@pytest.mark.asyncio
+async def test_chat_reasoning_left_inline_by_the_server_uses_the_strip_pattern(
+    server, client_factory
+):
+    server["chat_stream"] = capture("stream_inline_reasoning.sse")
+    inline = stream_text("stream_inline_reasoning.sse")
+    assert inline.startswith("<|channel>thought") and inline.endswith("<channel|>4")
+    client = client_factory(
+        model=MODEL,
+        api_handles_prompt_template=True,
+        reason_enabled=True,
+        reason_response_pattern=r".*?<channel\|>",
+    )
+    result, _ = await chat_request(server, client)
+    assert result == "4"
+    assert client.reasoning_response == inline.removesuffix("4")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("behavior", ["fail", "ignore"])
+async def test_chat_answer_without_any_thinking_is_used_as_it_is(
+    server, client_factory, behavior
+):
+    server["chat_stream"] = capture("stream_no_reasoning.sse")
+    client = client_factory(
+        model=MODEL,
+        api_handles_prompt_template=True,
+        reason_enabled=True,
+        reason_failure_behavior=behavior,
+    )
+    result, _ = await chat_request(server, client)
+    assert result == "4"
+    assert client.reasoning_response is None
+
+
+@pytest.mark.asyncio
+async def test_chat_reasoning_field_named_reasoning_is_read(server, client_factory):
+    server["chat_stream"] = (
+        'data: {"choices":[{"delta":{"reasoning":"thinking"}}]}\n\n'
+        'data: {"choices":[{"delta":{"content":"4"}}]}\n\n'
+        "data: [DONE]\n\n"
+    )
+    client = client_factory(
+        model=MODEL, api_handles_prompt_template=True, reason_enabled=True
+    )
+    result, _ = await chat_request(server, client)
+    assert (result, client.reasoning_response) == ("4", "thinking")
+
+
+@pytest.mark.asyncio
+async def test_chat_prefill_continues_a_trailing_assistant_message(
+    server, client_factory
+):
+    server["chat_stream"] = capture("stream_prefill.sse")
+    client = client_factory(model=MODEL, api_handles_prompt_template=True)
+    result = await client.generate("Name a color.<|BOT|>The color is", {}, "narrate")
+    assert result == stream_text("stream_prefill.sse") == " **Azure**."
+    payload = json.loads(server["requests"][-1].content)
+    assert payload["messages"][-1] == {"role": "assistant", "content": "The color is"}
+    assert payload["chat_template_kwargs"] == {"enable_thinking": False}
+
+
+@pytest.mark.asyncio
+async def test_chat_prefill_echoed_by_the_server_is_stripped(server, client_factory):
+    server["chat_stream"] = (
+        'data: {"choices":[{"delta":{"content":"The color is"}}]}\n\n'
+        'data: {"choices":[{"delta":{"content":" azure."}}]}\n\n'
+        "data: [DONE]\n\n"
+    )
+    client = client_factory(model=MODEL, api_handles_prompt_template=True)
+    result = await client.generate("Name a color.<|BOT|>The color is", {}, "narrate")
+    assert result == " azure."
+
+
+@pytest.mark.asyncio
+async def test_chat_ignores_chunks_without_a_delta(server, client_factory):
+    server["chat_stream"] = (
+        'data: {"choices":[]}\n\n'
+        'data: {"choices":[{"delta":null}]}\n\n'
+        "data: not json\n\n"
+        'data: {"choices":[{"delta":{"content":"ok"}}]}\n\n'
+        "data: [DONE]\n\n"
+    )
+    client = client_factory(model=MODEL, api_handles_prompt_template=True)
+    assert await client.generate("Hi", {}, "narrate") == "ok"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("remote_template", [False, True])
+@pytest.mark.parametrize("before", [True, False], ids=["after-content", "no-content"])
+async def test_in_stream_error_event_raises_with_the_server_message(
+    server, client_factory, remote_template, before
+):
+    content = (
+        'data: {"choices":[{"delta":{"content":"Half"}}]}\n\n'
+        if remote_template
+        else 'data: {"content":"Half"}\n\n'
+    )
+    error = 'data: {"error":{"code":500,"message":"slot crashed","type":"server_error"}}\n\n'
+    stream = (content if before else "") + error
+    server["chat_stream" if remote_template else "completion_stream"] = stream
+    client = client_factory(model=MODEL, api_handles_prompt_template=remote_template)
+    with pytest.raises(GenerationProcessingError, match=r"\(500\) - slot crashed"):
+        await client.generate("Hi", {}, "narrate")
+
+
+@pytest.mark.asyncio
+async def test_done_marker_lets_the_server_close_the_stream(
+    monkeypatch, client_factory
+):
+    finished = asyncio.Event()
+
+    class Stream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            yield b'data: {"choices":[{"delta":{"content":"ok"}}]}\n\n'
+            yield b"data: [DONE]\n\n"
+            yield b"\n"
+            finished.set()
+
+    async def respond(request):
+        if request.url.path == "/props":
+            return httpx.Response(200, json={"role": "router"})
+        return httpx.Response(200, stream=Stream())
+
+    native_client = httpx.AsyncClient.__bases__[0]
+
+    class StreamingClient(native_client):
+        def __init__(self, **kwargs):
+            super().__init__(transport=httpx.MockTransport(respond), **kwargs)
+
+    monkeypatch.setattr(llamacpp.httpx, "AsyncClient", StreamingClient)
+    client = client_factory(model=MODEL, api_handles_prompt_template=True)
+    assert await client.generate("Hi", {}, "narrate") == "ok"
+    assert finished.is_set()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "behavior,start_pattern,raises",
+    [
+        ("fail", r"<\|channel>thought", True),
+        ("fail", None, False),
+        ("ignore", r"<\|channel>thought", False),
+    ],
+)
+async def test_chat_inline_reasoning_is_an_error_only_with_fail_and_a_start_pattern(
+    server, client_factory, monkeypatch, behavior, start_pattern, raises
+):
+    server["chat_stream"] = capture("stream_inline_reasoning.sse")
+    client = client_factory(
+        model=MODEL,
+        api_handles_prompt_template=True,
+        reason_enabled=True,
+        reason_failure_behavior=behavior,
+        reason_validation_pattern=start_pattern,
+    )
+    dialog = AsyncMock(return_value="ignore")
+    monkeypatch.setattr(client, "_auto_retry_or_prompt", dialog)
+    result, _ = await chat_request(server, client)
+    assert result == stream_text("stream_inline_reasoning.sse")
+    assert dialog.await_count == int(raises)
+    if raises:
+        assert dialog.await_args.args[0] == "missing_reasoning"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("remote_template", [False, True])
+@pytest.mark.parametrize("prefix", ["/llama", "/v1"])
+async def test_prefixed_api_url_404_advice_follows_the_endpoint_sent(
+    server, client_factory, prefix, remote_template
+):
+    endpoint = "/v1/chat/completions" if remote_template else "/completion"
+    server.update(
+        prefix=prefix, error_path=endpoint, error_code=404, error_message="not found"
+    )
+    client = client_factory(
+        router_mode=False,
+        api_url=f"http://llama.test:8080{prefix}",
+        api_handles_prompt_template=remote_template,
+    )
+    with pytest.raises(GenerationProcessingError) as raised:
+        await client.generate("Hi", {}, "narrate")
+    message = str(raised.value)
+    assert f"POST {prefix}{endpoint} was not found" in message
+    if prefix == "/v1":
+        assert "remove it" in message
+        assert "OpenAI Compatible" not in message
+        assert "turn off API handles" not in message
+    elif remote_template:
+        assert "turn off API handles prompt template" in message
+        assert "OpenAI Compatible" not in message
+    else:
+        assert "OpenAI Compatible" in message
+        assert "turn off API handles" not in message

@@ -1,5 +1,6 @@
 import json
 import math
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -1283,6 +1284,32 @@ async def test_compatible_chat_reasoning_comes_from_the_response_field(
         assert await client.send_prompt("hello") == "answer"
     assert client.reasoning_response == "worked it out"
     assert len(wire) == 1
+
+
+@pytest.mark.parametrize(
+    "capture,pattern,answer",
+    [
+        ("response_reasoning_content.json", None, "4"),
+        ("response_inline_reasoning.json", r".*?<channel\|>", "4"),
+    ],
+    ids=["reasoning_content", "inline"],
+)
+async def test_compatible_chat_captured_llamacpp_whole_response(
+    clients, wire, wire_choice_overrides, capture, pattern, answer
+):
+    body = json.loads(
+        (Path(__file__).parent / "data" / "llamacpp_chat" / capture).read_text()
+    )
+    client = clients(
+        api_handles_prompt_template=True,
+        stream=False,
+        reason_enabled=True,
+        reason_response_pattern=pattern,
+    )
+    wire_choice_overrides.append(body["choices"])
+    with ClientContext(requires_active_scene=False):
+        assert await client.send_prompt("hello") == answer
+    assert client.reasoning_response
 
 
 async def test_compatible_chat_reasoning_ignores_the_strip_pattern(

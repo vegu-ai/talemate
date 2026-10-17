@@ -516,7 +516,7 @@
   title: llama.cpp Client
   summary: Connect to llama-server at port 8080 with API authentication, context length and local prompt templates.
     Router mode checkbox, detected-router hint, exact per-client model selection and routing icon, autoload and cold loading.
-    API handles prompt template uses /apply-template with coercion and thinking controls; Concurrent Inference requires parallel slots and is off by default.
+    API handles prompt template uses chat completions with coercion and thinking controls; Concurrent Inference requires parallel slots and is off by default.
 - path: user-guide/clients/types/lmstudio.md
   title: LMStudio Client
   summary: Connect Talemate to LMStudio's local server at port 1234, with optional API key and context length. Troubleshoots

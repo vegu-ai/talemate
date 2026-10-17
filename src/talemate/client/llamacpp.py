@@ -9,7 +9,9 @@ from openai import APIStatusError, AsyncOpenAI
 from talemate.client.api_handles import (
     ApiHandlesPromptTemplateConfig,
     ApiHandlesPromptTemplateMixin,
+    ChatReasoningMixin,
     api_handles_prompt_template_extra_fields,
+    strip_echoed_prefill,
 )
 from talemate.client.base import (
     ClientBase,
@@ -29,8 +31,6 @@ from talemate.client.remote import (
 from talemate.client.vision import VisionConfig, vision_extra_fields, OpenAIVisionMixin
 from talemate.config.schema import Client as BaseClientConfig
 from talemate.exceptions import GenerationProcessingError
-
-APPLY_TEMPLATE_TIMEOUT = 30
 
 
 class Defaults(CommonDefaults, ApiHandlesPromptTemplateConfig):
@@ -69,8 +69,27 @@ class RouterModels(pydantic.BaseModel):
     data: list[RouterModel]
 
 
+class ChatDelta(pydantic.BaseModel):
+    content: str | None = None
+    reasoning_content: str | None = None
+    reasoning: str | None = None
+
+    @property
+    def reasoning_text(self) -> str | None:
+        return self.reasoning_content or self.reasoning
+
+
+class ChatChoice(pydantic.BaseModel):
+    delta: ChatDelta | None = None
+
+
+class ChatChunk(pydantic.BaseModel):
+    choices: list[ChatChoice] = pydantic.Field(default_factory=list)
+
+
 @register()
 class LlamaCppClient(
+    ChatReasoningMixin,
     ApiHandlesPromptTemplateMixin,
     ConcurrentInferenceMixin,
     OpenAIVisionMixin,
@@ -83,8 +102,7 @@ class LlamaCppClient(
     This client uses llama.cpp's richer, non-OpenAI endpoint:
       POST /completion
 
-    (The server also offers OpenAI-compatible endpoints under /v1, which we
-    still use for model discovery via /v1/models.)
+    With "API handles prompt template" it uses POST /v1/chat/completions.
     """
 
     auto_determine_prompt_template: bool = True
@@ -296,7 +314,7 @@ class LlamaCppClient(
     @property
     def supported_parameters(self):
         # Talemate inference params (see config.schema.InferenceParameters) that
-        # we can map to llama.cpp /completion options.
+        # we can map to llama.cpp request options.
         return [
             "temperature",
             "top_p",
@@ -354,37 +372,15 @@ class LlamaCppClient(
         api_key = self.api_key or "sk-1234"
         return AsyncOpenAI(base_url=self.require_api_url_v1(), api_key=api_key)
 
-    async def apply_remote_template(
-        self, prompt: str, kind: str, model: str | None
-    ) -> str:
-        """
-        Renders the prompt through llama.cpp's POST /apply-template endpoint,
-        which applies the model's built-in chat template server-side and
-        leaves the final assistant turn open when a prefill (coercion)
-        message is included.
-        """
-
-        messages, _ = self.chat_messages_for_coercion(prompt, kind)
-
-        payload = {"messages": messages}
-        if model is not None:
-            payload["model"] = model
-        if not self.reason_enabled:
-            # best-effort: ask thinking-capable templates (Qwen, GLM, ...)
-            # not to open a think block when reasoning is disabled
-            payload["chat_template_kwargs"] = {"enable_thinking": False}
-
-        # A routed request can cold-load a model before rendering its template.
-        timeout = None if model is not None else APPLY_TEMPLATE_TIMEOUT
-        async with httpx.AsyncClient(timeout=timeout) as http:
-            response = await http.post(
-                f"{self._base_url()}/apply-template",
-                json=payload,
-                headers=self.request_headers,
-            )
-            if response.status_code >= 400:
-                self.raise_api_error(response)
-            return response.json()["prompt"]
+    def api_error_text(self, status_code: int | None, error) -> str:
+        message = (
+            error.get("message") or error.get("type")
+            if isinstance(error, dict)
+            else None
+        )
+        detail = "Invalid API key" if status_code in (401, 403) else "API error"
+        code = f" ({status_code})" if isinstance(status_code, int) else ""
+        return f"llama.cpp {detail}{code}" + (f" - {message}" if message else "")
 
     def raise_api_error(self, response: httpx.Response) -> NoReturn:
         try:
@@ -392,47 +388,40 @@ class LlamaCppClient(
         except ValueError:
             data = None
         error = data.get("error") if isinstance(data, dict) else None
-        message = (
-            error.get("message") or error.get("type")
-            if isinstance(error, dict)
-            else None
-        )
         status_code = response.status_code
-        detail = "Invalid API key" if status_code in (401, 403) else "API error"
-        text = f"llama.cpp {detail} ({status_code})" + (
-            f" - {message}" if message else ""
-        )
+        text = self.api_error_text(status_code, error)
         if status_code == 404:
             request = response.request
             text += (
                 f": {request.method} {request.url.path} was not found on the server."
-                " If the server does not implement it, use the OpenAI Compatible"
-                " client with API handles prompt template turned on and /v1 at the"
-                " end of its API URL."
             )
+            if self._base_url().endswith("/v1"):
+                text += (
+                    " The API URL ends in /v1: remove it, this client adds its own"
+                    " paths."
+                )
+            elif self.api_handles_prompt_template:
+                text += (
+                    " If the server has no chat endpoint, turn off API handles"
+                    " prompt template."
+                )
+            else:
+                text += (
+                    " If the server does not implement it, use the OpenAI Compatible"
+                    " client with API handles prompt template turned on and /v1 at the"
+                    " end of its API URL."
+                )
         raise GenerationProcessingError(text)
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
-        Generate text using llama.cpp's POST /completion endpoint in streaming
-        mode so token usage can be tracked incrementally via
+        Streams the response so token usage can be tracked incrementally via
         `update_request_tokens`.
         """
 
         model = await self.request_model()
-        if self.api_handles_prompt_template:
-            prompt = await self.apply_remote_template(prompt, kind, model)
 
-        self.log.debug(
-            "generate",
-            prompt=prompt[:128] + " ...",
-            parameters=parameters,
-        )
-
-        # Map Talemate settings into llama.cpp /completion payload.
-        # The prompt already includes any prompt templating done by Talemate.
         payload = {k: v for k, v in parameters.items() if v is not None}
-        payload["prompt"] = prompt.strip(" ")
         payload["stream"] = True
         if model is not None:
             payload["model"] = model
@@ -442,52 +431,99 @@ class LlamaCppClient(
                 payload["dry_sequence_breakers"]
             )
 
-        try:
-            response = ""
-            url = f"{self._base_url()}/completion"
+        if self.api_handles_prompt_template:
+            return await self._generate_chat(prompt, payload, kind)
+        return await self._generate_completion(prompt, payload)
 
-            async with httpx.AsyncClient(timeout=None) as http:
-                async with http.stream(
-                    "POST",
-                    url,
-                    json=payload,
-                    headers=self.request_headers,
-                ) as r:
-                    if r.status_code >= 400:
-                        # llama.cpp returns OAI-style errors (see tools/server/README.md).
-                        await r.aread()
-                        self.raise_api_error(r)
-                    async for line in r.aiter_lines():
-                        if not line or not line.startswith("data:"):
-                            continue
-                        raw = line[len("data:") :].strip()
-                        if raw == "[DONE]":
-                            break
-                        try:
-                            evt = json.loads(raw)
-                        except Exception:
-                            continue
+    async def _stream_events(self, path: str, payload: dict):
+        async with httpx.AsyncClient(timeout=None) as http:
+            async with http.stream(
+                "POST",
+                f"{self._base_url()}{path}",
+                json=payload,
+                headers=self.request_headers,
+            ) as r:
+                if r.status_code >= 400:
+                    # llama.cpp returns OAI-style errors (see tools/server/README.md).
+                    await r.aread()
+                    self.raise_api_error(r)
+                async for line in r.aiter_lines():
+                    if not line or not line.startswith("data:"):
+                        continue
+                    raw = line[len("data:") :].strip()
+                    if raw == "[DONE]":
+                        continue
+                    try:
+                        evt = json.loads(raw)
+                    except Exception:
+                        continue
+                    if isinstance(evt, dict) and evt.get("error"):
+                        error = evt["error"]
+                        code = error.get("code") if isinstance(error, dict) else None
+                        raise GenerationProcessingError(
+                            self.api_error_text(code, error)
+                        )
+                    yield evt
 
-                        piece = evt.get("content")
-                        if piece:
-                            response += piece
-                            self.update_request_tokens(self.count_tokens(piece))
+    async def _generate_completion(self, prompt: str, payload: dict) -> str:
+        self.log.debug(
+            "generate",
+            prompt=prompt[:128] + " ...",
+            parameters=payload,
+        )
 
-                        if evt.get("stop") is True:
-                            # Don't break immediately; let the server finish the SSE stream
-                            # cleanly (avoids noisy generator-close warnings in some runtimes).
-                            continue
+        payload["prompt"] = prompt.strip(" ")
 
-                    # If we saw a stop event but didn't receive [DONE], the server will still
-                    # close the response; exiting the context will clean up the connection.
+        response = ""
+        async for evt in self._stream_events("/completion", payload):
+            piece = evt.get("content")
+            if piece:
+                response += piece
+                self.update_request_tokens(self.count_tokens(piece))
 
-            # Store overall token accounting once the stream is finished
-            self._returned_prompt_tokens = self.prompt_tokens(prompt)
-            self._returned_response_tokens = self.response_tokens(response)
+        self._returned_prompt_tokens = self.prompt_tokens(prompt)
+        self._returned_response_tokens = self.response_tokens(response)
 
-            return response
-        except GenerationProcessingError:
-            raise
+        return response
+
+    async def _generate_chat(self, prompt: str, payload: dict, kind: str) -> str:
+        self.log.debug(
+            "generate (chat/completions)",
+            prompt=prompt[:128] + " ...",
+            parameters=payload,
+        )
+
+        messages, coercion_prompt = self.chat_messages_for_coercion(prompt, kind)
+        payload["messages"] = messages
+        payload["chat_template_kwargs"] = {"enable_thinking": self.reason_enabled}
+        if self.reason_enabled:
+            # overrides a server started with --reasoning-format none
+            payload["reasoning_format"] = "deepseek"
+
+        response = ""
+        reasoning = ""
+        async for evt in self._stream_events("/v1/chat/completions", payload):
+            try:
+                chunk = ChatChunk.model_validate(evt)
+            except pydantic.ValidationError:
+                continue
+            if not chunk.choices or not chunk.choices[0].delta:
+                continue
+            delta = chunk.choices[0].delta
+            if delta.reasoning_text:
+                reasoning += delta.reasoning_text
+                self.update_request_tokens(self.count_tokens(delta.reasoning_text))
+            if delta.content:
+                response += delta.content
+                self.update_request_tokens(self.count_tokens(delta.content))
+
+        if reasoning:
+            self._reasoning_response = reasoning
+
+        self._returned_prompt_tokens = self.prompt_tokens(prompt)
+        self._returned_response_tokens = self.response_tokens(response)
+
+        return strip_echoed_prefill(response, coercion_prompt)
 
     # ------------------------------------------------------------------
     # Token helpers

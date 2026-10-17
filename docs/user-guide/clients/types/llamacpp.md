@@ -55,11 +55,11 @@ With autoload enabled, models load on demand. The first request can take longer,
 
 ##### API handles prompt template
 
-When enabled, Talemate uses the server's `/apply-template` endpoint to render prompts through the model's built-in chat template instead of applying a prompt template itself. Coercion (pre-filling the beginning of the response) keeps working, since the server leaves the assistant turn open for continuation.
+When enabled, Talemate sends the request to the server's `/v1/chat/completions` endpoint, so llama.cpp renders the prompt through the model's built-in chat template instead of Talemate applying a prompt template itself. Coercion (pre-filling the beginning of the response) keeps working: the server continues a trailing assistant message.
 
 This is **off by default**. It is a trade-off: keep it disabled for full control of the prompt template in Talemate, or enable it to trust the model's built-in chat template on the server — useful when you don't know which prompt template to pick.
 
-Reasoning models work as usual — enable Reasoning on the client and the think block is separated out by the configured reasoning pattern. When Reasoning is disabled, Talemate asks thinking-capable templates (Qwen, GLM, ...) not to open a think block via `enable_thinking`.
+Reasoning models work as usual — enable Reasoning on the client and llama.cpp returns the thinking separately from the answer, so only the answer reaches the story and the thinking is stored as the reasoning. Talemate asks the server to separate it with `reasoning_format`, which overrides a server started with `--reasoning-format none`. If a server still leaves the thinking in the answer, Talemate strips it with the configured reasoning pattern, and that pattern has to match the model's tags. An answer the pattern does not match is used as it is, because the model may not have thought at all. To get an error instead, fill in the **Validation pattern (reasoning start)** on this client (the model presets under **Reasoning**, such as `<think>`, fill it; **Default** clears it) and keep **Pattern Not Found Behavior** on Fail, the default: thinking that starts but cannot be stripped then raises an error. A validation pattern shown as a template default does not count while **API handles prompt template** is on; it has to be set on the client. When Reasoning is disabled, Talemate asks thinking-capable templates (Qwen, GLM, ...) not to open a think block via `enable_thinking`.
 
 ##### Context Length
 
@@ -91,7 +91,11 @@ Check the client's API key against the server's authentication settings. A faile
 
 #### The error says an endpoint was not found
 
-This client sends generations to the server's `/completion` endpoint, and to `/apply-template` when **API handles prompt template** is enabled. A server that does not implement them answers 404, and the error names the endpoint, for example `POST /completion was not found on the server`. This happens with servers that only offer OpenAI-style chat completions. Use the [OpenAI Compatible](/talemate/user-guide/clients/types/openai-compatible/) client with **API handles prompt template** enabled instead, and put `/v1` at the end of the **API Url**.
+This client sends generations to the server's `/completion` endpoint, or to `/v1/chat/completions` when **API handles prompt template** is enabled. A server that does not implement the endpoint answers 404, and the error names it, for example `POST /completion was not found on the server`.
+
+- For `/completion`, the server probably only offers OpenAI-style chat completions. Use the [OpenAI Compatible](/talemate/user-guide/clients/types/openai-compatible/) client with **API handles prompt template** enabled instead, and put `/v1` at the end of the **API Url**.
+- For `/v1/chat/completions`, the server has no chat endpoint. Turn **API handles prompt template** off.
+- If the **API Url** ends in `/v1`, remove it; this client adds its own paths. Keep a path prefix only if the server is started with `--api-prefix` or sits behind a proxy at that path, and make the URL match it. Otherwise use the server root, for example `http://localhost:8080`.
 
 #### Generations are weird / bad
 

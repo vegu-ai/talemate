@@ -490,7 +490,9 @@
 - path: user-guide/clients/types/anthropic.md
   title: Anthropic Client
   summary: Configure an Anthropic client with the shared API key, model identifier and context length; manually enter models
-    absent from the dropdown. Covers ready-state indicators and Concurrent Inference, enabled by default for batch requests.
+    absent from the dropdown. Explains why Claude Opus 5.5 and Fable 5 cannot turn Reasoning off, how Response Length Enforcement
+    treats them, and the prompt-based start of response used by Claude 5, Opus 4.6-4.8 and Sonnet 4.6 that refuse a pre-filled
+    response. Covers ready-state indicators and Concurrent Inference.
 - path: user-guide/clients/types/cohere.md
   title: Cohere Client
   summary: Configure a Cohere client with its shared API key, model and context length, then save and verify the ready indicator.

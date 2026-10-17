@@ -31,7 +31,6 @@ def test_no_display_while_reasoning_is_off(make_client):
     [
         ("claude-opus-4-7", "budget"),
         ("claude-opus-4-7", "adaptive"),
-        ("claude-opus-4-6", "adaptive"),
     ],
 )
 def test_adaptive_thinking_offers_the_effort_selector(
@@ -41,6 +40,13 @@ def test_adaptive_thinking_offers_the_effort_selector(
     display = client.reasoning_display
     assert display.control == "effort"
     assert display.effort_choices == ["low", "medium", "high", "xhigh", "max"]
+
+
+def test_opus_4_6_offers_no_xhigh_effort(make_client):
+    client = make_client(
+        "claude-opus-4-6", reason_enabled=True, thinking_mode="adaptive"
+    )
+    assert client.reasoning_display.effort_choices == ["low", "medium", "high", "max"]
 
 
 @pytest.mark.parametrize(

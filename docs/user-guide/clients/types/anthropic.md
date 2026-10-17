@@ -37,6 +37,12 @@ Which model to use. Currently defaults to `claude-haiku-4-5`.
 !!! note "Talemate lags behind Anthropic"
     When Anthropic adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.
 
+!!! note "Models that do not accept a pre-filled response"
+    Talemate sometimes steers a reply by writing the first words of the response for the model. Claude Opus 4.6, 4.7 and 4.8, Sonnet 4.6, and the Claude 5 models (Haiku, Sonnet, Opus and Fable) refuse that and answer with HTTP 400. For these models Talemate asks for the same opening in the prompt instead ("Start your response with: …"), so nothing is lost and no setup is needed.
+
+!!! note "Models that always think"
+    Claude Opus 5.5 and Fable 5 cannot run without thinking. For them the **Reasoning** setting stays on whatever you choose, and thinking uses adaptive mode with your **Effort Level**. With the default Response Length Enforcement (Adaptive), the response length is requested in the prompt instead of being capped, so thinking cannot use up the cap. With a mode that caps tokens, the cap includes the thinking and can cut the answer short.
+
 ##### Context Length
 
 Maximum context length (in tokens) for generations sent to Anthropic. If you are not sure, leave the default value.

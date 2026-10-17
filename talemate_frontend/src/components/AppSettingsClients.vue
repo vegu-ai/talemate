@@ -7,8 +7,10 @@
             <v-list slim selectable mandatory v-model:selected="selected" color="primary" density="compact">
                 <v-list-item v-for="name in clientNames" :key="name" :value="name">
                     <template v-slot:prepend>
-                        <v-progress-circular v-if="statusOf(name) === 'busy'" indeterminate="disable-shrink" color="primary" size="14" class="mr-3"></v-progress-circular>
-                        <v-icon v-else :color="statusColor(name)" size="14" class="mr-3">mdi-checkbox-blank-circle</v-icon>
+                        <div class="client-status-slot">
+                            <v-progress-circular v-if="statusOf(name) === 'busy'" indeterminate="disable-shrink" color="primary" size="14"></v-progress-circular>
+                            <v-icon v-else :color="statusColor(name)" size="14">mdi-checkbox-blank-circle</v-icon>
+                        </div>
                     </template>
                     <v-list-item-title>{{ name }}</v-list-item-title>
                     <v-list-item-subtitle class="text-body-small">
@@ -380,3 +382,18 @@ export default {
     },
 }
 </script>
+
+<style scoped>
+.client-status-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    margin-inline-end: 32px;
+}
+.client-status-slot ~ :deep(.v-list-item__spacer) {
+    width: 0;
+}
+</style>

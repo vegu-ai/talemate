@@ -227,11 +227,13 @@ class SetLLMTemplatePayload(pydantic.BaseModel):
     template_file: str
     model: str
     client_name: str | None = None
+    lock_template: bool = False
 
 
 class DetermineLLMTemplatePayload(pydantic.BaseModel):
     model: str
     client_name: str | None = None
+    lock_template: bool = False
 
 
 class SaveLLMTemplatePayload(pydantic.BaseModel):
@@ -490,7 +492,7 @@ class ConfigPlugin(Plugin):
         payload = SetLLMTemplatePayload(**data["data"])
 
         model_name = payload.model
-        if payload.client_name:
+        if payload.lock_template and payload.client_name:
             model_name = locked_model_template(payload.client_name, payload.model)
 
         copied_to = model_prompt.create_user_override(payload.template_file, model_name)
@@ -503,24 +505,26 @@ class ConfigPlugin(Plugin):
             client_name=payload.client_name,
         )
 
-        spec = PromptSpec()
         client = None
         if payload.client_name:
             try:
                 client = get_client(payload.client_name)
             except KeyError:
                 client = None
-        reasoning_tokens = 0
-        if client is not None and getattr(client, "reason_enabled", False):
-            reasoning_tokens = getattr(client, "validated_reason_tokens", 0) or 0
 
-        prompt_template_example, prompt_template_file = model_prompt(
-            model_name,
-            "sysmsg",
-            "prompt<|BOT|>{LLM coercion}",
-            reasoning_tokens=reasoning_tokens,
-            spec=spec,
-        )
+        prompt_template_example = None
+        if client is not None:
+            prompt_template_example, prompt_template_file, spec = (
+                client.prompt_template_example(model_name)
+            )
+        if prompt_template_example is None:
+            spec = PromptSpec()
+            prompt_template_example, prompt_template_file = model_prompt(
+                model_name,
+                "{sysmsg}",
+                "{prompt}<|BOT|>{LLM coercion}",
+                spec=spec,
+            )
 
         log.info(
             "Prompt template example",
@@ -576,6 +580,7 @@ class ConfigPlugin(Plugin):
                         "template_file": template,
                         "model": payload.model,
                         "client_name": payload.client_name,
+                        "lock_template": payload.lock_template,
                     },
                 }
             )

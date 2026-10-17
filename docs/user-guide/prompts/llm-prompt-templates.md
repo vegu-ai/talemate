@@ -70,7 +70,7 @@ Chat templates pulled from a GGUF model's `tokenizer_config.json` (or the matchi
 | Variable | Description |
 |----------|-------------|
 | `messages` | List of `{role, content}` dicts (roles: `system`, `user`, `assistant`). |
-| `bos_token`, `eos_token` | Empty strings -- Talemate does not add BOS/EOS itself; if the model requires them, include the literal tokens in the template. |
+| `bos_token`, `eos_token` | Empty strings -- Talemate does not add BOS/EOS itself. The backend adds the beginning-of-text token when the model file asks for it, so do not write a literal one (such as `<bos>` or `<\|begin_of_text\|>`) into the template, or the model receives it twice. Text a format starts with on its own, such as GLM's `[gMASK]<sop>`, stays in the template. |
 | `add_generation_prompt` | Always `True`. |
 | `enable_thinking` | `True` when reasoning tokens are enabled on the client, otherwise `False`. |
 | `thinking_budget` | The client's reasoning token count, or `0`. |

@@ -499,7 +499,7 @@ class CommandRIdentifier(TemplateIdentifier):
 
     def __call__(self, content: str):
         """
-        <BOS_TOKEN><|START_OF_TURN_TOKEN|><|USER_TOKEN|>{{ system_message }}
+        <|START_OF_TURN_TOKEN|><|USER_TOKEN|>{{ system_message }}
         {{ user_message }}<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|>
         <|CHATBOT_TOKEN|>{{ coercion_message }}
         """
@@ -517,7 +517,7 @@ class CommandRPlusIdentifier(TemplateIdentifier):
 
     def __call__(self, content: str):
         """
-        <BOS_TOKEN><|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>{{ system_message }}
+        <|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>{{ system_message }}
         <|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|USER_TOKEN|>{{ user_message }}
         <|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>{{ coercion_message }}
         """

@@ -24,6 +24,8 @@ Click the two cogwheels to the right of the triangle to go to the client's edito
 
 The template name, preview and warning refresh when Talemate detects a model or template update, including while the client stays selected. Unsaved settings edits are preserved.
 
+The preview shows a request the way the client sends it. With reasoning on, the coercion is not pre-filled: `{LLM coercion}` appears as an instruction at the end of the prompt. A [Reason Prefill](/talemate/user-guide/clients/reasoning/#reason-prefill), if set, still appears after the model's turn marker.
+
 ![Client editor with an unknown prompt template](/talemate/img/0.40.0/client-unknown-prompt-template-editor.png)
 
 You can first try by clicking the `DETERMINE VIA HUGGINGFACE` button. This doesn't always work — it probes the model repository for a template in this order: a `chat_template.jinja2` or `chat_template.jinja` file, an example in the model's `README.md`, or the template set in the `tokenizer_config.json` file.

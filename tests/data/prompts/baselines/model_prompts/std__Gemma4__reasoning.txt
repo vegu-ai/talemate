@@ -1,5 +1,6 @@
-<bos><|turn>system
-<|think|>You are a helpful storytelling assistant.<turn|>
+<|turn>system
+<|think|>
+You are a helpful storytelling assistant.<turn|>
 <|turn>user
 Write the next scene.<turn|>
 <|turn>model

@@ -614,6 +614,18 @@ class TestPromptTemplate:
         assert "SYS" in out
 
 
+@pytest.fixture
+def gemma4_template(monkeypatch):
+    from talemate.client.model_prompts import model_prompt
+
+    template = model_prompt.env.from_string(
+        model_prompt.get_std_template_content("Gemma4.jinja2")
+    )
+    monkeypatch.setattr(
+        model_prompt, "get_template", lambda name: (template, "std/Gemma4.jinja2")
+    )
+
+
 class TestPromptTemplateExample:
     def test_returns_none_when_no_model(self, stub_client):
         rendered, tname, spec = stub_client.prompt_template_example()
@@ -637,6 +649,93 @@ class TestPromptTemplateExample:
         # Includes the placeholders unmodified
         assert "{sysmsg}" in rendered
         assert "{prompt}" in rendered
+
+    @pytest.mark.parametrize(
+        "config, expected_user, expected_model",
+        [
+            ({}, "{prompt}", "<|channel>thought\n<channel|>{LLM coercion}"),
+            (
+                {"double_coercion": "Stay in character."},
+                "{prompt}",
+                "<|channel>thought\n<channel|>Stay in character.\n\n{LLM coercion}",
+            ),
+            (
+                {"reason_enabled": True},
+                "{prompt}\nAfter thinking about it, start your answer with: {LLM coercion}",
+                "",
+            ),
+            (
+                {"reason_enabled": True, "double_coercion": "Stay in character."},
+                "{prompt}\nAfter thinking about it, start your answer with: "
+                "Stay in character.\n\n{LLM coercion}",
+                "",
+            ),
+            (
+                {"reason_enabled": True, "reason_prefill": "<|channel>thought\n"},
+                "{prompt}\nAfter thinking about it, start your answer with: {LLM coercion}",
+                "<|channel>thought\n",
+            ),
+        ],
+    )
+    def test_shows_coercion_as_the_client_sends_it(
+        self, cfg_isolation, gemma4_template, config, expected_user, expected_model
+    ):
+        _register_client_config("ex", model="some-model", enabled=True, **config)
+        client = _StubClient(name="ex")
+        rendered, _, _ = client.prompt_template_example()
+        think = "<|think|>\n" if config.get("reason_enabled") else ""
+        assert rendered == (
+            f"<|turn>system\n{think}{{sysmsg}}<turn|>\n"
+            f"<|turn>user\n{expected_user}<turn|>\n"
+            f"<|turn>model\n{expected_model}"
+        )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "config",
+        [
+            {},
+            {"double_coercion": "Stay in character."},
+            {"reason_enabled": True},
+            {"reason_enabled": True, "reason_prefill": "<|channel>thought\n"},
+        ],
+    )
+    async def test_example_matches_the_sent_prompt(
+        self, cfg_isolation, gemma4_template, monkeypatch, config
+    ):
+        _register_client_config("sent", model="some-model", enabled=True, **config)
+        client = _OfflineClient(
+            name="sent", response="<|channel>thought\nR<channel|>answer"
+        )
+        client.connected = True
+        client.remote_model_name = "some-model"
+        monkeypatch.setattr(client, "get_system_message", lambda kind: "SYS")
+        monkeypatch.setattr(
+            type(client),
+            "enforce_response_length_instructions",
+            property(lambda self: False),
+        )
+        sent = []
+        generate = client.generate
+
+        async def capture(prompt, parameters, kind):
+            sent.append(prompt)
+            return await generate(prompt, parameters, kind)
+
+        client.generate = capture
+
+        with _make_active_agent_context():
+            with ClientContext(requires_active_scene=False):
+                set_client_context_attribute("requires_active_scene", False)
+                await client.send_prompt("USER<|BOT|>START", kind="conversation")
+
+        rendered, _, _ = client.prompt_template_example()
+        expected = (
+            rendered.replace("{sysmsg}", "SYS")
+            .replace("{prompt}", "USER")
+            .replace("{LLM coercion}", "START")
+        )
+        assert sent == [expected]
 
 
 # ---------------------------------------------------------------------------

@@ -298,7 +298,7 @@ describe('selected client template status', () => {
         expect(ctx.editor.waitingForTemplateSelection).toBe(true);
         expect(ctx.editor.templateInfo.template_file).toBeNull();
         ctx.editor.setPromptTemplate('ChatML.jinja2');
-        expect(ctx.lastRequest().data.client_name).toBe('Local');
+        expect(ctx.lastRequest().data).toMatchObject({ client_name: 'Local', lock_template: true });
         await ctx.complete(undefined, { template_file: 'Local__LOCK.jinja2' });
         await ctx.receive(status('Local', 'second'));
         expect(ctx.editor.templateInfo.template_file).toBe('Local__LOCK.jinja2');
@@ -320,7 +320,7 @@ describe('selected client template status', () => {
         const ctx = await mount('llamacpp', { lock_template: true });
         ctx.editor.lockTemplateChanged(false);
         expect(ctx.lastRequest().action).toBe('determine_llm_template');
-        expect(ctx.lastRequest().data.client_name).toBeNull();
+        expect(ctx.lastRequest().data).toMatchObject({ client_name: 'Local', lock_template: false });
         await ctx.complete(undefined, { template_file: 'first.jinja2' });
         await ctx.receive(status('Local', 'first', { lock_template: true, template_file: 'Local__LOCK.jinja2' }));
         expect(ctx.editor.templateInfo.template_file).toBe('first.jinja2');

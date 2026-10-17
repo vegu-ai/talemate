@@ -755,7 +755,8 @@ export default {
       this.sendRequest(action, {
         ...data,
         model: this.modelName,
-        client_name: (this.values.lock_template ? this.client.name : null),
+        client_name: this.client.name,
+        lock_template: !!this.values.lock_template,
       }, requestId);
     },
     handleMessage(message) {

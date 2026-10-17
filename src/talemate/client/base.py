@@ -888,9 +888,34 @@ class ClientBase:
             self.log.warning("prompt template not applied", reason="no model loaded")
             return f"{sys_msg}\n{prompt}"
 
-        # is JSON coercion active?
-        # Check for <|BOT|>{ in the prompt
-        json_coercion = "<|BOT|>{" in prompt
+        spec = PromptSpec()
+
+        model_name = self.model_name
+        if self.lock_template:
+            model_name = locked_model_template(self.name, self.model_name)
+
+        prompt = model_prompt(
+            model_name,
+            sys_msg,
+            prompt,
+            self.template_double_coercion(json_coercion="<|BOT|>{" in prompt),
+            default_template=self.default_prompt_template,
+            reasoning_tokens=self.validated_reason_tokens if self.reason_enabled else 0,
+            spec=spec,
+        )[0]
+
+        request = self._prompt_request.get()
+        if request is not None:
+            request.reasoning_patterns = self._resolve_reasoning_patterns(spec)
+
+        return prompt
+
+    def template_double_coercion(self, json_coercion: bool) -> str | None:
+        """
+        Text the prompt template puts at the start of the response, ahead of
+        the prompt's own coercion: the configured coercion (not ahead of a
+        JSON coercion) and the reason prefill.
+        """
 
         if self.can_be_coerced and self.double_coercion and not json_coercion:
             double_coercion = self.double_coercion
@@ -906,44 +931,52 @@ class ClientBase:
             else:
                 double_coercion = f"{self.reason_prefill}{double_coercion}"
 
-        spec = PromptSpec()
+        return double_coercion
 
-        model_name = self.model_name
-        if self.lock_template:
-            model_name = locked_model_template(self.name, self.model_name)
+    def apply_indirect_coercion(self, prompt: str) -> tuple[str, str | None]:
+        """
+        A client that cannot pre-fill the response gets the coercion as an
+        instruction at the end of the prompt instead. Returns the prompt and
+        that coercion, or None when the prompt is sent as it is.
+        """
+        if self.can_be_coerced:
+            return prompt, None
 
-        prompt = model_prompt(
-            model_name,
-            sys_msg,
-            prompt,
-            double_coercion,
-            default_template=self.default_prompt_template,
-            reasoning_tokens=self.validated_reason_tokens if self.reason_enabled else 0,
-            spec=spec,
-        )[0]
+        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        if coercion_prompt:
+            coercion_instruction = (
+                INDIRECT_COERCION_PROMPT_REASONING
+                if self.reason_enabled
+                else INDIRECT_COERCION_PROMPT
+            )
+            prompt += f"{coercion_instruction}{coercion_prompt}"
+        return prompt, coercion_prompt
 
-        request = self._prompt_request.get()
-        if request is not None:
-            request.reasoning_patterns = self._resolve_reasoning_patterns(spec)
-
-        return prompt
-
-    def prompt_template_example(self) -> tuple[str | None, str | None, PromptSpec]:
-        if not getattr(self, "model_name", None):
-            return None, None, PromptSpec()
+    def prompt_template_example(
+        self, model_name: str | None = None
+    ) -> tuple[str | None, str | None, PromptSpec]:
+        """
+        Renders an example request as this client sends it, with the template
+        of `model_name` (default: the client's own model, locked or not).
+        """
+        if model_name is None:
+            if not getattr(self, "model_name", None):
+                return None, None, PromptSpec()
+            model_name = self.model_name
+            if self.lock_template:
+                model_name = locked_model_template(self.name, self.model_name)
 
         if not self.enabled:
             return None, None, PromptSpec()
 
-        model_name = self.model_name
-        if self.lock_template:
-            model_name = locked_model_template(self.name, self.model_name)
+        prompt, _ = self.apply_indirect_coercion("{prompt}<|BOT|>{LLM coercion}")
 
         spec = PromptSpec()
         rendered, template_file = model_prompt(
             model_name,
             "{sysmsg}",
-            "{prompt}<|BOT|>{LLM coercion}",
+            prompt,
+            self.template_double_coercion(json_coercion=False),
             default_template=self.default_prompt_template,
             reasoning_tokens=self.validated_reason_tokens if self.reason_enabled else 0,
             spec=spec,
@@ -2173,17 +2206,7 @@ class ClientBase:
             if not self.enforce_response_length_cap_tokens:
                 prompt_param.pop(self.max_tokens_param_name, None)
 
-            if not self.can_be_coerced:
-                prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
-                if coercion_prompt:
-                    coercion_instruction = (
-                        INDIRECT_COERCION_PROMPT_REASONING
-                        if self.reason_enabled
-                        else INDIRECT_COERCION_PROMPT
-                    )
-                    prompt += f"{coercion_instruction}{coercion_prompt}"
-            else:
-                coercion_prompt = None
+            prompt, coercion_prompt = self.apply_indirect_coercion(prompt)
 
             finalized_prompt = self.prompt_template(
                 self.get_system_message(kind), prompt

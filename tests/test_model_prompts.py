@@ -30,6 +30,7 @@ from talemate.client.model_prompts import (
     ModelPrompt,
     PromptSpec,
     STD_TEMPLATE_PATH,
+    TALEMATE_TEMPLATE_PATH,
     TEMPLATE_IDENTIFIERS,
 )
 
@@ -387,6 +388,25 @@ class TestBuiltinTemplateBaselines:
         )
         safe_name = template_name.replace(".jinja2", "")
         baseline_checker(rendered, f"std__{safe_name}__reasoning")
+
+
+# Tokens the backend adds itself when the model file sets add_bos_token.
+# Turn markers that merely look alike stay: GLM's [gMASK]<sop> and Seed's
+# per-turn <seed:bos> are not added by the backend.
+_BACKEND_BOS_TOKENS = ("<bos>", "<|begin_of_text|>", "<BOS_TOKEN>", "<s>")
+
+_BUNDLED_TEMPLATES = sorted(
+    Path(directory) / name
+    for directory in (STD_TEMPLATE_PATH, TALEMATE_TEMPLATE_PATH)
+    for name in os.listdir(directory)
+    if name.endswith(".jinja2")
+)
+
+
+@pytest.mark.parametrize("path", _BUNDLED_TEMPLATES, ids=lambda p: p.name)
+def test_bundled_template_leaves_bos_to_the_backend(path):
+    source = path.read_text(encoding="utf-8")
+    assert not [token for token in _BACKEND_BOS_TOKENS if token in source]
 
 
 # ---------------------------------------------------------------------------

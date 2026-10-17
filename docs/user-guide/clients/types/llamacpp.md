@@ -45,7 +45,7 @@ Turn on **Router mode** if the server serves several models (llama.cpp router). 
 
 **Router mode** defaults to off. With it off, the client uses single-model behavior. If Talemate detects a router, the editor and client status show: "Router detected. Turn on Router mode to pick a model." Turn on the checkbox to use that router; detection does not turn it on for you.
 
-When Router mode is on, a small routing icon appears beside the model name in the AI clients list. It stays visible for warnings, errors and disabled clients. Its tooltip and screen-reader label read **Router mode**.
+When Router mode is on, a small routing icon appears beside the client name in the AI clients list. It stays there while the client is disabled, and its tooltip and screen-reader label read **Router mode**.
 
 The selection is saved per client and survives status refreshes and reconnects. It applies to native generation, **API handles prompt template**, and vision requests. Status checks only read server properties and the model list; they do not load or swap models.
 
@@ -57,9 +57,26 @@ With autoload enabled, models load on demand. The first request can take longer,
 
 When enabled, Talemate sends the request to the server's `/v1/chat/completions` endpoint, so llama.cpp renders the prompt through the model's built-in chat template instead of Talemate applying a prompt template itself. Coercion (pre-filling the beginning of the response) keeps working: the server continues a trailing assistant message.
 
-This is **off by default**. It is a trade-off: keep it disabled for full control of the prompt template in Talemate, or enable it to trust the model's built-in chat template on the server — useful when you don't know which prompt template to pick.
+This is **on** for new clients. It is a trade-off: turn it off for full control of the prompt template in Talemate, or leave it on to trust the model's built-in chat template on the server — useful when you don't know which prompt template to pick. A client you saved before keeps its saved setting; only clients you add from now on start with it on.
+
+Turning the checkbox off shows the **Prompt Template** picker in the editor right away, before you save, so you can choose the template in the same edit. Turning it on hides the picker again.
 
 Reasoning models work as usual — enable Reasoning on the client and llama.cpp returns the thinking separately from the answer, so only the answer reaches the story and the thinking is stored as the reasoning. Talemate asks the server to separate it with `reasoning_format`, which overrides a server started with `--reasoning-format none`. If a server still leaves the thinking in the answer, Talemate strips it with the configured reasoning pattern, and that pattern has to match the model's tags. An answer the pattern does not match is used as it is, because the model may not have thought at all. To get an error instead, fill in the **Validation pattern (reasoning start)** on this client (the model presets under **Reasoning**, such as `<think>`, fill it; **Default** clears it) and keep **Pattern Not Found Behavior** on Fail, the default: thinking that starts but cannot be stripped then raises an error. A validation pattern shown as a template default does not count while **API handles prompt template** is on; it has to be set on the client. When Reasoning is disabled, Talemate asks thinking-capable templates (Qwen, GLM, ...) not to open a think block via `enable_thinking`.
+
+##### Reasoning Mode and Reasoning Effort
+
+Found in the **Reasoning** section of the client editor and used while **Reasoning** is on. **Reasoning Mode** chooses how the thinking is controlled and defaults to **effort**:
+
+| Setup | **effort** (default) | **tokens** |
+| --- | --- | --- |
+| **API handles prompt template** on (`/v1/chat/completions`) | Sends **Reasoning Effort** as `reasoning_effort`. `default` sends nothing; `none` turns the thinking off. | Sends **Reasoning Tokens** as `reasoning_budget_tokens`, and llama.cpp cuts the thinking off once it reaches that many tokens. A budget of `0` allows no thinking at all. |
+| **API handles prompt template** off (`/completion`) | Sends nothing. | Sends nothing. |
+
+llama.cpp hands `reasoning_effort` to the model's chat template. A level other than `default` and `none` changes the output only if the template uses it, so a model such as Qwen3, whose template ignores the level, answers the same at `low` and at `high`. The client card shows the effort dropdown when the effort is sent (effort mode with **API handles prompt template** on), and the token field otherwise.
+
+On `/completion`, llama.cpp ignores these fields: the raw prompt has no chat template, and the thinking budget needs the model's thinking start and end tags, which Talemate does not know. There **Reasoning Tokens** only adds room to the response limit, as it does in the other mode. The **Reasoning Mode** and **Reasoning Effort** settings take effect once you turn **API handles prompt template** on.
+
+In both modes **Reasoning Tokens** also adds room to the response limit, so the thinking does not use up the answer. In tokens mode a very small budget can push the thinking into the answer. Turning Reasoning on lifts a budget of `0` to 1024, so `0` only applies when you type it afterwards. Existing llama.cpp clients start in effort mode with effort `default`, which sends nothing.
 
 ##### Context Length
 

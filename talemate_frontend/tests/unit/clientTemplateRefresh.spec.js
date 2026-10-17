@@ -368,14 +368,41 @@ describe('selected client template status', () => {
         expect(ctx.config.clients.Local[field]).toBe(true);
     });
 
-    it('hides API-managed templates and refreshes after Talemate regains ownership', async () => {
+    it('shows and hides the template picker as the draft toggle changes, before saving', async () => {
+        const ctx = await mount('llamacpp', { api_handles_prompt_template: true });
+        await ctx.receive(status('Local', 'first', { api_handles_prompt_template: true }));
+        expect(ctx.editor.promptTemplateAvailable).toBe(false);
+        ctx.config.clients.Local.api_handles_prompt_template = false;
+        await nextTick();
+        expect(ctx.editor.promptTemplateAvailable).toBe(true);
+        ctx.config.clients.Local.api_handles_prompt_template = true;
+        await nextTick();
+        expect(ctx.editor.promptTemplateAvailable).toBe(false);
+    });
+
+    it('chooses a template in the same edit that turns API handles off', async () => {
+        const ctx = await mount('llamacpp', { api_handles_prompt_template: true });
+        await ctx.receive(status('Local', 'first', { api_handles_prompt_template: true }));
+        expect(ctx.editor.promptTemplateAvailable).toBe(false);
+        ctx.config.clients.Local.api_handles_prompt_template = false;
+        await nextTick();
+        ctx.editor.setPromptTemplate('ChatML.jinja2');
+        expect(ctx.lastRequest()).toMatchObject({ action: 'set_llm_template', data: { template_file: 'ChatML.jinja2' } });
+        await ctx.complete(ctx.lastRequest(), { template_file: 'ChatML.jinja2' });
+        expect(ctx.editor.promptTemplateAvailable).toBe(true);
+        expect(ctx.editor.templateInfo.template_file).toBe('ChatML.jinja2');
+        await ctx.receive(status('Local', 'first', { api_handles_prompt_template: true, template_file: 'ChatML.jinja2' }));
+        expect(ctx.editor.promptTemplateAvailable).toBe(true);
+        expect(ctx.editor.templateInfo.template_file).toBe('ChatML.jinja2');
+        expect(ctx.config.clients.Local.api_handles_prompt_template).toBe(false);
+    });
+
+    it('shows the status template again after a plain status refresh', async () => {
         const ctx = await mount();
         ctx.editor.setPromptTemplate('ChatML.jinja2');
         await ctx.complete();
-        await ctx.receive(status('Local', 'second', { api_handles_prompt_template: true }));
-        expect(ctx.editor.promptTemplateAvailable).toBe(false);
-        await ctx.receive(status('Local', 'third'));
+        await ctx.receive(status('Local', 'second'));
         expect(ctx.editor.promptTemplateAvailable).toBe(true);
-        expect(ctx.editor.templateInfo.template_file).toBe('third.jinja2');
+        expect(ctx.editor.templateInfo.template_file).toBe('second.jinja2');
     });
 });

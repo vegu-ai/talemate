@@ -198,6 +198,9 @@ describe('client list routing indicator', () => {
         expect(label.textContent).toBe('Router mode');
         expect(label.closest('[aria-hidden="true"]')).toBeNull();
         const entry = icon.closest('[data-component="VListItem"]');
+        const title = icon.closest('[data-component="VListItemTitle"]');
+        expect(title.textContent).toContain('First');
+        expect(icon.closest('[data-component="VListItemSubtitle"]')).toBeNull();
         expect(entry.textContent).toContain('First');
         if (!error_message) expect(entry.textContent).toContain('gemma');
         else if (state !== 'disabled') expect(entry.textContent).toContain(error_message);

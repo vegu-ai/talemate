@@ -12,7 +12,7 @@
     <div v-for="(client, index) in state.clients" :key="index">
       <v-list density="compact" v-if="client.status !== 'disabled' || !hideDisabled">
         <v-list-item>
-          <v-list-item-title>
+          <v-list-item-title class="d-flex align-center">
             <v-progress-circular v-if="client.status === 'busy'" indeterminate="disable-shrink" color="primary"
               size="14"></v-progress-circular>
             
@@ -24,7 +24,17 @@
             <v-icon v-else color="success" size="14">mdi-checkbox-blank-circle</v-icon>
 
             <!-- client name-->
-            <span :class="client.status == 'disabled' ? 'text-medium-emphasis ml-1' : 'ml-1'"> {{ client.name }}</span>
+            <span :class="['ml-1', 'text-truncate', { 'text-medium-emphasis': client.status == 'disabled' }]"> {{ client.name }}</span>
+
+            <!-- router mode -->
+            <span v-if="client.router_mode" class="d-inline-flex align-center flex-shrink-0">
+              <v-tooltip text="Router mode">
+                <template v-slot:activator="{ props }">
+                  <v-icon v-bind="props" size="14" color="muted" class="ml-1" aria-hidden="true">mdi-call-split</v-icon>
+                </template>
+              </v-tooltip>
+              <span class="d-sr-only">Router mode</span>
+            </span>
 
             <!-- request information -->
             <AIClientRequestInformation :requestInformation="client.request_information" />
@@ -35,19 +45,9 @@
             </v-btn>
           </v-list-item-subtitle>
 
-          <v-list-item-subtitle v-if="client.enabled || client.router_mode" class="d-flex align-center text-body-small mb-2 mt-2">
-            <template v-if="client.enabled">
-              <v-chip v-if="client.error_message" label size="small" color="error" variant="tonal" class="mb-1 mr-1 flex-shrink-1" prepend-icon="mdi-alert">{{ client.error_message }}</v-chip>
-              <span v-else class="text-truncate">{{ client.model_name }}</span>
-            </template>
-            <span v-if="client.router_mode" class="d-inline-flex align-center flex-shrink-0">
-              <v-tooltip text="Router mode">
-                <template v-slot:activator="{ props }">
-                  <v-icon v-bind="props" size="14" color="muted" class="ml-1" aria-hidden="true">mdi-call-split</v-icon>
-                </template>
-              </v-tooltip>
-              <span class="d-sr-only">Router mode</span>
-            </span>
+          <v-list-item-subtitle v-if="client.enabled" class="d-flex align-center text-body-small mb-2 mt-2">
+            <v-chip v-if="client.error_message" label size="small" color="error" variant="tonal" class="mb-1 mr-1 flex-shrink-1" prepend-icon="mdi-alert">{{ client.error_message }}</v-chip>
+            <span v-else class="text-truncate">{{ client.model_name }}</span>
           </v-list-item-subtitle>
           <div v-if="client.enabled">
             <v-list-item-title class="text-body-small">

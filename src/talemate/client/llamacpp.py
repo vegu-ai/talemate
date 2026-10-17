@@ -17,10 +17,17 @@ from talemate.client.base import (
     ClientBase,
     ClientStatusValue,
     CommonDefaults,
+    ExtraField,
     ParameterReroute,
 )
 from talemate.client.model_probe import OpenAIModelListProbeMixin
 from talemate.client.model_prompts import model_prompt
+from talemate.client.reasoning_effort import (
+    EffortFormat,
+    ReasoningEffortConfig,
+    ReasoningEffortMixin,
+    reasoning_effort_extra_fields,
+)
 from talemate.client.registry import register
 from talemate.client.utils import dry_sequence_breakers_list
 from talemate.client.remote import (
@@ -31,16 +38,70 @@ from talemate.client.remote import (
 from talemate.client.vision import VisionConfig, vision_extra_fields, OpenAIVisionMixin
 from talemate.config.schema import Client as BaseClientConfig
 from talemate.exceptions import GenerationProcessingError
+from talemate.ux.schema import Condition, Note
 
 
-class Defaults(CommonDefaults, ApiHandlesPromptTemplateConfig):
+REASONING_MODE_CHOICES = [
+    {
+        "label": "effort",
+        "value": "effort",
+        "description": "Sends the Reasoning Effort level to the model's chat template.",
+    },
+    {
+        "label": "tokens",
+        "value": "tokens",
+        "description": "Cuts the thinking off once it reaches Reasoning Tokens; a small budget can push the reasoning into the answer.",
+    },
+]
+
+
+ReasoningMode = Literal["effort", "tokens"]
+
+
+class LlamaCppReasoningConfig(ReasoningEffortConfig):
+    reasoning_mode: ReasoningMode = "effort"
+
+
+def reasoning_extra_fields() -> dict[str, ExtraField]:
+    fields = reasoning_effort_extra_fields()
+    effort = fields["effort_level"]
+    return {
+        "reasoning_mode": ExtraField(
+            name="reasoning_mode",
+            type="text",
+            label="Reasoning Mode",
+            choices=REASONING_MODE_CHOICES,
+            description="How the thinking is controlled while API handles prompt template is on: 'effort' sends the Reasoning Effort below, 'tokens' cuts the thinking off once it reaches the Reasoning Tokens. Without API handles prompt template neither is sent, and Reasoning Tokens only adds room to the response limit.",
+            note_on_value={
+                "tokens": Note(
+                    text="While API handles prompt template is on, a very small budget can push the thinking into the answer.",
+                ),
+            },
+            group=effort.group,
+            required=False,
+        ),
+        "effort_level": effort.model_copy(
+            update={
+                "condition": Condition(attribute="reasoning_mode", value="effort"),
+                "description": "Sent to the model's chat template while Reasoning is on. 'default' sends nothing and 'none' turns the thinking off; the other levels only change the output if the model's chat template uses them. Applies only while API handles prompt template is on.",
+            }
+        ),
+    }
+
+
+class Defaults(CommonDefaults, LlamaCppReasoningConfig, ApiHandlesPromptTemplateConfig):
     # llama.cpp `llama-server` defaults to port 8080 (see ggml-org/llama.cpp README)
     api_url: str = "http://localhost:8080"
     max_token_length: int = 16384
+    api_handles_prompt_template: bool = True
 
 
 class ClientConfig(
-    ConcurrentInference, ApiHandlesPromptTemplateConfig, VisionConfig, BaseClientConfig
+    ConcurrentInference,
+    LlamaCppReasoningConfig,
+    ApiHandlesPromptTemplateConfig,
+    VisionConfig,
+    BaseClientConfig,
 ):
     router_mode: bool = False
 
@@ -89,6 +150,7 @@ class ChatChunk(pydantic.BaseModel):
 
 @register()
 class LlamaCppClient(
+    ReasoningEffortMixin,
     ChatReasoningMixin,
     ApiHandlesPromptTemplateMixin,
     ConcurrentInferenceMixin,
@@ -123,6 +185,22 @@ class LlamaCppClient(
     @property
     def router_mode(self) -> bool:
         return self.client_config.router_mode
+
+    @property
+    def reasoning_mode(self) -> ReasoningMode:
+        return self.client_config.reasoning_mode
+
+    @property
+    def reasoning_effort_format(self) -> EffortFormat:
+        if self.reasoning_mode == "effort" and self.api_handles_prompt_template:
+            return "reasoning_effort"
+        return "none"
+
+    @property
+    def reasoning_budget_tokens(self) -> int | None:
+        if self.reasoning_mode != "tokens":
+            return None
+        return self.validated_reason_tokens
 
     @property
     def server_url_is_current(self) -> bool:
@@ -304,10 +382,11 @@ class LlamaCppClient(
             default_factory=lambda: {
                 **api_handles_prompt_template_extra_fields(
                     label="API handles prompt template",
-                    description="The prompt template is rendered by llama.cpp using the model's built-in chat template, and the prompt template selection below is ignored. Response pre-filling keeps working. Keep this disabled for full control of the prompt template in Talemate; enable it to trust that the template on the remote end is correct.",
+                    description="The prompt template is rendered by llama.cpp using the model's built-in chat template, and the prompt template selection below is ignored. Response pre-filling keeps working. Turn this off for full control of the prompt template in Talemate; leave it on to trust that the template on the remote end is correct.",
                 ),
                 **vision_extra_fields(),
                 **concurrent_inference_extra_fields(),
+                **reasoning_extra_fields(),
             }
         )
 
@@ -495,10 +574,18 @@ class LlamaCppClient(
 
         messages, coercion_prompt = self.chat_messages_for_coercion(prompt, kind)
         payload["messages"] = messages
-        payload["chat_template_kwargs"] = {"enable_thinking": self.reason_enabled}
+        effort = self.reasoning_effort
+        # an explicit enable_thinking overrides reasoning_effort "none" on the server
+        payload["chat_template_kwargs"] = {
+            "enable_thinking": self.reason_enabled and effort != "none"
+        }
         if self.reason_enabled:
             # overrides a server started with --reasoning-format none
             payload["reasoning_format"] = "deepseek"
+            if effort not in (None, "none"):
+                payload["reasoning_effort"] = effort
+            if (budget := self.reasoning_budget_tokens) is not None:
+                payload["reasoning_budget_tokens"] = budget
 
         response = ""
         reasoning = ""

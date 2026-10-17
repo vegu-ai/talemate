@@ -69,6 +69,7 @@ class Defaults(
     model: str = ""
     double_coercion: str = None
     rate_limit: int | None = None
+    api_handles_prompt_template: bool = True
 
 
 class ClientConfig(
@@ -123,7 +124,7 @@ class OpenAICompatibleClient(
         reason_tokens_as_allowance: bool = True
         extra_fields: dict[str, ExtraField] = {
             **api_handles_prompt_template_extra_fields(
-                description="The API handles the prompt template, meaning your choice in the UI for the prompt template below will be ignored. This is not recommended and should only be used if the API does not support the `completions` andpoint or you don't know which prompt template to use.",
+                description="The API handles the prompt template, meaning your choice in the UI for the prompt template below will be ignored. Turn this off to control the prompt template yourself; that needs an API that supports the `completions` endpoint.",
             ),
             **toggleable_parameters_extra_fields(TOGGLEABLE_PARAMETERS),
             **streaming_extra_fields(),

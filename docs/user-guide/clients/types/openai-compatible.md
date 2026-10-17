@@ -28,9 +28,7 @@ Your DeepInfra api key. You can manage your DeepInfra API keys at [https://deepi
 
 ##### API handles prompt template
 
-This will cause requests to go to the chat/completions API instead and DeepInfra will be in control of the prompt template. This means if you enable this DeepInfra needs to be configured correctly and Talemate will also lose control of the prompt template, causing a likely loss in quality.
-
-This setting is recommended to keep disabled.
+With this on, requests go to the chat/completions API and DeepInfra is in control of the prompt template. DeepInfra then needs to be configured correctly, and Talemate loses control of the prompt template, which likely costs quality, so it is recommended to turn it off for DeepInfra. New clients start with this **on**, because chat completions work with every server that has a chat endpoint; a client you saved before keeps its saved setting. Turning the checkbox off shows the **Prompt Template** picker in the editor right away, so you can choose the template in the same edit, before you save.
 
 ##### Model name
 

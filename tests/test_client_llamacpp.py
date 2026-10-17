@@ -1125,3 +1125,188 @@ async def test_prefixed_api_url_404_advice_follows_the_endpoint_sent(
     else:
         assert "OpenAI Compatible" in message
         assert "turn off API handles" not in message
+
+
+REASONING_FIELDS = ("reasoning_effort", "reasoning_budget_tokens")
+
+
+def reasoning_fields(payload: dict) -> dict:
+    return {key: payload[key] for key in REASONING_FIELDS if key in payload}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "settings, expected",
+    [
+        ({"effort_level": "high"}, {"reasoning_effort": "high"}),
+        ({"effort_level": "none"}, {}),
+        ({"effort_level": "default"}, {}),
+        ({}, {}),
+        (
+            {"reasoning_mode": "tokens", "effort_level": "high", "reason_tokens": 2048},
+            {"reasoning_budget_tokens": 2048},
+        ),
+        (
+            {"reasoning_mode": "tokens", "reason_tokens": 0},
+            {"reasoning_budget_tokens": 0},
+        ),
+    ],
+)
+async def test_chat_sends_only_the_field_of_the_reasoning_mode(
+    server, client_factory, settings, expected
+):
+    client = client_factory(
+        model=MODEL,
+        api_handles_prompt_template=True,
+        reason_enabled=True,
+        **settings,
+    )
+    _, payload = await chat_request(server, client)
+    assert reasoning_fields(payload) == expected
+
+
+@pytest.mark.asyncio
+async def test_chat_effort_none_turns_the_thinking_off_through_enable_thinking(
+    server, client_factory
+):
+    client = client_factory(
+        model=MODEL,
+        api_handles_prompt_template=True,
+        reason_enabled=True,
+        effort_level="none",
+    )
+    _, payload = await chat_request(server, client)
+    assert payload["chat_template_kwargs"] == {"enable_thinking": False}
+    assert "reasoning_effort" not in payload
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reasoning_mode", ["effort", "tokens"])
+async def test_chat_sends_no_reasoning_field_while_reasoning_is_off(
+    server, client_factory, reasoning_mode
+):
+    client = client_factory(
+        model=MODEL,
+        api_handles_prompt_template=True,
+        reasoning_mode=reasoning_mode,
+        effort_level="high",
+    )
+    _, payload = await chat_request(server, client)
+    assert reasoning_fields(payload) == {}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reasoning_mode", ["effort", "tokens"])
+async def test_completion_sends_no_reasoning_field(
+    server, client_factory, reasoning_mode
+):
+    client = client_factory(
+        model=MODEL,
+        api_handles_prompt_template=False,
+        reason_enabled=True,
+        reasoning_mode=reasoning_mode,
+        effort_level="high",
+    )
+    await client.generate("Hi", {}, "narrate")
+    request = server["requests"][-1]
+    assert request.url.path == "/completion"
+    assert reasoning_fields(json.loads(request.content)) == {}
+
+
+@pytest.mark.asyncio
+async def test_a_request_effort_replaces_the_client_effort_in_effort_mode(
+    server, client_factory
+):
+    client = client_factory(
+        model=MODEL,
+        api_handles_prompt_template=True,
+        reason_enabled=True,
+        effort_level="high",
+    )
+    agent = SimpleNamespace(
+        agent_type="narrator",
+        verbose_name="Narrator",
+        allow_repetition_break=lambda *args, **kwargs: False,
+        inject_prompt_paramters=lambda *args: None,
+    )
+    with (
+        ActiveAgent(agent, lambda: None),
+        ClientContext(requires_active_scene=False, reasoning_effort="low"),
+    ):
+        await client.send_prompt("Hi")
+    payload = json.loads(server["requests"][-1].content)
+    assert reasoning_fields(payload) == {"reasoning_effort": "low"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reasoning_mode", ["effort", "tokens"])
+async def test_chat_sends_only_enable_thinking_false_when_an_action_disables_reasoning(
+    server, client_factory, reasoning_mode
+):
+    client = client_factory(
+        model=MODEL,
+        api_handles_prompt_template=True,
+        reason_enabled=True,
+        reasoning_mode=reasoning_mode,
+        effort_level="high",
+    )
+    agent = SimpleNamespace(
+        agent_type="narrator",
+        verbose_name="Narrator",
+        allow_repetition_break=lambda *args, **kwargs: False,
+        inject_prompt_paramters=lambda *args: None,
+    )
+    with (
+        ActiveAgent(agent, lambda: None),
+        ClientContext(requires_active_scene=False, disable_reasoning=True),
+    ):
+        await client.send_prompt("Hi")
+    payload = json.loads(server["requests"][-1].content)
+    assert payload["chat_template_kwargs"] == {"enable_thinking": False}
+    assert "reasoning_format" not in payload
+    assert reasoning_fields(payload) == {}
+
+
+@pytest.mark.parametrize(
+    "settings, expected",
+    [
+        ({"api_handles_prompt_template": True}, {"control": "effort"}),
+        (
+            {"api_handles_prompt_template": True, "reasoning_mode": "tokens"},
+            {"control": "tokens"},
+        ),
+        ({"api_handles_prompt_template": False}, {"control": "tokens"}),
+    ],
+)
+def test_reasoning_display_follows_what_is_sent(client_factory, settings, expected):
+    client = client_factory(reason_enabled=True, **settings)
+    display = client.reasoning_display.model_dump(exclude_none=True)
+    assert display["control"] == expected["control"]
+    assert ("effort_choices" in display) == (expected["control"] == "effort")
+
+
+def test_reasoning_display_is_absent_while_reasoning_is_off(client_factory):
+    assert client_factory(api_handles_prompt_template=True).reasoning_display is None
+
+
+def test_reasoning_mode_fields_in_the_editor_schema():
+    fields = llamacpp.LlamaCppClient.Meta().extra_fields
+    assert fields["reasoning_mode"].group == fields["effort_level"].group
+    assert fields["reasoning_mode"].group.name == "reasoning"
+    assert "very small budget" in fields["reasoning_mode"].note_on_value["tokens"].text
+    assert fields["reasoning_mode"].note_on_value["tokens"].title is None
+    assert [choice["value"] for choice in fields["reasoning_mode"].choices] == [
+        "effort",
+        "tokens",
+    ]
+    assert fields["effort_level"].condition.model_dump() == {
+        "attribute": "reasoning_mode",
+        "value": "effort",
+    }
+
+
+def test_new_clients_default_to_effort_mode_and_the_api_template():
+    meta = llamacpp.LlamaCppClient.Meta().model_dump()
+    assert meta["defaults"]["reasoning_mode"] == "effort"
+    assert meta["defaults"]["effort_level"] == "default"
+    assert meta["defaults"]["api_handles_prompt_template"] is True

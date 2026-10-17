@@ -118,7 +118,7 @@ that is used as the extracted value.
 | `action_type` | `str` | Classification of the generated response (optional) |
 | `response_length` | `int` | The maximum length of the response (optional) |
 | `response_spec` | `response/spec` | (optional) Optional ResponseSpec for extracting structured data from response |
-| `reasoning_effort` | `str` | Reasoning effort for this request (optional). Replaces the client's Reasoning Effort while its Reasoning is on; clients with a Reasoning Effort setting only (OpenAI, OpenAI compatible, OpenRouter, MistralAI — ignored for Mistral models that do not accept an effort). `default` lets the model choose. |
+| `reasoning_effort` | `str` | Reasoning effort for this request (optional). Replaces the client's Reasoning Effort while its Reasoning is on; clients with a Reasoning Effort setting only (OpenAI, OpenAI compatible, OpenRouter, MistralAI — ignored for Mistral models that do not accept an effort; llama.cpp — only in effort mode with API handles prompt template on). `default` lets the model choose. |
 | `disable_reasoning` | `bool` | Turn reasoning off for this request (optional) |
 
 **Outputs**

@@ -550,7 +550,7 @@ export default {
         && this.meta.requires_prompt_template
         && !!this.modelName
         && this.templateInfo.prompt_template_example !== null
-        && !this.templateInfo.api_handles_prompt_template;
+        && !this.values.api_handles_prompt_template;
     },
     availablePresets() {
       const items = [{ title: 'Default', value: '' }];

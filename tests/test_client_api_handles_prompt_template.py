@@ -406,3 +406,56 @@ class TestTextGenWebuiChatGenerate:
 
         system_message = fake_tgw_transport[0]["json"]["messages"][0]["content"]
         assert "PERSONA INSTRUCTIONS" in system_message
+
+
+# ---------------------------------------------------------------------------
+# default for new clients vs. saved clients
+# ---------------------------------------------------------------------------
+
+
+NEW_CLIENT_DEFAULTS = {
+    "llamacpp": True,
+    "openai_compat": True,
+    "textgenwebui": False,
+    "tabbyapi": False,
+    "ollama": False,
+}
+
+
+def _client_class(client_type: str):
+    from talemate.client.registry import CLIENT_CLASSES
+
+    return CLIENT_CLASSES[client_type]
+
+
+class TestDefaultForNewClients:
+    @pytest.mark.parametrize("client_type, expected", NEW_CLIENT_DEFAULTS.items())
+    def test_new_client_payload(self, client_type, expected):
+        defaults = _client_class(client_type).Meta().model_dump()["defaults"]
+        assert defaults["api_handles_prompt_template"] is expected
+
+    @pytest.mark.parametrize("client_type", NEW_CLIENT_DEFAULTS)
+    def test_saved_client_without_the_field_keeps_it_off(self, client_type):
+        from talemate.config.schema import Config
+
+        config = Config(clients={"saved": {"type": client_type, "name": "saved"}})
+        assert config.clients["saved"].api_handles_prompt_template is False
+
+    @pytest.mark.parametrize("client_type", NEW_CLIENT_DEFAULTS)
+    @pytest.mark.parametrize("saved_value", [True, False])
+    def test_saved_value_survives_a_save_and_load(self, client_type, saved_value):
+        from talemate.config.schema import Config
+
+        config = Config(
+            clients={
+                "saved": {
+                    "type": client_type,
+                    "name": "saved",
+                    "api_handles_prompt_template": saved_value,
+                }
+            }
+        )
+        stored = config.model_dump(exclude_none=True)
+        assert stored["clients"]["saved"]["api_handles_prompt_template"] is saved_value
+        reloaded = Config(**stored)
+        assert reloaded.clients["saved"].api_handles_prompt_template is saved_value

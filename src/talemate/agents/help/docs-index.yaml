@@ -514,9 +514,10 @@
     registration, disable/re-enable lifecycle, preserved settings and Automatic Setup opt-out.
 - path: user-guide/clients/types/llamacpp.md
   title: llama.cpp Client
-  summary: Connect to llama-server at port 8080 with API authentication, context length and local prompt templates.
-    Router mode checkbox, detected-router hint, exact per-client model selection and routing icon, autoload and cold loading.
-    API handles prompt template uses chat completions with coercion and thinking controls; Concurrent Inference requires parallel slots and is off by default.
+  summary: 'llama-server port 8080: API authentication, context length, local prompt templates. Router mode checkbox,
+    detected-router hint, exact per-client model selection, routing icon, autoload, cold loading. API handles prompt template
+    (on for new clients), chat completions, coercion, thinking controls; Reasoning Mode effort or budget (reasoning_effort).
+    Concurrent Inference: parallel slots, off by default.'
 - path: user-guide/clients/types/lmstudio.md
   title: LMStudio Client
   summary: Connect Talemate to LMStudio's local server at port 1234, with optional API key and context length. Troubleshoots
@@ -537,7 +538,7 @@
     text prompt templates. Covers temperature, top_p, presence_penalty and Send stop toggles, Send enable_thinking, the text-completion
     limit, Reasoning Effort Format (none, reasoning_effort or reasoning object), Completion Token Parameter (max_tokens or max_completion_tokens),
     direct OpenAI setup, Extra Completion Tokens, reasoning patterns and per-action overrides; clients saved before 0.40. Also
-    Stream and chat-mode reasoning.'
+    Stream and chat-mode reasoning, and API handles prompt template (on for new clients, off recommended for DeepInfra).'
 - path: user-guide/clients/types/openai.md
   title: OpenAI Client
   summary: Configure OpenAI API key, manual models, fallback token estimates, context length, Concurrent Inference; Reasoning

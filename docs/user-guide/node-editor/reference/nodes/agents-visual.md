@@ -295,5 +295,7 @@ variants regardless of the prompt type.
 | `negative_prompt` | `str` | Negative prompt compiled according to prompt_type |
 | `positive_prompt_keywords` | `str` | Positive prompt compiled as comma-separated keywords |
 | `negative_prompt_keywords` | `str` | Negative prompt compiled as comma-separated keywords |
+| `positive_keywords` | `list` | Positive keywords of all parts as a list ("no X" keywords excluded) |
+| `negative_keywords` | `list` | Negative keywords of all parts as a list (implied "no X" negatives included) |
 | `positive_prompt_descriptive` | `str` | Positive prompt compiled as descriptive text |
 | `negative_prompt_descriptive` | `str` | Negative prompt compiled as descriptive text |

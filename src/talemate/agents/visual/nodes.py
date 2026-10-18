@@ -355,6 +355,8 @@ class UnpackPrompt(Node):
     - negative_prompt: Negative prompt compiled according to prompt_type
     - positive_prompt_keywords: Positive prompt compiled as comma-separated keywords
     - negative_prompt_keywords: Negative prompt compiled as comma-separated keywords
+    - positive_keywords: Positive keywords of all parts as a list ("no X" keywords excluded)
+    - negative_keywords: Negative keywords of all parts as a list (implied "no X" negatives included)
     - positive_prompt_descriptive: Positive prompt compiled as descriptive text
     - negative_prompt_descriptive: Negative prompt compiled as descriptive text
     """
@@ -372,6 +374,8 @@ class UnpackPrompt(Node):
         self.add_output("negative_prompt", socket_type="str")
         self.add_output("positive_prompt_keywords", socket_type="str")
         self.add_output("negative_prompt_keywords", socket_type="str")
+        self.add_output("positive_keywords", socket_type="list")
+        self.add_output("negative_keywords", socket_type="list")
         self.add_output("positive_prompt_descriptive", socket_type="str")
         self.add_output("negative_prompt_descriptive", socket_type="str")
 
@@ -388,6 +392,8 @@ class UnpackPrompt(Node):
                 "negative_prompt": prompt.negative_prompt,
                 "positive_prompt_keywords": prompt.positive_prompt_keywords,
                 "negative_prompt_keywords": prompt.negative_prompt_keywords,
+                "positive_keywords": prompt.positive_keywords,
+                "negative_keywords": prompt.negative_keywords,
                 "positive_prompt_descriptive": prompt.positive_prompt_descriptive,
                 "negative_prompt_descriptive": prompt.negative_prompt_descriptive,
             }

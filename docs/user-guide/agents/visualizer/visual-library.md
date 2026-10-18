@@ -287,7 +287,7 @@ Image analysis uses AI to extract detailed information from images. This is usef
     Image analysis requires the Image Analysis backend to be configured and available. If the backend is not configured, the Analyze button will be disabled or unavailable. Make sure you have an image analysis backend set up in your visual agent configuration before attempting to analyze images.
 
 !!! tip "Automatic Analysis During Generation"
-    If you prefer not to manually analyze each image, you can enable **Automatic Analysis of References** in the [Visualizer settings](/talemate/user-guide/agents/visualizer/settings/#automatic-analysis-of-references). When enabled, any reference images lacking analysis data will be automatically analyzed before prompt generation.
+    If you prefer not to manually analyze each image, you can enable **Automatic Analysis of References** in the [Visualizer settings](/talemate/user-guide/agents/visualizer/settings/#automatic-analysis-of-references). When enabled, any reference images lacking analysis data will be automatically analyzed before prompt generation. Like *Perform extra revision of editing prompts*, the automatic analysis only runs when the image backend that makes the image uses the **Descriptive** prompting type.
 
 ![A tooltip appearing above the "Analyze" button displays the message: "Analyze the image using AI. (Ctrl: set instructions)." The button is part of a dark-mode toolbar, positioned next to a partially visible "Set Cover" option.](/talemate/img/0.34.0/visual-library-21.png)
 

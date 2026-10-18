@@ -316,6 +316,7 @@ class Automatic1111Mixin:
             return Backend(api_url=api_url, gen_type=gen_type, prompt_type=prompt_type)
 
         backend.api_url = api_url
+        backend.prompt_type = prompt_type
         return backend
 
     async def automatic1111_prepare_generation(

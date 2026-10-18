@@ -101,6 +101,8 @@ This setting works in conjunction with **Perform Extra Revision of Editing Promp
 
 If you only enable prompt revision without automatic analysis, the revision step will still work but may have less information about unanalyzed references to work with.
 
+Like the revision, the automatic analysis only runs when the image backend that makes the image uses the **Descriptive** prompting type. With **Keywords**, an unanalyzed reference stays unanalyzed until a Descriptive generation uses it, you mark it as a reference, or you press **Analyze** in the Visual Library.
+
 !!! warning "Additional AI Queries"
     Enabling this option adds one AI query per unanalyzed reference image. You must have an image analysis backend configured for this feature to work.
 
@@ -121,8 +123,10 @@ For example, instead of generating a prompt like "Elena, a tall woman with red h
 
 With exactly one reference image there is no image number. The revised prompt names the reference in plain words instead — "Elena, as in the reference image, stands in a dimly lit tavern, looking worried". Image editing models generally expect a numbered tag only when two or more images are attached, and a single one is referred to naturally.
 
+The revision rewrites the descriptive prompt only. When the image backend that makes the image uses the **Keywords** prompting type, the revision is skipped and the backend gets the generated keywords.
+
 !!! warning "Additional AI Query"
-    This adds an extra AI query to the prompt generation process when reference images are provided.
+    This adds an extra AI query to the prompt generation process when reference images are provided and the backend uses Descriptive prompts.
 
 This setting is enabled by default.
 

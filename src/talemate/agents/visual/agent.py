@@ -180,11 +180,11 @@ class VisualAgent(
                         type="bool",
                         value=False,
                         label="Automatic analysis of references",
-                        description="When enabled, reference images lacking analysis data will be automatically analyzed before being used in prompt generation.",
+                        description="When enabled, reference images lacking analysis data will be automatically analyzed before being used in prompt generation. Only runs when the image backend that makes the image uses the Descriptive prompting type.",
                         note_on_value={
                             True: AgentActionNote(
                                 color="warning",
-                                text="Reference images will be analyzed on-the-fly when missing analysis data, adding one AI query per unanalyzed reference. Requires image analysis backend to be configured.",
+                                text="Reference images will be analyzed on-the-fly when missing analysis data, adding one AI query per unanalyzed reference when the image backend that makes the image uses the Descriptive prompting type. Requires image analysis backend to be configured.",
                             ),
                         },
                     ),
@@ -192,12 +192,12 @@ class VisualAgent(
                         type="bool",
                         value=True,
                         label="Perform extra revision of editing prompts",
-                        description="Uses AI to refine and simplify image editing prompts based on provided references, potentially improving generation results.",
+                        description="Uses AI to refine and simplify image editing prompts based on provided references, potentially improving generation results. Only runs when the image backend that makes the image uses the Descriptive prompting type.",
                         note_on_value={
                             True: AgentActionNote(
                                 color="warning",
                                 title="Additional AI Query Required",
-                                text="This will add an extra AI query to the prompt generation process when references are provided, but may improve results by better aligning the prompt with the provided references.",
+                                text="This will add an extra AI query to the prompt generation process when references are provided and the image backend that makes the image uses the Descriptive prompting type, but may improve results by better aligning the prompt with the provided references.",
                             ),
                         },
                     ),

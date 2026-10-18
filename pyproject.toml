@@ -68,6 +68,7 @@ dependencies = [
     "chatterbox-tts>=0.1.7",
     # PyPI's Perth 1.0.1 imports pkg_resources, absent at our setuptools floor.
     # Pin the maintained 1.1 source used by Chatterbox upstream until it is released.
+    # The source is a commit archive rather than a git checkout so installs need no git.
     "resemble-perth>=1.1.0",
     # 0.14.0 wheels link against the CUDA 13 runtime (libnvrtc.so.13); our torch
     # comes from the cu128 (CUDA 12.8) index, so cap below 0.14 to stay compatible.
@@ -159,7 +160,7 @@ override-dependencies = [
 ]
 
 [tool.uv.sources]
-resemble-perth = { git = "https://github.com/resemble-ai/Perth.git", rev = "ff1c8ac55a976971245cdd53c18d6131ca00d993" }
+resemble-perth = { url = "https://github.com/resemble-ai/Perth/archive/ff1c8ac55a976971245cdd53c18d6131ca00d993.tar.gz" }
 torch = [
   { index = "pytorch-cu128" },
 ]

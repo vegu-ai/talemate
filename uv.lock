@@ -5222,7 +5222,7 @@ wheels = [
 [[package]]
 name = "resemble-perth"
 version = "1.1.0"
-source = { git = "https://github.com/resemble-ai/Perth.git?rev=ff1c8ac55a976971245cdd53c18d6131ca00d993#ff1c8ac55a976971245cdd53c18d6131ca00d993" }
+source = { url = "https://github.com/resemble-ai/Perth/archive/ff1c8ac55a976971245cdd53c18d6131ca00d993.tar.gz" }
 dependencies = [
     { name = "librosa" },
     { name = "numpy" },
@@ -5231,6 +5231,18 @@ dependencies = [
     { name = "soundfile" },
     { name = "torch" },
     { name = "torchaudio" },
+]
+sdist = { hash = "sha256:00e89ff833f7efc1a0ae0ca3c5420ae108b9adbed9c0fb7b03750b854d30f149" }
+
+[package.metadata]
+requires-dist = [
+    { name = "librosa", specifier = ">=0.11.0" },
+    { name = "numpy", specifier = ">=1.24.0" },
+    { name = "pydub", specifier = ">=0.25.1" },
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "soundfile", specifier = ">=0.12.0" },
+    { name = "torch", specifier = ">=2.1.0" },
+    { name = "torchaudio", specifier = ">=2.1.0" },
 ]
 
 [[package]]
@@ -6153,7 +6165,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "requests", specifier = ">=2.26" },
-    { name = "resemble-perth", git = "https://github.com/resemble-ai/Perth.git?rev=ff1c8ac55a976971245cdd53c18d6131ca00d993" },
+    { name = "resemble-perth", url = "https://github.com/resemble-ai/Perth/archive/ff1c8ac55a976971245cdd53c18d6131ca00d993.tar.gz" },
     { name = "restrictedpython", specifier = ">7.1" },
     { name = "rope", specifier = ">=0.22" },
     { name = "sentence-transformers", specifier = ">=2.7.0" },

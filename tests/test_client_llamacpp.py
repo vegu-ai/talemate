@@ -1310,3 +1310,230 @@ def test_new_clients_default_to_effort_mode_and_the_api_template():
     assert meta["defaults"]["reasoning_mode"] == "effort"
     assert meta["defaults"]["effort_level"] == "default"
     assert meta["defaults"]["api_handles_prompt_template"] is True
+
+
+SAMPLER_PARAMETERS = {
+    "temperature": 0.8,
+    "top_p": 0.9,
+    "top_k": 40,
+    "min_p": 0.05,
+    "presence_penalty": 0.1,
+    "frequency_penalty": 0.2,
+    "xtc_threshold": 0.1,
+    "xtc_probability": 0.5,
+    "dry_multiplier": 0.8,
+    "dry_base": 1.75,
+    "dry_allowed_length": 2,
+    "dry_sequence_breakers": '"\\n"',
+    "stop": ["END"],
+    "adaptive_target": 0.5,
+    "adaptive_decay": 0.9,
+    "repetition_penalty": 1.1,
+    "repetition_penalty_range": 64,
+    "max_tokens": 128,
+}
+
+SENT_NAMES = {
+    "repetition_penalty": "repeat_penalty",
+    "repetition_penalty_range": "repeat_last_n",
+    "max_tokens": "n_predict",
+}
+
+TOGGLES = {
+    "temperature": ["temperature"],
+    "top_p": ["top_p"],
+    "top_k": ["top_k"],
+    "min_p": ["min_p"],
+    "presence_penalty": ["presence_penalty"],
+    "frequency_penalty": ["frequency_penalty"],
+    "stop": ["stop"],
+    "xtc": ["xtc_threshold", "xtc_probability"],
+    "dry": [
+        "dry_multiplier",
+        "dry_base",
+        "dry_allowed_length",
+        "dry_sequence_breakers",
+    ],
+    "adaptive": ["adaptive_target", "adaptive_decay"],
+    "repetition_penalty": ["repetition_penalty", "repetition_penalty_range"],
+}
+
+
+def tuned_parameters(client) -> dict:
+    agent = SimpleNamespace(
+        agent_type="narrator",
+        verbose_name="Narrator",
+        allow_repetition_break=lambda *args, **kwargs: False,
+        inject_prompt_paramters=lambda *args: None,
+    )
+    parameters = dict(SAMPLER_PARAMETERS, extra_stopping_strings=["BOB:"])
+    with ActiveAgent(agent, lambda: None), ClientContext(requires_active_scene=False):
+        client.tune_prompt_parameters(parameters, "narrate")
+    parameters.pop("extra_stopping_strings")
+    return parameters
+
+
+def cleaned_parameters(client) -> dict:
+    parameters = dict(SAMPLER_PARAMETERS)
+    client.clean_prompt_parameters(parameters)
+    return parameters
+
+
+def test_every_parameter_is_sent_by_default(client_factory):
+    parameters = cleaned_parameters(client_factory())
+    assert parameters == {
+        SENT_NAMES.get(name, name): value for name, value in SAMPLER_PARAMETERS.items()
+    }
+
+
+def test_every_sampler_parameter_belongs_to_one_toggle():
+    in_toggles = [name for names in TOGGLES.values() for name in names]
+    assert sorted(in_toggles) == sorted(set(SAMPLER_PARAMETERS) - {"max_tokens"})
+
+
+@pytest.mark.parametrize("toggle", TOGGLES)
+def test_a_toggle_off_leaves_its_parameters_out_under_both_names(
+    client_factory, toggle
+):
+    client = client_factory(**{f"send_{toggle}": False})
+    parameters = cleaned_parameters(client)
+    for name in TOGGLES[toggle]:
+        assert name not in parameters
+        assert SENT_NAMES.get(name, name) not in parameters
+    others = {
+        SENT_NAMES.get(name, name)
+        for name in SAMPLER_PARAMETERS
+        if name not in TOGGLES[toggle]
+    }
+    assert set(parameters) == others
+
+
+def test_the_response_limit_has_no_toggle_and_is_always_sent(client_factory):
+    client = client_factory(**{f"send_{toggle}": False for toggle in TOGGLES})
+    assert cleaned_parameters(client) == {"n_predict": 128}
+    assert not hasattr(
+        llamacpp.ClientConfig(type="llamacpp", name="n"), "send_max_tokens"
+    )
+
+
+def test_a_reroute_is_toggled_by_its_talemate_name(client_factory):
+    client = client_factory(send_repetition_penalty=False)
+    assert "repeat_penalty" not in client.supported_parameters
+    assert "repeat_last_n" not in client.supported_parameters
+    assert "repetition_penalty" not in client.supported_parameters
+    assert "n_predict" in client.supported_parameters
+
+
+def test_saved_client_without_the_toggles_loads_with_all_on():
+    config = Config.model_validate(
+        {
+            "clients": {
+                "old": {
+                    "type": "llamacpp",
+                    "name": "old",
+                    "api_url": "http://localhost:8080",
+                }
+            }
+        }
+    )
+    loaded = config.clients["old"]
+    assert all(getattr(loaded, f"send_{toggle}") is True for toggle in TOGGLES)
+
+
+def test_saved_toggle_survives_a_config_round_trip():
+    config = Config.model_validate(
+        {"clients": {"c": {"type": "llamacpp", "name": "c", "send_dry": False}}}
+    )
+    dumped = config.model_dump()["clients"]["c"]
+    assert dumped["send_dry"] is False
+    assert dumped["send_xtc"] is True
+
+
+def test_toggle_values_reach_the_client_status(client_factory):
+    client = client_factory(send_top_k=False, send_xtc=False)
+    data = {}
+    client.populate_extra_fields(data)
+    assert data["send_top_k"] is False
+    assert data["send_xtc"] is False
+    assert data["send_temperature"] is True
+
+
+def test_toggles_show_in_the_parameters_group_with_defaults_on():
+    meta = llamacpp.LlamaCppClient.Meta()
+    toggle_fields = {
+        k: f for k, f in meta.extra_fields.items() if k.startswith("send_")
+    }
+    assert set(toggle_fields) == {f"send_{toggle}" for toggle in TOGGLES}
+    for key, field in toggle_fields.items():
+        assert field.type == "bool"
+        assert field.group.name == "parameters"
+        assert getattr(meta.defaults, key) is True
+    assert len({field.group.description for field in toggle_fields.values()}) == 1
+    assert (
+        "llama.cpp's own value" in toggle_fields["send_temperature"].group.description
+    )
+
+
+def test_the_stop_toggle_says_what_the_user_loses():
+    field = llamacpp.LlamaCppClient.Meta().extra_fields["send_stop"]
+    assert "does not stop at the end of the turn" in field.description
+    assert "Talemate still cuts the text" in field.description
+
+
+def test_xtc_and_dry_label_and_describe_every_field_they_switch():
+    fields = llamacpp.LlamaCppClient.Meta().extra_fields
+    for toggle in ("xtc", "dry", "adaptive", "repetition_penalty"):
+        for name in TOGGLES[toggle]:
+            assert name in fields[f"send_{toggle}"].description
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("remote_template", [False, True])
+async def test_toggled_off_parameters_are_absent_from_the_request(
+    server, client_factory, remote_template
+):
+    client = client_factory(
+        model=MODEL,
+        api_handles_prompt_template=remote_template,
+        send_temperature=False,
+        send_stop=False,
+        send_repetition_penalty=False,
+        send_dry=False,
+    )
+    parameters = tuned_parameters(client)
+    assert parameters["stop"]
+    client.clean_prompt_parameters(parameters)
+
+    await client.generate("Hi", parameters, "narrate")
+
+    post = next(r for r in server["requests"] if r.method == "POST")
+    payload = json.loads(post.content)
+    assert payload["model"] == MODEL
+    for absent in (
+        "temperature",
+        "stop",
+        "repetition_penalty",
+        "repeat_penalty",
+        "repetition_penalty_range",
+        "repeat_last_n",
+        "dry_multiplier",
+        "dry_base",
+        "dry_allowed_length",
+        "dry_sequence_breakers",
+    ):
+        assert absent not in payload
+    assert payload["top_p"] == 0.9
+    assert payload["xtc_probability"] == 0.5
+    assert payload["n_predict"] == 128
+
+
+@pytest.mark.asyncio
+async def test_stop_strings_are_sent_while_the_stop_toggle_is_on(
+    server, client_factory
+):
+    client = client_factory(model=MODEL)
+    parameters = tuned_parameters(client)
+    client.clean_prompt_parameters(parameters)
+    await client.generate("Hi", parameters, "narrate")
+    post = next(r for r in server["requests"] if r.method == "POST")
+    assert "BOB:" in json.loads(post.content)["stop"]

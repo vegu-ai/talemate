@@ -28,6 +28,7 @@
   - "Settings and Clients: Pin inference parameters beside the client list and enter exact sampling, context and reasoning values."
   - "Settings and Clients: OpenAI, OpenRouter and compatible clients offer reasoning effort and completion-token options; OpenAI adds sampling and system-message controls, and OpenAI and compatible clients can stream."
   - "Settings and Clients: llama.cpp Router mode lets each client choose its model, including for vision and server prompt templates; the client list marks a router client with an icon beside its name."
+  - "Settings and Clients: llama.cpp clients can leave individual sampler parameters out of the request, so the server's own value or a router model preset applies; XTC, DRY, adaptive sampling and the repetition penalty each have one toggle."
   - "Settings and Clients: The OpenAI Compatible client has an Enable Vision option, so a vision model behind a compatible server can analyze images."
   - "Settings and Clients: New clients default to at least 16k context; supported hosted clients enable concurrent requests by default, while saved configurations retain their values."
   - "Settings and Clients: New OpenAI-compatible clients send stop sequences and thinking preferences, each with its own toggle; saved clients keep their current requests."

@@ -519,7 +519,8 @@
   summary: 'llama-server port 8080: API authentication, context length, local prompt templates. Router mode checkbox,
     detected-router hint, exact per-client model selection, routing icon, autoload, cold loading. API handles prompt template
     (on for new clients), chat completions, coercion, thinking controls; Reasoning Mode effort or budget (reasoning_effort).
-    Concurrent Inference: parallel slots, off by default.'
+    Concurrent Inference: parallel slots, off by default. Parameters: Send toggles per sampler (XTC, DRY, stop) leave
+    a parameter out so the server value applies.'
 - path: user-guide/clients/types/lmstudio.md
   title: LMStudio Client
   summary: Connect Talemate to LMStudio's local server at port 1234, with optional API key and context length. Troubleshoots

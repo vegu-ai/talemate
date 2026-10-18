@@ -230,3 +230,49 @@ class TestOpenAICompatSavedRequestShape:
         reloaded = self._load(edited)
         assert reloaded.send_stop is True
         assert reloaded.send_enable_thinking is False
+
+
+def test_openai_family_toggle_names_and_fields_are_unchanged():
+    from talemate.client.openai import TOGGLEABLE_PARAMETERS as OPENAI_PARAMETERS
+    from talemate.client.toggleable_parameters import (
+        PARAMETERS_FIELD_GROUP,
+        toggle_names,
+        toggleable_parameters_extra_fields,
+    )
+
+    for params in (
+        OPENAI_PARAMETERS,
+        OPENAI_COMPAT_TOGGLEABLE_PARAMETERS,
+        OPENROUTER_TOGGLEABLE_PARAMETERS,
+    ):
+        assert toggle_names(params) == list(params)
+        fields = toggleable_parameters_extra_fields(params)
+        assert list(fields) == [f"send_{p}" for p in params]
+        for param, field in zip(params, fields.values()):
+            assert field.label == f"Send {param}"
+            assert field.group == PARAMETERS_FIELD_GROUP
+            assert field.description == (
+                f"When enabled, {param} is included in the request. Disable for "
+                f"models/APIs that reject it."
+            )
+
+
+def test_a_reroute_and_a_set_share_the_toggle_of_their_talemate_names():
+    from talemate.client.base import ParameterReroute
+    from talemate.client.toggleable_parameters import ParameterSet, toggle_names
+
+    params = (
+        "temperature",
+        ParameterReroute(talemate_parameter="top_k", client_parameter="k"),
+        "xtc_threshold",
+        "xtc_probability",
+    )
+    sets = (
+        ParameterSet(
+            name="xtc",
+            parameters=("xtc_threshold", "xtc_probability"),
+            label="Send XTC",
+            description="x",
+        ),
+    )
+    assert toggle_names(params, sets) == ["temperature", "top_k", "xtc"]

@@ -74,7 +74,7 @@ The inference preset editor provides access to the following generation paramete
 
 A list of custom strings that end generation early for any request that uses the action type. Type a string into the field and press Enter to add it; remove its chip to delete it again.
 
-How the strings take effect depends on the client. Clients with native stop support (llama.cpp, Ollama, Text-Generation-WebUI, KoboldCpp (United API), LM Studio) send them with the request, so generation halts as soon as one is produced. All other clients let the generation finish and then trim the response at the earliest occurrence of any of the strings.
+How the strings take effect depends on the client. Clients with native stop support (llama.cpp while **Send stop** is on, Ollama, Text-Generation-WebUI, KoboldCpp (United API), LM Studio) send them with the request, so generation halts as soon as one is produced. All other clients let the generation finish and then trim the response at the earliest occurrence of any of the strings.
 
 Some backends cap the number of stop sequences per request (LM Studio 4, KoboldCpp 16). When the combined list exceeds the cap, the excess strings are dropped from the request and noted in Talemate's log — the dropped strings still apply through the post-generation cut.
 
@@ -128,7 +128,7 @@ Different clients support different subsets of these parameters:
 - **KoboldCpp (OpenAI mode)**: Limited to temperature, top_p, presence_penalty, and max_tokens.
 - **Remote APIs** (OpenAI, Anthropic, etc.): Typically support temperature, top_p, and penalty parameters. Advanced parameters like XTC, DRY, and Adaptive-P are generally not available.
 - **Other local APIs**: Parameter support varies by implementation.
-- **Extra Stopping Strings**: llama.cpp, Ollama, Text-Generation-WebUI, KoboldCpp (United API) and LM Studio receive the strings natively and halt generation early, subject to the per-backend caps described under [Extra Stopping Strings](#extra-stopping-strings). Every other client trims the response after generation instead.
+- **Extra Stopping Strings**: llama.cpp (while **Send stop** is on), Ollama, Text-Generation-WebUI, KoboldCpp (United API) and LM Studio receive the strings natively and halt generation early, subject to the per-backend caps described under [Extra Stopping Strings](#extra-stopping-strings). Every other client trims the response after generation instead.
 
 ## Editing an action type
 

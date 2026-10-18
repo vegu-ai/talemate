@@ -82,6 +82,32 @@ In both modes **Reasoning Tokens** also adds room to the response limit, so the 
 
 The number of tokens to use as context when generating text. Defaults to `16384`.
 
+##### Parameters
+
+![Client llama.cpp parameters](/talemate/img/0.40.0/client-llamacpp-parameters.png)
+
+Found in the **Parameters** section of the client editor. Each toggle decides whether Talemate sends a sampler parameter with every request. When a toggle is **off**, the parameter is left out of the request completely, and llama.cpp uses its own value instead: the server default, a launch flag such as `--temp` or `--top-k`, or the preset of the router model you picked.
+
+This is useful when you tuned the sampler on the server side, for example in a router model preset, and want Talemate to leave it alone.
+
+Every toggle is **on** for a new client, and a client you saved before keeps sending everything it sent.
+
+| Toggle | What it controls |
+| --- | --- |
+| **Send temperature**, **Send top_p**, **Send top_k**, **Send min_p**, **Send presence_penalty**, **Send frequency_penalty** | One parameter each. |
+| **Send XTC** | `xtc_threshold` and `xtc_probability` together. |
+| **Send DRY** | `dry_multiplier`, `dry_base`, `dry_allowed_length` and `dry_sequence_breakers` together. |
+| **Send adaptive** | `adaptive_target` and `adaptive_decay` together. |
+| **Send repetition_penalty** | `repetition_penalty` and `repetition_penalty_range` together. |
+| **Send stop** | The stop strings, such as the other characters' names in a conversation. |
+
+XTC, DRY, adaptive sampling and the repetition penalty each work as one sampler, so each has a single toggle. A sampler's on/off value and its tuning values should come from one place, either all from Talemate or all from the server. Splitting them mixes two configurations: Talemate's defaults, such as an `xtc_probability` or `dry_multiplier` of 0, could switch off a sampler that the server's preset turned on.
+
+!!! warning "Turning off Send stop"
+    Without the stop strings the server does not stop at the end of the turn and keeps generating, so the request takes longer and uses more of the response length. Talemate still cuts the text at the same stop strings afterwards, so you do not see the extra text. Turn it off only if you set stop strings on the server yourself.
+
+The response length is always sent.
+
 ##### Concurrent Inference
 
 Found in the **Concurrency** section of the client editor. When enabled, batch operations that need several queries (currently visual prompt generation for image generation) can send multiple requests to your `llama-server` in parallel instead of one at a time, which can speed those operations up.

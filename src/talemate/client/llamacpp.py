@@ -29,6 +29,13 @@ from talemate.client.reasoning_effort import (
     reasoning_effort_extra_fields,
 )
 from talemate.client.registry import register
+from talemate.client.toggleable_parameters import (
+    PARAMETERS_FIELD_GROUP,
+    ParameterSet,
+    ToggleableParametersMixin,
+    toggleable_parameters_config,
+    toggleable_parameters_extra_fields,
+)
 from talemate.client.utils import dry_sequence_breakers_list
 from talemate.client.remote import (
     ConcurrentInference,
@@ -56,6 +63,107 @@ REASONING_MODE_CHOICES = [
 
 
 ReasoningMode = Literal["effort", "tokens"]
+
+# Talemate inference params (see config.schema.InferenceParameters) that
+# we can map to llama.cpp request options.
+TOGGLEABLE_PARAMETERS: tuple[str | ParameterReroute, ...] = (
+    "temperature",
+    "top_p",
+    "top_k",
+    "min_p",
+    "presence_penalty",
+    "frequency_penalty",
+    "xtc_threshold",
+    "xtc_probability",
+    "dry_multiplier",
+    "dry_base",
+    "dry_allowed_length",
+    "dry_sequence_breakers",
+    "stop",
+    "adaptive_target",
+    "adaptive_decay",
+    ParameterReroute(
+        talemate_parameter="repetition_penalty",
+        client_parameter="repeat_penalty",
+    ),
+    ParameterReroute(
+        talemate_parameter="repetition_penalty_range",
+        client_parameter="repeat_last_n",
+    ),
+)
+
+ALWAYS_SENT_PARAMETERS: tuple[str | ParameterReroute, ...] = (
+    ParameterReroute(talemate_parameter="max_tokens", client_parameter="n_predict"),
+)
+
+
+PARAMETER_SETS: tuple[ParameterSet, ...] = (
+    ParameterSet(
+        name="xtc",
+        parameters=("xtc_threshold", "xtc_probability"),
+        label="Send XTC",
+        description="Exclude Top Choices sampler: xtc_threshold and xtc_probability.",
+    ),
+    ParameterSet(
+        name="dry",
+        parameters=(
+            "dry_multiplier",
+            "dry_base",
+            "dry_allowed_length",
+            "dry_sequence_breakers",
+        ),
+        label="Send DRY",
+        description=(
+            "DRY repetition sampler: dry_multiplier, dry_base, "
+            "dry_allowed_length and dry_sequence_breakers."
+        ),
+    ),
+    ParameterSet(
+        name="adaptive",
+        parameters=("adaptive_target", "adaptive_decay"),
+        label="Send adaptive",
+        description="Adaptive sampler: adaptive_target and adaptive_decay.",
+    ),
+    ParameterSet(
+        name="repetition_penalty",
+        parameters=("repetition_penalty", "repetition_penalty_range"),
+        label="Send repetition_penalty",
+        description=(
+            "Repetition penalty and how far back it looks: repetition_penalty "
+            "and repetition_penalty_range."
+        ),
+    ),
+)
+
+LLAMACPP_PARAMETERS_FIELD_GROUP = PARAMETERS_FIELD_GROUP.model_copy(
+    update={
+        "description": (
+            "Toggle individual sampler parameters. A parameter that is turned off "
+            "is left out of the request, so llama.cpp's own value applies: the "
+            "server default, a launch flag such as --temp or --top-k, or the "
+            "router model preset."
+        )
+    }
+)
+
+PARAMETER_DESCRIPTIONS = {
+    "temperature": "Randomness of the output.",
+    "top_p": "Nucleus sampling: only the most likely tokens that add up to this probability.",
+    "top_k": "Only the most likely N tokens are candidates.",
+    "min_p": "Drops tokens far less likely than the best one.",
+    "presence_penalty": "Penalizes tokens that already appeared.",
+    "frequency_penalty": "Penalizes tokens the more often they appeared.",
+    "stop": (
+        "When off, no stop strings are sent, so the server does not stop at the "
+        "end of the turn: generation runs on, which is slower and uses more of "
+        "the response length. Talemate still cuts the text at the stop strings."
+    ),
+}
+
+
+ToggleableParametersConfig = toggleable_parameters_config(
+    TOGGLEABLE_PARAMETERS, PARAMETER_SETS
+)
 
 
 class LlamaCppReasoningConfig(ReasoningEffortConfig):
@@ -89,7 +197,12 @@ def reasoning_extra_fields() -> dict[str, ExtraField]:
     }
 
 
-class Defaults(CommonDefaults, LlamaCppReasoningConfig, ApiHandlesPromptTemplateConfig):
+class Defaults(
+    CommonDefaults,
+    LlamaCppReasoningConfig,
+    ToggleableParametersConfig,
+    ApiHandlesPromptTemplateConfig,
+):
     # llama.cpp `llama-server` defaults to port 8080 (see ggml-org/llama.cpp README)
     api_url: str = "http://localhost:8080"
     max_token_length: int = 16384
@@ -99,6 +212,7 @@ class Defaults(CommonDefaults, LlamaCppReasoningConfig, ApiHandlesPromptTemplate
 class ClientConfig(
     ConcurrentInference,
     LlamaCppReasoningConfig,
+    ToggleableParametersConfig,
     ApiHandlesPromptTemplateConfig,
     VisionConfig,
     BaseClientConfig,
@@ -154,6 +268,7 @@ class LlamaCppClient(
     ChatReasoningMixin,
     ApiHandlesPromptTemplateMixin,
     ConcurrentInferenceMixin,
+    ToggleableParametersMixin,
     OpenAIVisionMixin,
     OpenAIModelListProbeMixin,
     ClientBase,
@@ -171,6 +286,9 @@ class LlamaCppClient(
     client_type = "llamacpp"
     remote_model_locked: bool = True
     config_cls = ClientConfig
+    toggleable_parameters = TOGGLEABLE_PARAMETERS
+    parameter_sets = PARAMETER_SETS
+    always_sent_parameters = ALWAYS_SENT_PARAMETERS
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -387,41 +505,14 @@ class LlamaCppClient(
                 **vision_extra_fields(),
                 **concurrent_inference_extra_fields(),
                 **reasoning_extra_fields(),
+                **toggleable_parameters_extra_fields(
+                    TOGGLEABLE_PARAMETERS,
+                    PARAMETER_SETS,
+                    group=LLAMACPP_PARAMETERS_FIELD_GROUP,
+                    descriptions=PARAMETER_DESCRIPTIONS,
+                ),
             }
         )
-
-    @property
-    def supported_parameters(self):
-        # Talemate inference params (see config.schema.InferenceParameters) that
-        # we can map to llama.cpp request options.
-        return [
-            "temperature",
-            "top_p",
-            "top_k",
-            "min_p",
-            "presence_penalty",
-            "frequency_penalty",
-            "xtc_threshold",
-            "xtc_probability",
-            "dry_multiplier",
-            "dry_base",
-            "dry_allowed_length",
-            "dry_sequence_breakers",
-            "stop",
-            "adaptive_target",
-            "adaptive_decay",
-            ParameterReroute(
-                talemate_parameter="repetition_penalty",
-                client_parameter="repeat_penalty",
-            ),
-            ParameterReroute(
-                talemate_parameter="repetition_penalty_range",
-                client_parameter="repeat_last_n",
-            ),
-            ParameterReroute(
-                talemate_parameter="max_tokens", client_parameter="n_predict"
-            ),
-        ]
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)

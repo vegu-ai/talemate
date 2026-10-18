@@ -75,6 +75,10 @@ from talemate.world_state import CharacterState
 def scene():
     s = MockScene()
     bootstrap_scene(s)
+    # the split flow is what these tests exercise unless `fast_mode` asks for Fast
+    instance.get_agent("creator").actions["character_creation"].config[
+        "fast"
+    ].value = False
     return s
 
 

@@ -394,7 +394,7 @@ class SDNextMixin:
             "prompt_type": AgentActionConfig(
                 type="text",
                 title="Prompt generation",
-                value=PROMPT_TYPE.KEYWORDS,
+                value=PROMPT_TYPE.DESCRIPTIVE,
                 label="Prompting Type",
                 choices=PROMPT_TYPE.choices(),
                 description="Semantic style of the generated prompt.",

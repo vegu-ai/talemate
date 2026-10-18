@@ -807,10 +807,10 @@ class ComfyUIMixin:
             "prompt_type": AgentActionConfig(
                 type="text",
                 title="Prompt generation",
-                value=PROMPT_TYPE.KEYWORDS,
+                value=PROMPT_TYPE.DESCRIPTIVE,
                 label="Prompting Type",
                 choices=PROMPT_TYPE.choices(),
-                description="The semantic style of the generated prompt. USe keywords for SDXL, SD51 and descriptive for flux and qwen.",
+                description="The semantic style of the generated prompt. Use keywords for SDXL and SD 1.5, and descriptive for Flux and Qwen.",
                 scene_overridable=False,
             ),
             "resolution_square": AgentActionConfig(
@@ -867,11 +867,6 @@ class ComfyUIMixin:
             ),
             config=cls.comfyui_shared_config(),
         )
-
-        # default prompt_type for edit should be DESCRIPTIVE
-        actions["comfyui_image_edit"].config[
-            "prompt_type"
-        ].value = PROMPT_TYPE.DESCRIPTIVE
 
         return actions
 

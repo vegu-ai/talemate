@@ -161,7 +161,7 @@ class VisualAgent(
                 config={
                     "fallback_prompt_type": AgentActionConfig(
                         type="text",
-                        value=PROMPT_TYPE.KEYWORDS,
+                        value=PROMPT_TYPE.DESCRIPTIVE,
                         label="Fallback Prompt Type",
                         description="The prompt type to use for prompt only generation (if backends are not configured)",
                         note="This will be used for `prompt only` generation if no backends are configured",
@@ -388,7 +388,7 @@ class VisualAgent(
     @property
     def fallback_prompt_type(self) -> PROMPT_TYPE:
         value = self.resolve_config("prompt_generation", "fallback_prompt_type")
-        return PROMPT_TYPE(value) if value else PROMPT_TYPE.KEYWORDS
+        return PROMPT_TYPE(value) if value else PROMPT_TYPE.DESCRIPTIVE
 
     @property
     def prompt_generation_length(self) -> int:

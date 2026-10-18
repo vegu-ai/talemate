@@ -75,6 +75,10 @@ def agents():
     the agents' own templates render against a real scene)."""
     scene = MockScene()
     handles = bootstrap_scene(scene)
+    # the split flow is what these tests exercise unless `fast_mode` asks for Fast
+    instance.get_agent("creator").actions["character_creation"].config[
+        "fast"
+    ].value = False
     return SimpleNamespace(
         creator=instance.get_agent("creator"),
         world_state=handles["world_state"],

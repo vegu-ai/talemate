@@ -133,8 +133,8 @@ By default, importing a character card runs several AI generation steps that enr
 !!! info "Failed generations keep the card's data"
     If the description rewrite, attribute extraction or example dialogue generation
     fails or comes back empty, the card's own version is kept and the import carries on
-    with the remaining steps. With the Creator agent's [**Fast Character Generation**](/talemate/user-guide/agents/creator/settings)
-    enabled, a consolidated response that cannot be parsed at all still aborts the import.
+    with the remaining steps. The Creator agent's [**Fast Character Generation**](/talemate/user-guide/agents/creator/settings)
+    is on by default. With it on, a consolidated response that cannot be parsed at all still aborts the import, and the error tells you to disable Fast Character Generation. Turn it off for models that cannot follow the consolidated format; the import then keeps the card's data as described above.
 
 Use the **Full** / **Minimal** preset buttons to toggle all AI generation steps at once. **Minimal** also disables episode title generation, reducing the import to the bare card data (name, description, greetings, example dialogue) — the fastest possible import.
 

@@ -38,10 +38,13 @@ For text-to-image generation, configure the following settings:
 - **API URL**: The URL where your ComfyUI instance is running (e.g., `http://localhost:8188`)
 - **Workflow**: Select the workflow file to use for generation. Talemate includes several pre-configured workflows including `qwen_image.json` and `z_image_turbo.json`
 - **Model**: Select the model to use from your ComfyUI models directory. If your workflow doesn't include a "Talemate Load Model" or "Talemate Load Checkpoint" node, this will be set to "- Workflow default -" and the model specified in the workflow file will be used.
-- **Prompt Type**: Choose between "Keywords" or "Descriptive" prompt formatting
+- **Prompt Type**: Choose between "Keywords" or "Descriptive" prompt formatting. Descriptive is the default.
+
+    !!! warning "The default workflow is SDXL-based"
+        The default workflow, `default-sdxl.json`, is SDXL-based and works best with **Keywords**. Either switch Prompt Type to **Keywords**, or pick a workflow for a model that prefers descriptive prompts, such as `qwen_image.json` or `z_image_turbo.json`.
 
     !!! tip "Choosing Prompt Type"
-        As a general rule: **SDXL models** typically work best with **Keywords** formatting, while most other models (including Qwen Image, Flux, etc.) work better with **Descriptive** formatting. If you're unsure, start with Descriptive and switch to Keywords if you're using an SDXL-based workflow.
+        As a general rule: **SDXL models** typically work best with **Keywords** formatting, while most other models (including Qwen Image, Flux, etc.) work better with **Descriptive** formatting. If you're using an SDXL-based workflow, switch to Keywords.
 
 - **Resolutions**: Configure the pixel dimensions for Square, Portrait, and Landscape formats
 
@@ -53,7 +56,7 @@ For text-to-image generation, configure the following settings:
 For image editing, configure similar settings but select an image editing workflow such as `qwen_image_edit.json`. The number of reference images supported depends on your model - for example, Qwen Image Edit can handle up to 3 reference images that can be used to guide the editing process.
 
 !!! note "Prompt Type for Image Editing"
-    Image editing workflows typically use **Descriptive** prompt formatting by default, as most image editing models (like Qwen Image Edit) work better with descriptive instructions rather than keyword-based prompts.
+    Image editing workflows typically use **Descriptive** prompt formatting, as most image editing models (like Qwen Image Edit) work better with descriptive instructions rather than keyword-based prompts.
 
 ![A screenshot of the "Visualizer" agent settings, specifically showing the "ComfyUI Image editing" section. It displays input fields for the API URL, a selected workflow file named "default-sdxl.json," descriptive prompting settings, and resolution presets for square, portrait, and landscape aspect ratios.](/talemate/img/0.40.0/visual-agent-comfyui-4.png)
 ![This screenshot shows a browser tab group labeled "Visualizer" marked with a green status dot on a dark background. The group contains four tabs: a Google link, two green-tinted ComfyUI tabs with image and pencil icons, and a gray tab titled "References 3".](/talemate/img/0.34.0/visual-agent-comfyui-5.png)

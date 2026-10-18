@@ -59,11 +59,11 @@ This means it comes at a noticable delay IF it finds issues, but the improvement
 
 ##### Enable Revision
 
-Check this to enable revision.
+Check this to enable revision. On by default, which makes the **:material-typewriter: Revise** chip available on the latest message. Nothing is revised until you use the chip or switch on automatic revision.
 
 ##### Automatic Revision
 
-Check this to enable automatic revision - this will analyze each incoming actor or narrator message and attempt to fix it if there are issues.
+Check this to enable automatic revision - this will analyze each incoming actor or narrator message and attempt to fix it if there are issues. Off by default, so a normal message sends no revision request.
 
 ##### Automatic Revision Targets
 

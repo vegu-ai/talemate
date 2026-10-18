@@ -311,7 +311,7 @@ class Prompt(Node):
             name="prompt_type",
             type="str",
             description="The type of prompt to create",
-            default="KEYWORDS",
+            default="DESCRIPTIVE",
             choices=PROMPT_TYPE.choice_values(),
         )
 
@@ -321,7 +321,7 @@ class Prompt(Node):
     def setup(self):
         self.add_input("prompt_type", socket_type="str", optional=True)
         self.add_input("parts", socket_type="list", optional=True)
-        self.set_property("prompt_type", "KEYWORDS")
+        self.set_property("prompt_type", "DESCRIPTIVE")
         self.add_output("prompt", socket_type="visual/prompt")
 
     async def run(self, state: GraphState):

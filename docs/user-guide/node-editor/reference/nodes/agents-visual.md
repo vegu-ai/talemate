@@ -213,7 +213,7 @@ prompt strings (comma-separated keywords or descriptive prose).
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| `prompt_type` | `str` | `"KEYWORDS"` | The type of prompt to create. Choices: `KEYWORDS`, `DESCRIPTIVE`. |
+| `prompt_type` | `str` | `"DESCRIPTIVE"` | The type of prompt to create. Choices: `KEYWORDS`, `DESCRIPTIVE`. |
 
 ## Visual Prompt Part
 

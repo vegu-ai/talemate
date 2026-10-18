@@ -121,7 +121,7 @@ class MemoryRAGMixin:
                     type="number",
                     label="Number of Queries",
                     description="The number of queries to use when retrieving context from the long term memory.",
-                    value=3,
+                    value=5,
                     min=1,
                     max=10,
                     step=1,

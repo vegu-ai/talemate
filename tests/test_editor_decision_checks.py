@@ -58,6 +58,7 @@ def editor_case(monkeypatch):
     agents = bootstrap_scene(scene)
     editor = agents["editor"]
     editor.actions["revision"].enabled = True
+    editor.actions["revision"].config["automatic_revision"].value = True
     editor.actions["revision"].config["revision_method"].value = "rewrite"
     editor.actions["revision"].config["decision_checks"].value = True
     previous = NarratorMessage(data["previous"])

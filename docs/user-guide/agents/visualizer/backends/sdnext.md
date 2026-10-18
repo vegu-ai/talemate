@@ -35,10 +35,10 @@ For text-to-image generation, configure the following settings:
 - **Sampling Method**: The sampling algorithm to use (dynamically populated from your SD.Next instance)
 - **CFG Scale**: Classifier-free guidance scale (default: 7.0, range: 1-30)
 - **Model**: Select the model to use from your SD.Next models directory (dynamically populated)
-- **Prompt Type**: Choose between "Keywords" or "Descriptive" prompt formatting
+- **Prompt Type**: Choose between "Keywords" or "Descriptive" prompt formatting (default: Descriptive)
 - **Resolutions**: Configure the pixel dimensions for Square, Portrait, and Landscape formats
 
-![This screenshot displays the "Visualizer" agent settings with the "SD.Next Text to image" section expanded, featuring configuration settings for the API URL, an authentication method of "None", 40 sampling steps, the DPM++ 2M method, and a CFG scale of 7.0. The section also shows a "Keywords" prompting type and an empty model selection, along with adjustable resolution presets for square, portrait, and landscape formats.](/talemate/img/0.40.0/visual-agent-sdnext-2.png)
+![This screenshot displays the "Visualizer" agent settings with the "SD.Next Text to image" section expanded, featuring configuration settings for the API URL, an authentication method of "None", 40 sampling steps, the DPM++ 2M method, and a CFG scale of 7.0. The section also shows a "Descriptive" prompting type and an empty model selection, along with adjustable resolution presets for square, portrait, and landscape formats.](/talemate/img/0.40.0/visual-agent-sdnext-2.png)
 
 ![This screenshot displays a dark-themed user interface form with a dropdown menu labeled "Authentication Method" selected to "Basic (username/password)". Below the menu are two text input fields for entering a "Username" and "Password" under a section header labeled "AUTHENTICATION (OPTIONAL, SERVER DEPENDENT)".](/talemate/img/0.40.0/visual-agent-sdnext-3.png)
 
@@ -89,7 +89,7 @@ SD.Next provides extensive control over the generation process:
 
 ## Prompt Formatting
 
-SD.Next uses **Keywords** prompt formatting by default. This means prompts are formatted as keyword lists optimized for Stable Diffusion models. You can switch to **Descriptive** formatting if you prefer natural language descriptions, though Keywords typically work better with SD models.
+SD.Next uses **Descriptive** prompt formatting by default. This means prompts are written as natural language descriptions, which suits newer models. For Stable Diffusion models such as SDXL, switch to **Keywords** formatting, which formats prompts as keyword lists.
 
 ## Remote Access
 

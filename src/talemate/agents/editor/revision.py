@@ -317,7 +317,7 @@ class RevisionMixin:
     @classmethod
     def add_actions(cls, actions: dict[str, AgentAction]):
         actions["revision"] = AgentAction(
-            enabled=False,
+            enabled=True,
             can_be_disabled=True,
             container=True,
             quick_toggle=True,
@@ -329,7 +329,7 @@ class RevisionMixin:
                     type="bool",
                     label="Automatic revision",
                     description="Enable / Disable automatic revision.",
-                    value=True,
+                    value=False,
                     quick_toggle=True,
                 ),
                 "automatic_revision_targets": AgentActionConfig(

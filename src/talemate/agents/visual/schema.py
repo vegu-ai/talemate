@@ -184,7 +184,7 @@ class VisualPromptPart(pydantic.BaseModel):
 
 
 class VisualPrompt(pydantic.BaseModel):
-    prompt_type: PROMPT_TYPE = PROMPT_TYPE.KEYWORDS
+    prompt_type: PROMPT_TYPE = PROMPT_TYPE.DESCRIPTIVE
     parts: list[VisualPromptPart] = pydantic.Field(default_factory=list)
 
     @pydantic.computed_field
@@ -273,7 +273,7 @@ class BackendBase(pydantic.BaseModel):
     )
 
     gen_type: GEN_TYPE = GEN_TYPE.TEXT_TO_IMAGE
-    prompt_type: PROMPT_TYPE = PROMPT_TYPE.KEYWORDS
+    prompt_type: PROMPT_TYPE = PROMPT_TYPE.DESCRIPTIVE
 
 
 class Resolution(pydantic.BaseModel):

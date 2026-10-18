@@ -651,6 +651,7 @@ class TestRevisionOnGeneration:
 
     async def test_skipped_when_disabled(self, editor_scene):
         _, editor = editor_scene
+        editor.actions["revision"].config["automatic_revision"].value = True
         editor.actions["revision"].enabled = False
         called = []
 
@@ -811,6 +812,7 @@ class TestMaybeReviseInplace:
 
     async def test_skipped_when_disabled(self, editor_scene):
         _, editor = editor_scene
+        editor.actions["revision"].config["automatic_revision"].value = True
         editor.actions["revision"].enabled = False
 
         called = []

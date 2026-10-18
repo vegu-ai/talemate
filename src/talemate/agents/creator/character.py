@@ -321,10 +321,10 @@ class CharacterCreatorMixin:
                         "(one request instead of several), but note that less "
                         "detail in the individual aspects is a possible failure "
                         "mode of this approach, and the model needs a large "
-                        "context window and reliable structured output. Keep "
+                        "context window and reliable structured output. Turn "
                         "this off for older or smaller models."
                     ),
-                    value=False,
+                    value=True,
                     title="Generation Mode",
                     quick_toggle=True,
                 ),

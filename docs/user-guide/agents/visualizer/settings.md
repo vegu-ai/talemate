@@ -66,7 +66,7 @@ Determines the format used for prompt-only generation when no backends are confi
 Available options:
 
 - **Keywords**: Generates prompts using keyword-based formatting
-- **Descriptive**: Generates prompts using descriptive text formatting
+- **Descriptive**: Generates prompts using descriptive text formatting (default)
 
 ### Max. Prompt Generation Length
 

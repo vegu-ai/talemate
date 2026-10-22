@@ -136,6 +136,10 @@ line_length = 88
 
 [tool.uv]
 exclude-newer = "1 week"
+# pillow 13.0.0 (2026-10-16) and certifi 2026.10.19 (2026-10-20) fix security
+# advisories and are newer than the normal window, so allow those releases
+# without opening other packages. Remove at the next dependency pass.
+exclude-newer-package = { pillow = "2026-10-17T00:00:00Z", certifi = "2026-10-21T00:00:00Z" }
 override-dependencies = [
   # Chatterbox pins torch 2.6.0, but Talemate validates its newer cu128 runtime.
   "torchaudio>=2.7.1",
@@ -148,6 +152,10 @@ override-dependencies = [
   "gradio>=6.16",
   "diffusers>=0.38",
   "safetensors>=0.8",
+  # Gradio caps pillow<13, but pillow 13 fixes 39 advisories in decoders that
+  # read imported character cards and uploaded images. Nothing in src/ imports
+  # gradio; it arrives only through chatterbox-tts and f5-tts.
+  "pillow>=13",
   # numba needs numpy < 2.3
   "numpy>=2,<2.3",
   "pydantic>=2.11",

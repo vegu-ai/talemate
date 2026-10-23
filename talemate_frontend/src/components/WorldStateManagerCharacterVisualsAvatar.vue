@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="mb-4">
-            <div class="text-subtitle-2 text-medium-emphasis">
+            <div class="text-title-small text-medium-emphasis">
                 Select a portrait for <span class="text-primary">{{ character.name }}</span>
             </div>
         </div>
@@ -22,7 +22,7 @@
         >
             <template #empty>
                 <p class="mt-2">No portraits found for {{ character.name }}</p>
-                <p class="text-caption">Generate a CHARACTER_PORTRAIT image in the Visual Library to add portraits.</p>
+                <p class="text-body-small">Generate a CHARACTER_PORTRAIT image in the Visual Library to add portraits.</p>
             </template>
             <template #badges="{ asset }">
                 <VisualAssetBadge v-if="defaultAvatarId === asset.id" icon="mdi-check" label="Default" />
@@ -80,7 +80,7 @@
             </template>
         </VisualAssetGrid>
 
-        <v-alert icon="mdi-account-circle" density="compact" variant="text" color="grey" class="mt-4">
+        <v-alert icon="mdi-account-circle" density="compact" variant="text" class="mt-4 text-medium-emphasis">
             <p>
                 Portraits are used in dialogue messages and character lists. They are typically
                 face-focused images with a <strong>square format</strong>.
@@ -179,14 +179,14 @@
                 <div class="d-flex align-start">
                     <v-icon class="mr-3 mt-1" color="primary">mdi-image-auto-adjust</v-icon>
                     <div class="text-muted">
-                        <div class="text-primary text-subtitle-2 font-weight-bold mb-1">Automatic Portrait Selection</div>
-                        <p class="text-body-2 mb-0">
+                        <div class="text-primary text-title-small font-weight-bold mb-1">Automatic Portrait Selection</div>
+                        <p class="text-body-medium mb-0">
                             Once you have at least 2 portraits, the World State Agent can automatically select the most appropriate portrait for the character based on the current moment in the scene. The agent <strong class="text-primary">checks the tags</strong> stored with each image to decide the best portrait.
                         </p>
-                        <p class="text-body-2 mt-2 mb-0">
+                        <p class="text-body-medium mt-2 mb-0">
                             <strong>Update tags:</strong> Open a portrait in the Visual Library to edit its tags.
                         </p>
-                        <p class="text-body-2 mt-2 mb-0">
+                        <p class="text-body-medium mt-2 mb-0">
                             <strong>Configure feature:</strong> Enable and adjust portrait selection frequency in
                             <a href="#" @click.prevent="openWorldStateAgentSettings" class="text-primary text-decoration-underline">World State Agent settings</a>.
                         </p>
@@ -208,7 +208,8 @@
 </template>
 
 <script>
-import { v4 as uuidv4 } from 'uuid';
+import { newUuid } from '@/utils/uuid';
+import { assetTarget, setAssetMessage } from '@/utils/assetTargets';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import AssetViewMixin from './AssetViewMixin.js';
 import VisualAssetGenerateMixin from './VisualAssetGenerateMixin.js';
@@ -383,13 +384,9 @@ export default {
         setDefaultAvatarForAsset(assetId) {
             if (!assetId) return;
 
-            this.getWebsocket().send(JSON.stringify({
-                type: 'scene_assets',
-                action: 'set_character_avatar',
-                asset_id: assetId,
-                character_name: this.character.name,
-                avatar_type: 'default',
-            }));
+            this.getWebsocket().send(JSON.stringify(
+                setAssetMessage(assetId, [assetTarget.characterAvatar(this.character.name, 'default')]),
+            ));
 
             // Request character details to sync up the UI after setting default avatar
             this.requestCharacterDetails();
@@ -398,13 +395,9 @@ export default {
         setCurrentAvatarForAsset(assetId) {
             if (!assetId) return;
 
-            this.getWebsocket().send(JSON.stringify({
-                type: 'scene_assets',
-                action: 'set_character_avatar',
-                asset_id: assetId,
-                character_name: this.character.name,
-                avatar_type: 'current',
-            }));
+            this.getWebsocket().send(JSON.stringify(
+                setAssetMessage(assetId, [assetTarget.characterAvatar(this.character.name, 'current')]),
+            ));
         },
 
         startGenerateNew() {
@@ -457,7 +450,7 @@ export default {
                     // Use allow_override=true as a "save this asset" flag without enabling message auto-attach.
                     allow_override: true,
                     default_avatar: isFirstAvatar,
-                    asset_name: `avatar_${this.character.name}_${uuidv4().slice(0, 10)}`,
+                    asset_name: `avatar_${this.character.name}_${newUuid().slice(0, 10)}`,
                 },
             };
 
@@ -487,7 +480,7 @@ export default {
                 asset_attachment_context: {
                     allow_override: true,
                     default_avatar: (isFirstAvatar && idx === 0),
-                    asset_name: `avatar_${this.character.name}_${uuidv4().slice(0, 10)}_${idx + 1}`,
+                    asset_name: `avatar_${this.character.name}_${newUuid().slice(0, 10)}_${idx + 1}`,
                 },
             }));
         },

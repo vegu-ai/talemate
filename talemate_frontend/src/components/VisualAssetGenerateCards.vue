@@ -1,14 +1,14 @@
 <template>
-    <v-row class="mt-2 generate-cards-row" dense>
+    <v-row class="mt-2 generate-cards-row" density="compact">
         <!-- Generate Variation Card -->
         <v-col cols="12" md="6" v-if="showVariation" class="pb-8">
-            <v-card class="generate-card" elevation="7">
+            <v-card class="generate-card" elevation="3">
                 <v-card-text>
                     <div class="d-flex align-center mb-2">
                         <v-icon class="mr-2" color="secondary">mdi-image</v-icon>
                         <strong>{{ variationLabel }}</strong>
                     </div>
-                    <p class="text-caption text-medium-emphasis mb-0">
+                    <p class="text-body-small text-medium-emphasis mb-0">
                         <slot name="variation-description"></slot>
                     </p>
                     <v-alert
@@ -40,13 +40,13 @@
 
         <!-- Generate New Card -->
         <v-col cols="12" md="6" class="pb-8">
-            <v-card class="generate-card" elevation="7">
+            <v-card class="generate-card" elevation="3">
                 <v-card-text>
                     <div class="d-flex align-center mb-2">
                         <v-icon class="mr-2" color="primary">mdi-image-plus</v-icon>
                         <strong>Generate New</strong>
                     </div>
-                    <p class="text-caption text-medium-emphasis mb-0">
+                    <p class="text-body-small text-medium-emphasis mb-0">
                         Create a completely new {{ newLabel }} from scratch using natural language instructions.
                         The visual agent will generate a prompt and create a new image based on your description.
                     </p>

@@ -18,6 +18,7 @@ from talemate.game.engine.context_id import (
     context_id_from_object,
     context_id_item_from_string,
     context_id_handler_from_string,
+    scan_text_for_context_ids,
     compress_name,
     CONTEXT_ID_TYPES,
     CONTEXT_ID_PATH_HANDLERS,
@@ -166,7 +167,7 @@ def test_world_entry_manual_context_id(entry_input, expected_entry_id):
 )
 def test_dynamic_history_entry_context_id(entry_id, layer, expected_path):
     """Test DynamicHistoryEntryContextID creation."""
-    entry = HistoryEntry(text="test", ts="PT1S", index=0, layer=layer, id=entry_id)
+    entry = HistoryEntry(text="test", ts=1, index=0, layer=layer, id=entry_id)
     context_id = DynamicHistoryEntryContextID.make(entry)
     assert context_id.entry_id == entry_id
     assert context_id.layer == layer
@@ -183,7 +184,7 @@ def test_dynamic_history_entry_context_id(entry_id, layer, expected_path):
 )
 def test_static_history_entry_context_id(entry_id):
     """Test StaticHistoryEntryContextID creation."""
-    entry = HistoryEntry(text="test", ts="PT1S", index=0, layer=0, id=entry_id)
+    entry = HistoryEntry(text="test", ts=1, index=0, layer=0, id=entry_id)
     context_id = StaticHistoryEntryContextID.make(entry)
     assert context_id.entry_id == entry_id
     assert context_id.path == [entry_id]
@@ -262,13 +263,13 @@ def test_get_context_id_type_missing():
         ),
         (
             "history_entry.static",
-            HistoryEntry(text="test", ts="PT1S", index=0, layer=0, id="hist_123"),
+            HistoryEntry(text="test", ts=1, index=0, layer=0, id="hist_123"),
             StaticHistoryEntryContextID,
             {"entry_id": "hist_123", "path": ["hist_123"]},
         ),
         (
             "history_entry.dynamic",
-            HistoryEntry(text="test", ts="PT1S", index=0, layer=3, id="hist_456"),
+            HistoryEntry(text="test", ts=1, index=0, layer=3, id="hist_456"),
             DynamicHistoryEntryContextID,
             {
                 "entry_id": "hist_456",
@@ -360,14 +361,14 @@ def test_context_id_from_object_comprehensive():
 
     static_hist = context_id_from_object(
         "history_entry.static",
-        HistoryEntry(text="test", ts="PT1S", index=0, layer=0, id="test_123"),
+        HistoryEntry(text="test", ts=1, index=0, layer=0, id="test_123"),
     )
     assert isinstance(static_hist, StaticHistoryEntryContextID)
     assert static_hist.path == ["test_123"]
 
     dynamic_hist = context_id_from_object(
         "history_entry.dynamic",
-        HistoryEntry(text="test", ts="PT1S", index=0, layer=2, id="test_456"),
+        HistoryEntry(text="test", ts=1, index=0, layer=2, id="test_456"),
     )
     assert isinstance(dynamic_hist, DynamicHistoryEntryContextID)
 
@@ -503,6 +504,19 @@ def mock_scene():
         },
     )
     scene.character_data[char.name] = char
+
+    # A name carrying a dot on both halves - the reason _remaining_name
+    # re-parses the raw path instead of the dot-split one.
+    doctor = Character(
+        name="Dr. Vance",
+        description="A field medic",
+        base_attributes={"Ph.D. status": "Completed in 2019"},
+        details={
+            "Injury: left knee": "Torn ligament, still healing",
+            "Sidearm: sidearm.model": "A worn service pistol",
+        },
+    )
+    scene.character_data[doctor.name] = doctor
 
     # Create second character for testing
     char2 = Character(
@@ -1653,3 +1667,177 @@ async def test_overlapping_names_attribute_on_short_name(mock_scene_overlapping_
     assert context_item.character.name == "M.A"
     assert context_item.name == "speed"
     assert context_item.value == 5
+
+
+# Tests for resolving a context ID that carries the readable name
+
+
+@pytest.fixture
+def mock_scene_world_entries():
+    """Create a mock scene with world entries whose titles contain punctuation."""
+    scene = MockScene()
+
+    for entry_id, text in [
+        ("Apartment: Living Room", "A cramped living room."),
+        ("St. Mark's Square", "A wide plaza full of pigeons."),
+        ("bakery", "The one on the corner."),
+        ("BAKERY", "The chain on the high street."),
+    ]:
+        scene.world_state.manual_context[entry_id] = ManualContext(
+            id=entry_id, text=text, meta={"typ": "world_state"}
+        )
+
+    return scene
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "entry_id, name_in_id",
+    [
+        ("Apartment: Living Room", "Apartment: Living Room"),
+        ("Apartment: Living Room", "apartment: living room"),
+        ("Apartment: Living Room", " Apartment: Living Room"),
+        ("St. Mark's Square", "St. Mark's Square"),
+        ("bakery", "bakery"),
+        ("BAKERY", "BAKERY"),
+    ],
+)
+async def test_world_entry_resolves_by_name(
+    mock_scene_world_entries, entry_id, name_in_id
+):
+    """A world entry resolves from its title as well as from its title hash."""
+    by_hash = await context_id_item_from_string(
+        f"world_entry.manual:{compress_name(entry_id)}", mock_scene_world_entries
+    )
+    by_name = await context_id_item_from_string(
+        f"world_entry.manual:{name_in_id}", mock_scene_world_entries
+    )
+
+    assert by_hash is not None
+    assert by_name is not None
+    assert by_name.name == entry_id
+    assert str(by_name.context_id) == str(by_hash.context_id)
+
+
+@pytest.mark.asyncio
+async def test_world_entry_name_match_prefers_the_exact_title(
+    mock_scene_world_entries,
+):
+    """Two titles differing only in case each resolve to their own entry."""
+    lower = await context_id_item_from_string(
+        "world_entry.manual:bakery", mock_scene_world_entries
+    )
+    upper = await context_id_item_from_string(
+        "world_entry.manual:BAKERY", mock_scene_world_entries
+    )
+
+    assert lower.value == "The one on the corner."
+    assert upper.value == "The chain on the high street."
+
+
+@pytest.mark.asyncio
+async def test_world_entry_unknown_name_does_not_resolve(mock_scene_world_entries):
+    """A title that matches no world entry still resolves to nothing."""
+    context_item = await context_id_item_from_string(
+        "world_entry.manual:No Such Entry", mock_scene_world_entries
+    )
+    assert context_item is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "character, context_type, name, name_in_id, expected_value",
+    [
+        ("TestCharacter", "character.attribute", "strength", "strength", 15),
+        ("TestCharacter", "character.attribute", "strength", "STRENGTH", 15),
+        (
+            "TestCharacter",
+            "character.detail",
+            "appearance",
+            "appearance",
+            "Tall and muscular",
+        ),
+        (
+            "Dr. Vance",
+            "character.detail",
+            "Injury: left knee",
+            "Injury: left knee",
+            "Torn ligament, still healing",
+        ),
+        (
+            "Dr. Vance",
+            "character.attribute",
+            "Ph.D. status",
+            "Ph.D. status",
+            "Completed in 2019",
+        ),
+        (
+            "Dr. Vance",
+            "character.detail",
+            "Sidearm: sidearm.model",
+            "Sidearm: sidearm.model",
+            "A worn service pistol",
+        ),
+    ],
+)
+async def test_character_context_resolves_by_name(
+    mock_scene, character, context_type, name, name_in_id, expected_value
+):
+    """A character attribute or detail resolves from its name as well as its hash."""
+    by_hash = await context_id_item_from_string(
+        f"{context_type}:{character}.{compress_name(name)}", mock_scene
+    )
+    by_name = await context_id_item_from_string(
+        f"{context_type}:{character}.{name_in_id}", mock_scene
+    )
+
+    assert by_hash is not None
+    assert by_name is not None
+    assert by_name.name == name
+    assert by_name.value == expected_value
+    assert str(by_name.context_id) == str(by_hash.context_id)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "attributes",
+    [
+        {" strength ": 1, "strength": 15},
+        {"strength": 15, " strength ": 1},
+    ],
+)
+async def test_name_match_prefers_the_name_exactly_as_stored(mock_scene, attributes):
+    """Outer whitespace does not decide the match by iteration order."""
+    character = Character(
+        name="Twin", description="Two spellings", base_attributes=attributes
+    )
+    mock_scene.character_data[character.name] = character
+
+    context_item = await context_id_item_from_string(
+        "character.attribute:Twin.strength", mock_scene
+    )
+
+    assert context_item is not None
+    assert context_item.name == "strength"
+    assert context_item.value == 15
+
+
+@pytest.mark.asyncio
+async def test_character_unknown_name_does_not_resolve(mock_scene):
+    """An attribute name that the character does not have resolves to nothing."""
+    context_item = await context_id_item_from_string(
+        "character.attribute:TestCharacter.charisma", mock_scene
+    )
+    assert context_item is None
+
+
+@pytest.mark.asyncio
+async def test_scan_resolves_a_world_entry_named_by_its_title(mock_scene_world_entries):
+    """A title written into scanned text resolves the way its hash does."""
+    result = await scan_text_for_context_ids(
+        "Change `world_entry.manual:Apartment: Living Room` to mention the new sofa.",
+        mock_scene_world_entries,
+    )
+
+    assert not result.unresolved
+    assert [item.name for item in result.resolved] == ["Apartment: Living Room"]

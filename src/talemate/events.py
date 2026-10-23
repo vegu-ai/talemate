@@ -1,18 +1,22 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal
 
 import pydantic
 import talemate.emit.async_signals as async_signals
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Actor, Scene, Character, SceneMessage
+    from talemate.scene_message import CharacterTransitionMessage
 
 __all__ = [
     "Event",
     "HistoryEvent",
     "ArchiveEvent",
     "CharacterStateEvent",
+    "CharacterActivatedEvent",
+    "CharacterDeactivatedEvent",
+    "GameStateChangedEvent",
     "SceneStateEvent",
     "GameLoopBase",
     "GameLoopEvent",
@@ -22,6 +26,8 @@ __all__ = [
     "GameLoopNewMessageEvent",
     "PlayerTurnStartEvent",
     "RegenerateGeneration",
+    "BeforeGenerationEvent",
+    "before_generation",
     "UserInteractionEvent",
 ]
 
@@ -52,7 +58,41 @@ class HistoryEvent(Event):
 class ArchiveEvent(Event):
     text: str
     memory_id: str
-    ts: str | None = None
+    ts: int | None = None
+    present: list[str] | None = None
+
+
+class CharacterActivatedEvent(Event):
+    """
+    Sent by `activate_character` once the character is back in the scene.
+    `transition` is the arrival entry in the history; None when none was
+    recorded, as during a scene load.
+    """
+
+    character: "Character"
+    transition: "CharacterTransitionMessage | None" = None
+
+
+class CharacterDeactivatedEvent(Event):
+    """
+    Sent by `deactivate_character` once the character has left the scene.
+    `transition` is the departure entry in the history; None when none was
+    recorded, as during a scene load.
+    """
+
+    character: "Character"
+    transition: "CharacterTransitionMessage | None" = None
+
+
+class GameStateChangedEvent(Event):
+    """
+    Sent for each game state value that changes, from any writer (see
+    talemate.game.state); a removed value has value None.
+    """
+
+    path: str
+    value: Any = None
+    previous_value: Any = None
 
 
 class CharacterStateEvent(Event):
@@ -99,7 +139,32 @@ class RegenerateGeneration(Event):
     character: "Character | None" = None
 
 
+GenerationTrigger = Literal[
+    "narrator", "conversation", "editor", "regenerate", "command"
+]
+
+
+class BeforeGenerationEvent(Event):
+    """
+    Sent before a generation that continues the story or acts on it: a
+    narration, a character's line, an editor detail, a regenerated message or
+    a `!` command. A receiver that raises GenerationCancelled stops the
+    generation.
+    """
+
+    trigger: GenerationTrigger
+
+
+async def before_generation(scene: "Scene", trigger: GenerationTrigger) -> None:
+    await async_signals.get("scene.before_generation").send(
+        BeforeGenerationEvent(
+            scene=scene, event_type="scene.before_generation", trigger=trigger
+        )
+    )
+
+
 async_signals.register(
+    "scene.before_generation",
     "regenerate.msg.character",
     "regenerate.msg.narrator",
     "regenerate.msg.reinforcement",

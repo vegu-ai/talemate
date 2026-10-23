@@ -1,12 +1,20 @@
+import asyncio
+
 import pydantic
 import structlog
 import os
 import shutil
+import talemate.instance as instance
+
+from typing import get_args
 
 from talemate import VERSION
-from talemate.changelog import delete_changelog_files, scene_ref_from_path
+from talemate.agents import observed_actions
+from talemate.changelog import delete_scene_revisions, scene_ref_from_path
+from talemate.client import openrouter
 from talemate.client.model_prompts import model_prompt, PromptSpec
 from talemate.client.registry import CLIENT_CLASSES
+from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
 from talemate.client.base import (
     ClientBase,
     DEFAULT_REASONING_PATTERN,
@@ -15,20 +23,197 @@ from talemate.client.base import (
 from talemate.config import Config as AppConfigData
 from talemate.config.schema import (
     AgentActionOverride,
+    DecisionModelConfig,
     GamePlayerCharacter,
+    resolve_config_cls,
 )
-from talemate.config import get_config, Config, update_config
+from talemate.config import get_config, Config, mark_apply_pending, update_config
+from talemate.config.state import ApplySectionKey, PENDING_APPLY
+from talemate.decisions.slot import configure_decision_service
 from talemate.emit import emit
 from talemate.files import scenes_directory, RESERVED_SCENES_DIRS
-from talemate.instance import emit_clients_status, get_client
+from talemate.instance import (
+    configure_agents,
+    emit_clients_status,
+    ensure_agent_llm_client,
+    get_client,
+    instantiate_clients,
+    purge_clients,
+)
+from talemate.scene_tools import SCENE_TOOL_ACTIONS
+from talemate.world_state.templates.theme import resolve_theme
 
 from .websocket_plugin import Plugin
 
 log = structlog.get_logger("talemate.server.config")
 
 
+class ApplySection:
+    """One config section's share of the ``config/save`` apply pipeline.
+
+    `apply` brings the section's slice of the config into the running
+    instance, `finalize` is the tail of that work another section's apply may
+    already deliver (see `covers_finalize_of`).
+    """
+
+    key: ApplySectionKey
+    # section keys whose finalize this section's apply delivers itself - a
+    # section listed here needs no standalone finalize when this one follows it
+    covers_finalize_of: tuple[ApplySectionKey, ...] = ()
+
+    def changed(self, config_before: dict, config_after: dict) -> bool:
+        return config_before[self.key] != config_after[self.key]
+
+    async def apply(self):
+        raise NotImplementedError()
+
+    async def finalize(self):
+        pass
+
+
+class ClientsApplySection(ApplySection):
+    key = "clients"
+
+    async def apply(self):
+        await instantiate_clients()
+        await purge_clients()
+        await emit_clients_status(wait_for_status=True)
+
+    async def finalize(self):
+        # repoint the agents at the (re)instantiated clients
+        await ensure_agent_llm_client()
+
+
+class AgentsApplySection(ApplySection):
+    key = "agents"
+    # configure_agents ends with ensure_agent_llm_client itself
+    covers_finalize_of = ("clients",)
+
+    async def apply(self):
+        await configure_agents()
+
+
+class DecisionModelApplySection(ApplySection):
+    key = "decision_model"
+
+    def changed(self, config_before: dict, config_after: dict) -> bool:
+        # OpenRouter uses the shared client key outside the slot's own section.
+        return (
+            super().changed(config_before, config_after)
+            or config_before["openrouter"] != config_after["openrouter"]
+        )
+
+    async def apply(self):
+        configure_decision_service()
+
+
+class ApplyOutcome(pydantic.BaseModel):
+    """What one pipeline run tried, what got through, and what stopped it."""
+
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
+    applying: set[ApplySectionKey]
+    applied: set[ApplySectionKey]
+    error: Exception | None = None
+
+    @property
+    def unapplied(self) -> set[ApplySectionKey]:
+        return self.applying - self.applied
+
+
+class ConfigApplyPipeline:
+    """The sections a saved config is applied through, in order."""
+
+    def __init__(self):
+        self.sections: tuple[ApplySection, ...] = (
+            ClientsApplySection(),
+            AgentsApplySection(),
+            DecisionModelApplySection(),
+        )
+
+        # keys are unique and in-Literal, and a cover reaches backward only: a
+        # section can only deliver the finalize of one that already ran, so a
+        # forward, self-referencing or misspelled entry is a declaration bug -
+        # and one that would otherwise no-op (or surface as a validation error
+        # from inside run()) at save time. Raised from the module-level
+        # singleton, so it fails at import rather than on somebody's save.
+        ran: set[ApplySectionKey] = set()
+        for section in self.sections:
+            if section.key not in get_args(ApplySectionKey):
+                raise ValueError(
+                    f"{type(section).__name__}.key is '{section.key}', "
+                    f"which is not an ApplySectionKey"
+                )
+            if section.key in ran:
+                raise ValueError(
+                    f"{type(section).__name__}.key is '{section.key}', "
+                    f"which another section already claims"
+                )
+            for covered in section.covers_finalize_of:
+                if covered not in ran:
+                    raise ValueError(
+                        f"{type(section).__name__}.covers_finalize_of names "
+                        f"'{covered}', which is not a section applied before it"
+                    )
+            ran.add(section.key)
+
+    @property
+    def pending(self) -> set[ApplySectionKey]:
+        return PENDING_APPLY
+
+    async def run(self, config_before: dict, config_after: dict) -> ApplyOutcome:
+        applying = [
+            section
+            for section in self.sections
+            if section.changed(config_before, config_after)
+            or section.key in self.pending
+        ]
+        applying_keys = {section.key for section in applying}
+
+        if self.pending:
+            log.warning(
+                "config save: re-applying sections left unapplied by an earlier save",
+                sections=sorted(self.pending),
+            )
+
+        # sections that made it all the way through their apply - only what is
+        # missing from here is stale if a later step raises. Recording the whole
+        # save instead would put the expensive half of the pipeline (tear down,
+        # re-instantiate, block on wait_for_status) on every later save because
+        # the agent half failed.
+        applied: set[ApplySectionKey] = set()
+
+        try:
+            for index, section in enumerate(applying):
+                await section.apply()
+                covered = any(
+                    section.key in later.covers_finalize_of
+                    for later in applying[index + 1 :]
+                )
+                if not covered:
+                    await section.finalize()
+                applied.add(section.key)
+        except Exception as exc:
+            self.pending.difference_update(applied)
+            mark_apply_pending(*(applying_keys - applied))
+            return ApplyOutcome(applying=applying_keys, applied=applied, error=exc)
+
+        self.pending.difference_update(applied)
+        return ApplyOutcome(applying=applying_keys, applied=applied)
+
+
+# Process state rather than per-connection state: plugins are built per
+# websocket connection, but the stale runtime outlives the connection the
+# failed save came in on (a frontend reload does not re-apply anything).
+APPLY_PIPELINE = ConfigApplyPipeline()
+
+
 class ConfigPayload(pydantic.BaseModel):
     config: AppConfigData
+    # echoed back with the completion so a sender can tell its own save apart
+    # from one made elsewhere (the settings view and the clients / agents
+    # drawer both save through this action)
+    request_id: str | None = None
 
 
 class DefaultCharacterPayload(pydantic.BaseModel):
@@ -42,11 +227,13 @@ class SetLLMTemplatePayload(pydantic.BaseModel):
     template_file: str
     model: str
     client_name: str | None = None
+    lock_template: bool = False
 
 
 class DetermineLLMTemplatePayload(pydantic.BaseModel):
     model: str
     client_name: str | None = None
+    lock_template: bool = False
 
 
 class SaveLLMTemplatePayload(pydantic.BaseModel):
@@ -71,11 +258,6 @@ class DeleteSceneProjectPayload(pydantic.BaseModel):
     path: str
 
 
-class SaveUnifiedAPIKeyPayload(pydantic.BaseModel):
-    config_path: str
-    api_key: str | None
-
-
 class TorchCudaDeviceInfo(pydantic.BaseModel):
     index: int
     name: str | None = None
@@ -93,6 +275,10 @@ class TorchCudaInfo(pydantic.BaseModel):
     error: str | None = None
 
 
+class DecisionModelsPayload(pydantic.BaseModel):
+    models: list[openrouter.DecisionModel]
+
+
 class SystemCapabilitiesPayload(pydantic.BaseModel):
     torch_cuda: TorchCudaInfo = TorchCudaInfo()
 
@@ -106,23 +292,110 @@ class ClearAgentActionOverridePayload(pydantic.BaseModel):
     key: str
 
 
+def app_config_message(config: Config) -> dict:
+    """The `app_config` push, built the same way `config.changed` builds it.
+
+    The frontend repaints from the resolved theme this carries, so a payload
+    without it reads as "no theme" and drops the app back to the defaults.
+
+    Runtime apply state stays outside the saved configuration.
+    """
+
+    data = config.model_dump()
+    data.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
+    data.update(theme=resolve_theme(config))
+    data.update(
+        decision_model_defaults=DecisionModelConfig().model_dump(
+            exclude={"enabled", "api_key"}
+        )
+    )
+
+    return {
+        "type": "app_config",
+        "data": data,
+        "version": VERSION,
+        "agent_apply_pending": any(
+            agent.config_apply_failed for agent in instance.AGENTS.values()
+        ),
+    }
+
+
+def client_model_defaults(client_type: str) -> dict:
+    """Field defaults of the config model a client of `client_type` saves to.
+
+    Instantiated and dumped rather than read off `model_fields` so that
+    default_factory fields and nested models serialize exactly as they would
+    in a saved config.
+    """
+    config_cls = resolve_config_cls(CLIENT_CLASSES[client_type])
+    return config_cls(type=client_type, name="").model_dump(exclude={"type", "name"})
+
+
 class ConfigPlugin(Plugin):
     router = "config"
 
+    def connect(self):
+        self._decision_model_requests: set[asyncio.Task] = set()
+
     async def handle_save(self, data):
         app_config_data = ConfigPayload(**data)
-        await update_config(app_config_data.config.model_dump())
-        self.websocket_handler.queue_put(
-            {
-                "type": "app_config",
-                "data": get_config().model_dump(),
-                "version": VERSION,
-            }
-        )
+
+        config_before = get_config().model_dump()
+        # signal=False: config.changed receivers broadcast app_config, and the
+        # frontend must only adopt a config that is already applied - the
+        # broadcast is fired below, after the apply pipeline
+        await update_config(app_config_data.config.model_dump(), signal=False)
+        config_after = get_config().model_dump()
+
+        outcome = await APPLY_PIPELINE.run(config_before, config_after)
+
+        if outcome.error is not None:
+            # the config is already stored and will be committed to disk, so
+            # the frontend gets it either way - what failed is the apply, and
+            # saying "save failed" would send the user looking for a config
+            # that is not coming back
+            log.error(
+                "config save: apply failed",
+                error=outcome.error,
+                clients_changed="clients" in outcome.applying,
+                agents_changed="agents" in outcome.applying,
+                unapplied=sorted(outcome.unapplied),
+            )
+            await get_config().set_dirty()
+            # `stage` lets the sender tell an apply failure (payload accepted
+            # and stored) from a refused payload (nothing stored) - the two
+            # call for opposite handling of whatever was stacked on the save
+            await self.signal_operation_failed(
+                f"Configuration was saved, but applying it failed: {outcome.error}",
+                request_id=app_config_data.request_id,
+                failed_action="save",
+                extra={"stage": "apply"},
+            )
+            return
+
+        # broadcasts app_config to every connected frontend (see
+        # WebsocketHandler.on_config_changed)
+        failures = await get_config().set_dirty()
+
+        if failures:
+            message = (
+                f"Configuration was saved, but applying it failed: {failures[0][1]}"
+            )
+            if len(failures) > 1:
+                message += f" (+{len(failures) - 1} more, see backend log)"
+            await self.signal_operation_failed(
+                message,
+                request_id=app_config_data.request_id,
+                failed_action="save",
+                extra={"stage": "apply"},
+            )
+            return
+
         self.websocket_handler.queue_put(
             {
                 "type": "config",
                 "action": "save_complete",
+                "request_id": app_config_data.request_id,
             }
         )
 
@@ -143,9 +416,7 @@ class ConfigPlugin(Plugin):
 
         await config.set_dirty()
 
-        self.websocket_handler.queue_put(
-            {"type": "app_config", "data": config.model_dump(), "version": VERSION}
-        )
+        self.websocket_handler.queue_put(app_config_message(config))
         self.websocket_handler.queue_put(
             {
                 "type": "config",
@@ -221,7 +492,7 @@ class ConfigPlugin(Plugin):
         payload = SetLLMTemplatePayload(**data["data"])
 
         model_name = payload.model
-        if payload.client_name:
+        if payload.lock_template and payload.client_name:
             model_name = locked_model_template(payload.client_name, payload.model)
 
         copied_to = model_prompt.create_user_override(payload.template_file, model_name)
@@ -234,24 +505,26 @@ class ConfigPlugin(Plugin):
             client_name=payload.client_name,
         )
 
-        spec = PromptSpec()
         client = None
         if payload.client_name:
             try:
                 client = get_client(payload.client_name)
             except KeyError:
                 client = None
-        reasoning_tokens = 0
-        if client is not None and getattr(client, "reason_enabled", False):
-            reasoning_tokens = getattr(client, "validated_reason_tokens", 0) or 0
 
-        prompt_template_example, prompt_template_file = model_prompt(
-            model_name,
-            "sysmsg",
-            "prompt<|BOT|>{LLM coercion}",
-            reasoning_tokens=reasoning_tokens,
-            spec=spec,
-        )
+        prompt_template_example = None
+        if client is not None:
+            prompt_template_example, prompt_template_file, spec = (
+                client.prompt_template_example(model_name)
+            )
+        if prompt_template_example is None:
+            spec = PromptSpec()
+            prompt_template_example, prompt_template_file = model_prompt(
+                model_name,
+                "{sysmsg}",
+                "{prompt}<|BOT|>{LLM coercion}",
+                spec=spec,
+            )
 
         log.info(
             "Prompt template example",
@@ -263,6 +536,7 @@ class ConfigPlugin(Plugin):
             {
                 "type": "config",
                 "action": "set_llm_template_complete",
+                "request_id": data.get("request_id"),
                 "data": {
                     "prompt_template_example": prompt_template_example,
                     "has_prompt_template": True if prompt_template_example else False,
@@ -301,11 +575,13 @@ class ConfigPlugin(Plugin):
         else:
             await self.handle_set_llm_template(
                 {
+                    "request_id": data.get("request_id"),
                     "data": {
                         "template_file": template,
                         "model": payload.model,
                         "client_name": payload.client_name,
-                    }
+                        "lock_template": payload.lock_template,
+                    },
                 }
             )
 
@@ -313,6 +589,7 @@ class ConfigPlugin(Plugin):
             {
                 "type": "config",
                 "action": "determine_llm_template_complete",
+                "request_id": data.get("request_id"),
                 "data": {
                     "template": template,
                 },
@@ -323,7 +600,10 @@ class ConfigPlugin(Plugin):
         log.info("Requesting client types")
 
         clients = {
-            client_type: CLIENT_CLASSES[client_type].Meta().model_dump()
+            client_type: {
+                **CLIENT_CLASSES[client_type].Meta().model_dump(),
+                "model_defaults": client_model_defaults(client_type),
+            }
             for client_type in CLIENT_CLASSES
         }
 
@@ -332,6 +612,45 @@ class ConfigPlugin(Plugin):
                 "type": "config",
                 "action": "client_types",
                 "data": clients,
+            }
+        )
+
+    async def handle_request_decision_models(self, data):
+        # the list may still have to come from OpenRouter, which must not hold
+        # up the websocket receive loop
+        task = asyncio.create_task(self._send_decision_models())
+        self._decision_model_requests.add(task)
+        task.add_done_callback(self._decision_model_requests.discard)
+
+    async def _send_decision_models(self):
+        models = await openrouter.fetch_available_decision_models()
+        self.websocket_handler.queue_put(
+            {
+                "type": "config",
+                "action": "decision_models",
+                "data": DecisionModelsPayload(models=models).model_dump(),
+            }
+        )
+
+    async def handle_request_agent_actions(self, data):
+        self.websocket_handler.queue_put(
+            {
+                "type": "config",
+                "action": "agent_actions",
+                "data": {"actions": observed_actions.snapshot()},
+            }
+        )
+
+    async def handle_request_scene_tool_actions(self, data):
+        log.info("Requesting scene tool actions")
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "config",
+                "action": "scene_tool_actions",
+                "data": {
+                    "actions": [action.model_dump() for action in SCENE_TOOL_ACTIONS],
+                },
             }
         )
 
@@ -445,9 +764,7 @@ class ConfigPlugin(Plugin):
             }
         )
 
-        self.websocket_handler.queue_put(
-            {"type": "app_config", "data": config.model_dump(), "version": VERSION}
-        )
+        self.websocket_handler.queue_put(app_config_message(config))
 
     def _active_scene_realpath(self) -> str | None:
         scene = self.scene
@@ -480,21 +797,8 @@ class ConfigPlugin(Plugin):
         except FileNotFoundError:
             log.warning("File not found", path=payload.path)
 
-        # remove associated changelog files (base, latest, and segmented changelog files)
-        try:
-            scene_ref = scene_ref_from_path(payload.path)
-            result = delete_changelog_files(scene_ref)
-            log.info(
-                "Deleted scene changelog artifacts",
-                deleted_files=len(result.get("deleted", [])),
-                dir_removed=result.get("dir_removed"),
-            )
-        except Exception as e:
-            log.warning(
-                "Failed to delete associated changelog files",
-                scene_path=payload.path,
-                error=e,
-            )
+        result = await delete_scene_revisions(scene_ref_from_path(payload.path))
+        log.info("Deleted scene revisions", **result)
 
         self.websocket_handler.queue_put(
             {
@@ -508,9 +812,7 @@ class ConfigPlugin(Plugin):
 
         config: Config = get_config()
 
-        self.websocket_handler.queue_put(
-            {"type": "app_config", "data": config.model_dump(), "version": VERSION}
-        )
+        self.websocket_handler.queue_put(app_config_message(config))
 
     async def handle_delete_scene_project(self, data):
         payload = DeleteSceneProjectPayload(**data)
@@ -562,9 +864,7 @@ class ConfigPlugin(Plugin):
             }
         )
 
-        self.websocket_handler.queue_put(
-            {"type": "app_config", "data": config.model_dump(), "version": VERSION}
-        )
+        self.websocket_handler.queue_put(app_config_message(config))
 
     async def handle_set_agent_action_override(self, data):
         payload = SetAgentActionOverridePayload(**data["data"])
@@ -584,35 +884,3 @@ class ConfigPlugin(Plugin):
             return
 
         await config.set_dirty()
-
-    async def handle_save_unified_api_key(self, data):
-        """Save a unified API key to app config."""
-        payload = SaveUnifiedAPIKeyPayload(**data["data"])
-
-        log.info("Saving unified API key", config_path=payload.config_path)
-
-        config: Config = get_config()
-
-        # Parse the config path (e.g., "anthropic.api_key")
-        path_parts = payload.config_path.split(".")
-        if len(path_parts) != 2:
-            log.error("Invalid config path", config_path=payload.config_path)
-            return
-
-        section_name, key_name = path_parts
-
-        # Get the section (e.g., config.anthropic)
-        section = getattr(config, section_name, None)
-        if section is None:
-            log.error("Config section not found", section=section_name)
-            return
-
-        # Set the API key
-        setattr(section, key_name, payload.api_key)
-
-        await config.set_dirty()
-
-        # Send updated config back
-        self.websocket_handler.queue_put(
-            {"type": "app_config", "data": config.model_dump(), "version": VERSION}
-        )

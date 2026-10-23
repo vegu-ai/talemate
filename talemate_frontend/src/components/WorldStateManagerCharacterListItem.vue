@@ -8,14 +8,14 @@
         </template>
         <v-list-item-title>{{ character.name }}</v-list-item-title>
         <v-list-item-subtitle>
-            <div class="text-caption">
+            <div class="text-body-small">
                 <v-chip v-if="character.is_player === true" label size="x-small"
-                    :variant="selectedName === character.name ? 'flat' : 'tonal'" color="info" elevation="7">Player</v-chip>
+                    :variant="selectedName === character.name ? 'flat' : 'tonal'" color="info">Player</v-chip>
                 <v-chip v-else-if="character.is_player === false" label size="x-small"
-                    :variant="selectedName === character.name ? 'flat' : 'tonal'" color="warning" elevation="7">AI</v-chip>
+                    :variant="selectedName === character.name ? 'flat' : 'tonal'" color="warning">AI</v-chip>
                 <v-chip v-if="character.active === true"
                     label size="x-small" :variant="selectedName === character.name ? 'flat' : 'tonal'" color="success"
-                    class="ml-1" elevation="7">Active</v-chip>
+                    class="ml-1">Active</v-chip>
                 <v-icon v-if="character.shared === true" color="highlight6" class="ml-1">mdi-earth</v-icon>
             </div>
         </v-list-item-subtitle>

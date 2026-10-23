@@ -1,221 +1,107 @@
 <template>
   <div>
-    <div v-if="loading && !preview" class="text-center py-8">
-      <v-progress-circular indeterminate color="primary" />
-      <div class="text-caption mt-2">Building context preview...</div>
+    <div class="view-toolbar d-flex align-center flex-wrap ga-2 px-2 py-1" data-testid="scene-context-view-controls">
+      <v-icon size="small" color="muted">mdi-eye-outline</v-icon>
+      <span class="text-body-small text-muted text-no-wrap">Preview for</span>
+      <v-chip-group
+        :model-value="perspective"
+        mandatory
+        class="py-0 perspective-chips"
+        data-testid="scene-context-perspective"
+        @update:model-value="setPerspective">
+        <v-chip
+          v-for="option in perspectiveOptions"
+          :key="option.value"
+          :value="option.value"
+          size="small"
+          :variant="option.value === perspective ? 'tonal' : 'outlined'"
+          :color="option.value === perspective ? 'primary' : undefined"
+          filter>
+          {{ option.title }}
+        </v-chip>
+      </v-chip-group>
+      <div class="d-flex align-center flex-nowrap ga-2 flex-shrink-0 ml-auto">
+        <v-chip v-if="preview" size="small" variant="tonal" label>
+          {{ preview.summary.history_tokens ?? preview.summary.total_tokens }} / {{ preview.budget.total }} history tokens
+        </v-chip>
+        <v-chip v-if="preview?.summary.knowledge_tokens" size="small" variant="tonal" label>{{ preview.summary.knowledge_tokens }} knowledge tokens</v-chip>
+        <v-btn variant="text" prepend-icon="mdi-refresh" :loading="loading" :disabled="!connected" data-testid="scene-context-refresh" @click="fetchPreview">Refresh</v-btn>
+      </div>
     </div>
+    <v-divider class="mb-3" />
 
-    <div v-else-if="error" class="py-4">
-      <v-alert type="error" variant="outlined" density="compact">{{ error }}</v-alert>
-    </div>
+    <v-row no-gutters>
+      <v-col cols="12" md="auto" class="settings-col">
+        <div class="settings-content">
+          <SceneHistorySettingsCard :agent-status="agentStatus" :connected="connected" :scene-id="sceneId" @writing="onWriting" />
+          <v-expansion-panels v-if="selectedCharacter && preview" class="mt-3" :model-value="0" variant="accordion" flat>
+            <v-expansion-panel class="border">
+              <v-expansion-panel-title class="text-body-medium">Excluded ({{ preview.exclusion_total ?? preview.exclusions?.length ?? 0 }})</v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <div v-for="(count, reason) in preview.exclusion_counts" :key="reason" class="text-body-small mb-1">{{ exclusionReason(reason) }}: {{ count }}</div>
+                <div v-if="preview.exclusion_total > preview.exclusions?.length" class="text-body-small text-medium-emphasis mb-2">Showing up to 20 samples per reason; passage text is shortened.</div>
+                <div v-if="!preview.exclusions?.length" class="text-body-small">No presence or audience exclusions.</div>
+                <div v-for="item in preview.exclusions" :key="`${item.kind}:${item.id}:${item.layer}:${item.reason}`" class="exclusion-entry py-2">
+                  <v-chip size="x-small" color="warning" variant="tonal">{{ exclusionReason(item.reason) }}</v-chip>
+                  <div class="text-body-small text-medium-emphasis mt-1">{{ item.section }} · {{ item.id }}<template v-if="item.layer != null && item.kind === 'layer'"> · layer {{ item.layer }}</template></div>
+                  <div class="text-body-small exclusion-text">{{ item.text }}</div>
+                </div>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
+        </div>
+      </v-col>
 
-    <div v-else-if="!preview" class="text-center pa-8 text-grey">
-      <v-icon size="64" class="mb-4">mdi-view-split-horizontal</v-icon>
-      <p>No context preview loaded.</p>
-      <p class="text-caption">Click Refresh to build a context preview.</p>
-      <v-btn
-        variant="tonal"
-        color="primary"
-        prepend-icon="mdi-refresh"
-        :loading="loading"
-        @click="fetchPreview"
-        class="mt-4"
-      >
-        Refresh
-      </v-btn>
-    </div>
+      <v-col cols="12" md class="preview-col">
+        <v-progress-linear v-if="loading && preview" indeterminate color="primary" height="2" />
+        <v-alert
+          v-if="perceptionStatus"
+          :type="perceptionStatus.state === 'failed' ? 'warning' : 'info'"
+          variant="tonal"
+          density="compact"
+          class="mb-2 text-body-small"
+        >
+          {{ perceptionStatus.message }}<template v-if="preview"> Showing the previous preview.</template>
+        </v-alert>
+        <v-alert v-if="contextIncomplete" type="warning" variant="tonal" density="compact" class="mb-2 text-body-small" icon="mdi-alert-outline">
+          The history does not fit. Lower the detail ratio or raise the budget.
+        </v-alert>
+        <div v-if="selectedCharacter && preview" class="text-body-small text-muted px-1 mb-2">
+          History follows {{ selectedCharacter }}'s Conversation settings. Knowledge shows existing analysis only.
+        </div>
 
-    <template v-else>
-      <v-card variant="text" class="text-caption text-muted mb-4 px-2">
-        This is a preview of how the scene history will be rendered into context for AI prompts. Adjust the settings below to change how the context budget is distributed, then click Refresh to see the effect.
-      </v-card>
+        <div v-if="loading && !preview" class="preview-state text-center py-12" data-testid="scene-context-loading">
+          <v-progress-circular indeterminate color="primary" />
+          <div class="text-body-small text-muted mt-3">Building the preview…</div>
+        </div>
 
-      <v-row no-gutters>
+        <div v-else-if="error" class="preview-state py-4" data-testid="scene-context-failed">
+          <v-alert type="error" variant="tonal" density="compact" title="The preview could not be built">{{ error }}</v-alert>
+        </div>
 
-        <!-- Sidebar -->
-        <v-col class="sidebar-col" style="flex: 0 0 320px; max-width: 320px;">
-          <div class="sidebar-content pa-4">
-            <v-chip v-if="preview" size="small" variant="tonal" label class="mb-4">
-              {{ preview.summary.total_tokens }} / {{ preview.budget.total }} tokens used
-            </v-chip>
+        <div v-else-if="!preview" class="preview-state text-center py-12 text-medium-emphasis" data-testid="scene-context-empty">
+          <v-icon size="48" color="muted" class="mb-3">mdi-view-split-horizontal</v-icon>
+          <div class="text-body-medium">No preview yet</div>
+          <v-btn variant="tonal" color="primary" prepend-icon="mdi-refresh" :loading="loading" :disabled="!connected" class="mt-4" @click="fetchPreview">Refresh</v-btn>
+        </div>
 
-            <!-- Best Fit Mode -->
-            <div class="sidebar-field mb-4">
-              <v-checkbox
-                v-model="overrides.best_fit"
-                label="Best fit mode"
-                density="compact"
-                hide-details
-                color="primary"
-              />
-              <div class="note-block text-caption text-muted mt-1" v-if="bestFitNote">
-                <v-icon size="x-small" color="primary" class="mr-1">mdi-information-outline</v-icon>
-                {{ bestFitNote }}
-              </div>
-            </div>
+        <template v-else>
 
-            <!-- Min Dialogue Messages (only in best_fit mode) -->
-            <div class="sidebar-field mb-4" v-if="overrides.best_fit">
-              <v-slider
-                v-model="overrides.best_fit_min_dialogue"
-                label="Min. Dialogue"
-                :min="0" :max="10" :step="1"
-                density="compact"
-                hide-details
-                thumb-label
-                color="primary"
-              >
-                <template #append>
-                  <span class="text-caption text-muted">{{ overrides.best_fit_min_dialogue }}</span>
-                </template>
-              </v-slider>
-            </div>
-
-            <!-- Max Dialogue Messages (only in best_fit mode) -->
-            <div class="sidebar-field mb-4" v-if="overrides.best_fit">
-              <v-slider
-                v-model="overrides.best_fit_max_dialogue"
-                label="Max. Dialogue"
-                :min="10" :max="500" :step="10"
-                density="compact"
-                hide-details
-                thumb-label
-                color="primary"
-              >
-                <template #append>
-                  <span class="text-caption text-muted">{{ overrides.best_fit_max_dialogue }}</span>
-                </template>
-              </v-slider>
-              <div class="note-block text-caption text-muted mt-1" v-if="maxDialogueNote">
-                <v-icon size="x-small" color="primary" class="mr-1">mdi-information-outline</v-icon>
-                {{ maxDialogueNote }}
-              </div>
-            </div>
-
-            <!-- Dialogue Ratio (hidden in best_fit mode) -->
-            <div class="sidebar-field mb-4" v-if="!overrides.best_fit">
-              <v-slider
-                v-model="overrides.dialogue_ratio"
-                label="Dialogue"
-                :min="10" :max="90" :step="5"
-                density="compact"
-                hide-details
-                thumb-label
-                color="primary"
-              >
-                <template #append>
-                  <span class="text-caption text-muted">{{ overrides.dialogue_ratio }}%</span>
-                </template>
-              </v-slider>
-            </div>
-
-            <!-- Summary Detail Ratio (hidden in best_fit mode) -->
-            <div class="sidebar-field mb-4" v-if="!overrides.best_fit">
-              <v-slider
-                v-model="overrides.summary_detail_ratio"
-                label="Detail"
-                :min="10" :max="90" :step="5"
-                density="compact"
-                hide-details
-                thumb-label
-                color="primary"
-              >
-                <template #append>
-                  <span class="text-caption text-muted">{{ overrides.summary_detail_ratio }}%</span>
-                </template>
-              </v-slider>
-            </div>
-
-            <!-- Max Budget -->
-            <div class="sidebar-field mb-4">
-              <v-number-input
-                v-model="overrides.max_budget"
-                label="Budget"
-                :min="0" :max="262144" :step="512"
-                density="compact"
-                hide-details
-                variant="outlined"
-                suffix="tokens"
-                control-variant="stacked"
-              />
-              <div class="note-block text-caption text-muted mt-2" v-if="overrides.max_budget === 0">
-                <v-icon size="x-small" color="primary" class="mr-1">mdi-information-outline</v-icon>
-                Preview uses 8192 tokens as default budget when set to 0.
-              </div>
-            </div>
-
-            <!-- Enforce Boundary (hidden in best_fit mode) -->
-            <div class="sidebar-field mb-4" v-if="!overrides.best_fit">
-              <v-checkbox
-                v-model="overrides.enforce_boundary"
-                label="Enforce boundary"
-                density="compact"
-                hide-details
-                color="primary"
-              />
-              <div class="note-block text-caption text-muted mt-1" v-if="enforceBoundaryNote">
-                <v-icon size="x-small" :color="overrides.enforce_boundary ? 'warning' : 'primary'" class="mr-1">
-                  {{ overrides.enforce_boundary ? 'mdi-alert-circle-outline' : 'mdi-information-outline' }}
-                </v-icon>
-                {{ enforceBoundaryNote }}
-              </div>
-            </div>
-
-            <!-- Incomplete warning -->
-            <div class="note-block text-caption text-warning mb-4" v-if="contextIncomplete">
-              <v-icon size="x-small" color="warning" class="mr-1">mdi-alert-outline</v-icon>
-              Context history is incomplete in this configuration. Reduce the detail ratio or increase the budget to fit all history.
-            </div>
-
-            <!-- Buttons -->
-            <div class="d-flex flex-column ga-2">
-              <v-btn
-                variant="text"
-                color="primary"
-                prepend-icon="mdi-refresh"
-                :loading="loading"
-                @click="fetchPreview"
-                block
-              >
-                Refresh
-              </v-btn>
-              <v-btn
-                variant="text"
-                color="success"
-                prepend-icon="mdi-content-save-outline"
-                :loading="applying"
-                :disabled="!hasChanges"
-                @click="applyConfig"
-                block
-              >
-                Apply
-                <v-tooltip activator="parent" location="top">Apply settings to the summarization agent</v-tooltip>
-              </v-btn>
-            </div>
-          </div>
-        </v-col>
-
-        <v-divider vertical />
-
-        <!-- Context sections -->
-        <v-col>
           <div class="context-sections">
             <template v-for="(section, idx) in nonEmptySections" :key="idx">
-
-              <!-- Section boundary divider -->
               <div class="section-boundary" :style="{ borderColor: sectionColor(section) }">
                 <div class="d-flex align-center px-4 py-2">
                   <v-icon size="small" :color="sectionColor(section)" class="mr-2">{{ sectionIcon(section) }}</v-icon>
-                  <span class="text-caption font-weight-bold" :style="{ color: sectionColor(section) }">
+                  <span class="text-body-small font-weight-bold" :style="{ color: sectionColor(section) }">
                     {{ section.label }}
                   </span>
                   <v-chip size="x-small" variant="tonal" :color="sectionColor(section)" class="ml-2" label>
                     {{ section.token_count }} tokens
                   </v-chip>
-                  <v-chip size="x-small" variant="outlined" color="grey" class="ml-1" label>
+                  <v-chip size="x-small" variant="outlined" color="muted" class="ml-1" label>
                     {{ section.entry_count }} {{ section.entry_count === 1 ? 'entry' : 'entries' }}
                   </v-chip>
-                  <v-chip v-if="section.budget != null" size="x-small" variant="outlined" color="grey" class="ml-1" label>
+                  <v-chip v-if="section.budget != null" size="x-small" variant="outlined" color="muted" class="ml-1" label>
                     budget: {{ section.budget }}
                   </v-chip>
                   <v-chip v-if="section.incomplete" size="x-small" variant="tonal" color="warning" class="ml-1" label>
@@ -225,7 +111,6 @@
                 </div>
               </div>
 
-              <!-- Section entries -->
               <div class="section-entries px-4 py-1">
                 <div
                   v-for="(entry, entryIdx) in section.entries"
@@ -235,58 +120,90 @@
                 >
                   <div class="entry-text" v-html="renderEntry(entry)"></div>
                 </div>
+                <div v-if="section.full_evidence" class="pb-2">
+                  <v-btn
+                    variant="text"
+                    size="small"
+                    prepend-icon="mdi-code-tags"
+                    @click="toggleFullEvidence(idx)"
+                  >
+                    {{ fullEvidenceOpen[idx] ? 'Hide full analysis evidence' : 'Show full analysis evidence' }}
+                  </v-btn>
+                  <pre v-if="fullEvidenceOpen[idx]" class="full-evidence">{{ section.full_evidence }}</pre>
+                </div>
               </div>
-
             </template>
           </div>
-        </v-col>
-
-      </v-row>
-    </template>
+        </template>
+      </v-col>
+    </v-row>
   </div>
 </template>
 
 <script>
+import SceneHistorySettingsCard from './SceneHistorySettingsCard.vue';
 import { SceneTextParser } from '../utils/sceneMessageRenderer.js';
+import { SCENE_HISTORY_KEYS, sceneHistoryValue } from '@/constants/sceneHistorySettings';
+import { v4 as uuidv4 } from 'uuid';
 
 const SECTION_COLORS = {
   layer: '#B39DDB',
   archived: '#FF8A65',
   dialogue: '#4FC3F7',
+  intro: '#64B5F6',
+  disclosure: '#AED581',
+  knowledge: '#AED581',
+  analysis: '#80CBC4',
 };
 
 const SECTION_ICONS = {
   layer: 'mdi-layers',
   archived: 'mdi-archive-outline',
   dialogue: 'mdi-message-text-outline',
+  intro: 'mdi-book-open-page-variant',
+  disclosure: 'mdi-account-voice',
+  knowledge: 'mdi-lightbulb-outline',
+  analysis: 'mdi-head-lightbulb-outline',
 };
 
+const SCENE_PERSPECTIVE = '__scene__';
+
 export default {
+  components: { SceneHistorySettingsCard },
   props: {
     visible: Boolean,
     agentStatus: Object,
+    sceneId: { type: [String, Number], default: null },
+    connected: { type: Boolean, default: true },
   },
   inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'appConfig'],
   data() {
     return {
       loading: false,
-      applying: false,
       error: null,
       preview: null,
-      overrides: {
-        dialogue_ratio: 50,
-        summary_detail_ratio: 50,
-        max_budget: 8192,
-        enforce_boundary: false,
-        best_fit: false,
-        best_fit_min_dialogue: 3,
-        best_fit_max_dialogue: 250,
-      },
-      savedValues: null,
-      overridesInitialized: false,
+      selectedCharacter: null,
+      activeCharacters: [],
+      previewHandler: null,
+      statusHandler: null,
+      perceptionStatus: null,
+      waitingPerceptionMessageId: null,
+      readyPerceptionMessages: new Set(),
+      refetchedPerceptionMessages: new Set(),
+      fullEvidenceOpen: {},
+      // a settings write is waiting for its answer
+      writing: false,
+      // the settings the shown preview was requested under
+      previewSettings: null,
     };
   },
   computed: {
+    perspectiveOptions() {
+      return [{ title: 'Scene', value: SCENE_PERSPECTIVE }, ...this.activeCharacters.map(name => ({ title: name, value: name }))];
+    },
+    perspective() {
+      return this.selectedCharacter ?? SCENE_PERSPECTIVE;
+    },
     nonEmptySections() {
       if (!this.preview) return [];
       return this.preview.sections.filter(s => s.entries.length > 0);
@@ -301,96 +218,175 @@ export default {
         brackets: sceneConfig.brackets || narratorStyles,
       });
     },
-    configMeta() {
-      return this.agentStatus?.summarizer?.actions?.manage_scene_history?.config || null;
-    },
-    bestFitNote() {
-      const noteOnValue = this.configMeta?.best_fit?.note_on_value;
-      if (!noteOnValue) return null;
-      const key = String(this.overrides.best_fit);
-      const note = noteOnValue[key] || noteOnValue[key.charAt(0).toUpperCase() + key.slice(1)];
-      return note?.text || null;
-    },
-    maxDialogueNote() {
-      return this.configMeta?.best_fit_max_dialogue?.note?.text || null;
-    },
-    enforceBoundaryNote() {
-      const noteOnValue = this.configMeta?.enforce_boundary?.note_on_value;
-      if (!noteOnValue) return null;
-      const key = String(this.overrides.enforce_boundary);
-      const note = noteOnValue[key] || noteOnValue[key.charAt(0).toUpperCase() + key.slice(1)];
-      return note?.text || null;
+    // what the loaded scene runs on, for every setting the card shows
+    confirmedSettings() {
+      const summarizer = this.agentStatus?.summarizer;
+      if (!summarizer?.actions) return null;
+      return JSON.stringify(SCENE_HISTORY_KEYS.map((key) => sceneHistoryValue(summarizer, key)));
     },
     contextIncomplete() {
       if (!this.preview) return false;
       return this.preview.sections.some(s => s.incomplete);
     },
-    hasChanges() {
-      if (!this.savedValues) return false;
-      return (
-        this.overrides.dialogue_ratio !== this.savedValues.dialogue_ratio ||
-        this.overrides.summary_detail_ratio !== this.savedValues.summary_detail_ratio ||
-        this.overrides.max_budget !== this.savedValues.max_budget ||
-        this.overrides.enforce_boundary !== this.savedValues.enforce_boundary ||
-        this.overrides.best_fit !== this.savedValues.best_fit ||
-        this.overrides.best_fit_min_dialogue !== this.savedValues.best_fit_min_dialogue ||
-        this.overrides.best_fit_max_dialogue !== this.savedValues.best_fit_max_dialogue
-      );
-    },
   },
   watch: {
+    // a change made elsewhere (the Summarizer settings, another window)
+    confirmedSettings() {
+      if (!this.writing) this.refreshForSettings();
+    },
+    selectedCharacter() {
+      if (this.visible) {
+        this.resetRequestOwnership({ clearPreview: true });
+        this.fetchPreview();
+      }
+    },
+    sceneId() {
+      this.resetRequestOwnership({ clearPreview: true });
+      this.activeCharacters = [];
+      if (this.visible && this.connected) this.fetchPreview();
+    },
+    connected(value) {
+      this.resetRequestOwnership({ clearPreview: !value });
+      if (value && this.visible) this.fetchPreview();
+    },
     visible: {
       immediate: true,
       handler(val) {
         if (val) {
           this.fetchPreview();
         } else {
+          this.clearPreviewHandler();
+          this.clearStatusHandler();
           this.preview = null;
+          this.selectedCharacter = null;
           this.error = null;
-          this.overridesInitialized = false;
-          this.savedValues = null;
+          this.perceptionStatus = null;
+          this.waitingPerceptionMessageId = null;
+          this.readyPerceptionMessages.clear();
+          this.refetchedPerceptionMessages.clear();
+          this.fullEvidenceOpen = {};
+          this.loading = false;
         }
       },
     },
   },
+  beforeUnmount() {
+    this.clearPreviewHandler();
+    this.clearStatusHandler();
+  },
   methods: {
+    onWriting(value) {
+      this.writing = value;
+      if (!value) this.refreshForSettings();
+    },
+    refreshForSettings() {
+      if (this.confirmedSettings === this.previewSettings) return;
+      if (this.visible && this.connected && this.preview) this.fetchPreview();
+    },
+    setPerspective(value) {
+      this.selectedCharacter = value === SCENE_PERSPECTIVE || value == null ? null : value;
+    },
+    perceptionKey(status) {
+      return [status.scene_id, status.message_id, status.selection_index,
+        status.selection_digest, status.selection_serial, this.selectedCharacter || 'scene'].join(':');
+    },
+    resetRequestOwnership({ clearPreview = false } = {}) {
+      this.clearPreviewHandler();
+      this.clearStatusHandler();
+      this.loading = false;
+      this.waitingPerceptionMessageId = null;
+      this.perceptionStatus = null;
+      this.readyPerceptionMessages.clear();
+      this.refetchedPerceptionMessages.clear();
+      if (clearPreview) this.preview = null;
+    },
+    clearPreviewHandler() {
+      if (this.previewHandler) this.unregisterMessageHandler(this.previewHandler);
+      this.previewHandler = null;
+    },
+    clearStatusHandler() {
+      if (this.statusHandler) this.unregisterMessageHandler(this.statusHandler);
+      this.statusHandler = null;
+    },
+    ensureStatusHandler() {
+      if (this.statusHandler) return;
+      this.statusHandler = (frame) => {
+        if (frame.type !== 'perception_status' || !this.visible || !this.connected) return;
+        const status = frame.data || {};
+        if (this.sceneId != null && status.scene_id !== this.sceneId) return;
+        if (this.selectedCharacter && !status.audiences?.includes(this.selectedCharacter)) return;
+        const key = this.perceptionKey(status);
+        if (status.state === 'ready') this.readyPerceptionMessages.add(key);
+        if (status.message_id !== this.waitingPerceptionMessageId) return;
+        this.perceptionStatus = status;
+        if (status.state !== 'ready') {
+          this.loading = false;
+          return;
+        }
+        this.waitingPerceptionMessageId = null;
+        this.readyPerceptionMessages.delete(key);
+        this.perceptionStatus = null;
+        if (!this.loading && !this.refetchedPerceptionMessages.has(key)) {
+          this.refetchedPerceptionMessages.add(key);
+          this.fetchPreview();
+        }
+      };
+      this.registerMessageHandler(this.statusHandler);
+    },
     fetchPreview() {
+      if (!this.connected) {
+        this.loading = false;
+        return;
+      }
+      this.clearPreviewHandler();
+      this.ensureStatusHandler();
       this.loading = true;
       this.error = null;
+      this.perceptionStatus = null;
+      this.previewSettings = this.confirmedSettings;
+      const requestId = uuidv4();
+      const requestedCharacter = this.selectedCharacter;
+      const requestedSceneId = this.sceneId;
 
       const handler = (data) => {
+        if (data.request_id !== requestId) return;
+        if (this.selectedCharacter !== requestedCharacter || this.sceneId !== requestedSceneId) return;
         if (data.type === 'summarizer' && data.action === 'context_review') {
           this.preview = data.data;
-          if (!this.overridesInitialized) {
-            this.overrides.dialogue_ratio = data.data.summary.dialogue_ratio ?? this.overrides.dialogue_ratio;
-            this.overrides.summary_detail_ratio = data.data.summary.summary_detail_ratio ?? this.overrides.summary_detail_ratio;
-            this.overrides.max_budget = data.data.summary.max_budget;
-            this.overrides.enforce_boundary = data.data.summary.enforce_boundary ?? this.overrides.enforce_boundary;
-            this.overrides.best_fit = data.data.summary.best_fit ?? false;
-            this.overrides.best_fit_min_dialogue = data.data.summary.best_fit_min_dialogue ?? this.overrides.best_fit_min_dialogue;
-            this.overrides.best_fit_max_dialogue = data.data.summary.best_fit_max_dialogue ?? this.overrides.best_fit_max_dialogue;
-            this.savedValues = { ...this.overrides };
-            this.overridesInitialized = true;
-          }
+          this.activeCharacters = data.data.characters || [];
           this.loading = false;
-          this.unregisterMessageHandler(handler);
+          this.waitingPerceptionMessageId = null;
+          this.perceptionStatus = null;
+          this.clearPreviewHandler();
+        } else if (data.type === 'summarizer' && data.action === 'context_review_status') {
+          this.perceptionStatus = data.data;
+          this.waitingPerceptionMessageId = data.data.message_id;
+          this.loading = false;
+          this.clearPreviewHandler();
+          const key = this.perceptionKey(data.data);
+          if (this.readyPerceptionMessages.has(key) && !this.refetchedPerceptionMessages.has(key)) {
+            this.readyPerceptionMessages.delete(key);
+            this.refetchedPerceptionMessages.add(key);
+            this.waitingPerceptionMessageId = null;
+            this.perceptionStatus = null;
+            this.fetchPreview();
+          }
         } else if (data.type === 'summarizer' && data.action === 'operation_done' && data.error) {
           this.error = data.error.message || 'Failed to load context review';
           this.loading = false;
-          this.unregisterMessageHandler(handler);
+          this.clearPreviewHandler();
         }
       };
 
+      this.previewHandler = handler;
       this.registerMessageHandler(handler);
 
       const message = {
         type: 'summarizer',
         action: 'context_review',
+        character: this.selectedCharacter,
+        request_id: requestId,
       };
-
-      if (this.overridesInitialized) {
-        message.overrides = { ...this.overrides };
-      }
 
       const ws = this.getWebsocket();
       if (ws) {
@@ -398,29 +394,16 @@ export default {
       } else {
         this.error = 'WebSocket not connected';
         this.loading = false;
-        this.unregisterMessageHandler(handler);
-      }
-    },
-
-    applyConfig() {
-      this.applying = true;
-
-      const ws = this.getWebsocket();
-      if (ws) {
-        ws.send(JSON.stringify({
-          type: 'summarizer',
-          action: 'apply_context_history_config',
-          config: { ...this.overrides },
-        }));
-        this.savedValues = { ...this.overrides };
-        this.applying = false;
-      } else {
-        this.applying = false;
+        this.clearPreviewHandler();
       }
     },
 
     sectionColor(section) {
       return SECTION_COLORS[section.type] || '#9E9E9E';
+    },
+
+    exclusionReason(reason) {
+      return { budget: 'Over token budget', absent: 'Absent', not_in_audience: 'Not in audience', hidden: 'Hidden', blocked: 'Blocked', pending: 'Perspective pending', failed: 'Perspective failed', omitted: 'View omitted' }[reason] || reason;
     },
 
     sectionIcon(section) {
@@ -434,27 +417,44 @@ export default {
     renderEntry(text) {
       return this.sceneParser.parse(text);
     },
+    toggleFullEvidence(index) {
+      this.fullEvidenceOpen = {
+        ...this.fullEvidenceOpen,
+        [index]: !this.fullEvidenceOpen[index],
+      };
+    },
   },
 };
 </script>
 
 <style scoped>
-.sidebar-content {
-  position: sticky;
-  top: 0;
-  max-height: 80vh;
-  overflow-y: auto;
+.perspective-chips {
+  flex: 1 1 0;
+  min-width: 160px;
 }
 
-.sidebar-field {
-  border-bottom: 1px solid rgba(var(--v-theme-primary), 0.05);
-  padding-bottom: 12px;
+.settings-content {
+  margin-bottom: 12px;
 }
 
-.note-block {
-  padding: 4px 8px;
-  border-left: 2px solid rgba(var(--v-theme-primary), 0.3);
+/* the `md` breakpoint of the columns (840 px in Vuetify 4) */
+@media (min-width: 840px) {
+  .settings-col {
+    flex: 0 0 336px;
+    max-width: 336px;
+  }
+  .settings-content {
+    position: sticky;
+    top: 0;
+    max-height: 80vh;
+    overflow-y: auto;
+    margin-bottom: 0;
+    padding-right: 12px;
+  }
 }
+
+.exclusion-entry + .exclusion-entry { border-top: 1px solid rgba(var(--v-theme-primary), 0.1); }
+.exclusion-text { white-space: normal; overflow-wrap: anywhere; }
 
 .context-sections {
   max-height: 80vh;
@@ -513,5 +513,13 @@ export default {
   border-radius: 4px;
   color: rgb(var(--v-theme-muted));
   background-color: transparent;
+}
+
+.full-evidence {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: rgba(var(--v-theme-primary), 0.06);
+  border-radius: 6px;
+  padding: 12px;
 }
 </style>

@@ -6,18 +6,22 @@ and updating agent settings (globally or as per-scene overrides), reading and
 updating application config sections, and a read-only view of the configured
 clients. Secret values (API keys) are never exposed and cannot be written.
 
-Write operations mirror the frontend save paths: agent settings persist via
-``Agent.save_config`` + ``commit_config`` and re-emit the agent status; app
-config writes re-validate the whole section through its pydantic model and
-fire ``config.changed`` so the frontend receives a fresh ``app_config``
-payload.
+Write operations mirror the frontend save paths: global agent settings reach
+the running agent through ``Agent.apply_config`` as a settings page save does
+(a failed apply keeps the change stored for retry on the next save), persist
+via ``Agent.save_config`` + ``commit_config`` and re-emit the agent status,
+app config writes re-validate the whole section through its pydantic model,
+and both fire ``config.changed`` so every frontend receives a fresh
+``app_config`` payload instead of keeping a snapshot that predates the write.
 """
 
+import json
 from typing import TYPE_CHECKING, Any, Literal
 
 import pydantic
 import structlog
 
+import talemate.config.schema as config_schema
 import talemate.instance as instance
 from talemate.agents.base import DYNAMIC_CHILDREN_FIELD
 from talemate.client.registry import get_client_class
@@ -28,7 +32,10 @@ from talemate.scene_agent_settings import (
     UNSET,
     agent_settings_dir,
 )
-from talemate.util.encryption import SENSITIVE_FIELD_NAMES
+from talemate.util.encryption import REDACTED, is_sensitive_field, redact_sensitive
+from talemate.ux.schema import SECRET_FIELD_TYPES
+
+from .config_read import read_value
 
 if TYPE_CHECKING:
     from talemate.agents.base import Agent, AgentAction, AgentActionConfig
@@ -44,17 +51,28 @@ __all__ = [
 
 log = structlog.get_logger("talemate.agents.help.settings")
 
-REDACTED = "(hidden)"
-
-# field types whose values must never be shown to (or written by) the LLM
-SECRET_FIELD_TYPES = ("password", "unified_api_key")
+MAX_INLINE_CHOICES = 20
+MAX_INLINE_CHOICES_BYTES = 2048
 
 # field types the update tool can write - everything else (tables, weights,
 # vectors, template pickers, ...) is UI-only
-WRITABLE_FIELD_TYPES = ("bool", "number", "text", "autocomplete", "blob", "flags")
+WRITABLE_FIELD_TYPES = (
+    "bool",
+    "number",
+    "text",
+    "autocomplete",
+    "combobox",
+    "blob",
+    "flags",
+)
 
 READABLE_CONFIG_SECTIONS = ("game", "appearance", "creator", "presets", "prompts")
 WRITABLE_CONFIG_SECTIONS = ("game", "appearance", "creator")
+
+# the permissions that decide what this agent may write are not writable by it:
+# a settings permission that could grant the template permission (or re-grant
+# itself after the user revoked it) is not a permission
+OWN_PERMISSIONS = ("help", "permissions")
 
 
 # ---------------------------------------------------------------------------
@@ -77,22 +95,6 @@ def _is_secret_field(field: "AgentActionConfig") -> bool:
     return field.type in SECRET_FIELD_TYPES
 
 
-def _redact_sensitive(data: Any) -> Any:
-    """Recursively replace values of sensitive keys (api_key etc.)."""
-    if isinstance(data, dict):
-        return {
-            key: (
-                (REDACTED if value else None)
-                if key in SENSITIVE_FIELD_NAMES
-                else _redact_sensitive(value)
-            )
-            for key, value in data.items()
-        }
-    if isinstance(data, list):
-        return [_redact_sensitive(item) for item in data]
-    return data
-
-
 def _coerce_bool(value: Any) -> bool:
     if isinstance(value, bool):
         return value
@@ -110,7 +112,23 @@ def _coerce_bool(value: Any) -> bool:
     raise ValueError(f"Expected a boolean (true/false), got {value!r}.")
 
 
-def _resolve_choice(field: "AgentActionConfig", value: Any) -> Any:
+def _choice_guidance(config_key: str, field: "AgentActionConfig") -> str | None:
+    if config_key in ("model", "model_name"):
+        return "Use a model id chosen by the user; ask for the id or point to the settings dropdown. Never list or recommend models."
+    if config_key in ("provider_only", "provider_ignore"):
+        return "Use provider ids chosen by the user in the settings dropdown; pass the full list of selected ids."
+    if (
+        len(field.choices or []) > MAX_INLINE_CHOICES
+        or len(json.dumps(field.choices or [], ensure_ascii=False).encode("utf-8"))
+        > MAX_INLINE_CHOICES_BYTES
+    ):
+        return "Use a value chosen by the user from the settings dropdown."
+    return None
+
+
+def _resolve_choice(
+    field: "AgentActionConfig", value: Any, guidance: str | None = None
+) -> Any:
     """Validate ``value`` against the field's choices, returning the canonical
     choice value. Raises ValueError when it matches neither a value nor a label."""
     valid_values = [choice["value"] for choice in field.choices]
@@ -120,10 +138,14 @@ def _resolve_choice(field: "AgentActionConfig", value: Any) -> Any:
     for choice in field.choices:
         if str(choice["label"]).strip().lower() == str(value).strip().lower():
             return choice["value"]
+    if guidance:
+        raise ValueError(f"Invalid choice {value!r}. {guidance}")
     raise ValueError(f"Invalid choice {value!r}. Valid values: {valid_values}")
 
 
-def _coerce_value(field: "AgentActionConfig", value: Any) -> Any:
+def _coerce_value(
+    field: "AgentActionConfig", value: Any, guidance: str | None = None
+) -> Any:
     """Coerce a raw LLM-supplied value to the field's type.
 
     Raises ValueError with an LLM-readable message when the value cannot be
@@ -147,12 +169,13 @@ def _coerce_value(field: "AgentActionConfig", value: Any) -> Any:
             raise ValueError(
                 f"This setting holds a list of values - pass the FULL new list, got {value!r}."
             )
-        return [_resolve_choice(field, item) for item in value]
+        return [_resolve_choice(field, item, guidance) for item in value]
     else:
         coerced = value if isinstance(value, str) else str(value)
 
-    if field.choices:
-        return _resolve_choice(field, coerced)
+    # a combobox offers its choices as suggestions and keeps any other value
+    if field.choices and field.type != "combobox":
+        return _resolve_choice(field, coerced, guidance)
 
     return coerced
 
@@ -168,22 +191,36 @@ def _field_payload(
     }
     if field.description:
         payload["description"] = field.description
-    if field.choices:
+    guidance = _choice_guidance(config_key, field)
+    if guidance:
+        payload["choices_omitted"] = True
+        payload["value_guidance"] = guidance
+    elif field.choices:
         payload["choices"] = [
             {"label": choice["label"], "value": choice["value"]}
             for choice in field.choices
         ]
+    if field.type == "combobox":
+        payload["other_values"] = (
+            "accepted; suggestions do not restrict the value"
+            if guidance
+            else "accepted, the choices are suggestions"
+        )
     if field.min is not None:
         payload["min"] = field.min
     if field.max is not None:
         payload["max"] = field.max
     if field.type not in WRITABLE_FIELD_TYPES or _is_secret_field(field):
-        payload["read_only"] = "can only be changed through the settings dialog"
+        payload["read_only"] = "can only be changed on the agent settings page"
     if not field.scene_overridable:
         payload["scene_overridable"] = False
 
+    # A stored value for a non-overridable field is inert — `resolve_config`
+    # ignores it — so reporting it would name an effective value that is not in
+    # effect. Secret types are covered by this: the validator forces them
+    # non-overridable.
     overrides = agent.scene_overrides()
-    if overrides is not None and not _is_secret_field(field):
+    if overrides is not None and field.scene_overridable:
         override_value = overrides.get_value(agent.agent_type, action_key, config_key)
         if override_value is not UNSET:
             payload["scene_override"] = override_value
@@ -201,8 +238,9 @@ def _action_payload(agent: "Agent", action_key: str, action: "AgentAction") -> d
     if action.can_be_disabled:
         payload["can_be_disabled"] = True
 
+    # `resolve_enabled` ignores a stored flag for a non-disableable action
     overrides = agent.scene_overrides()
-    if overrides is not None:
+    if overrides is not None and action.can_be_disabled:
         enabled_override = overrides.get_enabled(agent.agent_type, action_key)
         if enabled_override is not UNSET:
             payload["enabled_scene_override"] = enabled_override
@@ -286,20 +324,28 @@ def _resolve_setting(
     return agent, action, field
 
 
-def _open_modal_conflict(agent_type: str, open_agent_modal: str | None) -> str | None:
-    """Refusal message when the target agent's settings dialog is open.
+def _settings_dirty_conflict(app_settings_dirty: bool) -> str | None:
+    """Refusal message when the settings view holds unsaved edits.
 
-    The dialog holds its own copy of the agent's settings: it will not show
-    an external change, and closing it with pending edits writes the stale
-    copy back - silently reverting anything changed while it was open.
+    Agent configuration is edited on the settings tab, which holds a working
+    copy of the WHOLE configuration and saves all of it at once from whatever
+    page is showing - so unsaved edits anywhere in that view (including the
+    per-page extra changes folded into its dirty state) would push the
+    pre-change values back over whatever is written here. A merely open
+    settings view is fine: it adopts an incoming config cleanly, and edits
+    kept while the user is on another tab still count (the frontend reports
+    ``dirty`` off-screen). Same gating as ``update_app_config``.
+
+    Best-effort by construction: the flag rides on the UX snapshot taken when
+    the message was sent, so edits made while the agent is answering are not
+    seen.
     """
-    if not open_agent_modal or open_agent_modal != agent_type:
+    if not app_settings_dirty:
         return None
     return (
-        f"The settings dialog for the '{agent_type}' agent is currently open in "
-        "the interface - it holds its own copy of the settings, so it would not "
-        "show this change and could overwrite it when it closes. Ask the user to "
-        "close the dialog first, then apply the change again."
+        "The application settings view has unsaved edits - saving them would "
+        "overwrite this change. Ask the user to save or discard their settings "
+        "changes first, then apply the change again."
     )
 
 
@@ -327,7 +373,7 @@ def _scene_for_overrides(agent: "Agent") -> "tuple[Any, str | None]":
 def _ensure_scene_overlay(scene) -> SceneAgentSettings:
     """Return the scene's overlay, creating the default-named one if missing.
 
-    Unlike the AgentModal flow, no scene save is forced to persist the link:
+    Unlike the websocket flow, no scene save is forced to persist the link:
     a file with the default name is auto-linked on every scene load
     (scene_agent_settings.resolve_link_on_load).
     """
@@ -339,12 +385,72 @@ def _ensure_scene_overlay(scene) -> SceneAgentSettings:
     return scene.agent_overrides
 
 
-async def _persist_agent_config(agent: "Agent") -> None:
+async def _broadcast_agent_config(agent: "Agent") -> None:
     # same sequence as the frontend-driven save paths
-    # (server.agent_config._persist_and_broadcast)
-    await agent.save_config()
+    # (server.agent_config._persist_and_broadcast) — including the app_config
+    # broadcast, without which every frontend keeps a config snapshot that
+    # predates this write and reverts it on its next full-config save
+    await get_config().set_dirty()
     await commit_config()
     await agent.emit_status()
+
+
+async def _apply_global_setting(
+    agent: "Agent", action_key: str, setting_key: str, value: Any
+) -> str | None:
+    """Change one global setting (``"enabled"`` for the action's flag) the way
+    a settings page save does: store it, apply it to the running agent and
+    persist it. Returns the error when the apply failed; the change then stays
+    stored for retry on the next save."""
+    # the stored config gets the new value while the agent still holds the old
+    # one: agents compare the two to rebuild what the change affects (the
+    # Visualizer's backends, the memory agent's embeddings)
+    await agent.save_config()
+    stored = get_config().agents[agent.agent_type]
+    stored_action = stored.actions[action_key]
+    if setting_key == "enabled":
+        stored_action.enabled = value
+    else:
+        stored_action.config[setting_key] = config_schema.AgentActionConfig(value=value)
+    try:
+        await instance.apply_agent_config(agent, **stored.model_dump())
+    except Exception as exc:
+        log.error(
+            "applying a help chat setting change failed",
+            agent=agent.agent_type,
+            action=action_key,
+            setting=setting_key,
+            error=str(exc),
+        )
+        error = str(exc) or type(exc).__name__
+    else:
+        # apply_config can change values too: a new ComfyUI workflow clears
+        # the model
+        await agent.save_config()
+        error = None
+    await _broadcast_agent_config(agent)
+    return error
+
+
+def _saved_not_applied(
+    action_key: str, setting_key: str, value: Any, error: str
+) -> str:
+    return (
+        f"Saved {action_key}.{setting_key} = {value!r}, but applying it to the "
+        f"running agent failed: {error}. Open Settings and press Save to retry "
+        "(Apply pending keeps Save available without edits), or ask me to set "
+        "this setting again. If the error persists, correct its cause before retrying."
+    )
+
+
+def _own_permission_conflict(agent_type: str, action_key: str) -> str | None:
+    if (agent_type, action_key) != OWN_PERMISSIONS:
+        return None
+    return (
+        "The help agent's own permissions are not yours to change - they are what "
+        "decides what you may write. The user changes them under Settings > "
+        "Connections > Agents > Help > Permissions."
+    )
 
 
 async def update_agent_setting(
@@ -353,23 +459,27 @@ async def update_agent_setting(
     setting_key: str,
     value: Any,
     scope: Literal["global", "scene"] = "global",
-    open_agent_modal: str | None = None,
+    app_settings_dirty: bool = False,
 ) -> dict | str:
     """Update one agent setting - the global value or a per-scene override.
 
     ``setting_key`` may be ``"enabled"`` to toggle the action itself.
-    ``open_agent_modal`` names the agent whose settings dialog is open in the
-    frontend (from the UX snapshot) - writes targeting it are refused.
+    ``app_settings_dirty`` flags that the settings view in the frontend has
+    unsaved edits (from the UX snapshot) - agent writes are refused then.
     """
     if scope not in ("global", "scene"):
         return f"Invalid scope '{scope}'. Use 'global' or 'scene'."
+
+    own = _own_permission_conflict(agent_type, action_key)
+    if own:
+        return own
 
     resolved = _resolve_setting(agent_type, action_key, setting_key)
     if isinstance(resolved, str):
         return resolved
     agent, action, field = resolved
 
-    conflict = _open_modal_conflict(agent_type, open_agent_modal)
+    conflict = _settings_dirty_conflict(app_settings_dirty)
     if conflict:
         return conflict
 
@@ -391,8 +501,9 @@ async def update_agent_setting(
             if not action.can_be_disabled:
                 return f"Action '{action_key}' of agent '{agent_type}' is always enabled and cannot be toggled."
             result["previous_value"] = action.enabled
-            action.enabled = coerced
-            await _persist_agent_config(agent)
+            error = await _apply_global_setting(agent, action_key, "enabled", coerced)
+            if error:
+                return _saved_not_applied(action_key, "enabled", coerced, error)
         else:
             if not action.enabled_scene_overridable:
                 return f"The enabled flag of action '{action_key}' cannot be overridden per scene."
@@ -413,27 +524,31 @@ async def update_agent_setting(
     if _is_secret_field(field):
         return (
             f"Setting '{setting_key}' holds an API key or password and can only be "
-            "changed through the settings dialog."
+            "changed on the agent settings page."
         )
     if field.type not in WRITABLE_FIELD_TYPES:
         return (
             f"Setting '{setting_key}' ({field.type}) is too complex to change here - "
-            "the user should edit it in the agent's settings dialog."
+            "the user should edit it on the agent settings page."
         )
 
     try:
-        coerced = _coerce_value(field, value)
+        coerced = _coerce_value(field, value, _choice_guidance(setting_key, field))
     except ValueError as exc:
         return str(exc)
 
     if scope == "global":
         result["previous_value"] = field.value
-        field.value = coerced
-        await _persist_agent_config(agent)
+        error = await _apply_global_setting(agent, action_key, setting_key, coerced)
+        if error:
+            return _saved_not_applied(action_key, setting_key, coerced, error)
 
+        # a stored value for a non-overridable field masks nothing — the
+        # resolver ignores it, so the global write is already effective
         overrides = agent.scene_overrides()
         if (
             overrides is not None
+            and field.scene_overridable
             and overrides.get_value(agent_type, action_key, setting_key) is not UNSET
         ):
             result["warning"] = (
@@ -461,15 +576,19 @@ async def clear_agent_setting_scene_override(
     agent_type: str,
     action_key: str,
     setting_key: str,
-    open_agent_modal: str | None = None,
+    app_settings_dirty: bool = False,
 ) -> dict | str:
     """Remove a per-scene override so the setting falls back to its global value."""
+    own = _own_permission_conflict(agent_type, action_key)
+    if own:
+        return own
+
     resolved = _resolve_setting(agent_type, action_key, setting_key)
     if isinstance(resolved, str):
         return resolved
     agent, _action, field = resolved
 
-    conflict = _open_modal_conflict(agent_type, open_agent_modal)
+    conflict = _settings_dirty_conflict(app_settings_dirty)
     if conflict:
         return conflict
 
@@ -496,7 +615,9 @@ async def clear_agent_setting_scene_override(
         "agent": agent_type,
         "action": action_key,
         "setting": setting_key,
-        "removed_override_value": previous,
+        "removed_override_value": (
+            REDACTED if field is not None and _is_secret_field(field) else previous
+        ),
     }
 
 
@@ -505,12 +626,24 @@ async def clear_agent_setting_scene_override(
 # ---------------------------------------------------------------------------
 
 
-def read_app_config(section: str) -> dict | str:
-    """Return one application config section (secrets redacted)."""
+def read_app_config(
+    section: str = "",
+    path: list[str | int] | None = None,
+    fields: list[str] | None = None,
+    mode: Literal["auto", "index", "value"] = "auto",
+    offset: int = 0,
+    limit: int = 20,
+    revision: str | None = None,
+) -> dict | str:
+    """Read exact config values or a bounded, explicitly navigable page."""
+    if not isinstance(section, str):
+        return {"error": "Section must be a string."}
     section = (section or "").strip().lower()
+    if not section:
+        return {"sections": list(READABLE_CONFIG_SECTIONS)}
     if section not in READABLE_CONFIG_SECTIONS:
         return (
-            f"Unknown or unavailable config section '{section}'. "
+            "Unknown or unavailable config section. "
             f"Readable sections: {', '.join(READABLE_CONFIG_SECTIONS)}. "
             "Use read_agent_settings for agents and read_clients for clients."
         )
@@ -518,17 +651,16 @@ def read_app_config(section: str) -> dict | str:
     config = get_config()
     data = getattr(config, section).model_dump()
 
-    if section == "presets":
-        # the *_defaults entries mirror the shipped defaults and double the
-        # payload without adding information
-        data.pop("inference_defaults", None)
-        data.pop("embeddings_defaults", None)
-
-    return {
-        "section": section,
-        "writable": section in WRITABLE_CONFIG_SECTIONS,
-        "values": _redact_sensitive(data),
-    }
+    return read_value(
+        redact_sensitive(data),
+        path=path,
+        fields=fields,
+        mode=mode,
+        offset=offset,
+        limit=limit,
+        revision=revision,
+        metadata={"section": section, "writable": section in WRITABLE_CONFIG_SECTIONS},
+    )
 
 
 def _walk_to_leaf(data: dict, keys: list[str]) -> "tuple[dict, str] | str":
@@ -606,7 +738,7 @@ async def update_app_config(
             f"Config section '{section}' is not writable here. "
             f"Writable sections: {', '.join(WRITABLE_CONFIG_SECTIONS)}."
         )
-    if any(key in SENSITIVE_FIELD_NAMES for key in keys):
+    if any(is_sensitive_field(key) for key in keys):
         return "API keys and passwords cannot be read or changed through the help chat."
 
     config = get_config()

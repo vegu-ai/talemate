@@ -1,10 +1,13 @@
 import os
+from typing import Literal
+
 import structlog
 import yaml
 from talemate.path import CONFIG_FILE
 import talemate.emit.async_signals as async_signals
 from talemate.agents.registry import get_agent_class
 from talemate.client.registry import get_client_class
+from talemate.files import scene_file_hidden
 from talemate.util.encryption import decrypt_sensitive_values, encrypt_sensitive_values
 
 from .schema import Config
@@ -19,10 +22,27 @@ async_signals.register(
     "config.loaded",
 )
 
+ApplySectionKey = Literal["clients", "agents", "decision_model"]
+
+# config sections whose apply failed and that the next config save has to
+# apply again even when they diff as unchanged - the config is stored before it
+# is applied, so a failed apply leaves the stored config ahead of the running
+# instance and every later diff against it reads "nothing changed"
+PENDING_APPLY: set[ApplySectionKey] = set()
+
+
+def mark_apply_pending(*sections: ApplySectionKey) -> None:
+    PENDING_APPLY.update(sections)
+
 
 def _load_config() -> Config:
     log.debug("loading config", file_path=CONFIG_FILE)
-    with open(CONFIG_FILE, "r") as file:
+    try:
+        file = open(CONFIG_FILE, "r")
+    except FileNotFoundError:
+        log.info("config file not found, starting with defaults", file_path=CONFIG_FILE)
+        return Config()
+    with file:
         yaml_data = yaml.safe_load(file)
         if yaml_data is None:
             yaml_data = {}
@@ -37,11 +57,17 @@ def get_config() -> Config:
     return CONFIG
 
 
-async def update_config(other_config: dict):
+async def update_config(other_config: dict, signal: bool = True):
     """Apply a partial config update from a dict.
 
     Each top-level key in ``other_config`` replaces the corresponding field
     on the active ``Config`` (validated through pydantic first).
+
+    ``signal=False`` marks the config dirty without firing ``config.changed``.
+    Receivers of that signal broadcast the config to connected frontends, so a
+    caller that still has to APPLY the update (instantiate clients, reconfigure
+    agents) uses it to hold the broadcast back until the running instance
+    matches what it ships, then fires ``set_dirty()`` itself.
     """
     keys = list(other_config.keys())
     validated = Config.model_validate(other_config)
@@ -49,6 +75,11 @@ async def update_config(other_config: dict):
     config: Config = get_config()
     for key in keys:
         setattr(config, key, getattr(validated, key))
+
+    if not signal:
+        # still dirty: commit_config() is what writes it to disk
+        config.dirty = True
+        return
 
     await config.set_dirty()
 
@@ -130,6 +161,18 @@ def save_config():
             )
             client["preset_group"] = ""
 
+    # the inference param panel is pinned to one client by name, which a
+    # client removal or rename leaves pointing at nothing. Cleared on the live
+    # model too: every status broadcast is built from that, so a name only
+    # dropped from the file would keep reaching the frontend until a restart
+    panel = config["presets"]["inference_param_panel"]
+    if panel.get("client") and panel["client"] not in config["clients"]:
+        log.warning(
+            f"Inference param panel references non-existent client {panel['client']}, clearing it"
+        )
+        panel["client"] = None
+        get_config().presets.inference_param_panel.client = None
+
     _strip_unified_api_key_configs(config)
 
     encrypt_sensitive_values(config)
@@ -169,7 +212,8 @@ def cleanup_removed_agents(config: Config):
 
 def cleanup_removed_recent_scenes(config: Config):
     """
-    Will remove any recent scenes that are no longer present
+    Will remove any recent scenes that are no longer present or that are
+    hidden from the scene browser
     """
 
     if not config:
@@ -178,6 +222,9 @@ def cleanup_removed_recent_scenes(config: Config):
     for recent_scene in list(config.recent_scenes.scenes):
         if not os.path.exists(recent_scene.path):
             log.debug("recent scene path no longer exists", scene=recent_scene.path)
+            config.recent_scenes.scenes.remove(recent_scene)
+        elif scene_file_hidden(recent_scene.path):
+            log.debug("recent scene is hidden", scene=recent_scene.path)
             config.recent_scenes.scenes.remove(recent_scene)
 
 
@@ -219,6 +266,26 @@ def cleanup_instructor_embeddings(config: Config):
             config.dirty = True
 
 
+def restore_missing_embedding_presets(config: Config):
+    """
+    Adds shipped embedding presets that a saved config predates.
+
+    `save_config` persists `presets.embeddings` in full and the load replaces
+    the dict wholesale, so a config written before a preset shipped would
+    never see it.
+    """
+
+    if not config:
+        return
+
+    for preset_key, preset in config.presets.embeddings_defaults.items():
+        if preset_key in config.presets.embeddings:
+            continue
+
+        log.info("restoring shipped embedding preset", preset=preset_key)
+        config.presets.embeddings[preset_key] = preset.model_copy(deep=True)
+
+
 def cleanup() -> Config:
     log.info("cleaning up config")
 
@@ -228,6 +295,7 @@ def cleanup() -> Config:
     cleanup_removed_agents(config)
     cleanup_removed_recent_scenes(config)
     cleanup_instructor_embeddings(config)
+    restore_missing_embedding_presets(config)
 
     save_config()
 

@@ -28,7 +28,6 @@ from talemate.client.openai_compat import OpenAICompatibleClient
 from talemate.client.tabbyapi import TabbyAPIClient
 from talemate.client.textgenwebui import TextGeneratorWebuiClient
 from talemate.context import ActiveScene
-from talemate.exceptions import GenerationProcessingError
 
 
 @pytest.fixture
@@ -209,115 +208,6 @@ class TestChatMessagesForCoercion:
 
 
 # ---------------------------------------------------------------------------
-# llama.cpp /apply-template
-# ---------------------------------------------------------------------------
-
-
-class _FakeResponse:
-    def __init__(self, status_code: int = 200, data: dict | None = None):
-        self.status_code = status_code
-        self._data = data or {}
-
-    def json(self):
-        return self._data
-
-
-class _FakeAsyncClient:
-    """Stand-in for httpx.AsyncClient capturing POST calls."""
-
-    calls: list[dict] = []
-    response: _FakeResponse = _FakeResponse()
-
-    def __init__(self, **kwargs):
-        pass
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *args):
-        return False
-
-    async def post(self, url, json=None, headers=None):
-        _FakeAsyncClient.calls.append({"url": url, "json": json, "headers": headers})
-        return _FakeAsyncClient.response
-
-
-@pytest.fixture
-def fake_httpx(monkeypatch):
-    _FakeAsyncClient.calls = []
-    _FakeAsyncClient.response = _FakeResponse(200, {"prompt": "TEMPLATED"})
-    monkeypatch.setattr(llamacpp_module.httpx, "AsyncClient", _FakeAsyncClient)
-    return _FakeAsyncClient
-
-
-class TestLlamaCppApplyRemoteTemplate:
-    @pytest.mark.asyncio
-    async def test_posts_messages_and_returns_templated_prompt(
-        self, cfg_isolation, fake_httpx
-    ):
-        _register_llamacpp("lcpp_tpl", api_handles_prompt_template=True)
-        client = LlamaCppClient(name="lcpp_tpl")
-
-        result = await client.apply_remote_template(
-            "Describe the room.<|BOT|>The room is", "narrate"
-        )
-
-        assert result == "TEMPLATED"
-        assert len(fake_httpx.calls) == 1
-        call = fake_httpx.calls[0]
-        assert call["url"] == "http://fake:8080/apply-template"
-        messages = call["json"]["messages"]
-        assert [m["role"] for m in messages] == ["system", "user", "assistant"]
-        assert messages[1]["content"] == "Describe the room."
-        assert messages[2]["content"] == "The room is"
-
-    @pytest.mark.asyncio
-    async def test_no_coercion_omits_assistant_message(self, cfg_isolation, fake_httpx):
-        _register_llamacpp("lcpp_tpl2", api_handles_prompt_template=True)
-        client = LlamaCppClient(name="lcpp_tpl2")
-
-        await client.apply_remote_template("Describe the room.", "narrate")
-
-        messages = fake_httpx.calls[0]["json"]["messages"]
-        assert [m["role"] for m in messages] == ["system", "user"]
-
-    @pytest.mark.asyncio
-    async def test_thinking_disabled_when_reasoning_off(
-        self, cfg_isolation, fake_httpx
-    ):
-        _register_llamacpp("lcpp_nothink", api_handles_prompt_template=True)
-        client = LlamaCppClient(name="lcpp_nothink")
-
-        await client.apply_remote_template("Describe the room.", "narrate")
-
-        payload = fake_httpx.calls[0]["json"]
-        assert payload["chat_template_kwargs"] == {"enable_thinking": False}
-
-    @pytest.mark.asyncio
-    async def test_thinking_left_to_template_when_reasoning_on(
-        self, cfg_isolation, fake_httpx
-    ):
-        _register_llamacpp(
-            "lcpp_think", api_handles_prompt_template=True, reason_enabled=True
-        )
-        client = LlamaCppClient(name="lcpp_think")
-
-        await client.apply_remote_template("Describe the room.", "narrate")
-
-        payload = fake_httpx.calls[0]["json"]
-        assert "chat_template_kwargs" not in payload
-
-    @pytest.mark.asyncio
-    async def test_error_status_raises(self, cfg_isolation, fake_httpx):
-        _register_llamacpp("lcpp_tpl3", api_handles_prompt_template=True)
-        client = LlamaCppClient(name="lcpp_tpl3")
-        fake_httpx.response = _FakeResponse(500)
-
-        with pytest.raises(GenerationProcessingError):
-            await client.apply_remote_template("Describe the room.", "narrate")
-
-
-# ---------------------------------------------------------------------------
 # textgenwebui chat/completions
 # ---------------------------------------------------------------------------
 
@@ -380,7 +270,9 @@ class TestTextGenWebuiChatGenerate:
             {"role": "user", "content": "Describe the room."},
             {"role": "assistant", "content": "The room is"},
         ]
-        response = client._generate_chat(messages, "The room is", {"temperature": 0.7})
+        response = client._generate_chat(
+            messages, "The room is", {"temperature": 0.7}, False
+        )
 
         assert response == " dark and quiet."
 
@@ -390,6 +282,7 @@ class TestTextGenWebuiChatGenerate:
         assert payload["mode"] == "instruct"
         assert payload["continue_"] is True
         assert payload["stream"] is True
+        assert payload["enable_thinking"] is False
         messages = payload["messages"]
         assert [m["role"] for m in messages] == ["system", "user", "assistant"]
         assert messages[0]["content"] == "SYS"
@@ -415,7 +308,7 @@ class TestTextGenWebuiChatGenerate:
             {"role": "system", "content": "SYS"},
             {"role": "user", "content": "Describe the room."},
         ]
-        response = client._generate_chat(messages, None, {"temperature": 0.7})
+        response = client._generate_chat(messages, None, {"temperature": 0.7}, False)
 
         assert response == "The room is dark."
         assert client._reasoning_response == "Thinking about the room."
@@ -441,13 +334,55 @@ class TestTextGenWebuiChatGenerate:
             {"role": "system", "content": "SYS"},
             {"role": "user", "content": "Describe the room."},
         ]
-        response = client._generate_chat(messages, None, {"temperature": 0.7})
+        response = client._generate_chat(messages, None, {"temperature": 0.7}, False)
 
         assert response == "The room is dark."
 
         payload = fake_tgw_transport[0]["json"]
         assert "continue_" not in payload
         assert [m["role"] for m in payload["messages"]] == ["system", "user"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("reason_enabled", [False, True])
+    async def test_generate_sends_enable_thinking_from_reasoning_setting(
+        self, cfg_isolation, fake_tgw_transport, reason_enabled
+    ):
+        _register_textgenwebui(
+            "tgw_think",
+            api_handles_prompt_template=True,
+            reason_enabled=reason_enabled,
+        )
+        client = TextGeneratorWebuiClient(name="tgw_think")
+        _FakeSSEClient.chunks = [_chat_chunk("The room is dark."), "[DONE]"]
+
+        await client.generate("Describe the room.", {"temperature": 0.7}, "narrate")
+
+        assert fake_tgw_transport[0]["json"]["enable_thinking"] is reason_enabled
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("chat", [False, True])
+    @pytest.mark.parametrize("max_tokens", [None, 300])
+    async def test_uncapped_request_sends_null_max_tokens(
+        self, cfg_isolation, fake_tgw_transport, chat, max_tokens
+    ):
+        _register_textgenwebui("tgw_cap", api_handles_prompt_template=chat)
+        client = TextGeneratorWebuiClient(name="tgw_cap")
+        _FakeSSEClient.chunks = [
+            _chat_chunk("dark.")
+            if chat
+            else json.dumps({"choices": [{"text": "dark."}]}),
+            "[DONE]",
+        ]
+        parameters = {"temperature": 0.7}
+        if max_tokens:
+            parameters["max_tokens"] = max_tokens
+
+        await client.generate("Describe the room.", parameters, "narrate")
+
+        payload = fake_tgw_transport[0]["json"]
+        assert "max_tokens" in payload
+        assert payload["max_tokens"] == max_tokens
+        assert "max_new_tokens" not in payload
 
     @pytest.mark.asyncio
     async def test_generate_resolves_personas_across_executor_boundary(
@@ -471,3 +406,56 @@ class TestTextGenWebuiChatGenerate:
 
         system_message = fake_tgw_transport[0]["json"]["messages"][0]["content"]
         assert "PERSONA INSTRUCTIONS" in system_message
+
+
+# ---------------------------------------------------------------------------
+# default for new clients vs. saved clients
+# ---------------------------------------------------------------------------
+
+
+NEW_CLIENT_DEFAULTS = {
+    "llamacpp": True,
+    "openai_compat": True,
+    "textgenwebui": False,
+    "tabbyapi": False,
+    "ollama": False,
+}
+
+
+def _client_class(client_type: str):
+    from talemate.client.registry import CLIENT_CLASSES
+
+    return CLIENT_CLASSES[client_type]
+
+
+class TestDefaultForNewClients:
+    @pytest.mark.parametrize("client_type, expected", NEW_CLIENT_DEFAULTS.items())
+    def test_new_client_payload(self, client_type, expected):
+        defaults = _client_class(client_type).Meta().model_dump()["defaults"]
+        assert defaults["api_handles_prompt_template"] is expected
+
+    @pytest.mark.parametrize("client_type", NEW_CLIENT_DEFAULTS)
+    def test_saved_client_without_the_field_keeps_it_off(self, client_type):
+        from talemate.config.schema import Config
+
+        config = Config(clients={"saved": {"type": client_type, "name": "saved"}})
+        assert config.clients["saved"].api_handles_prompt_template is False
+
+    @pytest.mark.parametrize("client_type", NEW_CLIENT_DEFAULTS)
+    @pytest.mark.parametrize("saved_value", [True, False])
+    def test_saved_value_survives_a_save_and_load(self, client_type, saved_value):
+        from talemate.config.schema import Config
+
+        config = Config(
+            clients={
+                "saved": {
+                    "type": client_type,
+                    "name": "saved",
+                    "api_handles_prompt_template": saved_value,
+                }
+            }
+        )
+        stored = config.model_dump(exclude_none=True)
+        assert stored["clients"]["saved"]["api_handles_prompt_template"] is saved_value
+        reloaded = Config(**stored)
+        assert reloaded.clients["saved"].api_handles_prompt_template is saved_value

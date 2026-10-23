@@ -185,6 +185,9 @@ class LayeredHistoryMixin:
         chunks: list[dict],
         extra_context: str,
         generation_options: GenerationOptions | None = None,
+        *,
+        audience: tuple[str, ...] | None = None,
+        skip_author_hooks: bool = False,
     ) -> list[str]:
         """
         Split chunks based on max_process_tokens and summarize each part.
@@ -222,7 +225,11 @@ class LayeredHistoryMixin:
                 response_length=self.layered_history_response_length,
                 analyze_chunks=self.layered_history_analyze_chunks,
                 chunk_size=self.layered_history_chunk_size,
+                audience=audience,
+                skip_author_hooks=skip_author_hooks,
             )
+            if audience and not summary_text.strip():
+                raise ValueError("An audience summary chunk was empty")
             summaries.append(summary_text)
 
         return summaries
@@ -248,15 +255,15 @@ class LayeredHistoryMixin:
         """
         return "\n\n".join(self.compile_layered_history(layer_index))
 
-    def _lh_extract_timestamps(self, chunk: list[dict]) -> tuple[str, str, str]:
+    def _lh_extract_timestamps(self, chunk: list[dict]) -> tuple[int, int, int]:
         """
         Extracts timestamps from a chunk of entries.
         Returns (ts, ts_start, ts_end)
         """
         if not chunk:
-            return "PT1S", "PT1S", "PT1S"
+            return 0, 0, 0
 
-        ts = chunk[0].get("ts", "PT1S")
+        ts = chunk[0].get("ts", 0)
         ts_start = chunk[0].get("ts_start", ts)
         ts_end = chunk[-1].get("ts_end", chunk[-1].get("ts", ts))
 
@@ -355,13 +362,18 @@ class LayeredHistoryMixin:
         ).model_dump(exclude_none=True)
 
         next_layer.append(entry)
-
         emit(
             "status",
             status="busy",
             message=f"Updating layered history - layer {next_layer_index} - {num_entries_in_layer + 1} / {estimated_entries}",
         )
 
+        await self.queue_summary_views(
+            self.scene,
+            entry["id"],
+            next_layer_index + 1,
+            generation_options=generation_options,
+        )
         return entry
 
     async def _lh_summarize_layer(
@@ -490,6 +502,8 @@ class LayeredHistoryMixin:
         include_base_layer: bool = False,
         max: int = None,
         base_layer_end_id: str | None = None,
+        *,
+        scene=None,
     ) -> list[str]:
         """
         Starts at the last layer and compiles the layered history into a single
@@ -500,7 +514,8 @@ class LayeredHistoryMixin:
         Each preceeding layer starts from the end of the the next layer.
         """
 
-        layered_history = self.scene.layered_history
+        scene = scene or self.scene
+        layered_history = scene.layered_history
         compiled = []
         next_layer_start = None
 
@@ -523,7 +538,7 @@ class LayeredHistoryMixin:
             ]:
                 if base_layer_end_id:
                     contained = entry_contained(
-                        self.scene,
+                        scene,
                         base_layer_end_id,
                         HistoryEntry(index=0, layer=i + 1, **layered_history_entry),
                     )
@@ -569,7 +584,7 @@ class LayeredHistoryMixin:
 
             entry_num = 1
 
-            for ah in self.scene.archived_history[next_layer_start or 0 :]:
+            for ah in scene.archived_history[next_layer_start or 0 :]:
                 if base_layer_end_id and ah["id"] == base_layer_end_id:
                     break
 
@@ -652,6 +667,7 @@ class LayeredHistoryMixin:
                 has_been_updated = True
             if has_been_updated:
                 emit("status", status="success", message="Layered history updated.")
+                self.scene.emit_status()
         except SummaryLongerThanOriginalError as exc:
             log.error("summarize_to_layered_history", error=exc, layer="subsequent")
             emit("status", status="error", message="Layered history update failed.")
@@ -692,7 +708,8 @@ class LayeredHistoryMixin:
             return []
 
         ts, ts_start, ts_end = self._lh_extract_timestamps(entries)
-        extra_context = self._lh_build_extra_context(next_layer_index)
+        previous_entries = self.compile_layered_history(next_layer_index)
+        extra_context = "\n\n".join(previous_entries)
 
         text_length = util.count_tokens("\n\n".join(e["text"] for e in entries))
 
@@ -714,7 +731,7 @@ class LayeredHistoryMixin:
         )
 
         archive_entry = await self._lh_finalize_archive_entry(
-            archive_entry, extra_context.split("\n\n")
+            archive_entry, previous_entries
         )
 
         return [archive_entry]

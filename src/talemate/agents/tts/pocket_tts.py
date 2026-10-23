@@ -204,7 +204,6 @@ class PocketTTSMixin:
                     value="huggingface.api_key",
                     label="HuggingFace Token",
                     description="Optional. Only needed if downloading the voice cloning model is gated by Hugging Face. Used as the HF_TOKEN for model downloads.",
-                    scene_overridable=False,
                 ),
                 "variant": AgentActionConfig(
                     type="text",

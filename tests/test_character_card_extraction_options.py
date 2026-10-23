@@ -14,11 +14,15 @@ render and real parsing runs. Agent-level mocks remain only for
 transient-error / cancellation injection (autospec'd so signature drift
 fails loudly)."""
 
+import base64
 import json
+from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from PIL import Image
+from PIL.PngImagePlugin import PngInfo
 
 from conftest import MockClientContext, MockScene, bootstrap_scene, client_responses
 from _character_test_helpers import (
@@ -43,7 +47,10 @@ from talemate.load.character_card import (
     _setup_loading_status,
     load_scene_from_character_card,
 )
+from talemate.load import load_scene_from_data
 from talemate.status import LoadingStatus
+
+_SAVE_SCENE_FILES = character_card._save_scene_files
 
 EXTRACTION_FLAGS = [
     "determine_content_context",
@@ -68,6 +75,10 @@ def agents():
     the agents' own templates render against a real scene)."""
     scene = MockScene()
     handles = bootstrap_scene(scene)
+    # the split flow is what these tests exercise unless `fast_mode` asks for Fast
+    instance.get_agent("creator").actions["character_creation"].config[
+        "fast"
+    ].value = False
     return SimpleNamespace(
         creator=instance.get_agent("creator"),
         world_state=handles["world_state"],
@@ -100,6 +111,7 @@ def _scene_stub():
         context="",
         character_data={},
         world_state=SimpleNamespace(manual_context={}),
+        set_intro=Mock(),
     )
 
 
@@ -1025,16 +1037,24 @@ def pipeline_recorders(monkeypatch, agents):
     return recorders
 
 
-def _write_card(tmp_path) -> str:
+def _write_card(tmp_path, greeting: str = "Hello there.", source: str = "json") -> str:
     card = {
         "spec": "chara_card_v2",
         "data": {
             "name": "Hero",
             "description": "raw description",
-            "first_mes": "Hello there.",
+            "first_mes": greeting,
             "mes_example": "<START>\n{{char}}: raw example line",
         },
     }
+    if source == "image":
+        path = tmp_path / "card.png"
+        metadata = PngInfo()
+        payload = base64.b64encode(json.dumps(card).encode()).decode()
+        metadata.add_text("chara", payload)
+        Image.new("RGB", (1, 1)).save(path, pnginfo=metadata)
+        return str(path)
+
     path = tmp_path / "card.json"
     path.write_text(json.dumps(card))
     return str(path)
@@ -1054,6 +1074,42 @@ async def test_load_scene_runs_guarded_steps_by_default(tmp_path, pipeline_recor
         "_determine_character_dialogue_instructions"
     ].assert_awaited_once()
     pipeline_recorders["_determine_character_dialogue_examples"].assert_awaited_once()
+
+
+async def test_two_selected_names_differing_only_in_case_are_refused(
+    tmp_path, pipeline_recorders
+):
+    """The selection is not de-duplicated and the dialog refuses only an exact
+    repeat, so two card characters can collide with each other. The refusal
+    comes before the character book is written or a request is spent."""
+    scene = _scene_stub()
+    options = CharacterCardImportOptions(selected_character_names=["Bob", "bob"])
+
+    with pytest.raises(ValueError, match='Name "bob" already exists.'):
+        await load_scene_from_character_card(scene, _write_card(tmp_path), options)
+
+    pipeline_recorders["_initialize_scene_memory"].assert_not_awaited()
+    pipeline_recorders["_determine_character_context"].assert_not_awaited()
+    assert scene.character_data == {}
+
+
+@pytest.mark.parametrize("enabled", [None, False, True])
+async def test_card_mode_is_applied_before_initialization(
+    tmp_path, pipeline_recorders, enabled
+):
+    scene = _scene_stub()
+    scene.knowledge_eligibility = "perception"
+    observed = []
+    pipeline_recorders["_setup_player_character_from_options"].side_effect = (
+        lambda scene, options: observed.append(scene.knowledge_eligibility)
+    )
+    kwargs = {} if enabled is None else {"character_knowledge": enabled}
+    await load_scene_from_character_card(
+        scene, _write_card(tmp_path), _options_all_disabled(), **kwargs
+    )
+    expected = "perception" if enabled else "legacy"
+    assert observed == [expected]
+    assert scene.knowledge_eligibility == expected
 
 
 async def test_load_scene_skips_guarded_steps_when_disabled(
@@ -1079,3 +1135,74 @@ async def test_load_scene_skips_guarded_steps_when_disabled(
     hero = scene.character_data["Hero"]
     assert hero.description == "raw description"
     assert hero.example_dialogue == ["Hero: raw example line"]
+
+
+@pytest.mark.parametrize("source", ["json", "image"])
+@pytest.mark.parametrize("character_knowledge", [False, True])
+async def test_load_scene_persists_normalized_intro_from_supported_sources(
+    tmp_path, persistence_scene_factory, pipeline_recorders, source, character_knowledge
+):
+    greeting = '“Hello,” she said.\n“Mixed closing" and ‘single quotes’ stay.”'
+    expected = '"Hello," she said.\n"Mixed closing" and ‘single quotes’ stay."'
+    scene = persistence_scene_factory()
+    pipeline_recorders["_save_scene_files"].side_effect = _SAVE_SCENE_FILES
+
+    async def activate(scene, greeting):
+        scene.active_characters = ["Hero"]
+
+    pipeline_recorders["_activate_characters_from_greeting"].side_effect = activate
+
+    await load_scene_from_character_card(
+        scene,
+        _write_card(tmp_path, greeting=greeting, source=source),
+        _options_all_disabled(),
+        character_knowledge=character_knowledge,
+    )
+
+    assert scene.intro == expected
+    assert scene.character_data["Hero"].greeting_text == greeting
+    assert scene.intro_present == ["Hero"]
+    if character_knowledge:
+        assert scene.intro_knowledge.views[0].text == expected
+    pipeline_recorders["_activate_characters_from_greeting"].assert_awaited_once_with(
+        scene, expected
+    )
+    saved_path = Path(scene.full_path)
+    saved_data = json.loads(saved_path.read_text())
+    assert saved_data["intro"] == expected
+
+    reloaded = persistence_scene_factory()
+    await load_scene_from_data(reloaded, saved_data, reset=True, name=str(saved_path))
+    assert reloaded.intro == expected
+    assert reloaded.character_data["Hero"].greeting_text == greeting
+    if character_knowledge:
+        assert reloaded.intro_knowledge.views[0].text == expected
+
+
+@pytest.mark.parametrize(
+    ("greeting", "expected"),
+    [
+        ('"Already straight."\nSecond line.', '"Already straight."\nSecond line.'),
+        (
+            '“Mixed opening and straight closing"',
+            '"Mixed opening and straight closing"',
+        ),
+        ("‘Curly singles’ and “curly doubles”", '‘Curly singles’ and "curly doubles"'),
+    ],
+)
+async def test_load_scene_intro_normalization_is_narrow_and_idempotent(
+    tmp_path, pipeline_recorders, greeting, expected
+):
+    scene = _scene_stub()
+
+    await load_scene_from_character_card(
+        scene,
+        _write_card(tmp_path, greeting=greeting),
+        _options_all_disabled(),
+    )
+
+    assert scene.intro == expected
+    assert scene.character_data["Hero"].greeting_text == greeting
+    pipeline_recorders["_activate_characters_from_greeting"].assert_awaited_once_with(
+        scene, expected
+    )

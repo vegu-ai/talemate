@@ -1,0 +1,13 @@
+[
+  {
+    "type": "dialogue",
+    "entries": [
+      "You find yourself in a quiet forest clearing.",
+      "Rain drums on the lighthouse roof as the lamp turns overhead.\n",
+      "\nHERO\n*shakes the water from his coat* \"Anyone up here?\"\nEND-OF-LINE\n",
+      "\nELENA\n\"Only the keeper.\" *She sets the logbook aside.* \"And now you.\"\nEND-OF-LINE\n",
+      "10 minutes later\n",
+      "\nHERO\n\"The ferry left without me.\" *He glances at the stairs.*\nEND-OF-LINE\n"
+    ]
+  }
+]

@@ -1,5 +1,18 @@
+from talemate.knowledge.transitions import record_departure, record_arrival
+
 from typing import TYPE_CHECKING, Union
 import pydantic
+from talemate.context import active_scene
+from talemate.knowledge.schema import (
+    EntryVisibility,
+    ReinforcementEntry,
+    is_memory_attribute,
+)
+from talemate.scene_signals import (
+    character_changed,
+    character_renamed,
+    character_renaming,
+)
 from pydantic import ConfigDict
 import structlog
 import random
@@ -13,6 +26,7 @@ import talemate.agents.base as agent_base
 from talemate.agents.tts.schema import Voice
 from talemate.agents.visual.schema import PromptFinalizer as VisualPromptFinalizer
 import talemate.emit.async_signals as async_signals
+from talemate.events import CharacterActivatedEvent, CharacterDeactivatedEvent
 from talemate.game.engine.context_id.character import (
     CharacterContext,
 )
@@ -21,6 +35,7 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Scene, Actor
 
 __all__ = [
+    "character_name",
     "Character",
     "CharacterStatus",
     "VoiceChangedEvent",
@@ -28,11 +43,40 @@ __all__ = [
     "activate_character",
     "set_character_is_player",
     "set_voice",
+    "NAME_EXISTS_MESSAGE",
+    "name_is_taken",
 ]
 
 log = structlog.get_logger("talemate.character")
 
-async_signals.register("character.voice_changed")
+NAME_EXISTS_MESSAGE = 'Name "{name}" already exists.'
+
+
+def character_name(value: "str | Character") -> str:
+    """The name of a character given as a name or as a Character."""
+    return value if isinstance(value, str) else value.name
+
+
+def name_is_taken(
+    scene: "Scene", name: str, character: "Character | None" = None
+) -> "Character | None":
+    """Return the character that already holds `name`, or None.
+
+    Names are compared without case, because `Scene.get_character` resolves
+    them that way: a scene holding `Bob` and `bob` has two records its own
+    lookup cannot tell apart. `character` is the character asking, which never
+    counts as its own collision.
+    """
+    folded = name.casefold()
+    for other in scene.character_data.values():
+        if other is not character and other.name.casefold() == folded:
+            return other
+    return None
+
+
+async_signals.register(
+    "character.voice_changed", "character.activated", "character.deactivated"
+)
 
 
 class Character(pydantic.BaseModel):
@@ -72,12 +116,25 @@ class Character(pydantic.BaseModel):
     # attribute and detail storage
     base_attributes: dict = pydantic.Field(default_factory=dict)
     details: dict[str, str] = pydantic.Field(default_factory=dict)
+    reinforcement_entries: dict[str, ReinforcementEntry] = pydantic.Field(
+        default_factory=dict
+    )
+
+    # keyed by the memory storage key: "description", "<attr>", "detail.<key>"
+    visibility: dict[str, EntryVisibility] = pydantic.Field(default_factory=dict)
 
     # helpful references
     agent: agent_base.Agent | None = pydantic.Field(default=None, exclude=True)
     actor: "Actor | None" = pydantic.Field(default=None, exclude=True)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @pydantic.model_serializer(mode="wrap")
+    def serialize_reinforcement_entries(self, handler):
+        data = handler(self)
+        if not self.reinforcement_entries:
+            data.pop("reinforcement_entries", None)
+        return data
 
     @property
     def gender(self) -> str:
@@ -269,6 +326,16 @@ class Character(pydantic.BaseModel):
 
         return "\n".join(sheet_list)
 
+    def _signal_changed(self) -> None:
+        scene = active_scene.get()
+        if scene is not None:
+            character_changed.send(scene, character=self)
+
+    def validate_rename(self, new_name: str, scene=None) -> None:
+        """Raise ValueError when the scene cannot take the new name."""
+        if scene is not None:
+            character_renaming.send(scene, character=self, new_name=new_name)
+
     def rename(self, new_name: str):
         """
         Rename the character.
@@ -280,8 +347,13 @@ class Character(pydantic.BaseModel):
         None
         """
 
+        scene = active_scene.get()
+        self.validate_rename(new_name, scene)
         orig_name = self.name
         self.name = new_name
+
+        if scene is not None:
+            character_renamed.send(scene, old=orig_name, new=new_name)
 
         if orig_name.lower() == "you":
             # we dont want to replace "you" in the description
@@ -341,6 +413,7 @@ class Character(pydantic.BaseModel):
                 setattr(self, key, value)
 
         self.memory_dirty = True
+        self._signal_changed()
 
     async def set_acting_instructions(self, instructions: str | None):
         """
@@ -387,11 +460,7 @@ class Character(pydantic.BaseModel):
         await memory_agent.delete({"character": self.name})
         log.info("purged character from memory", character=self.name)
 
-    async def commit_to_memory(self, memory_agent):
-        """
-        Commits this character's details to the memory agent. (vectordb)
-        """
-
+    def memory_documents(self):
         items = []
 
         if not self.base_attributes or "description" not in self.base_attributes:
@@ -412,10 +481,7 @@ class Character(pydantic.BaseModel):
         seen_attributes = set()
 
         for attr, value in self.base_attributes.items():
-            if attr.startswith("_"):
-                continue
-
-            if attr.lower() in ["name", "scenario_context"]:
+            if not is_memory_attribute(attr):
                 continue
 
             seen_attributes.add(attr)
@@ -448,9 +514,12 @@ class Character(pydantic.BaseModel):
                 }
             )
 
+        return items
+
+    async def commit_to_memory(self, memory_agent):
+        items = self.memory_documents()
         if items:
             await memory_agent.add_many(items)
-
         self.memory_dirty = False
 
     async def commit_single_attribute_to_memory(
@@ -520,11 +589,18 @@ class Character(pydantic.BaseModel):
 
         await memory_agent.add_many(items)
 
-    async def set_detail(self, name: str, value):
+    async def set_detail(
+        self, name: str, value, *, reinforcement: ReinforcementEntry | None = None
+    ):
         memory_agent = instance.get_agent("memory")
+        if not value or self.details.get(name) != value:
+            self.reinforcement_entries.pop(name, None)
+        if value and reinforcement is not None:
+            self.reinforcement_entries[name] = reinforcement
         if not value:
             try:
                 del self.details[name]
+                self.visibility.pop(f"detail.{name}", None)
                 try:
                     self.shared_details.remove(name)
                 except ValueError:
@@ -547,8 +623,11 @@ class Character(pydantic.BaseModel):
             await self.commit_single_detail_to_memory(memory_agent, name, value)
 
     def set_detail_defer(self, name: str, value):
+        if self.details.get(name) != value:
+            self.reinforcement_entries.pop(name, None)
         self.details[name] = value
         self.memory_dirty = True
+        self._signal_changed()
 
     def get_detail(self, name: str):
         return self.details.get(name)
@@ -559,6 +638,7 @@ class Character(pydantic.BaseModel):
         if not value:
             try:
                 del self.base_attributes[name]
+                self.visibility.pop(name, None)
                 try:
                     self.shared_attributes.remove(name)
                 except ValueError:
@@ -575,6 +655,7 @@ class Character(pydantic.BaseModel):
     def set_base_attribute_defer(self, name: str, value):
         self.base_attributes[name] = value
         self.memory_dirty = True
+        self._signal_changed()
 
     def get_base_attribute(self, name: str):
         return self.base_attributes.get(name)
@@ -622,8 +703,6 @@ class Character(pydantic.BaseModel):
             self.shared_attributes = []
             self.shared_details = []
 
-        self.shared_details = list(self.details.keys())
-
     async def set_shared_attribute(self, attribute: str, shared: bool):
         """
         Set the shared attribute for this character
@@ -655,6 +734,12 @@ class Character(pydantic.BaseModel):
         updates = other_character.model_dump(exclude_none=True)
         updates.pop("base_attributes", None)
         updates.pop("details", None)
+        updates.pop("reinforcement_entries", None)
+        updates.pop("visibility", None)
+        updates["visual_finalizers"] = [
+            VisualPromptFinalizer.model_validate(value)
+            for value in updates["visual_finalizers"]
+        ]
         updates.pop(
             "current_avatar", None
         )  # current_avatar is scene-specific, not shared
@@ -671,9 +756,34 @@ class Character(pydantic.BaseModel):
         for detail in self.shared_details:
             if detail not in other_character.details:
                 continue
+            if self.details.get(detail) != other_character.details[detail]:
+                self.reinforcement_entries.pop(detail, None)
             self.details[detail] = other_character.details[detail]
 
+        # A shared entry's Known by travels with its text; every other record
+        # stays the receiving character's own.
+        transferred = (
+            ["description"]
+            + [
+                a
+                for a in self.shared_attributes
+                if a in other_character.base_attributes
+            ]
+            + [
+                f"detail.{d}"
+                for d in self.shared_details
+                if d in other_character.details
+            ]
+        )
+        for key in transferred:
+            record = other_character.visibility.get(key)
+            if record is None:
+                self.visibility.pop(key, None)
+            else:
+                self.visibility[key] = record.model_copy(deep=True)
+
         self.memory_dirty = True
+        self._signal_changed()
 
 
 class VoiceChangedEvent(pydantic.BaseModel):
@@ -682,7 +792,12 @@ class VoiceChangedEvent(pydantic.BaseModel):
     auto: bool = False
 
 
-async def deactivate_character(scene: "Scene", character: Union[str, "Character"]):
+async def deactivate_character(
+    scene: "Scene",
+    character: Union[str, "Character"],
+    *,
+    record_transition: bool = True,
+):
     """
     Deactivates a character
 
@@ -695,17 +810,29 @@ async def deactivate_character(scene: "Scene", character: Union[str, "Character"
     if isinstance(character, str):
         character = scene.get_character(character)
 
-    if character.name not in scene.active_characters:
+    if not scene.character_is_active(character):
         # already deactivated
         return False
 
+    transition = record_departure(scene, character) if record_transition else None
     await scene.remove_actor(character.actor)
-    scene.active_characters.remove(character.name)
+    await async_signals.get("character.deactivated").send(
+        CharacterDeactivatedEvent(
+            scene=scene,
+            character=character,
+            transition=transition,
+            event_type="character.deactivated",
+        )
+    )
 
 
 async def activate_character(scene: "Scene", character: Union[str, "Character"]):
     """
     Activates a character
+
+    A character that is already active is left alone: the call returns `False`
+    and sends no `character.activated`. Callers that create a character and
+    want the signal activate it here rather than adding the actor themselves.
 
     Arguments:
 
@@ -716,7 +843,7 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
     if isinstance(character, str):
         character = scene.get_character(character)
 
-    if character.name in scene.active_characters:
+    if scene.character_is_active(character):
         # already activated
         return False
 
@@ -726,7 +853,16 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
         actor = scene.Player(character, None)
 
     await scene.add_actor(actor)
-    scene.active_characters.append(character.name)
+
+    transition = record_arrival(scene, character)
+    await async_signals.get("character.activated").send(
+        CharacterActivatedEvent(
+            scene=scene,
+            character=character,
+            transition=transition,
+            event_type="character.activated",
+        )
+    )
 
 
 async def _demote_player_to_actor(scene: "Scene", character: "Character"):

@@ -627,7 +627,12 @@
         "items": [
           "story_configuration:title",
           "story_configuration:description",
-          "story_configuration:content_classification"
+          "story_configuration:content_classification",
+          "story_configuration:perspective",
+          "story_configuration:perspective.default",
+          "story_configuration:perspective.player",
+          "story_configuration:perspective.other",
+          "story_configuration:perspective.narrator"
         ]
       },
       "x": 135,
@@ -659,7 +664,7 @@
       "title": "Jinja2 Format",
       "id": "b62ffa05-640b-4de1-a71f-fa8b265a80e3",
       "properties": {
-        "template": "Analyze the instruction and route it to the appropriate function(s).\n\nYour only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\n{% if context_id_items %}\n{% set target=context_id_items[0] %}\nYou have been given a specific context ID to update: `{{ target.context_id }}`.\nYou MUST pass along this context ID in your instructions.\n{% if target.context_id.context_type in context_id_types and target.context_id.__str__() not in allowed_for_direct_update -%}\nYOU MUST NOT USE THE `direct_context_update` FUNCTION HERE.\n{%- endif %}\n{% endif %}\n\nINSTRUCTIONS:\n```\n{{ instructions }}\n```"
+        "template": "Analyze the instruction and route it to the appropriate function(s).\n\nYour only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\nRoute all Known by visibility changes, knowledge grants, disclosures and revokes to `character_changes`, including changes involving world or history entries. Pass the complete user instruction and any supplied Context IDs to that function.\n\n{% if context_id_items %}\n{% set target=context_id_items[0] %}\nYou have been given a specific context ID to update: `{{ target.context_id }}`.\nYou MUST pass along this context ID in your instructions.\n{% if target.context_id.context_type in context_id_types and target.context_id.__str__() not in allowed_for_direct_update -%}\nYOU MUST NOT USE THE `direct_context_update` FUNCTION HERE.\n{%- endif %}\n{% endif %}\n\nINSTRUCTIONS:\n```\n{{ instructions }}\n```"
       },
       "x": 675,
       "y": 496,
@@ -725,7 +730,7 @@
       "title": "AI Function Callback Metadata",
       "id": "5f46d8d6-18e0-4f88-8f3d-84861e76a8a5",
       "properties": {
-        "instructions": "Changes to world entries must go to the `world_changes` function.\n\n- World entry creation / deletion / updates\n\nIMPORTANT: This cannot be used for static history entries, which are a special kind of context.",
+        "instructions": "Changes to world entries must go to the `world_changes` function.\n\n- World entry creation / deletion / updates\n\nIMPORTANT: This cannot be used for static history entries, which are a special kind of context.\n\nFor visibility or character knowledge changes without editing entry text, use character_changes instead.",
         "examples": [
           {
             "instructions": "Create a new world entry called 'The Crystal Caverns of Eldereth' describing the magical underground chambers where ancient dragons once hoarded their treasures."
@@ -754,7 +759,7 @@
       "title": "AI Function Callback Metadata",
       "id": "9c4ba59c-e6d9-4679-93ac-bf0e6ea03611",
       "properties": {
-        "instructions": "Changes to static history entries must go to the history_changes function.",
+        "instructions": "Changes to static history entries must go to the history_changes function.\n\nFor visibility or character knowledge changes without editing entry text, use character_changes instead.",
         "examples": [
           {
             "instructions": "Create a new static history entry for 1 week ago that describes how Jenna and Rob met at the birthday party"
@@ -925,7 +930,7 @@
       "title": "AI Function Callback Metadata",
       "id": "121604ad-680e-4304-97ce-30139b001370",
       "properties": {
-        "instructions": "Any character specific changes go to this function.\n\n- Character attribute changes\n- Character description changes\n- Character detail changes\n- Character name changes\n- Character UX color changes\n- Character voice assignment changes\n- Deactivation / Activation of a character\n- Dialogue examples for a character\n- Acting instructions for a character",
+        "instructions": "Any character specific changes go to this function.\n\n- Character attribute changes\n- Character description changes\n- Character detail changes\n- Character name changes\n- Character UX color changes\n- Character voice assignment changes\n- Deactivation / Activation of a character\n- Dialogue examples for a character\n- Acting instructions for a character\n- Known by visibility changes, knowledge grants, disclosures and revokes, including world or history entries\n\nPass one complete free-form instruction with any supplied Context IDs.",
         "examples": [
           {
             "instructions": "Create a new character named Lyra Moonwhisper, a 150-year-old elven mage with silver hair and ancient knowledge of forbidden spells. Make her active in the current scene."
@@ -984,12 +989,14 @@
         "group": "Update Context",
         "action_id": "update_context.edit_characters",
         "action_title": "Existing Characters",
-        "description_chat": "Make changes to an existing character's attributes, details, description, acting instructions, example dialogue, scene entry / exit.\n\nActivating or deactivating an existing character's scene participation: if the character's exit or entry has not yet been narrated, also provide instructions on how to narrate their exit or entry.",
+        "description_chat": "Make changes to an existing character's attributes, details, description, acting instructions, example dialogue, scene entry / exit.\n\nActivating or deactivating an existing character's scene participation: if the character's exit or entry has not yet been narrated, also provide instructions on how to narrate their exit or entry.\n\nSet Known by visibility or change character knowledge of character, world or history entries. In Character perspectives, establish disclosures; revocation and forgetting are unavailable.",
         "description_scene_direction": "",
         "instruction_examples": [
           "Add 'spiders' to Julia's dislikes.",
           "Remove david from the current scene, have him exit the room, slamming the door behind him.",
-          "Activate Sarah. The narrative already covers her entry to the scene, so we just need to make sure she can active participate in it, no need for entry narration."
+          "Activate Sarah. The narrative already covers her entry to the scene, so we just need to make sure she can active participate in it, no need for entry narration.",
+          "Only Bob knows the world entry Hidden Door.",
+          "Give Alice the information that the ledger is under the bed."
         ],
         "availability": "both",
         "force_enabled": false
@@ -1273,6 +1280,10 @@
         {
           "name": "item5",
           "type": "*"
+        },
+        {
+          "name": "item6",
+          "type": "*"
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
@@ -1301,12 +1312,13 @@
         "group": "Update Context",
         "action_id": "update_context.story_configuration",
         "action_title": "Story Configuration",
-        "description_chat": "Make changes to the story / experience's configuration: Title, Description, Introduction, Content Classification, Story Intention, Scene Intention and Scene Type.\n\nManage Contextual Pins (add, update, remove pins of world entries).",
+        "description_chat": "Make changes to the story / experience's configuration: Title, Description, Introduction, Content Classification, Story Intention, Scene Intention, Scene Type and Narrative Perspective.\n\nThe narrative perspective is the prose voice and tense of the story. It has a scene-wide default (Context ID `story_configuration:perspective`) and three optional per-speaker overrides (`story_configuration:perspective.player`, `.other` and `.narrator`), each of which falls back to the default while it is empty.\n\nManage Contextual Pins (add, update, remove pins of world entries).",
         "description_scene_direction": "",
         "instruction_examples": [
           "Update the story intention to be more specific about the expected story's mature content.",
           "Change the scene type to `roleplay`. Julienne should explore the marketplace to see if she finds anything interesting.",
-          "Keep the scene type `roleplay` but update the goal. Lara and Gustav are discussing how to traverse the puzzle room."
+          "Keep the scene type `roleplay` but update the goal. Lara and Gustav are discussing how to traverse the puzzle room.",
+          "Set the narrative perspective. `story_configuration:perspective` becomes 'Second person, present tense.' and `story_configuration:perspective.other` becomes 'Third person limited, present tense.'"
         ],
         "availability": "both",
         "force_enabled": false
@@ -1318,6 +1330,37 @@
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "e0052861-be1a-4dbc-bc12-c7370577da0c": {
+      "title": "Agent Report Issue",
+      "id": "e0052861-be1a-4dbc-bc12-c7370577da0c",
+      "properties": {
+        "name": "report_issue"
+      },
+      "x": 640,
+      "y": 1175,
+      "width": 151,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/agentReportIssue",
+      "base_type": "core/functions/Function"
+    },
+    "89b8b99d-01db-4b34-a9fb-cfb72bbc33db": {
+      "title": "AI Function Callback",
+      "id": "89b8b99d-01db-4b34-a9fb-cfb72bbc33db",
+      "properties": {
+        "name": "report_issue",
+        "allow_multiple_calls": true
+      },
+      "x": 920,
+      "y": 1175,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
       "base_type": "core/Node"
     }
   },
@@ -1539,14 +1582,20 @@
     "80265d56-f041-4b26-9468-2a0b38f886a2.callback": [
       "d4071915-492a-41ac-b4f9-54e48a167c5c.state"
     ],
-    "e9460323-7f9c-484b-a993-e351e8fd2762.list": [
-      "f5e3af1d-3da3-4813-b89d-a719384c79ae.callbacks"
-    ],
     "b6e0f644-176c-4503-8f5f-511700a77bac.value": [
       "f16b6be4-f755-4999-ba41-64e630e4bb61.is_player"
     ],
     "d4071915-492a-41ac-b4f9-54e48a167c5c.state": [
       "e9460323-7f9c-484b-a993-e351e8fd2762.item2"
+    ],
+    "e0052861-be1a-4dbc-bc12-c7370577da0c.fn": [
+      "89b8b99d-01db-4b34-a9fb-cfb72bbc33db.fn"
+    ],
+    "89b8b99d-01db-4b34-a9fb-cfb72bbc33db.callback": [
+      "e9460323-7f9c-484b-a993-e351e8fd2762.item6"
+    ],
+    "e9460323-7f9c-484b-a993-e351e8fd2762.list": [
+      "f5e3af1d-3da3-4813-b89d-a719384c79ae.callbacks"
     ]
   },
   "groups": [
@@ -1565,7 +1614,7 @@
       "x": 10,
       "y": 238,
       "width": 2765,
-      "height": 2904,
+      "height": 2920,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false

@@ -1,9 +1,13 @@
 import asyncio
 import structlog
 from functools import wraps
-from typing import Optional
+from typing import Awaitable, Callable, Coroutine, Iterable, Optional
+
+from talemate.exceptions import ControlFlowException
 
 __all__ = [
+    "bounded_gather",
+    "bounded_gather_apply",
     "cleanup_pending_tasks",
     "debounce",
     "shared_debounce",
@@ -116,6 +120,97 @@ def shared_debounce(
         return wrapper
 
     return decorator
+
+
+async def bounded_gather(
+    coros: Iterable[Coroutine],
+    max_concurrent: int = 3,
+    return_exceptions: bool = False,
+) -> list:
+    """
+    Gather coroutines with at most `max_concurrent` running at a time.
+
+    `max_concurrent=1` degenerates to sequential execution - callers that
+    fan out LLM calls use this to respect `supports_concurrent_inference`.
+
+    Unlike plain gather, a batch-fatal failure keeps queued coroutines from
+    launching: with `return_exceptions=False` any failure is batch-fatal,
+    with `return_exceptions=True` only interrupts (ControlFlowException,
+    cancellation) are - other failures are collected as results while the
+    rest of the batch runs.
+    """
+    semaphore = asyncio.Semaphore(max(1, max_concurrent))
+    failed = False
+
+    async def bounded(coro: Coroutine):
+        nonlocal failed
+        try:
+            async with semaphore:
+                # a flag, not sibling-task cancellation: the semaphore hands
+                # off to a queued task before the gather sees the failure
+                if failed:
+                    raise asyncio.CancelledError()
+                try:
+                    return await coro
+                except (ControlFlowException, asyncio.CancelledError):
+                    failed = True
+                    raise
+                except BaseException:
+                    if not return_exceptions:
+                        failed = True
+                    raise
+        finally:
+            coro.close()
+
+    tasks = [asyncio.ensure_future(bounded(coro)) for coro in coros]
+    try:
+        return await asyncio.gather(*tasks, return_exceptions=return_exceptions)
+    except BaseException:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
+
+
+async def bounded_gather_apply(
+    items: list,
+    generate: Callable[[object], Coroutine],
+    apply: Callable[[object, object], Awaitable],
+    max_concurrent: int = 3,
+    on_error: Callable[[object, BaseException], None] | None = None,
+):
+    """
+    Fan `generate(item)` out via bounded_gather, then run `apply(item, result)`
+    sequentially in item order, so all side effects stay ordered.
+
+    An interrupt (ControlFlowException or cancellation) among the results
+    aborts before anything applies. Other failures are reported via
+    `on_error`, the successful results still apply, and the first failure
+    re-raises afterwards - mirroring a sequential loop where items before a
+    failure survive it.
+    """
+    results = await bounded_gather(
+        [generate(item) for item in items],
+        max_concurrent=max_concurrent,
+        return_exceptions=True,
+    )
+
+    for result in results:
+        if isinstance(result, (ControlFlowException, asyncio.CancelledError)):
+            raise result
+
+    first_error = None
+    for item, result in zip(items, results):
+        if isinstance(result, BaseException):
+            if on_error:
+                on_error(item, result)
+            if first_error is None:
+                first_error = result
+            continue
+        await apply(item, result)
+
+    if first_error is not None:
+        raise first_error
 
 
 async def cleanup_pending_tasks():

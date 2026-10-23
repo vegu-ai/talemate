@@ -2,16 +2,16 @@
     <v-row>
         <v-col cols="3">
             <v-tabs color="secondary" direction="vertical" v-model="tab">
-                <v-tab value="cover" class="text-caption" prepend-icon="mdi-image-frame">
+                <v-tab value="cover" class="text-body-small" prepend-icon="mdi-image-frame">
                     Cover Image
                 </v-tab>
-                <v-tab value="avatar" class="text-caption" prepend-icon="mdi-account-circle">
+                <v-tab value="avatar" class="text-body-small" prepend-icon="mdi-account-circle">
                     Portrait
                 </v-tab>
-                <v-tab value="rules" class="text-caption" prepend-icon="mdi-format-list-bulleted-type">
+                <v-tab value="rules" class="text-body-small" prepend-icon="mdi-format-list-bulleted-type">
                     Rules
                 </v-tab>
-                <v-tab value="finalizers" class="text-caption" prepend-icon="mdi-auto-fix">
+                <v-tab value="finalizers" class="text-body-small" prepend-icon="mdi-auto-fix">
                     Prompt Finalization
                 </v-tab>
             </v-tabs>
@@ -42,7 +42,6 @@
                 ref="rules"
                 :character="character"
                 :scene="scene"
-                @require-scene-save="$emit('require-scene-save')"
             />
             <WorldStateManagerCharacterVisualsFinalizers
                 v-else-if="tab === 'finalizers'"

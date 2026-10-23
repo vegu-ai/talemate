@@ -8,11 +8,12 @@ from talemate.game.engine.nodes.core import (
 )
 from talemate.game.engine.nodes.registry import register
 from talemate.game.engine.nodes.agent import AgentSettingsNode, AgentNode
-from talemate.agents.tts.schema import Voice, VoiceLibrary
+from talemate.agents.tts.schema import Voice, VoiceGenerationEmission, VoiceLibrary
 
 TYPE_CHOICES.extend(
     [
         "tts/voice",
+        "tts/generation_emission",
     ]
 )
 
@@ -202,3 +203,191 @@ class Generate(AgentNode):
         )
 
         self.set_output_values({"state": state})
+
+
+@register("agents/tts/UnpackGenerationEmission")
+class UnpackGenerationEmission(AgentNode):
+    """
+    Unpacks a TTS generation emission into the fields of the chunk that is
+    about to be spoken.
+
+    Inputs:
+
+    - emission: The generation emission
+
+    Outputs:
+
+    - emission: The emission, passed through
+    - text: The text of the chunk
+    - character_name: The name of the character speaking the chunk
+    - type: The chunk type (dialogue or exposition)
+    - api: The TTS provider (API) generating the chunk
+    - message_id: The ID of the message the chunk belongs to
+    - voice: The voice the chunk will be spoken with
+    - model: The model of the voice, when the voice sets one
+    """
+
+    _agent_name: ClassVar[str] = "tts"
+
+    def __init__(self, title="Unpack Generation Emission", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("emission", socket_type="event,tts/generation_emission")
+
+        self.add_output("emission", socket_type="tts/generation_emission")
+        self.add_output("text", socket_type="str,text")
+        self.add_output("character_name", socket_type="str")
+        self.add_output("type", socket_type="str")
+        self.add_output("api", socket_type="str")
+        self.add_output("message_id", socket_type="int,str")
+        self.add_output("voice", socket_type="tts/voice")
+        self.add_output("model", socket_type="str")
+
+    async def run(self, state: GraphState):
+        emission: VoiceGenerationEmission = self.require_input("emission")
+        chunk = emission.chunk
+
+        self.set_output_values(
+            {
+                "emission": emission,
+                "text": chunk.text[0],
+                "character_name": chunk.character_name,
+                "type": chunk.type,
+                "api": chunk.api,
+                "message_id": chunk.message_id,
+                "voice": chunk.voice,
+                "model": chunk.model,
+            }
+        )
+
+
+@register("agents/tts/AudioTagSupport")
+class AudioTagSupport(AgentNode):
+    """
+    Whether the voice backend of a chunk accepts sound tags such as [laugh]
+    or [sigh], and which ones. Use it on agent.tts.generate.before before
+    adding a tag with Set Chunk Text.
+
+    Inputs:
+
+    - emission: The generation emission
+    - tag: A tag name to format for this backend, e.g. laugh (optional)
+
+    Outputs:
+
+    - emission: The emission, passed through
+    - supported: True when the backend and model accept sound tags
+    - allowed_tags: The tags the backend accepts, or None when any tag is accepted
+    - tag_format: How a tag is written for this backend, with {{ tag }} for the name
+    - formatted_tag: The tag input written in the backend's format, or None when the backend does not accept it
+    """
+
+    _agent_name: ClassVar[str] = "tts"
+
+    class Fields:
+        tag = PropertyField(
+            name="tag",
+            description="A tag name to format for this backend",
+            type="str",
+            default="",
+        )
+
+    def __init__(self, title="Audio Tag Support", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("emission", socket_type="event,tts/generation_emission")
+        self.add_input("tag", socket_type="str", optional=True)
+        self.set_property("tag", "")
+
+        self.add_output("emission", socket_type="tts/generation_emission")
+        self.add_output("supported", socket_type="bool")
+        self.add_output("allowed_tags", socket_type="list")
+        self.add_output("tag_format", socket_type="str")
+        self.add_output("formatted_tag", socket_type="str")
+
+    async def run(self, state: GraphState):
+        emission: VoiceGenerationEmission = self.require_input("emission")
+        chunk = emission.chunk
+        supported = self.agent.chunk_supports_audio_tags(chunk)
+        allowed = None
+        tag_format = None
+        if supported:
+            tag_format = self.agent.get_audio_tag_format(chunk.api)
+            tags_fn = getattr(self.agent, f"{chunk.api}_supported_audio_tags", None)
+            tags = tags_fn(model=chunk.model) if tags_fn else None
+            allowed = list(tags) if tags else None
+
+        tag = (self.normalized_input_value("tag") or "").strip().strip("[]")
+        formatted = None
+        if supported and tag and (allowed is None or tag in allowed):
+            formatted = tag_format.replace("{{ tag }}", tag)
+
+        self.set_output_values(
+            {
+                "emission": emission,
+                "supported": supported,
+                "allowed_tags": allowed,
+                "tag_format": tag_format,
+                "formatted_tag": formatted,
+            }
+        )
+
+
+@register("agents/tts/SetChunkText")
+class SetChunkText(AgentNode):
+    """
+    Replaces the text of the chunk carried by a TTS generation emission,
+    letting a graph rewrite what is spoken before the audio is generated.
+    Empty text still reaches the backend and produces no audio for that
+    chunk.
+
+    Inputs:
+
+    - state: The graph state (required — wire through any gating switch so
+      the node is skipped when the chunk should be left alone)
+    - emission: The generation emission
+    - text: The text to speak instead (required at runtime despite the
+      optional socket)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - emission: The emission, passed through
+    """
+
+    _agent_name: ClassVar[str] = "tts"
+
+    class Fields:
+        text = PropertyField(
+            name="text",
+            type="text",
+            description="The text to speak instead",
+            default=UNRESOLVED,
+        )
+
+    def __init__(self, title="Set Chunk Text", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("emission", socket_type="event,tts/generation_emission")
+        self.add_input("text", socket_type="str,text", optional=True)
+        self.set_property("text", UNRESOLVED)
+
+        self.add_output("state")
+        self.add_output("emission", socket_type="tts/generation_emission")
+
+    async def run(self, state: GraphState):
+        emission: VoiceGenerationEmission = self.require_input("emission")
+        text = self.require_input("text")
+
+        emission.chunk.text[0] = text
+
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "emission": emission,
+            }
+        )

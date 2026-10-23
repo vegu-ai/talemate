@@ -1,16 +1,16 @@
 # Mistral.ai Client
 
-If you want to add an Mistral.ai client, change the `Client Type` to `Mistral.ai`.
+If you want to add an Mistral.ai client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `MistralAI` from the client type menu.
 
-![Client Mistral.ai](/talemate/img/0.39.0/client-mistral.png)
+![Client Mistral.ai](/talemate/img/0.40.0/client-mistral.png)
 
-Click `Save` to add the client.
+Click `Save` in the toolbar to add the client.
 
 ### Mistral.ai API Key
 
 The client should appear in the clients list. If you haven't setup Mistral.ai before, you will see a warning that the API key is missing.
 
-![Client mistral no api key](/talemate/img/0.26.0/client-mistral-no-api-key.png)
+![Client mistral no api key](/talemate/img/0.40.0/client-mistral-no-api-key.png)
 
 Click the `SET API KEY` button. This will open the application settings on the API Keys page where you can add your Mistral.ai API key.
 
@@ -32,7 +32,7 @@ A unique name for the client that makes sense to you.
 
 ##### Model
 
-Which model to use. Currently defaults to `mixtral-8x22`.
+Which model to use. Currently defaults to `mistral-large-4`.
 
 !!! note "Talemate lags behind Mistral.ai"
     When Mistral.ai adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.
@@ -43,7 +43,17 @@ Maximum context length (in tokens) for generations sent to Mistral.ai. If you ar
 
 ##### Concurrent Inference
 
-Found under the **Concurrency** tab in the client settings. When enabled, batch operations that need several queries (currently visual prompt generation for image generation) can send multiple requests to the Mistral.ai API in parallel instead of one at a time, which can speed those operations up.
+Found in the **Concurrency** section of the client editor. When enabled, batch operations that need several queries (currently visual prompt generation for image generation) can send multiple requests to the Mistral.ai API in parallel instead of one at a time, which can speed those operations up.
 
-This is **off by default**. Whether concurrent requests actually complete in parallel depends on your Mistral.ai account's rate limits. See the [Concurrent Requests](/talemate/user-guide/clients/concurrent-requests/) page for more detail.
+This is **on by default**. Whether concurrent requests actually complete in parallel depends on your Mistral.ai account's rate limits. See the [Concurrent Requests](/talemate/user-guide/clients/concurrent-requests/) page for more detail.
+
+##### Reasoning Effort
+
+Open the client's **Reasoning** section to adjust these settings:
+
+- **Reasoning Effort** controls how much effort the model spends thinking. With **Reasoning** on, Talemate sends your choice as `reasoning_effort`, but only for models known to accept it: `mistral-small-latest`, `mistral-medium-latest`, `mistral-large-4` and `magistral-medium-latest` (checked against Mistral's API). The offered levels are `default`, `none` and `high`: `default` sends nothing, so the model uses its own default, and `high` asks for maximum thinking. For any other model, such as `mistral-large-latest`, Talemate never sends an effort: the client card shows the **Extra Completion Tokens** field instead of the effort dropdown, and the Reasoning Effort field in the editor has no effect. If the model does not accept the selected setting, its server error is shown; choose `default` to omit it.
+- **Extra Completion Tokens** adds room to the total completion limit for thinking and the answer when you enable **Reasoning**. It is not a separate reasoning budget.
+- Thinking arrives separately from the answer, so no reasoning strip pattern is needed.
+
+With **Reasoning** off, Talemate sends no effort setting at all. While Reasoning is on, the client card shows the selected effort in a dropdown next to the context token budget for the models that accept an effort; other models show the Extra Completion Tokens field.
 --8<-- "docs/snippets/common.md:client-response-length"

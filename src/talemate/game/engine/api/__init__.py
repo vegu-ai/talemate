@@ -1,3 +1,12 @@
+"""
+Legacy game-scripting API.
+
+DEPRECATED: the legacy game-scripting API (the scoped ``TM`` API a scene's
+``game.py`` calls) is unmaintained and being phased out in favour of node
+graph modules. No fixes or new features are accepted for it; build scene logic
+with node modules instead.
+"""
+
 import talemate.game.engine.api.agents.creator as agent_creator  # noqa: F401
 import talemate.game.engine.api.agents.director as agent_director  # noqa: F401
 import talemate.game.engine.api.agents.narrator as agent_narrator  # noqa: F401

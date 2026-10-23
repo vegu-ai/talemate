@@ -43,7 +43,7 @@
                     instructions-placeholder="Describe the writing style you want instructions generated for."
                     @generate="onGenerateInstructions"
                 />
-                <div v-if="!sceneActive" class="text-caption text-muted text-right">Requires an active scene to generate.</div>
+                <div v-if="!sceneActive" class="text-body-small text-muted text-right">Requires an active scene to generate.</div>
             </v-col>
             <v-col cols="12" sm="4" xxl="7">
                 <v-checkbox 
@@ -55,21 +55,30 @@
             </v-col>
         </v-row>
         
+        <WritingStyleDecisionChecks
+            :key="template.uid || 'new'"
+            :model-value="template.decision_checks"
+            :defaults="defaultDecisionChecks"
+            :default-threshold="defaultDecisionCheckThreshold"
+            @update:model-value="updateDecisionChecks"
+            @editing="checksEditing = $event"
+        />
+
         <v-card class="mt-4">
             <v-card-title>
                 <v-icon size="small" class="mr-2">mdi-text-box-search</v-icon>
                 Phrase Detection
-                <v-chip label size="x-small" color="grey" class="ml-2">
+                <v-chip label size="x-small" color="muted" class="ml-2">
                     {{ phrasesCount }} phrases
                 </v-chip>
             </v-card-title>
             <v-card-text>
-                <p class="text-caption mb-4">
+                <p class="text-body-small mb-4">
                     Add phrases that should be detected in the generated content. 
                     When these phrases are found, the AI may apply the specified instructions.
                 </p>
 
-                <v-alert v-if="hasAnyWithSemanticSimilarity" class="text-caption mb-4 text-muted" variant="text" icon="mdi-information-outline">
+                <v-alert v-if="hasAnyWithSemanticSimilarity" class="text-body-small mb-4 text-muted" variant="text" icon="mdi-information-outline">
                     <p class="text-uppercase">
                         <strong class="text-warning">Some phrases are using semantic similarity.</strong> 
                     </p>
@@ -161,7 +170,7 @@
                         </tr>
                     </tbody>
                 </v-table>
-                <v-alert v-else type="info" color="grey" variant="text" class="mt-2 mb-2">
+                <v-alert v-else icon="mdi-information" variant="text" class="mt-2 mb-2 text-medium-emphasis">
                     No phrases defined. Add a phrase below.
                 </v-alert>
                 
@@ -200,13 +209,20 @@
 
 <script>
 import ContextualGenerate from './ContextualGenerate.vue';
+import WritingStyleDecisionChecks from './WritingStyleDecisionChecks.vue';
 
 export default {
     name: 'TemplateWritingStyle',
     components: {
         ContextualGenerate,
+        WritingStyleDecisionChecks,
     },
     props: {
+        defaultDecisionChecks: {
+            type: Array,
+            default: () => []
+        },
+        defaultDecisionCheckThreshold: Number,
         immutableTemplate: {
             type: Object,
             required: true
@@ -217,6 +233,10 @@ export default {
         }
     },
     computed: {
+        dirty: {
+            get() { return this.fieldsDirty || this.checksEditing; },
+            set(value) { this.fieldsDirty = value; }
+        },
         phrasesCount() {
             return this.template.phrases ? this.template.phrases.length : 0;
         },
@@ -234,8 +254,10 @@ export default {
     watch: {
         immutableTemplate: {
             handler(newVal) {
+                if (newVal.uid !== this.template.uid) this.checksEditing = false;
                 this.template = {
                     ...newVal,
+                    decision_checks: JSON.parse(JSON.stringify(newVal.decision_checks || [])),
                     phrases: Array.isArray(newVal.phrases) ? [...newVal.phrases].map(phrase => ({
                         ...phrase,
                         active: phrase.active === undefined ? true : phrase.active
@@ -253,9 +275,11 @@ export default {
                 description: '',
                 instructions: '',
                 phrases: [],
+                decision_checks: [],
                 favorite: false
             },
-            dirty: false,
+            fieldsDirty: false,
+            checksEditing: false,
             newPhrase: '',
             newInstructions: '',
             newClassification: 'unwanted',
@@ -279,6 +303,10 @@ export default {
     },
     emits: ['update'],
     methods: {
+        updateDecisionChecks(checks) {
+            this.template.decision_checks = checks;
+            this.save();
+        },
         addPhrase() {
             if (!this.newPhrase || !this.newInstructions) return;
             
@@ -314,6 +342,10 @@ export default {
             this.save();
         },
         startEdit(index) {
+            // an open row edit writes back by index - a push that rebuilds the
+            // array under it would land the write on a different phrase, so the
+            // parent must not adopt one while a row is open
+            this.dirty = true;
             this.editIndex = index;
             this.editPhrase = {
                 phrase: this.template.phrases[index].phrase,
@@ -340,6 +372,7 @@ export default {
         },
         cancelEdit() {
             this.editIndex = -1;
+            this.dirty = false;
         },
         onGenerateInstructions(content) {
             this.template.instructions = content;
@@ -354,6 +387,7 @@ export default {
     created() {
         this.template = {
             ...this.immutableTemplate,
+            decision_checks: JSON.parse(JSON.stringify(this.immutableTemplate.decision_checks || [])),
             phrases: this.immutableTemplate.phrases ? [...this.immutableTemplate.phrases].map(phrase => ({
                 ...phrase,
                 active: phrase.active === undefined ? true : phrase.active
@@ -376,4 +410,4 @@ export default {
 .td-active {
     width: 80px;
 }
-</style> 
+</style>

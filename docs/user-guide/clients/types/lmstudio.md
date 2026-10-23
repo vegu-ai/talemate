@@ -5,14 +5,14 @@
     If you do not have a LMStudio instance running, you can follow their setup instructions 
     in their [website](https://lmstudio.ai/).
 
-If you want to add an LMStudio client, change the `Client Type` to `LMStudio`.
+If you want to add an LMStudio client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `LMStudio` from the client type menu.
 
-![Client LMStudio](/talemate/img/0.26.0/client-lmstudio.png)
+![Client LMStudio](/talemate/img/0.40.0/client-lmstudio.png)
 
 !!! note "Should work out of the box with a local LMStudio instance"
     The default values should work with a local LMStudio instance if you have followed their setup instructions and are running the server on the default port.
 
-Click `Save` to add the client.
+Click `Save` in the toolbar to add the client.
 
 ### Ready to use
 
@@ -36,7 +36,7 @@ If the LMStudio instance requires an API key, you can set it here.
 
 ##### Context Length
 
-The number of tokens to use as context when generating text. Defaults to `8192`.
+The number of tokens to use as context when generating text. Defaults to `16384`.
 
 ### Common issues
 
@@ -46,7 +46,7 @@ Make sure the [correct prompt template is assigned](/talemate/user-guide/clients
 
 #### Could not connect
 
-![Client lmstudio could not connect](/talemate/img/0.26.0/client-lmstudio-could-not-connect.png)
+![Client lmstudio could not connect](/talemate/img/0.40.0/client-lmstudio-could-not-connect.png)
 
 This means that either your LMStudio instance or server is not running, the url is incorrect, or the connection is somehow blocked. (For example, by a firewall)
 

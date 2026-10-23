@@ -11,8 +11,8 @@
             @click.stop><v-icon>{{ icon }}</v-icon></v-btn>
         </template>
         <v-list density="compact">
-            <v-list-item prepend-icon="mdi-history" @click="openTimeline">
-                <v-list-item-title>Timeline</v-list-item-title>
+            <v-list-item prepend-icon="mdi-source-branch" @click="openRevisions">
+                <v-list-item-title>Scene revisions</v-list-item-title>
             </v-list-item>
             <v-divider></v-divider>
             <v-list-subheader>Remove</v-list-subheader>
@@ -46,11 +46,11 @@ export default {
             default: 'small',
         },
     },
-    inject: ['getWebsocket', 'openSceneTimeline'],
+    inject: ['getWebsocket', 'openSceneRevisions'],
     emits: ['delete'],
     methods: {
-        openTimeline() {
-            this.openSceneTimeline({
+        openRevisions() {
+            this.openSceneRevisions({
                 scenePath: this.scenePath,
                 sceneName: this.sceneName,
             });

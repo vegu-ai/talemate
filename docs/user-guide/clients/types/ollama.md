@@ -1,16 +1,16 @@
 # Ollama Client
 
-If you want to add an Ollama client, change the `Client Type` to `Ollama`.
+If you want to add an Ollama client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `Ollama` from the client type menu.
 
-![Client Ollama](/talemate/img/0.31.0/client-ollama.png)
+![Client Ollama](/talemate/img/0.40.0/client-ollama.png)
 
-Click `Save` to add the client.
+Click `Save` in the toolbar to add the client.
 
 ### Ollama Server
 
 The client should appear in the clients list. Talemate will ping the Ollama server to verify that it is running. If the server is not reachable you will see a warning.
 
-![Client ollama offline](/talemate/img/0.31.0/client-ollama-offline.png)
+![Client ollama offline](/talemate/img/0.40.0/client-ollama-offline.png)
 
 Make sure that the Ollama server is running (by default at `http://localhost:11434`) and that the model you want to use has been pulled.
 
@@ -18,11 +18,11 @@ It may also show a yellow dot next to it, saying that there is no model loaded.
 
 ![Client ollama no model](/talemate/img/0.31.0/client-ollama-no-model.png)
 
-Open the client settings by clicking the :material-cogs: icon, to select a model.
+Click the :material-cogs: icon on the client to go to its editor on the Clients settings page, and select a model.
 
-![Ollama settings](/talemate/img/0.31.0/client-ollama-select-model.png)
+![Ollama settings](/talemate/img/0.40.0/client-ollama-select-model.png)
 
-Click save and the client should have a green dot next to it, indicating that it is ready to go.
+Click `Save` and the client should have a green dot next to it, indicating that it is ready to go.
 
 ![Client ollama ready](/talemate/img/0.31.0/client-ollama-ready.png)
 

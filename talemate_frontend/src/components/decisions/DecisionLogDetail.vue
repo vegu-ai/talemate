@@ -1,0 +1,294 @@
+<template>
+    <div :data-decision-id="row.id">
+        <v-sheet rounded="lg" border class="pa-4 mb-5 decision-summary">
+            <div class="text-label-small text-muted mb-2">OUTCOME</div>
+            <div class="d-flex align-center flex-wrap ga-3">
+                <v-chip size="small" variant="tonal" :color="outcome.color" :prepend-icon="outcome.icon">{{ outcome.label }}</v-chip>
+                <span class="text-body-medium font-weight-medium">{{ result }}</span>
+            </div>
+        </v-sheet>
+        <section class="decision-result mb-5" aria-label="What happened">
+            <div class="text-body-medium font-weight-medium mb-1">What happened</div>
+            <div v-if="request?.failure" class="text-body-small text-error">
+                {{ request.dispatched ? 'Request failed' : 'Request not sent' }} — {{ reason(request.failure) }}.
+            </div>
+            <div v-if="request?.policy_failure" class="text-body-small text-error">
+                The feature could not use the answer — {{ reason(request.policy_failure) }}.
+            </div>
+            <div v-for="(outcome, index) in outcomes" :key="index" class="text-body-small">
+                {{ describe(outcome) }}
+            </div>
+            <div v-for="action in row.actions" :key="action.id" class="text-body-small">
+                {{ describeAction(action) }}
+                <v-chip v-if="action.unassociated" size="x-small" variant="tonal" color="muted" label class="ml-1">
+                    not linked to this request
+                </v-chip>
+            </div>
+            <div v-if="!row.actions.length && !outcomes.length" class="text-body-small">
+                {{ emptyOutcome }}
+            </div>
+            <div v-if="row.actions.length" class="text-body-small text-muted mt-1">
+                A completed action does not mean the text changed.
+            </div>
+        </section>
+
+        <section v-if="request" class="decision-context mb-5" aria-label="Context sent" data-testid="decision-context">
+            <div class="text-body-medium font-weight-medium mb-2">Context sent</div>
+            <div v-if="!tokens" class="d-flex align-center ga-2 text-body-small text-muted">
+                <v-icon size="16">mdi-counter</v-icon>
+                <span>No token count. The request stopped before it was prepared for sending.</span>
+            </div>
+            <template v-else>
+                <div class="decision-context-stats">
+                    <v-sheet border rounded="lg" class="decision-stat" data-testid="decision-tokens-sent">
+                        <div class="text-label-small text-muted">{{ tokens.dispatched ? 'SENT' : 'NOT SENT' }}</div>
+                        <div class="text-body-large font-weight-medium decision-number">{{ tokens.total.toLocaleString() }}</div>
+                        <div class="text-body-small text-muted">{{ sentCaption }}</div>
+                    </v-sheet>
+                    <v-sheet border rounded="lg" class="decision-stat" data-testid="decision-tokens-budget">
+                        <div class="text-label-small text-muted">STATE BUDGET</div>
+                        <div class="text-body-large font-weight-medium decision-number">{{ budgetValue }}</div>
+                        <div class="text-body-small text-muted">{{ budgetCaption }}</div>
+                    </v-sheet>
+                    <v-sheet border rounded="lg" class="decision-stat" data-testid="decision-tokens-split">
+                        <div class="text-label-small text-muted">STATE · QUESTIONS</div>
+                        <div class="text-body-large font-weight-medium decision-number">{{ tokens.state.toLocaleString() }} · {{ tokens.questions.toLocaleString() }}</div>
+                        <div class="text-body-small text-muted">{{ questionCount }} question{{ questionCount === 1 ? '' : 's' }}</div>
+                    </v-sheet>
+                    <v-sheet border rounded="lg" class="decision-stat" data-testid="decision-tokens-parts">
+                        <div class="text-label-small text-muted">PARTS</div>
+                        <div class="text-body-large font-weight-medium decision-number">{{ tokens.parts }}</div>
+                        <div class="text-body-small text-muted">{{ tokens.parts === 1 ? 'one request' : 'each carries the state' }}</div>
+                    </v-sheet>
+                </div>
+                <div v-if="tokens.budget" class="mt-3">
+                    <div class="decision-meter" role="meter" aria-label="State size against its budget"
+                        :aria-valuenow="tokens.state" aria-valuemin="0" :aria-valuemax="tokens.budget"
+                        :aria-valuetext="`${tokens.state.toLocaleString()} of ${tokens.budget.toLocaleString()} state tokens`">
+                        <span class="decision-meter-fill bg-primary" :style="{ width: `${Math.min(100, tokens.state / tokens.budget * 100)}%` }"></span>
+                    </div>
+                    <div class="text-body-small text-muted">The state uses {{ budgetShare }} of its budget.</div>
+                </div>
+            </template>
+        </section>
+
+        <v-card v-for="group in groups" :key="group.id" variant="outlined" rounded="lg" class="decision-check mb-4">
+            <div class="pa-4">
+            <div class="d-flex align-center ga-2 flex-wrap mb-2">
+                <v-icon size="18" color="primary">mdi-text-box-check-outline</v-icon>
+                <h3 class="text-body-medium font-weight-medium">{{ group.label }}</h3>
+                <v-chip v-if="group.scope !== 'all'" size="x-small" variant="tonal" label :prepend-icon="scope(group).icon">{{ scope(group).title }}</v-chip>
+            </div>
+            <p class="text-body-small decision-instruction mb-2">{{ group.instructions }}</p>
+            </div>
+            <div v-for="item in group.questions" :key="item.id" class="decision-question"
+                :class="{ 'decision-question-flagged': item.flagged }" :data-question-id="item.id">
+                <div class="decision-passage">
+                    <div class="text-body-small text-muted">{{ item.presentation?.passage_id || questionName(item.id) }}</div>
+                    <p v-if="item.presentation" class="text-body-medium decision-passage-text">{{ item.presentation.passage_text }}</p>
+                </div>
+                <div class="decision-answer text-body-small">
+                    <div class="font-weight-medium">
+                        <template v-if="item.answer?.type === 'noul'">Probability {{ probability(item.answer.p_true, item.presentation?.threshold) }}</template>
+                        <template v-else-if="item.answer">{{ answerValue(item.answer) }}</template>
+                        <template v-else>{{ request.status === 'pending' ? 'Pending' : 'No answer returned' }}</template>
+                    </div>
+                    <div v-if="item.presentation" class="text-muted">Threshold {{ probability(item.presentation.threshold, item.answer?.p_true) }}</div>
+                    <div v-if="item.presentation && item.answer?.type === 'noul'" class="decision-meter mt-2"
+                        role="meter" aria-label="Probability" :aria-valuenow="item.answer.p_true" aria-valuemin="0" aria-valuemax="1"
+                        :aria-valuetext="`${probability(item.answer.p_true, item.presentation.threshold)}, threshold ${probability(item.presentation.threshold, item.answer.p_true)}, ${item.flagged ? 'flagged' : item.flagged === false ? 'not flagged' : 'verdict not recorded'}`">
+                        <span class="decision-meter-fill" :class="item.flagged ? 'bg-warning' : 'bg-primary'" :style="{ width: `${item.answer.p_true * 100}%` }"></span>
+                        <span class="decision-meter-threshold" :style="{ left: `${item.presentation.threshold * 100}%` }"></span>
+                    </div>
+                    <v-chip v-if="item.flagged !== null" size="x-small" variant="tonal"
+                        :color="item.flagged ? 'warning' : 'muted'" label class="mt-1">
+                        {{ item.flagged ? 'Flagged' : 'Not flagged' }}
+                    </v-chip>
+                </div>
+            </div>
+            <div v-if="group.skipped.length" class="decision-skipped d-flex align-center ga-2 text-body-small text-muted" data-testid="decision-skipped">
+                <v-icon size="16">mdi-debug-step-over</v-icon>
+                <span>Skipped {{ group.skipped.join(', ') }}: no {{ scope(group).part }} in {{ group.skipped.length === 1 ? 'this passage' : 'these passages' }}.</span>
+            </div>
+        </v-card>
+        <v-alert v-if="!groups.length && !styleNote" variant="tonal" color="muted" icon="mdi-text-box-outline" class="mb-4">The feature asked no questions this time.</v-alert>
+
+        <v-sheet border rounded="lg">
+        <v-btn block variant="text" size="small" :aria-expanded="rawOpen" data-testid="decision-raw-toggle"
+            :prepend-icon="rawOpen ? 'mdi-chevron-up' : 'mdi-code-json'" @click="rawOpen = !rawOpen">
+            {{ rawOpen ? 'Hide technical details' : 'Show technical details' }}
+        </v-btn>
+        <div v-if="rawOpen" class="pa-4">
+            <template v-if="request">
+                <div class="text-body-medium font-weight-medium">Request</div>
+                <pre class="decision-json text-body-small">{{ pretty({ label: request.label, state: request.state, questions: request.questions, presentation: request.presentation, failure: request.failure, policy_failure: request.policy_failure }) }}</pre>
+                <div class="text-body-medium font-weight-medium mt-3">Answers</div>
+                <pre class="decision-json text-body-small">{{ pretty(request.answers) }}</pre>
+                <div class="text-body-medium font-weight-medium mt-3">Provider response</div>
+                <pre class="decision-json text-body-small">{{ pretty(request.raw) }}</pre>
+                <div class="text-body-medium font-weight-medium mt-3">Template outcomes</div>
+                <pre class="decision-json text-body-small">{{ pretty(request.outcomes) }}</pre>
+            </template>
+            <template v-else-if="outcomes.length">
+                <div class="text-body-medium font-weight-medium">Template outcomes</div>
+                <pre class="decision-json text-body-small">{{ pretty(outcomes) }}</pre>
+            </template>
+            <div class="text-body-medium font-weight-medium mt-3">Actions</div>
+            <pre class="decision-json text-body-small">{{ pretty(row.actions) }}</pre>
+            <div class="text-body-medium font-weight-medium mt-3">Identity</div>
+            <div class="text-body-small text-muted">
+                <div v-if="request">Label {{ request.label }}</div>
+                <div>Template {{ entry.template_uid }}
+                    <v-chip v-if="entry.source_group" size="x-small" variant="text" color="muted" label data-testid="decision-source-group">{{ entry.source_group }}</v-chip>
+                </div>
+                <div v-if="request">Request {{ request.id }}</div>
+                <div>Invocation {{ request?.invocation_id || row.invocation.id }}</div>
+                <div v-if="request">{{ request.provider || 'no provider' }} · {{ request.model || 'no model' }}</div>
+                <div>{{ row.timestamp }}</div>
+            </div>
+        </div>
+        </v-sheet>
+    </div>
+</template>
+
+<script>
+import { failureReason } from '@/utils/decisionModelText';
+import { formatProbability } from '@/utils/probability';
+import { decisionCheckScope } from '@/utils/decisionCheckScope';
+import { actionSummary, answerValue, outcomeSummary, questionGroups, questionName, decisionOutcome, decisionResult, decisionTokens, rowOutcomes, writingStyleNote } from '@/utils/decisionLog';
+
+export default {
+    name: 'DecisionLogDetail',
+    props: {
+        row: { type: Object, required: true },
+    },
+    data() {
+        return { rawOpen: false };
+    },
+    computed: {
+        outcome() { return decisionOutcome(this.row); },
+        result() { return decisionResult(this.row); },
+        request() {
+            return this.row.request;
+        },
+        entry() {
+            return this.request || this.row.invocation;
+        },
+        outcomes() {
+            return rowOutcomes(this.row);
+        },
+        groups() {
+            return questionGroups(this.request, this.outcomes);
+        },
+        styleNote() {
+            return writingStyleNote(this.outcomes);
+        },
+        tokens() {
+            return decisionTokens(this.row);
+        },
+        sentCaption() {
+            const tokens = this.tokens;
+            if (!tokens.reportedByProvider) return 'tokens, estimated by Talemate';
+            return `tokens, counted by the provider · estimate ${tokens.sent.toLocaleString()}`;
+        },
+        budgetValue() {
+            const tokens = this.tokens;
+            if (!tokens.sized) return 'Fixed';
+            return tokens.budget == null ? 'No limit' : tokens.budget.toLocaleString();
+        },
+        budgetCaption() {
+            const tokens = this.tokens;
+            if (!tokens.sized) return 'the caller sent its state as given';
+            return tokens.budget == null ? 'the provider sets no input limit' : 'tokens the state could take';
+        },
+        budgetShare() {
+            return `${Math.round(this.tokens.state / this.tokens.budget * 100)}%`;
+        },
+        questionCount() {
+            return Object.keys(this.request.questions || {}).length;
+        },
+        emptyOutcome() {
+            if (this.row.status === 'active') return 'Waiting for the result.';
+            if (this.row.status === 'cancelled') return 'Cancelled.';
+            if (this.row.status === 'failed') return 'No action recorded.';
+            return 'No action; reason unspecified.';
+        },
+    },
+    methods: {
+        pretty(value) {
+            return JSON.stringify(value, null, 2);
+        },
+        probability: formatProbability,
+        answerValue,
+        describe: outcomeSummary,
+        describeAction: actionSummary,
+        questionName,
+        scope(group) {
+            return decisionCheckScope(group.scope);
+        },
+        reason(failure) {
+            return failureReason(failure.code);
+        },
+    },
+}
+</script>
+
+<style scoped>
+.decision-passage {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.decision-result { overflow-wrap: anywhere; }
+.decision-instruction, .decision-passage-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.decision-question {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+    padding: 12px;
+    border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+    border-left: 3px solid transparent;
+}
+.decision-question-flagged {
+    border-left-color: rgb(var(--v-theme-warning));
+    background: rgba(var(--v-theme-warning), 0.08);
+}
+.decision-skipped {
+    padding: 10px 12px;
+    border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.decision-answer {
+    text-align: right;
+    min-width: 160px;
+}
+.decision-summary { background: rgba(var(--v-theme-primary), 0.04); }
+.decision-context-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+}
+.decision-stat { padding: 10px 12px; }
+.decision-number { font-variant-numeric: tabular-nums; }
+.decision-check { border-color: rgba(var(--v-border-color), var(--v-border-opacity)); }
+.decision-meter { position: relative; height: 6px; margin-bottom: 8px; border-radius: 3px; background: rgba(var(--v-theme-on-surface), 0.12); }
+.decision-meter-fill { display: block; height: 100%; border-radius: inherit; }
+.decision-meter-threshold { position: absolute; top: -3px; bottom: -3px; width: 2px; transform: translateX(-1px); background: rgb(var(--v-theme-on-surface)); }
+.decision-json {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-height: 320px;
+    overflow: auto;
+    margin: 4px 0;
+}
+@media (max-width: 600px) {
+    .decision-question {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 8px;
+    }
+    .decision-answer {
+        text-align: left;
+    }
+}
+</style>

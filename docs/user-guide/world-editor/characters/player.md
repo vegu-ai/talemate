@@ -1,6 +1,6 @@
 # Make or Unmark a Player Character
 
-Every scene can have one character that is controlled by you, the player. All other characters are controlled by the AI. From the character editor you can change which character is the player at any time, without having to recreate anyone.
+Every scene can have one character that is controlled by you, the player. All other characters are controlled by the AI. From the character editor you can change which character is the player whenever no agent is generating, without having to recreate anyone.
 
 A character's current role is shown next to their name in the character list:
 
@@ -21,6 +21,8 @@ This does two things at once:
 If the character you promote is currently [deactivated](/talemate/user-guide/world-editor/characters/deactivate), they are automatically activated and brought into the scene as the player.
 
 Only one character can be the player at a time, so there is never any need to unmark the previous player yourself.
+
+The button is unavailable while an agent is generating, for example while a character is writing their next line. Wait for the generation to finish, then try again. This keeps a line that is still being written from counting as your turn.
 
 ## Unmark the player character
 

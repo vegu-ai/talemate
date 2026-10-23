@@ -33,9 +33,11 @@ import talemate.util as util
 from talemate.context import ActiveScene
 from talemate.events import HistoryEvent
 from talemate.history import ArchiveEntry
+from talemate.knowledge.timeline import message_times
 from talemate.scene_message import (
     CharacterMessage,
     DirectorMessage,
+    SceneBackdropMessage,
     TimePassageMessage,
 )
 
@@ -62,7 +64,7 @@ def make_archived(
     text: str = "summary",
     start: int | None = None,
     end: int | None = None,
-    ts: str = "PT0S",
+    ts: int = 0,
     entry_id: str | None = None,
 ) -> dict:
     e = ArchiveEntry(text=text, ts=ts, start=start, end=end)
@@ -129,6 +131,20 @@ class TestActionRegistration:
         assert summarizer.threshold == 256
         assert summarizer.archive_threshold == 256
 
+    def test_scene_history_numbers_are_whole(self, summarizer_scene):
+        _, summarizer = summarizer_scene
+        config = summarizer.actions["manage_scene_history"].config
+        config["dialogue_ratio"].value = 50.5
+        config["summary_detail_ratio"].value = 60.5
+        config["best_fit_min_dialogue"].value = 10.5
+        config["best_fit_max_dialogue"].value = 100.5
+        config["max_budget"].value = 8192.5
+        assert summarizer.scene_history_dialogue_ratio == 50
+        assert summarizer.scene_history_summary_detail_ratio == 60
+        assert summarizer.scene_history_best_fit_min_dialogue == 10
+        assert summarizer.scene_history_best_fit_max_dialogue == 100
+        assert summarizer.scene_history_max_budget == 8192
+
     def test_archive_method_property(self, summarizer_scene):
         _, summarizer = summarizer_scene
         assert summarizer.archive_method == "balanced"
@@ -179,6 +195,185 @@ class TestEstimatedEntryCount:
         assert summarizer.estimated_entry_count == 2
 
 
+class TestArchiveStatus:
+    """Status and archive selection share one span rule."""
+
+    def _set_threshold(self, summarizer, value):
+        summarizer.actions["archive"].config["threshold"].value = value
+
+    def test_disabled_archive_reports_off(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100)
+        # the shipped action cannot be disabled; the branch mirrors the first
+        # check in build_archive for the day the declaration changes
+        summarizer.actions["archive"].can_be_disabled = True
+        summarizer.actions["archive"].enabled = False
+        scene.history = [make_character_message("a" * 60)]
+
+        assert summarizer.archive_status() == {
+            "enabled": False,
+            "threshold": 100,
+            "pending_tokens": None,
+            "remaining_tokens": None,
+            "due": False,
+            "due_reason": None,
+        }
+
+    def test_newest_message_is_not_pending(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100)
+        # "Alice: <10 x>" is 17 chars = 17 tokens under the char counter
+        scene.history = [
+            make_character_message("x" * 10),
+            make_character_message("y" * 10),
+            make_character_message("z" * 10),
+        ]
+
+        status = summarizer.archive_status()
+        assert status["enabled"] is True
+        assert status["due"] is False
+        assert status["pending_tokens"] == 34
+        # the cutoff is strictly greater than the threshold
+        assert status["remaining_tokens"] == 67
+
+    def test_fractional_threshold_counts_as_whole_tokens(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100.5)
+        scene.history = [
+            make_character_message("x" * 10),
+            make_character_message("y" * 10),
+            make_character_message("z" * 10),
+        ]
+
+        status = summarizer.archive_status()
+        assert summarizer.threshold == 100
+        assert status["threshold"] == 100
+        assert status["pending_tokens"] == 34
+        assert status["remaining_tokens"] == 67
+
+    @pytest.mark.parametrize(
+        ("threshold", "due", "remaining"),
+        [
+            (35, False, 2),
+            (34, False, 1),
+            (33, True, 0),
+        ],
+    )
+    def test_due_follows_the_collector_cutoff_at_the_boundary(
+        self, summarizer_scene, threshold, due, remaining
+    ):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, threshold)
+        # two counted messages of 17 tokens each; the third is the newest
+        scene.history = [
+            make_character_message("x" * 10),
+            make_character_message("y" * 10),
+            make_character_message("z" * 10),
+        ]
+
+        span = summarizer.collect_archive_span(scene)
+        status = summarizer.archive_status()
+        assert (span.end is not None) is due
+        assert status["pending_tokens"] == 34
+        assert status["due"] is due
+        assert status["due_reason"] == ("threshold" if due else None)
+        assert status["remaining_tokens"] == remaining
+
+    def test_a_backdrop_entry_at_the_end_keeps_the_newest_reply_unarchived(
+        self, summarizer_scene
+    ):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 35)
+        scene.history = [
+            make_character_message("x" * 10),
+            make_character_message("y" * 10),
+            make_character_message("z" * 10),
+            SceneBackdropMessage(backdrop="harbour-night"),
+        ]
+
+        span = summarizer.collect_archive_span(scene)
+        assert span.end is None
+        assert summarizer.archive_status()["pending_tokens"] == 34
+
+    def test_time_passage_cut_reports_zero_remaining(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100000)
+        scene.history = [
+            make_character_message("first"),
+            make_character_message("second"),
+            TimePassageMessage(ts=300, message="Five minutes pass"),
+            make_character_message("trailing"),
+            make_character_message("newest"),
+        ]
+
+        span = summarizer.collect_archive_span(scene)
+        assert span.time_passage_termination is True
+        assert span.end == 1
+        status = summarizer.archive_status()
+        assert status["due"] is True
+        assert status["due_reason"] == "time_passage"
+        # the cut lands below the threshold
+        assert status["pending_tokens"] == 25
+        assert status["remaining_tokens"] == 0
+
+    def test_presence_change_cut_names_its_reason(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100000)
+        with_alice = make_character_message("first")
+        with_alice.present = ["Alice"]
+        with_bob = make_character_message("second")
+        with_bob.present = ["Bob"]
+        scene.history = [with_alice, with_bob, make_character_message("newest")]
+
+        span = summarizer.collect_archive_span(scene)
+        assert span.presence_termination is True
+        status = summarizer.archive_status()
+        assert status["due"] is True
+        assert status["due_reason"] == "presence"
+        assert status["pending_tokens"] == len(str(with_alice))
+
+    def test_skipped_message_types_do_not_count(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100)
+        scene.history = [
+            DirectorMessage(message="cue!", source="ai"),
+            make_character_message("x" * 10),
+            make_character_message("newest"),
+        ]
+
+        span = summarizer.collect_archive_span(scene)
+        assert span.start == 1
+        assert span.tokens == 17
+        assert summarizer.archive_status()["pending_tokens"] == 17
+
+    def test_resumes_after_the_last_archive_end(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100)
+        scene.archived_history = [make_archived(text="prior", start=0, end=1, ts=60)]
+        scene.history = [
+            make_character_message("a" * 10),
+            make_character_message("b" * 10),
+            make_character_message("c" * 10),
+            make_character_message("newest"),
+        ]
+
+        span = summarizer.collect_archive_span(scene)
+        assert span.start == 2
+        assert summarizer.archive_status()["pending_tokens"] == 17
+
+    def test_static_archive_entry_starts_at_zero(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100)
+        scene.archived_history = [make_archived(text="backstory")]
+        scene.history = [
+            make_character_message("a" * 10),
+            make_character_message("newest"),
+        ]
+
+        assert summarizer.collect_archive_span(scene).start == 0
+        assert summarizer.archive_status()["pending_tokens"] == 17
+
+
 # ---------------------------------------------------------------------------
 # clean_result
 # ---------------------------------------------------------------------------
@@ -214,7 +409,7 @@ class TestPreviousSummaries:
         scene, summarizer = summarizer_scene
         scene.archived_history = [make_archived(entry_id="aa", start=0, end=5)]
 
-        ghost = ArchiveEntry(text="ghost", ts="PT1M", start=0, end=1)
+        ghost = ArchiveEntry(text="ghost", ts=60, start=0, end=1)
         ghost.id = "does-not-exist"
         with pytest.raises(ValueError):
             await summarizer.previous_summaries(ghost)
@@ -222,7 +417,7 @@ class TestPreviousSummaries:
     async def test_returns_empty_when_include_previous_zero(self, summarizer_scene):
         scene, summarizer = summarizer_scene
         summarizer.actions["archive"].config["include_previous"].value = 0
-        e = ArchiveEntry(text="e", ts="PT1M", start=0, end=5)
+        e = ArchiveEntry(text="e", ts=60, start=0, end=5)
         d = e.model_dump(exclude_none=True)
         scene.archived_history = [d]
         # Re-create entry that matches the dict id so we can look it up.
@@ -231,30 +426,78 @@ class TestPreviousSummaries:
         result = await summarizer.previous_summaries(target)
         assert result == []
 
-    async def test_non_layered_path_reads_text_from_dict(self, summarizer_scene):
-        """The non-layered branch reads `text` via dict subscript because
-        `archived_history` stores dicts (via `model_dump`), not
-        `ArchiveEntry` instances."""
+    @staticmethod
+    def _target(scene, index):
+        entry = scene.archived_history[index]
+        target = ArchiveEntry(**entry)
+        target.id = entry["id"]
+        return target
+
+    @pytest.mark.parametrize(
+        "index, expected",
+        [
+            (0, []),
+            (1, ["a0"]),
+            (2, ["a0", "a1"]),
+            (3, ["a1", "a2"]),
+            (5, ["a3", "a4"]),
+        ],
+    )
+    async def test_the_entries_directly_before(self, summarizer_scene, index, expected):
+        """Up to `include_previous` entries directly before the target, in
+        order; the first entry has none (#645)."""
         scene, summarizer = summarizer_scene
         summarizer.actions["archive"].config["include_previous"].value = 2
         summarizer.actions["layered_history"].enabled = False
-
-        # Three prior summaries, dict-shaped as production stores them.
         scene.archived_history = [
-            make_archived(text="oldest", start=0, end=5, entry_id="a1"),
-            make_archived(text="middle", start=6, end=10, entry_id="a2"),
-            make_archived(text="recent", start=11, end=15, entry_id="a3"),
-            make_archived(text="target", start=16, end=20, entry_id="target"),
+            make_archived(text=f"a{i}", start=i, end=i, entry_id=f"a{i}")
+            for i in range(6)
         ]
 
-        target_dict = scene.archived_history[-1]
-        target = ArchiveEntry(**target_dict)
-        target.id = target_dict["id"]
+        result = await summarizer.previous_summaries(self._target(scene, index))
 
-        result = await summarizer.previous_summaries(target)
-        # entry_index=3, end=2; slice [end - num_previous : end] = [0:2]
-        # → text from indices 0 and 1.
-        assert result == ["oldest", "middle"]
+        assert result == expected
+
+    @pytest.mark.parametrize(
+        "index, expected",
+        [
+            (0, []),
+            (1, ["a0"]),
+            (2, ["L0-1"]),
+            (3, ["L0-1", "a2"]),
+            (4, ["L0-1", "L2-3"]),
+            (5, ["L2-3", "a4"]),
+        ],
+    )
+    async def test_the_entries_directly_before_with_layered_history(
+        self, summarizer_scene, index, expected
+    ):
+        scene, summarizer = summarizer_scene
+        summarizer.actions["archive"].config["include_previous"].value = 2
+        summarizer.actions["layered_history"].enabled = True
+        scene.history = [make_character_message(f"m{i}") for i in range(6)]
+        scene.archived_history = [
+            make_archived(text=f"a{i}", start=i, end=i, entry_id=f"a{i}")
+            for i in range(6)
+        ]
+        scene.layered_history = [
+            [
+                {
+                    "id": f"l{start}",
+                    "text": f"L{start}-{start + 1}",
+                    "start": start,
+                    "end": start + 1,
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 0,
+                }
+                for start in (0, 2)
+            ]
+        ]
+
+        result = await summarizer.previous_summaries(self._target(scene, index))
+
+        assert result == expected
 
     async def test_layered_history_path_returns_compiled_summaries(
         self, summarizer_scene
@@ -273,9 +516,9 @@ class TestPreviousSummaries:
                     "text": "L0-A",
                     "start": 0,
                     "end": 0,
-                    "ts": "PT0S",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT0S",
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 0,
                     "id": "l0a",
                 }
             ]
@@ -355,14 +598,17 @@ class TestBuildArchive:
             make_character_message("first"),
             make_character_message("second"),
             make_character_message("third"),
-            TimePassageMessage(ts="PT5M", message="Five minutes pass"),
+            TimePassageMessage(ts=300, message="Five minutes pass"),
             make_character_message("post-passage"),
             make_character_message("trailing"),
         ]
+        scene.ts = 300
 
         called = {}
 
-        async def stub_summarize(text, extra_context=None, generation_options=None):
+        async def stub_summarize(
+            text, extra_context=None, generation_options=None, **_
+        ):
             called["text"] = text
             called["extra_context"] = extra_context
             return "SUMMARIZED"
@@ -387,8 +633,55 @@ class TestBuildArchive:
         assert entry["text"] == "SUMMARIZED"
         assert entry["start"] == 0
         assert entry["end"] == 2
-        # Time passage 5M -> scene timestamp updated to "PT5M".
-        assert scene.ts == "PT5M"
+        # the passage ends the span: the lines come before it
+        assert entry["ts"] == 0
+        assert scene.ts == 300
+
+    async def test_a_passage_that_ends_a_span_counts_once(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        summarizer.actions["archive"].config["threshold"].value = 100000
+        day, hour = 86400, 3600
+        messages = [
+            make_character_message("one"),
+            make_character_message("two"),
+            make_character_message("three"),
+            TimePassageMessage(ts=2 * day, message="Two days pass"),
+            make_character_message("four"),
+            make_character_message("five"),
+            make_character_message("six"),
+            TimePassageMessage(ts=4 * hour, message="Four hours pass"),
+            make_character_message("seven"),
+            make_character_message("eight"),
+        ]
+
+        async def stub_summarize(text, **_):
+            return "SUMMARIZED"
+
+        async def stub_analyze(dialogue):
+            return ""
+
+        summarizer.summarize = stub_summarize
+        summarizer.analyze_dialoge = stub_analyze
+        scene.history = []
+        # the way push_history adds a message: a passage moves the clock
+        for message in messages:
+            scene.history.append(message)
+            if isinstance(message, TimePassageMessage):
+                scene.advance_time(message.ts)
+            await summarizer.build_archive(scene)
+            assert scene.ts == message_times(scene)[message.id]
+
+        times = message_times(scene)
+        entries = scene.archived_history
+        assert [(entry["start"], entry["end"]) for entry in entries] == [
+            (0, 2),
+            (4, 6),
+        ]
+        assert [entry["ts"] for entry in entries] == [0, 2 * day]
+        for entry in entries:
+            lines = scene.history[entry["start"] : entry["end"] + 1]
+            assert {times[line.id] for line in lines} == {entry["ts"]}
+        assert scene.ts == 2 * day + 4 * hour
 
     async def test_director_messages_skipped_at_start(self, summarizer_scene):
         scene, summarizer = summarizer_scene
@@ -398,11 +691,13 @@ class TestBuildArchive:
             DirectorMessage(message="cue!", source="ai"),
             make_character_message("first"),
             make_character_message("second"),
-            TimePassageMessage(ts="PT2M", message="Two minutes pass"),
+            TimePassageMessage(ts=120, message="Two minutes pass"),
             make_character_message("trailing"),
         ]
 
-        async def stub_summarize(text, extra_context=None, generation_options=None):
+        async def stub_summarize(
+            text, extra_context=None, generation_options=None, **_
+        ):
             return "SUMM"
 
         summarizer.summarize = stub_summarize
@@ -422,19 +717,19 @@ class TestBuildArchive:
         scene, summarizer = summarizer_scene
         summarizer.actions["archive"].config["threshold"].value = 100000
         # Existing archive ending at index 1 -> start = 2.
-        scene.archived_history = [
-            make_archived(text="prior", start=0, end=1, ts="PT1M")
-        ]
+        scene.archived_history = [make_archived(text="prior", start=0, end=1, ts=60)]
         scene.history = [
             make_character_message("a"),
             make_character_message("b"),
             make_character_message("c"),
             make_character_message("d"),
-            TimePassageMessage(ts="PT2M", message="Two minutes pass"),
+            TimePassageMessage(ts=120, message="Two minutes pass"),
             make_character_message("trailing"),
         ]
 
-        async def stub_summarize(text, extra_context=None, generation_options=None):
+        async def stub_summarize(
+            text, extra_context=None, generation_options=None, **_
+        ):
             return "NEW SUMM"
 
         summarizer.summarize = stub_summarize
@@ -451,6 +746,43 @@ class TestBuildArchive:
         assert scene.archived_history[1]["start"] == 2
         assert scene.archived_history[1]["text"] == "NEW SUMM"
 
+    async def test_null_ts_on_recent_archive_entry(self, summarizer_scene):
+        """Scenes saved before scene time became integer seconds may carry an
+        explicit null `ts` on an archive entry, which the migration keeps as
+        is. The next entry takes the time of its own lines and does not read
+        it."""
+        scene, summarizer = summarizer_scene
+        summarizer.actions["archive"].config["threshold"].value = 100000
+        prior = make_archived(text="prior", start=0, end=1, ts=0)
+        prior["ts"] = None
+        scene.archived_history = [prior]
+        scene.history = [
+            make_character_message("a"),
+            make_character_message("b"),
+            make_character_message("c"),
+            make_character_message("d"),
+            TimePassageMessage(ts=120, message="Two minutes pass"),
+            make_character_message("trailing"),
+        ]
+
+        async def stub_summarize(
+            text, extra_context=None, generation_options=None, **_
+        ):
+            return "NEW SUMM"
+
+        summarizer.summarize = stub_summarize
+
+        async def stub_analyze(dialogue):
+            return ""
+
+        summarizer.analyze_dialoge = stub_analyze
+
+        await summarizer.build_archive(scene)
+
+        assert len(scene.archived_history) == 2
+        # the passage ends the span, so the lines sit at the scene's start
+        assert scene.archived_history[1]["ts"] == 0
+
 
 # ---------------------------------------------------------------------------
 # on_push_history
@@ -462,9 +794,12 @@ class TestOnPushHistory:
         scene, summarizer = summarizer_scene
         called = {}
 
-        async def stub_build_archive(scene_arg, generation_options=None):
+        async def stub_build_archive(
+            scene_arg, generation_options=None, *, notify=False
+        ):
             called["scene"] = scene_arg
             called["generation_options"] = generation_options
+            called["notify"] = notify
 
         summarizer.build_archive = stub_build_archive
 
@@ -472,6 +807,7 @@ class TestOnPushHistory:
             scene=scene, event_type="push_history.after", messages=[]
         )
         await summarizer.on_push_history(emission)
+        assert called["notify"] is True
         assert called["scene"] is scene
         # generation_options is constructed with the scene's writing_style.
         assert called["generation_options"] is not None
@@ -691,3 +1027,7 @@ class TestSummarizeViaPromptRequest:
 
         assert "[no content.]" not in result
         assert "twenty characters" in result
+
+
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------

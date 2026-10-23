@@ -6,9 +6,7 @@
         </v-tabs>
 
         <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
-        <v-toolbar rounded="md" density="compact" color="grey-darken-4" class="pl-2 mb-1">
-
-            <RequestInput ref="requestSaveCopyName" title="Save Scene As" @continue="(name) => { saveScene(name) }" /> 
+        <v-toolbar rounded="md" density="compact" color="mutedbg" class="pl-2 mb-1">
 
             <v-menu>
                 <template v-slot:activator="{ props }">
@@ -26,8 +24,8 @@
                 </v-list>
             </v-menu>
 
-            <span v-if="!scene.saved" class="text-muted text-caption mr-1">Unsaved changes.</span>
-            <v-chip v-if="scene && scene.data != null" size="x-small" prepend-icon="mdi-file" label class="text-caption text-muted">{{ scene.data.filename }}</v-chip>
+            <span v-if="!scene.saved" class="text-muted text-body-small mr-1">Unsaved changes.</span>
+            <v-chip v-if="scene && scene.data != null" size="x-small" prepend-icon="mdi-file" label class="text-body-small text-muted">{{ scene.data.filename }}</v-chip>
             <v-spacer></v-spacer>
             <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { updateGenerationOptions(opt) }" />
         </v-toolbar>
@@ -80,6 +78,7 @@
                 @load-pin="onLoadPin"
                 @add-pin="onAddPin"
                 :generation-options="generationOptions"
+                :character-list="characterList"
                 :entries="worldEntries"
                 :states="worldStates"
                 :pins="pins"
@@ -91,11 +90,12 @@
             <v-window-item value="history">
                 <WorldStateManagerHistory ref="history" 
                 :scene="scene"
+                :character-list="characterList"
                 :generation-options="generationOptions"
                 :app-busy="appBusy"
                 :app-ready="appReady"
                 :app-config="appConfig"
-                :visible="tab === 'history'"
+                :visible="visible && tab === 'history'"
                 />
             </v-window-item>
 
@@ -145,9 +145,7 @@ import WorldStateManagerScene from './WorldStateManagerScene.vue';
 import WorldStateManagerHistory from './WorldStateManagerHistory.vue';
 import WorldStateManagerSuggestions from './WorldStateManagerSuggestions.vue';
 import GenerationOptions from './GenerationOptions.vue';
-import RequestInput from './RequestInput.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
-
 
 export default {
     name: 'WorldStateManager',
@@ -158,9 +156,9 @@ export default {
         WorldStateManagerPins,
         WorldStateManagerScene,
         WorldStateManagerHistory,
+
         WorldStateManagerSuggestions,
         GenerationOptions,
-        RequestInput,
     },
     computed: {
         characterStateReinforcementsList() {
@@ -260,6 +258,10 @@ export default {
         'selected-character',
     ],
     watch: {
+        'scene.data.id'() {
+            this.loadWritingStyleTemplate = true;
+            this.syncWritingStyle();
+        },
         visible(val) {
             if(val) {
                 // When the editor is reopened, refresh the active tab's content
@@ -346,12 +348,14 @@ export default {
     },
     inject: [
         'getWebsocket',
+        'requestSceneSave',
         'registerMessageHandler',
         'unregisterMessageHandler',
         'setWaitingForInput',
         'isInputDisabled',
         'autocompleteRequest',
         'autocompleteInfoMessage',
+        'openWorldStateManager',
     ],
     methods: {
 
@@ -359,7 +363,14 @@ export default {
             this.generationOptions = options;
         },
 
-    
+        syncWritingStyle() {
+            if (!this.loadWritingStyleTemplate || !this.templates.by_type || !this.scene?.data) {
+                return;
+            }
+            this.$refs.generationOptions?.loadWritingStyle(this.scene.data.writing_style_template);
+            this.loadWritingStyleTemplate = false;
+        },
+
         emitEditorState(tab, meta) {
 
             if(meta === undefined) {
@@ -379,6 +390,7 @@ export default {
                 tool = this.$refs.contextdb;
             } else if(tab === 'history') {
                 tool = this.$refs.history;
+
             } else if(tab === 'pins') {
                 tool = this.$refs.pins;
             } else if(tab === 'suggestions') {
@@ -404,6 +416,10 @@ export default {
         },
 
         show(tab, sub1, sub2, sub3) {
+            if (tab === 'templates') {
+                this.openWorldStateManager('templates', sub1);
+                return;
+            }
             //this.reset();
             this.requestCharacterList();
             this.requestPins();
@@ -511,15 +527,14 @@ export default {
 
         saveScene(copy) {
 
-            if(copy === true) {
-                this.$refs.requestSaveCopyName.openDialog();
-                return;
+            if(copy || !this.scene.data.filename) {
+                return this.requestSceneSave();
             }
 
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'save_scene',
-                save_as: copy ? copy : null,
+                authoring: true,
                 project_name: this.scene.data.filename ? this.scene.data.name : (this.scene.data.title || this.scene.data.name)
             }));
         },
@@ -722,12 +737,7 @@ export default {
             }
             else if (message.action == 'templates') {
                 this.templates = message.data;
-                this.$nextTick(() => {
-                    if(this.loadWritingStyleTemplate && this.scene.data && this.scene.data.writing_style_template) {
-                        this.$refs.generationOptions.loadWritingStyle(this.scene.data.writing_style_template);
-                        this.loadWritingStyleTemplate = false;
-                    }
-                });
+                this.$nextTick(() => this.syncWritingStyle());
             }
             else if(message.action === 'character_deleted') {
                 this.requestCharacterList()

@@ -10,6 +10,18 @@ There are three types of historical entries:
 
 ![History](/talemate/img/0.31.0/history.png)
 
+### Presence
+
+Every entry generated from a summary carries the characters that were active in the scene while its source messages were written. They show as chips next to the entry time. Layered entries show the union over the entries they summarize.
+
+The summarizer starts a new entry whenever the active character list changes, the same way a time passage does, so a summarized entry never mixes two known sets of present characters. An entry that contains a message without presence records unknown presence as a whole. This is the record the per-character knowledge features build on.
+
+Scenes saved before presence tracking carry no presence on their old messages, and entries built from them show no chips. Unknown presence is never guessed from who spoke: an entry without chips counts as witnessed by everyone.
+
+### Perspective refresh
+
+In Character perspectives mode, an entry containing a passage with out-of-date views shows an **Analyze perceptions** chip. Click it to refresh that passage, just as with its message action. Revisions also invalidate dependent summaries and memory documents. Standard mode has no knowledge analysis request; sending the next line settles the affected summary cleanup.
+
 ### Managing entries
 
 - **All entries** can be edited by double-clicking the text.
@@ -32,6 +44,10 @@ The text of the entry. Should be at most 1 - 2 paragraphs. Less is more. Anythin
 
 You can let the AI write the entry for you with the **:material-auto-fix: Generate** button. Hold `ctrl` (or `cmd` on macOS) while clicking to provide [instructions](/talemate/user-guide/world-editor/generation-settings/#generation-instructions). For history entries your instruction is treated as the *seed* for the entry: the AI writes the entry about the event or state you describe and expands it with consistent detail, rather than ignoring it.
 
+##### Known by
+
+Static entries have a **Known by** field for their initial visibility. Choose everyone, nobody, or selected characters. Character knowledge controls can later **Learn** or **Never Learn** an entry without changing its authored text.
+
 ##### Unit
 
 Defines the duration unit of the entry. So minutes, hours, days, weeks, months or years.
@@ -42,11 +58,13 @@ Defines the duration unit amount of the entry.
 
 So if you want to define something that happened 10 months ago (from the current moment in the scene), you would set the unit to months and the amount to 10.
 
+The scene keeps that distance. For example, you add "The war ended" 10 months ago to a new scene. After a reload, or after **Regenerate All History**, the entry still reads **10 Months ago**. When the new entry is older than every other entry, the timeline moves back to make room for it: the other entries keep their age.
+
 ![Add Static Entry](/talemate/img/0.38.0/history-add-entry.png)
 
 ## Time Passage Entries
 
-The history view displays time passage entries with editable duration fields. You can double-click a time passage entry to edit its duration (amount and unit), or delete it entirely.
+The history view displays time passage entries with editable duration and chapter title fields. You can double-click a time passage entry to edit its duration (amount and unit) and the chapter title that names it in [Replay](/talemate/user-guide/replay/#moving-around), or delete it entirely. A time passage inserted before a summarized entry can only be edited here — it sits further back than the scene view loads.
 
 For more details on managing time passages, see the [Time Passage Management](/talemate/user-guide/time-passage/) documentation.
 
@@ -56,7 +74,7 @@ The history tools menu displays layered history compression statistics for each 
 
 ## Regenerate everything
 
-It is possible to regenerate the entire history by clicking the **:material-refresh: Regenerate All History** button in the left sidebar. Static entries will remain unchanged.
+It is possible to regenerate the entire history by clicking the **:material-refresh: Regenerate All History** button in the left sidebar. Static entries will remain unchanged. The regeneration builds summaries from the selected passage versions. In Character perspectives mode, pending perception analysis remains a separate operation.
 
 ![Regenerate All History](/talemate/img/0.31.0/history-regenerate-all.png)
 

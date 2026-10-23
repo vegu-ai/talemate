@@ -34,11 +34,11 @@
         </v-toolbar>
 
         <v-list-item v-if="selectedNodeName" density="compact" class="mx-2 mt-2" border rounded>
-            <v-list-item-title class="text-caption text-primary font-weight-bold text-truncate">
+            <v-list-item-title class="text-body-small text-primary font-weight-bold text-truncate">
                 {{ selectedNodeName }}
                 <v-tooltip activator="parent" location="bottom">{{ selectedNodeName }}</v-tooltip>
             </v-list-item-title>
-            <v-list-item-subtitle class="text-caption text-muted text-truncate" style="font-size: 0.7rem !important;">
+            <v-list-item-subtitle class="text-body-small text-muted text-truncate" style="font-size: 0.7rem !important;">
                 {{ selectedNodeRegistry }}
                 <v-tooltip activator="parent" location="bottom">{{ selectedNodeRegistry }}</v-tooltip>
             </v-list-item-subtitle>
@@ -105,13 +105,13 @@
                 Create new {{ newModule.label }}</v-card-title>
             <v-card-text>
                 <v-alert v-if="newModule.nodes" density="compact" color="primary" variant="outlined" icon="mdi-graph-outline" class="mt-0 mb-4">
-                    <span class="text-caption text-muted">You are creating a new module from a selection of {{ newModule.nodes.nodes.length }} nodes.</span>
+                    <span class="text-body-small text-muted">You are creating a new module from a selection of {{ newModule.nodes.nodes.length }} nodes.</span>
                 </v-alert>
                 <v-alert v-else-if="newModule.type === 'extend'" density="compact" color="primary" variant="outlined" icon="mdi-information-outline" class="mt-0 mb-4">
-                    <span class="text-caption text-muted">You are extending from <span class="text-primary">{{ newModule.original_registry }}</span></span>
+                    <span class="text-body-small text-muted">You are extending from <span class="text-primary">{{ newModule.original_registry }}</span></span>
                 </v-alert>
                 <v-alert v-else-if="newModule.type === 'copy'" density="compact" color="primary" variant="outlined" icon="mdi-information-outline" class="mt-0 mb-4">
-                    <span class="text-caption text-muted">You are copying from <span class="text-primary">{{ newModule.original_registry }}</span></span>
+                    <span class="text-body-small text-muted">You are copying from <span class="text-primary">{{ newModule.original_registry }}</span></span>
                 </v-alert>
                 <v-form v-model="newModuleValid" @submit.prevent="createModule">
 
@@ -160,7 +160,7 @@
             </v-card-title>
             <v-card-text>
                 <v-alert density="compact" color="primary" variant="outlined" icon="mdi-information-outline" class="mt-0 mb-4">
-                    <span class="text-caption text-muted">
+                    <span class="text-body-small text-muted">
                         Promoting <span class="text-primary">{{ promoteModule.name }}</span> to a shared module, making it available to all scenes.
                     </span>
                 </v-alert>
@@ -674,10 +674,10 @@ export default {
         iconToColor(icon) {
             switch(icon) {
                 case 'mdi-console-line': return 'highlight1';
-                case 'mdi-alpha-e-circle': return 'yellow-darken-1';
-                case 'mdi-function': return 'orange-lighten-1';
-                case 'mdi-file': return 'grey';
-                case 'mdi-package-variant': return 'green-lighten-1';
+                case 'mdi-alpha-e-circle': return 'unsaved';
+                case 'mdi-function': return 'highlight6';
+                case 'mdi-file': return 'muted';
+                case 'mdi-package-variant': return 'highlight3';
                 case 'mdi-bullhorn': return 'director';
                 case 'mdi-source-branch-sync': return 'highlight6';
                 case 'mdi-web-box': return 'highlight7';
@@ -732,7 +732,6 @@ export default {
         },
 
         createModule() {
-            console.log("Creating node", this.newModule);
             this.creatingNode = true;
             this.getWebsocket().send(JSON.stringify({
                 type: 'node_editor',
@@ -830,12 +829,12 @@ export default {
 
 .module-locked-selected {
     border-width: 1px;
-    border-color: rgb(var(--v-theme-locked_node_selected));
+    border-color: rgb(var(--v-theme-module_locked_selected));
 }
 
 .module-selected {
     border-width: 1px;
-    border-color: rgb(var(--v-theme-scene_node_selected));
+    border-color: rgb(var(--v-theme-module_selected));
 }
 
 /* Reduce left indent for nested tree items */

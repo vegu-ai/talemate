@@ -44,6 +44,18 @@ class register:
         return cls
 
 
+# validation context for a template read off disk. `sanitize_data` drops a
+# template that fails to validate - and permanently, the next save of the group
+# writes the file back out without it - so a value this version cannot
+# interpret is repaired on that path instead of raised on. Nothing else passes
+# it, which keeps a bad value in an API payload an error.
+REPAIR_CONTEXT = {"repair_unknown_choices": True}
+
+
+def repairs_unknown_choices(info: pydantic.ValidationInfo) -> bool:
+    return bool((info.context or {}).get("repair_unknown_choices"))
+
+
 def name_to_id(name: str) -> str:
     return name.replace(" ", "_").lower()
 
@@ -56,7 +68,7 @@ def validate_template(
     if isinstance(v, dict):
         if v["template_type"] not in MODELS:
             raise ValueError(f"Template type {v['template_type']} is not registered")
-        return MODELS[v["template_type"]](**v)
+        return MODELS[v["template_type"]].model_validate(v, context=info.context)
     elif isinstance(v, Template):
         if v.template_type not in MODELS:
             raise ValueError(f"Template type {v.template_type} is not registered")
@@ -76,6 +88,9 @@ class Template(pydantic.BaseModel):
     instructions: str | None = None
     group: str | None = None
     favorite: bool = False
+    # ships immutable when set - only ever written by hand into a template
+    # file; the websocket save path preserves the on-disk value instead
+    locked: bool = False
     uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
     # priority: Priority = Priority.low
     # Weird behavior during yaml dump with IntEnum
@@ -142,7 +157,7 @@ class Group(pydantic.BaseModel):
         with open(path, "r") as f:
             data = yaml.safe_load(f)
             data = cls.sanitize_data(data)
-            return cls(path=path, **data)
+            return cls.model_validate({"path": path, **data}, context=REPAIR_CONTEXT)
 
     @classmethod
     def sanitize_data(cls, data: dict) -> dict:
@@ -207,6 +222,22 @@ class Group(pydantic.BaseModel):
                     template_type=template_type,
                 )
                 del data["templates"][template_id]
+                continue
+
+            # a hand edited template must not fail the whole group's load.
+            # this probe is the drop site, so it validates with the same
+            # context `load` does - otherwise a repair the model only performs
+            # on the load path would never get the chance to happen
+            try:
+                MODELS[template_type].model_validate(template, context=REPAIR_CONTEXT)
+            except pydantic.ValidationError as exc:
+                log.warning(
+                    "Template is invalid",
+                    template_id=template_id,
+                    template_type=template_type,
+                    error=str(exc),
+                )
+                del data["templates"][template_id]
 
         return data
 
@@ -215,9 +246,33 @@ class Group(pydantic.BaseModel):
         cleaned_name = self.name.replace(" ", "-").lower()
         return f"{cleaned_name}.yaml"
 
+    def derived_path(self, path: str) -> str:
+        """
+        The file this group writes to when it has no path yet, derived from
+        its name. The name is user supplied, so it must not be able to name
+        a file outside of `path`.
+        """
+
+        filename = self.filename
+
+        if "/" in filename or "\\" in filename or os.sep in filename:
+            raise ValueError(
+                f"Template group name must not contain path separators: {self.name}"
+            )
+
+        root = os.path.realpath(path)
+        target = os.path.realpath(os.path.join(root, filename))
+
+        if os.path.dirname(target) != root:
+            raise ValueError(
+                f"Template group name resolves outside of {path}: {self.name}"
+            )
+
+        return os.path.join(path, filename)
+
     def save(self, path: str = TEMPLATE_PATH):
         if not self.path:
-            self.path = os.path.join(path, self.filename)
+            self.path = self.derived_path(path)
 
         # ensure `group` is set on all templates
         for template in self.templates.values():
@@ -366,7 +421,11 @@ class Collection(pydantic.BaseModel):
 
             converted_templates = []
             for template in templates.values():
-                _template = MODELS[template_type](**template)
+                # read the way a group file is read: a choice this version
+                # does not know is repaired rather than raised on
+                _template = MODELS[template_type].model_validate(
+                    template, context=REPAIR_CONTEXT
+                )
                 _template.uid = f"{name_to_id(_template.name)}"
                 converted_templates.append(_template)
 

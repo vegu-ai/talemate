@@ -4,13 +4,15 @@
 // want scene-aware parsing should use SceneTextParser instead.
 
 import { Marked } from "marked";
+import { escapeHtmlText, sanitizeHtml } from "./htmlSanitizer.js";
 
 const renderer = new Marked({ breaks: true, gfm: true });
+renderer.use({ renderer: { html: ({ text }) => escapeHtmlText(text) } });
 
 export function parseBlock(text) {
-  return renderer.parse(text ?? "");
+  return sanitizeHtml(renderer.parse(text ?? ""));
 }
 
 export function parseInline(text) {
-  return renderer.parseInline(text ?? "");
+  return sanitizeHtml(renderer.parseInline(text ?? ""));
 }

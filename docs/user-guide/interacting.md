@@ -82,6 +82,43 @@ You can turn this off by disabling the auto progress setting, either in the game
 A set of tools to help you interact with the scenario. Find out more about the various actions in the [Scene Tools](/talemate/user-guide/scenario-tools) section of the user guide.
 
 
+## Edit and delete messages
+
+!!! info "Changed in 0.40.0"
+
+You can change the story after it happened: double-click a message to edit its text, or hover over it and click the **:material-close:** button at its top right to delete it. Both work on messages anywhere in the scene, not only the most recent one. Director notes cannot be edited, and some of them cannot be deleted either.
+
+Talemate does not rewrite what came after the change. Later messages, summaries and the world state were built from the old version of the story, and they keep what they learned from it. Say Edwin gave Mara a brass key three messages ago, and you delete that message. Mara can still mention the key in the next message, because the messages after it and the summary of that part of the story still include it.
+
+### Editing a message
+
+When you open an earlier message for editing, a notice appears under the text field:
+
+![Edit notice under a message in edit mode](/talemate/img/0.40.0/message-edit-notice.png)
+
+The notice is a reminder only. Edit the text and press `enter` to save it, or press `escape` (or click anywhere else) to cancel. The notice disappears when you leave edit mode.
+
+The most recent message in the scene history gets no notice: nothing has been built on it yet. Like the delete confirmation below, this goes by the scene history, not by the last message on screen.
+
+An earlier [time passage](/talemate/user-guide/time-passage) shows the same notice while you edit it. It has its own **Save** and **Cancel** buttons instead of the keys.
+
+### Deleting a message
+
+Talemate asks before it deletes a message. What it asks depends on where the message is in the scene history.
+
+An **earlier message** (any message before the last one in the scene history) gets a warning about what can go out of step:
+
+![Delete confirmation for an earlier message](/talemate/img/0.40.0/message-delete-earlier.png)
+
+The **most recent message** gets a short question, to catch a click by accident:
+
+![Delete confirmation for the most recent message](/talemate/img/0.40.0/message-delete-final.png)
+
+Click **Delete** to remove the message, or **Cancel** to keep it. Cancel leaves the scene exactly as it was.
+
+!!! note "The last message in the history, not the last one on screen"
+    The scene history can hold entries that the story view does not show, such as hidden director notes and tracked state updates. If such an entry comes after the last message you can see, that message is an earlier message, and you get the longer warning.
+
 ## Message revision history
 
 !!! info "New in 0.38.0"
@@ -93,6 +130,7 @@ Character and narrator messages (and context investigation results) keep a histo
 The paginator shows:
 
 - **Left / right arrows** to step between versions.
+- **Analyze perceptions** in a Character perspectives story when the selected text needs new character views. It analyzes this one passage; what was built on it stays out of sync until you choose **Repair** (see [When perspectives go out of sync](/talemate/user-guide/world-editor/knowledge#when-perspectives-go-out-of-sync)). A regenerated or continued reply is analyzed with your next line instead. **Update knowledge** retries pending memory-index work when the views are already current; sending your next line runs it automatically.
 - A **counter** (for example `2/3`) telling you which version you are viewing and how many exist in total.
 - A **tag** describing where the version you are currently looking at came from:
     - **Original** -- the message as it was first generated.
@@ -100,7 +138,17 @@ The paginator shows:
     - **Revised** -- a version that the [Editor agent](/talemate/user-guide/agents/editor) automatically rewrote.
     - **Continued** -- a version created by continuing the message (see below).
 
-The paginator only appears on the **most recent** message, and only once that message has more than one version.
+Browsing changes the active text immediately without running analysis or saving the scene. The selection is saved with your next scene save, or after **Analyze perceptions** or **Update knowledge** succeeds with auto save enabled. Until then the scene is marked unsaved. The arrows wait for the server to acknowledge each selection before the displayed text changes, so delayed replies cannot leave the counter and text on different versions. In the World Editor's History tab, the history entry that contains a changed passage shows a chip with the same label while that passage's perspectives are out of sync; click the chip to run the update from there. Selecting a regenerated or continued version is analyzed with your next line; selecting the original text again counts as an edit and waits for **Analyze perceptions** or **Repair**. Reading, scrolling, moving keyboard focus and changing tabs do not start a request.
+
+Double-clicking a message, editing its text and pressing Enter saves the edit without starting analysis. In a Character perspectives story the edited passage and what was built on it are flagged as out of sync; **Analyze perceptions** or **Repair** updates them, and the story keeps using the last perspectives until then. Unchanged edits and canceled edits require no new analysis.
+
+Your submitted character or narrator line appears immediately. The next response first analyzes new passages. If that fails or is cancelled, your line stays in history and the response does not start; a cancelled analysis is retried with the next send, a failed one waits for **Repair**. The scene counts as unsaved until it is saved; with auto-save disabled, save the scene yourself before closing it.
+
+Character perspectives analyzes a generated message when the next generation starts, after automatic revision has finished. It analyzes the final accepted text once and marks that version ready; sending your next line does not repeat successful analysis of that unchanged version. A failed analysis leaves the action available, and **Repair** retries it as well.
+
+In Character perspectives, **Analyze perceptions** analyzes the chosen passage; the summaries and later perspectives built on it stay out of sync until **Repair**. Standard mode settles affected summary cleanup without a knowledge request. Returning to the baseline restores evidence still owned by the revision transaction. If the memory index needs repair, **Update knowledge** or your next send retries it without repeating current analysis. Index work remains pending when unavailable, while the story can continue.
+
+Revision controls appear on the **most recent** supported message. The arrows and counter appear once it has more than one version; **Analyze perceptions** also appears after an in-place edit with only one version when analysis is required.
 
 !!! note "The version you view is the one that sticks"
     Whichever version you have selected in the paginator becomes the message's active text. That is the version saved with the scene, and the version the AI builds on when it continues the scene. Browsing to an earlier version and leaving it selected effectively rolls the message back to that version.
@@ -117,6 +165,10 @@ You don't add versions manually -- they accumulate as you work with a message:
 The most recent character or narrator message offers a **:material-fast-forward: Continue** action on its hover toolbar.
 
 Clicking **Continue** generates more text and appends it to the message, recording the result as a new **Continued** version in the revision history. Narrator messages support the Continue action as well as character messages.
+
+## View a character's perspective
+
+In a Character perspectives story, the **View Perspective** chip above the scene tools splits the scene in two and shows, beside each message, what one character noticed of it. Double-click a perspective to change it. See [View a character's perspective](perspective-view.md).
 
 ## Cancel Generation
 

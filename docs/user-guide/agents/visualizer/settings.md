@@ -1,12 +1,16 @@
 # Settings
 
-![This image displays a dark user interface header labeled "Visualizer," accented with a chromatic aberration effect and a green status dot. Below the title, there are two badges: one labeled "Google" with a monitor icon, and a warning badge featuring a triangle alert symbol that reads "No backend configured."](/talemate/img/0.34.0/visual-agent-general-1.png)
+![This image displays a dark user interface header labeled "Visualizer," accented with a chromatic aberration effect and a green status dot. Next to the title there are two badges: one labeled "openrouter" with a monitor icon, and a warning badge featuring a triangle alert symbol that reads "No backend configured."](/talemate/img/0.40.0/visual-agent-general-1.png)
 
 The Visualizer agent settings are organized into four main sections: **General**, **Prompt Generation**, **Styles**, and **Prompt Finalization**. Additionally, each backend may have its own configuration options, including [resolution presets](#resolution-presets) for local image generation backends.
 
-![A dark-mode settings interface for a 'Visualizer' tool displaying the 'General' configuration tab. It features dropdown menus showing 'Google' selected as the client with no backends currently configured, alongside a slider for image generation timeout and checkboxes for automatic setup options.](/talemate/img/0.34.0/visual-agent-general-2.png)
+![A dark-mode settings page for the 'Visualizer' agent with the 'General' section expanded. It features dropdown menus showing 'openrouter' selected as the client with no backends currently configured, alongside a slider for image generation timeout and checkboxes for automatic setup options. The 'Prompt Generation', 'Prompt Finalization' and 'Styles' sections are collapsed below it.](/talemate/img/0.40.0/visual-agent-general-2.png)
 
 ## General Settings
+
+### Client
+
+The text-generation client used for the agent's text generations, such as image prompt generation.
 
 ### Backend Configuration
 
@@ -33,9 +37,23 @@ This setting is enabled by default and helps streamline the setup process when u
 
 ### Automatic Generation
 
-When enabled, allows the Visualizer agent to automatically generate visual content based on scene context. This can be useful for automatically creating character portraits or scene illustrations as your story progresses.
+Decides whether images can be generated without you asking for them. It is off by default, so no image is generated unless you ask for it.
 
-This setting is disabled by default, giving you full control over when images are generated.
+These features generate images on their own and only do so while Automatic Generation is on:
+
+- World State **Character Portraits → Generate New Portraits**: a new portrait when none of the character's portraits fits the moment
+- World State **Scene Backgrounds → Generate New Backgrounds**: a new background when none of the scene's backgrounds fits
+- Director **Character Management → Generate Visuals**: a cover image for a character the Director persists
+- The Director's **Create new Image(s)** action during [Scene Direction](/talemate/user-guide/agents/director/scene-direction/)
+- The portrait for a character the **Simulation Suite** adds when you ask the computer for one
+
+While it is off, the portrait and background features still pick from the images you already have, and the Director is not offered image creation during Scene Direction. The World State settings show a **No new portraits** or **No new backgrounds** note with a link back to this setting.
+
+Images you ask for are never affected: Visualize, Regenerate, the Visual Library, the message menu's portrait options, and images you ask the Director for in [Director Chat](/talemate/user-guide/agents/director/chat/).
+
+Automatic Generation can be overridden per scene.
+
+You can also switch it with the :material-creation: **Automatic Generation** chip on the Visualizer in the agent panel, or from the [scene tools visualizer menu](/talemate/user-guide/scenario-tools/#automatic-generation). The menu also switches new portraits and new backgrounds on and off.
 
 ## Prompt Generation
 
@@ -48,7 +66,7 @@ Determines the format used for prompt-only generation when no backends are confi
 Available options:
 
 - **Keywords**: Generates prompts using keyword-based formatting
-- **Descriptive**: Generates prompts using descriptive text formatting
+- **Descriptive**: Generates prompts using descriptive text formatting (default)
 
 ### Max. Prompt Generation Length
 
@@ -83,6 +101,8 @@ This setting works in conjunction with **Perform Extra Revision of Editing Promp
 
 If you only enable prompt revision without automatic analysis, the revision step will still work but may have less information about unanalyzed references to work with.
 
+Like the revision, the automatic analysis only runs when the image backend that makes the image uses the **Descriptive** prompting type. With **Keywords**, an unanalyzed reference stays unanalyzed until a Descriptive generation uses it, you mark it as a reference, or you press **Analyze** in the Visual Library.
+
 !!! warning "Additional AI Queries"
     Enabling this option adds one AI query per unanalyzed reference image. You must have an image analysis backend configured for this feature to work.
 
@@ -101,16 +121,20 @@ This revision step analyzes the reference images (using their analysis data or t
 
 For example, instead of generating a prompt like "Elena, a tall woman with red hair and green eyes wearing a blue dress, stands in a dimly lit tavern," the revised prompt might become "Elena (IMAGE 1) stands in a dimly lit tavern, looking worried" - letting the reference image provide the character's appearance while your prompt defines the scene.
 
+With exactly one reference image there is no image number. The revised prompt names the reference in plain words instead — "Elena, as in the reference image, stands in a dimly lit tavern, looking worried". Image editing models generally expect a numbered tag only when two or more images are attached, and a single one is referred to naturally.
+
+The revision rewrites the descriptive prompt only. When the image backend that makes the image uses the **Keywords** prompting type, the revision is skipped and the backend gets the generated keywords.
+
 !!! warning "Additional AI Query"
-    This adds an extra AI query to the prompt generation process when reference images are provided.
+    This adds an extra AI query to the prompt generation process when reference images are provided and the backend uses Descriptive prompts.
 
 This setting is enabled by default.
 
 ## Styles Configuration
 
-![This image shows the "Styles" configuration tab within the dark-mode "Visualizer" interface, listing various dropdown menus for customizing generation settings. Options include "Art Style," set to "Digital Art," alongside selectors for character cards, portraits, and scene elements. A "Manage styles" box at the bottom indicates that additional styles can be created in the Templates manager.](/talemate/img/0.34.0/visual-agent-general-3.png)
+![This image shows the "Styles" section expanded within the dark-mode "Visualizer" agent settings, listing various dropdown menus for customizing generation settings. Options include "Art Style," set to "Digital Art," alongside selectors for character cards, portraits, scene elements and object illustrations. A "Manage styles" box at the bottom indicates that additional styles can be created in the Templates manager.](/talemate/img/0.40.0/visual-agent-general-3.png)
 
-The Styles tab allows you to configure visual styles for different types of content. Each style is a template that defines how prompts are formatted and what visual characteristics are applied.
+The Styles section allows you to configure visual styles for different types of content. Each style is a template that defines how prompts are formatted and what visual characteristics are applied.
 
 ### Style Options
 
@@ -120,6 +144,7 @@ The Styles tab allows you to configure visual styles for different types of cont
 - **Scene Card**: The style to use for scene card visual prompt generation
 - **Scene Background**: The style to use for scene background visual prompt generation
 - **Scene Illustration**: The style to use for scene illustration visual prompt generation
+- **Object Illustration**: The style to use for object illustration visual prompt generation
 
 !!! info "Managing Styles"
     Additional styles can be created and managed in the Templates manager. Styles are reusable templates that define visual characteristics, keywords, and instructions for different types of visual content.
@@ -135,17 +160,20 @@ These styles are applied automatically when generating images based on the visua
 
 ## Prompt Finalization
 
-![Visualizer prompt finalization settings](/talemate/img/0.39.0/visualizer-prompt-finalization.png)
+![Visualizer prompt finalization settings](/talemate/img/0.40.0/visualizer-prompt-finalization.png)
 
-The Prompt Finalization tab defines a chain of post-processing actions applied to the final prompt strings right before they are sent to the image generation backend. Use it to clean up recurring unwanted keywords, enforce specific phrasing, or transform the whole prompt with an AI instruction. The same finalization is applied to `prompt only` generation output, and custom node graphs can invoke it through the `Finalize Prompt` node.
+The Prompt Finalization section defines a chain of post-processing actions applied to the final prompt strings right before they are sent to the image generation backend. Use it to clean up recurring unwanted keywords, enforce specific phrasing, or transform the whole prompt with an AI instruction. The same finalization is applied to `prompt only` generation output, and custom node graphs can invoke it through the `Finalize Prompt` node.
 
-All settings in this section can be overridden per scene through the Agent Modal's scene mode.
+All settings in this section can be overridden per scene through the [Agents settings page](/talemate/user-guide/agents/scene-overrides)'s **Scene** mode.
 
 ### Presets
 
 The **Preset** picker below the actions table inserts the actions of a **Visual prompt finalizer** template into the table as editable copies. You can insert as many presets as you like; inserted rows behave like any other action — reorder, edit, or remove them freely. Because rows are copied, later changes to the template do not affect actions that were already inserted.
 
-Presets are reusable sets of post-processing actions managed in the Templates manager — Talemate ships an **Ideogram JSON** preset that converts the positive prompt into an Ideogram 4.0 structured JSON prompt.
+Presets are reusable sets of post-processing actions managed in the Templates manager. Talemate ships two:
+
+- **Ideogram JSON** converts the positive prompt into an Ideogram 4.0 structured JSON prompt.
+- **Qwen 2.1 Image references** rewrites the reference image labels of the positive prompt into the tag form that model expects, so `IMAGE 1` becomes `<image1>`. Qwen 2.1 Image requires those tags whenever two or more reference images are attached. The action matches capitals only, so ordinary prose such as `a mirror image 2 metres away` is left alone.
 
 ### Post-processing Actions
 
@@ -221,12 +249,27 @@ The preset picker includes resolution options optimized for different model type
 | **Qwen Image** | 1328 x 1328 | 928 x 1664 | 1664 x 928 |
 | **Z-Image Turbo** | 2048 x 2048 | 1088 x 1920 | 1920 x 1088 |
 
+Below them sits a second series, named after the pixel budget rather than a model. Pick from this series when you care about generation time and video memory more than about a model's native size — the pixel count roughly sets both.
+
+| Preset | Square | Portrait | Landscape |
+|--------|--------|----------|-----------|
+| **0.4 MP** | 640 x 640 | 512 x 768 | 768 x 512 |
+| **0.8 MP** | 896 x 896 | 736 x 1088 | 1088 x 736 |
+| **1 MP** | 1024 x 1024 | 832 x 1216 | 1216 x 832 |
+| **1.4 MP** | 1184 x 1184 | 960 x 1440 | 1440 x 960 |
+| **2 MP** | 1408 x 1408 | 1152 x 1728 | 1728 x 1152 |
+
+The square entries are 1:1 and the portrait and landscape entries are about 2:3. Every width and height is a multiple of 32, which the SD, Flux and Qwen model families all accept. The label names the class, so the exact pixel count is a few percent away from it.
+
+!!! tip "Which step to pick"
+    The shipped model presets tell you where your model sits: SD 1.5 portrait is near 0.4 MP and its square is smaller still at 0.26 MP, SDXL is 1 MP, Qwen Image is near 1.5 MP and Z-Image Turbo landscape is near 2 MP. Start at your model's class and step down when generation is too slow or runs out of video memory.
+
 ### Selecting a Preset
 
 To select a resolution preset:
 
 1. Open the Visualizer agent settings
-2. Navigate to the backend configuration tab (ComfyUI, SD.Next, or AUTOMATIC1111)
+2. Expand the backend configuration section (ComfyUI, SD.Next, or AUTOMATIC1111)
 3. Find the **Resolutions** section
 4. Click the dropdown menu button next to the resolution you want to change
 5. Select the appropriate preset for your model

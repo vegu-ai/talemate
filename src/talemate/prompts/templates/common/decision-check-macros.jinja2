@@ -1,0 +1,76 @@
+{% macro build_questions(passages, decision_checks, output) %}
+{% set output.questions = {} %}
+{% set output.presentation = {} %}
+{% set output.evaluations = [] %}
+{% set output.skipped = [] %}
+{% set scope_notes = {
+    "dialogue": ("dialogue", "the words inside double quotes", "narration"),
+    "prose": ("prose", "everything outside double quotes", "dialogue")
+} %}
+{% for passage in passages %}
+    {% for check in decision_checks %}
+        {# a caller marks passages whose dialogue/prose split is unreliable; a scoped check judges them as All #}
+        {% set scope = "all" if passage.get("no_reliable_split") else check.scope %}
+        {# a part that is the whole passage is asked about the passage itself; callers may leave it out of the state #}
+        {% set whole_passage = scope != "all" and passage[scope] == passage.text %}
+        {% set scoped_text = passage.text if scope == "all" else passage[scope] %}
+        {% for question in check.questions %}
+            {% if not scoped_text %}
+                {% set _ = output.skipped.append({
+                    "group_id": question.id,
+                    "label": check.name,
+                    "instructions": question.question.replace("{passage_id}", "shown below"),
+                    "passage_id": passage.id,
+                    "scope": scope
+                }) %}
+            {% else %}
+            {% set id = passage.id ~ "_" ~ question.id %}
+            {% set has_criteria = question.true_criteria.strip() and question.false_criteria.strip() %}
+            {% set instructions = question.question.replace("{passage_id}", passage.id) if "{passage_id}" in question.question else "Passage " ~ passage.id ~ ": " ~ question.question %}
+            {% set evaluation_instructions = question.instructions %}
+            {% if scope != "all" %}
+                {% set part, meaning, other = scope_notes[scope] %}
+                {% if not whole_passage %}
+                {% set instructions = "Judge only the " ~ part ~ " of passage " ~ passage.id ~ " (its `" ~ part ~ "` text: " ~ meaning ~ "); ignore its " ~ other ~ ". " ~ instructions %}
+                {% endif %}
+                {% set evaluation_instructions = evaluation_instructions ~ " Change only the " ~ part ~ " of this passage." %}
+            {% endif %}
+            {% set _ = output.questions.update({id: yes_no(
+                instructions,
+                threshold=check.threshold,
+                true_criteria=question.true_criteria.replace("{passage_id}", passage.id) if has_criteria else none,
+                false_criteria=question.false_criteria.replace("{passage_id}", passage.id) if has_criteria else none
+            )}) %}
+            {% set _ = output.presentation.update({id: {
+                "group_id": question.id,
+                "label": check.name,
+                "instructions": question.question.replace("{passage_id}", "shown below"),
+                "passage_id": passage.id,
+                "passage_text": scoped_text,
+                "scope": scope,
+                "threshold": check.threshold
+            }}) %}
+            {% set _ = output.evaluations.append({"id": id, "passage": passage, "kind": question.kind, "instructions": evaluation_instructions, "threshold": check.threshold}) %}
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+{% endfor %}
+{% endmacro %}
+
+{% macro collect_findings(answers, evaluations, output) %}
+{% set output.findings = [] %}
+{% set output.flagged = [] %}
+{% set output.flagged_questions = [] %}
+{% set output.thresholds = {} %}
+    {% for evaluation in evaluations %}
+        {% set answer = answers[evaluation.id] %}
+        {% set _ = output.thresholds.update({evaluation.id: evaluation.threshold}) %}
+        {% set match = namespace(value=answer.yes) %}
+        {% if caller is defined %}{% set _ = caller(answer, evaluation, match) %}{% endif %}
+        {% if match.value %}
+            {% set _ = output.flagged_questions.append(evaluation.id) %}
+            {% set _ = output.findings.append({"passage_id": evaluation.passage.id, "text": evaluation.passage.text, "kind": evaluation.kind, "instructions": evaluation.instructions, "p_true": answer.p_true}) %}
+            {% if evaluation.passage.id not in output.flagged %}{% set _ = output.flagged.append(evaluation.passage.id) %}{% endif %}
+        {% endif %}
+    {% endfor %}
+{% endmacro %}

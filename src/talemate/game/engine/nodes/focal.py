@@ -96,12 +96,14 @@ class Focal(Node):
     - retries: The number of retries to make
     - response_length: The maximum length of the response
     - max_concurrent: Maximum number of concurrent callback executions
+    - inherit_parent_call: Include these calls in an enclosing callback's batch; disable for internal agent work
 
     Outputs:
     - state: The current graph state
     - calls: The list of calls made (focal.Call instances)
     - call_payloads: The payload dictionaries of the calls made
     - response: The raw response from the processed prompt
+    - batch: The most recently extracted calls, including rejected and skipped calls
     """
 
     class Fields:
@@ -152,6 +154,13 @@ class Focal(Node):
             max=10,
         )
 
+        inherit_parent_call = PropertyField(
+            name="inherit_parent_call",
+            description="Include these calls in the enclosing callback's batch",
+            type="bool",
+            default=True,
+        )
+
     def __init__(self, title="AI Function Calling", **kwargs):
         super().__init__(title=title, **kwargs)
 
@@ -169,11 +178,13 @@ class Focal(Node):
         self.set_property("retries", 0)
         self.set_property("response_length", 1024)
         self.set_property("max_concurrent", 3)
+        self.set_property("inherit_parent_call", True)
 
         self.add_output("state")
         self.add_output("calls", socket_type="list")
         self.add_output("call_payloads", socket_type="list")
         self.add_output("response", socket_type="str")
+        self.add_output("batch", socket_type="list")
 
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
@@ -216,8 +227,17 @@ class Focal(Node):
         if template_vars:
             template_vars.pop("scene", None)
 
+        call_state = state
+        parent_call = None
+        while self.get_property("inherit_parent_call") and call_state is not None:
+            if "__focal_call" in call_state.data:
+                parent_call = call_state.data["__focal_call"]
+                break
+            call_state = call_state.outer
+
         focal_handler = focal.Focal(
             agent.client,
+            parent_call=parent_call,
             callbacks=callbacks,
             max_calls=max_calls,
             scene=scene,
@@ -249,6 +269,7 @@ class Focal(Node):
                 "calls": focal_handler.state.calls,
                 "call_payloads": [call.payload for call in focal_handler.state.calls],
                 "response": response,
+                "batch": focal_handler.state.batch,
             }
         )
 
@@ -270,12 +291,19 @@ class Metadata(Node):
     Properties:
     - instructions: The instructions for the callback
     - examples: The examples for the callback
+    - counts_toward_budget: Whether this function consumes the model's call budget
 
     Outputs:
     - state: Not populated at runtime
     """
 
     class Fields:
+        counts_toward_budget = PropertyField(
+            name="counts_toward_budget",
+            type="bool",
+            default=True,
+            description="Whether this function consumes the model's call budget",
+        )
         instructions = PropertyField(
             name="instructions",
             description="The instructions for the callback",
@@ -297,6 +325,7 @@ class Metadata(Node):
         self.add_input("state")
         self.set_property("instructions", "")
         self.set_property("examples", [])
+        self.set_property("counts_toward_budget", True)
         self.add_output("state")
 
     async def run(self, state: GraphState):
@@ -390,8 +419,12 @@ class Callback(Node):
             name=name,
             arguments=arguments,
             fn=fn,
+            pass_call=True,
             multiple=self.get_property("allow_multiple_calls"),
             concurrent=self.get_property("allow_concurrent"),
+            counts_toward_budget=metadata.get_property("counts_toward_budget")
+            if metadata
+            else True,
             instructions=metadata.normalized_input_value("instructions")
             if metadata
             else "",
@@ -404,6 +437,36 @@ class Callback(Node):
         self.set_output_values(
             {
                 "callback": callback,
+            }
+        )
+
+
+@register("focal/KnownCalls")
+class KnownCalls(Node):
+    """
+    Excludes calls skipped because no matching callback exists; rejected calls remain.
+
+    Inputs:
+    - calls: A list of focal.Call instances (optional)
+
+    Outputs:
+    - calls: Calls whose skipped_reason is not unknown_callback
+    """
+
+    def __init__(self, title="Known Calls", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("calls", socket_type="list", optional=True)
+        self.add_output("calls", socket_type="list")
+
+    async def run(self, state: GraphState):
+        calls = self.normalized_input_value("calls") or []
+        self.set_output_values(
+            {
+                "calls": [
+                    call for call in calls if call.skipped_reason != "unknown_callback"
+                ]
             }
         )
 
@@ -425,6 +488,9 @@ class UnpackCall(Node):
     - uid: The UID of the call
     - called: Whether the call was made
     - error: The error message if the call failed
+    - skipped_reason: Why a call was not applied (reject, reject_with_instructions, over_budget, unknown_callback, timed_out, interrupted, failed, aborted), or None
+    - rejection_instructions: The correction the user gave with a rejection
+    - subcalls: The calls this call made, as focal calls
     """
 
     def __init__(self, title="Unpack AI Function Call", **kwargs):
@@ -438,6 +504,9 @@ class UnpackCall(Node):
         self.add_output("uid", socket_type="str")
         self.add_output("called", socket_type="bool")
         self.add_output("error", socket_type="str")
+        self.add_output("skipped_reason", socket_type="str")
+        self.add_output("rejection_instructions", socket_type="str")
+        self.add_output("subcalls", socket_type="list")
 
     async def run(self, state: GraphState):
         call = self.get_input_value("call")
@@ -449,6 +518,9 @@ class UnpackCall(Node):
                 "uid": call.uid,
                 "called": call.called,
                 "error": call.error,
+                "skipped_reason": call.skipped_reason,
+                "rejection_instructions": call.rejection_instructions,
+                "subcalls": list(call.subcalls),
             }
         )
 

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
-import isodate
+from talemate.knowledge.bucket import KnowledgeIndex
+from talemate.knowledge.mode import character_knowledge_enabled
+
 import structlog
 
 import talemate.emit.async_signals
 import talemate.util as util
-from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.client import ClientBase
 from talemate.prompts import Prompt
@@ -30,10 +31,13 @@ from talemate.agents.memory.rag import MemoryRAGMixin
 
 from .character_progression import CharacterProgressionMixin
 from .avatars import AvatarMixin
+from .backgrounds import BackgroundMixin
+from .visual_selection import VisualSelectionMixin
 from .snapshot import WorldStateSnapshotMixin
 from .snapshot import SNAPSHOT_TASK as SNAPSHOT_TASK
 from .reinforcements import WorldStateReinforcementsMixin
 from .pin_conditions import WorldStatePinConditionsMixin
+from .queries import WorldStateQueriesMixin
 from .websocket_handler import WorldStateWebsocketHandler
 import talemate.agents.world_state.nodes
 
@@ -58,7 +62,7 @@ class TimePassageEmission(WorldStateAgentEmission):
     Emission class for time passage
     """
 
-    duration: str
+    duration: int
     narrative: str | None = None
     human_duration: str | None = None
 
@@ -69,8 +73,11 @@ class WorldStateAgent(
     WorldStateSnapshotMixin,
     WorldStateReinforcementsMixin,
     WorldStatePinConditionsMixin,
+    WorldStateQueriesMixin,
     CharacterProgressionMixin,
     AvatarMixin,
+    BackgroundMixin,
+    VisualSelectionMixin,
     Agent,
 ):
     """
@@ -90,9 +97,11 @@ class WorldStateAgent(
         WorldStateSnapshotMixin.add_actions(actions)
         WorldStateReinforcementsMixin.add_actions(actions)
         WorldStatePinConditionsMixin.add_actions(actions)
+        WorldStateQueriesMixin.add_actions(actions)
         MemoryRAGMixin.add_actions(actions)
         CharacterProgressionMixin.add_actions(actions)
         AvatarMixin.add_actions(actions)
+        BackgroundMixin.add_actions(actions)
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):
@@ -115,21 +124,22 @@ class WorldStateAgent(
         return True
 
     async def advance_time(
-        self, duration: str, narrative: str = None
+        self, duration: int | str, narrative: str = None, title: str = None
     ) -> TimePassageMessage:
         """
         Emit a time passage message
+
+        `duration` is a number of seconds, but user-saved node graphs may still
+        carry a legacy ISO8601 duration string.
         """
 
-        isodate.parse_duration(duration)
-        human_duration = util.iso8601_duration_to_human(duration, suffix=" later")
-        message = TimePassageMessage(ts=duration, message=human_duration)
+        duration = util.coerce_ts(duration)
+        human_duration = util.duration_to_human(duration, suffix=" later")
+        message = TimePassageMessage(ts=duration, message=human_duration, title=title)
 
         log.debug("world_state.advance_time", message=message)
-        await self.scene.push_history(message)
+        await self.scene.push_history(message, emit_message=True)
         self.scene.emit_status()
-
-        emit("time", message)
 
         await talemate.emit.async_signals.get("agent.world_state.time").send(
             TimePassageEmission(
@@ -151,6 +161,8 @@ class WorldStateAgent(
         response_length=1024,
         num_queries=1,
         extra_context: list[str] = [],
+        filter: Callable | None = None,
+        viewer: str | None = None,
     ):
         response, extracted = await Prompt.request(
             "world_state.analyze-text-and-extract-context",
@@ -165,6 +177,12 @@ class WorldStateAgent(
                 "response_length": response_length,
                 "num_queries": num_queries,
                 "extra_context": extra_context,
+                "memory_filter": filter,
+                "knowledge_index": KnowledgeIndex.from_scene(self.scene),
+                "knowledge_viewer": viewer,
+                **await self.retrieval_perspective_vars(
+                    viewer, include_character_context
+                ),
             },
         )
 
@@ -183,6 +201,8 @@ class WorldStateAgent(
         response_length=1024,
         num_queries=1,
         extra_context: list[str] = [],
+        filter: Callable | None = None,
+        viewer: str | None = None,
     ) -> list[str]:
         response, extracted = await Prompt.request(
             "world_state.analyze-text-and-generate-rag-queries",
@@ -197,6 +217,11 @@ class WorldStateAgent(
                 "response_length": response_length,
                 "num_queries": num_queries,
                 "extra_context": extra_context,
+                "knowledge_index": KnowledgeIndex.from_scene(self.scene),
+                "knowledge_viewer": viewer,
+                **await self.retrieval_perspective_vars(
+                    viewer, include_character_context
+                ),
             },
         )
 
@@ -204,7 +229,17 @@ class WorldStateAgent(
 
         memory_agent = get_agent("memory")
 
-        context = await memory_agent.multi_query(queries, iterate=3)
+        context = await memory_agent.multi_query(
+            queries,
+            iterate=3,
+            filter=filter,
+            over_fetch=3 if filter else 1,
+            **(
+                {"viewer": viewer}
+                if viewer is not None and character_knowledge_enabled(self.scene)
+                else {}
+            ),
+        )
 
         # log.debug(
         #    "analyze_text_and_extract_context_via_queries",
@@ -215,6 +250,19 @@ class WorldStateAgent(
         # )
 
         return context
+
+    async def retrieval_perspective_vars(self, viewer, include_character_context):
+        if viewer is None or not character_knowledge_enabled(self.scene):
+            return {}
+        memory = get_agent("memory")
+        memory.validate_audience_viewer(viewer)
+        return {
+            "memory_viewer": viewer,
+            "character_retrieval": True,
+            "memory_character_context": await memory.audience_character_context(viewer)
+            if include_character_context
+            else "",
+        }
 
     @set_processing
     async def analyze_and_follow_instruction(
@@ -303,18 +351,6 @@ class WorldStateAgent(
         )
 
         return extracted["response"].strip()
-
-    @set_processing
-    async def answer_query_true_or_false(
-        self,
-        query: str,
-        text: str,
-    ) -> bool:
-        query = f"{query} Answer with a yes or no."
-        response = await self.analyze_text_and_answer_question(
-            query=query, text=text, response_length=10
-        )
-        return response.lower().startswith("y")
 
     @set_processing
     async def identify_characters(

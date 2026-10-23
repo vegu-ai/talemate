@@ -52,7 +52,7 @@
   "ts": "PT0S",
   "experimental": true,
   "help": "While there is not simulation active you can chat with the computer normally.\n\nOnce a simulation is active, address the computer by starting your statements with 'Computer, ' followed by an instruction.\n\nExamples:\n'Computer, i would like to experience an adventure on a derelict space station'\n'Computer, add an alien creature to the environment.'",
-  "writing_style_template": "",
+  "writing_style_template": "talemate_default_467c7fe3__ffecb67e-34fe-4aa7-818b-d3270c8e2610",
   "restore_from": "the-simulation-suite.json",
   "nodes_filename": "",
   "creative_nodes_filename": ""

@@ -3,13 +3,13 @@
     <v-row>
         <v-col cols="3">
             <v-tabs color="secondary" direction="vertical" v-model="tab">
-                <v-tab value="instructions" class="text-caption" prepend-icon="mdi-pencil">
+                <v-tab value="instructions" class="text-body-small" prepend-icon="mdi-pencil">
                     Dialogue Instructions
                 </v-tab>
-                <v-tab value="examples" class="text-caption" prepend-icon="mdi-format-quote-close">
+                <v-tab value="examples" class="text-body-small" prepend-icon="mdi-format-quote-close">
                     Dialogue Examples
                 </v-tab>
-                <v-tab value="voice" class="text-caption" prepend-icon="mdi-account-voice">
+                <v-tab value="voice" class="text-body-small" prepend-icon="mdi-account-voice">
                     Voice
                 </v-tab>
             </v-tabs>
@@ -38,7 +38,7 @@
                 @blur="updateCharacterActor(true)"
                 rows="3" 
                 auto-grow></v-textarea>
-                <v-alert icon="mdi-bullhorn" density="compact" variant="text" color="grey">
+                <v-alert icon="mdi-bullhorn" density="compact" variant="text" class="text-medium-emphasis">
                     <p>
                         Any instructions you enter here will be inserted into the context right before
                         <span class="text-primary">{{ character.name }}</span> speaks the next line. It can have a strong effect on the style
@@ -48,7 +48,7 @@
                     </p>
                     <v-divider class="mt-2 mb-2"></v-divider>
                     <p>
-                        <v-icon size="small" color="orange" class="mr-1">mdi-flask</v-icon><span class="text-orange">Experimental feature</span> - whether or not this improves or degrades generations strongly depends on LLM  used. Giving too long instructions here may degrade the quality of the dialogue, especially in the beginning of the scene. 
+                        <v-icon size="small" color="warning" class="mr-1">mdi-flask</v-icon><span class="text-warning">Experimental feature</span> - whether or not this improves or degrades generations strongly depends on LLM  used. Giving too long instructions here may degrade the quality of the dialogue, especially in the beginning of the scene. 
                     </p>
                 </v-alert>
             </div>
@@ -92,13 +92,13 @@
                         :key="index"
                         class="mb-3"
                         variant="text"
-                        elevation="6"
+                        elevation="2"
                     >
                         <v-card-text class="py-2">
                             <div class="d-flex justify-space-between align-start">
                                 <div class="text-muted flex-grow-1" style="white-space: pre-wrap;" v-html="renderSceneText(example)"></div>
                                 <v-btn 
-                                    color="red-darken-2" 
+                                    color="delete" 
                                     rounded="sm" 
                                     size="small" 
                                     icon 

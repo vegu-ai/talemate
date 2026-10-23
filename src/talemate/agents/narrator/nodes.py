@@ -4,7 +4,7 @@ from talemate.game.engine.nodes.core import GraphState, PropertyField, InputValu
 from talemate.game.engine.nodes.registry import register
 from talemate.game.engine.nodes.agent import AgentNode, AgentSettingsNode
 from talemate.scene_message import NarratorMessage
-from talemate.util import iso8601_duration_to_human
+from talemate.util import coerce_ts, duration_to_human
 
 log = structlog.get_logger("talemate.game.engine.nodes.agents.narrator")
 
@@ -256,8 +256,8 @@ class GenerateCharacterNarration(GenerateNarrationBase):
 class GenerateTimeNarration(GenerateNarrationBase):
     """
     Generates narration for a passage of time, via the narrator agent's
-    narrate_time_passage action. The ISO 8601 duration is converted to a
-    human readable string before being handed to the narrator.
+    narrate_time_passage action. The duration is converted to a human
+    readable string before being handed to the narrator.
 
     The generated message is not added to the scene history by this node,
     nor does the node advance the scene time.
@@ -267,7 +267,7 @@ class GenerateTimeNarration(GenerateNarrationBase):
     - state: The graph state
     - narrative_direction: Optional direction the narrative should take
     - response_length: Optional response length in tokens (0 for default)
-    - duration: The time passed as an ISO 8601 duration (e.g. "PT30M")
+    - duration: The time passed in seconds (e.g. 1800 for thirty minutes)
 
     Outputs:
 
@@ -280,14 +280,14 @@ class GenerateTimeNarration(GenerateNarrationBase):
 
     def setup(self):
         super().setup()
-        self.add_input("duration", socket_type="str")
-        self.set_property("duration", "P0T1S")
+        self.add_input("duration", socket_type="int")
+        self.set_property("duration", 1)
 
     async def prepare_input_values(self) -> dict:
         input_values = await super().prepare_input_values()
-        input_values["time_passed"] = iso8601_duration_to_human(
-            input_values["duration"]
-        )
+        # saved graphs may still carry a legacy ISO8601 duration string
+        input_values["duration"] = coerce_ts(input_values["duration"])
+        input_values["time_passed"] = duration_to_human(input_values["duration"])
         return input_values
 
 

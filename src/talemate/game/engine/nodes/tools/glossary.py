@@ -19,11 +19,11 @@ never invoked.
 
 from __future__ import annotations
 
-import dataclasses
 import re
 from pathlib import Path
 
 import structlog
+from pydantic import BaseModel, Field
 
 from talemate.path import TALEMATE_ROOT, relative_to_root
 
@@ -64,6 +64,7 @@ PREFIX_MAP: dict[str, str] = {
     "data": "data",
     "data/number": "data-number",
     "data/string": "data-string",
+    "decisions": "ask-questions",
     "event": "event",
     "focal": "focal",
     "input": "input",
@@ -75,6 +76,7 @@ PREFIX_MAP: dict[str, str] = {
     "scene/history": "scene-history",
     "scene/intention": "scene-intent",
     "scene/message": "scene-messages",
+    "scene/perspective": "scene-perspectives",
     "scene/worldstate": "scene-world-state",
     "state": "state",
     "util": "util",
@@ -142,6 +144,16 @@ NODE_OVERRIDES: dict[str, str] = {
     "agents/visual/SelectBackend": "agents-visual-generation",
     "agents/visual/UnpackGenerationRequest": "agents-visual-generation",
     "agents/visual/UnpackGenerationResponse": "agents-visual-generation",
+    # scene header controls, state counters and the world snapshot: split off
+    # so the state and world state pages stay within the help agent's read
+    # budget
+    "state/GetGameStatePathSettings": "scene-header-controls",
+    "state/PinGameStatePath": "scene-header-controls",
+    "state/ConditionalCounterState": "state-counters",
+    "state/CounterState": "state-counters",
+    "state/CounterStatePath": "state-counters",
+    "agents/world_state/AddSnapshotEntity": "world-panel",
+    "agents/world_state/GetSnapshot": "world-panel",
 }
 
 # slug -> (page title, one-line description used in the index table and as
@@ -154,6 +166,26 @@ PAGE_TITLES: dict[str, tuple[str, str]] = {
     "agents": (
         "Agent Nodes",
         "Generic agent interaction: get an agent, call agent functions, read and count agent state variables.",
+    ),
+    "ask-questions": (
+        "Question Nodes",
+        "Ask the decision model a yes/no, choice or score question and branch on the answer's probability, with an uncertain route when no answer comes.",
+    ),
+    "scene-perspectives": (
+        "Perspective Nodes",
+        "Character Perspectives: read and replace one character's view of a message.",
+    ),
+    "scene-header-controls": (
+        "Scene Header Control Nodes",
+        "Game state variables shown as scene header controls or in Debug Tools: read a variable's control settings and pin or unpin it.",
+    ),
+    "world-panel": (
+        "World Panel Nodes",
+        "The characters, items, places and location the World State panel shows: read them, and add a person, object or place named in a message.",
+    ),
+    "knowledge": (
+        "Knowledge Nodes",
+        "Who knows what: an entry's Known by line, a character's knowledge report, entry visibility, disclosures and grant/revoke knowledge edges. Grant Knowledge Metadata and Grant Knowledge Confirmation select the director wording for the scene's knowledge mode.",
     ),
     "agents-conversation": (
         "Conversation Agent Nodes",
@@ -205,7 +237,7 @@ PAGE_TITLES: dict[str, tuple[str, str]] = {
     ),
     "agents-tts": (
         "Voice Agent Nodes",
-        "Text-to-speech: get and unpack voices and generate speech through the voice agent.",
+        "Text-to-speech: get and unpack voices, generate speech and read or rewrite generation text through the voice agent.",
     ),
     "agents-visual": (
         "Visualizer Agent Prompt Nodes",
@@ -225,7 +257,7 @@ PAGE_TITLES: dict[str, tuple[str, str]] = {
     ),
     "assets": (
         "Asset Nodes",
-        "Scene asset CRUD: add, get, list, remove and update assets, cover and avatar images.",
+        "Scene asset CRUD: add, get, list, remove and update assets, cover, avatar and backdrop images.",
     ),
     "assets-meta": (
         "Asset Meta And Selection Nodes",
@@ -313,11 +345,15 @@ PAGE_TITLES: dict[str, tuple[str, str]] = {
     ),
     "state": (
         "State Nodes",
-        "Graph state variables: get/set/unset across scopes (local, parent, shared, scene loop, game), counters and path variants.",
+        "Graph state variables: get/set/unset across scopes (local, parent, shared, scene loop, game) and path variants.",
+    ),
+    "state-counters": (
+        "State Counter Nodes",
+        "Increment a numeric state variable in place and restart it at a reset cap, with a conditional and a path variant.",
     ),
     "util": (
         "Utility Nodes",
-        "Miscellaneous helpers: counters, diffs, list extraction, ISO date durations and module styling.",
+        "Miscellaneous helpers: counters, diffs, list extraction, durations and module styling.",
     ),
     "util-packaging": (
         "Packaging Nodes",
@@ -338,16 +374,14 @@ PAGE_TITLES: dict[str, tuple[str, str]] = {
 }
 
 
-@dataclasses.dataclass
-class SocketDoc:
+class SocketDoc(BaseModel):
     name: str
     type: str
     optional: bool = False
     description: str = ""
 
 
-@dataclasses.dataclass
-class PropertyDoc:
+class PropertyDoc(BaseModel):
     name: str
     type: str
     default: str
@@ -360,16 +394,15 @@ class PropertyDoc:
     readonly: bool = False
 
 
-@dataclasses.dataclass
-class NodeDoc:
+class NodeDoc(BaseModel):
     registry: str
     title: str
     base_type: str
     module: str
     prose: str = ""
-    inputs: list[SocketDoc] = dataclasses.field(default_factory=list)
-    outputs: list[SocketDoc] = dataclasses.field(default_factory=list)
-    properties: list[PropertyDoc] = dataclasses.field(default_factory=list)
+    inputs: list[SocketDoc] = Field(default_factory=list)
+    outputs: list[SocketDoc] = Field(default_factory=list)
+    properties: list[PropertyDoc] = Field(default_factory=list)
     module_path: str = ""
     dynamic_imported: bool = False
     supports_dynamic_inputs: bool = False

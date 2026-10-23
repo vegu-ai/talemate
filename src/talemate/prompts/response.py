@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import re
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Literal, Union
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -29,6 +29,7 @@ __all__ = [
     "AnchorExtractorBase",
     "AnchorExtractor",
     "StrictAnchorExtractor",
+    "AnchorListExtractor",
     "ComplexAnchorExtractor",
     "AsIsExtractor",
     "AfterAnchorExtractor",
@@ -68,6 +69,10 @@ class Extractor(BaseModel, ABC):
         """
         pass
 
+    def anchors(self) -> list[str]:
+        """Literal markers the response must contain for this extractor to find its content."""
+        return []
+
     def _apply_trim(self, content: str | None) -> str | None:
         """Apply trimming if enabled."""
         if content is None:
@@ -90,6 +95,9 @@ class AnchorExtractorBase(Extractor):
     left: str
     right: str
     fallback_to_full: bool = False
+
+    def anchors(self) -> list[str]:
+        return [self.left]
 
     def _find_marker(self, text: str, marker: str) -> int | None:
         """
@@ -265,6 +273,38 @@ class StrictAnchorExtractor(AnchorExtractor):
         if blocks:
             return self._apply_trim(blocks[-1])
         return None
+
+
+class AnchorListExtractor(AnchorExtractor):
+    """
+    Extract an anchored block as a list of items.
+
+    The block found by AnchorExtractor is split on the ``separator`` regex.
+    Each item loses surrounding whitespace, a leading list bullet (``-``,
+    ``*``, ``•``, ``1.``, ``1)``) and wrapping quotes or backticks; empty items
+    are dropped. An empty block gives ``[]``, a missing block ``None``.
+
+    Attributes:
+        separator: Regex the items are separated by (commas, semicolons and
+            line breaks by default). Use non-capturing groups only: a
+            capturing group returns the separators as items. A leading
+            number followed by ``.`` or ``)`` reads as a list bullet and is
+            removed.
+    """
+
+    separator: str = r"[,;\n]"
+
+    def extract(self, text: str) -> list[str] | None:
+        content = super().extract(text)
+        if content is None:
+            return None
+        items = []
+        for part in re.split(self.separator, content):
+            item = re.sub(r"^\s*(?:[-*•]|\d+[.)])(?:\s+|$)", "", part).strip()
+            item = item.strip("`\"'").strip()
+            if item:
+                items.append(item)
+        return items
 
 
 class ComplexAnchorExtractor(AnchorExtractorBase):
@@ -571,6 +611,9 @@ class AfterAnchorExtractor(Extractor):
     stop_at: str | None = None
     fallback_to_full: bool = False
 
+    def anchors(self) -> list[str]:
+        return [self.start]
+
     def extract(self, text: str) -> str | None:
         """
         Extract everything after the start marker.
@@ -616,12 +659,18 @@ class RegexExtractor(Extractor):
         flags: Regex flags (as int, e.g., re.IGNORECASE = 2)
         group: The capture group to extract (default: 1)
         all_matches: If True, return list[str] instead of str
+        container: Optional anchor extractor; the pattern is matched only
+            inside the container's content
     """
 
     pattern: str
     flags: int = 0
     group: int = 1
     all_matches: bool = False
+    container: AnchorExtractorBase | None = None
+
+    def anchors(self) -> list[str]:
+        return self.container.anchors() if self.container else []
 
     def extract(self, text: str) -> Union[str, list[str], None]:
         """
@@ -633,6 +682,8 @@ class RegexExtractor(Extractor):
         Returns:
             The extracted content (str or list[str]), or None if not found
         """
+        if self.container and text:
+            text = self.container.extract(text)
         if not text:
             return None
 
@@ -740,6 +791,38 @@ class CodeBlockExtractorMixin:
 
         return False
 
+    def _decode_json(self, block_content: str) -> str | None:
+        """
+        The JSON value the content holds as a whole, or the JSON object or
+        array right after the first opening fence when only the closing fence
+        (or nothing) follows it. Decoding finds the value's end itself, so a
+        code fence inside a JSON string does not cut the value short. Only the
+        first fence is tried: a later block never wins over the answer.
+        """
+        try:
+            json.loads(block_content)
+            return block_content.strip()
+        except ValueError:
+            pass
+
+        first_fence = block_content.find("```")
+        if first_fence == -1:
+            return None
+        opening = re.compile(r"```(?:json)?\s*(?=[\[{])", re.IGNORECASE).match(
+            block_content, first_fence
+        )
+        if not opening:
+            return None
+        candidate = block_content[opening.end() :]
+        try:
+            _, end = json.JSONDecoder().raw_decode(candidate)
+        except ValueError:
+            return None
+        suffix = candidate[end:].lstrip()
+        if suffix and not suffix.startswith("```"):
+            return None
+        return candidate[:end]
+
     def _extract_code_block_from_content(self, block_content: str) -> str | None:
         """
         Extract code block content from inside a tagged block.
@@ -752,6 +835,10 @@ class CodeBlockExtractorMixin:
         """
         if not block_content:
             return None
+
+        decoded = self._decode_json(block_content)
+        if decoded is not None:
+            return decoded
 
         # Step 1: Try ```lang...``` pattern (complete code fence)
         fenced_pattern = r"```(?:json|yaml)?\s*([\s\S]*?)\s*```"
@@ -913,11 +1000,41 @@ class BlockListExtractor(Extractor):
     When a ``name`` group is captured, the extractor strips a leading
     name prefix from content if the LLM echoed it.
 
-    Consecutive blocks of the same type and named groups are merged.
-    Tag matching is case-insensitive.
+    Consecutive blocks of the same type and named groups are merged into
+    one, their contents joined by a line break. With ``merge_consecutive``
+    off they stay separate blocks.
+    Tag matching is case-insensitive. A closing anchor shaped like a tag
+    (``</ITEM>``) also matches with whitespace or attributes inside the tag
+    (``</ITEM >``, ``</ITEM n="2">``).
+
+    Blocks form a flat sequence. A block without its closing anchor is
+    handled by ``unclosed``:
+
+    - ``recover`` (default): it ends at the next configured opening anchor,
+      or at the end of the response for the final block.
+    - ``drop_last``: as ``recover``, but a final block without its closing
+      anchor counts as cut off and is dropped.
+    - ``drop``: it is dropped.
+
+    With a ``container`` extractor, blocks are read only inside the
+    container's content, so a tagged aside outside it is not a block.
     """
 
     blocks: list[tuple[str, str, str]] = []
+    container: AnchorExtractorBase | None = None
+    unclosed: Literal["recover", "drop_last", "drop"] = "recover"
+    merge_consecutive: bool = True
+
+    def anchors(self) -> list[str]:
+        return self.container.anchors() if self.container else []
+
+    def _closing_pattern(self, right: str) -> re.Pattern:
+        tag = re.fullmatch(r"</\s*([A-Za-z_][\w-]*)\s*>", right)
+        if tag:
+            return re.compile(
+                rf"</\s*{re.escape(tag.group(1))}(?:\s[^>]*)?>", re.IGNORECASE
+            )
+        return re.compile(re.escape(right), re.IGNORECASE)
 
     def _strip_name_prefix(self, content: str, name: str) -> str:
         """Strip leading name prefix from content if present."""
@@ -937,50 +1054,54 @@ class BlockListExtractor(Extractor):
         Returns:
             List of block dicts. Empty list if no valid blocks found.
         """
+        if self.container and text:
+            text = self.container.extract(text)
         if not text or not self.blocks:
             return []
 
-        # Find all block matches with their positions for ordering
-        found: list[tuple[int, dict]] = []
-        text_lower = text.lower()
-
+        openings = []
         for block_type, left_pattern, right_literal in self.blocks:
-            right_lower = right_literal.lower()
+            right_pattern = self._closing_pattern(right_literal)
+            for match in re.finditer(left_pattern, text, re.IGNORECASE):
+                openings.append((match, block_type, right_pattern))
+        openings.sort(key=lambda item: item[0].start())
 
-            for left_match in re.finditer(left_pattern, text, re.IGNORECASE):
-                content_start = left_match.end()
+        blocks = []
 
-                # Find the closing anchor (case-insensitive) after this opening
-                right_pos = text_lower.find(right_lower, content_start)
-                if right_pos < 0:
+        for index, (left_match, block_type, right_pattern) in enumerate(openings):
+            content_start = left_match.end()
+            next_start = (
+                openings[index + 1][0].start()
+                if index + 1 < len(openings)
+                else len(text)
+            )
+            right_match = right_pattern.search(text, content_start, next_start)
+            if right_match is None:
+                if self.unclosed == "drop" or (
+                    self.unclosed == "drop_last" and next_start == len(text)
+                ):
                     continue
+                right_pos = next_start
+            else:
+                right_pos = right_match.start()
 
-                content = text[content_start:right_pos]
-                if self.trim:
-                    content = content.strip()
+            content = text[content_start:right_pos]
+            if self.trim:
+                content = content.strip()
 
-                # Build block dict with type and content
-                block = {"type": block_type, "content": content}
+            block = {"type": block_type, "content": content}
+            named_groups = left_match.groupdict()
+            block.update(named_groups)
 
-                # Add any named capture groups from the left regex
-                named_groups = left_match.groupdict()
-                block.update(named_groups)
-
-                # Strip name prefix from content if a "name" group was captured
-                if named_groups.get("name") and content:
-                    block["content"] = self._strip_name_prefix(
-                        content, named_groups["name"]
-                    )
-
-                found.append((left_match.start(), block))
-
-        # Sort by position in text
-        found.sort(key=lambda x: x[0])
-        blocks = [b for _, b in found]
+            if named_groups.get("name") and content:
+                block["content"] = self._strip_name_prefix(
+                    content, named_groups["name"]
+                )
+            blocks.append(block)
 
         # Merge consecutive blocks with same type and same named groups
-        if not blocks:
-            return []
+        if not blocks or not self.merge_consecutive:
+            return blocks
 
         merged: list[dict] = [blocks[0]]
         for block in blocks[1:]:

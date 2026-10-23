@@ -1,6 +1,6 @@
 [project]
 name = "talemate"
-version = "0.39.0"
+version = "0.40.0.dev5"
 description = "AI-backed roleplay and narrative tools"
 authors = [{name = "VeguAITools"}]
 license = {text = "GNU Affero General Public License v3.0"}
@@ -14,7 +14,9 @@ dependencies = [
     "isort>=5.10",
     "jinja2>=3.0",
     "openai>=1",
-    "mistralai>=2.4.0",
+    # 2.10+ closes a streamed response while its byte iterator is still open;
+    # that iterator's cleanup then raises at garbage collection on every request.
+    "mistralai==2.9.4",
     "cohere>=6.0.0",
     "anthropic>=0.19.1",
     "groq>=0.5.0",
@@ -35,10 +37,9 @@ dependencies = [
     "structlog>=23.1.0",
     "google-genai>=1.20.0",
     "nest_asyncio>=1.5.7",
-    "isodate>=0.6.1",
     "thefuzz>=0.20.0",
     "tiktoken>=0.5.1",
-    "nltk>=3.8.1,!=3.10.1",
+    "nltk>=3.10.3",
     "huggingface-hub>=0.20.2",
     "RestrictedPython>7.1",
     "numpy>=2",
@@ -49,19 +50,26 @@ dependencies = [
     "sseclient-py>=1.8.0",
     "ollama>=0.5.1",
     # ChromaDB
-    "chromadb>=1.0.12",
+    "chromadb>=1.5.0",
     "torch>=2.7.1",
     "torchaudio>=2.7.1",
     "sentence_transformers>=2.7.0",
-    "transformers<5",
+    # 5.10 closes unsafe model loading and save-path handling. 5.17 removes the
+    # attention-mask helper that the GTE embeddings preset's remote code calls.
+    # 5.17 also fixes CVE-2026-80047 (custom generate code); Talemate does not
+    # reach it.
+    "transformers==5.16.1",
     # TTS
     "elevenlabs>=2.7.1",
     # Local TTS
     # Chatterbox TTS
-    # we cannot upgrade to 0.1.3 because it installs ancient pkuseg library
-    # "chatterbox-tts==0.1.2",
-    # tts_webui_chatterbox_tts is much faster without seeminly any quality loss
-    "tts_webui_chatterbox_tts==0.4.4",
+    # Use the maintained upstream package, whose stock LlamaModel backend supports
+    # Transformers 5; the stale tts-webui fork bundles an incompatible custom model.
+    "chatterbox-tts>=0.1.7",
+    # PyPI's Perth 1.0.1 imports pkg_resources, absent at our setuptools floor.
+    # Pin the maintained 1.1 source used by Chatterbox upstream until it is released.
+    # The source is a commit archive rather than a git checkout so installs need no git.
+    "resemble-perth>=1.1.0",
     # 0.14.0 wheels link against the CUDA 13 runtime (libnvrtc.so.13); our torch
     # comes from the cu128 (CUDA 12.8) index, so cap below 0.14 to stay compatible.
     "torchcodec>=0.9.0,<0.14",
@@ -128,16 +136,30 @@ line_length = 88
 
 [tool.uv]
 exclude-newer = "1 week"
-# nltk 3.10.2 (uploaded 2026-08-05) removes the CWD-import hook that 3.10.1 shipped;
-# remove once it ages past the 1-week window
-exclude-newer-package = { nltk = "2026-08-06T00:00:00Z" }
+# pillow 13.0.0 (2026-10-16) and certifi 2026.10.19 (2026-10-20) fix security
+# advisories and are newer than the normal window, so allow those releases
+# without opening other packages. Remove at the next dependency pass.
+exclude-newer-package = { pillow = "2026-10-17T00:00:00Z", certifi = "2026-10-21T00:00:00Z" }
 override-dependencies = [
-  # chatterbox wants torch 2.6.0, but is confirmed working with 2.7.1
+  # Chatterbox pins torch 2.6.0, but Talemate validates its newer cu128 runtime.
   "torchaudio>=2.7.1",
   "torch>=2.7.1",
+  # Chatterbox 0.1.7 pins vulnerable Transformers 5.2.0. Its stock Llama backend
+  # is compatible through 5.16.1, so retain Talemate's own pin.
+  "transformers==5.16.1",
+  # Chatterbox's pins predate security fixes, including in its Diffusers-based
+  # synthesis path and its Gradio demo interface.
+  "gradio>=6.16",
+  "diffusers>=0.38",
+  "safetensors>=0.8",
+  # Gradio caps pillow<13, but pillow 13 fixes 39 advisories in decoders that
+  # read imported character cards and uploaded images. Nothing in src/ imports
+  # gradio; it arrives only through chatterbox-tts and f5-tts.
+  "pillow>=13",
   # numba needs numpy < 2.3
   "numpy>=2,<2.3",
   "pydantic>=2.11",
+  "accelerate>=1.15.0",
   # torch 2.11 cu128 pins setuptools<82 (setuptools 82 removed pkg_resources);
   # nothing we ship imports pkg_resources and 83.0.0 carries the MANIFEST.in
   # unicode-normalization security fix, so override the pin. Confirmed working
@@ -146,6 +168,7 @@ override-dependencies = [
 ]
 
 [tool.uv.sources]
+resemble-perth = { url = "https://github.com/resemble-ai/Perth/archive/ff1c8ac55a976971245cdd53c18d6131ca00d993.tar.gz" }
 torch = [
   { index = "pytorch-cu128" },
 ]
@@ -168,6 +191,9 @@ asyncio_mode = "auto"
 # `--capture=no` or readable output. (`--pdb` needs no flag — xdist disables
 # distribution for it by itself.)
 addopts = "-n auto --dist worksteal"
+markers = [
+    "requires_compose: renders shipped Compose files with the Docker Compose CLI (no daemon required)",
+]
 
 [tool.coverage.run]
 source = ["src/talemate"]

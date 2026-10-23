@@ -1,8 +1,18 @@
+import pytest
+
+from conftest import MockScene, bootstrap_scene
+from talemate.character import Character
+from talemate.config import get_config
 from talemate.load.character_card import (
     create_manual_context_from_character_book,
+    _process_characters_for_import,
+    _setup_player_character_from_options,
     CharacterBook,
     CharacterBookEntry,
+    CharacterCardImportOptions,
+    PlayerCharacterTemplate,
 )
+from talemate.status import LoadingStatus
 from talemate.world_state import ManualContext
 
 
@@ -301,3 +311,62 @@ def test_create_manual_context_from_character_book_without_meta():
     manual_context = result["character_book_1"]
     assert manual_context.meta["source"] == "imported"
     assert "chara" not in manual_context.meta
+
+
+@pytest.mark.asyncio
+async def test_card_import_refuses_a_character_that_clashes_with_the_player():
+    """The player character is set up before the card's characters are written
+    into `character_data`, and that write goes around `add_actor`. A card
+    character with the player's name would replace the player's object and
+    leave the scene with no player at all."""
+    scene = MockScene()
+    bootstrap_scene(scene)
+    player = Character(name="Bob", description="the player", is_player=True)
+    await scene.add_actor(scene.Player(player, None), commit_to_memory=False)
+
+    with pytest.raises(ValueError, match='Name "Bob" already exists.'):
+        await _process_characters_for_import(
+            scene,
+            [Character(name="Bob", description="from the card")],
+            ["a greeting"],
+            "",
+            LoadingStatus(max_steps=None),
+            CharacterCardImportOptions(),
+        )
+
+    assert scene.character_data["Bob"] is player
+    assert scene.get_player_character() is player
+
+
+@pytest.mark.asyncio
+async def test_card_import_player_template_sends_one_activation(
+    activation_signal, monkeypatch
+):
+    """The card import creates its default player through activate_character
+    alone. Putting add_actor back in front of it makes the helper a no-op that
+    sends nothing, and every other card-import test mocks this helper out."""
+    scene = MockScene()
+    bootstrap_scene(scene)
+    activated = []
+
+    async def record(event):
+        activated.append(event.character)
+
+    activation_signal.connect(record)
+    # the helper writes the entered values into the session config when no
+    # default player character is set, and that config is session-scoped
+    monkeypatch.setattr(
+        get_config().game.default_player_character, "name", "Someone", raising=False
+    )
+
+    created = await _setup_player_character_from_options(
+        scene,
+        CharacterCardImportOptions(
+            player_character_template=PlayerCharacterTemplate(name="Zed")
+        ),
+    )
+
+    assert created is True
+    assert [character.name for character in activated] == ["Zed"]
+    assert scene.active_characters == ["Zed"]
+    assert isinstance(scene.get_character("Zed").actor, scene.Player)

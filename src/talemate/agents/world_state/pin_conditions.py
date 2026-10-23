@@ -6,6 +6,8 @@ import structlog
 
 import talemate.emit.async_signals
 from talemate.events import GameLoopEvent
+from talemate.decisions.budget import fit_list
+from talemate.decisions.gate import decision_gate
 from talemate.prompts import Prompt
 
 from talemate.agents.base import AgentAction, AgentActionConfig, set_processing
@@ -30,6 +32,12 @@ class WorldStatePinConditionsMixin:
             label="Update conditional context pins",
             description="Will evaluate context pins conditions and toggle those pins accordingly. Runs automatically every N turns.",
             config={
+                "decision_model": AgentActionConfig(
+                    type="bool",
+                    label="Use Decision Model",
+                    description="Check pin conditions with the decision model. Only unclear or failed answers still need the usual request.",
+                    value=True,
+                ),
                 "turns": AgentActionConfig(
                     type="number",
                     label="Turns",
@@ -38,7 +46,7 @@ class WorldStatePinConditionsMixin:
                     min=1,
                     max=100,
                     step=1,
-                )
+                ),
             },
         )
 
@@ -154,21 +162,53 @@ class WorldStatePinConditionsMixin:
                 self.scene.emit_status()
             return
 
-        first_entry_id = list(pins_to_check.keys())[0]
+        scene = self.scene
 
-        _, answers = await Prompt.request(
-            "world_state.check-pin-conditions",
-            self.client,
-            "analyze",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "previous_states": json.dumps(pins_to_check, indent=2),
-                "coercion": {first_entry_id: {"condition": ""}},
+        async def fallback(ids):
+            _, answers = await Prompt.request(
+                "world_state.check-pin-conditions",
+                self.client,
+                "analyze",
+                vars={
+                    "scene": scene,
+                    "max_tokens": self.client.max_token_length,
+                    "previous_states": json.dumps(
+                        {key: pins_to_check[key] for key in ids}, indent=2
+                    ),
+                    "coercion": {ids[0]: {"condition": ""}},
+                },
+            )
+            return answers
+
+        def decision_state(budget):
+            return fit_list(
+                # the conditions go out once, in the questions
+                {
+                    "history": [],
+                    "previous_states": {
+                        key: pin["state"] for key, pin in pins_to_check.items()
+                    },
+                },
+                "history",
+                scene.context_history(
+                    budget=min(2048, self.client.max_token_length - 500)
+                ),
+                budget,
+            )
+
+        answers = await decision_gate(
+            "world_state.decision-pin-conditions",
+            enabled=self.resolve_config("check_pin_conditions", "decision_model"),
+            candidates={key: [True, False] for key in pins_to_check},
+            variables=lambda: {
+                "pins": pins_to_check,
+                "state": decision_state,
             },
+            fallback=fallback,
+            accept=lambda value: {"state": value},
+            is_current=lambda: self.scene is scene,
         )
 
-        # Apply LLM results
         for entry_id, answer in answers.items():
             if entry_id not in world_state.pins:
                 log.debug(

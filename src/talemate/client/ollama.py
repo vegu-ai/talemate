@@ -9,7 +9,6 @@ from talemate.client.api_handles import (
     api_handles_prompt_template_extra_fields,
 )
 from talemate.client.base import (
-    STOPPING_STRINGS,
     ClientBase,
     CommonDefaults,
     ParameterReroute,
@@ -75,6 +74,7 @@ class OllamaClient(ApiHandlesPromptTemplateMixin, ClientBase):
             ParameterReroute(
                 talemate_parameter="max_tokens", client_parameter="num_predict"
             ),
+            "stop",
             "stopping_strings",
             # internal parameters that will be removed before sending
             "extra_stopping_strings",
@@ -171,9 +171,7 @@ class OllamaClient(ApiHandlesPromptTemplateMixin, ClientBase):
         super().tune_prompt_parameters(parameters, kind)
 
         # Build stopping strings list
-        parameters["stop"] = STOPPING_STRINGS + parameters.get(
-            "extra_stopping_strings", []
-        )
+        parameters["stop"] = self.build_stopping_strings(parameters)
 
         # Ollama uses num_predict instead of max_tokens
         if "max_tokens" in parameters:

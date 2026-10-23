@@ -75,7 +75,7 @@ export default {
                     items: [
                         {
                             title: 'Conversation / Actor',
-                            subtitle: 'Format, length, and other generation settings',
+                            subtitle: 'Length, instructions, and other generation settings',
                             icon: 'mdi-forum',
                             action: () => this.openAgentSettings('conversation', 'generation_override')
                         },
@@ -123,7 +123,7 @@ export default {
                         },
                         {
                             title: 'Summarizer',
-                            subtitle: 'Auto-summarization and context management',
+                            subtitle: 'Auto-summarization, scene context format and history budget',
                             icon: 'mdi-text-short',
                             action: () => this.openAgentSettings('summarizer', 'archive')
                         },

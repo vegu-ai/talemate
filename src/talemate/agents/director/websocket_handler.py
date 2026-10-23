@@ -12,8 +12,8 @@ from .action_core.gating import (
     extract_all_callback_descriptors,
 )
 from talemate.context import interaction, handle_generation_cancelled
-from talemate.status import set_loading
-from talemate.exceptions import GenerationCancelled
+from talemate.status import LoadingLabel, set_loading
+from talemate.exceptions import GenerationCancelled, GenerationProcessingError
 from .scene_direction.schema import UserInteractionMessage
 from .character_management import PersistCharacterRequest
 
@@ -25,6 +25,10 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.server.director")
+
+# scene intent text is free-form and can run long - the status snackbar only
+# has room for a taste of it
+SCENE_INTENT_STATUS_MAX_LENGTH = 100
 
 
 class InstructionPayload(pydantic.BaseModel):
@@ -86,6 +90,15 @@ class SetDisabledSubActionsPayload(pydantic.BaseModel):
     disabled_action_ids: list[str]
 
 
+def _dynamic_choices_label(handler, data: dict) -> LoadingLabel | str:
+    character = CharacterPayload(**data).character
+    return (
+        LoadingLabel("Generating actions for {}", character)
+        if character
+        else "Generating dynamic actions"
+    )
+
+
 class DirectorWebsocketHandler(DirectorChatWebsocketMixin, Plugin):
     """
     Handles director actions
@@ -112,7 +125,52 @@ class DirectorWebsocketHandler(DirectorChatWebsocketMixin, Plugin):
             await self.director.direction_append_message(message)
         await self.director.direction_execute_turn()
 
-    @set_loading("Generating dynamic actions", cancellable=True, as_async=True)
+    @set_loading("Determining scene intent", cancellable=True, as_async=True)
+    async def handle_determine_scene_intent(self, data: dict):
+        """
+        Manually trigger the director's scene intent evaluation.
+
+        If instructions are provided they are passed on as the user's
+        direction for the determination.
+        """
+        payload = InstructionPayload(**data)
+
+        try:
+            phase = await self.director.auto_direct_set_scene_intent(
+                require=False,
+                raise_on_error=True,
+                instructions=payload.instructions,
+            )
+        except GenerationProcessingError as exc:
+            await self.signal_operation_failed(f"Scene intent evaluation failed: {exc}")
+            return
+
+        if phase is None:
+            await self.signal_operation_done(
+                signal_only=True,
+                emit_status_message={
+                    "message": "Director left the scene intent unchanged",
+                    "status": "info",
+                },
+            )
+            return
+
+        scene_types = self.scene.intent_state.scene_types or {}
+        scene_type = scene_types.get(phase.scene_type)
+
+        message = (
+            f"Scene intent set: {scene_type.name if scene_type else phase.scene_type}"
+        )
+
+        intent = " ".join((phase.intent or "").split())
+        if intent:
+            if len(intent) > SCENE_INTENT_STATUS_MAX_LENGTH:
+                intent = f"{intent[:SCENE_INTENT_STATUS_MAX_LENGTH].rstrip()}..."
+            message = f"{message} - {intent}"
+
+        await self.signal_operation_done(emit_status_message=message)
+
+    @set_loading(_dynamic_choices_label, cancellable=True, as_async=True)
     async def handle_request_dynamic_choices(self, data: dict):
         """
         Generate clickable actions for the user
@@ -162,24 +220,38 @@ class DirectorWebsocketHandler(DirectorChatWebsocketMixin, Plugin):
         )
 
         async def handle_task_done(task):
-            if task.exception():
-                exc = task.exception()
-                log.error("Error persisting character", error=exc)
+            exc = task.exception()
 
-                # Handle GenerationCancelled properly to reset cancel_requested flag
-                if isinstance(exc, GenerationCancelled):
-                    handle_generation_cancelled(exc)
-
-                await self.signal_operation_failed(f"Error persisting character: {exc}")
-            else:
-                self.websocket_handler.queue_put(
-                    {
-                        "type": self.router,
-                        "action": "character_persisted",
-                        "character": task.result(),
-                    }
-                )
+            if isinstance(exc, GenerationCancelled):
+                # a cancel is not a failure: persist_character already reported
+                # it, so this only clears the frontend's busy state
+                handle_generation_cancelled(exc)
                 await self.signal_operation_done()
+                return
+
+            if exc:
+                log.error("Error persisting character", error=exc)
+                await self.signal_operation_failed(f"Error persisting character: {exc}")
+                return
+
+            character = task.result()
+            if character is None:
+                # persist_character reports the error itself, so the envelope
+                # goes without a second status - the frontend reads .name off
+                # the success payload and a None cannot go on the wire
+                await self.signal_operation_failed(
+                    "Character creation failed", emit_status=False
+                )
+                return
+
+            self.websocket_handler.queue_put(
+                {
+                    "type": self.router,
+                    "action": "character_persisted",
+                    "character": character,
+                }
+            )
+            await self.signal_operation_done()
 
         task.add_done_callback(lambda task: asyncio.create_task(handle_task_done(task)))
 

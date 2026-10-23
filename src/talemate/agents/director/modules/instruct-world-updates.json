@@ -269,9 +269,9 @@
       "id": "b37eaa4d-16d6-4dc5-b990-7f411b45a60b",
       "properties": {
         "template": null,
-        "max_calls": 1,
+        "max_calls": 5,
         "retries": 0,
-        "response_length": 1024
+        "response_length": 2048
       },
       "x": 4910,
       "y": 1657,
@@ -518,7 +518,7 @@
       "properties": {
         "name": "context_id",
         "typ": "str",
-        "instructions": "The exact world entry id for the entry you want to make changes to."
+        "instructions": "The exact Context ID of the world entry you want to make changes to, for example `world_entry.manual:662b3b63ec0d`. If you do not know the hashed part, put the exact world entry title in its place and keep the `world_entry.manual:` prefix, for example `world_entry.manual:Rosetti Family Bakery`."
       },
       "x": 176,
       "y": 1418,
@@ -611,21 +611,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "agents/creator/ContextualGenerate",
-      "base_type": "core/Node"
-    },
-    "f56ac59e-bb75-420c-97d0-689ad77979ee": {
-      "title": "Path to Context ID",
-      "id": "f56ac59e-bb75-420c-97d0-689ad77979ee",
-      "properties": {
-        "path": ""
-      },
-      "x": 556,
-      "y": 1308,
-      "width": 210,
-      "height": 218,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "context_id/PathToContextID",
       "base_type": "core/Node"
     },
     "f6fa5702-7bc2-49f8-8468-d5723f95953f": {
@@ -840,7 +825,7 @@
       "title": "AI Function Callback",
       "id": "3f87e867-0c14-4510-ba7b-ff3edd3fd6bc",
       "properties": {
-        "name": "report_problem",
+        "name": "report_issue",
         "allow_multiple_calls": true
       },
       "x": 4330,
@@ -855,7 +840,9 @@
     "409624c0-7f87-41b4-99a5-207187dfc46e": {
       "title": "Agent Report Issue",
       "id": "409624c0-7f87-41b4-99a5-207187dfc46e",
-      "properties": {},
+      "properties": {
+        "name": "report_issue"
+      },
       "x": 4080,
       "y": 2200,
       "width": 151,
@@ -946,7 +933,7 @@
       "properties": {
         "name": "context_id",
         "typ": "str",
-        "instructions": "The exact world entry id for the entry you want to make changes to."
+        "instructions": "The exact Context ID of the world entry you want to make changes to, for example `world_entry.manual:662b3b63ec0d`. If you do not know the hashed part, put the exact world entry title in its place and keep the `world_entry.manual:` prefix, for example `world_entry.manual:Rosetti Family Bakery`."
       },
       "x": 180,
       "y": 1420,
@@ -979,7 +966,7 @@
       "properties": {
         "name": "context_id",
         "typ": "str",
-        "instructions": "The exact world entry id for the entry you want to make changes to."
+        "instructions": "The exact Context ID of the world entry you want to make changes to, for example `world_entry.manual:662b3b63ec0d`. If you do not know the hashed part, put the exact world entry title in its place and keep the `world_entry.manual:` prefix, for example `world_entry.manual:Rosetti Family Bakery`."
       },
       "x": 623,
       "y": 2637,
@@ -1041,21 +1028,6 @@
       "registry": "scene/worldstate/RemoveWorldEntry",
       "base_type": "core/Node"
     },
-    "42847ac5-a1b6-43cb-b10a-10e2a0a40f7e": {
-      "title": "Path to Context ID",
-      "id": "42847ac5-a1b6-43cb-b10a-10e2a0a40f7e",
-      "properties": {
-        "path": ""
-      },
-      "x": 1223,
-      "y": 2647,
-      "width": 210,
-      "height": 218,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "context_id/PathToContextID",
-      "base_type": "core/Node"
-    },
     "101b87f0-d8a7-4e98-8b3c-cf8f2437dc2c": {
       "title": "Advanced Format",
       "id": "101b87f0-d8a7-4e98-8b3c-cf8f2437dc2c",
@@ -1102,6 +1074,9 @@
         "examples": [
           {
             "context_id": "world_entry.manual:662b3b63ec0d"
+          },
+          {
+            "context_id": "world_entry.manual:Rosetti Family Bakery"
           }
         ]
       },
@@ -1154,7 +1129,7 @@
       "title": "AI Function Callback Metadata",
       "id": "89d44840-9309-4136-8592-7a43115660ca",
       "properties": {
-        "instructions": "Use this to make changes to a specific world entry. The world entry MUST be identified by its full Context ID. If you do not know the Context ID do not use this function and instead report back that you don't know.",
+        "instructions": "Use this to make changes to a specific world entry. Identify the world entry by its full Context ID, or - if you do not know the hashed part of it - by its exact title in place of that hash. If you know neither, do not use this function and instead report back that you don't know.",
         "examples": [
           {
             "context_id": "world_entry.manual:662b3b63ec0d",
@@ -1164,6 +1139,11 @@
           {
             "context_id": "world_entry.manual:109e72fc8104",
             "instructions": "Add information to the existing entry about the dragons' behavior. Include that locals are reporting the dragons seem agitated and restless.",
+            "replace": false
+          },
+          {
+            "context_id": "world_entry.manual:Rosetti Family Bakery",
+            "instructions": "Add that the bakery now opens an hour earlier on market days.",
             "replace": false
           }
         ]
@@ -1221,6 +1201,36 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "7939e858-f2f0-4cba-8969-a6ec3d2a8a17": {
+      "title": "Validate Context ID Item",
+      "id": "7939e858-f2f0-4cba-8969-a6ec3d2a8a17",
+      "properties": {
+        "error_message": ""
+      },
+      "x": 556,
+      "y": 1308,
+      "width": 245,
+      "height": 158,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateContextIDItem",
+      "base_type": "core/Node"
+    },
+    "0f2367bb-5157-4523-83b3-5f8a71dcc81e": {
+      "title": "Validate Context ID Item",
+      "id": "0f2367bb-5157-4523-83b3-5f8a71dcc81e",
+      "properties": {
+        "error_message": ""
+      },
+      "x": 1223,
+      "y": 2647,
+      "width": 245,
+      "height": 158,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateContextIDItem",
       "base_type": "core/Node"
     }
   },
@@ -1309,7 +1319,7 @@
       "c1401f4d-acfb-4f76-af5e-678753214dc0.dynamic_context"
     ],
     "40805cce-f360-48d8-9e6d-20df6d032dae.value": [
-      "f56ac59e-bb75-420c-97d0-689ad77979ee.path"
+      "7939e858-f2f0-4cba-8969-a6ec3d2a8a17.value"
     ],
     "9cc86192-aab0-4397-a6fd-a0490e059437.value": [
       "18badecb-e756-4daa-8d7b-674c3301f9bb.check"
@@ -1333,13 +1343,13 @@
     "e94cfd6a-acc6-479e-9d4f-2f5446bef062.original": [
       "a9686166-832b-4014-aebf-e4232eb04006.a"
     ],
-    "f56ac59e-bb75-420c-97d0-689ad77979ee.context_id_item": [
+    "7939e858-f2f0-4cba-8969-a6ec3d2a8a17.context_id_item": [
       "f6fa5702-7bc2-49f8-8468-d5723f95953f.context_id_item"
     ],
-    "f56ac59e-bb75-420c-97d0-689ad77979ee.name": [
+    "7939e858-f2f0-4cba-8969-a6ec3d2a8a17.name": [
       "e94cfd6a-acc6-479e-9d4f-2f5446bef062.context_name"
     ],
-    "f56ac59e-bb75-420c-97d0-689ad77979ee.value": [
+    "7939e858-f2f0-4cba-8969-a6ec3d2a8a17.context_value": [
       "18badecb-e756-4daa-8d7b-674c3301f9bb.no"
     ],
     "f6fa5702-7bc2-49f8-8468-d5723f95953f.context_id_item": [
@@ -1402,7 +1412,7 @@
       "ad722790-c95e-408f-8c4f-9edc819c667c.value"
     ],
     "7c4243a6-f4de-4c06-85f1-2456276a5b4f.value": [
-      "42847ac5-a1b6-43cb-b10a-10e2a0a40f7e.path"
+      "0f2367bb-5157-4523-83b3-5f8a71dcc81e.value"
     ],
     "da703d6e-296d-4b92-b9d9-7fcac98fd8f5.value": [
       "7c4243a6-f4de-4c06-85f1-2456276a5b4f.value"
@@ -1417,10 +1427,10 @@
     "56717d98-2eda-4aab-ae91-70ec55d1d1da.entry_id": [
       "101b87f0-d8a7-4e98-8b3c-cf8f2437dc2c.item0"
     ],
-    "42847ac5-a1b6-43cb-b10a-10e2a0a40f7e.context_id": [
+    "0f2367bb-5157-4523-83b3-5f8a71dcc81e.context_id": [
       "101b87f0-d8a7-4e98-8b3c-cf8f2437dc2c.item1"
     ],
-    "42847ac5-a1b6-43cb-b10a-10e2a0a40f7e.name": [
+    "0f2367bb-5157-4523-83b3-5f8a71dcc81e.name": [
       "ffdd745d-5306-4abb-b14a-724bb7348fda.item0",
       "7fa4148d-6751-425e-b788-0292ca93e182.state"
     ],

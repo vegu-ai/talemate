@@ -2,18 +2,16 @@ import asyncio
 import json
 import traceback
 
-import starlette.websockets
 import structlog
 import websockets
 
 import talemate.instance as instance
-from talemate import VERSION
 from talemate.client.base import (
     resolve_all_generation_errors,
     resolve_generation_error,
 )
-from talemate.config import get_config, Config, commit_config, update_config
-from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
+from talemate.config import get_config, commit_config
+from talemate.server.config import app_config_message
 from talemate.server.websocket_server import WebsocketHandler
 from talemate.util.data import JSONEncoder
 from talemate.context import ActiveScene, Interaction
@@ -27,10 +25,62 @@ log = structlog.get_logger("talemate")
 # connection attempts while it is still open.
 _active_frontend_websocket = None
 _active_frontend_websocket_handler = None
+WEBSOCKET_DISCONNECT_EXCEPTIONS = (
+    websockets.exceptions.ConnectionClosed,
+    RuntimeError,
+)
+CONNECTION_TASK_DRAIN_TIMEOUT = 1.0
+
+
+def _is_task_failure(result):
+    return isinstance(result, BaseException) and not isinstance(
+        result, asyncio.CancelledError
+    )
 
 
 def get_active_frontend_handler():
     return _active_frontend_websocket_handler
+
+
+async def send_queued_frames(websocket, message_queue: asyncio.Queue) -> Exception:
+    """Send the queued frames in order until the socket closes; return the
+    exception that closed it."""
+    while True:
+        # check if there are messages in the queue
+        if message_queue.empty():
+            await asyncio.sleep(0.01)
+            continue
+
+        message = await message_queue.get()
+        try:
+            payload = json.dumps(message, cls=JSONEncoder)
+            await websocket.send(payload)
+        except WEBSOCKET_DISCONNECT_EXCEPTIONS as exc:
+            return exc
+
+
+async def client_status_loop(interval: float = 3.0):
+    """Emit client and agent status while a frontend is connected."""
+    steps = (instance.emit_clients_status, instance.agent_ready_checks, commit_config)
+    # a step that keeps failing must neither end the loop - this connection
+    # would get no further client or agent status until the page is reloaded -
+    # nor starve the steps after it, since commit_config() runs last and a
+    # settings change that never reaches disk is lost without a trace
+    last_errors: dict[str, str] = {}
+    while True:
+        for step in steps:
+            try:
+                await step()
+            except Exception:
+                error = traceback.format_exc()
+                if last_errors.get(step.__name__) == error:
+                    log.debug("client status loop", step=step.__name__)
+                else:
+                    last_errors[step.__name__] = error
+                    log.error("client status loop", step=step.__name__, error=error)
+            else:
+                last_errors.pop(step.__name__, None)
+        await asyncio.sleep(interval)
 
 
 async def websocket_endpoint(websocket):
@@ -61,6 +111,7 @@ async def websocket_endpoint(websocket):
     handler = WebsocketHandler(websocket, message_queue)
     _active_frontend_websocket_handler = handler
     scene_task = None
+    disconnect_exc = None
 
     log.info("frontend connected")
 
@@ -72,51 +123,34 @@ async def websocket_endpoint(websocket):
         nonlocal scene_task
         log.warning(f"frontend disconnected: {exc}")
 
-        main_task.cancel()
-        send_messages_task.cancel()
-        send_status_task.cancel()
-        test_connection_task.cancel()
         # no user response can arrive anymore - terminate any coroutine still
         # waiting on a generation error dialog
         resolve_all_generation_errors("cancel")
-        handler.disconnect()
-        if handler.scene:
-            handler.scene.active = False
-            handler.scene.continue_scene = False
-            if scene_task:
-                scene_task.cancel()
-        # Clear the active websocket reference so a new frontend can connect.
-        if _active_frontend_websocket is websocket:
-            _active_frontend_websocket = None
-        if _active_frontend_websocket_handler is handler:
-            _active_frontend_websocket_handler = None
+        if scene_task:
+            scene_task.cancel()
+        try:
+            handler.disconnect()
+        finally:
+            # Clear the active websocket reference so a new frontend can connect.
+            if _active_frontend_websocket is websocket:
+                _active_frontend_websocket = None
+            if _active_frontend_websocket_handler is handler:
+                _active_frontend_websocket_handler = None
 
     # Create a task to send messages from the queue
     async def send_messages():
-        while True:
-            # check if there are messages in the queue
-            if message_queue.empty():
-                await asyncio.sleep(0.01)
-                continue
-
-            message = await message_queue.get()
-            await websocket.send(json.dumps(message, cls=JSONEncoder))
-
-    # Create a task to send regular client status updates
-    async def send_status():
-        while True:
-            await instance.emit_clients_status()
-            await instance.agent_ready_checks()
-            await commit_config()
-            await asyncio.sleep(3)
+        nonlocal disconnect_exc
+        disconnect_exc = await send_queued_frames(websocket, message_queue)
 
     # task to test connection
     async def test_connection():
+        nonlocal disconnect_exc
         while True:
             try:
                 await websocket.send(json.dumps({"type": "ping"}))
-            except Exception as e:
-                await frontend_disconnect(e)
+            except WEBSOCKET_DISCONNECT_EXCEPTIONS as exc:
+                disconnect_exc = exc
+                return
             await asyncio.sleep(1)
 
     # process a message from the frontend
@@ -150,6 +184,7 @@ async def websocket_endpoint(websocket):
                         {
                             "type": "system",
                             "id": "scene.loading",
+                            "request_id": data.get("request_id"),
                             "status": "loading",
                         }
                     )
@@ -159,6 +194,7 @@ async def websocket_endpoint(websocket):
                             {
                                 "type": "system",
                                 "id": "scene.loaded",
+                                "request_id": data.get("request_id"),
                                 "status": "success",
                                 "data": {
                                     "hidden": True,
@@ -182,6 +218,7 @@ async def websocket_endpoint(websocket):
                             reset=reset,
                             callback=scene_loading_done,
                             scene_initialization=scene_initialization,
+                            request_id=data.get("request_id"),
                         )
                     )
 
@@ -198,15 +235,6 @@ async def websocket_endpoint(websocket):
                     handler.request_scenes_list(query, list_images)
                 elif action_type == "request_scenes_tree":
                     handler.request_scenes_tree()
-                elif action_type == "configure_clients":
-                    await update_config({"clients": data.get("clients")})
-                    await instance.instantiate_clients()
-                    await instance.purge_clients()
-                    await instance.emit_clients_status(wait_for_status=True)
-                    await instance.ensure_agent_llm_client()
-                elif action_type == "configure_agents":
-                    await update_config({"agents": data.get("agents")})
-                    await instance.configure_agents()
                 elif action_type == "request_client_status":
                     await handler.request_client_status()
                 elif action_type == "request_scene_assets":
@@ -214,7 +242,9 @@ async def websocket_endpoint(websocket):
                     handler.request_scene_assets(data.get("asset_ids"))
                 elif action_type == "request_file_image_data":
                     log.info("request_file_image_data", data=data)
-                    handler.request_file_image_data(data.get("file_path"))
+                    handler.request_file_image_data(
+                        data.get("file_path"), data.get("request_id")
+                    )
                 elif action_type == "upload_scene_asset":
                     log.info("upload_scene_asset")
                     await handler.add_scene_asset(data=data)
@@ -258,26 +288,13 @@ async def websocket_endpoint(websocket):
                 elif action_type == "request_app_config":
                     log.info("request_app_config")
 
-                    config: Config = get_config().model_dump()
-                    config.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
-
-                    await message_queue.put(
-                        {
-                            "type": "app_config",
-                            "data": config,
-                            "version": VERSION,
-                        }
-                    )
+                    await message_queue.put(app_config_message(get_config()))
                 else:
                     log.info("Routing to sub-handler", action_type=action_type)
                     await handler.route(data)
 
-        except (
-            websockets.exceptions.ConnectionClosed,
-            starlette.websockets.WebSocketDisconnect,
-            RuntimeError,
-        ) as exc:
-            raise exc
+        except WEBSOCKET_DISCONNECT_EXCEPTIONS:
+            raise
 
         except Exception as e:
             log.error("Unhandled error", error=e, traceback=traceback.format_exc())
@@ -291,6 +308,7 @@ async def websocket_endpoint(websocket):
 
     # main loop task
     async def handle_messages():
+        nonlocal disconnect_exc
         try:
             while True:
                 data = await websocket.recv()
@@ -298,21 +316,44 @@ async def websocket_endpoint(websocket):
                 await process_message(data)
 
         # handle disconnects
-        except (
-            websockets.exceptions.ConnectionClosed,
-            starlette.websockets.WebSocketDisconnect,
-            RuntimeError,
-        ) as exc:
-            await frontend_disconnect(exc)
+        except WEBSOCKET_DISCONNECT_EXCEPTIONS as exc:
+            disconnect_exc = exc
 
     main_task = asyncio.create_task(handle_messages())
     send_messages_task = asyncio.create_task(send_messages())
-    send_status_task = asyncio.create_task(send_status())
+    send_status_task = asyncio.create_task(client_status_loop())
     test_connection_task = asyncio.create_task(test_connection())
 
-    await asyncio.gather(
+    connection_tasks = (
         main_task,
         send_messages_task,
         send_status_task,
         test_connection_task,
     )
+    try:
+        # Each task owns one connection-lifetime loop, so any return starts
+        # teardown for the complete set.
+        await asyncio.wait(connection_tasks, return_when=asyncio.FIRST_COMPLETED)
+    finally:
+        for task in connection_tasks:
+            if not task.done():
+                task.cancel()
+
+        # Cancellation handlers can wait for scene release, which happens in
+        # frontend_disconnect. Bound this first drain so they cannot keep the
+        # active connection slot forever.
+        done, _ = await asyncio.wait(
+            connection_tasks,
+            timeout=CONNECTION_TASK_DRAIN_TIMEOUT,
+        )
+        drained_results = await asyncio.gather(*done, return_exceptions=True)
+        cleanup_exc = disconnect_exc or next(
+            (result for result in drained_results if _is_task_failure(result)),
+            None,
+        )
+        await frontend_disconnect(cleanup_exc)
+        results = await asyncio.gather(*connection_tasks, return_exceptions=True)
+
+    for result in results:
+        if _is_task_failure(result):
+            raise result

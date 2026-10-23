@@ -10,14 +10,12 @@ from packaging.markers import Marker, default_environment
 
 
 ROOT = Path(__file__).parent.parent
-COMPOSE_AVAILABLE = (
-    shutil.which("docker") is not None
-    and subprocess.run(
-        ["docker", "compose", "version"],
-        capture_output=True,
-        check=False,
-    ).returncode
-    == 0
+COMPOSE_SETUP_GUIDANCE = (
+    "Docker Compose CLI is required for tests marked requires_compose. "
+    "Install Docker Desktop or the Docker Compose plugin, verify it with "
+    "`docker compose version`, then rerun the tests. To deliberately omit "
+    "these checks, use `uv run pytest tests/ -m 'not requires_compose'`; "
+    "pytest will report the deselected coverage. A live Docker daemon is not required."
 )
 PORTS = {5050: 5050, 8082: 8082}
 CPU_COMMAND = "docker compose -f docker-compose.cpu.yml up"
@@ -45,8 +43,36 @@ VOLUME_TARGETS = {
 }
 
 
-def render_compose(*files: str) -> dict:
-    command = ["docker", "compose"]
+def compose_cli_command() -> str:
+    docker = shutil.which("docker")
+    if docker is None:
+        raise RuntimeError(COMPOSE_SETUP_GUIDANCE)
+    try:
+        result = subprocess.run(
+            [docker, "compose", "version"],
+            capture_output=True,
+            check=False,
+            text=True,
+        )
+    except OSError as exc:
+        raise RuntimeError(f"{COMPOSE_SETUP_GUIDANCE} ({exc})") from exc
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        suffix = f" Compose reported: {detail}" if detail else ""
+        raise RuntimeError(f"{COMPOSE_SETUP_GUIDANCE}{suffix}")
+    return docker
+
+
+@pytest.fixture(scope="module")
+def compose_cli():
+    try:
+        return compose_cli_command()
+    except RuntimeError as exc:
+        pytest.fail(str(exc), pytrace=False)
+
+
+def render_compose(compose_cli: str, *files: str) -> dict:
+    command = [compose_cli, "compose"]
     for compose_file in files:
         command.extend(["-f", compose_file])
     command.extend(["config", "--format", "json"])
@@ -87,7 +113,7 @@ def assert_runtime_contract(service: dict, *, gpu: bool, local_build: bool) -> N
         assert "build" not in service
 
 
-@pytest.mark.skipif(not COMPOSE_AVAILABLE, reason="Docker Compose CLI is unavailable")
+@pytest.mark.requires_compose
 @pytest.mark.parametrize(
     ("files", "gpu", "local_build"),
     [
@@ -111,22 +137,37 @@ def assert_runtime_contract(service: dict, *, gpu: bool, local_build: bool) -> N
     ],
 )
 def test_documented_compose_invocations_render_complete_service(
-    files: tuple[str, ...], gpu: bool, local_build: bool
+    compose_cli, files: tuple[str, ...], gpu: bool, local_build: bool
 ):
-    service = render_compose(*files)["services"]["talemate"]
+    service = render_compose(compose_cli, *files)["services"]["talemate"]
 
     assert_runtime_contract(service, gpu=gpu, local_build=local_build)
 
 
-@pytest.mark.skipif(not COMPOSE_AVAILABLE, reason="Docker Compose CLI is unavailable")
-def test_render_compose_ignores_ambient_port_overrides(monkeypatch):
+@pytest.mark.requires_compose
+def test_render_compose_ignores_ambient_port_overrides(compose_cli, monkeypatch):
     monkeypatch.setenv("TALEMATE_FRONTEND_PORT", "9090")
     monkeypatch.setenv("TALEMATE_BACKEND_PORT", "6060")
 
-    service = render_compose("docker-compose.cpu.yml")["services"]["talemate"]
+    service = render_compose(compose_cli, "docker-compose.cpu.yml")["services"][
+        "talemate"
+    ]
     ports = {int(port["target"]): int(port["published"]) for port in service["ports"]}
 
     assert ports == PORTS
+
+
+def test_missing_compose_cli_reports_setup_and_explicit_exclusion(monkeypatch):
+    monkeypatch.setattr(shutil, "which", lambda _: None)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        compose_cli_command()
+
+    message = str(exc_info.value)
+    assert "Docker Compose CLI is required" in message
+    assert "docker compose version" in message
+    assert "-m 'not requires_compose'" in message
+    assert "live Docker daemon is not required" in message
 
 
 def applies_to_docker(package: dict) -> bool:

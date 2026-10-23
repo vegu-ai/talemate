@@ -5,7 +5,7 @@
                 <slot name="title"></slot>
             </v-card-title>
             <v-card-text>
-                <p class="text-caption mb-4">
+                <p class="text-body-small mb-4">
                     <slot name="caption"></slot>
                 </p>
 

@@ -53,7 +53,7 @@
                                     :color="pins[selected].pin.active ? 'success' : 'delete'"
                                     :class="pins[selected].pin.active ? 'pin-active-success' : 'pin-active-delete'"
                                     label="Pin active" @change="update(selected)"></v-checkbox>
-                                <v-alert class="mb-2 pre-wrap" variant="text" color="grey"
+                                <v-alert class="mb-2 pre-wrap text-medium-emphasis" variant="text"
                                     icon="mdi-book-open-page-variant">
                                     <div class="formatted-text">
                                         {{ selectedPin.text }}
@@ -82,7 +82,7 @@
 
                                     <v-window v-model="conditionTab" class="mt-2">
                                         <v-window-item value="ai">
-                                            <v-alert v-if="selectedPinIsGamestateControlled" variant="text" color="grey" icon="mdi-information-outline">
+                                            <v-alert v-if="selectedPinIsGamestateControlled" variant="text" class="text-medium-emphasis" icon="mdi-information-outline">
                                                 Game State conditions are set, so the AI prompt condition is currently ignored (but kept for later).
                                             </v-alert>
 
@@ -107,7 +107,7 @@
                                                 min="0"
                                                 :max="pins[selected].pin.decay"
                                                 step="1"
-                                                color="brown-darken-2"
+                                                color="dirty"
                                                 v-model="pins[selected].pin.decay_due"
                                                 label="Active decay counter"
                                                 thumb-label="always"
@@ -139,7 +139,7 @@
 
 
                     </v-row>
-                    <v-alert v-else type="info" color="grey" variant="text" icon="mdi-pin">
+                    <v-alert v-else class="text-medium-emphasis" variant="text" icon="mdi-pin">
                         Pins allow you to permanently pin a context entry to the AI context. While a pin is
                         active, the AI will always consider the pinned entry when generating text. <v-icon
                             color="warning">mdi-alert</v-icon> Pinning too many entries may use up your

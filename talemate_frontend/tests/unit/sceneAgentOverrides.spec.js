@@ -1,0 +1,357 @@
+import { describe, expect, it, vi } from 'vitest';
+import {
+    SceneAgentOverridesCoordinator,
+    sceneCanPersist,
+    sceneIdentityOf,
+} from '@/utils/sceneAgentOverrides';
+import { DEFAULT_SCENE_AGENT_SETTINGS_FILENAME } from '@/constants/sceneAgentSettings';
+
+function harness({ scene = { data: { id: 'scene-1', filename: 's.json', project_name: 'p', agent_settings_file: null } } } = {}) {
+    const sent = [];
+    const state = { busy: false, error: null };
+    const coordinator = new SceneAgentOverridesCoordinator({
+        getWebsocket: () => ({ send: (payload) => sent.push(JSON.parse(payload)) }),
+        scene: () => scene,
+        state,
+    });
+    const done = (payload) => coordinator.handleMessage({ type: 'agent_config', action: 'operation_done', ...payload });
+    return { sent, state, coordinator, done, scene };
+}
+
+const setEntry = (agent, action, config, enabled) => ({ agent, action, ...(enabled !== undefined ? { enabled } : {}), config });
+
+describe('the scene-only coordinator payload', () => {
+    it('sends a sparse per-agent patch, never a replacement override', () => {
+        const { sent, coordinator, done } = harness();
+        coordinator.applySceneAgentValues([
+            setEntry('conversation', 'character_knowledge', { memory_pass: true, memory_pass: true }),
+            setEntry('memory', 'retrieval', {}, false),
+        ]);
+        expect(sent).toHaveLength(1);
+        const conversation = sent[0];
+        expect(conversation).toMatchObject({
+            type: 'agent_config',
+            action: 'save_scene_overrides',
+            agent_type: 'conversation',
+            scene_identity: 'scene-1',
+            patch: { set: { actions: { character_knowledge: { config: { memory_pass: { value: true }, memory_pass: { value: true } } } } }, clear: [] },
+        });
+        expect(conversation.override).toBeUndefined();
+        expect(conversation.filename).toBe(DEFAULT_SCENE_AGENT_SETTINGS_FILENAME);
+        done({ request_id: sent[0].request_id });
+        expect(sent[1].agent_type).toBe('memory');
+    });
+
+    it('serializes the agents: the next patch waits for the acknowledgement', () => {
+        const { sent, coordinator, done } = harness();
+        coordinator.applySceneAgentValues([
+            setEntry('conversation', 'character_knowledge', { memory_pass: true }),
+            setEntry('memory', 'retrieval', {}, false),
+        ]);
+        expect(sent).toHaveLength(1);
+        expect(coordinator.busy).toBe(true);
+        done({ request_id: sent[0].request_id });
+        expect(sent).toHaveLength(2);
+        done({ request_id: sent[1].request_id });
+        expect(coordinator.busy).toBe(false);
+    });
+
+    it('reuses the link for later patches instead of naming the file again', () => {
+        const { sent, coordinator, done } = harness();
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
+        expect(sent[0].filename).toBe(DEFAULT_SCENE_AGENT_SETTINGS_FILENAME);
+        done({ request_id: sent[0].request_id });
+        coordinator.applySceneAgentValues([setEntry('memory', 'retrieval', {}, false)]);
+        expect(sent[1].filename).toBeUndefined();
+    });
+
+    it('never names a file when the scene already links one', () => {
+        const { sent, coordinator } = harness({
+            scene: { data: { id: 'scene-1', filename: 's.json', project_name: 'p', agent_settings_file: 'existing.json' } },
+        });
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
+        expect(sent[0].filename).toBeUndefined();
+    });
+
+    it('sends clear entries without a config as an enable clear', () => {
+        const { sent, coordinator } = harness();
+        coordinator.clearSceneAgentValues([
+            { agent: 'memory', action: 'retrieval' },
+            { agent: 'memory', action: 'retrieval', config: 'recency_weight' },
+        ]);
+        expect(sent[0].patch).toEqual({
+            set: { actions: {} },
+            clear: [{ action: 'retrieval' }, { action: 'retrieval', config: 'recency_weight' }],
+        });
+    });
+});
+
+describe('the coordinator request correlation', () => {
+    it('ignores an acknowledgement for a request it did not send', () => {
+        const { sent, coordinator, done } = harness();
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
+        done({ request_id: 'someone-else' });
+        expect(coordinator.inFlight).not.toBeNull();
+        done({ request_id: sent[0].request_id });
+        expect(coordinator.inFlight).toBeNull();
+    });
+
+    it('surfaces a failed save and keeps going without retrying', () => {
+        const onError = vi.fn();
+        const sent = [];
+        const state = { busy: false, error: null };
+        const coordinator = new SceneAgentOverridesCoordinator({
+            getWebsocket: () => ({ send: (payload) => sent.push(JSON.parse(payload)) }),
+            scene: () => ({ data: { id: 'scene-1', filename: 's.json', project_name: 'p' } }),
+            state,
+            onError,
+        });
+        coordinator.applySceneAgentValues([
+            setEntry('conversation', 'character_knowledge', { memory_pass: true }),
+            setEntry('memory', 'retrieval', {}, false),
+        ]);
+        coordinator.handleMessage({
+            type: 'agent_config', action: 'operation_done', request_id: sent[0].request_id,
+            error: { message: 'disk full' },
+        });
+        expect(state.error).toBe('disk full');
+        expect(onError).toHaveBeenCalledWith('disk full');
+        // the remaining agent still gets its write
+        expect(sent).toHaveLength(2);
+        // and its success must not erase the failure the user needs to see
+        coordinator.handleMessage({ type: 'agent_config', action: 'operation_done', request_id: sent[1].request_id });
+        expect(state.busy).toBe(false);
+        expect(state.error).toBe('disk full');
+        // only a deliberate later action clears it
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: false })]);
+        expect(state.error).toBeNull();
+    });
+});
+
+describe('the coordinator scene binding', () => {
+    it('drops queued work when the scene loads', () => {
+        const { sent, coordinator } = harness();
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
+        coordinator.handleMessage({ type: 'system', id: 'scene.loaded' });
+        expect(coordinator.busy).toBe(false);
+        expect(sent).toHaveLength(1);
+    });
+
+    it('drops queued work at load start and binds the generation the next scene_status reports', () => {
+        const { sent, coordinator, scene } = harness();
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
+        expect(sent).toHaveLength(1);
+        coordinator.handleMessage({ type: 'system', id: 'scene.loading' });
+        expect(coordinator.busy).toBe(false);
+        scene.data = { id: 'scene-B', filename: 'b.json', project_name: 'p', agent_settings_file: null };
+        coordinator.handleMessage({ type: 'scene_status', data: scene.data });
+        coordinator.applySceneAgentValues([setEntry('memory', 'retrieval', {}, false)]);
+        expect(sent[1].scene_identity).toBe('scene-B');
+    });
+
+    it('binds the new generation when scene.loaded arrives before the new scene_status', () => {
+        const { sent, coordinator, scene } = harness();
+        // fast load: loaded is queued immediately, the scene_status is debounced
+        coordinator.handleMessage({ type: 'system', id: 'scene.loaded' });
+        scene.data = { id: 'scene-B', filename: 'b.json', project_name: 'p', agent_settings_file: null };
+        coordinator.handleMessage({ type: 'scene_status', data: scene.data });
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
+        expect(sent).toHaveLength(1);
+        expect(sent[0].scene_identity).toBe('scene-B');
+    });
+
+    it('reset forgets the generation for a transport teardown and the next scene_status rebinds it', () => {
+        const { sent, coordinator, scene } = harness();
+        coordinator.applySceneAgentValues([
+            setEntry('conversation', 'character_knowledge', { memory_pass: true }),
+            setEntry('memory', 'retrieval', {}, false),
+        ]);
+        expect(coordinator.busy).toBe(true);
+        coordinator.reset();
+        expect(coordinator.busy).toBe(false);
+        expect(coordinator.identity).toBeNull();
+        coordinator.handleMessage({ type: 'scene_status', data: scene.data });
+        expect(coordinator.identity).toBe('scene-1');
+        coordinator.applySceneAgentValues([setEntry('memory', 'retrieval', {}, false)]);
+        expect(sent[sent.length - 1].scene_identity).toBe('scene-1');
+    });
+
+    it('refuses to write into a scene that replaced the one it queued for', () => {
+        const current = { data: { id: 'scene-1', filename: 's.json', project_name: 'p' } };
+        const { sent, coordinator } = harness({ scene: current });
+        // queue, then swap the live scene before the first dispatch
+        coordinator.queue.push({ agent: 'conversation', patch: { set: { actions: {} }, clear: [] }, identity: 'scene-1', requestId: 'r1' });
+        current.data = { id: 'scene-2', filename: 't.json', project_name: 'p' };
+        coordinator.dispatch();
+        expect(sent).toHaveLength(0);
+    });
+
+    it('sends nothing for a scene with no on-disk identity and says why', () => {
+        const { sent, state, coordinator } = harness({
+            scene: { data: { id: 'scene-1', filename: null, project_name: null } },
+        });
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
+        expect(sent).toHaveLength(0);
+        expect(state.error).toBe('Save the scene to change its scene overrides.');
+    });
+});
+
+describe('the coordinator link reconciliation', () => {
+    it('re-names the file after the scene reports the link was removed', () => {
+        const { sent, coordinator, done, scene } = harness();
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
+        expect(sent[0].filename).toBe(DEFAULT_SCENE_AGENT_SETTINGS_FILENAME);
+        done({ request_id: sent[0].request_id });
+        // World Editor unlinks without changing the scene id
+        scene.data = { ...scene.data, agent_settings_file: null };
+        coordinator.handleMessage({ type: 'scene_status', data: scene.data });
+        coordinator.applySceneAgentValues([setEntry('memory', 'retrieval', {}, false)]);
+        expect(sent[1].filename).toBe(DEFAULT_SCENE_AGENT_SETTINGS_FILENAME);
+    });
+
+    it('keeps the first link while a pre-link scene_status still reports no file', () => {
+        const { sent, coordinator, done, scene } = harness();
+        coordinator.applySceneAgentValues([setEntry('conversation', 'character_knowledge', { memory_pass: true })]);
+        // a frame emitted before the link landed reports no file
+        coordinator.handleMessage({ type: 'scene_status', data: { ...scene.data, agent_settings_file: null } });
+        done({ request_id: sent[0].request_id });
+        coordinator.applySceneAgentValues([setEntry('memory', 'retrieval', {}, false)]);
+        expect(sent[1].filename).toBeUndefined();
+    });
+});
+
+describe('scene identity helpers', () => {
+    it('is the scene id, or the project and filename when there is none', () => {
+        expect(sceneIdentityOf({ data: { id: 'abc' } })).toBe('abc');
+        expect(sceneIdentityOf({ data: { project_name: 'p', filename: 's.json' } })).toBe('p/s.json');
+        expect(sceneIdentityOf(null)).toBeNull();
+    });
+
+    it('requires a save file and a project name', () => {
+        expect(sceneCanPersist({ data: { filename: 's.json', project_name: 'p' } })).toBe(true);
+        expect(sceneCanPersist({ data: { filename: null, project_name: 'p' } })).toBe(false);
+        expect(sceneCanPersist({ data: { filename: 's.json', project_name: null } })).toBe(false);
+    });
+});
+
+describe('the answer to one change', () => {
+    const reply = () => ({ onComplete: vi.fn(), onError: vi.fn() });
+
+    it('completes once every agent of the change is acknowledged', () => {
+        const { sent, coordinator, done } = harness();
+        const answer = reply();
+        coordinator.applySceneAgentValues([
+            setEntry('conversation', 'character_knowledge', { memory_pass: true }),
+            setEntry('memory', 'retrieval', {}, false),
+        ], null, answer);
+        done({ request_id: sent[0].request_id });
+        expect(answer.onComplete).not.toHaveBeenCalled();
+        done({ request_id: sent[1].request_id });
+        expect(answer.onComplete).toHaveBeenCalledTimes(1);
+        expect(answer.onError).not.toHaveBeenCalled();
+    });
+
+    it('reports a refused patch with the backend message', () => {
+        const { sent, coordinator, done } = harness();
+        const answer = reply();
+        coordinator.clearSceneAgentValues([{ agent: 'summarizer', action: 'manage_scene_history', config: 'format' }], answer);
+        done({ request_id: sent[0].request_id, error: { message: 'Failed to write agent-settings file' } });
+        expect(answer.onError).toHaveBeenCalledWith('Failed to write agent-settings file');
+        expect(answer.onComplete).not.toHaveBeenCalled();
+    });
+
+    it('reports work that a scene change dropped', () => {
+        const { coordinator } = harness();
+        const inFlight = reply();
+        const queued = reply();
+        coordinator.applySceneAgentValues([setEntry('summarizer', 'manage_scene_history', { format: 'chat' })], null, inFlight);
+        coordinator.applySceneAgentValues([setEntry('summarizer', 'manage_scene_history', { max_budget: 4096 })], null, queued);
+        coordinator.handleMessage({ type: 'system', id: 'scene.loading' });
+        // the sent patch may be stored; the queued one never left
+        expect(inFlight.onError).toHaveBeenCalledWith('The scene changed before the answer arrived; the change may have been saved.', false, true);
+        expect(queued.onError).toHaveBeenCalledWith('The scene changed before the change was sent.');
+    });
+
+    it('says that a discarded change was discarded', async () => {
+        const scene = { data: { id: 'scene-1', filename: null, project_name: null, agent_settings_file: null } };
+        const state = { busy: false, error: null };
+        const coordinator = new SceneAgentOverridesCoordinator({
+            getWebsocket: () => ({ send: vi.fn() }),
+            scene: () => scene,
+            state,
+            requestSave: () => Promise.resolve({ status: 'cancelled' }),
+        });
+        const answer = reply();
+        coordinator.applySceneAgentValues([setEntry('summarizer', 'manage_scene_history', { max_budget: 4096 })], null, answer);
+        await Promise.resolve();
+        await Promise.resolve();
+        coordinator.discardPendingSave();
+        expect(answer.onError).toHaveBeenCalledWith('The change was discarded.');
+    });
+
+    it('refuses at once when the scene cannot take the change', () => {
+        const { coordinator } = harness({ scene: { data: {} } });
+        const answer = reply();
+        coordinator.applySceneAgentValues([setEntry('summarizer', 'manage_scene_history', { format: 'chat' })], null, answer);
+        expect(answer.onError).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('one change with sets and clears', () => {
+    it('sends one patch per agent carrying both', () => {
+        const { sent, coordinator, done } = harness();
+        coordinator.patchSceneAgentValues({
+            set: [setEntry('visual', '_prompt_finalization', { mode: 'b' })],
+            clear: [{ agent: 'visual', action: '_prompt_finalization', config: 'instructions' }, { agent: 'memory', action: 'retrieval' }],
+        });
+        expect(sent).toHaveLength(1);
+        expect(sent[0].agent_type).toBe('visual');
+        expect(sent[0].patch).toEqual({
+            set: { actions: { _prompt_finalization: { config: { mode: { value: 'b' } } } } },
+            clear: [{ action: '_prompt_finalization', config: 'instructions' }],
+        });
+        done({ request_id: sent[0].request_id });
+        expect(sent[1]).toMatchObject({ agent_type: 'memory', patch: { set: { actions: {} }, clear: [{ action: 'retrieval' }] } });
+    });
+});
+
+describe('a refused change is never silent', () => {
+    function pendingHarness() {
+        const scene = { data: { id: 'scene-1', project_name: 'p', filename: null } };
+        const sent = [];
+        const state = { busy: false, error: null };
+        let resolveSave;
+        const coordinator = new SceneAgentOverridesCoordinator({
+            getWebsocket: () => ({ send: (payload) => sent.push(JSON.parse(payload)) }),
+            scene: () => scene,
+            state,
+            requestSave: () => new Promise((resolve) => { resolveSave = resolve; }),
+        });
+        return { coordinator, state, sent, cancelSave: () => resolveSave({ status: 'cancelled' }) };
+    }
+
+    it('reports a change refused behind a pending save on the shared state, with or without a reply', async () => {
+        const { coordinator, state, sent, cancelSave } = pendingHarness();
+        coordinator.applySceneAgentValues([setEntry('world_state', 'avatars', { generate_new: true })], 'Character portraits: On');
+        cancelSave();
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(state.pendingSave).toBe(true);
+        expect(state.pendingLabel).toBe('Character portraits: On');
+        expect(state.error).toBe('Save cancelled. Your change is still pending.');
+
+        coordinator.applySceneAgentValues([setEntry('world_state', 'avatars', { generate_new: false })], 'Character portraits: Off');
+        expect(state.error).toBe('An earlier change is waiting for the scene to be saved.');
+        const answer = { onComplete: vi.fn(), onError: vi.fn() };
+        coordinator.applySceneAgentValues([setEntry('world_state', 'backgrounds', { generate_new: true })], 'Backgrounds: On', answer);
+        expect(answer.onError).toHaveBeenCalledWith('An earlier change is waiting for the scene to be saved.');
+        expect(state.pendingLabel).toBe('Character portraits: On');
+        expect(sent).toEqual([]);
+    });
+
+    it('reports a change for a scene that cannot save on the shared state', () => {
+        const { coordinator, state } = harness({ scene: { data: {} } });
+        coordinator.applySceneAgentValues([setEntry('summarizer', 'manage_scene_history', { format: 'chat' })]);
+        expect(state.error).toBe('Save the scene to change its scene overrides.');
+    });
+});

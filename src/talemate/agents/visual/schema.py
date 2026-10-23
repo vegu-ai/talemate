@@ -184,7 +184,7 @@ class VisualPromptPart(pydantic.BaseModel):
 
 
 class VisualPrompt(pydantic.BaseModel):
-    prompt_type: PROMPT_TYPE = PROMPT_TYPE.KEYWORDS
+    prompt_type: PROMPT_TYPE = PROMPT_TYPE.DESCRIPTIVE
     parts: list[VisualPromptPart] = pydantic.Field(default_factory=list)
 
     @pydantic.computed_field
@@ -205,6 +205,14 @@ class VisualPrompt(pydantic.BaseModel):
         return self._build_prompt(self.prompt_type, False)
 
     @property
+    def positive_keywords(self) -> list[str]:
+        return self._keywords(True)
+
+    @property
+    def negative_keywords(self) -> list[str]:
+        return self._keywords(False)
+
+    @property
     def positive_prompt_keywords(self) -> str:
         return self._build_prompt(PROMPT_TYPE.KEYWORDS, True)
 
@@ -220,14 +228,18 @@ class VisualPrompt(pydantic.BaseModel):
     def negative_prompt_descriptive(self) -> str:
         return self._build_prompt(PROMPT_TYPE.DESCRIPTIVE, False)
 
+    def _keywords(self, positive: bool) -> list[str]:
+        keywords: list[str] = []
+        for part in self.parts:
+            keywords.extend(
+                part.positive_keywords if positive else part.negative_keywords
+            )
+        return list(dict.fromkeys(keywords))
+
     def _build_prompt(self, prompt_type: PROMPT_TYPE, positive: bool) -> str:
         prompt: list[str] = []
         if prompt_type == PROMPT_TYPE.KEYWORDS:
-            for part in self.parts:
-                prompt.extend(
-                    part.positive_keywords if positive else part.negative_keywords
-                )
-            return ", ".join(dict.fromkeys(prompt))
+            return ", ".join(self._keywords(positive))
         elif prompt_type == PROMPT_TYPE.DESCRIPTIVE:
             for part in self.parts:
                 if part.positive_descriptive if positive else part.negative_descriptive:
@@ -273,7 +285,7 @@ class BackendBase(pydantic.BaseModel):
     )
 
     gen_type: GEN_TYPE = GEN_TYPE.TEXT_TO_IMAGE
-    prompt_type: PROMPT_TYPE = PROMPT_TYPE.KEYWORDS
+    prompt_type: PROMPT_TYPE = PROMPT_TYPE.DESCRIPTIVE
 
 
 class Resolution(pydantic.BaseModel):
@@ -320,6 +332,10 @@ class AssetAttachmentContext(pydantic.BaseModel):
     current_avatar: bool = False
     override_current_avatar: bool = False
 
+    # scene backdrop
+    scene_backdrop: bool = False
+    backdrop_message_id: int | None = None
+
     # asset meta
     asset_name: str | None = None
     tags: list[str] = pydantic.Field(default_factory=list)
@@ -334,6 +350,9 @@ class AssetAttachmentContext(pydantic.BaseModel):
             return True
 
         if self.default_avatar or self.current_avatar:
+            return True
+
+        if self.scene_backdrop:
             return True
 
         return False
@@ -359,6 +378,12 @@ class GenerationRequest(pydantic.BaseModel):
 
     reference_assets: list[str] = pydantic.Field(default_factory=list)
 
+    purpose: str | None = None
+
+    # the feature that started the generation without a user request;
+    # None for a generation the user asked for
+    automatic_source: str | None = None
+
     inline_reference: str | None = pydantic.Field(default=None, exclude=False)
 
     callback: Callable | None = pydantic.Field(default=None, exclude=True)
@@ -366,6 +391,10 @@ class GenerationRequest(pydantic.BaseModel):
     asset_attachment_context: AssetAttachmentContext = pydantic.Field(
         default=AssetAttachmentContext()
     )
+
+    @property
+    def automatic(self) -> bool:
+        return bool(self.automatic_source)
 
     @property
     def reference_bytes(self) -> list[bytes]:
@@ -409,6 +438,7 @@ class GenerationResponse(pydantic.BaseModel):
     id: str | None = None
     backend_name: str | None = None
     saved: bool = False
+    refused: bool = False
 
     @pydantic.computed_field
     @property
@@ -429,6 +459,7 @@ class AnalysisRequest(pydantic.BaseModel):
     id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
     asset_id: str
     save: bool = False
+    generate_tags: bool = False
 
     @property
     def reference_bytes(self) -> list[bytes]:
@@ -441,6 +472,7 @@ class AnalysisRequest(pydantic.BaseModel):
 
 class AnalysisResponse(pydantic.BaseModel):
     analysis: str | None = None
+    tags: list[str] = pydantic.Field(default_factory=list)
     request: AnalysisRequest | None = None
     id: str | None = None
     backend_name: str | None = None

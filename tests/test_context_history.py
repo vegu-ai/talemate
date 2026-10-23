@@ -67,6 +67,13 @@ def _make_message(index: int, total_chars: int) -> CharacterMessage:
     return CharacterMessage(message=text, source="ai")
 
 
+def _set_scene_history(monkeypatch, summarizer, **values):
+    """Set manage_scene_history config values for the duration of one test."""
+    config = summarizer.actions["manage_scene_history"].config
+    for key, value in values.items():
+        monkeypatch.setattr(config[key], "value", value)
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -101,14 +108,12 @@ def agents():
     scene = MockScene()
     agents_dict = bootstrap_scene(scene)
 
-    # Set conversation format to "chat" for deterministic token counting
-    conversation = agents_dict["conversation"]
-    conversation.actions["generation_override"].enabled = True
-    conversation.actions["generation_override"].config["format"].value = "chat"
+    # Set the scene context format to "chat" for deterministic token counting
+    summarizer = agents_dict["summarizer"]
+    summarizer.actions["manage_scene_history"].config["format"].value = "chat"
 
     # Disable best-fit mode by default so standard-path tests are deterministic.
     # TestBestFit explicitly re-enables it via _enable_best_fit().
-    summarizer = agents_dict["summarizer"]
     summarizer.actions["manage_scene_history"].config["best_fit"].value = False
 
     return agents_dict
@@ -323,8 +328,8 @@ class TestBasicContextHistory:
         # with archived_history end values within history range.
         messages = [_make_message(i, 200) for i in range(30)]
         archived = [
-            {"text": "The party arrived at the ancient ruins.", "ts": "PT0S", "end": 9},
-            {"text": "They discovered a hidden chamber.", "ts": "PT30M", "end": 19},
+            {"text": "The party arrived at the ancient ruins.", "ts": 0, "end": 9},
+            {"text": "They discovered a hidden chamber.", "ts": 1800, "end": 19},
         ]
         scene = _make_scene(test_data, history=messages, archived_history=archived)
         result = scene.context_history(budget=8192)
@@ -388,17 +393,17 @@ class TestLayeredHistory:
         # can't cover all of them, leaving archived_boundary > 0 so the
         # layer entry isn't excluded by the boundary check.
         archived = [
-            {"text": _pad("Archived early", 500), "ts": "PT0S", "end": 4},
-            {"text": _pad("Archived mid", 500), "ts": "PT10M", "end": 9},
-            {"text": _pad("Archived late", 500), "ts": "PT30M", "end": 14},
-            {"text": _pad("Archived recent", 500), "ts": "PT1H", "end": 19},
+            {"text": _pad("Archived early", 500), "ts": 0, "end": 4},
+            {"text": _pad("Archived mid", 500), "ts": 600, "end": 9},
+            {"text": _pad("Archived late", 500), "ts": 1800, "end": 14},
+            {"text": _pad("Archived recent", 500), "ts": 3600, "end": 19},
         ]
         layered = [
             [  # Layer 0 covers archived 0-1
                 {
                     "text": "The adventure began with the party forming.",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT10M",
+                    "ts_start": 0,
+                    "ts_end": 600,
                     "start": 0,
                     "end": 1,
                 },
@@ -425,25 +430,25 @@ class TestLayeredHistory:
 
         messages = [_make_message(i, 200) for i in range(30)]
         archived = [
-            {"text": "The party arrived at the ancient ruins.", "ts": "PT0S", "end": 4},
+            {"text": "The party arrived at the ancient ruins.", "ts": 0, "end": 4},
             {
                 "text": "They discovered a hidden chamber beneath the temple.",
-                "ts": "PT30M",
+                "ts": 1800,
                 "end": 9,
             },
             {
                 "text": "A mysterious figure emerged from the shadows.",
-                "ts": "PT1H",
+                "ts": 3600,
                 "end": 14,
             },
-            {"text": "The confrontation revealed secrets.", "ts": "PT1H30M", "end": 19},
+            {"text": "The confrontation revealed secrets.", "ts": 5400, "end": 19},
         ]
         layered = [
             [
                 {
                     "text": "Layered summary of early events.",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT30M",
+                    "ts_start": 0,
+                    "ts_end": 1800,
                     "start": 0,
                     "end": 1,
                 }
@@ -473,17 +478,17 @@ class TestLayeredHistory:
         # archived_boundary.
         messages = [_make_message(i, 200) for i in range(30)]
         archived = [
-            {"text": _pad("Archived early", 500), "ts": "PT0S", "end": 4},
-            {"text": _pad("Archived mid-early", 500), "ts": "PT10M", "end": 9},
-            {"text": _pad("Archived mid-late", 500), "ts": "PT30M", "end": 14},
-            {"text": _pad("Archived recent", 500), "ts": "PT1H", "end": 19},
+            {"text": _pad("Archived early", 500), "ts": 0, "end": 4},
+            {"text": _pad("Archived mid-early", 500), "ts": 600, "end": 9},
+            {"text": _pad("Archived mid-late", 500), "ts": 1800, "end": 14},
+            {"text": _pad("Archived recent", 500), "ts": 3600, "end": 19},
         ]
         layered = [
             [
                 {
                     "text": "The adventure began with the party forming.",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT10M",
+                    "ts_start": 0,
+                    "ts_end": 600,
                     "start": 0,
                     "end": 0,
                 }
@@ -647,7 +652,7 @@ class TestAssuredDialogueNum:
 
         # Archived history covers up to index 8, so summarized_to = 9
         # Only message 9 is after the boundary
-        archived = [{"text": "Summary", "ts": "PT0S", "end": 9}]
+        archived = [{"text": "Summary", "ts": 0, "end": 9}]
 
         scene = MockScene()
         scene.history = messages
@@ -677,7 +682,7 @@ class TestAssuredDialogueNum:
         ]
 
         # summarized_to = 5, so messages 5-9 are after boundary (5 messages)
-        archived = [{"text": "Summary", "ts": "PT0S", "end": 5}]
+        archived = [{"text": "Summary", "ts": 0, "end": 5}]
 
         scene = MockScene()
         scene.history = messages
@@ -708,7 +713,7 @@ class TestAssuredDialogueNum:
         ]
 
         # summarized_to = 8, so only messages 8-9 are after boundary
-        archived = [{"text": "Summary", "ts": "PT0S", "end": 8}]
+        archived = [{"text": "Summary", "ts": 0, "end": 8}]
 
         scene = MockScene()
         scene.history = messages
@@ -769,7 +774,7 @@ class TestEdgeCases:
         # Create a scene with archived_history pointing beyond current history
         scene = mock_scene(
             archived_history=[
-                {"text": "Old content", "ts": "PT0S", "end": 100}  # end > len(history)
+                {"text": "Old content", "ts": 0, "end": 100}  # end > len(history)
             ]
         )
         result = scene.context_history(budget=8192)
@@ -781,7 +786,7 @@ class TestEdgeCases:
         """Should handle archived history entries without 'end' key (static entries)."""
         scene = mock_scene(
             archived_history=[
-                {"text": "Static backstory", "ts": "PT0S"}  # No 'end' key
+                {"text": "Static backstory", "ts": 0}  # No 'end' key
             ]
         )
         result = scene.context_history(budget=8192)
@@ -842,7 +847,7 @@ class TestDialogueSummaryBoundary:
         # Archived history with end=6 means it covers indices 0-5
         # summarized_to = 6, so traditionally dialogue would start at index 6
         # But with expansion enabled, dialogue should expand backwards
-        archived = [{"text": "Summary of early messages", "ts": "PT0S", "end": 6}]
+        archived = [{"text": "Summary of early messages", "ts": 0, "end": 6}]
 
         scene = MockScene()
         scene.history = messages
@@ -877,7 +882,7 @@ class TestDialogueSummaryBoundary:
         ]
 
         # Archived history covers messages 0-7 (summarized_to = 8)
-        archived = [{"text": "Summary of early messages", "ts": "PT0S", "end": 7}]
+        archived = [{"text": "Summary of early messages", "ts": 0, "end": 7}]
 
         scene = MockScene()
         scene.history = messages
@@ -916,7 +921,7 @@ class TestDialogueSummaryBoundary:
 
         # Archived history with end=6 means it covers indices 0-5
         # summarized_to = 6, so dialogue starts at index 6
-        archived = [{"text": "Summary of early messages", "ts": "PT0S", "end": 6}]
+        archived = [{"text": "Summary of early messages", "ts": 0, "end": 6}]
 
         scene = MockScene()
         scene.history = messages
@@ -953,17 +958,17 @@ class TestDialogueSummaryBoundary:
         archived = [
             {
                 "text": "First summary chunk with lots of content.",
-                "ts": "PT0S",
+                "ts": 0,
                 "end": 3,
             },
             {
                 "text": "Second summary chunk with more content.",
-                "ts": "PT30M",
+                "ts": 1800,
                 "end": 5,
             },
             {
                 "text": "Third summary chunk covering recent events.",
-                "ts": "PT1H",
+                "ts": 3600,
                 "end": 7,
             },
         ]
@@ -1008,12 +1013,12 @@ class TestDialogueSummaryBoundary:
 
         # 6 archived entries covering different message ranges
         archived = [
-            {"text": "Summary A", "ts": "PT0S", "end": 3},  # idx 0
-            {"text": "Summary B", "ts": "PT10M", "end": 7},  # idx 1
-            {"text": "Summary C", "ts": "PT20M", "end": 11},  # idx 2
-            {"text": "Summary D", "ts": "PT30M", "end": 15},  # idx 3
-            {"text": "Summary E", "ts": "PT1H", "end": 20},  # idx 4
-            {"text": "Summary F", "ts": "PT1H30M", "end": 25},  # idx 5
+            {"text": "Summary A", "ts": 0, "end": 3},  # idx 0
+            {"text": "Summary B", "ts": 600, "end": 7},  # idx 1
+            {"text": "Summary C", "ts": 1200, "end": 11},  # idx 2
+            {"text": "Summary D", "ts": 1800, "end": 15},  # idx 3
+            {"text": "Summary E", "ts": 3600, "end": 20},  # idx 4
+            {"text": "Summary F", "ts": 5400, "end": 25},  # idx 5
         ]
 
         # Layered history covers archived entries 0-3
@@ -1021,8 +1026,8 @@ class TestDialogueSummaryBoundary:
             [  # Layer 0 (base layer)
                 {
                     "text": "Layered summary of early events",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT30M",
+                    "ts_start": 0,
+                    "ts_end": 1800,
                     "end": 3,  # archived_history index, NOT message index
                 },
             ],
@@ -1075,20 +1080,20 @@ class TestDialogueSummaryBoundary:
         messages = [_make_message(i, 200) for i in range(30)]
 
         archived = [
-            {"text": _pad("Early archived 1", 50), "ts": "PT0S", "end": 3},
-            {"text": _pad("Early archived 2", 50), "ts": "PT10M", "end": 7},
-            {"text": _pad("Early archived 3", 50), "ts": "PT20M", "end": 11},
-            {"text": _pad("Gap summary middle", 50), "ts": "PT30M", "end": 15},
-            {"text": _pad("Gap summary later", 50), "ts": "PT1H", "end": 20},
-            {"text": _pad("Near dialogue", 50), "ts": "PT1H30M", "end": 25},
+            {"text": _pad("Early archived 1", 50), "ts": 0, "end": 3},
+            {"text": _pad("Early archived 2", 50), "ts": 600, "end": 7},
+            {"text": _pad("Early archived 3", 50), "ts": 1200, "end": 11},
+            {"text": _pad("Gap summary middle", 50), "ts": 1800, "end": 15},
+            {"text": _pad("Gap summary later", 50), "ts": 3600, "end": 20},
+            {"text": _pad("Near dialogue", 50), "ts": 5400, "end": 25},
         ]
 
         layered = [
             [
                 {
                     "text": _pad("Layered summary", 50),
-                    "ts_start": "PT0S",
-                    "ts_end": "PT20M",
+                    "ts_start": 0,
+                    "ts_end": 1200,
                     "end": 2,
                 }
             ],
@@ -1129,9 +1134,9 @@ class TestDialogueSummaryBoundary:
         messages = [_make_message(i, 300) for i in range(20)]
 
         archived = [
-            {"text": _pad("Early summary 0-7", 50), "ts": "PT0S", "end": 7},
-            {"text": _pad("Middle summary 8-15", 50), "ts": "PT30M", "end": 15},
-            {"text": _pad("Recent summary 16-18", 50), "ts": "PT1H", "end": 18},
+            {"text": _pad("Early summary 0-7", 50), "ts": 0, "end": 7},
+            {"text": _pad("Middle summary 8-15", 50), "ts": 1800, "end": 15},
+            {"text": _pad("Recent summary 16-18", 50), "ts": 3600, "end": 18},
         ]
 
         scene = MockScene()
@@ -1171,9 +1176,9 @@ class TestDialogueSummaryBoundary:
 
         # Archived entries - small ranges that dialogue can fully cover
         archived = [
-            {"text": "Summary of message 0-2", "ts": "PT0S", "end": 2},
-            {"text": "Summary of message 3-5", "ts": "PT30M", "end": 5},
-            {"text": "Summary of message 6-8", "ts": "PT1H", "end": 8},
+            {"text": "Summary of message 0-2", "ts": 0, "end": 2},
+            {"text": "Summary of message 3-5", "ts": 1800, "end": 5},
+            {"text": "Summary of message 6-8", "ts": 3600, "end": 8},
         ]
 
         scene = MockScene()
@@ -1217,7 +1222,7 @@ class TestDialogueSummaryBoundary:
         archived = [
             {
                 "text": _pad(f"Archived {i}", 50),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 5 - 1,
             }
             for i in range(10)
@@ -1228,8 +1233,8 @@ class TestDialogueSummaryBoundary:
             [
                 {
                     "text": _pad("Layered first half", 50),
-                    "ts_start": "PT0S",
-                    "ts_end": "PT40M",
+                    "ts_start": 0,
+                    "ts_end": 2400,
                     "start": 0,
                     "end": 4,
                 }
@@ -1307,7 +1312,7 @@ class TestLayeredDetailGradient:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 3 - 1,
             }
             for i in range(8)
@@ -1318,29 +1323,29 @@ class TestLayeredDetailGradient:
         layer_0 = [
             {
                 "text": _pad("L0-A", self.L0_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 1,
             },
             {
                 "text": _pad("L0-B", self.L0_CHARS),
-                "ts_start": "PT10M",
-                "ts_end": "PT20M",
+                "ts_start": 600,
+                "ts_end": 1200,
                 "start": 2,
                 "end": 2,
             },
             {
                 "text": _pad("L0-C", self.L0_CHARS),
-                "ts_start": "PT20M",
-                "ts_end": "PT30M",
+                "ts_start": 1200,
+                "ts_end": 1800,
                 "start": 3,
                 "end": 3,
             },
             {
                 "text": _pad("L0-D", self.L0_CHARS),
-                "ts_start": "PT30M",
-                "ts_end": "PT50M",
+                "ts_start": 1800,
+                "ts_end": 3000,
                 "start": 4,
                 "end": 5,
             },
@@ -1350,15 +1355,15 @@ class TestLayeredDetailGradient:
         layer_1 = [
             {
                 "text": _pad("L1-X", self.L1_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 1,
             },
             {
                 "text": _pad("L1-Y", self.L1_CHARS),
-                "ts_start": "PT10M",
-                "ts_end": "PT20M",
+                "ts_start": 600,
+                "ts_end": 1200,
                 "start": 2,
                 "end": 2,
             },
@@ -1426,7 +1431,7 @@ class TestLayeredDetailGradient:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 5 - 1,
             }
             for i in range(6)
@@ -1437,22 +1442,22 @@ class TestLayeredDetailGradient:
         layer_0 = [
             {
                 "text": _pad("L0-A", self.L0_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 0,
             },
             {
                 "text": _pad("L0-B", self.L0_CHARS),
-                "ts_start": "PT10M",
-                "ts_end": "PT20M",
+                "ts_start": 600,
+                "ts_end": 1200,
                 "start": 1,
                 "end": 1,
             },
             {
                 "text": _pad("L0-C", self.L0_CHARS),
-                "ts_start": "PT20M",
-                "ts_end": "PT30M",
+                "ts_start": 1200,
+                "ts_end": 1800,
                 "start": 2,
                 "end": 3,
             },
@@ -1462,8 +1467,8 @@ class TestLayeredDetailGradient:
         layer_1 = [
             {
                 "text": _pad("L1-overview", self.L1_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT20M",
+                "ts_start": 0,
+                "ts_end": 1200,
                 "start": 0,
                 "end": 1,
             },
@@ -1502,13 +1507,13 @@ class TestLayeredDetailGradient:
         messages = self._make_messages(20)
 
         archived = [
-            {"text": _pad("Archived early", self.ARCH_CHARS), "ts": "PT0S", "end": 5},
+            {"text": _pad("Archived early", self.ARCH_CHARS), "ts": 0, "end": 5},
             {
                 "text": _pad("Archived middle", self.ARCH_CHARS),
-                "ts": "PT30M",
+                "ts": 1800,
                 "end": 10,
             },
-            {"text": _pad("Archived recent", self.ARCH_CHARS), "ts": "PT1H", "end": 15},
+            {"text": _pad("Archived recent", self.ARCH_CHARS), "ts": 3600, "end": 15},
         ]
 
         scene = MockScene()
@@ -1548,7 +1553,7 @@ class TestLayeredDetailGradient:
         archived = [
             {
                 "text": _pad(f"Archived {i}", 300),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 6 - 1,
             }
             for i in range(8)
@@ -1559,29 +1564,29 @@ class TestLayeredDetailGradient:
         layer_0 = [
             {
                 "text": _pad("L0-A", 200),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 1,
             },
             {
                 "text": _pad("L0-B", 200),
-                "ts_start": "PT10M",
-                "ts_end": "PT20M",
+                "ts_start": 600,
+                "ts_end": 1200,
                 "start": 2,
                 "end": 2,
             },
             {
                 "text": _pad("L0-C", 200),
-                "ts_start": "PT20M",
-                "ts_end": "PT30M",
+                "ts_start": 1200,
+                "ts_end": 1800,
                 "start": 3,
                 "end": 3,
             },
             {
                 "text": _pad("L0-D", 200),
-                "ts_start": "PT30M",
-                "ts_end": "PT50M",
+                "ts_start": 1800,
+                "ts_end": 3000,
                 "start": 4,
                 "end": 5,
             },
@@ -1591,15 +1596,15 @@ class TestLayeredDetailGradient:
         layer_1 = [
             {
                 "text": _pad("L1-X", 100),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 1,
             },
             {
                 "text": _pad("L1-Y", 100),
-                "ts_start": "PT10M",
-                "ts_end": "PT20M",
+                "ts_start": 600,
+                "ts_end": 1200,
                 "start": 2,
                 "end": 2,
             },
@@ -1661,7 +1666,7 @@ class TestLayeredDetailGradient:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 5 - 1,
             }
             for i in range(4)
@@ -1670,8 +1675,8 @@ class TestLayeredDetailGradient:
         layer_0 = [
             {
                 "text": _pad("L0-entry", self.L0_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 0,
             },
@@ -1680,8 +1685,8 @@ class TestLayeredDetailGradient:
         layer_1 = [
             {
                 "text": _pad("L1-entry", self.L1_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 0,
             },
@@ -1728,7 +1733,7 @@ class TestLayeredDetailGradient:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 5 - 1,
             }
             for i in range(4)
@@ -1737,15 +1742,15 @@ class TestLayeredDetailGradient:
         layer_0 = [
             {
                 "text": _pad("L0-A", self.L0_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 1,
             },
             {
                 "text": _pad("L0-B", self.L0_CHARS),
-                "ts_start": "PT10M",
-                "ts_end": "PT20M",
+                "ts_start": 600,
+                "ts_end": 1200,
                 "start": 2,
                 "end": 2,
             },
@@ -1815,7 +1820,7 @@ class TestIndependentRatios:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 3 - 1,
             }
             for i in range(6)
@@ -1824,15 +1829,15 @@ class TestIndependentRatios:
         layer_0 = [
             {
                 "text": _pad("L0-A", self.L0_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 0,
             },
             {
                 "text": _pad("L0-B", self.L0_CHARS),
-                "ts_start": "PT10M",
-                "ts_end": "PT20M",
+                "ts_start": 600,
+                "ts_end": 1200,
                 "start": 1,
                 "end": 1,
             },
@@ -1896,7 +1901,7 @@ class TestIndependentRatios:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 5 - 1,
             }
             for i in range(6)
@@ -1953,7 +1958,7 @@ class TestIndependentRatios:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 5 - 1,
             }
             for i in range(6)
@@ -1962,8 +1967,8 @@ class TestIndependentRatios:
         layer_0 = [
             {
                 "text": _pad("L0-entry", self.L0_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 1,
             },
@@ -2020,7 +2025,7 @@ class TestIndependentRatios:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 3 - 1,
             }
             for i in range(6)
@@ -2029,8 +2034,8 @@ class TestIndependentRatios:
         layer_0 = [
             {
                 "text": _pad(f"L0-{i}", self.L0_CHARS),
-                "ts_start": f"PT{i * 10}M",
-                "ts_end": f"PT{(i + 1) * 10}M",
+                "ts_start": i * 600,
+                "ts_end": (i + 1) * 600,
                 "start": i,
                 "end": i,
             }
@@ -2115,7 +2120,7 @@ class TestBestFit:
         archived = [
             {
                 "text": _pad(f"Archived {i}", cls.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 3 - 1,
             }
             for i in range(num_archived)
@@ -2125,8 +2130,8 @@ class TestBestFit:
             layer_0 = [
                 {
                     "text": _pad(f"L0-{i}", cls.L0_CHARS),
-                    "ts_start": f"PT{i * 20}M",
-                    "ts_end": f"PT{(i + 1) * 20}M",
+                    "ts_start": i * 1200,
+                    "ts_end": (i + 1) * 1200,
                     "start": i * 2,
                     "end": i * 2 + 1,
                 }
@@ -2136,8 +2141,8 @@ class TestBestFit:
             layer_1 = [
                 {
                     "text": _pad(f"L1-{i}", cls.L1_CHARS),
-                    "ts_start": f"PT{i * 40}M",
-                    "ts_end": f"PT{(i + 1) * 40}M",
+                    "ts_start": i * 2400,
+                    "ts_end": (i + 1) * 2400,
                     "start": i * 2,
                     "end": i * 2 + 1,
                 }
@@ -2390,17 +2395,13 @@ class TestBestFit:
         assert "L0-" not in text
         assert "L1-" not in text
 
-    def test_best_fit_preview(self, summarizer, test_data):
+    def test_best_fit_preview(self, summarizer, test_data, monkeypatch):
         """Preview in best-fit mode returns correct structure."""
         self._enable_best_fit(summarizer)
         scene = self._make_test_scene(test_data)
 
-        from talemate.agents.summarize.context_history import (
-            ContextHistoryPreviewOverrides,
-        )
-
-        overrides = ContextHistoryPreviewOverrides(best_fit=True, max_budget=5000)
-        preview = summarizer.context_history_preview(scene, overrides=overrides)
+        _set_scene_history(monkeypatch, summarizer, best_fit=True, max_budget=5000)
+        preview = summarizer.context_history_preview(scene)
 
         assert preview["summary"]["best_fit"] is True
         assert "total" in preview["budget"]
@@ -2422,8 +2423,9 @@ class TestBestFit:
         """At least _BEST_FIT_MIN_DIALOGUE messages are included regardless of budget."""
         from talemate.agents.summarize.context_history import _BEST_FIT_MIN_DIALOGUE
 
-        if _BEST_FIT_MIN_DIALOGUE <= 0:
-            pytest.skip("min dialogue guarantee is disabled")
+        assert _BEST_FIT_MIN_DIALOGUE > 0, (
+            "minimum-dialogue guarantee tests require an enabled default"
+        )
 
         self._enable_best_fit(summarizer)
 
@@ -2433,7 +2435,7 @@ class TestBestFit:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 2 - 1,  # covers all 10 messages
             }
             for i in range(5)
@@ -2461,8 +2463,9 @@ class TestBestFit:
         """Min dialogue guarantee works even when budget is exhausted."""
         from talemate.agents.summarize.context_history import _BEST_FIT_MIN_DIALOGUE
 
-        if _BEST_FIT_MIN_DIALOGUE <= 0:
-            pytest.skip("min dialogue guarantee is disabled")
+        assert _BEST_FIT_MIN_DIALOGUE > 0, (
+            "minimum-dialogue guarantee tests require an enabled default"
+        )
 
         self._enable_best_fit(summarizer)
         scene = self._make_test_scene(test_data)
@@ -2484,7 +2487,7 @@ class TestBestFit:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 2 - 1,
             }
             for i in range(5)
@@ -2535,8 +2538,9 @@ class TestBestFit:
         """
         from talemate.agents.summarize.context_history import _BEST_FIT_MIN_DIALOGUE
 
-        if _BEST_FIT_MIN_DIALOGUE <= 0:
-            pytest.skip("min dialogue guarantee is disabled")
+        assert _BEST_FIT_MIN_DIALOGUE > 0, (
+            "minimum-dialogue guarantee tests require an enabled default"
+        )
 
         self._enable_best_fit(summarizer)
 
@@ -2554,7 +2558,7 @@ class TestBestFit:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 6 - 1,
             }
             for i in range(5)
@@ -2580,19 +2584,21 @@ class TestBestFit:
             f"with duplicate texts, got {dialogue_count}"
         )
 
-    def test_best_fit_preview_includes_min_dialogue(self, summarizer, test_data):
+    def test_best_fit_preview_includes_min_dialogue(
+        self, summarizer, test_data, monkeypatch
+    ):
         """Preview response includes best_fit_min_dialogue in summary."""
         self._enable_best_fit(summarizer)
         scene = self._make_test_scene(test_data)
 
-        from talemate.agents.summarize.context_history import (
-            ContextHistoryPreviewOverrides,
+        _set_scene_history(
+            monkeypatch,
+            summarizer,
+            best_fit=True,
+            max_budget=5000,
+            best_fit_min_dialogue=7,
         )
-
-        overrides = ContextHistoryPreviewOverrides(
-            best_fit=True, max_budget=5000, best_fit_min_dialogue=7
-        )
-        preview = summarizer.context_history_preview(scene, overrides=overrides)
+        preview = summarizer.context_history_preview(scene)
 
         assert preview["summary"]["best_fit_min_dialogue"] == 7
 
@@ -2612,7 +2618,7 @@ class TestBestFit:
 
         # Lower level: 10 entries, each 100 tokens
         lower_entries = [
-            {"text": _pad(f"lower-{i}", 100), "ts": f"PT{i}M"} for i in range(10)
+            {"text": _pad(f"lower-{i}", 100), "ts": i * 60} for i in range(10)
         ]
         lower_formatted = [e["text"] for e in lower_entries]
         lower_tokens = [100] * 10  # 1000 tokens total
@@ -2624,22 +2630,22 @@ class TestBestFit:
         upper_entries = [
             {
                 "text": _pad("upper-0", 50),
-                "ts_start": "PT0M",
-                "ts_end": "PT3M",
+                "ts_start": 0,
+                "ts_end": 180,
                 "start": 0,
                 "end": 2,
             },
             {
                 "text": _pad("upper-1", 50),
-                "ts_start": "PT3M",
-                "ts_end": "PT5M",
+                "ts_start": 180,
+                "ts_end": 300,
                 "start": 3,
                 "end": 4,
             },
             {
                 "text": _pad("upper-2", 50),
-                "ts_start": "PT6M",
-                "ts_end": "PT9M",
+                "ts_start": 360,
+                "ts_end": 540,
                 "start": 6,
                 "end": 8,
             },
@@ -2688,6 +2694,158 @@ class TestBestFit:
             f"with budget {budget}"
         )
 
+    def test_best_fit_compute_ranges_clamps_out_of_range_indices(self):
+        """start/end beyond the lower level's length must not leak into ranges.
+
+        Render ranges are used as direct list indices downstream
+        (``level.formatted[i]``); an entry whose start/end points past the
+        level below (drifted or reconstructed summarization indices) must be
+        clamped or skipped, never propagated.
+        """
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryMixin,
+            _BestFitLevel,
+        )
+
+        lower = _BestFitLevel(
+            entries=[{"text": _pad(f"lower-{i}", 100), "ts": i * 60} for i in range(3)],
+            formatted=[_pad(f"lower-{i}", 100) for i in range(3)],
+            tokens=[100] * 3,
+            type="archived",
+        )
+        upper = _BestFitLevel(
+            entries=[
+                {
+                    "text": _pad("upper-0", 50),
+                    "ts_start": 0,
+                    "ts_end": 180,
+                    "start": 5,
+                    "end": 99,
+                }
+            ],
+            formatted=[_pad("upper-0", 50)],
+            tokens=[50],
+            type="layer",
+            layer_idx=0,
+        )
+
+        render_ranges = ContextHistoryMixin._best_fit_compute_ranges(
+            [upper, lower], budget=10000
+        )
+
+        for level, (s, e) in zip([upper, lower], render_ranges):
+            assert 0 <= s <= e <= len(level.entries), (
+                f"render range ({s}, {e}) exceeds level of {len(level.entries)} entries"
+            )
+
+    def test_best_fit_compute_ranges_warns_on_out_of_range_indices(self):
+        """Fully out-of-range entries are skipped, and the skip is logged."""
+        from structlog.testing import capture_logs
+
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryMixin,
+            _BestFitLevel,
+        )
+
+        lower = _BestFitLevel(
+            entries=[{"text": _pad(f"lower-{i}", 100), "ts": i * 60} for i in range(3)],
+            formatted=[_pad(f"lower-{i}", 100) for i in range(3)],
+            tokens=[100] * 3,
+            type="archived",
+        )
+        upper = _BestFitLevel(
+            entries=[
+                {
+                    "text": _pad("upper-0", 50),
+                    "ts_start": 0,
+                    "ts_end": 180,
+                    "start": 5,
+                    "end": 99,
+                }
+            ],
+            formatted=[_pad("upper-0", 50)],
+            tokens=[50],
+            type="layer",
+            layer_idx=0,
+        )
+
+        with capture_logs() as logs:
+            ContextHistoryMixin._best_fit_compute_ranges([upper, lower], budget=10000)
+
+        assert any(
+            log["event"] == "best_fit_ranges_clamped" and log["log_level"] == "warning"
+            for log in logs
+        )
+
+    def test_best_fit_unexpandable_entry_stays_rendered(self):
+        """A drifted entry must not be cut from the render when an older entry expands.
+
+        Expansion walks newest → oldest; an unexpandable (fully out-of-range)
+        entry is a hard boundary. Otherwise the older entry's expansion shrinks
+        the upper range past the drifted entry and its summary renders nowhere.
+        """
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryMixin,
+            _BestFitLevel,
+        )
+
+        lower = _BestFitLevel(
+            entries=[{"text": _pad(f"lower-{i}", 100), "ts": i * 60} for i in range(3)],
+            formatted=[_pad(f"lower-{i}", 100) for i in range(3)],
+            tokens=[100] * 3,
+            type="archived",
+        )
+        upper = _BestFitLevel(
+            entries=[
+                # valid older entry — would expand fine on its own
+                {
+                    "text": _pad("upper-0", 50),
+                    "ts_start": 0,
+                    "ts_end": 60,
+                    "start": 0,
+                    "end": 0,
+                },
+                # drifted newest entry — points past the lower level
+                {
+                    "text": _pad("upper-1", 50),
+                    "ts_start": 60,
+                    "ts_end": 180,
+                    "start": 5,
+                    "end": 99,
+                },
+            ],
+            formatted=[_pad("upper-0", 50), _pad("upper-1", 50)],
+            tokens=[50, 50],
+            type="layer",
+            layer_idx=0,
+        )
+
+        render_ranges = ContextHistoryMixin._best_fit_compute_ranges(
+            [upper, lower], budget=10000
+        )
+
+        # the drifted newest entry stays in the upper render range
+        assert render_ranges[0] == (0, 2)
+
+    def test_best_fit_out_of_range_layer_indices_no_index_error(
+        self, summarizer, test_data
+    ):
+        """End-to-end: a scene whose layered_history indices point past the
+        layer below (as changelog reconstruction can produce) must render
+        without IndexError."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+        # layer 0 has 4 entries; point the second layer-1 entry past the end
+        scene.layered_history[1][1]["start"] = 5
+        scene.layered_history[1][1]["end"] = 99
+
+        # budget small enough that not all dialogue fits, forcing the
+        # level-expansion path that consumes the corrupted indices
+        result = scene.context_history(budget=1500)
+
+        assert isinstance(result, list)
+        assert len(result) > 0
+
     def test_best_fit_prefers_dialogue_over_summaries(self, summarizer, test_data):
         """When budget fits all dialogue, prefer it over summaries."""
         self._enable_best_fit(summarizer)
@@ -2726,18 +2884,16 @@ class TestBestFit:
         )
         assert has_summary, "Summary content should fill gaps when dialogue doesn't fit"
 
-    def test_best_fit_preview_prefers_dialogue(self, summarizer, test_data):
+    def test_best_fit_preview_prefers_dialogue(
+        self, summarizer, test_data, monkeypatch
+    ):
         """Preview in best-fit mode also prefers full dialogue when budget allows."""
         self._enable_best_fit(summarizer)
         scene = self._make_test_scene(test_data)
 
-        from talemate.agents.summarize.context_history import (
-            ContextHistoryPreviewOverrides,
-        )
-
         # Budget large enough for all 30 messages (3000 chars)
-        overrides = ContextHistoryPreviewOverrides(best_fit=True, max_budget=5000)
-        preview = summarizer.context_history_preview(scene, overrides=overrides)
+        _set_scene_history(monkeypatch, summarizer, best_fit=True, max_budget=5000)
+        preview = summarizer.context_history_preview(scene)
 
         types = [s["type"] for s in preview["sections"]]
         assert "dialogue" in types
@@ -2763,15 +2919,15 @@ class TestBestFit:
         messages = [_make_message(i, self.MSG_CHARS) for i in range(10)]
         # Mix of summary entries (with end) and permanent notes (without end)
         archived = [
-            {"text": _pad("Permanent note", self.ARCH_CHARS), "ts": "PT0S"},
+            {"text": _pad("Permanent note", self.ARCH_CHARS), "ts": 0},
             {
                 "text": _pad("Summary 0", self.ARCH_CHARS),
-                "ts": "PT10M",
+                "ts": 600,
                 "end": 3,
             },
             {
                 "text": _pad("Summary 1", self.ARCH_CHARS),
-                "ts": "PT20M",
+                "ts": 1200,
                 "end": 7,
             },
         ]
@@ -2792,13 +2948,11 @@ class TestBestFit:
         # Summary entries may appear (if budget allows)
         # The important thing is the permanent note was filtered out
 
-    def test_best_fit_preview_includes_intro_when_sparse(self, summarizer, test_data):
+    def test_best_fit_preview_includes_intro_when_sparse(
+        self, summarizer, test_data, monkeypatch
+    ):
         """Preview includes scene intro in dialogue section when context is sparse."""
         self._enable_best_fit(summarizer)
-
-        from talemate.agents.summarize.context_history import (
-            ContextHistoryPreviewOverrides,
-        )
 
         # Scene with no history/archives — context is empty, so intro should appear
         scene = MockScene()
@@ -2808,8 +2962,8 @@ class TestBestFit:
         scene.ts = test_data["basic_scene"]["ts"]
         scene.intro = "Welcome to the test adventure."
 
-        overrides = ContextHistoryPreviewOverrides(best_fit=True, max_budget=5000)
-        preview = summarizer.context_history_preview(scene, overrides=overrides)
+        _set_scene_history(monkeypatch, summarizer, best_fit=True, max_budget=5000)
+        preview = summarizer.context_history_preview(scene)
 
         dialogue_section = next(
             s for s in preview["sections"] if s["type"] == "dialogue"
@@ -2819,12 +2973,10 @@ class TestBestFit:
             "Intro should appear in dialogue section when context is sparse"
         )
 
-    def test_ratio_preview_includes_intro_when_sparse(self, summarizer, test_data):
+    def test_ratio_preview_includes_intro_when_sparse(
+        self, summarizer, test_data, monkeypatch
+    ):
         """Ratio-mode preview includes scene intro in dialogue when context is sparse."""
-        from talemate.agents.summarize.context_history import (
-            ContextHistoryPreviewOverrides,
-        )
-
         scene = MockScene()
         scene.history = []
         scene.archived_history = []
@@ -2832,8 +2984,8 @@ class TestBestFit:
         scene.ts = test_data["basic_scene"]["ts"]
         scene.intro = "A stormy night begins."
 
-        overrides = ContextHistoryPreviewOverrides(best_fit=False, max_budget=5000)
-        preview = summarizer.context_history_preview(scene, overrides=overrides)
+        _set_scene_history(monkeypatch, summarizer, best_fit=False, max_budget=5000)
+        preview = summarizer.context_history_preview(scene)
 
         dialogue_section = next(
             s for s in preview["sections"] if s["type"] == "dialogue"
@@ -2860,8 +3012,8 @@ class TestBestFit:
         messages = [director_msg] + [_make_message(i, 120) for i in range(1, 25)]
         # 2 archived entries covering messages 0..19
         archived = [
-            {"text": _pad("Summary 0", 200), "ts": "PT10M", "end": 9},
-            {"text": _pad("Summary 1", 200), "ts": "PT20M", "end": 19},
+            {"text": _pad("Summary 0", 200), "ts": 600, "end": 9},
+            {"text": _pad("Summary 1", 200), "ts": 1200, "end": 19},
         ]
 
         scene = MockScene()
@@ -2886,7 +3038,7 @@ class TestBestFit:
         )
 
     def test_best_fit_preview_all_dialogue_with_few_summaries(
-        self, summarizer, test_data
+        self, summarizer, test_data, monkeypatch
     ):
         """Repro (preview path): 25 messages (~3000 tokens), 2 archived, budget=12000."""
         self._enable_best_fit(summarizer)
@@ -2894,14 +3046,10 @@ class TestBestFit:
             "best_fit_max_dialogue"
         ].value = 250
 
-        from talemate.agents.summarize.context_history import (
-            ContextHistoryPreviewOverrides,
-        )
-
         messages = [_make_message(i, 120) for i in range(25)]
         archived = [
-            {"text": _pad("Summary 0", 200), "ts": "PT10M", "end": 9},
-            {"text": _pad("Summary 1", 200), "ts": "PT20M", "end": 19},
+            {"text": _pad("Summary 0", 200), "ts": 600, "end": 9},
+            {"text": _pad("Summary 1", 200), "ts": 1200, "end": 19},
         ]
 
         scene = MockScene()
@@ -2910,10 +3058,14 @@ class TestBestFit:
         scene.layered_history = []
         scene.ts = test_data["basic_scene"]["ts"]
 
-        overrides = ContextHistoryPreviewOverrides(
-            best_fit=True, max_budget=12000, best_fit_max_dialogue=250
+        _set_scene_history(
+            monkeypatch,
+            summarizer,
+            best_fit=True,
+            max_budget=12000,
+            best_fit_max_dialogue=250,
         )
-        preview = summarizer.context_history_preview(scene, overrides=overrides)
+        preview = summarizer.context_history_preview(scene)
 
         types = [s["type"] for s in preview["sections"]]
         assert "dialogue" in types
@@ -2947,6 +3099,14 @@ class TestBestFit:
         assert len(summarized_messages) > 0, (
             "Some summarized messages should be expanded to dialogue"
         )
+        message_ids = {
+            message.as_format("chat"): message.id for message in scene.history
+        }
+        for part in result:
+            if part in message_ids:
+                assert part.message_id == message_ids[part]
+            else:
+                assert not hasattr(part, "message_id")
 
     def test_best_fit_dialogue_expansion_maximizes_detail(self, summarizer, test_data):
         """Dialogue expansion should prefer recent messages over summaries."""
@@ -2975,9 +3135,9 @@ class TestBestFit:
         messages = [_make_message(i, self.MSG_CHARS) for i in range(20)]
         # Archived entries deliberately missing 'start' field
         archived = [
-            {"text": _pad("Archived 0", self.ARCH_CHARS), "ts": "PT0S", "end": 4},
-            {"text": _pad("Archived 1", self.ARCH_CHARS), "ts": "PT10M", "end": 9},
-            {"text": _pad("Archived 2", self.ARCH_CHARS), "ts": "PT20M", "end": 14},
+            {"text": _pad("Archived 0", self.ARCH_CHARS), "ts": 0, "end": 4},
+            {"text": _pad("Archived 1", self.ARCH_CHARS), "ts": 600, "end": 9},
+            {"text": _pad("Archived 2", self.ARCH_CHARS), "ts": 1200, "end": 14},
         ]
 
         scene = MockScene()
@@ -3031,7 +3191,7 @@ class TestBestFit:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "start": i * 3,
                 "end": i * 3 + 2,
             }
@@ -3042,8 +3202,8 @@ class TestBestFit:
         layer_0 = [
             {
                 "text": _pad(f"L0-{i}", self.L0_CHARS),
-                "ts_start": f"PT{i * 30}M",
-                "ts_end": f"PT{(i + 1) * 30}M",
+                "ts_start": i * 1800,
+                "ts_end": (i + 1) * 1800,
                 "start": i * 2,
                 "end": i * 2 + 1,
             }
@@ -3054,8 +3214,8 @@ class TestBestFit:
         layer_1 = [
             {
                 "text": _pad(f"L1-{i}", self.L1_CHARS),
-                "ts_start": f"PT{i * 60}M",
-                "ts_end": f"PT{(i + 1) * 60}M",
+                "ts_start": i * 3600,
+                "ts_end": (i + 1) * 3600,
                 "start": i * 2,
                 "end": i * 2 + 1,
             }
@@ -3128,11 +3288,7 @@ class TestBuildPreviewParity:
         best_fit_min_dialogue=5,
         best_fit_max_dialogue=250,
     ):
-        """Configure summarizer and return matching preview overrides."""
-        from talemate.agents.summarize.context_history import (
-            ContextHistoryPreviewOverrides,
-        )
-
+        """Configure the summarizer's scene history settings."""
         cfg = summarizer.actions["manage_scene_history"].config
         cfg["max_budget"].value = 0
         cfg["best_fit"].value = best_fit
@@ -3142,16 +3298,6 @@ class TestBuildPreviewParity:
         cfg["best_fit_min_dialogue"].value = best_fit_min_dialogue
         cfg["best_fit_max_dialogue"].value = best_fit_max_dialogue
         summarizer.actions["layered_history"].enabled = True
-
-        return ContextHistoryPreviewOverrides(
-            max_budget=0,
-            best_fit=best_fit,
-            dialogue_ratio=dialogue_ratio,
-            summary_detail_ratio=summary_detail_ratio,
-            enforce_boundary=enforce_boundary,
-            best_fit_min_dialogue=best_fit_min_dialogue,
-            best_fit_max_dialogue=best_fit_max_dialogue,
-        )
 
     @classmethod
     def _make_test_scene(
@@ -3177,7 +3323,7 @@ class TestBuildPreviewParity:
         archived = [
             {
                 "text": _pad(f"Archived {i}", cls.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 3 - 1,
             }
             for i in range(num_archived)
@@ -3187,8 +3333,8 @@ class TestBuildPreviewParity:
             layer_0 = [
                 {
                     "text": _pad(f"L0-{i}", cls.L0_CHARS),
-                    "ts_start": f"PT{i * 20}M",
-                    "ts_end": f"PT{(i + 1) * 20}M",
+                    "ts_start": i * 1200,
+                    "ts_end": (i + 1) * 1200,
                     "start": i * 2,
                     "end": i * 2 + 1,
                 }
@@ -3198,8 +3344,8 @@ class TestBuildPreviewParity:
             layer_1 = [
                 {
                     "text": _pad(f"L1-{i}", cls.L1_CHARS),
-                    "ts_start": f"PT{i * 40}M",
-                    "ts_end": f"PT{(i + 1) * 40}M",
+                    "ts_start": i * 2400,
+                    "ts_end": (i + 1) * 2400,
                     "start": i * 2,
                     "end": i * 2 + 1,
                 }
@@ -3218,12 +3364,10 @@ class TestBuildPreviewParity:
         scene.intro = intro or ""
         return scene
 
-    def _assert_parity(self, summarizer, scene, budget, overrides):
+    def _assert_parity(self, summarizer, scene, budget):
         """Assert build and preview produce identical flattened entries."""
         build_result = scene.context_history(budget=budget)
-        preview = summarizer.context_history_preview(
-            scene, budget=budget, overrides=overrides
-        )
+        preview = summarizer.context_history_preview(scene, budget=budget)
         preview_entries = self._flatten_preview(preview)
 
         assert build_result == preview_entries, (
@@ -3238,54 +3382,54 @@ class TestBuildPreviewParity:
 
     def test_best_fit_all_dialogue_fits(self, summarizer, test_data):
         """Parity when all dialogue fits within budget (no summaries)."""
-        overrides = self._setup_summarizer(summarizer, best_fit=True)
+        self._setup_summarizer(summarizer, best_fit=True)
         scene = self._make_test_scene(test_data)
-        self._assert_parity(summarizer, scene, budget=100000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=100000)
 
     def test_best_fit_with_layers_tight_budget(self, summarizer, test_data):
         """Parity in best-fit mode with layers and a tight budget."""
-        overrides = self._setup_summarizer(summarizer, best_fit=True)
+        self._setup_summarizer(summarizer, best_fit=True)
         scene = self._make_test_scene(test_data)
-        self._assert_parity(summarizer, scene, budget=2000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=2000)
 
     def test_best_fit_no_layers(self, summarizer, test_data):
         """Parity in best-fit mode with only archived + dialogue."""
-        overrides = self._setup_summarizer(summarizer, best_fit=True)
+        self._setup_summarizer(summarizer, best_fit=True)
         scene = self._make_test_scene(test_data, with_layers=False)
-        self._assert_parity(summarizer, scene, budget=2000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=2000)
 
     def test_best_fit_medium_budget_expansion(self, summarizer, test_data):
         """Parity when budget allows partial expansion of archived to dialogue."""
-        overrides = self._setup_summarizer(summarizer, best_fit=True)
+        self._setup_summarizer(summarizer, best_fit=True)
         scene = self._make_test_scene(test_data)
-        self._assert_parity(summarizer, scene, budget=3500, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=3500)
 
     def test_best_fit_dialogue_exceeds_budget(self, summarizer, test_data):
         """Parity when mandatory dialogue alone exceeds the budget."""
-        overrides = self._setup_summarizer(summarizer, best_fit=True)
+        self._setup_summarizer(summarizer, best_fit=True)
         scene = self._make_test_scene(test_data)
-        self._assert_parity(summarizer, scene, budget=300, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=300)
 
     def test_best_fit_empty_scene_with_intro(self, summarizer, test_data):
         """Parity with empty history and an intro (sparse context path)."""
-        overrides = self._setup_summarizer(summarizer, best_fit=True)
+        self._setup_summarizer(summarizer, best_fit=True)
         scene = MockScene()
         scene.history = []
         scene.archived_history = []
         scene.layered_history = []
         scene.ts = test_data["basic_scene"]["ts"]
         scene.intro = "Welcome to the adventure."
-        self._assert_parity(summarizer, scene, budget=5000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=5000)
 
     def test_best_fit_with_orphan_entries(self, summarizer, test_data):
         """Parity when layers have orphan entries not covered by the layer above."""
-        overrides = self._setup_summarizer(summarizer, best_fit=True)
+        self._setup_summarizer(summarizer, best_fit=True)
 
         messages = [_make_message(i, self.MSG_CHARS) for i in range(40)]
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "start": i * 3,
                 "end": i * 3 + 2,
             }
@@ -3295,8 +3439,8 @@ class TestBuildPreviewParity:
         layer_0 = [
             {
                 "text": _pad(f"L0-{i}", self.L0_CHARS),
-                "ts_start": f"PT{i * 30}M",
-                "ts_end": f"PT{(i + 1) * 30}M",
+                "ts_start": i * 1800,
+                "ts_end": (i + 1) * 1800,
                 "start": i * 2,
                 "end": i * 2 + 1,
             }
@@ -3306,8 +3450,8 @@ class TestBuildPreviewParity:
         layer_1 = [
             {
                 "text": _pad(f"L1-{i}", self.L1_CHARS),
-                "ts_start": f"PT{i * 60}M",
-                "ts_end": f"PT{(i + 1) * 60}M",
+                "ts_start": i * 3600,
+                "ts_end": (i + 1) * 3600,
                 "start": i * 2,
                 "end": i * 2 + 1,
             }
@@ -3320,13 +3464,13 @@ class TestBuildPreviewParity:
         scene.layered_history = [layer_0, layer_1]
         scene.ts = test_data["basic_scene"]["ts"]
 
-        self._assert_parity(summarizer, scene, budget=5000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=5000)
 
     # --- Ratio mode ---
 
     def test_ratio_no_layers_no_boundary(self, summarizer, test_data):
         """Parity in ratio mode without layers or boundary enforcement."""
-        overrides = self._setup_summarizer(
+        self._setup_summarizer(
             summarizer,
             best_fit=False,
             dialogue_ratio=50,
@@ -3334,22 +3478,22 @@ class TestBuildPreviewParity:
         )
         summarizer.actions["layered_history"].enabled = False
         scene = self._make_test_scene(test_data, with_layers=False)
-        self._assert_parity(summarizer, scene, budget=2000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=2000)
 
     def test_ratio_with_layers(self, summarizer, test_data):
         """Parity in ratio mode with layered history."""
-        overrides = self._setup_summarizer(
+        self._setup_summarizer(
             summarizer,
             best_fit=False,
             dialogue_ratio=40,
             summary_detail_ratio=40,
         )
         scene = self._make_test_scene(test_data)
-        self._assert_parity(summarizer, scene, budget=3000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=3000)
 
     def test_ratio_with_boundary(self, summarizer, test_data):
         """Parity in ratio mode with boundary enforcement."""
-        overrides = self._setup_summarizer(
+        self._setup_summarizer(
             summarizer,
             best_fit=False,
             dialogue_ratio=50,
@@ -3357,33 +3501,33 @@ class TestBuildPreviewParity:
             enforce_boundary=True,
         )
         scene = self._make_test_scene(test_data, with_layers=False)
-        self._assert_parity(summarizer, scene, budget=3000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=3000)
 
     def test_ratio_high_dialogue_ratio(self, summarizer, test_data):
         """Parity in ratio mode with high dialogue ratio (80%)."""
-        overrides = self._setup_summarizer(
+        self._setup_summarizer(
             summarizer,
             best_fit=False,
             dialogue_ratio=80,
             summary_detail_ratio=50,
         )
         scene = self._make_test_scene(test_data, with_layers=False)
-        self._assert_parity(summarizer, scene, budget=5000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=5000)
 
     def test_ratio_low_dialogue_ratio_with_layers(self, summarizer, test_data):
         """Parity in ratio mode with low dialogue ratio and layers."""
-        overrides = self._setup_summarizer(
+        self._setup_summarizer(
             summarizer,
             best_fit=False,
             dialogue_ratio=20,
             summary_detail_ratio=60,
         )
         scene = self._make_test_scene(test_data)
-        self._assert_parity(summarizer, scene, budget=4000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=4000)
 
     def test_ratio_empty_scene_with_intro(self, summarizer, test_data):
         """Parity in ratio mode with empty history and intro."""
-        overrides = self._setup_summarizer(
+        self._setup_summarizer(
             summarizer,
             best_fit=False,
             dialogue_ratio=50,
@@ -3395,4 +3539,19 @@ class TestBuildPreviewParity:
         scene.layered_history = []
         scene.ts = test_data["basic_scene"]["ts"]
         scene.intro = "A stormy night begins."
-        self._assert_parity(summarizer, scene, budget=5000, overrides=overrides)
+        self._assert_parity(summarizer, scene, budget=5000)
+
+
+def test_an_emptied_summary_does_not_carry_the_intro():
+    """A removal can leave a summary without messages: (k, k-1) has the end
+    of the summary before it, and only the first summary carries the intro."""
+    from types import SimpleNamespace
+
+    from talemate.agents.summarize.context_history import ContextHistoryMixin
+
+    first = {"id": "s1", "text": "they met", "start": 0, "end": 0}
+    emptied = {"id": "s2", "text": "a lost line", "start": 1, "end": 0}
+    scene = SimpleNamespace(archived_history=[first, emptied])
+
+    assert ContextHistoryMixin._summary_carries_intro(scene, first) is True
+    assert ContextHistoryMixin._summary_carries_intro(scene, emptied) is False

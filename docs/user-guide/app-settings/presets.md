@@ -9,25 +9,27 @@ Change inference parameters, embedding parameters and global system prompt overr
 
     This document will NOT explain what each setting does.
 
-![App settings - Presets - Inference](/talemate/img/0.39.0/app-settings-presets-inference.png)
+![App settings - Presets - Inference](/talemate/img/0.40.0/app-settings-presets-inference.png)
 
 If you're familiar with editing inference parameters from other similar applications, be aware that there is a significant difference in how TaleMate handles these settings.
 
-Agents take different actions, and based on that action one of the presets is selected. 
+Each preset in a group belongs to one **action type**. Agents take different actions, and based on that action one of the action types is selected.
 
-That means that ALL presets are relevant and will be used at some point.
+That means that ALL action types are relevant and will be used at some point.
 
-For example analysis will use the `Anlytical` preset, which is configured to be less random and more deterministic.
+For example analysis will use the `Analytical` action type, which is configured to be less random and more deterministic.
 
-The `Conversation` preset is used by the conversation agent during dialogue gneration.
+The `Conversation` action type is used by the conversation agent during dialogue generation.
 
-The other presets are used for various creative tasks.
+The other action types are used for various creative tasks.
+
+See [Inference Configuration](../clients/presets.md) for the parameters and the **Action Type** selector of the pinned inference panel.
 
 These are all experimental and will probably change / get merged in the future.
 
 ## :material-cube-unfolded: Embeddings
 
-![App settings - Presets - Embeddings](/talemate/img/0.39.0/app-settings-presets-embeddings.png)
+![App settings - Presets - Embeddings](/talemate/img/0.40.0/app-settings-presets-embeddings.png)
 
 Allows you to add, remove and manage various embedding models for the memory agent to use via chromadb.
 
@@ -37,7 +39,7 @@ Allows you to add, remove and manage various embedding models for the memory age
 
 ![App settings - Presets - System Prompts](/talemate/img/0.39.0/app-settings-presets-system-prompts.png)
 
-This panel lets you override the global system prompts for the entire application for each prompt kind (Conversation, Narration, Creation, and so on). Per-client overrides live on the **System Prompts** tab of each client's [configuration dialog](../clients/client-configuration.md).
+This panel lets you override the global system prompts for the entire application for each prompt kind (Conversation, Narration, Creation, and so on). Per-client overrides live in the **System Prompts** section of each client's [editor](../clients/client-configuration.md).
 
 See [System Prompt Overrides](system-prompts.md) for the full reference, including:
 

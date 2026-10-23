@@ -13,6 +13,11 @@ class SetQuickSettingsPayload(pydantic.BaseModel):
     value: Any
 
 
+class SceneHeaderSlotEdit(pydantic.BaseModel):
+    item: str
+    shown: bool
+
+
 class QuickSettingsPlugin:
     router = "quick_settings"
 
@@ -43,6 +48,14 @@ class QuickSettingsPlugin:
             config.game.general.auto_progress = payload.value
         elif payload.setting == "auto_attach_assets":
             config.appearance.scene.auto_attach_assets = payload.value
+        elif payload.setting == "scene_header_enabled":
+            config.game.scene_header.enabled = payload.value
+        elif payload.setting in ("scene_header_slot_a", "scene_header_slot_b"):
+            # an edit applies to the stored list, never to a client copy
+            edit = SceneHeaderSlotEdit.model_validate(payload.value)
+            config.game.scene_header.set_item_shown(
+                payload.setting.removeprefix("scene_header_"), edit.item, edit.shown
+            )
         else:
             raise NotImplementedError(f"Setting {payload.setting} not implemented.")
 

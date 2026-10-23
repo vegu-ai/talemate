@@ -1,3 +1,4 @@
+import math
 import random
 
 __all__ = [
@@ -8,6 +9,10 @@ __all__ = [
     "ALL_COLOR_NAMES",
     "random_color",
     "unique_random_colors",
+    "relative_luminance",
+    "contrast_ratio",
+    "oklch",
+    "describe_color",
 ]
 
 # Primary mapping of Vue color names to hex codes
@@ -84,6 +89,7 @@ SPECIAL_COLOR_NAMES = [
     "director",
     "time",
     "context_investigation",
+    "reinforcement",
     "information",
 ]
 
@@ -113,3 +119,143 @@ def unique_random_colors(count: int) -> list[str]:
     else:
         # Sample unique colors for each requested color
         return random.sample(COLORS, count)
+
+
+# ---------------------------------------------------------------------------
+# color analysis
+# ---------------------------------------------------------------------------
+
+# OKLCH hue in degrees -> the name a reader would use. Calibrated against the
+# material palette above: pink lands at 10, red at 29, orange at 64, green at
+# 144, blue at 249, purple at 321.
+HUE_NAMES = (
+    (20, "pink"),
+    (33, "red"),
+    (75, "orange"),
+    (95, "amber"),
+    (110, "yellow"),
+    (125, "lime"),
+    (160, "green"),
+    (200, "teal"),
+    (225, "cyan"),
+    (268, "blue"),
+    (285, "indigo"),
+    (310, "violet"),
+    (345, "purple"),
+    (360, "pink"),
+)
+
+GREY_NAMES = (
+    (0.12, "black"),
+    (0.25, "near-black grey"),
+    (0.45, "dark grey"),
+    (0.72, "grey"),
+    (0.88, "light grey"),
+    (0.97, "near-white grey"),
+    (1.01, "white"),
+)
+
+LIGHTNESS_NAMES = (
+    (0.12, "near-black"),
+    (0.32, "very dark"),
+    (0.50, "dark"),
+    (0.68, ""),
+    (0.85, "light"),
+    (0.97, "very light"),
+    (1.01, "near-white"),
+)
+
+CHROMA_NAMES = (
+    (0.06, "muted"),
+    (0.12, "soft"),
+    (0.20, ""),
+    (1.00, "vivid"),
+)
+
+ACHROMATIC_CHROMA = 0.02
+
+# a dulled, darker orange-red is a brown to every reader, and no reader calls a
+# theme slot "muted dark orange"
+BROWN_MAX_CHROMA = 0.09
+BROWN_MAX_LIGHTNESS = 0.72
+
+
+def _channels(color: str) -> tuple[float, float, float]:
+    color = color.strip().lstrip("#")
+    return tuple(int(color[i : i + 2], 16) / 255 for i in (0, 2, 4))
+
+
+def _linear(channel: float) -> float:
+    return channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4
+
+
+def relative_luminance(color: str) -> float:
+    """WCAG relative luminance of a `#RRGGBB` color."""
+    red, green, blue = (_linear(channel) for channel in _channels(color))
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+
+
+def contrast_ratio(color: str, other: str) -> float:
+    """WCAG 2.x contrast ratio between two `#RRGGBB` colors, 1.0 to 21.0."""
+    lighter, darker = sorted(
+        (relative_luminance(color), relative_luminance(other)), reverse=True
+    )
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+def oklch(color: str) -> tuple[float, float, float]:
+    """Convert `#RRGGBB` to OKLCH: perceptual lightness, chroma, hue in degrees.
+
+    Lightness and chroma are perceptually spaced, unlike HSL's, which is what
+    makes a name derived from them match what the eye reports.
+    """
+    red, green, blue = (_linear(channel) for channel in _channels(color))
+
+    long_ = (0.4122214708 * red + 0.5363325363 * green + 0.0514459929 * blue) ** (1 / 3)
+    medium = (0.2119034982 * red + 0.6806995451 * green + 0.1073969566 * blue) ** (
+        1 / 3
+    )
+    short = (0.0883024619 * red + 0.2817188376 * green + 0.6299787005 * blue) ** (1 / 3)
+
+    lightness = 0.2104542553 * long_ + 0.7936177850 * medium - 0.0040720468 * short
+    green_red = 1.9779984951 * long_ - 2.4285922050 * medium + 0.4505937099 * short
+    blue_yellow = 0.0259040371 * long_ + 0.7827717662 * medium - 0.8086757660 * short
+
+    chroma = math.hypot(green_red, blue_yellow)
+    hue = math.degrees(math.atan2(blue_yellow, green_red)) % 360
+
+    return lightness, chroma, hue
+
+
+def _bucket(value: float, buckets: tuple[tuple[float, str], ...]) -> str:
+    for edge, name in buckets:
+        if value < edge:
+            return name
+    return buckets[-1][1]
+
+
+def describe_color(color: str) -> str:
+    """A rough, deterministic name for a color - 'muted dark blue'.
+
+    Meant for an LLM reading a palette it cannot see: enough to tell a slate
+    blue from a vivid one and to notice that two slots hold the same family.
+    """
+    lightness, chroma, hue = oklch(color)
+
+    if chroma < ACHROMATIC_CHROMA:
+        return _bucket(lightness, GREY_NAMES)
+
+    hue_name = _bucket(hue, HUE_NAMES)
+    if (
+        hue_name in ("red", "orange")
+        and chroma < BROWN_MAX_CHROMA
+        and lightness < BROWN_MAX_LIGHTNESS
+    ):
+        hue_name = "brown"
+
+    parts = [
+        _bucket(chroma, CHROMA_NAMES),
+        _bucket(lightness, LIGHTNESS_NAMES),
+        hue_name,
+    ]
+    return " ".join(part for part in parts if part)

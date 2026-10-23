@@ -1,6 +1,6 @@
 <template>
     <div>
-    <v-toolbar density="compact" flat color="mutedbg" class="chat-selector-toolbar">
+    <v-toolbar density="compact" flat color="transparent" class="chat-selector-toolbar">
         <v-select
             v-if="chatSelectItems.length > 0"
             :model-value="activeChatId"
@@ -37,8 +37,8 @@
         </v-btn>
     </v-toolbar>
 
-    <v-toolbar density="compact" flat color="mutedbg">
-        <v-toolbar-title class="text-subtitle-2 text-muted d-flex align-center" style="overflow: visible;">
+    <v-toolbar density="compact" flat color="transparent">
+        <v-toolbar-title class="text-title-small text-muted d-flex align-center" style="overflow: visible;">
 
             <v-tooltip v-if="activeChatId" text="Select chat mode" location="top">
                 <template v-slot:activator="{ props: tooltipProps }">
@@ -186,11 +186,11 @@ export default {
     computed: {
         modeOptions() {
             return {
-                normal: { value: 'normal', title: 'Normal', icon: 'mdi-chat-processing', color: 'default' },
-                decisive: { value: 'decisive', title: 'Decisive', icon: 'mdi-lightning-bolt', color: 'orange' },
+                normal: { value: 'normal', title: 'Normal', icon: 'mdi-chat-processing', color: '' },
+                decisive: { value: 'decisive', title: 'Decisive', icon: 'mdi-lightning-bolt', color: 'warning' },
                 nospoilers: { value: 'nospoilers', title: 'No Spoilers', icon: 'mdi-emoticon-cool', color: 'primary' },
-                generate_arc: { value: 'generate_arc', title: 'Generate Arc', icon: 'mdi-movie-open', color: 'green' },
-                generate_arc_expand: { value: 'generate_arc_expand', title: 'Generate Arc (Expand)', icon: 'mdi-lightning-bolt', color: 'green' }
+                generate_arc: { value: 'generate_arc', title: 'Generate Arc', icon: 'mdi-movie-open', color: 'success' },
+                generate_arc_expand: { value: 'generate_arc_expand', title: 'Generate Arc (Expand)', icon: 'mdi-lightning-bolt', color: 'success' }
             }
         },
         chatSelectItems() {

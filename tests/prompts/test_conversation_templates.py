@@ -15,9 +15,11 @@ from unittest.mock import Mock, AsyncMock
 
 import talemate.instance as instance
 from talemate.agents.conversation import ConversationAgent
+from talemate.agents.summarize import SummarizeAgent
 from talemate.scene_message import CharacterMessage
 from .helpers import (
     create_scene_with_characters,
+    set_scene_context_format,
     register_world_state_toggle,
     seed_world_state_snapshot,
 )
@@ -51,6 +53,7 @@ def mock_conversation_agent_for_registry():
     conv.content_use_writing_style = True
     # rag_build is called by templates - needs to be an async function
     conv.rag_build = AsyncMock(return_value=[])
+    conv.knowledge_perspective = AsyncMock(return_value=None)
     return conv
 
 
@@ -63,13 +66,19 @@ def conversation_agent(mock_llm_client, mock_scene):
 
 
 @pytest.fixture
-def setup_agents(mock_conversation_agent_for_registry):
+def setup_agents(mock_conversation_agent_for_registry, conversation_agent):
     """Set up the agent registry with mocked agents."""
     # Save original AGENTS dict
     original_agents = instance.AGENTS.copy()
 
     # Set up mock agents in the registry
+    mock_conversation_agent_for_registry.history_context = (
+        conversation_agent.history_context
+    )
     instance.AGENTS["conversation"] = mock_conversation_agent_for_registry
+    summarizer = SummarizeAgent(client=conversation_agent.client)
+    summarizer.scene = conversation_agent.scene
+    instance.AGENTS["summarizer"] = summarizer
 
     yield
 
@@ -99,6 +108,19 @@ class TestConverseMethod:
     2. Format-specific processing (movie_script, chat, or narrative)
     3. Character name prefixing to produce "CharName: dialogue"
     """
+
+    @pytest.mark.asyncio
+    async def test_converse_projects_history_once(
+        self, active_context, mock_scene, monkeypatch
+    ):
+        agent = active_context
+        projection = AsyncMock(wraps=agent.history_context)
+        monkeypatch.setattr(agent, "history_context", projection)
+        monkeypatch.setattr(
+            instance.AGENTS["conversation"], "history_context", projection
+        )
+        await agent.converse(mock_scene.get_character("Elena").actor)
+        projection.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_converse_calls_client(self, active_context, mock_scene):
@@ -160,7 +182,7 @@ class TestConverseMethod:
         actor = npc.actor
 
         # Ensure movie_script format is used
-        agent.actions["generation_override"].config["format"].value = "movie_script"
+        set_scene_context_format("movie_script")
 
         # Set a movie-script style response
         mock_llm_client.send_prompt.return_value = (
@@ -201,7 +223,7 @@ class TestConverseMethod:
         actor = npc.actor
 
         # Set chat format
-        agent.actions["generation_override"].config["format"].value = "chat"
+        set_scene_context_format("chat")
 
         # Set a chat-style response
         mock_llm_client.send_prompt.return_value = (
@@ -241,7 +263,7 @@ class TestConverseMethod:
         actor = npc.actor
 
         # Set narrative format
-        agent.actions["generation_override"].config["format"].value = "narrative"
+        set_scene_context_format("narrative")
 
         # Narrative format - LLM generates prose without name prefix
         mock_llm_client.send_prompt.return_value = 'She paused, her eyes reflecting the distant mountains. "The view is breathtaking."'
@@ -426,20 +448,13 @@ class TestCleanResult:
 class TestConversationProperties:
     """Tests for conversation agent properties."""
 
-    def test_conversation_format_property(self, conversation_agent):
-        """Test conversation_format property returns correct format."""
-        conversation_agent.actions["generation_override"].enabled = True
-        conversation_agent.actions["generation_override"].config[
-            "format"
-        ].value = "narrative"
+    def test_generation_has_no_format(self, conversation_agent):
+        assert "format" not in conversation_agent.actions["generation_override"].config
 
-        assert conversation_agent.conversation_format == "narrative"
+    def test_scene_format_follows_summarizer(self, setup_agents, mock_scene):
+        set_scene_context_format("narrative")
 
-    def test_conversation_format_default(self, conversation_agent):
-        """Test conversation_format defaults to movie_script when disabled."""
-        conversation_agent.actions["generation_override"].enabled = False
-
-        assert conversation_agent.conversation_format == "movie_script"
+        assert mock_scene.conversation_format == "narrative"
 
     def test_generation_settings_task_instructions(self, conversation_agent):
         """Test generation_settings_task_instructions property."""
@@ -535,7 +550,7 @@ class TestResponseExtraction:
         actor = npc.actor
 
         # Ensure movie_script format
-        agent.actions["generation_override"].config["format"].value = "movie_script"
+        set_scene_context_format("movie_script")
 
         # Response starting with uppercase character name (as in movie script)
         mock_llm_client.send_prompt.return_value = (
@@ -562,7 +577,7 @@ class TestResponseExtraction:
         actor = npc.actor
 
         # Set chat format
-        agent.actions["generation_override"].config["format"].value = "chat"
+        set_scene_context_format("chat")
 
         # Response with character name prefix (as in chat format)
         mock_llm_client.send_prompt.return_value = (
@@ -674,7 +689,7 @@ class TestResponseExtraction:
         actor = npc.actor
 
         # Set narrative format
-        agent.actions["generation_override"].config["format"].value = "narrative"
+        set_scene_context_format("narrative")
 
         # Narrative response (no character prefix from LLM)
         mock_llm_client.send_prompt.return_value = (

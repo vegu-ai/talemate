@@ -25,7 +25,9 @@ __all__ = [
 ]
 
 
-def split_long_chunk(text: str, chunk_size: int) -> list[str]:
+def split_long_chunk(
+    text: str, chunk_size: int, protected_phrases: tuple[str, ...] = ()
+) -> list[str]:
     """
     Split a single chunk that exceeds chunk_size into smaller pieces.
 
@@ -35,15 +37,21 @@ def split_long_chunk(text: str, chunk_size: int) -> list[str]:
     Args:
         text: The text to split.
         chunk_size: Maximum size for each chunk.
+        protected_phrases: Atomic spans such as supported native audio tags.
 
     Returns:
-        A list of text chunks, each at most chunk_size characters.
+        Text chunks up to chunk_size, except an atomic span longer than the limit.
     """
     if len(text) <= chunk_size:
         return [text]
 
     result = []
     remaining = text
+    protected = (
+        re.compile("|".join(re.escape(p) for p in protected_phrases))
+        if protected_phrases
+        else None
+    )
 
     while len(remaining) > chunk_size:
         # Find the best split point within chunk_size
@@ -59,6 +67,12 @@ def split_long_chunk(text: str, chunk_size: int) -> list[str]:
             if space_pos > chunk_size // 2:
                 split_point = space_pos + 1  # Include the space
             # else: hard split at chunk_size (no good boundary found)
+
+        if protected:
+            for span in protected.finditer(remaining):
+                if span.start() < split_point < span.end():
+                    split_point = span.start() or span.end()
+                    break
 
         result.append(remaining[:split_point].strip())
         remaining = remaining[split_point:].strip()
@@ -123,7 +137,9 @@ def parse_chunks(text: str) -> list[str]:
         return [text.replace("__ellipsis__", "...").replace("*", "")]
 
 
-def rejoin_chunks(chunks: list[str], chunk_size: int = 250) -> list[str]:
+def rejoin_chunks(
+    chunks: list[str], chunk_size: int = 250, protected_phrases: tuple[str, ...] = ()
+) -> list[str]:
     """
     Combine chunks split by punctuation into larger chunks up to chunk_size.
 
@@ -133,9 +149,10 @@ def rejoin_chunks(chunks: list[str], chunk_size: int = 250) -> list[str]:
     Args:
         chunks: List of text chunks to potentially combine.
         chunk_size: Maximum size for each resulting chunk.
+        protected_phrases: Atomic spans passed through to split_long_chunk.
 
     Returns:
-        A list of chunks where each is at most chunk_size characters.
+        Chunks up to chunk_size, except an atomic span longer than the limit.
     """
 
     joined_chunks = []
@@ -148,7 +165,7 @@ def rejoin_chunks(chunks: list[str], chunk_size: int = 250) -> list[str]:
             if current_chunk:
                 joined_chunks.append(current_chunk)
                 current_chunk = ""
-            joined_chunks.extend(split_long_chunk(chunk, chunk_size))
+            joined_chunks.extend(split_long_chunk(chunk, chunk_size, protected_phrases))
             continue
 
         # Check if adding this chunk would exceed the limit (+ 1 for space)

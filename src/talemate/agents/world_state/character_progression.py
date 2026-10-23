@@ -3,11 +3,12 @@ import structlog
 from talemate.agents.base import set_processing, AgentAction, AgentActionConfig
 from talemate.instance import get_agent
 from talemate.events import GameLoopEvent
-from talemate.status import set_loading
+from talemate.status import LoadingLabel, set_loading
 
 import talemate.emit.async_signals
 import talemate.game.focal as focal
 import talemate.world_state.templates as world_state_templates
+from talemate.util.async_tools import bounded_gather_apply
 from talemate.world_state.manager import WorldStateManager
 from talemate.world_state import Suggestion
 
@@ -120,20 +121,70 @@ class CharacterProgressionMixin:
 
         self.set_scene_states(rounds_since_last_character_progression_check=0)
 
-        for character in self.scene.characters:
-            if character.is_player and not self.character_progression_player_character:
-                continue
-
-            calls: list[focal.Call] = await self.determine_character_development(
-                character
+        characters = [
+            character
+            for character in self.scene.characters
+            if not (
+                character.is_player and not self.character_progression_player_character
             )
+        ]
+
+        await self.character_progression_track(characters)
+
+    # methods
+
+    async def character_progression_track(self, characters: list["Character"]):
+        """
+        Determine and process character development for the given characters.
+
+        When both this agent's client and the creator agent's client (which
+        runs the development callbacks) support concurrent inference, the
+        determinations run concurrently against the same scene snapshot and
+        their proposals are processed sequentially in character order
+        afterwards; otherwise each character is determined and processed one
+        at a time.
+        """
+        creator = get_agent("creator")
+        supports_concurrent = bool(
+            self.client
+            and self.client.supports_concurrent_inference
+            and creator.client
+            and creator.client.supports_concurrent_inference
+        )
+
+        if not supports_concurrent or len(characters) < 2:
+            for character in characters:
+                calls: list[focal.Call] = await self.determine_character_development(
+                    character
+                )
+                await self.character_progression_process_calls(
+                    character=character,
+                    calls=calls,
+                    as_suggestions=self.character_progression_as_suggestions,
+                )
+            return
+
+        async def process(character: "Character", calls: list[focal.Call]):
             await self.character_progression_process_calls(
                 character=character,
                 calls=calls,
                 as_suggestions=self.character_progression_as_suggestions,
             )
 
-    # methods
+        def on_error(character: "Character", error: BaseException):
+            log.error(
+                "character_progression_track",
+                character=character.name,
+                error=str(error),
+                exc_info=error,
+            )
+
+        await bounded_gather_apply(
+            characters,
+            self.determine_character_development,
+            process,
+            on_error=on_error,
+        )
 
     @set_processing
     async def character_progression_process_calls(
@@ -183,7 +234,12 @@ class CharacterProgressionMixin:
 
         creator = get_agent("creator")
 
-        @set_loading("Generating character attribute", cancellable=True)
+        def attribute_label(name: str, instructions: str) -> LoadingLabel:
+            if not name:
+                return LoadingLabel("Generating an attribute for {}", character.name)
+            return LoadingLabel("Generating {} for {}", name, character.name)
+
+        @set_loading(attribute_label, cancellable=True)
         async def add_attribute(name: str, instructions: str) -> str:
             return await creator.generate_character_attribute(
                 character,
@@ -192,7 +248,7 @@ class CharacterProgressionMixin:
                 generation_options=generation_options,
             )
 
-        @set_loading("Generating character attribute", cancellable=True)
+        @set_loading(attribute_label, cancellable=True)
         async def update_attribute(name: str, instructions: str) -> str:
             return await creator.generate_character_attribute(
                 character,
@@ -205,7 +261,9 @@ class CharacterProgressionMixin:
         async def remove_attribute(name: str, reason: str) -> str:
             return None
 
-        @set_loading("Generating character description", cancellable=True)
+        @set_loading(
+            LoadingLabel("Updating {}'s description", character.name), cancellable=True
+        )
         async def update_description(instructions: str) -> str:
             return await creator.generate_character_detail(
                 character,

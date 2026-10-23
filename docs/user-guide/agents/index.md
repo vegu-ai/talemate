@@ -12,7 +12,7 @@ Used for creative tasks like scene and character generation
 
 ### Director
 
-Will eventually become a Game Master type agent. Right now used for some very rudimentary scene direction. Allows complex scene control via the scoped api scripting.
+Will eventually become a Game Master type agent. Right now used for some very rudimentary scene direction. Older scenes can also script it through the legacy scoped API (a scene's `game.py`). That API is deprecated and no longer maintained; build new scene logic with [node modules](../node-editor/index.md).
 
 ### Editor
 

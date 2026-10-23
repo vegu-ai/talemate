@@ -11,18 +11,25 @@ where needed) are instantiated directly rather than mocked.
 from __future__ import annotations
 
 import asyncio
+import base64
+import copy
 import json
 import os
 import types
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
+import httpx
+import openai
 import pydantic
 import pytest
 import pytest_asyncio
 
+import talemate.agents.tts as tts_module
+import talemate.agents.tts.openai_compatible as openai_compatible_module
 import talemate.agents.tts.pocket_tts as pocket_tts_module
 import talemate.agents.tts.voice_library as voice_library
+import talemate.emit.async_signals as async_signals
 import talemate.instance as instance
 from talemate.agents.tts import TTSAgent
 from talemate.agents.tts.openai_compatible import (
@@ -32,6 +39,7 @@ from talemate.agents.tts.openai_compatible import (
 from talemate.config.state import get_config
 from talemate.agents.tts.schema import (
     Chunk,
+    GenerationContext,
     MAX_TAG_LENGTH,
     MAX_TAGS_PER_VOICE,
     Voice,
@@ -63,6 +71,38 @@ def _make_voice(
     **kwargs,
 ) -> Voice:
     return Voice(label=label, provider=provider, provider_id=provider_id, **kwargs)
+
+
+# GET https://api.fish.audio/model?self=true, trimmed to a few of the fields
+# Fish Audio's list-models reference documents for each item.
+FISH_AUDIO_MODEL_LISTING = {
+    "total": 2,
+    "items": [
+        {
+            "_id": "9a9cf47702da476aa4629e2506d4a857",
+            "type": "tts",
+            "title": "Warm Narrator",
+            "description": "",
+            "state": "trained",
+            "tags": ["narration"],
+            "languages": ["en"],
+            "visibility": "private",
+            "author": {"_id": "65f0c1d2e3a4b5c6d7e8f901", "nickname": "me"},
+        },
+        {
+            "_id": "e58b0d7efca34eb38d5c4985e378abcb",
+            "type": "tts",
+            "title": "Gruff Innkeeper",
+            "description": "cloned from a sample",
+            "state": "trained",
+            "tags": [],
+            "languages": ["en", "de"],
+            "visibility": "unlist",
+            "author": {"_id": "65f0c1d2e3a4b5c6d7e8f901", "nickname": "me"},
+        },
+    ],
+    "has_more": False,
+}
 
 
 @pytest.fixture
@@ -761,6 +801,183 @@ class TestOpenAICompatibleMixin:
         assert "api_key" not in management.config
         assert "model" not in management.config
 
+    def test_response_format_is_a_free_text_field_defaulting_to_mp3(self, tts_agent):
+        self._register(tts_agent)
+        field = tts_agent.actions[self.SLUG].config["response_format"]
+        assert field.type == "text"
+        assert field.value == "mp3"
+        # a text field with choices renders as a closed select
+        assert field.choices is None
+        assert field.scene_overridable is False
+
+    @pytest.mark.asyncio
+    async def test_backend_saved_without_response_format_requests_mp3(self, tts_agent):
+        await tts_agent.apply_config(
+            actions={
+                "openai_compatible": {
+                    "config": {
+                        "dynamic_children": {
+                            "value": json.dumps(
+                                [{"slug": self.SLUG, "label": self.LABEL}]
+                            )
+                        },
+                    },
+                },
+                self.SLUG: {
+                    "config": {
+                        "api_url": {"value": "http://localhost:8000/v1"},
+                        "model": {"value": "tts-1"},
+                    },
+                },
+            },
+        )
+        assert tts_agent._openai_compatible_response_format(self.SLUG) == "mp3"
+
+
+class TestOpenAICompatibleSpeechRequest:
+    """The request ``_openai_compatible_generate`` puts on the wire.
+
+    The real AsyncOpenAI client builds the request; only its transport is
+    replaced, so the assertions see exactly what the server receives.
+    """
+
+    SLUG = "fish"
+    AUDIO = b"ID3\x04\x00fake-mp3-bytes"
+
+    @pytest.fixture
+    def server(self, monkeypatch):
+        control = types.SimpleNamespace(
+            requests=[],
+            reply=lambda request: httpx.Response(200, content=self.AUDIO),
+        )
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            control.requests.append(request)
+            return control.reply(request)
+
+        real_client = openai_compatible_module.AsyncOpenAI
+
+        def make_client(**kwargs):
+            transport = httpx.MockTransport(handler)
+            # no retries, so a failing request is sent once
+            return real_client(
+                http_client=httpx.AsyncClient(transport=transport),
+                max_retries=0,
+                **kwargs,
+            )
+
+        monkeypatch.setattr(openai_compatible_module, "AsyncOpenAI", make_client)
+        return control
+
+    @pytest.fixture
+    def statuses(self, monkeypatch) -> list[dict]:
+        emitted: list[dict] = []
+
+        def _emit(typ, message=None, **kwargs):
+            emitted.append({"typ": typ, "message": message, **kwargs})
+
+        monkeypatch.setattr(openai_compatible_module, "emit", _emit)
+        return emitted
+
+    async def _generate(self, tts_agent, response_format: str | None = None) -> bytes:
+        tts_agent.register_dynamic_child("openai_compatible", self.SLUG, "Fish Audio")
+        config = tts_agent.actions[self.SLUG].config
+        config["api_url"].value = "https://api.fish.audio/compat/v1"
+        config["api_key"].value = "fish-key"
+        config["model"].value = "fish-audio/s2.1-pro"
+        if response_format is not None:
+            config["response_format"].value = response_format
+        chunk = Chunk(
+            text=["Hello there"],
+            type="dialogue",
+            api=self.SLUG,
+            voice=Voice(label="Narrator", provider=self.SLUG, provider_id="9a9cf477"),
+        )
+        return await tts_agent._openai_compatible_generate(
+            self.SLUG, chunk, GenerationContext()
+        )
+
+    @pytest.mark.asyncio
+    async def test_requests_mp3_by_default(self, tts_agent, server):
+        audio = await self._generate(tts_agent)
+
+        assert audio == self.AUDIO
+        assert len(server.requests) == 1
+        request = server.requests[0]
+        assert str(request.url) == "https://api.fish.audio/compat/v1/audio/speech"
+        assert request.headers["Authorization"] == "Bearer fish-key"
+        assert json.loads(request.content) == {
+            "model": "fish-audio/s2.1-pro",
+            "voice": "9a9cf477",
+            "input": "Hello there.",
+            "response_format": "mp3",
+        }
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "configured",
+        # mp3_44100_128 is outside the SDK's response_format Literal; the
+        # setting is a free choice, so it must still reach the server as typed
+        ["wav", "opus", "pcm", "mp3_44100_128"],
+    )
+    async def test_sends_the_configured_format(self, tts_agent, server, configured):
+        await self._generate(tts_agent, response_format=configured)
+
+        assert json.loads(server.requests[0].content)["response_format"] == configured
+
+    @pytest.mark.asyncio
+    async def test_empty_format_requests_mp3(self, tts_agent, server):
+        await self._generate(tts_agent, response_format="")
+
+        assert json.loads(server.requests[0].content)["response_format"] == "mp3"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("configured", "requested"), [(" wav ", "wav"), ("   ", "mp3")]
+    )
+    async def test_strips_the_configured_format(
+        self, tts_agent, server, configured, requested
+    ):
+        await self._generate(tts_agent, response_format=configured)
+
+        assert json.loads(server.requests[0].content)["response_format"] == requested
+
+    @pytest.mark.asyncio
+    async def test_refused_format_shows_the_server_error(
+        self, tts_agent, server, statuses
+    ):
+        server.reply = lambda request: httpx.Response(
+            422, json={"detail": "unsupported response_format: flac"}
+        )
+
+        with pytest.raises(openai.UnprocessableEntityError):
+            await self._generate(tts_agent, response_format="flac")
+
+        assert len(server.requests) == 1
+        assert len(statuses) == 1
+        assert statuses[0]["typ"] == "status"
+        assert statuses[0]["status"] == "error"
+        assert statuses[0]["message"].startswith("Fish Audio: ")
+        assert "unsupported response_format: flac" in statuses[0]["message"]
+
+    @pytest.mark.asyncio
+    async def test_unreachable_server_shows_an_error(self, tts_agent, server, statuses):
+        def refuse(request):
+            raise httpx.ConnectError("connection refused", request=request)
+
+        server.reply = refuse
+
+        with pytest.raises(openai.APIConnectionError):
+            await self._generate(tts_agent)
+
+        assert statuses == [
+            {
+                "typ": "status",
+                "message": "Fish Audio: Connection error.",
+                "status": "error",
+            }
+        ]
+
 
 # ---------------------------------------------------------------------------
 # api_status
@@ -1113,6 +1330,43 @@ class TestQueueLifecycle:
         block.set()
 
     @pytest.mark.asyncio
+    async def test_cancellation_reports_each_message_exactly_once(self, generate_agent):
+        """A listener waiting for a message to finish being generated (the
+        playthrough pacing does) needs one report per queued message: none and
+        it waits forever, two and it counts a message it never saw."""
+        generate_agent.actions["_config"].config["speaker_separation"].value = "none"
+
+        reported: list = []
+        generate_agent.signal_generation_complete = reported.append
+
+        block = asyncio.Event()
+        started = asyncio.Event()
+
+        async def _slow_chunk(chunk, ctx):
+            started.set()
+            await block.wait()
+
+        generate_agent._generate_chunk = _slow_chunk
+
+        # message 1 has a chunk in flight and another still queued behind it -
+        # the in-flight one has already left the deque, so it is only visible
+        # to the queue task's own cleanup
+        await generate_agent.generate("first", message_id=1)
+        await generate_agent.generate("second", message_id=1)
+        await generate_agent.generate("third", message_id=2)
+        await asyncio.wait_for(started.wait(), timeout=1)
+        task = generate_agent._queue_task
+
+        await generate_agent.stop_and_clear_queue()
+        block.set()
+        try:
+            await asyncio.wait_for(task, timeout=1)
+        except asyncio.CancelledError:
+            pass
+
+        assert sorted(reported) == [1, 2]
+
+    @pytest.mark.asyncio
     async def test_queue_drains_naturally_resets_state(self, generate_agent):
         generate_agent.actions["_config"].config["speaker_separation"].value = "none"
         # default _generate_chunk is an AsyncMock that returns immediately
@@ -1122,6 +1376,168 @@ class TestQueueLifecycle:
         # after natural drain, queue state is reset
         assert generate_agent._queue_id is None
         assert len(generate_agent._generation_queue) == 0
+
+
+# ---------------------------------------------------------------------------
+# generation-complete signalling
+# ---------------------------------------------------------------------------
+
+
+class TestGenerationCompleteSignal:
+    """Playthrough's auto-advance waits for a message to finish being spoken.
+    A slow backend leaves gaps between a message's chunks during which the
+    player's queue is empty, so only the agent can say when a message is done.
+    """
+
+    def test_completion_is_emitted_for_a_message(self, generate_agent):
+        generate_agent.signal_generation_complete(42)
+
+        (call,) = tts_module.emit.call_args_list
+        assert call.args[0] == "audio_queue"
+        assert call.kwargs["data"] == {"message_id": 42, "generation_complete": True}
+
+    def test_the_intro_sentinel_is_carried_through(self, generate_agent):
+        generate_agent.signal_generation_complete("intro")
+
+        assert tts_module.emit.call_args.kwargs["data"]["message_id"] == "intro"
+
+    def test_nothing_is_emitted_without_a_message(self, generate_agent):
+        generate_agent.signal_generation_complete(None)
+
+        tts_module.emit.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_a_disabled_agent_still_reports_completion(self, generate_agent):
+        # otherwise a caller waiting for the narration to finish waits forever
+        generate_agent.is_enabled = False
+        reported: list = []
+        generate_agent.signal_generation_complete = reported.append
+
+        await generate_agent.generate("some text", message_id=42)
+
+        assert reported == [42]
+
+
+# ---------------------------------------------------------------------------
+# _generate_chunk — backends that return no audio
+# ---------------------------------------------------------------------------
+
+
+class TestGenerateChunkWithoutAudio:
+    """Backends such as google/elevenlabs return ``None`` instead of raising
+    when generation fails. That chunk must be skipped without taking the rest
+    of the queue down with it."""
+
+    def _chunk(self, generate_fn, text: list[str]) -> Chunk:
+        return Chunk(
+            text=text,
+            type="dialogue",
+            character_name="Alice",
+            api="google",
+            message_id=7,
+            voice=_make_voice(),
+            generate_fn=generate_fn,
+        )
+
+    def _record_playback(self, agent, monkeypatch) -> list[tuple]:
+        """Stand in for play_audio, keeping its base64 encode so a ``None``
+        payload blows up here exactly as it does in production."""
+        played: list[tuple] = []
+
+        def _play(audio_data, message_id=None):
+            played.append((base64.b64encode(audio_data), message_id))
+
+        monkeypatch.setattr(agent, "play_audio", _play)
+        return played
+
+    @pytest.mark.asyncio
+    async def test_none_wav_bytes_is_skipped_and_generation_continues(
+        self, tts_agent, monkeypatch
+    ):
+        after_emissions: list = []
+
+        async def generate(chunk: Chunk, context: GenerationContext) -> bytes | None:
+            if chunk.text == ["first"]:
+                return None
+            return b"RIFF....WAVE"
+
+        async def on_generate_after(emission):
+            after_emissions.append(emission)
+
+        played = self._record_playback(tts_agent, monkeypatch)
+
+        signal = async_signals.get("agent.tts.generate.after")
+        signal.connect(on_generate_after)
+        try:
+            await tts_agent._generate_chunk(
+                self._chunk(generate, ["first", "second"]), GenerationContext()
+            )
+        finally:
+            signal.disconnect(on_generate_after)
+
+        assert played == [(base64.b64encode(b"RIFF....WAVE"), 7)]
+        assert [e.chunk.text for e in after_emissions] == [["second"]]
+
+    @pytest.mark.asyncio
+    async def test_handler_clearing_wav_bytes_is_skipped(self, tts_agent, monkeypatch):
+        """A generate.after handler may replace wav_bytes — the signal documents
+        it as mutable — so a node graph can leave a chunk with nothing to play."""
+
+        async def generate(chunk: Chunk, context: GenerationContext) -> bytes:
+            return b"RIFF....WAVE"
+
+        async def mute_first(emission):
+            if emission.chunk.text == ["first"]:
+                emission.wav_bytes = None
+
+        played = self._record_playback(tts_agent, monkeypatch)
+
+        signal = async_signals.get("agent.tts.generate.after")
+        signal.connect(mute_first)
+        try:
+            await tts_agent._generate_chunk(
+                self._chunk(generate, ["first", "second"]), GenerationContext()
+            )
+        finally:
+            signal.disconnect(mute_first)
+
+        assert played == [(base64.b64encode(b"RIFF....WAVE"), 7)]
+
+    @pytest.mark.asyncio
+    async def test_empty_wav_bytes_is_skipped(self, tts_agent, monkeypatch):
+        async def generate(chunk: Chunk, context: GenerationContext) -> bytes:
+            return b"" if chunk.text == ["first"] else b"RIFF....WAVE"
+
+        played = self._record_playback(tts_agent, monkeypatch)
+
+        await tts_agent._generate_chunk(
+            self._chunk(generate, ["first", "second"]), GenerationContext()
+        )
+
+        assert played == [(base64.b64encode(b"RIFF....WAVE"), 7)]
+
+    @pytest.mark.asyncio
+    async def test_queue_survives_a_chunk_without_audio(self, tts_agent, monkeypatch):
+        async def generate_none(chunk: Chunk, context: GenerationContext) -> None:
+            return None
+
+        async def generate_bytes(chunk: Chunk, context: GenerationContext) -> bytes:
+            return b"RIFF....WAVE"
+
+        played = self._record_playback(tts_agent, monkeypatch)
+
+        context = GenerationContext()
+        tts_agent._queue_id = "queue-1"
+        tts_agent._generation_queue.append(
+            (context, self._chunk(generate_none, ["silent"]))
+        )
+        tts_agent._generation_queue.append(
+            (context, self._chunk(generate_bytes, ["spoken"]))
+        )
+
+        await tts_agent._process_queue("queue-1")
+
+        assert played == [(base64.b64encode(b"RIFF....WAVE"), 7)]
 
 
 # ---------------------------------------------------------------------------
@@ -2015,10 +2431,10 @@ class TestRefreshBackendVoices:
     """
 
     @pytest.mark.asyncio
-    async def test_returns_zero_for_unknown_slug(self, tts_agent, fresh_voice_library):
+    async def test_returns_none_for_unknown_slug(self, tts_agent, fresh_voice_library):
         # No registered backend with that slug.
         count = await tts_agent.refresh_backend_voices("nope")
-        assert count == 0
+        assert count is None
 
     @pytest.mark.asyncio
     async def test_unions_fetched_voices_into_library(
@@ -2179,6 +2595,259 @@ class TestRefreshBackendVoices:
         assert fresh_voice_library.voices == {}
 
 
+NARRATOR_ID = "fish:9a9cf47702da476aa4629e2506d4a857"
+INNKEEPER_ID = "fish:e58b0d7efca34eb38d5c4985e378abcb"
+
+
+@pytest.fixture
+def fish_listing(tts_agent, fresh_voice_library, monkeypatch):
+    """A registered "fish" backend whose Refresh voices reads the Fish Audio
+    listing through the real parser, or gets no listing while ``responds`` is
+    False; library saves are recorded, not written."""
+    listing = copy.deepcopy(FISH_AUDIO_MODEL_LISTING)
+    saves: list[VoiceLibrary] = []
+    state = types.SimpleNamespace(items=listing["items"], saves=saves, responds=True)
+
+    async def _fake_save(library):
+        saves.append(library)
+
+    async def _fake_fetch():
+        return _parse_voices_payload(listing, "fish") if state.responds else None
+
+    monkeypatch.setattr(voice_library, "save_voice_library", _fake_save)
+    tts_agent.register_dynamic_child("openai_compatible", "fish", "Fish Audio")
+    original_api_method = tts_agent.api_method
+    monkeypatch.setattr(
+        tts_agent,
+        "api_method",
+        lambda api, name, default=None: _fake_fetch
+        if (api == "fish" and name == "fetch_voices")
+        else original_api_method(api, name, default),
+    )
+    return state
+
+
+def _voice_library_handler():
+    from talemate.agents.tts.websocket_handler import TTSWebsocketHandler
+
+    handler = object.__new__(TTSWebsocketHandler)
+    handler.websocket_handler = MagicMock(scene=None)
+    handler._broadcast_update = MagicMock()
+    handler.signal_operation_done = AsyncMock()
+    return handler
+
+
+class TestRefreshVoicesProvenance:
+    """A refresh keeps the voices it added in step with the server listing,
+    also when the listing carries display names, and never changes or removes
+    a voice the user added or edited."""
+
+    @pytest.mark.asyncio
+    async def test_the_listed_voices_are_added_as_refresh_voices(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        count = await tts_agent.refresh_backend_voices("fish")
+
+        assert count == 2
+        narrator = fresh_voice_library.voices[NARRATOR_ID]
+        assert narrator.label == "Warm Narrator"
+        assert narrator.managed_by == "refresh"
+        assert fresh_voice_library.voices[INNKEEPER_ID].managed_by == "refresh"
+
+    @pytest.mark.asyncio
+    async def test_a_rename_on_the_server_updates_the_label(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        await tts_agent.refresh_backend_voices("fish")
+        fish_listing.items[0]["title"] = "Calm Narrator"
+
+        await tts_agent.refresh_backend_voices("fish")
+
+        assert fresh_voice_library.voices[NARRATOR_ID].label == "Calm Narrator"
+
+    @pytest.mark.asyncio
+    async def test_a_voice_deleted_on_the_server_is_removed(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        await tts_agent.refresh_backend_voices("fish")
+        del fish_listing.items[1]
+
+        await tts_agent.refresh_backend_voices("fish")
+
+        assert INNKEEPER_ID not in fresh_voice_library.voices
+        assert NARRATOR_ID in fresh_voice_library.voices
+
+    @pytest.mark.asyncio
+    async def test_voices_the_user_edited_survive_a_rename_and_a_delete(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        await tts_agent.refresh_backend_voices("fish")
+        handler = _voice_library_handler()
+        await handler.handle_edit(
+            {
+                "voice_id": NARRATOR_ID,
+                "scope": "global",
+                "label": "Old Tom",
+                "provider": "fish",
+                "provider_id": NARRATOR_ID.split(":", 1)[1],
+            }
+        )
+        await handler.handle_edit(
+            {
+                "voice_id": INNKEEPER_ID,
+                "scope": "global",
+                "label": "Gruff Innkeeper",
+                "provider": "fish",
+                "provider_id": INNKEEPER_ID.split(":", 1)[1],
+                "tags": ["male"],
+            }
+        )
+        fish_listing.items[0]["title"] = "Calm Narrator"
+        del fish_listing.items[1]
+
+        await tts_agent.refresh_backend_voices("fish")
+
+        narrator = fresh_voice_library.voices[NARRATOR_ID]
+        assert narrator.label == "Old Tom"
+        assert narrator.managed_by == "user"
+        innkeeper = fresh_voice_library.voices[INNKEEPER_ID]
+        assert innkeeper.tags == ["male"]
+        assert innkeeper.managed_by == "user"
+
+    @pytest.mark.asyncio
+    async def test_a_voice_added_by_hand_survives_with_its_id_as_label(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        # a Fish Voice Library voice the workspace does not own is not listed
+        await _voice_library_handler().handle_add(
+            {
+                "label": "f00dface",
+                "provider": "fish",
+                "provider_id": "f00dface",
+                "scope": "global",
+            }
+        )
+
+        await tts_agent.refresh_backend_voices("fish")
+
+        assert fresh_voice_library.voices["fish:f00dface"].managed_by == "user"
+
+    @pytest.mark.asyncio
+    async def test_a_saved_library_without_the_marker_keeps_the_old_rule(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        def saved_voice(label: str, provider_id: str) -> dict:
+            return {
+                "label": label,
+                "provider": "fish",
+                "provider_id": provider_id,
+                "provider_model": None,
+                "tags": [],
+                "parameters": {},
+                "is_scene_asset": False,
+                "id": f"fish:{provider_id}",
+            }
+
+        narrator_pid = NARRATOR_ID.split(":", 1)[1]
+        saved_file = json.dumps(
+            {
+                "version": 1,
+                "voices": {
+                    "fish:gone": saved_voice("gone", "gone"),
+                    "fish:renamed": saved_voice("Renamed", "renamed"),
+                    NARRATOR_ID: saved_voice(narrator_pid, narrator_pid),
+                },
+            }
+        )
+        fresh_voice_library.voices.update(
+            VoiceLibrary.model_validate_json(saved_file).voices
+        )
+
+        await tts_agent.refresh_backend_voices("fish")
+
+        voices = fresh_voice_library.voices
+        # unlisted, untagged and labelled with its id: removed, as before
+        assert "fish:gone" not in voices
+        # unlisted with a label of its own: kept, as before
+        assert voices["fish:renamed"].managed_by is None
+        # listed: left as it is, as before
+        assert voices[NARRATOR_ID].label == narrator_pid
+        assert voices[NARRATOR_ID].managed_by is None
+
+    @pytest.mark.asyncio
+    async def test_a_refresh_without_a_listing_changes_nothing(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        await tts_agent.refresh_backend_voices("fish")
+        # the old rule would remove this one on any refresh that misses it
+        fresh_voice_library.voices["fish:gone"] = Voice(
+            label="gone", provider="fish", provider_id="gone"
+        )
+        before = dict(fresh_voice_library.voices)
+        saves_before = len(fish_listing.saves)
+        fish_listing.responds = False
+
+        count = await tts_agent.refresh_backend_voices("fish")
+
+        assert count is None
+        assert fresh_voice_library.voices == before
+        assert len(fish_listing.saves) == saves_before
+
+    @pytest.mark.asyncio
+    async def test_an_empty_listing_removes_the_refresh_voices_only(
+        self, tts_agent, fresh_voice_library, fish_listing
+    ):
+        await tts_agent.refresh_backend_voices("fish")
+        await _voice_library_handler().handle_add(
+            {
+                "label": "f00dface",
+                "provider": "fish",
+                "provider_id": "f00dface",
+                "scope": "global",
+            }
+        )
+        saved_before_the_marker = {
+            "fish:gone": Voice(label="gone", provider="fish", provider_id="gone"),
+            "fish:named": Voice(label="Named", provider="fish", provider_id="named"),
+        }
+        fresh_voice_library.voices.update(saved_before_the_marker)
+        fish_listing.items.clear()
+
+        count = await tts_agent.refresh_backend_voices("fish")
+
+        assert count == 0
+        assert sorted(fresh_voice_library.voices) == [
+            "fish:f00dface",
+            "fish:named",
+        ]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "count, status, message",
+        [
+            (None, "warning", "no complete voice listing was received"),
+            (0, "success", "fetched 0 voices"),
+            (2, "success", "fetched 2 voices"),
+        ],
+    )
+    async def test_the_status_message_tells_no_listing_from_an_empty_one(
+        self, monkeypatch, count, status, message
+    ):
+        from talemate.agents.tts import websocket_handler as handler_module
+
+        agent = types.SimpleNamespace(
+            refresh_backend_voices=AsyncMock(return_value=count)
+        )
+        monkeypatch.setattr(handler_module, "get_agent", lambda name: agent)
+        plugin = _voice_library_handler()
+
+        await plugin.handle_refresh_backend_voices({"slug": "fish"})
+
+        emitted = plugin.signal_operation_done.await_args.kwargs["emit_status_message"]
+        assert emitted["status"] == status
+        assert message in emitted["message"]
+
+
 class TestParseVoicesPayload:
     """Direct exercise of the tolerant payload parser."""
 
@@ -2218,11 +2887,17 @@ class TestParseVoicesPayload:
         voices = _parse_voices_payload(payload, "test-be")
         assert [v.provider_id for v in voices] == ["alpha"]
 
-    def test_none_payload_returns_empty(self):
-        assert _parse_voices_payload(None, "test-be") == []
+    def test_none_payload_is_no_listing(self):
+        assert _parse_voices_payload(None, "test-be") is None
 
-    def test_dict_without_recognized_keys_returns_empty(self):
-        assert _parse_voices_payload({"unknown": [1, 2, 3]}, "test-be") == []
+    def test_dict_without_recognized_keys_is_no_listing(self):
+        assert _parse_voices_payload({"unknown": [1, 2, 3]}, "test-be") is None
+
+    def test_a_listing_without_entries_is_an_empty_listing(self):
+        assert _parse_voices_payload({"total": 0, "items": []}, "fish") == []
+
+    def test_entries_of_which_none_is_a_voice_are_no_listing(self):
+        assert _parse_voices_payload([{"description": "x"}, 42], "test-be") is None
 
     def test_entries_missing_id_skipped(self):
         # An entry that has neither id, voice_id, name, nor voice should
@@ -2241,6 +2916,290 @@ class TestParseVoicesPayload:
         # Numbers, lists, etc. don't match either branch — they're skipped.
         voices = _parse_voices_payload([42, ["nope"], "alpha"], "test-be")
         assert [v.provider_id for v in voices] == ["alpha"]
+
+    def test_items_container(self):
+        payload = {"items": [{"id": "alpha"}]}
+        voices = _parse_voices_payload(payload, "test-be")
+        assert [v.provider_id for v in voices] == ["alpha"]
+
+    def test_underscore_id_with_title(self):
+        voices = _parse_voices_payload([{"_id": "abc123", "title": "Alpha"}], "test-be")
+        assert [(v.provider_id, v.label) for v in voices] == [("abc123", "Alpha")]
+
+    def test_ids_rank_before_names_and_title_after_display_name(self):
+        voices = _parse_voices_payload(
+            [
+                {"id": "a", "_id": "mongo-a", "name": "A"},
+                {"_id": "mongo-b", "name": "B", "title": "Title B"},
+                {"_id": "mongo-c", "display_name": "Display C", "title": "Title C"},
+            ],
+            "test-be",
+        )
+        assert [(v.provider_id, v.label) for v in voices] == [
+            ("a", "A"),
+            ("mongo-b", "Title B"),
+            ("mongo-c", "Display C"),
+        ]
+
+    def test_fish_audio_model_listing(self):
+        voices = _parse_voices_payload(FISH_AUDIO_MODEL_LISTING, "fish")
+        assert [(v.provider_id, v.label, v.provider) for v in voices] == [
+            ("9a9cf47702da476aa4629e2506d4a857", "Warm Narrator", "fish"),
+            ("e58b0d7efca34eb38d5c4985e378abcb", "Gruff Innkeeper", "fish"),
+        ]
+
+
+class TestOpenAICompatibleVoicesEndpoint:
+    """Refresh voices through a backend's Voices endpoint override."""
+
+    SLUG = "fish"
+    FISH_LISTING_URL = "https://api.fish.audio/model?self=true&page_size=100"
+
+    @pytest.fixture
+    def listing_requests(self, monkeypatch) -> list[httpx.Request]:
+        requests: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return httpx.Response(200, json=FISH_AUDIO_MODEL_LISTING)
+
+        real_client = httpx.AsyncClient
+
+        def make_client(**kwargs):
+            return real_client(transport=httpx.MockTransport(handler), **kwargs)
+
+        monkeypatch.setattr(openai_compatible_module.httpx, "AsyncClient", make_client)
+        return requests
+
+    @pytest.mark.asyncio
+    async def test_refresh_reads_fish_audio_listing(
+        self, tts_agent, fresh_voice_library, listing_requests, monkeypatch
+    ):
+        async def _fake_save(library):
+            pass
+
+        monkeypatch.setattr(voice_library, "save_voice_library", _fake_save)
+
+        tts_agent.register_dynamic_child("openai_compatible", self.SLUG, "Fish Audio")
+        config = tts_agent.actions[self.SLUG].config
+        config["api_url"].value = "https://api.fish.audio/compat/v1"
+        config["api_key"].value = "fish-key"
+        config["voices_endpoint"].value = self.FISH_LISTING_URL
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count == 2
+        assert [str(r.url) for r in listing_requests] == [self.FISH_LISTING_URL]
+        assert listing_requests[0].headers["Authorization"] == "Bearer fish-key"
+        library = fresh_voice_library.voices
+        assert library["fish:9a9cf47702da476aa4629e2506d4a857"].label == "Warm Narrator"
+        assert (
+            library["fish:e58b0d7efca34eb38d5c4985e378abcb"].label == "Gruff Innkeeper"
+        )
+
+    @pytest.fixture
+    def listing_server(self, tts_agent, monkeypatch):
+        """The registered "fish" backend's Voices endpoint, answering from
+        ``pages`` by the requested ``page_number`` (1 when absent); library
+        saves are not written."""
+        server = types.SimpleNamespace(requests=[], pages={})
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            server.requests.append(request)
+            page = server.pages.get(int(request.url.params.get("page_number", 1)))
+            if isinstance(page, httpx.Response):
+                return page
+            return httpx.Response(200, json=page) if page else httpx.Response(404)
+
+        real_client = httpx.AsyncClient
+
+        def make_client(**kwargs):
+            return real_client(transport=httpx.MockTransport(handler), **kwargs)
+
+        async def _fake_save(library):
+            pass
+
+        monkeypatch.setattr(openai_compatible_module.httpx, "AsyncClient", make_client)
+        monkeypatch.setattr(voice_library, "save_voice_library", _fake_save)
+        tts_agent.register_dynamic_child("openai_compatible", self.SLUG, "Fish Audio")
+        config = tts_agent.actions[self.SLUG].config
+        config["api_url"].value = "https://api.fish.audio/compat/v1"
+        config["voices_endpoint"].value = self.FISH_LISTING_URL
+        return server
+
+    @staticmethod
+    def fish_page(voice_ids: list[str], total: int, **extra) -> dict:
+        return {
+            "total": total,
+            "items": [{"_id": vid, "title": vid.title()} for vid in voice_ids],
+            **extra,
+        }
+
+    @staticmethod
+    def fish_voice_ids(library: VoiceLibrary) -> list[str]:
+        return sorted(v.provider_id for v in library.voices.values())
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "more",
+        [{"has_more": True}, {}],
+        ids=["has_more", "total_only"],
+    )
+    async def test_refresh_reads_every_page(
+        self, tts_agent, fresh_voice_library, listing_server, more
+    ):
+        listing_server.pages = {
+            1: self.fish_page(["alpha", "beta"], total=3, **more),
+            2: self.fish_page(["gamma"], total=3, has_more=False),
+        }
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count == 3
+        assert self.fish_voice_ids(fresh_voice_library) == ["alpha", "beta", "gamma"]
+        assert [str(r.url) for r in listing_server.requests] == [
+            self.FISH_LISTING_URL,
+            f"{self.FISH_LISTING_URL}&page_number=2",
+        ]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "second_page",
+        [
+            httpx.Response(500),
+            {"total": 3, "items": [{"_id": "alpha"}, {"_id": "beta"}]},
+        ],
+        ids=["page_fails", "page_number_ignored"],
+    )
+    async def test_a_listing_not_read_in_full_changes_nothing(
+        self, tts_agent, fresh_voice_library, listing_server, second_page
+    ):
+        # gamma is on the page that cannot be read
+        fresh_voice_library.voices["fish:gamma"] = Voice(
+            label="Gamma", provider="fish", provider_id="gamma", managed_by="refresh"
+        )
+        listing_server.pages = {
+            1: self.fish_page(["alpha", "beta"], total=3, has_more=True),
+            2: second_page,
+        }
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count is None
+        assert self.fish_voice_ids(fresh_voice_library) == ["gamma"]
+
+    @pytest.mark.asyncio
+    async def test_a_listing_past_the_page_limit_changes_nothing(
+        self, tts_agent, fresh_voice_library, listing_server, monkeypatch
+    ):
+        monkeypatch.setattr(openai_compatible_module, "MAX_VOICE_LISTING_PAGES", 2)
+        fresh_voice_library.voices["fish:gamma"] = Voice(
+            label="Gamma", provider="fish", provider_id="gamma", managed_by="refresh"
+        )
+        listing_server.pages = {
+            1: self.fish_page(["alpha"], total=3, has_more=True),
+            2: self.fish_page(["beta"], total=3, has_more=True),
+        }
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count is None
+        assert len(listing_server.requests) == 2
+        assert self.fish_voice_ids(fresh_voice_library) == ["gamma"]
+
+    @pytest.mark.asyncio
+    async def test_an_empty_listing_removes_the_refresh_voices(
+        self, tts_agent, fresh_voice_library, listing_server
+    ):
+        fresh_voice_library.voices["fish:alpha"] = Voice(
+            label="Alpha", provider="fish", provider_id="alpha", managed_by="refresh"
+        )
+        listing_server.pages = {1: self.fish_page([], total=0, has_more=False)}
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count == 0
+        assert fresh_voice_library.voices == {}
+
+    @pytest.mark.asyncio
+    async def test_an_endpoint_that_fails_changes_nothing(
+        self, tts_agent, fresh_voice_library, listing_server
+    ):
+        fresh_voice_library.voices["fish:alpha"] = Voice(
+            label="Alpha", provider="fish", provider_id="alpha", managed_by="refresh"
+        )
+        listing_server.pages = {1: httpx.Response(503)}
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count is None
+        assert self.fish_voice_ids(fresh_voice_library) == ["alpha"]
+
+
+class TestVoiceListingProbes:
+    """A backend without a Voices endpoint, so Refresh voices tries the default
+    probe paths in turn."""
+
+    SLUG = "probe"
+
+    @pytest.fixture
+    def probe_server(self, tts_agent, fresh_voice_library, monkeypatch):
+        """Answers from ``answers``, keyed by (path, page_number); 404 for the
+        rest. Starts with one refresh voice in the library; saves are not
+        written."""
+        server = types.SimpleNamespace(answers={})
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            key = (request.url.path, int(request.url.params.get("page_number", 1)))
+            answer = server.answers.get(key)
+            if isinstance(answer, httpx.Response):
+                return answer
+            if answer is None:
+                return httpx.Response(404)
+            return httpx.Response(200, json=answer)
+
+        real_client = httpx.AsyncClient
+
+        def make_client(**kwargs):
+            return real_client(transport=httpx.MockTransport(handler), **kwargs)
+
+        async def _fake_save(library):
+            pass
+
+        monkeypatch.setattr(openai_compatible_module.httpx, "AsyncClient", make_client)
+        monkeypatch.setattr(voice_library, "save_voice_library", _fake_save)
+        tts_agent.register_dynamic_child("openai_compatible", self.SLUG, "Probe")
+        tts_agent.actions[self.SLUG].config["api_url"].value = "http://tts.local/v1"
+        fresh_voice_library.voices["probe:alpha"] = Voice(
+            label="Alpha", provider="probe", provider_id="alpha", managed_by="refresh"
+        )
+        return server
+
+    @pytest.mark.asyncio
+    async def test_a_partial_read_on_one_path_outweighs_an_empty_path(
+        self, tts_agent, fresh_voice_library, probe_server
+    ):
+        probe_server.answers = {
+            ("/v1/audio/voices", 1): {"voices": [{"id": "alpha"}], "has_more": True},
+            ("/v1/audio/voices", 2): httpx.Response(500),
+            ("/v1/audio/speech/voices", 1): {"voices": []},
+        }
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count is None
+        assert list(fresh_voice_library.voices) == ["probe:alpha"]
+
+    @pytest.mark.asyncio
+    async def test_one_complete_empty_path_removes_the_refresh_voices(
+        self, tts_agent, fresh_voice_library, probe_server
+    ):
+        probe_server.answers = {("/v1/audio/speech/voices", 1): {"voices": []}}
+
+        count = await tts_agent.refresh_backend_voices(self.SLUG)
+
+        assert count == 0
+        assert fresh_voice_library.voices == {}
 
 
 class TestResolveVoicesUrl:

@@ -1,13 +1,38 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, get_args
 
 import pydantic
+import structlog
+
 from talemate.agents.visual.schema import PromptFinalizer
-from talemate.world_state.templates.base import Template, register
+from talemate.world_state.templates.base import (
+    Template,
+    register,
+    repairs_unknown_choices,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
-__all__ = ["VisualStyle", "VisualFinalizer"]
+__all__ = ["VisualStyle", "VisualFinalizer", "VisualType", "VISUAL_TYPES"]
+
+log = structlog.get_logger("world-state.templates.visual")
+
+# the values the visualizer's style settings filter on (`agents/visual/style.py`).
+# STYLE is the general art style and is not a VIS_TYPE member - a style template
+# is picked for a slot, it does not name one
+VisualType = Literal[
+    "STYLE",
+    "CHARACTER_CARD",
+    "CHARACTER_PORTRAIT",
+    "SCENE_CARD",
+    "SCENE_BACKGROUND",
+    "SCENE_ILLUSTRATION",
+    "OBJECT_ILLUSTRATION",
+]
+
+VISUAL_TYPES = get_args(VisualType)
+
+DEFAULT_VISUAL_TYPE = "STYLE"
 
 
 @register("visual_style")
@@ -29,10 +54,36 @@ class VisualStyle(Template):
     positive_descriptive: str | None = None
     negative_descriptive: str | None = None
 
-    # Visual type (maps to VIS_TYPE, stored as string to avoid coupling)
-    visual_type: str = "STYLE"
+    visual_type: VisualType = DEFAULT_VISUAL_TYPE
 
     template_type: str = "visual_style"
+
+    @pydantic.field_validator("visual_type", mode="before")
+    @classmethod
+    def _coerce_visual_type(cls, v, info: pydantic.ValidationInfo) -> str:
+        if isinstance(v, str):
+            v = v.strip()
+
+        if v in VISUAL_TYPES:
+            return v
+
+        # only a template read off disk falls back: `Group.sanitize_data` drops
+        # one that fails to validate, so raising there would take the rest of
+        # the template with it. Everywhere else an unknown visual type is an
+        # error.
+        if not repairs_unknown_choices(info):
+            raise ValueError(
+                f"Unknown visual type: {v}. Valid visual types: "
+                f"{', '.join(VISUAL_TYPES)}"
+            )
+
+        log.warning(
+            "unknown visual type, falling back",
+            visual_type=v,
+            template=info.data.get("name"),
+            fallback=DEFAULT_VISUAL_TYPE,
+        )
+        return DEFAULT_VISUAL_TYPE
 
     def render(
         self, scene: "Scene", character_name: str | None = None

@@ -11,7 +11,7 @@
   <!-- Dialog for visual library -->
   <v-dialog v-model="dialogModel" max-width="1920" min-height="600">
     <v-card>
-      <v-toolbar density="comfortable" color="grey-darken-4">
+      <v-toolbar density="comfortable" color="mutedbg">
         <v-toolbar-title class="d-flex align-center">
           <v-icon class="mr-2" size="small" color="primary">mdi-image-multiple-outline</v-icon>
           Visual Library
@@ -33,10 +33,10 @@
                 </template>
                 <span class="font-weight-bold" :class="`text-${t2iColor}`">Text to Image</span>
                 <template v-if="t2iBackendName || t2iGeneratorLabel">
-                  <v-divider vertical class="mx-1" color="grey-lighten-1" />
-                  <span v-if="t2iBackendName" class="text-grey-lighten-1">{{ t2iBackendName }}</span>
+                  <v-divider vertical class="mx-1" color="mutedheader" />
+                  <span v-if="t2iBackendName" class="text-medium-emphasis">{{ t2iBackendName }}</span>
                   <template v-if="t2iBackendName && t2iGeneratorLabel">
-                    <v-divider vertical class="mx-1" color="grey-lighten-1" />
+                    <v-divider vertical class="mx-1" color="mutedheader" />
                   </template>
                   <span v-if="t2iGeneratorLabel" class="text-muted">{{ t2iGeneratorLabel }}</span>
                 </template>
@@ -58,10 +58,10 @@
                 </template>
                 <span class="font-weight-bold" :class="`text-${editColor}`">Image Edit</span>
                 <template v-if="editBackendName || editGeneratorLabel">
-                  <v-divider vertical class="mx-1" color="grey-lighten-1" />
-                  <span v-if="editBackendName" class="text-grey-lighten-1">{{ editBackendName }}</span>
+                  <v-divider vertical class="mx-1" color="mutedheader" />
+                  <span v-if="editBackendName" class="text-medium-emphasis">{{ editBackendName }}</span>
                   <template v-if="editBackendName && editGeneratorLabel">
-                    <v-divider vertical class="mx-1" color="grey-lighten-1" />
+                    <v-divider vertical class="mx-1" color="mutedheader" />
                   </template>
                   <span v-if="editGeneratorLabel" class="text-muted">{{ editGeneratorLabel }}</span>
                 </template>
@@ -83,10 +83,10 @@
                 </template>
                 <span class="font-weight-bold" :class="`text-${analysisColor}`">Image Analysis</span>
                 <template v-if="analysisBackendName || analysisGeneratorLabel">
-                  <v-divider vertical class="mx-1" color="grey-lighten-1" />
-                  <span v-if="analysisBackendName" class="text-grey-lighten-1">{{ analysisBackendName }}</span>
+                  <v-divider vertical class="mx-1" color="mutedheader" />
+                  <span v-if="analysisBackendName" class="text-medium-emphasis">{{ analysisBackendName }}</span>
                   <template v-if="analysisBackendName && analysisGeneratorLabel">
-                    <v-divider vertical class="mx-1" color="grey-lighten-1" />
+                    <v-divider vertical class="mx-1" color="mutedheader" />
                   </template>
                   <span v-if="analysisGeneratorLabel" class="text-muted">{{ analysisGeneratorLabel }}</span>
                 </template>
@@ -176,7 +176,7 @@
 </template>
 
 <script>
-import { v4 as uuidv4 } from 'uuid';
+import { newUuid } from '@/utils/uuid';
 import VisualLibraryQueue from './VisualLibraryQueue.vue';
 import VisualLibraryPendingQueue from './VisualLibraryPendingQueue.vue';
 import VisualLibraryScene from './VisualLibraryScene.vue';
@@ -261,21 +261,21 @@ export default {
       if (status === BACKEND_STATUS.OK) return 'success';
       if (status === BACKEND_STATUS.WARNING) return 'warning';
       if (status === BACKEND_STATUS.ERROR) return 'error';
-      return 'grey';
+      return 'medium-emphasis';
     },
     editColor() {
       const status = this.visualMeta?.image_edit?.status;
       if (status === BACKEND_STATUS.OK) return 'success';
       if (status === BACKEND_STATUS.WARNING) return 'warning';
       if (status === BACKEND_STATUS.ERROR) return 'error';
-      return 'grey';
+      return 'medium-emphasis';
     },
     analysisColor() {
       const status = this.visualMeta?.image_analyzation?.status;
       if (status === BACKEND_STATUS.OK) return 'success';
       if (status === BACKEND_STATUS.WARNING) return 'warning';
       if (status === BACKEND_STATUS.ERROR) return 'error';
-      return 'grey';
+      return 'medium-emphasis';
     },
     t2iTooltip() {
       const label = this.t2iDetail?.value || 'Not configured';
@@ -406,7 +406,6 @@ export default {
     },
     handleMessage(message) {
       if (message.type === 'image_generated') {
-        console.log('image_generated', message.data);
         const req = message.data?.request || null;
         const base64 = message.data?.base64 || null;
         const saved = !!message.data?.saved;
@@ -498,7 +497,7 @@ export default {
       // Add unique IDs to items if they don't have them
       const itemsWithIds = items.map(item => ({
         ...item,
-        id: item.id || uuidv4(),
+        id: item.id || newUuid(),
         status: 'pending',
       }));
       
@@ -605,5 +604,4 @@ export default {
 
 <style scoped>
 </style>
-
 

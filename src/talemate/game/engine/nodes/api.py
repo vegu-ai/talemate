@@ -25,6 +25,9 @@ class ScopedAPIFunction(Node):
     The code has access to the `arguments` dict, a `result` dict to
     populate, and the `TM` scoped API object.
 
+    The `TM` scoped API is deprecated and no longer maintained; prefer
+    regular nodes for new graph logic.
+
     Inputs:
 
     - state: The graph state

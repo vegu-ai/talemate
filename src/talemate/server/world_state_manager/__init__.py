@@ -1,21 +1,30 @@
 import asyncio
+import json
+import os
 import uuid
-from typing import Any, Union
+from typing import Annotated, Any, Union
 import base64
 
 import pydantic
 import structlog
 
 import talemate.world_state.templates as world_state_templates
+from talemate.world_state.templates.decision_checks import (
+    DEFAULT_THRESHOLD,
+    default_writing_style_decision_checks,
+)
 from talemate.game.schema import ConditionGroup
 from talemate.export import ExportOptions, export
-from talemate.instance import get_agent
+from talemate.instance import emit_agents_status, get_agent
 from talemate.world_state.manager import WorldStateManager, Suggestion
 from talemate.scene.schema import ScenePerspectives
-from talemate.status import background_task, set_loading
+from talemate.knowledge.mode import KnowledgeEligibility
+from talemate.status import LoadingLabel, background_task, set_loading
 import talemate.game.focal as focal
-from talemate.config import save_config
+from talemate.config import save_config, get_config, commit_config
 from talemate.server.websocket_plugin import Plugin
+from talemate.save import scene_save_filename
+from talemate.util.path import is_safe_relative_filename
 
 from .scene_intent import SceneIntentMixin
 from .history import HistoryMixin
@@ -23,8 +32,14 @@ from .character import CharacterMixin
 from .shared_context import SharedContextMixin
 from .episodes import EpisodesMixin
 from .scene_state_reset import SceneStateResetMixin
+from .knowledge import KnowledgeMixin
 
 log = structlog.get_logger("talemate.server.world_state_manager")
+
+EmptyAsNoneCharacterName = Annotated[
+    str | None,
+    pydantic.BeforeValidator(lambda value: None if value == "" else value),
+]
 
 
 class UpdateCharacterAttributePayload(pydantic.BaseModel):
@@ -53,6 +68,7 @@ class SetCharacterDetailReinforcementPayload(pydantic.BaseModel):
     update_state: bool = False
     insert: str = "sequential"
     require_active: bool = True
+    answer_confirmed: bool = True
 
 
 class CharacterDetailReinforcementPayload(pydantic.BaseModel):
@@ -82,10 +98,11 @@ class SetWorldEntryReinforcementPayload(pydantic.BaseModel):
     question: str
     instructions: Union[str, None] = None
     interval: int = 10
-    answer: str = ""
+    answer: str | None = None
     update_state: bool = False
     insert: str = "never"
     require_active: bool = True
+    answer_confirmed: bool = True
 
 
 class WorldEntryReinforcementPayload(pydantic.BaseModel):
@@ -135,20 +152,40 @@ class DeleteWorldStateTemplatePayload(pydantic.BaseModel):
 
 class ApplyWorldStateTemplatePayload(pydantic.BaseModel):
     template: world_state_templates.AnnotatedTemplate
-    character_name: str | None = (None,)
-    run_immediately: bool = (False,)
+    character_name: EmptyAsNoneCharacterName = None
+    run_immediately: bool = False
 
 
 class ApplyWorldStateTemplatesPayload(pydantic.BaseModel):
     templates: list[world_state_templates.AnnotatedTemplate]
-    character_name: str | None = (None,)
-    run_immediately: bool = (False,)
+    character_name: EmptyAsNoneCharacterName = None
+    run_immediately: bool = False
     source: str | None = None
     generation_options: world_state_templates.GenerationOptions | None = None
 
 
 class SaveWorldStateTemplateGroupPayload(pydantic.BaseModel):
     group: world_state_templates.Group
+
+    @pydantic.field_validator("group")
+    @classmethod
+    def _validate_group_path(
+        cls, v: world_state_templates.Group
+    ) -> world_state_templates.Group:
+        # a group that already has a path saves straight to it, so an inbound
+        # path must not be able to name a file outside the template directory
+        if not v.path:
+            return v
+
+        root = os.path.realpath(world_state_templates.TEMPLATE_PATH)
+        target = os.path.realpath(v.path)
+
+        if target == root or os.path.commonpath([root, target]) != root:
+            raise ValueError(
+                f"Template group path is outside of the template directory: {v.path}"
+            )
+
+        return v
 
 
 class DeleteWorldStateTemplateGroupPayload(pydantic.BaseModel):
@@ -168,22 +205,25 @@ class SceneOutlinePayload(pydantic.BaseModel):
 
 
 class SceneSettingsPayload(pydantic.BaseModel):
+    """Omitted fields stay unchanged; agent_settings_file=None opts out."""
+
+    knowledge_eligibility: KnowledgeEligibility | None = None
     experimental: bool = False
     immutable_save: bool = False
     writing_style_template: str | None = None
     agent_persona_templates: dict[str, str | None] | None = None
     visual_style_template: str | None = None
     restore_from: str | None = None
-    # Presence-aware via `model_fields_set` — see handler. None = opt out;
-    # string = link to that file; unset (caller omits the key) = leave the
-    # link alone.
     agent_settings_file: str | None = None
     agent_settings_opted_out: bool | None = None
 
 
 class SaveScenePayload(pydantic.BaseModel):
     save_as: str | None = None
+    authoring: bool = False
     project_name: str | None = None
+    request_id: str | None = None
+    scene_identity: str | None = None
 
 
 class GenerateSuggestionPayload(pydantic.BaseModel):
@@ -199,6 +239,35 @@ class SuggestionPayload(pydantic.BaseModel):
     proposal_uid: str | None = None
 
 
+async def templates_message(world_state_manager: WorldStateManager) -> dict:
+    """The `templates` push, built the same way `handle_get_templates` builds it.
+
+    The frontend keeps its whole template state from this one payload, so a
+    write that reaches it any other way (the help agent's theme tools) has to
+    send the same shape.
+    """
+
+    templates = await world_state_manager.get_templates()
+
+    return {
+        "type": "world_state_manager",
+        "action": "templates",
+        "data": {
+            "by_type": templates.model_dump()["templates"],
+            "managed": world_state_manager.template_collection.model_dump(),
+            "defaults": {
+                "writing_style": {
+                    "decision_checks": [
+                        check.model_dump(mode="json")
+                        for check in default_writing_style_decision_checks()
+                    ],
+                    "decision_check_threshold": DEFAULT_THRESHOLD,
+                }
+            },
+        },
+    }
+
+
 class WorldStateManagerPlugin(
     SceneIntentMixin,
     HistoryMixin,
@@ -206,6 +275,7 @@ class WorldStateManagerPlugin(
     SharedContextMixin,
     EpisodesMixin,
     SceneStateResetMixin,
+    KnowledgeMixin,
     Plugin,
 ):
     router = "world_state_manager"
@@ -288,16 +358,8 @@ class WorldStateManagerPlugin(
         )
 
     async def handle_get_templates(self, data):
-        templates = await self.world_state_manager.get_templates()
         self.websocket_handler.queue_put(
-            {
-                "type": "world_state_manager",
-                "action": "templates",
-                "data": {
-                    "by_type": templates.model_dump()["templates"],
-                    "managed": self.world_state_manager.template_collection.model_dump(),
-                },
-            }
+            await templates_message(self.world_state_manager)
         )
 
     async def handle_update_character_color(self, data):
@@ -390,6 +452,7 @@ class WorldStateManagerPlugin(
             payload.insert,
             payload.update_state,
             payload.require_active,
+            answer_confirmed=payload.answer_confirmed,
         )
 
         self.websocket_handler.queue_put(
@@ -589,6 +652,7 @@ class WorldStateManagerPlugin(
             payload.insert,
             payload.update_state,
             payload.require_active,
+            answer_confirmed=payload.answer_confirmed,
         )
 
         self.websocket_handler.queue_put(
@@ -808,7 +872,7 @@ class WorldStateManagerPlugin(
 
         result = await self.world_state_manager.apply_template(
             template=payload.template,
-            character_name=payload.character_name or "",
+            character_name=payload.character_name,
             run_immediately=payload.run_immediately,
         )
 
@@ -824,7 +888,12 @@ class WorldStateManagerPlugin(
 
         await self.handle_get_world({})
         await self.handle_get_templates({})
-        await self.signal_operation_done()
+        # a theme writes the application config, never scene state - letting the
+        # completion fall through would auto-save the scene, or mark a scene
+        # nobody edited as unsaved
+        await self.signal_operation_done(
+            signal_only=payload.template.template_type == "theme"
+        )
 
     async def handle_save_template(self, data):
         payload = SaveWorldStateTemplatePayload(**data)
@@ -841,8 +910,21 @@ class WorldStateManagerPlugin(
             }
         )
 
+        template = payload.template
+        if template.template_type == "theme":
+            config = get_config()
+            if config.appearance.theme == f"{template.group}__{template.uid}":
+                await self.websocket_handler.on_config_changed(config)
+
         await self.handle_get_templates({})
         await self.signal_operation_done()
+
+    async def _deactivate_theme(self):
+        """Drops the active theme after the template backing it was deleted."""
+        config = get_config()
+        config.appearance.theme = None
+        await config.set_dirty()
+        await commit_config()
 
     async def handle_delete_template(self, data):
         payload = DeleteWorldStateTemplatePayload(**data)
@@ -863,6 +945,11 @@ class WorldStateManagerPlugin(
                 "data": payload.model_dump(),
             }
         )
+
+        if template.template_type == "theme":
+            active_theme = get_config().appearance.theme
+            if active_theme == f"{template.group}__{template.uid}":
+                await self._deactivate_theme()
 
         await self.handle_get_templates({})
         await self.signal_operation_done()
@@ -951,6 +1038,10 @@ class WorldStateManagerPlugin(
             }
         )
 
+        active_theme = get_config().appearance.theme
+        if active_theme and active_theme.split("__", 1)[0] == group.uid:
+            await self._deactivate_theme()
+
         await self.handle_get_templates({})
         await self.signal_operation_done()
 
@@ -1013,6 +1104,7 @@ class WorldStateManagerPlugin(
         await self.handle_get_character_list({})
         self.scene.emit_status()
 
+    @background_task("Activating character")
     async def handle_activate_character(self, data):
         payload = SelectiveCharacterPayload(**data)
         character = self.scene.get_character(payload.name)
@@ -1079,35 +1171,34 @@ class WorldStateManagerPlugin(
         )
 
         await self.signal_operation_done()
-        self.scene.emit_status()
-        await self.scene.emit_history()
 
     async def handle_update_scene_settings(self, data):
         payload = SceneSettingsPayload(**data)
 
-        # `model_fields_set` distinguishes "caller omitted this field" from
-        # "caller explicitly sent None" — needed by the agent-settings link
-        # logic where None means opt-out and absent means "leave it alone".
-        kwargs = payload.model_dump()
-        if "agent_settings_file" not in payload.model_fields_set:
-            kwargs.pop("agent_settings_file", None)
-        if "agent_settings_opted_out" not in payload.model_fields_set:
-            kwargs.pop("agent_settings_opted_out", None)
+        kwargs = payload.model_dump(exclude_unset=True)
 
+        mode_before = self.scene.knowledge_eligibility
         try:
             await self.world_state_manager.update_scene_settings(**kwargs)
         except ValueError as exc:
             log.warning("update_scene_settings rejected", error=str(exc))
-            await self.signal_operation_failed(str(exc))
+            await self.signal_operation_failed(
+                str(exc), failed_action="update_scene_settings"
+            )
             return
 
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
                 "action": "scene_settings_updated",
-                "data": payload.model_dump(),
+                "data": kwargs,
             }
         )
+        # The agents describe their settings for the scene's mode (a
+        # Character perspectives scene hides the Standard-only controls), so a
+        # mode change has to refresh what every settings view shows.
+        if self.scene.knowledge_eligibility != mode_before:
+            emit_agents_status()
 
         await self.signal_operation_done(allow_auto_save=False)
 
@@ -1144,16 +1235,86 @@ class WorldStateManagerPlugin(
 
     async def handle_save_scene(self, data):
         payload = SaveScenePayload(**data)
+        scene = self.scene
+        if payload.scene_identity is not None and payload.scene_identity != str(
+            scene.id
+        ):
+            await self.signal_operation_failed(
+                "The scene changed; the save was cancelled.",
+                request_id=payload.request_id,
+                failed_action="save_scene",
+            )
+            return
 
-        log.debug("Save scene", copy=payload.save_as, project_name=payload.project_name)
+        if payload.save_as and not is_safe_relative_filename(payload.save_as):
+            await self.signal_operation_failed(
+                "Invalid save name. Enter a filename without path separators.",
+                request_id=payload.request_id,
+                failed_action="save_scene",
+            )
+            return
 
-        if not self.scene.filename:
-            # scene has never been saved before
-            # specify project name (directory name)
-            self.scene.name = payload.project_name
+        destination_name = payload.save_as or scene.filename
+        if destination_name:
+            destination = os.path.join(
+                scene.save_dir, scene_save_filename(destination_name)
+            )
+            same_file = bool(scene.filename) and (
+                os.path.realpath(destination) == os.path.realpath(scene.full_path)
+                or (
+                    os.path.exists(destination)
+                    and os.path.exists(scene.full_path)
+                    and os.path.samefile(destination, scene.full_path)
+                )
+            )
+            read_only = scene.immutable_save if same_file else False
+            if not same_file and os.path.exists(destination):
+                try:
+                    with open(destination) as file:
+                        saved_scene = json.load(file)
+                    if not isinstance(saved_scene, dict):
+                        raise ValueError("Scene data must be a JSON object")
+                    read_only = saved_scene.get("immutable_save", False)
+                except (OSError, ValueError):
+                    await self.signal_operation_failed(
+                        "Cannot read the destination scene file. Choose a different "
+                        "name for Save As.",
+                        request_id=payload.request_id,
+                        failed_action="save_scene",
+                    )
+                    return
+            authoring_current_file = (
+                payload.authoring and payload.save_as is None and same_file
+            )
+            if read_only and not authoring_current_file:
+                await self.signal_operation_failed(
+                    "This scene file is read-only. Choose a different name for Save As.",
+                    request_id=payload.request_id,
+                    failed_action="save_scene",
+                )
+                return
 
-        await self.scene.save(auto=False, force=True, copy_name=payload.save_as)
-        self.scene.emit_status()
+        previous_name, previous_filename = scene.name, scene.filename
+        previous_protection = scene.immutable_save, scene.hidden, scene.deprecated
+        try:
+            if not scene.filename:
+                scene.name = payload.project_name or scene.name
+            await scene.save(auto=False, force=True, copy_name=payload.save_as)
+        except Exception:
+            scene.name, scene.filename = previous_name, previous_filename
+            scene.immutable_save, scene.hidden, scene.deprecated = previous_protection
+            scene.saved = False
+            scene.emit_status()
+            raise
+        scene.emit_status()
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "scene_saved",
+                "request_id": payload.request_id,
+                "scene_identity": str(scene.id),
+            }
+        )
 
     # Suggestions
 
@@ -1233,7 +1394,7 @@ class WorldStateManagerPlugin(
                     focal_context.hooks_after_call.append(send_suggestion)
 
                 @set_loading(
-                    "Analyzing character development",
+                    LoadingLabel("Analyzing {}'s development", character.name),
                     cancellable=True,
                     set_success=True,
                     set_error=True,

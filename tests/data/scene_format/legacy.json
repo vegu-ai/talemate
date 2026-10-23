@@ -1,0 +1,11 @@
+{
+  "name": "Format Fixture",
+  "project_name": "format-fixture",
+  "description": "A quiet harbor.",
+  "intro": "The tide is rising.",
+  "environment": "creative",
+  "history": [{"id": 1, "typ": "narrator", "source": "progress_story", "message": "A bell rings across the water.", "rev": 0}],
+  "archived_history": [],
+  "character_data": {},
+  "active_characters": []
+}

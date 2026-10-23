@@ -1,0 +1,1259 @@
+from _knowledge_step_helpers import push_and_step
+import asyncio
+import json
+from pathlib import Path
+from talemate.knowledge.status import knowledge_sync
+from talemate.regenerate import InplaceRegeneration, regenerate
+from talemate.tale_mate import Actor
+from talemate.server.scene_message import SceneMessagePlugin
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
+import pytest
+
+from _perception_response_helpers import exclude_passage, excluding_passage
+from talemate.agents.summarize.perceptions import (
+    PerceptionValidationError,
+    parse_perceptions,
+    perception_context,
+)
+from talemate.agents.summarize.response_specs import PERCEPTIONS_SPEC
+from talemate.character import Character
+from talemate.client.base import _generation_error_futures, resolve_generation_error
+from talemate.context import ActiveScene
+from talemate.exceptions import GenerationCancelled
+from talemate.instance import get_agent
+from talemate.knowledge.perspectives import (
+    select_character_view,
+    set_source_perspectives,
+    source_reference,
+)
+from talemate.knowledge.revision_browsing import defer_revision_work
+from talemate.knowledge.revision_refresh import catch_up_revisions
+from talemate.knowledge.step import knowledge_step, repair_knowledge
+from _knowledge_stale_helpers import not_current
+from talemate.scene_message import CharacterMessage, DirectorMessage, NarratorMessage
+
+CASES = json.loads(
+    (Path(__file__).parent / "data/perceptions/passages.json").read_text()
+)
+
+
+PASSAGE = "Alice: Hello."
+
+
+def answer(alice="Alice says hello.", bob="Bob hears Alice say hello.", passage=None):
+    """With `passage`, ready views exclude all of it, as a direct parse needs."""
+    payload = json.dumps(
+        {
+            "views": [
+                {
+                    "audience": [name],
+                    "knowledge_ids": [],
+                    "passage_ids": [],
+                    "status": "ready" if text else "omitted",
+                    "text": text,
+                }
+                for name, text in (("Alice", alice), ("Bob", bob))
+            ]
+        }
+    )
+    return exclude_passage(payload, passage) if passage else payload
+
+
+def result(text=None):
+    text = answer() if text is None else text
+    try:
+        data = json.loads(text)
+        for view in data.get("views", []):
+            view.setdefault("knowledge_ids", [])
+            view.setdefault("passage_ids", [])
+        text = json.dumps(data)
+    except (ValueError, AttributeError):
+        pass
+    return text, {"perceptions": text}
+
+
+@pytest.fixture
+def setup(scene, monkeypatch):
+    scene.knowledge_eligibility = "perception"
+    scene.character_data = {name: Character(name=name) for name in ("Alice", "Bob")}
+    scene.active_characters = ["Alice", "Bob"]
+    summarizer = get_agent("summarizer")
+    summarizer.actions["perceptions"].config["automatic_repair"].value = False
+    request = AsyncMock(return_value=result())
+    monkeypatch.setattr(
+        "talemate.agents.summarize.perceptions.Prompt.request",
+        excluding_passage(request),
+    )
+    with ActiveScene(scene):
+        yield scene, summarizer, request
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "kind,source",
+    [
+        (CharacterMessage, "ai"),
+        (CharacterMessage, "player"),
+        (NarratorMessage, "narrate_scene"),
+    ],
+)
+async def test_finalized_source_kinds_and_no_duplicate_processing(setup, kind, source):
+    scene, summarizer, request = setup
+    message = kind(message="Alice: Hello.", source=source)
+    before = message.message
+    active = scene.active_characters.copy()
+    await push_and_step(scene, message)
+    acquired = message.knowledge.acquired
+    views = message.knowledge.views
+    await knowledge_step(scene)
+    await knowledge_step(scene)
+    assert request.await_count == 1
+    assert scene.history == [message]
+    assert message.message == before
+    assert scene.active_characters == active
+    assert message.knowledge.acquired == acquired
+    assert message.knowledge.views == views
+    assert (
+        select_character_view(
+            scene, source_reference(scene, "message", message.id), "Bob"
+        ).text
+        == "Bob hears Alice say hello."
+    )
+
+
+@pytest.mark.asyncio
+async def test_perception_job_emits_running_then_ready(setup, monkeypatch):
+    scene, _, _ = setup
+    statuses = []
+    monkeypatch.setattr(
+        "talemate.agents.summarize.perceptions.emit_perception_status",
+        lambda _, message, state: statuses.append((message.id, state)),
+    )
+    message = CharacterMessage(message="Alice: Hello.")
+    await push_and_step(scene, message)
+    assert statuses == [(message.id, "running"), (message.id, "ready")]
+
+
+@pytest.mark.asyncio
+async def test_editor_finalization_precedes_analysis_after_the_push(setup):
+    scene, summarizer, request = setup
+    summarizer.actions["archive"].enabled = False
+    order = []
+
+    async def edit(event):
+        order.append("edit")
+        event.messages[0].message = "Alice: Polished."
+
+    async def analyze(*args, **kwargs):
+        order.append("perception")
+        assert kwargs["vars"]["context"]["passage"]["text"] == "Polished."
+        return result()
+
+    async def after(event):
+        order.append("after")
+        assert event.messages[0].knowledge is None
+
+    scene.signals["push_history"].connect(edit)
+    scene.signals["push_history.after"].connect(after)
+    request.side_effect = analyze
+    await push_and_step(scene, CharacterMessage(message="Alice: Draft."))
+    assert order == ["edit", "after", "perception"]
+
+
+@pytest.mark.asyncio
+async def test_no_new_requests_in_legacy_mode(setup):
+    scene, summarizer, request = setup
+    scene.knowledge_eligibility = "legacy"
+    message = CharacterMessage(message="Alice: Hello.")
+    await push_and_step(scene, message)
+    await knowledge_step(scene)
+    request.assert_not_awaited()
+    assert message.knowledge is None
+
+
+@pytest.mark.asyncio
+async def test_no_historical_or_director_backfill(setup):
+    scene, summarizer, request = setup
+    old = CharacterMessage(message="Alice: Old untracked history.")
+    scene.history.append(old)
+    await push_and_step(
+        scene, DirectorMessage(message="Alice should speak next.", source="Alice")
+    )
+    await knowledge_step(scene)
+    request.assert_not_awaited()
+    assert old.knowledge is None
+
+
+@pytest.mark.asyncio
+async def test_concurrent_waiters_share_source_analysis(setup):
+    scene, summarizer, request = setup
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def analyze(*args, **kwargs):
+        started.set()
+        await release.wait()
+        return result()
+
+    request.side_effect = analyze
+    message = CharacterMessage(message="Alice: Hello.")
+    task = asyncio.create_task(push_and_step(scene, message))
+    await started.wait()
+    waiting = asyncio.create_task(knowledge_step(scene))
+    await asyncio.sleep(0)
+    assert not waiting.done()
+    release.set()
+    await asyncio.gather(task, waiting)
+    assert request.await_count == 1
+    assert len(scene.history) == 1
+
+
+@pytest.mark.asyncio
+async def test_batch_analysis_is_ordered_and_every_passage_registered(setup):
+    scene, summarizer, request = setup
+    messages = [
+        CharacterMessage(message="Alice: First."),
+        NarratorMessage(message="Then a bell rings."),
+    ]
+    await push_and_step(scene, messages)
+    assert request.await_count == 2
+    context = request.await_args_list[1].kwargs["vars"]["context"]
+    assert (
+        context["cast"][1]["established_knowledge"][0]["text"]
+        == "Bob hears Alice say hello."
+    )
+    assert [message.knowledge.acquired.order for message in messages] == [1, 2]
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "not JSON",
+        "{}",
+        '{"views": []}',
+        '{"views": [{"audience": ["Alice"], "status": "ready", "text": ""}]}',
+        '{"views": [{"audience": ["Alice", "Bob"], "status": "ready", "text": "Shared"}]}',
+        answer().replace('"Bob"', '"Alice"'),
+        answer().replace('"Bob"', '"Carol"'),
+        answer().replace('"ready"', '"pending"'),
+    ],
+)
+def test_reject_invalid_analysis(payload):
+    with pytest.raises(ValueError):
+        parse_perceptions(payload, ("Alice", "Bob"), PASSAGE)
+
+
+def test_accept_complete_views_and_explicit_omission():
+    views = parse_perceptions(
+        PERCEPTIONS_SPEC.extract_all(
+            "<PERCEPTIONS>```json\n"
+            + answer(bob=None, passage=PASSAGE)
+            + "\n```</PERCEPTIONS>"
+        )["perceptions"],
+        ("Alice", "Bob"),
+        PASSAGE,
+    )
+    assert views[0].text == "Alice says hello."
+    assert views[1].status == "omitted"
+    assert views[1].text is None
+
+
+async def wait_for_dialog():
+    async with asyncio.timeout(3):
+        while not _generation_error_futures:
+            await asyncio.sleep(0.01)
+    return next(iter(_generation_error_futures))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "failure", [ValueError("transport failed"), result("malformed")]
+)
+async def test_visible_retry_blocks_then_resumes_without_duplicate(setup, failure):
+    scene, summarizer, request = setup
+    request.side_effect = [failure, result()]
+    message = CharacterMessage(message="Alice: Hello.")
+    downstream = AsyncMock()
+    scene.signals["push_history.after"].connect(downstream)
+    task = asyncio.create_task(push_and_step(scene, message))
+    try:
+        rid = await wait_for_dialog()
+        assert not task.done()
+        assert {view.audience: view.status for view in message.knowledge.views} == {
+            ("Alice",): "ready",
+            ("Bob",): "failed",
+        }
+        downstream.assert_awaited_once()
+        acquisition = message.knowledge.acquired
+        identities = {view.audience: view.id for view in message.knowledge.views}
+        resolve_generation_error(rid, "retry")
+        await asyncio.wait_for(task, 3)
+        downstream.assert_awaited_once()
+        assert request.await_count == 2
+        assert scene.history == [message]
+        assert message.knowledge.acquired == acquisition
+        assert {
+            view.audience: view.id for view in message.knowledge.views
+        } == identities
+        assert {view.status for view in message.knowledge.views} == {"ready"}
+    finally:
+        task.cancel()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("action", ["cancel", "ignore"])
+async def test_dialog_cannot_bypass_failed_analysis(setup, action):
+    scene, summarizer, request = setup
+    request.return_value = result("malformed")
+    message = CharacterMessage(message="Alice: Hello.")
+    task = asyncio.create_task(push_and_step(scene, message))
+    try:
+        rid = await wait_for_dialog()
+        resolve_generation_error(rid, action)
+        with pytest.raises(GenerationCancelled):
+            await asyncio.wait_for(task, 3)
+        assert scene.history == [message]
+        assert {view.audience: view.status for view in message.knowledge.views} == {
+            ("Alice",): "ready",
+            ("Bob",): "failed",
+        }
+    finally:
+        task.cancel()
+
+
+@pytest.mark.asyncio
+async def test_manual_edit_discards_inflight_response_until_next_send(setup):
+    scene, summarizer, request = setup
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def analyze(*args, **kwargs):
+        if request.await_count == 1:
+            started.set()
+            await release.wait()
+            return result(answer("Stale private thought.", "Stale public speech."))
+        assert kwargs["vars"]["context"]["passage"]["text"] == "Revised."
+        return result(answer("Alice says revised.", "Bob hears revised."))
+
+    request.side_effect = analyze
+    message = CharacterMessage(message="Alice: Original.")
+    task = asyncio.create_task(push_and_step(scene, message))
+    await started.wait()
+    acquired = message.knowledge.acquired
+    revision = message.knowledge.revision
+    with defer_revision_work():
+        scene.edit_message(message.id, "Alice: Revised.")
+    release.set()
+    await asyncio.wait_for(task, 3)
+    assert request.await_count == 1
+    await catch_up_revisions(scene)
+    assert request.await_count == 2
+    assert message.knowledge.revision == revision + 1
+    assert message.knowledge.acquired == acquired
+    assert message.knowledge.views[1].text == "Bob hears revised."
+
+
+@pytest.mark.asyncio
+async def test_deleted_source_discards_inflight_result(setup):
+    scene, summarizer, request = setup
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def analyze(*args, **kwargs):
+        started.set()
+        await release.wait()
+        return result()
+
+    request.side_effect = analyze
+    message = CharacterMessage(message="Alice: Hello.")
+    task = asyncio.create_task(push_and_step(scene, message))
+    await started.wait()
+    scene.delete_message(message.id)
+    release.set()
+    await asyncio.wait_for(task, 3)
+    assert request.await_count == 1
+    assert scene.history == []
+
+
+@pytest.mark.asyncio
+async def test_failed_perceptions_do_not_block_generation(setup):
+    scene, summarizer, request = setup
+    message = CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
+    scene.history.append(message)
+    set_source_perspectives(
+        scene, "message", message.id, [{"audience": ["Alice"], "status": "failed"}]
+    )
+    # the failed view waits for Repair: the step before a generation and the
+    # character's history go on without it
+    await knowledge_step(scene)
+    request.assert_not_awaited()
+    history = scene.context_history(stored_views=True, budget=1000, perspective="Alice")
+    assert "Hello." not in "\n".join(history)
+
+
+def test_prompt_context_separates_reader_from_prior_knowledge(setup):
+    scene, summarizer, request = setup
+    previous = CharacterMessage(message="Alice: Secret thought. Public hello.")
+    message = NarratorMessage(message="A bell rings.", present=["Alice", "Bob"])
+    scene.history.extend([previous, message])
+    set_source_perspectives(
+        scene,
+        "message",
+        previous.id,
+        [
+            {
+                "audience": ["Alice"],
+                "status": "ready",
+                "text": "Secret thought. Public hello.",
+            },
+            {"audience": ["Bob"], "status": "ready", "text": "Public hello."},
+        ],
+    )
+    context = perception_context(scene, message)
+    assert "Secret thought" in context["prior_physical_context"][0]["text"]
+    assert context["cast"][1]["established_knowledge"][0]["text"] == "Public hello."
+
+
+@pytest.mark.asyncio
+async def test_cancelled_analysis_keeps_the_emitted_passage(setup, monkeypatch):
+    scene, summarizer, request = setup
+    emitted = []
+    monkeypatch.setattr(
+        "talemate.tale_mate.emit",
+        lambda *args, **kwargs: emitted.append((args, kwargs)),
+    )
+    request.side_effect = GenerationCancelled("cancelled")
+    after = AsyncMock()
+    scene.signals["push_history.after"].connect(after)
+    message = CharacterMessage(message="Alice: Preserved reader prose.")
+    with pytest.raises(GenerationCancelled):
+        await push_and_step(scene, message, emit_message=True)
+    assert any(
+        args[0] == "character" and args[1] is message for args, kwargs in emitted
+    )
+    assert message.message == "Alice: Preserved reader prose."
+    after.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", ["pending", "failed"])
+async def test_saved_incomplete_source_resumes_without_backfill(setup, status):
+    scene, summarizer, request = setup
+    old = CharacterMessage(message="Alice: Old untracked prose.")
+    message = CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
+    scene.history.extend([old, message])
+    set_source_perspectives(
+        scene,
+        "message",
+        message.id,
+        [{"audience": [name], "status": status} for name in scene.character_data],
+    )
+    saved = message.model_dump()
+    scene.history[1] = CharacterMessage.model_validate(saved)
+    await knowledge_step(scene)
+    # a line that never ran is new; a failed one waits for Repair
+    assert request.await_count == int(status == "pending")
+    await repair_knowledge(scene)
+    assert old.knowledge is None
+    assert request.await_count == 1
+    assert scene.history[1].knowledge.acquired == message.knowledge.acquired
+
+
+@pytest.mark.asyncio
+async def test_manual_edit_while_retry_dialog_is_open_defers_new_source(setup):
+    scene, summarizer, request = setup
+    request.side_effect = [result("malformed"), result(answer("Revised.", "Revised."))]
+    message = CharacterMessage(message="Alice: Original.")
+    task = asyncio.create_task(push_and_step(scene, message))
+    try:
+        rid = await wait_for_dialog()
+        with defer_revision_work():
+            scene.edit_message(message.id, "Alice: Revised.")
+        resolve_generation_error(rid, "retry")
+        await asyncio.wait_for(task, 3)
+        assert request.await_count == 1
+        await catch_up_revisions(scene)
+        assert (
+            request.await_args.kwargs["vars"]["context"]["passage"]["text"]
+            == "Revised."
+        )
+        assert message.knowledge.revision == 2
+    finally:
+        task.cancel()
+
+
+@pytest.mark.asyncio
+async def test_regeneration_analyzes_only_final_version_in_original_slot(
+    setup, monkeypatch
+):
+    scene, summarizer, request = setup
+    scene.actors.append(Actor(scene.character_data["Alice"], get_agent("conversation")))
+    message = CharacterMessage(message="Alice: Original.")
+    await push_and_step(scene, message)
+    identity = (message.id, message.knowledge.acquired)
+    monkeypatch.setattr(
+        "talemate.regenerate._regenerate_inplace",
+        AsyncMock(
+            return_value=InplaceRegeneration(
+                versions=[
+                    ("Alice: Raw.", "regenerate"),
+                    ("Alice: Polished.", "revision"),
+                ]
+            )
+        ),
+    )
+    await regenerate(scene)
+    await knowledge_step(scene)
+    assert len(scene.history) == 1
+    assert (message.id, message.knowledge.acquired) == identity
+    assert request.await_count == 2
+    assert (
+        request.await_args.kwargs["vars"]["context"]["passage"]["text"] == "Polished."
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("case", CASES, ids=lambda case: case["name"])
+async def test_analytical_fixtures_persist_supported_views(setup, case):
+    scene, summarizer, request = setup
+    scene.character_data = {
+        name: Character(name=name, description=description)
+        for name, description in case["cast"].items()
+    }
+    scene.active_characters = ["Alice"]
+    scene.history.append(NarratorMessage(message=case["prior"]))
+    cls = CharacterMessage if case["kind"] == "character" else NarratorMessage
+    message = cls(
+        message=case["passage"], present=case["present"], source=case["source"]
+    )
+    request.return_value = result(
+        json.dumps({"views": [v for v in case["views"] if v["audience"][0] != "Dan"]})
+    )
+    await push_and_step(scene, message)
+    reference = source_reference(scene, "message", message.id)
+    for expected in case["views"]:
+        if expected["audience"] == ["Dan"]:
+            continue
+        view = select_character_view(scene, reference, expected["audience"][0])
+        assert view.status == expected["status"]
+        assert view.text == expected["text"]
+    assert scene.active_characters == ["Alice"]
+    assert message.message == case["passage"]
+    assert request.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_shared_prompt_renders_without_additional_requests(scene, monkeypatch):
+    scene.knowledge_eligibility = "perception"
+    scene.character_data = {name: Character(name=name) for name in ("Alice", "Bob")}
+    scene.active_characters = ["Alice", "Bob"]
+    client = get_agent("summarizer").client
+    passage = "Alice: *A private thought.*"
+    send = AsyncMock(
+        return_value=f"<PERCEPTIONS>{answer(bob=None, passage=passage)}</PERCEPTIONS>"
+    )
+    monkeypatch.setattr(client, "send_prompt", send)
+    with ActiveScene(scene):
+        await push_and_step(scene, CharacterMessage(message=passage))
+    send.assert_awaited_once()
+    prompt = str(send.await_args.args[0])
+    assert "Do not continue the story" in prompt
+    assert "no authority to activate or deactivate" in prompt
+    assert "*A private thought.*" in prompt
+    assert "Alice: *A private thought.*" not in prompt
+    assert scene.history[0].knowledge.views[1].status == "omitted"
+
+
+@pytest.mark.asyncio
+async def test_prior_view_invalidation_rebuilds_only_affected_sibling(setup):
+    scene, summarizer, request = setup
+    first = NarratorMessage(message="First bell.")
+    second = NarratorMessage(message="Second bell.")
+    await push_and_step(scene, first)
+    used = json.loads(answer())
+    used["views"][0]["knowledge_ids"] = ["K0-0"]
+    used["views"][1]["knowledge_ids"] = ["K1-0"]
+    request.return_value = result(json.dumps(used))
+    await push_and_step(scene, second)
+    bob = second.knowledge.views[1]
+    assert bob.sources[0].view_id == first.knowledge.views[1].id
+    set_source_perspectives(
+        scene,
+        "message",
+        first.id,
+        [
+            {
+                "audience": ["Alice"],
+                "status": "ready",
+                "text": "Alice's revised understanding.",
+            },
+            first.knowledge.views[1].model_dump(exclude={"revision"}),
+        ],
+    )
+    assert second.knowledge.views[0].stale
+    assert second.knowledge.views[1] == bob
+    request.return_value = result(
+        answer("Alice's rebuilt view.", "Discard this unrelated rewrite.")
+    )
+    await knowledge_step(scene)
+    assert request.await_count == 2
+    await repair_knowledge(scene)
+    assert request.await_count == 3
+    assert (
+        next(view for view in second.knowledge.views if view.audience == ("Bob",))
+        == bob
+    )
+    assert (
+        next(
+            view for view in second.knowledge.views if view.audience == ("Alice",)
+        ).text
+        == "Alice's rebuilt view."
+    )
+
+
+@pytest.mark.asyncio
+async def test_reset_discards_inflight_result_without_recreating_records(setup):
+    scene, summarizer, request = setup
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def analyze(*args, **kwargs):
+        started.set()
+        await release.wait()
+        return result()
+
+    request.side_effect = analyze
+    message = NarratorMessage(message="The bell rings.")
+    task = asyncio.create_task(push_and_step(scene, message))
+    await started.wait()
+    scene.reset()
+    release.set()
+    await asyncio.wait_for(task, 3)
+    assert scene.history == []
+    assert message.knowledge.views[0].status == "pending"
+    assert request.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_websocket_edit_defers_rebuild_and_saves(setup, monkeypatch):
+    scene, summarizer, request = setup
+    message = NarratorMessage(message="The bell rings.")
+    await push_and_step(scene, message)
+    saved = AsyncMock()
+    monkeypatch.setattr(scene, "attempt_auto_save", saved)
+    handler = SimpleNamespace(scene=scene, queue_put=lambda data: None)
+    plugin = SceneMessagePlugin(handler)
+    await plugin.handle_edit({"id": message.id, "text": "The bell stops."})
+    await asyncio.sleep(0)
+    assert request.await_count == 1
+    await catch_up_revisions(scene)
+    assert request.await_count == 2
+    assert message.knowledge.revision == 2
+    assert all(view.status == "ready" for view in message.knowledge.views)
+    assert saved.await_count >= 1
+
+
+@pytest.mark.parametrize(
+    "wrap",
+    [
+        lambda value: "<PERCEPTIONS>" + value + "</PERCEPTIONS>",
+        lambda value: "<PERCEPTIONS>\n```json\n" + value + "\n```\n</PERCEPTIONS>",
+        lambda value: "Here is the analysis:\n<PERCEPTIONS>```JSON\n"
+        + value
+        + "\n```\nDone.</PERCEPTIONS>",
+        lambda value: "<PERCEPTIONS>```json\n" + value + "</PERCEPTIONS>",
+        lambda value: "<PERCEPTIONS>```\n" + value + "\n```</PERCEPTIONS>",
+        # cut off before the closing tag
+        lambda value: "<PERCEPTIONS>```json\n" + value + "\n```",
+        lambda value: "<perceptions>" + value,
+    ],
+)
+def test_project_code_block_extraction(wrap):
+    extracted = PERCEPTIONS_SPEC.extract_all(wrap(answer(passage=PASSAGE)))
+    assert (
+        len(parse_perceptions(extracted["perceptions"], ("Alice", "Bob"), PASSAGE)) == 2
+    )
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        "",
+        answer(passage=PASSAGE),
+        "```json\n" + answer(passage=PASSAGE) + "\n```",
+    ],
+)
+def test_a_response_without_a_perceptions_block_is_a_miss(response):
+    extracted = PERCEPTIONS_SPEC.extract_all(response)
+    assert extracted["perceptions"] is None
+    with pytest.raises(PerceptionValidationError, match="No <PERCEPTIONS> block"):
+        parse_perceptions(None, ("Alice", "Bob"), PASSAGE, block=extracted["block"])
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        "<PERCEPTIONS>not JSON</PERCEPTIONS>",
+        "<PERCEPTIONS></PERCEPTIONS>",
+        # cut off by the answer budget
+        '<PERCEPTIONS>{"views": [{"audience": ["',
+        '<PERCEPTIONS>{\n  "views":',
+    ],
+)
+def test_an_invalid_or_cut_off_block_reports_its_json_error(response):
+    extracted = PERCEPTIONS_SPEC.extract_all(response)
+    assert extracted["perceptions"] is None
+    with pytest.raises(PerceptionValidationError, match="Invalid perception JSON"):
+        parse_perceptions(
+            extracted["perceptions"],
+            ("Alice", "Bob"),
+            PASSAGE,
+            block=extracted["block"],
+        )
+
+
+@pytest.mark.asyncio
+async def test_long_history_edit_reanalyzes_only_its_own_passage(setup):
+    scene, summarizer, request = setup
+    messages = [
+        CharacterMessage(message=f"Alice: Independent weather report {i}.")
+        for i in range(200)
+    ]
+    await push_and_step(scene, messages)
+    assert request.await_count == 200
+    assert all(
+        not view.sources for message in messages for view in message.knowledge.views
+    )
+    untouched = messages[-1].knowledge
+    scene.edit_message(messages[2].id, "Alice: Corrected weather report.")
+    assert (
+        sum(summarizer._perception_needed(scene, message) for message in messages) == 1
+    )
+    await knowledge_step(scene)
+    assert request.await_count == 200
+    assert knowledge_sync(scene).passages == 1
+    await repair_knowledge(scene)
+    assert request.await_count == 201
+    assert messages[-1].knowledge == untouched
+
+
+def test_dense_saved_dependency_graph_has_linear_freshness_walk(setup, monkeypatch):
+    import talemate.knowledge.perspectives as perspectives
+    from talemate.knowledge.perspective_models import (
+        Acquisition,
+        PerspectiveView,
+        SourcePerspectives,
+        SceneKnowledge,
+        content_digest,
+    )
+
+    scene, _, _ = setup
+    references = []
+    for index in range(perspectives.MAX_DEPENDENCY_DEPTH + 1):
+        message = CharacterMessage(message=f"Alice: {index}.")
+        message.knowledge = SourcePerspectives(
+            content_digest=content_digest(message.message),
+            acquired=Acquisition(order=index + 1, ts=0),
+            views=(
+                PerspectiveView(
+                    id=f"view-{index}",
+                    audience=("Alice",),
+                    status="ready",
+                    text=str(index),
+                    sources=tuple(references[-12:]),
+                ),
+            ),
+        )
+        scene.history.append(message)
+        scene.knowledge = SceneKnowledge(last_order=index + 1)
+        reference = source_reference(scene, "message", message.id)
+        references.append(select_character_view(scene, reference, "Alice").source)
+    original = perspectives._find
+    calls = 0
+
+    def counted(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(perspectives, "_find", counted)
+    assert select_character_view(scene, references[-1], "Alice").status == "ready"
+    assert calls <= perspectives.MAX_DEPENDENCY_DEPTH + 2
+
+
+@pytest.mark.asyncio
+async def test_omission_tracks_unperceived_physical_passage(setup):
+    scene, summarizer, request = setup
+    prior = NarratorMessage(message="Bob lies unconscious on the floor.")
+    scene.history.append(prior)
+    message = CharacterMessage(message="Alice: The password is swordfish.")
+    output = json.loads(answer(bob=None))
+    output["views"][1]["passage_ids"] = [prior.id]
+    request.return_value = result(json.dumps(output))
+    await push_and_step(scene, message)
+    alice = message.knowledge.views[0]
+    assert [
+        item.message_id for item in message.knowledge.views[1].passage_provenance
+    ] == [message.id, prior.id]
+    scene.edit_message(prior.id, "Bob sits awake, watching the room.")
+    assert message.knowledge.views[0] == alice
+    assert not_current(scene, source_reference(scene, "message", message.id), "Bob")
+    request.return_value = result(answer(bob="Bob hears the password swordfish."))
+    await repair_knowledge(scene)
+    assert (
+        select_character_view(
+            scene, source_reference(scene, "message", message.id), "Bob"
+        ).text
+        == "Bob hears the password swordfish."
+    )
+    assert prior.knowledge is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("action", ["retry", "cancel", "ignore"])
+async def test_dispatcher_remains_free_to_answer_explicit_analysis_retry(
+    setup, monkeypatch, action
+):
+    scene, summarizer, request = setup
+    message = NarratorMessage(message="The bell rings.")
+    await push_and_step(scene, message)
+    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
+    request.side_effect = [result("malformed"), result()]
+    plugin = SceneMessagePlugin(
+        SimpleNamespace(scene=scene, queue_put=lambda data: None)
+    )
+    received = asyncio.Queue()
+
+    async def receive_loop():
+        while True:
+            frame = await received.get()
+            if frame["type"] == "scene_message":
+                await plugin.handle(frame)
+            else:
+                resolve_generation_error(frame["request_id"], frame["action"])
+                return
+
+    loop = asyncio.create_task(receive_loop())
+    await received.put(
+        {
+            "type": "scene_message",
+            "action": "edit",
+            "id": message.id,
+            "text": "The bell stops.",
+        }
+    )
+    await received.put(
+        {
+            "type": "scene_message",
+            "action": "commit_revision",
+            "id": message.id,
+            "index": message.active_version,
+        }
+    )
+    try:
+        rid = await wait_for_dialog()
+        # the failed analysis keeps the last perspective, flagged
+        assert message.knowledge.views[0].stale
+        await received.put(
+            {"type": "generation_error_response", "request_id": rid, "action": action}
+        )
+        await asyncio.wait_for(loop, 3)
+        async with asyncio.timeout(3):
+            while rid in _generation_error_futures:
+                await asyncio.sleep(0.01)
+        if action == "retry":
+            assert message.knowledge.views[0].status == "ready"
+            assert not message.knowledge.views[0].stale
+        else:
+            assert message.knowledge.views[0].stale
+    finally:
+        loop.cancel()
+
+
+@pytest.mark.asyncio
+async def test_relevant_cast_and_scaled_answer_budget(setup):
+    from talemate.client.presets import max_tokens_for_kind
+
+    scene, _, request = setup
+    scene.character_data.update(
+        {f"Person{i}": Character(name=f"Person{i}") for i in range(40)}
+    )
+    scene.active_characters = ["Alice", *(f"Person{i}" for i in range(10))]
+    names = ["Bob", *(f"Person{i}" for i in range(10))]
+    message = NarratorMessage(message="A long passage. " * 200, present=names)
+    request.return_value = result(
+        json.dumps(
+            {
+                "views": [
+                    {
+                        "audience": [name],
+                        "status": "ready",
+                        "text": "The passage.",
+                        "knowledge_ids": [],
+                        "passage_ids": [],
+                    }
+                    for name in names
+                ]
+            }
+        )
+    )
+    await push_and_step(scene, message)
+    context = request.await_args.kwargs["vars"]["context"]
+    assert {character["name"] for character in context["cast"]} == set(names)
+    assert max_tokens_for_kind(request.await_args.args[2], 32768) > 2048
+    assert len(message.knowledge.views) == 11
+    assert (
+        select_character_view(
+            scene, source_reference(scene, "message", message.id), "Alice"
+        ).status
+        == "omitted"
+    )
+
+
+@pytest.mark.asyncio
+async def test_empty_presence_is_not_backfilled_when_a_cast_activates(setup):
+    scene, summarizer, request = setup
+    scene.active_characters = []
+    message = NarratorMessage(message="The room is quiet.")
+    await push_and_step(scene, message)
+    assert message.knowledge is None
+    request.assert_not_awaited()
+    scene.active_characters = ["Alice", "Bob"]
+    await knowledge_step(scene)
+    assert message.knowledge is None
+    request.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_cancellation_stops_existing_dependent_waiters(setup):
+    scene, summarizer, request = setup
+    request.return_value = result("malformed")
+    producer = asyncio.create_task(
+        push_and_step(scene, CharacterMessage(message="Alice: Hello."))
+    )
+    rid = await wait_for_dialog()
+    dependent = asyncio.create_task(knowledge_step(scene))
+    await asyncio.sleep(0)
+    resolve_generation_error(rid, "cancel")
+    outcomes = await asyncio.wait_for(
+        asyncio.gather(producer, dependent, return_exceptions=True), 3
+    )
+    assert all(isinstance(outcome, GenerationCancelled) for outcome in outcomes)
+    assert all(outcome.by_user for outcome in outcomes)
+    assert request.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_provenance_survives_save_and_detects_unbound_physical_edit(setup):
+    from talemate.knowledge.perspectives import bind_perspective_sources
+
+    scene, summarizer, request = setup
+    prior = NarratorMessage(message="Bob is asleep.")
+    scene.history.append(prior)
+    message = CharacterMessage(message="Alice: Hello.")
+    payload = json.loads(answer(bob=None))
+    payload["views"][1]["passage_ids"] = [prior.id]
+    request.return_value = result(json.dumps(payload))
+    await push_and_step(scene, message)
+    saved = [entry.model_dump() for entry in scene.history]
+    scene.history = [
+        NarratorMessage.model_validate(saved[0]),
+        CharacterMessage.model_validate(saved[1]),
+    ]
+    assert scene.history[1].model_dump() == saved[1]
+    object.__setattr__(scene.history[0], "message", "Bob is awake.")
+    view = select_character_view(
+        scene, source_reference(scene, "message", message.id), "Bob"
+    )
+    # the omitted view stays as it was, flagged as out of sync
+    assert view.status == "omitted" and view.stale
+    bind_perspective_sources(scene)
+
+
+@pytest.mark.asyncio
+async def test_drop_unoffered_analytical_input_ids(setup):
+    from talemate.agents.summarize.perceptions import resolve_perception_inputs
+
+    scene, _, _ = setup
+    message = CharacterMessage(message="Alice: Hello.", present=["Alice", "Bob"])
+    scene.history.append(message)
+    payload = json.loads(answer(passage=PASSAGE))
+    payload["views"][0]["knowledge_ids"] = ["K1-999"]
+    outputs = resolve_perception_inputs(
+        parse_perceptions(json.dumps(payload), ("Alice", "Bob"), PASSAGE),
+        perception_context(scene, message),
+    )
+    assert len(outputs) == 2
+    assert outputs[0].sources == ()
+    assert outputs[0].text == "Alice says hello."
+
+
+@pytest.mark.parametrize("text", ["A ```print(1)``` sign.", "A stray ``` marker."])
+@pytest.mark.parametrize(
+    "wrapper", ["{}", "```json\n{}\n```", "Analysis:\n```JSON\n{}\n```\nDone."]
+)
+def test_literal_fences_inside_perception_prose(text, wrapper):
+    response = "<PERCEPTIONS>" + wrapper.format(answer(alice=text, passage=PASSAGE))
+    parsed = parse_perceptions(
+        PERCEPTIONS_SPEC.extract_all(response + "</PERCEPTIONS>")["perceptions"],
+        ("Alice", "Bob"),
+        PASSAGE,
+    )
+    assert parsed[0].text == text
+
+
+@pytest.mark.asyncio
+async def test_cited_history_has_bounded_rebuild_and_one_index_per_scan(
+    setup, monkeypatch
+):
+    import talemate.knowledge.perspectives as perspectives
+    from talemate.agents.summarize.perceptions import CONTEXT_PASSAGES
+
+    scene, summarizer, request = setup
+
+    async def cite_previous(*args, **kwargs):
+        views = []
+        for character in kwargs["vars"]["context"]["cast"]:
+            known = character["established_knowledge"]
+            views.append(
+                {
+                    "audience": [character["name"]],
+                    "status": "ready",
+                    "text": "An observation.",
+                    "knowledge_ids": [known[-1]["id"]] if known else [],
+                    "passage_ids": [],
+                }
+            )
+        return result(json.dumps({"views": views}))
+
+    request.side_effect = cite_previous
+    messages = [CharacterMessage(message=f"Alice: Report {i}.") for i in range(200)]
+    await push_and_step(scene, messages)
+    assert request.await_count == 200
+    assert sum(bool(message.knowledge.views[1].sources) for message in messages) > 150
+    original_sources = perspectives._sources
+    scans = 0
+
+    def counted(scene):
+        nonlocal scans
+        scans += 1
+        yield from original_sources(scene)
+
+    monkeypatch.setattr(perspectives, "_sources", counted)
+    await summarizer.ensure_perceptions(scene)
+    assert scans == 1
+    assert request.await_count == 200
+    untouched = messages[-1].knowledge
+    scene.edit_message(messages[2].id, "Alice: Corrected report.")
+    read = perspectives.PerspectiveReadContext(scene)
+    pending = sum(
+        summarizer._perception_needed(scene, message, read=read) for message in messages
+    )
+    assert 1 < pending <= perspectives.MAX_DEPENDENCY_DEPTH + CONTEXT_PASSAGES + 1
+    assert knowledge_sync(scene).passages == pending
+    await repair_knowledge(scene)
+    assert request.await_count == 200 + pending
+    assert messages[-1].knowledge == untouched
+
+
+def test_saved_deep_chain_stops_at_bound_with_indexed_lookups(setup, monkeypatch):
+    import talemate.knowledge.perspectives as perspectives
+    from talemate.knowledge.perspective_models import (
+        Acquisition,
+        PerspectiveView,
+        SourcePerspectives,
+        SceneKnowledge,
+        content_digest,
+    )
+
+    scene, _, _ = setup
+    reference = None
+    for index in range(1000):
+        message = CharacterMessage(message=f"Alice: {index}.")
+        message.knowledge = SourcePerspectives(
+            content_digest=content_digest(message.message),
+            acquired=Acquisition(order=index + 1, ts=0),
+            views=(
+                PerspectiveView(
+                    id=f"deep-{index}",
+                    audience=("Alice",),
+                    status="ready",
+                    text=str(index),
+                    sources=(reference,) if reference else (),
+                ),
+            ),
+        )
+        scene.history.append(message)
+        reference = perspectives.SourceReference(
+            kind="message",
+            id=message.id,
+            revision=1,
+            view_id=f"deep-{index}",
+            view_revision=1,
+        )
+    scene.knowledge = SceneKnowledge(last_order=1000)
+    original_sources, original_find = perspectives._sources, perspectives._find
+    scans = lookups = 0
+
+    def count_sources(scene):
+        nonlocal scans
+        scans += 1
+        yield from original_sources(scene)
+
+    def count_find(*args, **kwargs):
+        nonlocal lookups
+        lookups += 1
+        return original_find(*args, **kwargs)
+
+    monkeypatch.setattr(perspectives, "_sources", count_sources)
+    monkeypatch.setattr(perspectives, "_find", count_find)
+    assert select_character_view(scene, reference, "Alice").stale
+    assert scans == 1
+    assert lookups <= perspectives.MAX_DEPENDENCY_DEPTH + 1
+
+
+def test_depth_limit_is_preserved_by_shared_freshness_cache(setup):
+    import talemate.knowledge.perspectives as perspectives
+    from talemate.knowledge.perspective_models import (
+        Acquisition,
+        PerspectiveView,
+        SourcePerspectives,
+        SceneKnowledge,
+        content_digest,
+    )
+
+    scene, _, _ = setup
+    reference = None
+    for index in range(perspectives.MAX_DEPENDENCY_DEPTH + 1):
+        message = CharacterMessage(message=f"Alice: {index}.")
+        message.knowledge = SourcePerspectives(
+            content_digest=content_digest(message.message),
+            acquired=Acquisition(order=index + 1, ts=0),
+            views=(
+                PerspectiveView(
+                    id=f"limit-{index}",
+                    audience=("Alice",),
+                    status="ready",
+                    text=str(index),
+                    sources=(reference,) if reference else (),
+                ),
+            ),
+        )
+        scene.history.append(message)
+        reference = perspectives.SourceReference(
+            kind="message",
+            id=message.id,
+            revision=1,
+            view_id=f"limit-{index}",
+            view_revision=1,
+        )
+    scene.knowledge = SceneKnowledge(last_order=len(scene.history))
+    read = perspectives.PerspectiveReadContext(scene)
+    assert select_character_view(scene, reference, "Alice", read=read).status == "ready"
+    assert not perspectives.can_cite_view(scene, reference, "Alice", read=read)
+    context = perception_context(scene, CharacterMessage(message="Alice: Next."))
+    assert all(
+        item["source"]["id"] != reference.id
+        for character in context["cast"]
+        for item in character["established_knowledge"]
+    )
+    new = CharacterMessage(message="Alice: New dependent.")
+    scene.history.append(new)
+    with pytest.raises(ValueError, match="dependency"):
+        set_source_perspectives(
+            scene,
+            "message",
+            new.id,
+            [
+                {
+                    "audience": ["Alice"],
+                    "status": "ready",
+                    "text": "Too deep.",
+                    "sources": [reference],
+                }
+            ],
+        )
+    assert new.knowledge is None
+
+
+@pytest.mark.parametrize(
+    "agent_name,action,hidden",
+    [
+        (
+            "conversation",
+            "character_knowledge",
+            {
+                "perspective_filter",
+            },
+        ),
+    ],
+)
+async def test_status_payload_hides_retired_controls_and_restores_legacy(
+    setup, monkeypatch, agent_name, action, hidden
+):
+    scene, _, _ = setup
+    agent = get_agent(agent_name)
+    original = {key: value.model_dump() for key, value in agent.actions.items()}
+    emitted = []
+    monkeypatch.setattr(
+        "talemate.agents.base.emit", lambda *args, **kwargs: emitted.append(kwargs)
+    )
+    await agent._do_emit_status()
+    public = emitted[-1]["data"]["actions"][action]
+    assert not hidden.intersection(public["config"])
+    if agent_name == "conversation":
+        assert set(public["config"]) == {
+            "memory_pass",
+        }
+    scene.knowledge_eligibility = "legacy"
+    await agent._do_emit_status()
+    assert emitted[-1]["data"]["actions"] == original
+    assert {key: value.model_dump() for key, value in agent.actions.items()} == original
+
+
+@pytest.mark.asyncio
+async def test_consumed_background_cancel_does_not_warn_for_dependent_perception(
+    setup, monkeypatch
+):
+    from talemate.context import handle_generation_cancelled
+    from talemate.status import set_loading
+    from structlog.testing import capture_logs
+
+    scene, summarizer, request = setup
+    message = CharacterMessage(message="Alice: Hello.")
+    entered, release = asyncio.Event(), asyncio.Event()
+    emitted = []
+    monkeypatch.setattr("talemate.emit.emit", lambda typ, **data: emitted.append(data))
+
+    async def cancelled(*args, **kwargs):
+        entered.set()
+        await release.wait()
+        scene.interrupt()
+        exc = GenerationCancelled("User stopped perception", by_user=True)
+        handle_generation_cancelled(exc)
+        assert not scene.cancel_requested
+        raise exc
+
+    request.side_effect = cancelled
+    producer = asyncio.create_task(
+        set_loading("Perception")(push_and_step)(scene, message)
+    )
+    dependent = None
+    try:
+        await asyncio.wait_for(entered.wait(), 2)
+        dependent = asyncio.create_task(knowledge_step(scene))
+        await asyncio.sleep(0)
+        with capture_logs() as logs:
+            release.set()
+            outcomes = await asyncio.wait_for(
+                asyncio.gather(producer, dependent, return_exceptions=True), 2
+            )
+            for exc in outcomes:
+                assert isinstance(exc, GenerationCancelled)
+                assert exc.by_user
+                handle_generation_cancelled(exc)
+        assert not any(entry["log_level"] == "warning" for entry in logs)
+        assert not any(entry.get("status") == "warning" for entry in emitted)
+    finally:
+        release.set()
+        await asyncio.gather(
+            producer, *([dependent] if dependent else []), return_exceptions=True
+        )

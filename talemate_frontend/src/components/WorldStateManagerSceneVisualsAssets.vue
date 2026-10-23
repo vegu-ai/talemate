@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="mb-4">
-            <div class="text-subtitle-2 text-medium-emphasis">
+            <div class="text-title-small text-medium-emphasis">
                 Manage {{ typeConfig.pluralLabel }} for <span class="text-primary">{{ sceneTitle }}</span>
             </div>
         </div>
@@ -15,7 +15,7 @@
             class="mb-4"
         >
             <div class="d-flex align-center flex-wrap">
-                <span class="text-caption mr-4">
+                <span class="text-body-small mr-4">
                     Scene backdrop: <strong>{{ backdropAssetName }}</strong>
                 </span>
                 <v-switch
@@ -57,7 +57,7 @@
         >
             <template #empty>
                 <p class="mt-2">No {{ typeConfig.pluralLabel }} found for this scene</p>
-                <p class="text-caption">Generate one below, or drop an image onto the upload card.</p>
+                <p class="text-body-small">Generate one below, or drop an image onto the upload card.</p>
             </template>
             <template #badges="{ asset }">
                 <VisualAssetBadge v-if="backdropAssetId === asset.id" icon="mdi-image-area" label="Backdrop" position="bottom-left" />
@@ -120,7 +120,7 @@
             </template>
         </VisualAssetGrid>
 
-        <v-alert :icon="typeConfig.icon" density="compact" variant="text" color="grey" class="mt-4">
+        <v-alert :icon="typeConfig.icon" density="compact" variant="text" class="mt-4 text-medium-emphasis">
             <p>{{ typeConfig.description }}</p>
             <p v-if="hasReferenceAssets && visualAgentReady" class="mt-2">
                 <strong>Tip:</strong> You can generate new variations using existing scene images as references.
@@ -205,7 +205,8 @@
 </template>
 
 <script>
-import { v4 as uuidv4 } from 'uuid';
+import { newUuid } from '@/utils/uuid';
+import { assetTarget, setAssetMessage } from '@/utils/assetTargets';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import AssetViewMixin from './AssetViewMixin.js';
 import VisualAssetGenerateMixin from './VisualAssetGenerateMixin.js';
@@ -353,19 +354,18 @@ export default {
         setSceneCoverImage(assetId) {
             if (!assetId) return;
 
-            this.getWebsocket().send(JSON.stringify({
-                type: 'scene_assets',
-                action: 'set_scene_cover_image',
-                asset_id: assetId,
-            }));
+            this.getWebsocket().send(JSON.stringify(setAssetMessage(assetId, [assetTarget.sceneCover()])));
         },
 
         setBackdrop({ assetId = null, enabled = null, clear = false }) {
+            if (assetId && !clear) {
+                this.getWebsocket().send(JSON.stringify(setAssetMessage(assetId, [assetTarget.sceneBackdrop()])));
+            }
+            if (enabled === null && !clear) return;
             const payload = {
                 type: 'scene_assets',
                 action: 'set_scene_backdrop',
             };
-            if (assetId) payload.asset_id = assetId;
             if (enabled !== null) payload.enabled = enabled;
             if (clear) payload.clear = true;
             this.getWebsocket().send(JSON.stringify(payload));
@@ -430,7 +430,7 @@ export default {
                 ...this.buildGenerationRequest(prompt),
                 asset_attachment_context: {
                     allow_override: true,
-                    asset_name: `${this.typeConfig.namePrefix}_scene_${uuidv4().slice(0, 10)}_${idx + 1}`,
+                    asset_name: `${this.typeConfig.namePrefix}_scene_${newUuid().slice(0, 10)}_${idx + 1}`,
                 },
             }));
         },

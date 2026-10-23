@@ -314,19 +314,6 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "7d0d79b9-93f3-49c9-9e34-3b941686e029": {
-      "title": "Game State",
-      "id": "7d0d79b9-93f3-49c9-9e34-3b941686e029",
-      "properties": {},
-      "x": 800,
-      "y": 990,
-      "width": 140,
-      "height": 26,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "state/Gamestate",
-      "base_type": "core/Node"
-    },
     "309dbbd0-4da8-46ff-a72f-c205295d7ecd": {
       "title": "Director Action Confirm",
       "id": "309dbbd0-4da8-46ff-a72f-c205295d7ecd",
@@ -402,20 +389,19 @@
       "registry": "util/ModuleStyle",
       "base_type": "core/Node"
     },
-    "5f0fba74-6246-46d6-95aa-093b719a9ef6": {
-      "title": "Dict Update",
-      "id": "5f0fba74-6246-46d6-95aa-093b719a9ef6",
+    "6212651d-053c-49f3-aff5-0020cb112ece": {
+      "title": "Update Game State",
+      "id": "6212651d-053c-49f3-aff5-0020cb112ece",
       "properties": {
-        "create_copy": false,
         "merge": true
       },
       "x": 990,
       "y": 940,
       "width": 210,
-      "height": 122,
+      "height": 102,
       "collapsed": false,
       "inherited": false,
-      "registry": "data/DictUpdate",
+      "registry": "state/UpdateGameState",
       "base_type": "core/Node"
     },
     "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac": {
@@ -485,12 +471,9 @@
       "309dbbd0-4da8-46ff-a72f-c205295d7ecd.state",
       "43a56733-1e07-49d7-ad80-fa97377ea7cc.item0"
     ],
-    "7d0d79b9-93f3-49c9-9e34-3b941686e029.variables": [
-      "5f0fba74-6246-46d6-95aa-093b719a9ef6.dict"
-    ],
     "309dbbd0-4da8-46ff-a72f-c205295d7ecd.accepted": [
-      "5f0fba74-6246-46d6-95aa-093b719a9ef6.state",
-      "5f0fba74-6246-46d6-95aa-093b719a9ef6.dicts"
+      "6212651d-053c-49f3-aff5-0020cb112ece.state",
+      "6212651d-053c-49f3-aff5-0020cb112ece.updates"
     ],
     "43a56733-1e07-49d7-ad80-fa97377ea7cc.result": [
       "309dbbd0-4da8-46ff-a72f-c205295d7ecd.description"
@@ -498,7 +481,7 @@
     "91bcf73f-ef94-4e28-a6a1-681b5f9813a7.value": [
       "25b43bed-e4bf-45c0-87c7-72c5785c1d62.value"
     ],
-    "5f0fba74-6246-46d6-95aa-093b719a9ef6.dict": [
+    "6212651d-053c-49f3-aff5-0020cb112ece.variables": [
       "1a8900a1-7cbd-4c6a-8627-c95268f4dc63.state"
     ],
     "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac.result": [

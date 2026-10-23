@@ -6,6 +6,7 @@
                     <span class="headline">Import Character</span>
                 </v-card-title>
                 <v-card-text>
+                    <v-alert v-if="error_message !== null" type="error" variant="tonal" density="compact" class="mb-2">{{ error_message }}</v-alert>
                     <v-autocomplete v-model="sceneInput" :items="scenes"
                         label="Search scenes" outlined @update:search="updateSearchInput" @blur="fetchCharacters"
                         item-title="label" item-value="path" :loading="sceneSearchLoading">
@@ -40,6 +41,7 @@ export default {
             selectedScene: null,
             selectedCharacter: null,
             importing: false,
+            error_message: null,
         }
     },
     watch: {
@@ -53,6 +55,7 @@ export default {
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'requestSceneAssets'],
     methods: {
         show() {
+            this.error_message = null;
             this.dialog = true;
         },
         exit() {
@@ -70,6 +73,7 @@ export default {
 
         importCharacter() {
             this.importing = true;
+            this.error_message = null;
             this.sendRequest({
                 action: 'import',
                 scene_path: this.selectedScene,
@@ -95,6 +99,12 @@ export default {
                     this.$emit('import-done', data.character);
                 }
 
+                return;
+            }
+
+            if (data.type === 'error' && data.plugin === 'character_importer') {
+                this.importing = false;
+                this.error_message = data.error;
             }
 
         },

@@ -19,4 +19,6 @@ Respond with each aspect inside its own tag pair — an opening AND a closing ta
 <DIALOGUE_INSTRUCTIONS>…</DIALOGUE_INSTRUCTIONS>
 Every tag MUST be closed. Do not write anything outside the tag pairs.
 
+
 The length of your response must fit within 4 paragraphs.
+<|BOT|><DESCRIPTION>

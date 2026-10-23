@@ -20,17 +20,25 @@ If a client shows a yellow triangle next to it, it means that the prompt templat
 
 ![Client unknown prompt template](/talemate/img/0.26.0/client-unknown-prompt-template.png)
 
-Click the two cogwheels to the right of the triangle to open the client settings.
+Click the two cogwheels to the right of the triangle to go to the client's editor on the Clients settings page.
 
-![Client unknown prompt template modal](/talemate/img/0.26.0/client-unknown-prompt-template-modal.png)
+The template name, preview and warning refresh when Talemate detects a model or template update, including while the client stays selected. Unsaved settings edits are preserved.
 
-You can first try by clicking the `DETERMINE VIA HUGGINGFACE` button. This doesn't always work, it requires either the model's `README.md` to contain an example or for the template to be set in the tokenizer_config.json file.
+The preview shows a request the way the client sends it. With reasoning on, the coercion is not pre-filled: `{LLM coercion}` appears as an instruction at the end of the prompt. A [Reason Prefill](/talemate/user-guide/clients/reasoning/#reason-prefill), if set, still appears after the model's turn marker.
+
+![Client editor with an unknown prompt template](/talemate/img/0.40.0/client-unknown-prompt-template-editor.png)
+
+You can first try by clicking the `DETERMINE VIA HUGGINGFACE` button. This doesn't always work — it probes the model repository for a template in this order: a `chat_template.jinja2` or `chat_template.jinja` file, an example in the model's `README.md`, or the template set in the `tokenizer_config.json` file.
 
 If that doesn't work, you can manually select the prompt template from the dropdown. 
 
-In the case for `Phi-3-medium-128k-instruct-Q8_0` that is `Phi3` - select it from the dropdown and click `Save`.
+In the case for `Phi-3-medium-128k-instruct-Q8_0` that is `Phi-3` - select it from the dropdown. The selection is applied and remembered for that model right away, so there is nothing to save for the template itself.
 
-![Client assigned prompt template](/talemate/img/0.26.0/client-assigned-prompt-template.png)
+![Client assigned prompt template](/talemate/img/0.40.0/client-assigned-prompt-template.png)
+
+The `MANAGE TEMPLATES` button next to it opens the [LLM Prompt Templates](/talemate/user-guide/prompts/llm-prompt-templates/) view, where templates can be added and edited.
+
+**Lock Template** stops the template from being updated automatically when the model changes, pinning your selection to this client. Unlike the template selection itself this is a client setting, so it needs to be saved.
 
 ## Adding a new prompt template
 

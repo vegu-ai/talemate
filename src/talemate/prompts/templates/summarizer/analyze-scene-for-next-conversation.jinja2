@@ -1,4 +1,4 @@
-{#-
+{% if evidence %}{% include "analyze-character-evidence.jinja2" %}{% else %}{#-
 Extractors:
   - analysis: AnchorExtractor("<ANALYSIS>", "</ANALYSIS>") [required]
   - investigate: AnchorExtractor("<INVESTIGATE>", "</INVESTIGATE>")
@@ -81,4 +81,4 @@ Provide your response in the following format:
 <INVESTIGATE>... describe what specific information from long-term memory would be useful to retrieve to deepen the understanding of this moment. Be specific about what facts, events, or character history would be most valuable. ...</INVESTIGATE>
 {% endif %}
 <|CLOSE_SECTION|>
-{{ set_prepared_response("<ANALYSIS>", fallback="") }}
+{{ set_prepared_response("<ANALYSIS>", fallback="") }}{% endif %}

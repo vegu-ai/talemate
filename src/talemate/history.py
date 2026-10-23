@@ -11,35 +11,37 @@ from typing import TYPE_CHECKING, Callable
 import structlog
 import traceback
 import uuid
-import datetime
-import isodate
 
 from talemate.emit import emit
 import talemate.emit.async_signals as async_signals
 from talemate.instance import get_agent
-from talemate.scene_message import SceneMessage, TimePassageMessage
-from talemate.util import (
-    count_tokens,
-    iso8601_diff_to_human,
-    iso8601_add,
-    duration_to_timedelta,
-)
+from talemate.scene_message import NON_STORY_TYPES, SceneMessage, TimePassageMessage
+from talemate.util import count_tokens
 from talemate.util.time import (
-    amount_unit_to_iso8601_duration,
-    iso8601_duration_to_amount_unit,
-    iso8601_duration_to_human,
+    amount_unit_to_seconds,
+    seconds_to_amount_unit,
+    duration_to_human,
+    diff_to_human,
+    shift_ts,
 )
 from talemate.world_state.templates import GenerationOptions
 from talemate.exceptions import GenerationCancelled
 from talemate.context import handle_generation_cancelled
 from talemate.events import ArchiveEvent
+from talemate.knowledge.perspective_models import PerspectiveSourceModel
+from talemate.knowledge.timeline import shift_world_entry_times
+from talemate.scene_signals import (
+    archive_entry_changed,
+    archive_entry_regenerated,
+    archive_entry_removed,
+    timeline_shifted,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
 __all__ = [
     "history_with_relative_time",
-    "pop_history",
     "count_message_types_at_tail",
     "rebuild_history",
     "character_activity",
@@ -54,6 +56,7 @@ __all__ = [
     "reimport_history",
     "compute_layer_stats",
     "collect_time_passages",
+    "render_span",
 ]
 
 log = structlog.get_logger()
@@ -66,32 +69,36 @@ class UnregeneratableEntryError(Exception):
     pass
 
 
-class ArchiveEntry(pydantic.BaseModel):
+class ArchiveEntry(PerspectiveSourceModel):
     text: str
     id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:8])
     start: int | None = None
     end: int | None = None
-    ts: str = pydantic.Field(default_factory=lambda: "PT1S")
+    ts: int = 0
+    present: list[str] | None = None
+    intro_included: bool | None = None
 
 
 class LayeredArchiveEntry(ArchiveEntry):
-    ts_start: str | None = None
-    ts_end: str | None = None
+    ts_start: int | None = None
+    ts_end: int | None = None
 
 
-class HistoryEntry(pydantic.BaseModel):
+class HistoryEntry(PerspectiveSourceModel):
     text: str
-    ts: str
+    ts: int
     index: int
     layer: int
     id: str | None = None
-    ts_start: str | None = None
-    ts_end: str | None = None
+    ts_start: int | None = None
+    ts_end: int | None = None
     time: str | None = None
     time_start: str | None = None
     time_end: str | None = None
     start: int | None = None
     end: int | None = None
+    present: list[str] | None = None
+    intro_included: bool | None = None
 
     @property
     def is_static(self) -> bool:
@@ -104,9 +111,9 @@ class SourceEntry(pydantic.BaseModel):
     id: str | int
     start: int | None = None
     end: int | None = None
-    ts: str | None = None
-    ts_start: str | None = None
-    ts_end: str | None = None
+    ts: int | None = None
+    ts_start: int | None = None
+    ts_end: int | None = None
 
     def __str__(self):
         return self.text
@@ -114,10 +121,12 @@ class SourceEntry(pydantic.BaseModel):
 
 class TimePassageEntry(pydantic.BaseModel):
     history_index: int
-    ts: str
+    message_id: int
+    ts: int
     amount: int
     unit: str
     human: str
+    title: str | None = None
 
 
 async def emit_archive_add(scene: "Scene", entry: ArchiveEntry):
@@ -131,6 +140,7 @@ async def emit_archive_add(scene: "Scene", entry: ArchiveEntry):
             text=entry.text,
             ts=entry.ts,
             memory_id=entry.id,
+            present=entry.present,
         )
     )
 
@@ -182,11 +192,7 @@ def collect_source_entries(scene: "Scene", entry: HistoryEntry) -> list[SourceEn
     if entry.layer == 0:
         # base layer
         def include_message(message: SceneMessage) -> bool:
-            return message.typ not in [
-                "director",
-                "context_investigation",
-                "reinforcement",
-            ]
+            return message.typ not in NON_STORY_TYPES
 
         result = [
             SourceEntry(
@@ -300,40 +306,15 @@ def compute_layer_stats(scene: "Scene", layer: int) -> dict:
     }
 
 
-def pop_history(
-    history: list[SceneMessage],
-    typ: str,
-    source: str = None,
-    all: bool = False,
-    max_iterations: int = None,
-    reverse: bool = False,
-):
+def count_summary_layers(scene: "Scene") -> int:
     """
-    Pops the last message from the scene history
+    Populated summary layers, numbered the way `compute_layer_stats` numbers
+    them: the base archive counts once it holds a summarized entry, then each
+    layered history layer that holds entries.
     """
-
-    iterations = 0
-
-    if not reverse:
-        iter_range = range(len(history) - 1, -1, -1)
-    else:
-        iter_range = range(len(history))
-
-    to_remove = []
-
-    for idx in iter_range:
-        if history[idx].typ == typ and (
-            history[idx].source == source or source is None
-        ):
-            to_remove.append(history[idx])
-            if not all:
-                break
-        iterations += 1
-        if max_iterations and iterations >= max_iterations:
-            break
-
-    for message in to_remove:
-        history.remove(message)
+    base = any(entry.get("end") is not None for entry in scene.archived_history)
+    layered = sum(1 for layer in scene.layered_history or [] if layer)
+    return int(base) + layered
 
 
 def count_message_types_at_tail(
@@ -378,15 +359,16 @@ def count_message_types_at_tail(
 
 
 def history_with_relative_time(
-    history: list[dict], scene_time: str, layer: int = 0
+    history: list[dict], scene_time: int, layer: int = 0
 ) -> list[dict]:
     """
-    Cycles through a list of Archived History entries and runs iso8601_diff_to_human
+    Cycles through a list of Archived History entries and adds a human
+    readable time to each
 
     Will return a list of dictionaries with the following keys
 
     - text `str`: the history text
-    - ts `str `: the original timestamp
+    - ts `int`: the original timestamp in seconds
     - time `str`: the human readable time
     """
 
@@ -399,18 +381,24 @@ def history_with_relative_time(
             layer=layer,
             ts_start=entry.get("ts_start", None),
             ts_end=entry.get("ts_end", None),
-            time=iso8601_diff_to_human(scene_time, entry["ts"]),
-            time_start=iso8601_diff_to_human(
-                scene_time, entry["ts_start"] if entry.get("ts_start") else None
-            ),
-            time_end=iso8601_diff_to_human(
-                scene_time, entry["ts_end"] if entry.get("ts_end") else None
-            ),
+            time=diff_to_human(scene_time, entry["ts"]),
+            time_start=diff_to_human(scene_time, entry.get("ts_start", None)),
+            time_end=diff_to_human(scene_time, entry.get("ts_end", None)),
             start=entry.get("start", None),
             end=entry.get("end", None),
+            present=entry.get("present", None),
+            knowledge=entry.get("knowledge"),
+            intro_included=entry.get("intro_included"),
         ).model_dump()
         for index, entry in enumerate(history)
     ]
+
+
+def render_span(messages: list[SceneMessage], *, intro: str | None = None) -> str:
+    """The source text for a summary, including the opening when available."""
+    lines = [intro] if intro else []
+    lines.extend(str(message) for message in messages)
+    return "\n".join(lines)
 
 
 def collect_time_passages(scene: "Scene") -> list[dict]:
@@ -421,14 +409,16 @@ def collect_time_passages(scene: "Scene") -> list[dict]:
     passages = []
     for idx, message in enumerate(scene.history):
         if isinstance(message, TimePassageMessage):
-            amount, unit = iso8601_duration_to_amount_unit(message.ts)
+            amount, unit = seconds_to_amount_unit(message.ts)
             passages.append(
                 TimePassageEntry(
                     history_index=idx,
+                    message_id=message.id,
                     ts=message.ts,
                     amount=amount,
                     unit=unit,
-                    human=iso8601_duration_to_human(message.ts, suffix=" later"),
+                    human=duration_to_human(message.ts, suffix=" later"),
+                    title=message.title,
                 ).model_dump()
             )
     return passages
@@ -439,6 +429,7 @@ def insert_time_passage(
     archive_index: int,
     amount: int,
     unit: str,
+    title: str | None = None,
 ) -> TimePassageMessage:
     """
     Insert a TimePassageMessage into scene.history just before the source
@@ -462,34 +453,52 @@ def insert_time_passage(
 
     insertion_index = entry["start"]
 
-    iso_duration = amount_unit_to_iso8601_duration(amount, unit)
-    human = iso8601_duration_to_human(iso_duration, suffix=" later")
-    tp_message = TimePassageMessage(ts=iso_duration, message=human)
+    duration = amount_unit_to_seconds(amount, unit)
+    human = duration_to_human(duration, suffix=" later")
+    tp_message = TimePassageMessage(ts=duration, message=human, title=title)
 
-    scene.history.insert(insertion_index, tp_message)
-
-    # Bump all archived_history start/end indices at or after the insertion point
-    for arch_entry in scene.archived_history:
-        if (
-            arch_entry.get("start") is not None
-            and arch_entry["start"] >= insertion_index
-        ):
-            arch_entry["start"] += 1
-        if arch_entry.get("end") is not None and arch_entry["end"] >= insertion_index:
-            arch_entry["end"] += 1
-
-    scene.fix_time()
+    scene.insert_message_at(insertion_index, tp_message)
 
     return tp_message
 
 
+def message_inserted(scene: "Scene", history_index: int) -> None:
+    """
+    Repair the archive after a message entered `scene.history` at
+    `history_index`: a span from that position on moves forward one, and a
+    span that runs past it grows by one.
+    """
+
+    for arch_entry in scene.archived_history:
+        if arch_entry.get("start") is not None and arch_entry["start"] >= history_index:
+            arch_entry["start"] += 1
+        if arch_entry.get("end") is not None and arch_entry["end"] >= history_index:
+            arch_entry["end"] += 1
+
+
+def message_removed(scene: "Scene", history_index: int, message: SceneMessage) -> None:
+    """
+    Repair the archive after `message` left `scene.history` at
+    `history_index`. `start` and `end` are positions in the history and `end`
+    is inclusive, so a span after the removed position moves back one and a
+    span that held it ends one earlier. Only a time passage changes a time,
+    so only its removal runs `fix_time`.
+    """
+
+    for arch_entry in scene.archived_history:
+        if arch_entry.get("start") is not None and arch_entry["start"] > history_index:
+            arch_entry["start"] -= 1
+        if arch_entry.get("end") is not None and arch_entry["end"] >= history_index:
+            arch_entry["end"] -= 1
+
+    if isinstance(message, TimePassageMessage):
+        scene.fix_time()
+
+
 def delete_time_passage(scene: "Scene", history_index: int) -> None:
     """
-    Delete a TimePassageMessage from scene.history at `history_index`.
-
-    After deletion, all start/end indices in archived_history that are >
-    the deletion point are decremented by 1, and fix_time() is called to
-    recalculate timestamps.
+    Delete a TimePassageMessage from scene.history at `history_index` and
+    repair the timeline.
     """
 
     if history_index < 0 or history_index >= len(scene.history):
@@ -501,18 +510,7 @@ def delete_time_passage(scene: "Scene", history_index: int) -> None:
     if not isinstance(message, TimePassageMessage):
         raise ValueError("Entry at history_index is not a TimePassageMessage")
 
-    scene.history.pop(history_index)
-
-    # Decrement all archived_history start/end indices that are > the deletion point.
-    # Indices equal to the deletion point should not exist (a TimePassageMessage
-    # should not be the start/end of an archived entry), but we use > to be safe.
-    for arch_entry in scene.archived_history:
-        if arch_entry.get("start") is not None and arch_entry["start"] > history_index:
-            arch_entry["start"] -= 1
-        if arch_entry.get("end") is not None and arch_entry["end"] > history_index:
-            arch_entry["end"] -= 1
-
-    scene.fix_time()
+    scene.remove_message_at(history_index)
 
 
 def insert_time_passage_after_message(
@@ -520,6 +518,7 @@ def insert_time_passage_after_message(
     message_id: int,
     amount: int,
     unit: str,
+    title: str | None = None,
 ) -> TimePassageMessage:
     """
     Insert a TimePassageMessage into scene.history right after the message
@@ -533,22 +532,11 @@ def insert_time_passage_after_message(
         raise ValueError(f"Message with id {message_id} not found in scene.history")
     insertion_index = msg_index + 1
 
-    iso_duration = amount_unit_to_iso8601_duration(amount, unit)
-    human = iso8601_duration_to_human(iso_duration, suffix=" later")
-    tp_message = TimePassageMessage(ts=iso_duration, message=human)
+    duration = amount_unit_to_seconds(amount, unit)
+    human = duration_to_human(duration, suffix=" later")
+    tp_message = TimePassageMessage(ts=duration, message=human, title=title)
 
-    scene.history.insert(insertion_index, tp_message)
-
-    for arch_entry in scene.archived_history:
-        if (
-            arch_entry.get("start") is not None
-            and arch_entry["start"] >= insertion_index
-        ):
-            arch_entry["start"] += 1
-        if arch_entry.get("end") is not None and arch_entry["end"] >= insertion_index:
-            arch_entry["end"] += 1
-
-    scene.fix_time()
+    scene.insert_message_at(insertion_index, tp_message)
 
     return tp_message
 
@@ -571,10 +559,11 @@ def update_time_passage_by_id(
     message_id: int,
     amount: int,
     unit: str,
+    title: str | None = None,
 ) -> None:
     """
-    Update the duration of a TimePassageMessage in scene.history by its
-    message id. Calls fix_time() to recalculate timestamps.
+    Update the duration and title of a TimePassageMessage in scene.history by
+    its message id. Calls fix_time() to recalculate timestamps.
     """
 
     history_index = scene.message_index(message_id)
@@ -586,9 +575,10 @@ def update_time_passage_by_id(
     if not isinstance(message, TimePassageMessage):
         raise ValueError("Message is not a TimePassageMessage")
 
-    iso_duration = amount_unit_to_iso8601_duration(amount, unit)
-    message.ts = iso_duration
-    message.message = iso8601_duration_to_human(iso_duration, suffix=" later")
+    duration = amount_unit_to_seconds(amount, unit)
+    message.ts = duration
+    message.message = duration_to_human(duration, suffix=" later")
+    message.title = title
 
     scene.fix_time()
 
@@ -620,7 +610,13 @@ async def rebuild_history(
     """
     rebuilds all history for a scene
     """
+    from talemate.knowledge.revision_refresh import (
+        revisions_before_rebuild,
+        settle_revisions_after_rebuild,
+    )
+
     summarizer = get_agent("summarizer")
+    revisions = revisions_before_rebuild(scene)
 
     # clear out archived history, but keep pre-established history
     scene.archived_history = [
@@ -684,6 +680,8 @@ async def rebuild_history(
         emit("status", message="Rebuilding layered history...", status="busy")
         await summarizer.summarize_to_layered_history()
 
+    settle_revisions_after_rebuild(scene, revisions)
+    scene.emit_status()
     emit("status", message="Historical archive rebuilt", status="success")
 
 
@@ -737,25 +735,54 @@ async def character_activity(
 
 
 async def update_history_entry(
-    scene: "Scene", entry: HistoryEntry
+    scene: "Scene", entry: HistoryEntry, *, still_current=None
 ) -> LayeredArchiveEntry | ArchiveEntry:
     """
     Updates a history entry in the scene's archived history
     """
 
+    if still_current is not None and not still_current():
+        raise GenerationCancelled("The scene changed during history refresh")
+    from talemate.knowledge.revision_refresh import capture_revision_mutations
+
+    # fields the payload does not carry (or carries as None) stay as stored
     if entry.layer == 0:
         # base layer
-        archive_entry = ArchiveEntry(**entry.model_dump())
-        scene.archived_history[entry.index] = archive_entry.model_dump(
-            exclude_none=True
+        archive_entry = ArchiveEntry(
+            **{
+                **scene.archived_history[entry.index],
+                **entry.model_dump(exclude_none=True, exclude={"knowledge"}),
+            }
         )
+        with capture_revision_mutations(scene):
+            scene.archived_history[entry.index] = archive_entry.model_dump(
+                exclude_none=True
+            )
+            archive_entry_changed.send(scene, identity=archive_entry.id, layer=0)
+        archive_entry = ArchiveEntry(**scene.archived_history[entry.index])
         await emit_archive_add(scene, archive_entry)
+        if still_current is not None and not still_current():
+            raise GenerationCancelled("The scene changed during history refresh")
         return archive_entry
     else:
-        # layered history
-        layered_entry = LayeredArchiveEntry(**entry.model_dump())
-        scene.layered_history[entry.layer - 1][entry.index] = layered_entry.model_dump(
-            exclude_none=True
+        # layered history; presence is computed from the sources, never stored
+        payload = entry.model_dump(exclude_none=True, exclude={"knowledge"})
+        payload.pop("present", None)
+        layered_entry = LayeredArchiveEntry(
+            **{
+                **scene.layered_history[entry.layer - 1][entry.index],
+                **payload,
+            }
+        )
+        with capture_revision_mutations(scene):
+            scene.layered_history[entry.layer - 1][entry.index] = (
+                layered_entry.model_dump(exclude_none=True)
+            )
+            archive_entry_changed.send(
+                scene, identity=layered_entry.id, layer=entry.layer
+            )
+        layered_entry = LayeredArchiveEntry(
+            **scene.layered_history[entry.layer - 1][entry.index]
         )
         return layered_entry
 
@@ -764,6 +791,8 @@ async def regenerate_history_entry(
     scene: "Scene",
     entry: HistoryEntry,
     generation_options: GenerationOptions | None = None,
+    *,
+    still_current=None,
 ) -> LayeredArchiveEntry | ArchiveEntry:
     """
     Regenerates a history entry in the scene's archived history
@@ -796,6 +825,10 @@ async def regenerate_history_entry(
             entry.end,
             generation_options=generation_options,
         )
+        if summarizer.scene is not scene or (
+            still_current is not None and not still_current()
+        ):
+            raise GenerationCancelled("The scene changed during history refresh")
 
         if not new_archive_entries:
             raise UnregeneratableEntryError("Summarization produced no output")
@@ -804,15 +837,29 @@ async def regenerate_history_entry(
         summarized = "\n\n".join(entry.text for entry in new_archive_entries)
 
     elif isinstance(archive_entry, ArchiveEntry):
-        summarized = await summarizer.summarize(
-            "\n".join(map(str, entries)),
-            extra_context=await summarizer.previous_summaries(archive_entry),
+        summarized = await summarizer.summarize_entry(
+            archive_entry,
+            extra_context=await summarizer.previous_summaries(
+                archive_entry, scene=scene
+            ),
             generation_options=generation_options,
+            scene=scene,
+            still_current=still_current,
         )
 
     entry.text = summarized
 
-    await update_history_entry(scene, entry)
+    if still_current is not None and not still_current():
+        raise GenerationCancelled("The scene changed during history refresh")
+    await update_history_entry(scene, entry, still_current=still_current)
+    if still_current is not None and not still_current():
+        raise GenerationCancelled("The scene changed during history refresh")
+    archive_entry_regenerated.send(
+        scene,
+        identity=entry.id,
+        layer=entry.layer,
+        generation_options=generation_options,
+    )
 
     return entry
 
@@ -887,35 +934,21 @@ async def validate_history(scene: "Scene", commit_to_memory: bool = True) -> boo
     return not invalid
 
 
-async def add_history_entry(scene: "Scene", text: str, offset: str) -> ArchiveEntry:
+async def add_history_entry(scene: "Scene", text: str, offset: int) -> ArchiveEntry:
     """
     Inserts a manual history entry into the base (archived) history.
 
     Args:
         scene: The active Scene instance.
         text: Human-provided text for the entry.
-        offset: ISO-8601 duration representing how long **before the current scene time** the entry occurred.
+        offset: Number of seconds **before the current scene time** the entry occurred.
 
     Returns:
-        The created ArchiveEntry dataclass instance.
+        The created ArchiveEntry.
 
     Raises:
-        ValueError: If the entry would not be older than the first summarized archive entry or if no summarized entry exists.
+        ValueError: If the entry would not be older than the first summarized archive entry.
     """
-
-    is_first_entry = len(scene.archived_history) == 0
-
-    if is_first_entry:
-        # first entry we can just push it to the front of the history
-        entry = ArchiveEntry(
-            text=text,
-            ts="PT0S",
-            id=str(uuid.uuid4())[:8],
-        ).model_dump(exclude_none=True)
-        scene.archived_history.append(entry)
-        scene.ts = offset
-        await reimport_history(scene)
-        return entry
 
     # Find the first archive entry that originated from summarisation (has start & end)
     first_summary: dict | None = None
@@ -924,71 +957,43 @@ async def add_history_entry(scene: "Scene", text: str, offset: str) -> ArchiveEn
             first_summary = entry
             break
 
-    # Parse and convert to timedelta for arithmetic
-    scene_td = duration_to_timedelta(isodate.parse_duration(scene.ts))
-    offset_td = duration_to_timedelta(isodate.parse_duration(offset))
-
-    new_ts_td: datetime.timedelta = scene_td - offset_td
+    new_ts: int = scene.ts - offset
 
     log.debug(
         "add_history_entry",
-        is_first_entry=is_first_entry,
         scene_ts=scene.ts,
+        start_ts=scene.start_ts,
         offset=offset,
-        scene_td=scene_td,
-        offset_td=offset_td,
-        new_ts_td=new_ts_td,
+        new_ts=new_ts,
     )
 
-    # If offset predates the current scene start, shift timeline earlier so
-    # that the *relative* distance between existing events is preserved.
-    if new_ts_td.total_seconds() < 0:
-        log.debug(
-            "offset is before scene start, shifting timeline", new_ts_td=new_ts_td
-        )
-        # Amount we must shift the whole timeline forward so that the new
-        # entry can be placed at PT0S.  This is the *earliness* gap between
-        # the requested offset and the current earliest timestamp.
-        # We need to shift by: offset - scene.ts (which is positive since offset > scene.ts)
-        # Since we already have the timedeltas, we can compute this directly
-        shift_td = offset_td - scene_td  # This will be positive
-        shift_iso = isodate.duration_isoformat(shift_td)
+    moved = new_ts < 0
 
-        log.debug("shift_iso", shift_iso=shift_iso)
-
-        # Shift everything forward by the calculated amount so that the
-        # timeline can accommodate the earlier entry at PT0S.
-        shift_scene_timeline(scene, shift_iso)
-
-        # After shifting, the new entry will sit at PT0S
-        new_ts_td = datetime.timedelta(seconds=0)
+    # Zero is the oldest event: an entry older than that moves the whole
+    # timeline, the scene start included, forward so the entry sits at zero.
+    if moved:
+        log.debug("offset is before the oldest event, shifting timeline", shift=-new_ts)
+        shift_scene_timeline(scene, -new_ts)
+        new_ts = 0
 
     if first_summary is not None:
-        first_summary_td = duration_to_timedelta(
-            isodate.parse_duration(first_summary["ts"])
-        )
-
         # New entry must be OLDER (i.e. smaller duration) than the first summary entry.
-        if new_ts_td >= first_summary_td:
+        if new_ts >= first_summary["ts"]:
             raise ValueError(
                 "New entry must be older than the first summarized history entry."
             )
 
     # Build ArchiveEntry
-    new_ts_str = isodate.duration_isoformat(new_ts_td)
-    archive_entry = ArchiveEntry(text=text, ts=new_ts_str)
+    archive_entry = ArchiveEntry(text=text, ts=new_ts)
 
     # Insert maintaining chronological order (ascending by duration)
     inserted = False
     for idx, existing in enumerate(scene.archived_history):
-        try:
-            existing_ts_td = duration_to_timedelta(
-                isodate.parse_duration(existing.get("ts", "PT0S"))
-            )
-        except Exception:
+        existing_ts = existing.get("ts")
+        if existing_ts is None:
             continue
 
-        if new_ts_td < existing_ts_td:
+        if new_ts < existing_ts:
             scene.archived_history.insert(
                 idx, archive_entry.model_dump(exclude_none=True)
             )
@@ -998,14 +1003,10 @@ async def add_history_entry(scene: "Scene", text: str, offset: str) -> ArchiveEn
     if not inserted:
         scene.archived_history.append(archive_entry.model_dump(exclude_none=True))
 
-    # Recalculate scene time based on updated history/archives
-    try:
-        if first_summary is not None:
-            scene.sync_time()
-    except Exception as e:
-        log.error("add_history_entry.sync_time", error=e)
-
+    scene.sync_time()
     await reimport_history(scene)
+    if moved:
+        await world_entry_times_moved(scene)
 
     return archive_entry
 
@@ -1035,85 +1036,102 @@ async def delete_history_entry(scene: "Scene", entry: HistoryEntry) -> ArchiveEn
             remove_idx = idx
             break
 
-    is_oldest_entry = remove_idx == 0
-
     if remove_idx is None:
         raise ValueError("Entry not found.")
 
     removed_raw = scene.archived_history.pop(remove_idx)
+    archive_entry_removed.send(scene, entry=removed_raw)
     removed_entry = ArchiveEntry(**removed_raw)
 
-    if is_oldest_entry:
-        # The removed first entry is always at 0s.  We therefore need to shift
-        # the timeline by the timestamp of **what is now** the first entry so
-        # that it becomes ``PT0S``.
-        shift_iso = (
-            (scene.archived_history[0].get("ts") or "PT0S")
-            if scene.archived_history
-            else "PT0S"
-        )
-        # Apply the negative shift to the entire scene timeline.
-        shift_scene_timeline(scene, f"-{shift_iso}")
+    # Zero stays the oldest event: the oldest remaining static entry, or the
+    # scene start once no static entry is older.
+    oldest = min(
+        [
+            existing["ts"]
+            for existing in scene.archived_history
+            if existing.get("end") is None and existing.get("ts") is not None
+        ]
+        + [scene.start_ts]
+    )
+    shift_scene_timeline(scene, -oldest)
 
-    # Ensure scene time remains consistent
-    try:
-        scene.sync_time()
-    except Exception as e:
-        log.error("delete_history_entry.sync_time", error=e)
-
+    scene.sync_time()
     await reimport_history(scene)
+    if oldest:
+        await world_entry_times_moved(scene)
 
     return removed_entry
 
 
-def _shift_entry_ts(entry: dict, shift_iso: str):
+async def world_entry_times_moved(scene: "Scene"):
+    """
+    After a shift: the memory copy of a world entry carries its own `ts`,
+    and an active pin renders its age from that copy.
+    """
+    moved = {
+        entry.id
+        for entry in scene.world_state.manual_context.values()
+        if "ts" in entry.meta
+    }
+    if not moved:
+        return
+    await scene.world_state.commit_to_memory(get_agent("memory"), entry_ids=moved)
+    await scene.load_active_pins()
+
+
+def legacy_start_ts(archived_history: list[dict]) -> int:
+    """
+    The scene start of a timeline recorded before `start_ts` existed: the
+    newest static entry before the first summary.
+    """
+    start_ts = 0
+    for entry in archived_history:
+        if "end" in entry:
+            break
+        if entry.get("ts") is not None:
+            start_ts = entry["ts"]
+    return start_ts
+
+
+def _shift_entry_ts(entry: dict, shift: int):
     """Shift *in-place* the ts/ts_start/ts_end fields of a raw archive entry, clamping to >= 0."""
     for key in ["ts", "ts_start", "ts_end"]:
-        if entry.get(key):
-            try:
-                entry[key] = iso8601_add(entry[key], shift_iso, clamp_non_negative=True)
-            except Exception as e:  # pragma: no cover – defensive only
-                log.error(
-                    "shift_entry_ts",
-                    error=e,
-                    key=key,
-                    value=entry.get(key),
-                    shift_iso=shift_iso,
-                )
+        if entry.get(key) is not None:
+            entry[key] = shift_ts(entry[key], shift)
 
 
-def shift_scene_timeline(scene: "Scene", shift_iso: str):
-    """Shift *every* timeline reference in the scene by the provided ISO-8601 duration.
+def shift_scene_timeline(scene: "Scene", shift: int) -> None:
+    """Shift *every* timeline reference in the scene by the provided number of seconds.
 
     The function mutates the scene in place:
 
-    1. ``scene.ts`` – overall scene time
+    1. ``scene.ts`` and ``scene.start_ts`` – scene time and scene start
     2. ``ts``, ``ts_start``, ``ts_end`` of every entry in ``scene.archived_history``
     3. Same fields for every entry in every layer in ``scene.layered_history``
+    4. The acquisition stamps of every knowledge source and disclosure, and
+       the time of every knowledge edge
+    5. The scene time a world entry records
 
-    ``shift_iso`` can be positive (move forward in time) or negative (move backward).
+    ``shift`` can be positive (move forward in time) or negative (move backward).
     """
 
-    if shift_iso in ["PT0S", "P0D", "PT0H", "P0M", "P0S", "-PT0S", "-P0D"]:
+    if shift == 0:
         # No-op
         return
 
-    # 1) shift scene timestamp
-    try:
-        scene.ts = iso8601_add(scene.ts, shift_iso, clamp_non_negative=True)
-    except Exception as e:  # pragma: no cover – defensive only
-        log.error(
-            "shift_scene_timeline.scene_ts",
-            error=e,
-            scene_ts=scene.ts,
-            shift_iso=shift_iso,
-        )
+    # 1) shift scene timestamp and scene start
+    scene.ts = shift_ts(scene.ts, shift)
+    scene.start_ts = shift_ts(scene.start_ts, shift)
 
     # 2) shift archived_history entries
     for entry in scene.archived_history:
-        _shift_entry_ts(entry, shift_iso)
+        _shift_entry_ts(entry, shift)
 
     # 3) shift layered history entries
     for layer in scene.layered_history:
         for entry in layer:
-            _shift_entry_ts(entry, shift_iso)
+            _shift_entry_ts(entry, shift)
+
+    # 4) world entry times
+    shift_world_entry_times(scene, shift)
+    timeline_shifted.send(scene, shift=shift)

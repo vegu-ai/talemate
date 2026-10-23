@@ -7,6 +7,9 @@ Functions must be called using {{ state.schema_format }} code blocks.
 BEFORE calling ANY functions, briefly explain which functions you will call and your understanding of the schema. Never ask or confirmation or permission.
 
 YOU ARE NOT ALLOWED TO MAKE MORE THAN {{ max_calls }} FUNCTION CALL, TOTAL.
+{% if budget_exempt %}
+Exception: {{ budget_exempt|join(', ') }} calls do not count toward this limit and may be used after it is reached.
+{% endif %}
 
 HOW TO CALL A FUNCTION: For each function call define it in a {{ state.schema_format }} code block as part of THIS response. Do this for each function call you make. You must not split the code block across multiple responses.
 

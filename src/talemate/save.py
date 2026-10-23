@@ -14,6 +14,11 @@ if TYPE_CHECKING:
 log = structlog.get_logger("talemate.save")
 
 
+def scene_save_filename(name: str) -> str:
+    """Append the scene JSON suffix when it is absent."""
+    return name if name.endswith(".json") else f"{name}.json"
+
+
 def combine_paths(absolute, relative):
     # Split paths into components
     rel_parts = os.path.normpath(relative).split(os.sep)

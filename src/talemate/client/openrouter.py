@@ -2,8 +2,10 @@ import pydantic
 import structlog
 import httpx
 import asyncio
+import hashlib
 import json
 import time
+from typing import Any, Callable
 
 from talemate.client.base import (
     ClientBase,
@@ -20,6 +22,12 @@ from talemate.client.remote import (
 from talemate.config.schema import Client as BaseClientConfig
 from talemate.config import get_config
 
+from talemate.client.reasoning_effort import (
+    EffortFormat,
+    ReasoningEffortConfig,
+    ReasoningEffortMixin,
+    reasoning_effort_extra_fields,
+)
 from talemate.client.registry import register
 from talemate.client.toggleable_parameters import (
     ToggleableParametersMixin,
@@ -45,14 +53,30 @@ class OpenRouterAPIError(Exception):
 
 log = structlog.get_logger("talemate.client.openrouter")
 
+MODELS_URL = "https://openrouter.ai/api/v1/models"
+DECISION_MODELS_URL = f"{MODELS_URL}?output_modalities=decisions"
+IMAGE_MODELS_URL = "https://openrouter.ai/api/v1/images/models"
+PROVIDERS_URL = "https://openrouter.ai/api/v1/providers"
+
+# Failed fetches stay unlatched so the retry triggers (config saves, client
+# status refreshes) can recover; the cooldown keeps them from hammering the
+# API while it is unreachable.
+FETCH_RETRY_COOLDOWN = 30.0
+
 # Available models will be populated when talemate loads - this can be done without an API key
-# and doing so imrpoves the initial setup experience since all the models will be available right away
+# and doing so improves the initial setup experience since all the models will be available right away.
+# MODELS_URL only lists models that output text: its output_modalities filter defaults to "text".
 AVAILABLE_MODELS = []
+
+DECISION_MODELS: list["DecisionModel"] = []
+
+# The image generation models of OpenRouter's Image API, keyed by model id in id order
+IMAGE_MODELS: dict[str, "ImageModel"] = {}
 
 # Available providers will be populated dynamically from OpenRouter API once a valid API key is set
 AVAILABLE_PROVIDERS = []
 
-DEFAULT_MODEL = "google/gemini-3.6-flash"
+DEFAULT_MODEL = "google/gemini-3.8-flash"
 
 # Sampler parameters whose inclusion in the request payload is user-toggleable.
 # Some OpenRouter providers hard-error when these are sent for certain models
@@ -70,144 +94,300 @@ TOGGLEABLE_PARAMETERS = (
 
 ToggleableParametersConfig = toggleable_parameters_config(TOGGLEABLE_PARAMETERS)
 
-MODELS_FETCHED = False
-PROVIDERS_FETCHED = False
 
-_MODELS_LOCK = asyncio.Lock()
-_PROVIDERS_LOCK = asyncio.Lock()
+class DecisionModel(pydantic.BaseModel):
+    id: str
+    name: str = ""
 
-# Failed fetches stay unlatched so the retry triggers (config saves, client
-# status refreshes) can recover; the cooldown keeps them from hammering the
-# API while it is unreachable.
-FETCH_RETRY_COOLDOWN = 30.0
-# None = never attempted; time.monotonic() can be < FETCH_RETRY_COOLDOWN on a
-# freshly-booted host, so a 0.0 sentinel would wrongly cool down the first try.
-_models_last_attempt: float | None = None
-_providers_last_attempt: float | None = None
+
+class ImageModel(pydantic.BaseModel):
+    """What the image backend reads from an entry of the Image API model list."""
+
+    id: str
+    input_modalities: list[str] | None = None
+    output_modalities: list[str] = pydantic.Field(default_factory=list)
+    # the listed values of these parameters, empty when the model lists none
+    aspect_ratios: list[str] = pydantic.Field(default_factory=list)
+    output_formats: list[str] = pydantic.Field(default_factory=list)
+    # the listed input_references range, None when the model lists none
+    min_references: int | None = None
+    max_references: int | None = None
+
+    @classmethod
+    def from_entry(cls, entry: dict) -> "ImageModel":
+        parameters = entry.get("supported_parameters") or {}
+        min_references, max_references = _range_values(
+            parameters.get("input_references")
+        )
+        return cls(
+            id=entry["id"],
+            input_modalities=(entry.get("architecture") or {}).get("input_modalities"),
+            output_modalities=(entry.get("architecture") or {}).get("output_modalities")
+            or [],
+            aspect_ratios=_enum_values(parameters.get("aspect_ratio")),
+            output_formats=_enum_values(parameters.get("output_format")),
+            min_references=min_references,
+            max_references=max_references,
+        )
+
+    @property
+    def outputs_text(self) -> bool:
+        return "text" in self.output_modalities
+
+    @property
+    def svg_only(self) -> bool:
+        return set(self.output_formats) == {"svg"}
+
+    @property
+    def needs_references(self) -> bool:
+        return bool(self.min_references)
+
+    @property
+    def takes_references(self) -> bool:
+        return self.max_references != 0
+
+
+def _enum_values(descriptor: dict | None) -> list[str]:
+    if not descriptor or descriptor.get("type") != "enum":
+        return []
+    return [str(value) for value in descriptor.get("values") or []]
+
+
+def _range_values(descriptor: dict | None) -> tuple[int | None, int | None]:
+    if not descriptor or descriptor.get("type") != "range":
+        return None, None
+    return descriptor.get("min"), descriptor.get("max")
+
+
+class ListFetch:
+    """Fetch state of one OpenRouter list: the success latch, the retry
+    cooldown and the lock that keeps concurrent fetches apart."""
+
+    def __init__(self):
+        self.fetched = False
+        # None = never attempted; time.monotonic() can be < FETCH_RETRY_COOLDOWN on a
+        # freshly-booted host, so a 0.0 sentinel would wrongly cool down the first try.
+        self.last_attempt: float | None = None
+        self.lock = asyncio.Lock()
+
+    def reset(self):
+        self.fetched = False
+        self.last_attempt = None
+
+    def begin_attempt(self) -> bool:
+        """Record an attempt now, unless the previous one is inside the cooldown."""
+        now = time.monotonic()
+        if (
+            self.last_attempt is not None
+            and now - self.last_attempt < FETCH_RETRY_COOLDOWN
+        ):
+            return False
+        self.last_attempt = now
+        return True
+
+
+MODELS_FETCH = ListFetch()
+DECISION_MODELS_FETCH = ListFetch()
+IMAGE_MODELS_FETCH = ListFetch()
+PROVIDERS_FETCH = ListFetch()
+
+# digest of the API key the lists were last fetched for; a config save with
+# another key fetches every list again
+_lists_key_digest: str | None = None
+
+
+async def _fetch_list(
+    state: ListFetch,
+    list_name: str,
+    url: str,
+    parse: Callable[[list[dict]], Any],
+    headers: dict | None = None,
+    refresh: bool = False,
+) -> Any:
+    """One fetch attempt for a list. Returns the parsed list, or None when the
+    list is already fetched (and not refreshed), the attempt is cooling down or
+    the fetch failed."""
+    if state.fetched and not refresh:
+        return None
+
+    async with state.lock:
+        if (state.fetched and not refresh) or not state.begin_attempt():
+            return None
+
+        try:
+            log.debug(f"Fetching {list_name} from OpenRouter")
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, headers=headers, timeout=10.0)
+            if response.status_code != 200:
+                log.error(
+                    f"Failed to fetch {list_name} from OpenRouter: HTTP {response.status_code}"
+                )
+                return None
+            result = parse(response.json().get("data", []))
+        except Exception as e:
+            log.error(f"Error fetching {list_name} from OpenRouter: {e}")
+            return None
+
+        state.fetched = True
+        log.debug(f"Fetched {len(result)} {list_name} from OpenRouter")
+        return result
+
+
+def _on_list_changed():
+    # agent settings carry these lists as field choices, and those reach the
+    # frontend with the agent status
+    emit("request_agent_status")
 
 
 async def fetch_available_models(api_key: str = None):
-    """Fetch available models from OpenRouter API"""
-    global AVAILABLE_MODELS, MODELS_FETCHED, _models_last_attempt
+    global AVAILABLE_MODELS
+    models = await _fetch_list(
+        MODELS_FETCH,
+        "models",
+        MODELS_URL,
+        lambda data: sorted(model["id"] for model in data if model.get("id")),
+    )
+    if models is not None and models != AVAILABLE_MODELS:
+        AVAILABLE_MODELS = models
+        _on_list_changed()
+    return AVAILABLE_MODELS
 
-    if MODELS_FETCHED:
-        return AVAILABLE_MODELS
 
-    async with _MODELS_LOCK:
-        if MODELS_FETCHED:
-            return AVAILABLE_MODELS
-
-        now = time.monotonic()
-        if (
-            _models_last_attempt is not None
-            and now - _models_last_attempt < FETCH_RETRY_COOLDOWN
-        ):
-            return AVAILABLE_MODELS
-        _models_last_attempt = now
-
+def _parse_decision_models(data: list[dict]) -> list[DecisionModel]:
+    models = []
+    for entry in data:
         try:
-            log.debug("Fetching models from OpenRouter")
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    "https://openrouter.ai/api/v1/models", timeout=10.0
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    models = []
-                    for model in data.get("data", []):
-                        model_id = model.get("id")
-                        if model_id:
-                            models.append(model_id)
-                    AVAILABLE_MODELS = sorted(models)
-                    MODELS_FETCHED = True
-                    log.debug(f"Fetched {len(AVAILABLE_MODELS)} models from OpenRouter")
-                else:
-                    log.warning(
-                        f"Failed to fetch models from OpenRouter: {response.status_code}"
-                    )
-        except Exception as e:
-            log.error(f"Error fetching models from OpenRouter: {e}")
+            if not entry.get("id"):
+                continue
+            models.append(DecisionModel(id=entry["id"], name=entry.get("name") or ""))
+        except (AttributeError, TypeError, pydantic.ValidationError) as e:
+            log.warning(f"Skipped an OpenRouter decision model entry: {e}")
+    return sorted(models, key=lambda model: model.id)
 
-        return AVAILABLE_MODELS
+
+async def fetch_available_decision_models() -> list[DecisionModel]:
+    global DECISION_MODELS
+    models = await _fetch_list(
+        DECISION_MODELS_FETCH,
+        "decision models",
+        DECISION_MODELS_URL,
+        _parse_decision_models,
+    )
+    if models is not None and models != DECISION_MODELS:
+        DECISION_MODELS = models
+        emit(
+            "decision_models_changed",
+            data={"models": [model.model_dump() for model in models]},
+        )
+    return DECISION_MODELS
+
+
+def _parse_image_models(data: list[dict]) -> dict[str, ImageModel]:
+    models = {}
+    for entry in data:
+        try:
+            model = ImageModel.from_entry(entry)
+        except (AttributeError, KeyError, TypeError, ValueError) as e:
+            # one malformed entry must not take the routing data of every
+            # other model down with it
+            log.warning(f"Skipped an OpenRouter image model entry: {e}")
+            continue
+        models[model.id] = model
+    return dict(sorted(models.items()))
+
+
+async def fetch_available_image_models(
+    refresh: bool = False,
+) -> dict[str, ImageModel]:
+    """`refresh` fetches a loaded list again, at most once per retry cooldown."""
+    global IMAGE_MODELS
+    models = await _fetch_list(
+        IMAGE_MODELS_FETCH,
+        "image models",
+        IMAGE_MODELS_URL,
+        _parse_image_models,
+        refresh=refresh,
+    )
+    if models is not None and models != IMAGE_MODELS:
+        IMAGE_MODELS = models
+        _on_list_changed()
+    return IMAGE_MODELS
 
 
 async def fetch_available_providers(api_key: str = None):
     """Fetch available providers from OpenRouter API"""
-    global AVAILABLE_PROVIDERS, PROVIDERS_FETCHED, _providers_last_attempt
+    global AVAILABLE_PROVIDERS
 
-    if PROVIDERS_FETCHED:
+    if PROVIDERS_FETCH.fetched:
         return AVAILABLE_PROVIDERS
 
-    async with _PROVIDERS_LOCK:
-        if PROVIDERS_FETCHED:
-            return AVAILABLE_PROVIDERS
+    if not api_key:
+        api_key = get_config().openrouter.api_key
 
-        if not api_key:
-            api_key = get_config().openrouter.api_key
-
-        if not api_key:
-            # No key yet (e.g. initial setup) — stay unlatched so the fetch
-            # reruns once a key is saved.
-            log.warning("No OpenRouter API key available, cannot fetch providers")
-            return AVAILABLE_PROVIDERS
-
-        now = time.monotonic()
-        if (
-            _providers_last_attempt is not None
-            and now - _providers_last_attempt < FETCH_RETRY_COOLDOWN
-        ):
-            return AVAILABLE_PROVIDERS
-        _providers_last_attempt = now
-
-        try:
-            log.debug("Fetching providers from OpenRouter")
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    "https://openrouter.ai/api/v1/providers",
-                    headers={"Authorization": f"Bearer {api_key}"},
-                    timeout=10.0,
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    providers = []
-                    for provider in data.get("data", []):
-                        provider_name = provider.get("name")
-                        if provider_name:
-                            providers.append(provider_name)
-                    AVAILABLE_PROVIDERS = sorted(providers)
-                    PROVIDERS_FETCHED = True
-                    log.info(
-                        f"Fetched {len(AVAILABLE_PROVIDERS)} providers from OpenRouter"
-                    )
-                else:
-                    log.error(
-                        f"Failed to fetch providers from OpenRouter: HTTP {response.status_code}"
-                    )
-        except Exception as e:
-            log.error(f"Error fetching providers from OpenRouter: {e}")
-
+    if not api_key:
+        # No key yet (e.g. initial setup) — stay unlatched so the fetch
+        # reruns once a key is saved.
+        log.warning("No OpenRouter API key available, cannot fetch providers")
         return AVAILABLE_PROVIDERS
+
+    providers = await _fetch_list(
+        PROVIDERS_FETCH,
+        "providers",
+        PROVIDERS_URL,
+        lambda data: sorted(
+            provider["name"] for provider in data if provider.get("name")
+        ),
+        headers={"Authorization": f"Bearer {api_key}"},
+    )
+    if providers is not None and providers != AVAILABLE_PROVIDERS:
+        AVAILABLE_PROVIDERS = providers
+        _on_list_changed()
+    return AVAILABLE_PROVIDERS
+
+
+async def fetch_lists(api_key: str | None):
+    await asyncio.gather(
+        fetch_available_models(api_key),
+        fetch_available_decision_models(),
+        fetch_available_image_models(),
+        fetch_available_providers(api_key),
+    )
+
+
+def _key_digest(api_key: str | None) -> str | None:
+    return hashlib.sha256(api_key.encode()).hexdigest() if api_key else None
 
 
 def on_talemate_started(event):
-    """Spawn background tasks to fetch models and providers"""
+    global _lists_key_digest
     api_key = get_config().openrouter.api_key
+    _lists_key_digest = _key_digest(api_key)
     loop = asyncio.get_event_loop()
-    loop.create_task(fetch_available_models(api_key))
-    loop.create_task(fetch_available_providers(api_key))
+    loop.create_task(fetch_lists(api_key))
 
 
 async def on_config_saved(config):
+    """Retry the lists that failed; a changed API key fetches every list again."""
+    global _lists_key_digest
     api_key = config.openrouter.api_key
-    await fetch_available_models(api_key)
-    await fetch_available_providers(api_key)
+    key_digest = _key_digest(api_key)
+    if key_digest != _lists_key_digest:
+        _lists_key_digest = key_digest
+        for state in (MODELS_FETCH, IMAGE_MODELS_FETCH, PROVIDERS_FETCH):
+            state.reset()
+    await fetch_lists(api_key)
 
 
 handlers["talemate_started"].connect(on_talemate_started)
 async_signals.get("config.saved").connect(on_config_saved)
 
 
-class Defaults(ToggleableParametersConfig, CommonDefaults, pydantic.BaseModel):
+class Defaults(
+    ReasoningEffortConfig,
+    ToggleableParametersConfig,
+    CommonDefaults,
+    pydantic.BaseModel,
+):
     max_token_length: int = 16384
     model: str = DEFAULT_MODEL
     # Reasoning on by default: with it off the client is coercible, and several
@@ -219,7 +399,13 @@ class Defaults(ToggleableParametersConfig, CommonDefaults, pydantic.BaseModel):
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
 
 
-class ClientConfig(ToggleableParametersConfig, ConcurrentInference, BaseClientConfig):
+class ClientConfig(
+    ReasoningEffortConfig,
+    ToggleableParametersConfig,
+    ConcurrentInference,
+    BaseClientConfig,
+):
+    concurrent_inference_enabled: bool = True
     provider_only: list[str] = pydantic.Field(default_factory=list)
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
 
@@ -230,8 +416,6 @@ PROVIDER_FIELD_GROUP = FieldGroup(
     description="Configure OpenRouter provider routing.",
     icon="mdi-server-network",
 )
-
-MIN_THINKING_TOKENS = 256
 
 
 def cache_control_for_model(model_name: str) -> dict | None:
@@ -252,7 +436,12 @@ def cache_control_for_model(model_name: str) -> dict | None:
 
 
 @register()
-class OpenRouterClient(ConcurrentInferenceMixin, ToggleableParametersMixin, ClientBase):
+class OpenRouterClient(
+    ReasoningEffortMixin,
+    ConcurrentInferenceMixin,
+    ToggleableParametersMixin,
+    ClientBase,
+):
     """
     OpenRouter client for generating text using various models.
     """
@@ -273,6 +462,7 @@ class OpenRouterClient(ConcurrentInferenceMixin, ToggleableParametersMixin, Clie
         )
         unified_api_key_config_path: str = "openrouter.api_key"
         requires_prompt_template: bool = False
+        reason_tokens_as_allowance: bool = True
         defaults: Defaults = Defaults()
 
         @staticmethod
@@ -298,6 +488,7 @@ class OpenRouterClient(ConcurrentInferenceMixin, ToggleableParametersMixin, Clie
                     required=False,
                 ),
             }
+            fields.update(reasoning_effort_extra_fields())
             fields.update(toggleable_parameters_extra_fields(TOGGLEABLE_PARAMETERS))
             fields.update(concurrent_inference_extra_fields())
             return fields
@@ -327,8 +518,8 @@ class OpenRouterClient(ConcurrentInferenceMixin, ToggleableParametersMixin, Clie
         return False
 
     @property
-    def min_reason_tokens(self) -> int:
-        return MIN_THINKING_TOKENS
+    def reasoning_effort_format(self) -> EffortFormat:
+        return "reasoning"
 
     def emit_status(self, processing: bool = None):
         error_action = None
@@ -378,10 +569,10 @@ class OpenRouterClient(ConcurrentInferenceMixin, ToggleableParametersMixin, Clie
         # Retry fetches that haven't succeeded yet (e.g. the initial fetch
         # failed, or ran before an API key was configured) — the fetchers
         # latch on success and rate-limit retries internally.
-        if not MODELS_FETCHED:
+        if not MODELS_FETCH.fetched:
             await fetch_available_models(self.openrouter_api_key)
 
-        if not PROVIDERS_FETCHED and self.openrouter_api_key:
+        if not PROVIDERS_FETCH.fetched and self.openrouter_api_key:
             await fetch_available_providers(self.openrouter_api_key)
 
         self.emit_status()
@@ -433,12 +624,16 @@ class OpenRouterClient(ConcurrentInferenceMixin, ToggleableParametersMixin, Clie
         payload = {
             "model": self.model_name,
             "messages": messages,
-            "reasoning": {
-                "max_tokens": self.validated_reason_tokens,
-            },
             "stream": True,
             **parameters,
         }
+        if self.reason_enabled:
+            # OpenRouter refuses reasoning.effort and reasoning.max_tokens together.
+            payload["reasoning"] = (
+                {"effort": self.reasoning_effort}
+                if self.reasoning_effort is not None
+                else {"enabled": True}
+            )
 
         self.log.debug(
             "generate",

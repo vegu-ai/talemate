@@ -1,6 +1,8 @@
 from typing import Literal
 
 import pydantic
+import structlog
+
 
 from talemate.world_state import WorldState
 from talemate.game.state import GameState
@@ -15,6 +17,8 @@ __all__ = [
     "PerspectiveRole",
 ]
 
+
+log = structlog.get_logger("talemate.scene.schema")
 
 PerspectiveRole = Literal["default", "player", "other", "narrator"]
 

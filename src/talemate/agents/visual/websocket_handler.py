@@ -1,3 +1,4 @@
+import asyncio
 import pydantic
 import structlog
 
@@ -6,6 +7,7 @@ from talemate.server.websocket_plugin import Plugin
 from talemate.scene_assets import AssetMeta
 from talemate.world_state.manager import WorldStateManager
 
+from .reference import ReferenceProgress, ReferenceStepError
 from .schema import GenerationRequest, AnalysisRequest, VIS_TYPE
 
 __all__ = [
@@ -19,12 +21,19 @@ class SetCoverImagePayload(pydantic.BaseModel):
     base64: str
 
 
-class RegeneratePayload(pydantic.BaseModel):
-    generation_request: GenerationRequest
-
-
 class GeneratePayload(pydantic.BaseModel):
     generation_request: GenerationRequest
+
+    @pydantic.field_validator("generation_request")
+    @classmethod
+    def user_request(cls, request: GenerationRequest) -> GenerationRequest:
+        # the Visual Library replays a stored request, automatic_source included
+        request.automatic_source = None
+        return request
+
+
+class RegeneratePayload(GeneratePayload):
+    pass
 
 
 class SaveImagePayload(pydantic.BaseModel):
@@ -38,6 +47,10 @@ class AnalyzeAssetPayload(pydantic.BaseModel):
     asset_id: str
     prompt: str
     save: bool = False
+
+
+class MarkAsReferencePayload(pydantic.BaseModel):
+    asset_id: str
 
 
 class UpdateArtStylePayload(pydantic.BaseModel):
@@ -127,6 +140,52 @@ class VisualWebsocketHandler(Plugin):
         )
 
         await visual.analyze(request)
+
+    async def handle_mark_as_reference(self, data: dict):
+        """
+        Prepares an asset as a reference candidate in the background,
+        reporting each step as a mark_as_reference_progress reply.
+        """
+        payload = MarkAsReferencePayload(**data)
+        visual = get_agent("visual")
+
+        progress = ReferenceProgress(asset_id=payload.asset_id)
+
+        async def report(update: ReferenceProgress):
+            nonlocal progress
+            progress = update
+            self.websocket_handler.queue_put(
+                {
+                    "type": self.router,
+                    "action": "mark_as_reference_progress",
+                    **update.model_dump(mode="json"),
+                }
+            )
+
+        async def run():
+            try:
+                await visual.mark_as_reference(payload.asset_id, on_progress=report)
+            except (Exception, asyncio.CancelledError) as exc:
+                log.error("mark_as_reference", error=str(exc))
+                step = progress.step or "reference"
+                error = (
+                    ReferenceStepError(step=step, message="Cancelled")
+                    if isinstance(exc, asyncio.CancelledError)
+                    else ReferenceStepError.from_exception(step, exc)
+                )
+                await report(
+                    progress.model_copy(
+                        update={
+                            "step": None,
+                            "finished": True,
+                            "errors": progress.errors + [error],
+                        }
+                    )
+                )
+                if isinstance(exc, asyncio.CancelledError):
+                    raise
+
+        await visual.run_tracked_task(f"mark_as_reference:{payload.asset_id}", run)
 
     async def handle_cancel_generation(self, data: dict):
         """

@@ -134,9 +134,11 @@
                                 <!-- TOGGLE PLAYER CHARACTER -->
                                 <div>
                                     <v-list-item v-if="!character.is_player">
-                                        <v-tooltip max-width="300" :text="`Mark ${character.name} as the player character. The current player character (if any) will be demoted to an AI actor.`">
+                                        <v-tooltip max-width="300" :text="makePlayerCharacterHint">
                                             <template v-slot:activator="{ props }">
-                                                <v-btn @click.stop="setIsPlayer(true)" v-bind="props" variant="tonal" block color="info" prepend-icon="mdi-account-star">Make Player Character</v-btn>
+                                                <span v-bind="props" class="d-block" tabindex="-1" @focusin="props.onFocus" @focusout="props.onBlur">
+                                                    <v-btn @click.stop="setIsPlayer(true)" :disabled="appBusy" variant="tonal" block color="info" prepend-icon="mdi-account-star">Make Player Character</v-btn>
+                                                </span>
                                             </template>
                                         </v-tooltip>
                                     </v-list-item>
@@ -179,20 +181,20 @@
                                 <v-list-item>
                                     <v-tooltip  v-if="confirmDelete === null"  max-width="300" :text="`Permanently delete ${character.name} - will ask for confirmation and cannot be undone.`">
                                         <template v-slot:activator="{ props }">
-                                            <v-btn @click.stop="confirmDelete=''; $nextTick(() => { $refs.confirmDeleteInput.focus() })" variant="tonal" v-bind="props" block color="red-darken-2" prepend-icon="mdi-close-box-outline">Delete</v-btn>
+                                            <v-btn @click.stop="confirmDelete=''; $nextTick(() => { $refs.confirmDeleteInput.focus() })" variant="tonal" v-bind="props" block color="delete" prepend-icon="mdi-close-box-outline">Delete</v-btn>
                                         </template>
                                     </v-tooltip>
                         
                                     <div v-else class="mt-2">
                                         <v-list-item-subtitle>Confirm Deletion</v-list-item-subtitle>
-                                        <p class="text-grey text-caption">
+                                        <p class="text-medium-emphasis text-body-small">
                                             Confirm that you want to delete <span class="text-primary">{{ character.name }}</span>, by
-                                            typing the character name and clicking <span class="text-red-darken-2">Delete</span> once more.
+                                            typing the character name and clicking <span class="text-delete">Delete</span> once more.
                                             This cannot be undone.
                                         </p>
-                                        <v-text-field ref="confirmDeleteInput" :disabled="deleteBusy" v-model="confirmDelete" color="red-darken-2" hide-details @keydown.enter="deleteCharacter" />
+                                        <v-text-field ref="confirmDeleteInput" :disabled="deleteBusy" v-model="confirmDelete" color="delete" hide-details @keydown.enter="deleteCharacter" />
                                         <v-btn v-if="confirmDelete !== character.name" :disabled="deleteBusy" variant="tonal" block color="secondary" prepend-icon="mdi-cancel" @click.stop="confirmDelete = null">Cancel</v-btn>
-                                        <v-btn v-else :disabled="deleteBusy" variant="tonal" block color="red-darken-2" prepend-icon="mdi-close-box-outline" @click.stop="deleteCharacter">Delete</v-btn>
+                                        <v-btn v-else :disabled="deleteBusy" variant="tonal" block color="delete" prepend-icon="mdi-close-box-outline" @click.stop="deleteCharacter">Delete</v-btn>
                                     </div>
                                 </v-list-item>
 
@@ -227,6 +229,9 @@
                                     <v-tab value="visuals" prepend-icon="mdi-image-multiple">
                                         Visuals
                                     </v-tab>
+                                    <v-tab value="knowledge" prepend-icon="mdi-head-lightbulb-outline">
+                                        Knowledge
+                                    </v-tab>
                                 </v-tabs>
 
                                 <v-divider></v-divider>
@@ -239,6 +244,7 @@
                                             @require-scene-save="$emit('require-scene-save')"
                                             :generation-options="generationOptions"
                                             :templates="templates"
+                                            :character-names="characterNames"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>
                                         <v-tabs-window-item value="attributes">
@@ -247,6 +253,7 @@
                                             @require-scene-save="$emit('require-scene-save')"
                                             :generation-options="generationOptions"
                                             :templates="templates"
+                                            :character-names="characterNames"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>
                                         <v-tabs-window-item value="details">
@@ -259,6 +266,7 @@
                                             :generation-options="generationOptions"
                                             :templates="templates"
                                             :pins="pins"
+                                            :character-names="characterNames"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>
                                         <v-tabs-window-item value="reinforce">
@@ -287,6 +295,16 @@
                                             :image-edit-available="imageEditAvailable"
                                             :image-create-available="imageCreateAvailable" />
                                         </v-tabs-window-item>
+                                        <v-tabs-window-item value="knowledge">
+                                            <WorldStateManagerCharacterKnowledge
+                                            ref="knowledge"
+                                            :scene="scene"
+                                            @require-scene-save="$emit('require-scene-save')"
+                                            :app-busy="appBusy"
+                                            :app-ready="appReady"
+                                            :visible="page === 'knowledge'"
+                                            :immutable-character="character" />
+                                        </v-tabs-window-item>
                                     </v-tabs-window>
                                 </v-card-text>
                             </v-card>
@@ -296,7 +314,7 @@
                     </v-col>
                 </v-row>
             </div>
-            <v-alert v-else type="info" color="grey" variant="text" icon="mdi-account">
+            <v-alert v-else class="text-medium-emphasis" variant="text" icon="mdi-account">
                 <p>
                     Manage existing characters or add new ones to the scene. Characters can be AI or player controlled.
                 </p>
@@ -314,16 +332,16 @@
 
     <v-card class="mt-4" density="compact" v-if="character === null">
         <v-card-title>Overview</v-card-title>
-        <v-card-text class="text-grey">
+        <v-card-text class="text-medium-emphasis">
             <p class="mt-4">
                 <!-- Attribute description -->
-                <strong class="text-grey-lighten-1">
+                <strong class="text-high-emphasis">
                     <v-icon size="small" class="mr-2" color="highlight1">mdi-badge-account</v-icon>Attributes
                 </strong> are low to medium detail information about the character. They range from physical attributes to personality traits.
             </p>
             <p class="mt-4">
                 <!-- Details description -->
-                <strong class="text-grey-lighten-1">
+                <strong class="text-high-emphasis">
                     <v-icon size="small" class="mr-2" color="highlight2">mdi-account-details</v-icon>Details
                 </strong> are low to high detail information about the character. They could contain information about the character's background, history, or other relevant information.
             </p>
@@ -332,25 +350,25 @@
             </p>
             <p class="mt-4">
                 <!-- Character description description -->
-                <strong class="text-grey-lighten-1">
-                    <v-icon size="small" class="mr-2" color="grey">mdi-text-account</v-icon>Description
+                <strong class="text-high-emphasis">
+                    <v-icon size="small" class="mr-2" color="muted">mdi-text-account</v-icon>Description
                 </strong> is a description of the character. A summarization of their appearance, personality, and other relevant information as it relates to the scene.
             </p>
             <p class="mt-4">
                 <!-- Reinforcement description -->
-                <strong class="text-grey-lighten-1">
+                <strong class="text-high-emphasis">
                     <v-icon size="small" class="mr-2" color="highlight3">mdi-image-auto-adjust</v-icon>States
                 </strong> are the reinforcement states for the character. This is where you can set up automatic reinforcement of character states. This will cause the AI to regularly re-evaluate the state and update the detail accordingly.
             </p>
             <p class="mt-4">
                 <!-- Actor description -->
-                <strong class="text-grey-lighten-1">
+                <strong class="text-high-emphasis">
                     <v-icon size="small" class="mr-2" color="highlight5">mdi-bullhorn</v-icon>Actor
                 </strong> management lets you define acting and speaking patterns for the character via dialogue instructions and examples. This is only available for AI characters.
             </p>
             <p class="mt-4">
                 <!-- Visuals description -->
-                <strong class="text-grey-lighten-1">
+                <strong class="text-high-emphasis">
                     <v-icon size="small" class="mr-2" color="highlight4">mdi-image-multiple</v-icon>Visuals
                 </strong> allows you to manage cover images and portraits for the character by selecting from generated images in the visual library.
             </p>
@@ -371,6 +389,7 @@ import WorldStateManagerCharacterReinforcements from './WorldStateManagerCharact
 import WorldStateManagerCharacterActor from './WorldStateManagerCharacterActor.vue';
 import WorldStateManagerCharacterCreator from './WorldStateManagerCharacterCreator.vue';
 import WorldStateManagerCharacterVisuals from './WorldStateManagerCharacterVisuals.vue';
+import WorldStateManagerCharacterKnowledge from './WorldStateManagerCharacterKnowledge.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 import { FOLDER_NAME_MAX_LENGTH } from '@/constants/character';
 import { VIS_TYPE } from '@/constants/visual';
@@ -388,6 +407,7 @@ export default {
         WorldStateManagerCharacterActor,
         WorldStateManagerCharacterCreator,
         WorldStateManagerCharacterVisuals,
+        WorldStateManagerCharacterKnowledge,
     },
     props: {
         scene: Object,
@@ -442,6 +462,18 @@ export default {
         'add-pin',
     ],
     computed: {
+        makePlayerCharacterHint() {
+            if (this.appBusy) {
+                return `Unavailable while an agent is generating. A line that is still being generated could otherwise count as the wrong character's turn.`;
+            }
+            return `Mark ${this.character.name} as the player character. The current player character (if any) will be demoted to an AI actor.`;
+        },
+        characterNames() {
+            if (!this.characterList || !this.characterList.characters) {
+                return [];
+            }
+            return Object.values(this.characterList.characters).map(c => c.name);
+        },
         folderNameMaxLength() {
             return FOLDER_NAME_MAX_LENGTH;
         },
@@ -490,6 +522,9 @@ export default {
         },
 
         onCharacterCreated(character) {
+            if (!character) {
+                return;
+            }
             this.$nextTick(() => {
                 this.selected = character.name;
             });

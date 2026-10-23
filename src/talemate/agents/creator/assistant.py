@@ -13,7 +13,6 @@ from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.prompts import Prompt
 from talemate.prompts.base import StripMode
-from talemate.util.path import is_safe_relative_filename
 from talemate.util.response import extract_list
 from talemate.scene_message import CharacterMessage
 from talemate.world_state.templates import (
@@ -22,7 +21,12 @@ from talemate.world_state.templates import (
     Spices,
     WritingStyle,
 )
-from talemate.changelog import fork_scene_at_revision
+from talemate.storage.changelog import SnapshotStore
+from talemate.changelog import (
+    ForkSaveNameError,
+    fork_scene_at_revision,
+    resolve_fork_save_name,
+)
 from talemate.save import SceneEncoder
 import os
 from talemate.agents.base import (
@@ -831,22 +835,10 @@ class AssistantMixin:
                 stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
                 save_name = f"{util.slugify(base) or 'scene'}_fork_{stamp}"
 
-            fork_filename = f"{save_name}.json"
-
-            if not is_safe_relative_filename(fork_filename, suffix=".json"):
-                emit(
-                    "status",
-                    f"'{save_name}' is not a valid save name",
-                    status="error",
-                )
-                return
-
-            if os.path.exists(os.path.join(self.scene.save_dir, fork_filename)):
-                emit(
-                    "status",
-                    f"A save named '{save_name}' already exists — pick a different name",
-                    status="error",
-                )
+            try:
+                save_name = resolve_fork_save_name(self.scene, save_name)
+            except ForkSaveNameError as e:
+                emit("status", str(e), status="error")
                 return
 
             # Find the message to fork from
@@ -854,8 +846,22 @@ class AssistantMixin:
             if not message:
                 raise ValueError(f"Message with id {message_id} not found.")
 
-            # Determine fork type based on message revision
-            use_reconstructive_fork = message.rev > 0
+            # Revision zero is saved state; None identifies an unrecorded message.
+            head = (
+                await SnapshotStore(self.scene.save_dir).head(self.scene.filename)
+                if self.scene.filename
+                else None
+            )
+            if self.scene.filename and (message.rev is None or head is None):
+                emit(
+                    "status",
+                    "Save As first to fork from this message"
+                    if self.scene.immutable_save
+                    else "Save the scene to fork from this message",
+                    status="error",
+                )
+                return
+            use_reconstructive_fork = head is not None
 
             if use_reconstructive_fork:
                 log.info(
@@ -865,18 +871,10 @@ class AssistantMixin:
                 )
                 emit("status", "Creating reconstructive fork...", status="busy")
 
-                # Create fork file with reconstructed scene data (shared_context will be disconnected)
                 fork_file_path = await fork_scene_at_revision(
-                    self.scene, message.rev, save_name
+                    self.scene, message.rev, save_name, expect_message_id=message_id
                 )
-
-                log.info(
-                    "Reconstructive fork created",
-                    save_name=save_name,
-                    rev=message.rev,
-                    path=fork_file_path,
-                )
-            else:
+            if not use_reconstructive_fork:
                 log.info("Creating shallow fork", message_id=message_id)
                 emit("status", "Creating shallow fork...", status="busy")
 
@@ -884,15 +882,20 @@ class AssistantMixin:
                 scene_data = self.scene.serialize
 
                 scene_data["immutable_save"] = False
+                scene_data["hidden"] = False
+                scene_data["deprecated"] = False
                 scene_data["memory_id"] = str(uuid.uuid4())[:10]
+                scene_data["playthrough_progress"] = None
 
                 # Truncate history to the fork point
                 index = self.scene.message_index(message_id)
-                if index is None:
+                if index < 0:
                     raise ValueError(f"Message with id {message_id} not found.")
 
-                # Truncate history (keeping index as the last element)
-                scene_data["history"] = self.scene.history[: index + 1]
+                scene_data["history"] = [
+                    msg.model_copy(update={"rev": None})
+                    for msg in self.scene.history[: index + 1]
+                ]
 
                 # Truncate archived_history (keeping elements where 'end' < index)
                 scene_data["archived_history"] = [
@@ -914,18 +917,17 @@ class AssistantMixin:
 
                 scene_data["layered_history"] = new_layered_history
 
-                # Clear shared_context for fork (same logic as reconstructive fork)
-                if scene_data.get("shared_context"):
-                    log.info(
-                        "Disconnecting forked scene from shared_context",
-                        shared_context=scene_data.get("shared_context"),
-                    )
-                    scene_data["shared_context"] = ""
-
                 # Write the fork file
-                fork_file_path = os.path.join(self.scene.save_dir, fork_filename)
-                with open(fork_file_path, "w") as f:
-                    json.dump(scene_data, f, indent=2, cls=SceneEncoder)
+                fork_file_path = os.path.join(self.scene.save_dir, f"{save_name}.json")
+                encoded = json.dumps(scene_data, indent=2, cls=SceneEncoder)
+                destination = open(fork_file_path, "x")
+                try:
+                    with destination:
+                        destination.write(encoded)
+                    await SnapshotStore(self.scene.save_dir).delete(f"{save_name}.json")
+                except BaseException:
+                    os.remove(fork_file_path)
+                    raise
 
                 log.info(
                     "Shallow fork created", save_name=save_name, path=fork_file_path

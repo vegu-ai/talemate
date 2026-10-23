@@ -5,8 +5,10 @@ Tests the PromptsPlugin handlers for template management API.
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
+from unittest.mock import ANY, Mock, patch, MagicMock, AsyncMock
 
+from talemate.prompts.compatibility import OverrideStatus
+from talemate.prompts.groups import MissingMarker
 from talemate.server.prompts import (
     PromptsPlugin,
     parse_template_uid,
@@ -355,6 +357,7 @@ class TestPromptsPluginListGroupTemplates:
         mock_templates = [
             Mock(
                 uid="narrator.narrate-scene",
+                agent="narrator",
                 available_in=["default", "user"],
                 model_dump=lambda: {
                     "uid": "narrator.narrate-scene",
@@ -363,6 +366,7 @@ class TestPromptsPluginListGroupTemplates:
             ),
             Mock(
                 uid="narrator.other-template",
+                agent="narrator",
                 available_in=["default"],
                 model_dump=lambda: {
                     "uid": "narrator.other-template",
@@ -371,11 +375,26 @@ class TestPromptsPluginListGroupTemplates:
             ),
         ]
 
-        with patch(
-            "talemate.server.prompts.list_templates", return_value=mock_templates
+        mock_templates[0].name = "narrate-scene"
+        status = OverrideStatus(
+            has_default=True,
+            compatibility="incomplete",
+            missing_markers=[MissingMarker(kind="flag", name="perspective")],
+        )
+
+        with (
+            patch(
+                "talemate.server.prompts.list_templates", return_value=mock_templates
+            ),
+            patch(
+                "talemate.server.prompts.override_status", return_value=status
+            ) as mock_status,
         ):
             await plugin.handle_list_group_templates({"group": "user"})
 
+        mock_status.assert_called_once_with(
+            "user", "narrator", "narrate-scene", None, ANY
+        )
         response = plugin.websocket_handler.messages[0]
         templates = response["data"]["templates"]
         assert len(templates) == 2
@@ -389,6 +408,12 @@ class TestPromptsPluginListGroupTemplates:
 
         assert narrate_scene["exists"] is True  # exists in user
         assert other_template["exists"] is False  # doesn't exist in user
+        # status of the user copy, not of whichever copy resolves
+        assert narrate_scene["compatibility"] == "incomplete"
+        assert narrate_scene["missing_markers"] == [
+            {"kind": "flag", "name": "perspective", "detail": None}
+        ]
+        assert "compatibility" not in other_template
 
 
 class TestPromptsPluginGetTemplate:
@@ -444,6 +469,30 @@ class TestPromptsPluginGetTemplate:
         assert response["data"]["readonly"] is True
 
     @pytest.mark.asyncio
+    async def test_includes_override_status(self, plugin):
+        """The reply carries the group copy's status against the default."""
+        status = OverrideStatus(
+            has_default=True,
+            is_outdated=True,
+            compatibility="incomplete",
+            missing_markers=[MissingMarker(kind="include", name="x.jinja2")],
+        )
+        with (
+            patch(
+                "talemate.server.prompts.get_template_content",
+                return_value="template content",
+            ),
+            patch(
+                "talemate.server.prompts.override_status", return_value=status
+            ) as mock_status,
+        ):
+            await plugin.handle_get_template({"uid": "narrator.test", "group": "user"})
+
+        mock_status.assert_called_once_with("user", "narrator", "test", None)
+        response = plugin.websocket_handler.messages[0]
+        assert response["data"]["status"] == status.model_dump()
+
+    @pytest.mark.asyncio
     async def test_handles_not_found(self, plugin):
         """Handles template not found."""
         with patch("talemate.server.prompts.get_template_content", return_value=None):
@@ -453,6 +502,8 @@ class TestPromptsPluginGetTemplate:
 
         response = plugin.websocket_handler.messages[0]
         assert "error" in response["data"]
+        assert response["data"]["uid"] == "narrator.nonexistent"
+        assert response["data"]["group"] == "user"
 
 
 class TestPromptsPluginSaveTemplate:
@@ -479,6 +530,9 @@ class TestPromptsPluginSaveTemplate:
         response = plugin.websocket_handler.messages[0]
         assert response["data"]["success"] is True
         assert response["data"]["syntax_valid"] is True
+        assert response["data"]["uid"] == "narrator.test"
+        assert response["data"]["group"] == "user"
+        assert response["data"]["status"]["has_default"] is False
 
     @pytest.mark.asyncio
     async def test_reports_syntax_errors(self, plugin):
@@ -528,6 +582,8 @@ class TestPromptsPluginDeleteTemplate:
 
         response = plugin.websocket_handler.messages[0]
         assert response["data"]["success"] is True
+        assert response["data"]["uid"] == "narrator.test"
+        assert response["data"]["group"] == "user"
 
     @pytest.mark.asyncio
     async def test_handles_not_found(self, plugin):
@@ -540,6 +596,7 @@ class TestPromptsPluginDeleteTemplate:
         response = plugin.websocket_handler.messages[0]
         assert response["data"]["success"] is False
         assert response["data"]["error"] == "Template not found"
+        assert response["data"]["uid"] == "narrator.nonexistent"
 
 
 class TestPromptsPluginCreateTemplate:
@@ -592,6 +649,94 @@ class TestPromptsPluginCreateTemplate:
         response = plugin.websocket_handler.messages[0]
         assert response["data"]["success"] is False
         assert "already exists" in response["data"]["error"]
+
+
+class _TemplateDirScene(Scene):
+    template_dir = None
+
+    def __init__(self, template_dir):
+        super().__init__()
+        self.name = "test-scene"
+        self.template_dir = str(template_dir)
+
+
+class TestPromptsPluginSceneGroupFiles:
+    """Root-level scene files (agent "") against agent subfolders."""
+
+    @pytest.fixture
+    def plugin(self, tmp_path):
+        handler = MockWebsocketHandler(scene=_TemplateDirScene(tmp_path))
+        return PromptsPlugin(handler)
+
+    async def _call(self, plugin, name, **data):
+        plugin.websocket_handler.messages.clear()
+        await getattr(plugin, f"handle_{name}")(data)
+        return plugin.websocket_handler.messages[0]["data"]
+
+    @pytest.mark.asyncio
+    async def test_empty_agent_creates_a_root_level_file(self, plugin, tmp_path):
+        reply = await self._call(
+            plugin,
+            "create_template",
+            uid=".scene-include",
+            group="scene",
+            content="{# new #}",
+        )
+
+        assert reply["success"] is True
+        assert (tmp_path / "scene-include.jinja2").read_text() == "{# new #}"
+        assert not (tmp_path / "scene").exists()
+
+    @pytest.mark.asyncio
+    async def test_an_agent_category_creates_in_its_subfolder(self, plugin, tmp_path):
+        reply = await self._call(
+            plugin,
+            "create_template",
+            uid="director.scene-override",
+            group="scene",
+            content="{# new #}",
+        )
+
+        assert reply["success"] is True
+        assert (tmp_path / "director" / "scene-override.jinja2").exists()
+        assert not (tmp_path / "scene-override.jinja2").exists()
+
+    @pytest.mark.asyncio
+    async def test_root_level_file_opens_saves_and_deletes(self, plugin, tmp_path):
+        uid = ".scene-include"
+        await self._call(
+            plugin, "create_template", uid=uid, group="scene", content="first"
+        )
+
+        opened = await self._call(plugin, "get_template", uid=uid, group="scene")
+        assert opened["content"] == "first"
+        assert opened["group"] == "scene"
+        assert opened["readonly"] is False
+
+        saved = await self._call(
+            plugin, "save_template", uid=uid, group="scene", content="second"
+        )
+        assert saved["success"] is True
+        assert (tmp_path / "scene-include.jinja2").read_text() == "second"
+
+        deleted = await self._call(plugin, "delete_template", uid=uid, group="scene")
+        assert deleted["success"] is True
+        assert not (tmp_path / "scene-include.jinja2").exists()
+
+    @pytest.mark.asyncio
+    async def test_root_level_file_is_listed_with_an_empty_agent(
+        self, plugin, tmp_path
+    ):
+        await self._call(
+            plugin, "create_template", uid=".scene-include", group="scene", content="x"
+        )
+
+        listed = await self._call(plugin, "list_templates")
+
+        [template] = [t for t in listed["templates"] if t["name"] == "scene-include"]
+        assert template["agent"] == ""
+        assert template["uid"] == ".scene-include"
+        assert template["available_in"] == ["scene"]
 
 
 class TestPromptsPluginSetTemplateSource:

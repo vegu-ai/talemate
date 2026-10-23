@@ -11,7 +11,7 @@
                                     <v-select :items="templates" label="Template" v-model="selected_template"></v-select>
                                 </v-col>
                                 <v-col cols="4">
-                                    <v-switch label="Is Player Character" color="green" v-model="is_player_character"></v-switch>
+                                    <v-switch label="Is Player Character" color="success" v-model="is_player_character"></v-switch>
                                 </v-col>
                                 <v-col cols="4">
                                     <v-slider label="Use Spice" min="0" max="0.5" step="0.05" v-model="use_spice"></v-slider>
@@ -49,7 +49,7 @@
 
                             <v-divider class="mb-2"></v-divider>
 
-                            <span class="mt-2 mb-2 text-subtitle-2" prepend-icon="mdi-memory">Generated Attributes</span>
+                            <span class="mt-2 mb-2 text-title-small" prepend-icon="mdi-memory">Generated Attributes</span>
 
                             <!-- generated attributes -->
 
@@ -105,7 +105,7 @@
                             <v-list>
                                 <v-list-item v-for="(question, index) in detail_questions" :key="index">
                                     <div>
-                                        <v-icon color="red-darken-1" @click="detail_questions.splice(index, 1)">mdi-close-box-outline</v-icon>
+                                        <v-icon color="delete" @click="detail_questions.splice(index, 1)">mdi-close-box-outline</v-icon>
                                         {{ question }}
                                     </div>
                                 </v-list-item>
@@ -136,7 +136,7 @@
                             <v-list>
                                     <v-list-item v-for="(example, index) in dialogue_examples" :key="index">
                                         <div>
-                                            <v-icon color="red-darken-1" @click="dialogue_examples.splice(index, 1)">mdi-close-box-outline</v-icon>
+                                            <v-icon color="delete" @click="dialogue_examples.splice(index, 1)">mdi-close-box-outline</v-icon>
                                             {{ example }}
                                         </div>
                                     </v-list-item>
@@ -169,7 +169,7 @@
         </v-window>
     </v-dialog> 
 
-    <v-snackbar v-model="notification" color="red-darken-1" :timeout="3000">
+    <v-snackbar v-model="notification" color="delete" :timeout="3000">
         {{ notification_text }}
     </v-snackbar>
 </template>

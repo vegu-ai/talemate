@@ -11,25 +11,39 @@ Scenario Premise:
 {# GENERAL REINFORCEMENTS #}
 {% set general_reinforcements = scene.world_state.filter_reinforcements(insert=reinforcement_inserts|default(['all-context'])) -%}
 {%- for reinforce in general_reinforcements %}
-{{ reinforce.as_context_line|condensed }}
+{%- set reinforce_text = reinforce.context_for(scene, knowledge_viewer|default(none)) -%}
+{% if reinforce_text %}{{ reinforce_text|condensed }}
 
-{% endfor %}
+{% endif %}{% endfor %}
 {# END GENERAL REINFORCEMENTS #}
 {# CHARACTER SPECIFIC REINFORCEMENTS #}
 {% if reinforcement_character and reinforcement_character_inserts %}
 {% set char_reinforcements = scene.world_state.filter_reinforcements(character=reinforcement_character, insert=reinforcement_character_inserts) -%}
 {%- for reinforce in char_reinforcements %}
-{{ reinforce.as_context_line|condensed }}
+{%- set reinforce_text = reinforce.context_for(scene, knowledge_viewer|default(none)) -%}
+{% if reinforce_text %}{{ reinforce_text|condensed }}
 
-{% endfor %}
+{% endif %}{% endfor %}
 {% endif %}
 {# END CHARACTER SPECIFIC REINFORCEMENTS #}
 {# ACTIVE PINS #}
-{% if scene.active_pins and technical %}<|SECTION:ACTIVE PINS|>{% endif %}
+{% set visible_pins %}
 {%- for pin in scene.active_pins %}
+{%- if knowledge_index is not defined or knowledge_index.knows_entry(scene, knowledge_viewer|default(none), pin.pin.entry_id) %}
+{% set pin_reinforcement = scene.world_state.reinforcement_entry_context(pin.pin.entry_id, knowledge_viewer) if character_knowledge_enabled(scene) and knowledge_viewer|default(none) else none %}
+{% if pin_reinforcement is not none %}
+{% if pin_reinforcement %}{{ pin_reinforcement|condensed }}
+---
+{% endif %}
+{% else %}
 {% if technical %}`{{ pin.context_id }}`: {% else %}{{ pin.title }}: {{ pin.time_aware_text|condensed }}{% endif %}
 ---
+{% endif %}
+{% endif -%}
 {% endfor %}
-{% if scene.active_pins and technical %}<|CLOSE_SECTION|>{% endif %}
+{% endset %}
+{% if visible_pins|trim %}{% if technical %}<|SECTION:ACTIVE PINS|>{% endif %}
+{{ visible_pins }}
+{% if technical %}<|CLOSE_SECTION|>{% endif %}{% endif %}
 {# END ACTIVE PINS #}
 {% endblock %}

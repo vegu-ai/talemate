@@ -361,7 +361,7 @@ class TestOnInjectInstructions:
     ):
         _, summarizer, _ = summarizer_with_active_agent
         # Pre-populate cache.
-        await summarizer.set_cached_analysis("conversation", "cached analysis")
+        await summarizer.set_cached_analysis("conversation", "cached analysis", alice)
 
         emission = ConversationAgentEmission(
             agent=summarizer, response="", actor=None, character=alice
@@ -392,7 +392,9 @@ class TestOnInjectInstructions:
 
         captured = {}
 
-        async def stub_analyze(typ, character, length):
+        async def stub_analyze(
+            typ, character, length, *, evidence_key=None, standard_fp=...
+        ):
             captured["typ"] = typ
             captured["character"] = character
             captured["length"] = length
@@ -414,7 +416,9 @@ class TestOnInjectInstructions:
         _, summarizer, _ = summarizer_with_active_agent
         emission = NarratorAgentEmission(agent=summarizer, response="")
 
-        async def stub_analyze(typ, character, length):
+        async def stub_analyze(
+            typ, character, length, *, evidence_key=None, standard_fp=...
+        ):
             return "narrator analysis"
 
         summarizer.analyze_scene_for_next_action = stub_analyze
@@ -431,7 +435,9 @@ class TestOnInjectInstructions:
             agent=summarizer, response="", actor=None, character=alice
         )
 
-        async def stub_analyze(typ, character, length):
+        async def stub_analyze(
+            typ, character, length, *, evidence_key=None, standard_fp=...
+        ):
             return ""
 
         summarizer.analyze_scene_for_next_action = stub_analyze

@@ -19,7 +19,12 @@ List of currently supported events.
 | [`game_loop_player_character_iter`](#game_loop_player_character_iter) | Game Loop |
 | [`game_loop_new_message`](#game_loop_new_message) | Game Loop |
 | [`player_turn_start`](#player_turn_start) | Game Loop |
+| [`scene.before_generation`](#scenebefore_generation) | Game Loop |
 | [`scene_init`](#scene_init) | Scene Loop |
+| [`scene.revision_saved`](#scene-revision-events) | Scene Revisions |
+| [`scene.revision_forked`](#scene-revision-events) | Scene Revisions |
+| [`scene.revisions_deleted`](#scene-revision-events) | Scene Revisions |
+| [`scene.revision_failed`](#scene-revision-events) | Scene Revisions |
 | [`scene_loop_init`](#scene_loop_init) | Scene Loop |
 | [`scene_loop_init_after`](#scene_loop_init_after) | Scene Loop |
 | [`scene_loop_start_cycle`](#scene_loop_start_cycle) | Scene Loop |
@@ -32,6 +37,7 @@ List of currently supported events.
 | [`agent.conversation.before_generate`](#agentconversationbefore_generate) | Conversation Agent |
 | [`agent.conversation.inject_instructions`](#agentconversationinject_instructions) | Conversation Agent |
 | [`agent.conversation.generated`](#agentconversationgenerated) | Conversation Agent |
+| [`agent.conversation.finalized`](#agentconversationfinalized) | Conversation Agent |
 | [`agent.creator.contextual_generate.before`](#agentcreatorcontextual_generatebefore) | Creator Agent |
 | [`agent.creator.contextual_generate.after`](#agentcreatorcontextual_generateafter) | Creator Agent |
 | [`agent.creator.autocomplete.before`](#agentcreatorautocompletebefore) | Creator Agent |
@@ -40,6 +46,7 @@ List of currently supported events.
 | [`agent.creator.dialogue_examples.after`](#agentcreatordialogue_examplesafter) | Creator Agent |
 | [`agent.editor.revision-analysis.before`](#agenteditorrevision-analysisbefore) | Editor Agent |
 | [`agent.editor.revision-analysis.after`](#agenteditorrevision-analysisafter) | Editor Agent |
+| [`agent.editor.revision.decision-checks.before`](#agenteditorrevisiondecision-checksbefore) | Editor Agent |
 | [`agent.editor.revision-revise.before`](#agenteditorrevision-revisebefore) | Editor Agent |
 | [`agent.editor.revision-revise.after`](#agenteditorrevision-reviseafter) | Editor Agent |
 | [`agent.help.chat.before`](#agenthelpchatbefore) | Help Agent |
@@ -55,7 +62,10 @@ List of currently supported events.
 | [`agent.director.generate_choices.generated`](#agentdirectorgenerate_choicesgenerated) | Director Agent |
 | [`agent.director.character_management.before_persist_character`](#agentdirectorcharacter_managementbefore_persist_character) | Director Agent |
 | [`agent.director.character_management.after_persist_character`](#agentdirectorcharacter_managementafter_persist_character) | Director Agent |
+| [`agent.director.chat.batch_complete`](#agentdirectorchatbatch_complete) | Director Agent |
 | [`agent.world_state.time`](#agentworld_statetime) | World State Agent |
+| [`agent.world_state.reinforcement.skipped`](#agentworld_statereinforcementskipped) | World State Agent |
+| [`agent.world_state.snapshot.entity_added`](#agentworld_statesnapshotentity_added) | World State Agent |
 | [`agent.summarization.scene_analysis.before`](#agentsummarizationscene_analysisbefore) | Summarization Agent |
 | [`agent.summarization.scene_analysis.cached`](#agentsummarizationscene_analysiscached) | Summarization Agent |
 | [`agent.summarization.scene_analysis.before_deep_analysis`](#agentsummarizationscene_analysisbefore_deep_analysis) | Summarization Agent |
@@ -67,12 +77,16 @@ List of currently supported events.
 | [`agent.summarization.after_build_archive`](#agentsummarizationafter_build_archive) | Summarization Agent |
 | [`agent.summarization.layered_history.finalize`](#agentsummarizationlayered_historyfinalize) | Summarization Agent |
 | [`agent.summarization.rag_build_sub_instruction`](#agentsummarizationrag_build_sub_instruction) | Summarization Agent |
+| [`agent.summarization.perceptions.after`](#agentsummarizationperceptionsafter) | Summarization Agent |
+| [`agent.summarization.perceptions.failed`](#agentsummarizationperceptionsfailed) | Summarization Agent |
 | [`agent.tts.prepare.before`](#agentttspreparebefore) | TTS Agent |
 | [`agent.tts.prepare.after`](#agentttsprepareafter) | TTS Agent |
 | [`agent.tts.generate.before`](#agentttsgeneratebefore) | TTS Agent |
 | [`agent.tts.generate.after`](#agentttsgenerateafter) | TTS Agent |
 | [`agent.visual.generation.before_generate`](#agentvisualgenerationbefore_generate) | Visual Agent |
 | [`agent.visual.generation.after_generate`](#agentvisualgenerationafter_generate) | Visual Agent |
+| [`agent.visual.generation.failed`](#agentvisualgenerationfailed) | Visual Agent |
+| [`agent.visual.generation.refused`](#agentvisualgenerationrefused) | Visual Agent |
 | [`agent.visual.prompt_finalize.before`](#agentvisualprompt_finalizebefore) | Visual Agent |
 | [`agent.visual.prompt_finalize.after`](#agentvisualprompt_finalizeafter) | Visual Agent |
 | [`asset_saved`](#asset_saved) | Scene Assets |
@@ -80,6 +94,19 @@ List of currently supported events.
 | [`scene.backdrop_changed`](#scenebackdrop_changed) | Scene Assets |
 | [`scene.cover_image_changed`](#scenecover_image_changed) | Scene Assets |
 | [`character.cover_image_changed`](#charactercover_image_changed) | Scene Assets |
+| [`game_state.changed`](#game_statechanged) | Game State |
+| [`character.activated`](#characteractivated) | Characters |
+| [`character.deactivated`](#characterdeactivated) | Characters |
+| [`knowledge.changed`](#knowledgechanged) | Knowledge |
+| [`knowledge.visibility_changed`](#knowledgevisibility_changed) | Knowledge |
+| [`knowledge.edge_removed`](#knowledgeedge_removed) | Knowledge |
+| [`knowledge.disclosure_added`](#knowledgedisclosure_added) | Knowledge |
+| [`perspective.view_edited`](#perspectiveview_edited) | Knowledge |
+| [`decision.invocation.finished`](#decisioninvocationfinished) | Decision Model |
+| [`decision.gate.resolved`](#decisiongateresolved) | Decision Model |
+| [`client.enabled`](#clientenabled) | Clients |
+| [`client.disabled`](#clientdisabled) | Clients |
+| [`client.embeddings_available`](#clientembeddings_available) | Clients |
 
 ## Game Loop
 
@@ -162,6 +189,19 @@ Triggered when the user turn starts. User input has not yet happened at this poi
     | Name | Type | Description |
     |------|------|-------------|
     | `scene` | `Scene` | The scene object |
+
+---
+
+### scene.before_generation
+
+Emitted before a generation that continues the story or acts on it: a narration, a character's line, an editor detail, a regenerated message or a `!` command. In Character perspectives mode the new passages are analyzed here, before the generation starts. A handler that cancels stops the generation.
+
+!!! payload "Payload"
+
+    | Name | Type | Description |
+    |------|------|-------------|
+    | `scene` | `Scene` | The scene object |
+    | `trigger` | `str` | `narrator`, `conversation`, `editor`, `regenerate` or `command` |
 
 ---
 
@@ -340,6 +380,24 @@ Handlers can edit `generation` in-place to clean up or transform the text (the E
     | `character` | `Character` | The speaking character |
     | `response` | `str` | **Mutable.** Final text lines that will be turned into messages |
 
+---
+
+### agent.conversation.finalized
+
+Emitted once a character's message is in the history, after it is shown to the player and before the new-message listeners (voice preparation, archive summaries) run. In Character perspectives mode its perspectives do not exist yet: they are analyzed before the next generation, which `agent.summarization.perceptions.after` reports.
+Handlers can set `avatar` to an asset id to change the portrait shown with the message. The shipped portrait module listens here.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `ConversationAgent` | The agent instance |
+    | `actor` | `Actor` | Actor that spoke |
+    | `character` | `Character` | The speaking character |
+    | `response` | `str` | The final message text |
+    | `message_ids` | `list[int]` | The id of the finished message |
+    | `avatar` | `str` | **Mutable.** Asset id of the portrait for the message |
+
 ## Creator Agent Events
 
 ### agent.creator.contextual_generate.before
@@ -361,7 +419,6 @@ Emitted **before** the Creator agent sends the prompt to the model.
 
 Emitted **after** the Creator agent receives the model output but **before** the message is pushed to history.  
 Handlers can edit `response` in-place to clean up or transform the text (the Editor agent does this).
-
 
 !!! payload "Payload"
 
@@ -456,6 +513,8 @@ Handlers can add extra revise instructions via `dynamic_instructions` or adjust 
     | `agent` | `EditorAgent` | The agent instance |
     | `template_vars` | `dict` | Variables that will be fed into the prompt – **mutable** |
     | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable.** Push additional `DynamicInstruction` objects to influence generation |
+    | `info` | `RevisionInformation` | The text being revised and where it comes from (`text`, `character`, `context_type`, `context_name`) |
+    | `issues` | `Issues` | What the revision will fix. With Editor Decision Checks on, `issues.decision_findings` lists the findings (`passage_id`, `text`, `kind`, `instructions`, `p_true`) — **mutable**, remove a finding to leave that passage alone |
 
 ---
 
@@ -517,6 +576,24 @@ notification hook for observers of the rewrite flow.
     |-------|------|-------|
     | `agent` | `EditorAgent` | The agent instance |
     | `template_vars` | `dict` | Same vars used for the prompt |
+
+---
+
+### agent.editor.revision.decision-checks.before
+
+Emitted before the Editor Decision Checks of one revision run, with the checks of the scene's writing style that are active.
+Handlers can add, remove or change checks for this message only; the writing style is not changed. With no checks left, the usual revision detection runs instead.
+
+Example: during the mystery act a module adds a check "Does this passage reveal who the killer is?".
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `EditorAgent` | The agent instance |
+    | `info` | `RevisionInformation` | The text being revised |
+    | `checks` | `list[DecisionCheck]` | **Mutable.** The checks that will run |
+    | `writing_style` | `str` | Template id of the scene's writing style |
 
 ## Help Agent Events
 
@@ -697,6 +774,26 @@ Emitted **after** the character has been fully persisted: actor added, generatio
     | `agent` | `DirectorAgent` | The agent instance |
     | `character` | `Character` | The character that was just persisted |
 
+---
+
+### agent.director.chat.batch_complete
+
+Emitted after the Director Chat has handled one batch of proposed actions, including actions the user confirmed or rejected.
+
+Each call is a dict with `function`, `arguments` and `applied`, and when set `reason` (`confirm`, `reject`, `reject_with_instructions`, `over_budget`, `unknown_callback`, `timed_out`, `interrupted`, `failed`, `aborted`), `error`, `instructions` and `subcalls`.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `DirectorAgent` | The agent instance |
+    | `chat_id` | `str` | The Director Chat |
+    | `applied` | `list[dict]` | Calls that were applied |
+    | `not_applied` | `list[dict]` | Calls that were not applied |
+    | `rejections` | `list[dict]` | Calls the user rejected with a correction (`function`, `arguments`, `reason`, `instructions`) |
+    | `applied_count` | `int` | Applied calls, sub-calls included |
+    | `not_applied_count` | `int` | Calls not applied, sub-calls included |
+
 ## World State Agent Events
 
 ### agent.world_state.time
@@ -708,9 +805,43 @@ Emitted when the world state agent advances the time in the scene.
     | Field | Type | Notes |
     |-------|------|-------|
     | `agent` | `WorldStateAgent` | The agent instance |
-    | `duration` | `str` | The duration of the time passage (ISO 8601 duration) |
+    | `duration` | `int` | The duration of the time passage, in seconds |
     | `human_duration` | `str` | The human-readable duration of the time passage |
     | `narrative` | `str` | The narrative direction of the time passage |
+
+---
+
+### agent.world_state.reinforcement.skipped
+
+Emitted when the decision model finds that a tracked state has not changed, so no update request runs. The state keeps its answer until its next interval.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `WorldStateAgent` | The agent instance |
+    | `question` | `str` | The tracked state's question |
+    | `character` | `str` | The character the state belongs to, or `None` |
+    | `answer` | `str` | The answer it keeps |
+    | `interval` | `int` | Turns until the next check |
+
+---
+
+### agent.world_state.snapshot.entity_added
+
+Emitted when a person, object or place selected in a message was added to the world snapshot, from the message menu or with the **Add Snapshot Entity** node.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `WorldStateAgent` | The agent instance |
+    | `message_id` | `int` | The message the text was selected in |
+    | `selection` | `str` | The selected text |
+    | `name` | `str` | The entry name in the snapshot |
+    | `kind` | `str` | `character`, `item` or `place` |
+    | `in_moment` | `bool` | Whether the message is in the snapshot's current moment |
+    | `mentions` | `list[str]` | Phrases of the message marked as the entry |
 
 ## Summarization Agent Events
 
@@ -882,6 +1013,37 @@ Fires when the summarizer assembles the additional sub-instruction used when fet
     | `agent` | `SummarizeAgent` | The agent instance |
     | `sub_instruction` | `str \| None` | **Mutable.** Concatenated sub-instruction to attach to the RAG query |
 
+---
+
+### agent.summarization.perceptions.after
+
+Emitted once the characters' views of a passage are stored. New passages are analyzed in one step before a generation, and out-of-sync ones when you choose **Repair**; the event is sent after that step has finished, and the generation waits for the handler. A handler can start a generation or a director action from this event.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `SummarizeAgent` | The agent instance |
+    | `message_id` | `int` | The passage |
+    | `views` | `list[PerceptionView]` | One entry per character: `character`, `status` (`ready` or `omitted`), `text` |
+    | `analyzed` | `list[str]` | Characters whose view the model wrote |
+    | `verbatim` | `list[str]` | Characters who received the full passage without analysis, such as the speaker |
+
+---
+
+### agent.summarization.perceptions.failed
+
+Emitted after the analysis of a passage failed, once the knowledge step has finished.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `SummarizeAgent` | The agent instance |
+    | `message_id` | `int` | The passage |
+    | `characters` | `list[str]` | The characters whose views were requested |
+    | `error` | `str` | Why it failed |
+
 ## TTS Agent Events
 
 ### agent.tts.prepare.before
@@ -892,7 +1054,7 @@ Emitted **before** an optional `prepare_fn` runs against an audio chunk (e.g. te
 
     | Field | Type | Notes |
     |-------|------|-------|
-    | `chunk` | `Chunk` | The TTS chunk about to be prepared |
+    | `chunk` | `Chunk` | **Mutable.** The TTS chunk about to be prepared |
     | `context` | `GenerationContext` | The full generation context (all chunks for the current request) |
     | `wav_bytes` | `bytes \| None` | Always `None` at this point |
 
@@ -906,7 +1068,7 @@ Fires after a chunk's `prepare_fn` has run but before audio generation starts. H
 
     | Field | Type | Notes |
     |-------|------|-------|
-    | `chunk` | `Chunk` | The prepared TTS chunk |
+    | `chunk` | `Chunk` | **Mutable.** The prepared TTS chunk |
     | `context` | `GenerationContext` | The full generation context |
     | `wav_bytes` | `bytes \| None` | Always `None` at this point |
 
@@ -920,9 +1082,11 @@ Emitted **immediately before** the chunk is sent to the active TTS backend for s
 
     | Field | Type | Notes |
     |-------|------|-------|
-    | `chunk` | `Chunk` | The TTS chunk about to be synthesised |
+    | `chunk` | `Chunk` | **Mutable.** The TTS chunk about to be synthesised |
     | `context` | `GenerationContext` | The full generation context |
     | `wav_bytes` | `bytes \| None` | Always `None` at this point |
+
+The voice agent provides the `Unpack Generation Emission` and `Set Chunk Text` nodes for this event, which read and rewrite the chunk's text without going through `Get` and `Set` — see [Text Manipulation](../../agents/voice/text-manipulation.md).
 
 ---
 
@@ -930,13 +1094,15 @@ Emitted **immediately before** the chunk is sent to the active TTS backend for s
 
 Fires after the TTS backend returns audio for a chunk and before the audio is played back. Handlers can inspect (or replace) the produced audio via `wav_bytes`.
 
+A chunk the backend produced no audio for is skipped: it is logged and neither this event nor the playback happens for it. Handlers therefore always receive audio. A handler that empties `wav_bytes` itself is honoured the same way — the chunk is logged and skipped rather than played, and the rest of the queue continues.
+
 !!! payload "Payload"
 
     | Field | Type | Notes |
     |-------|------|-------|
-    | `chunk` | `Chunk` | The TTS chunk that was synthesised |
+    | `chunk` | `Chunk` | The TTS chunk that was synthesised (changes no longer affect the audio) |
     | `context` | `GenerationContext` | The full generation context |
-    | `wav_bytes` | `bytes \| None` | **Mutable.** The synthesised audio bytes (None if generation failed) |
+    | `wav_bytes` | `bytes` | **Mutable.** The synthesised audio bytes |
 
 ## Visual Agent Events
 
@@ -965,6 +1131,35 @@ Fires after a generation request has completed and the resulting image has been 
     | `agent` | `VisualAgent` | The agent instance |
     | `request` | `GenerationRequest` | The original request |
     | `response` | `GenerationResponse` | The completed response, including base64 image data |
+
+---
+
+### agent.visual.generation.failed
+
+Fires when a generation request ends without an image: the backend failed, the user cancelled it, or it could not start (for example no backend is available).
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `VisualAgent` | The agent instance |
+    | `request` | `GenerationRequest` | The request, including its `purpose` |
+    | `error` | `str \| None` | Why it failed; `None` when it was cancelled |
+    | `cancelled` | `bool` | `True` when the generation was cancelled |
+
+---
+
+### agent.visual.generation.refused
+
+Fires when the visual agent refuses a generation request without starting it. An automatic request (one with an `automatic_source`) is refused while the Visualizer's **Automatic Generation** setting is off. Nothing is generated, the request never counts as running, and the returned response has `refused` set.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `VisualAgent` | The agent instance |
+    | `request` | `GenerationRequest` | The refused request, including `automatic_source` (the feature that started it), `purpose`, `vis_type` and `character_name` |
+    | `reason` | `str` | Why it was refused |
 
 ---
 
@@ -1066,3 +1261,301 @@ Emitted when a character's cover image is set.
     |-------|------|-------|
     | `asset` | `Asset` | The new cover image asset |
     | `character_name` | `str` | The character the cover image belongs to |
+
+## Game State Events
+
+### game_state.changed
+
+Emitted once for each game state value that changes, whoever changes it:
+
+- a control in the scene header, or Debug Tools
+- the World Editor's game state editor
+- the Director's game state updates
+- a node graph: the state nodes in the `game` scope and **Update Game State**
+- a scene script or template that calls `game_state.set_var` or `game_state.unset_var`
+
+A nested value has its own event with its full path. A removed value has `value` `None`. A write that leaves a value as it was sends no event, and loading a scene sends none. The new value is already stored, after the control's bounds and choices were applied. The event is sent in a task after the change, without waiting for its handlers, so a handler can start a generation.
+
+A change made in place on the dict from the **Game State** node sends no event. Use **Update Game State** or a state node in the `game` scope.
+
+!!! warning "Handlers that write game state"
+    A handler that writes the game state emits this event again. Write only when the value must change, or the handler runs in a loop.
+
+Example: the player switches `stance` from `friendly` to `hostile`, and a module at once adds a director instruction for the next turn.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `path` | `str` | The value's path, e.g. `player/health` |
+    | `value` | `any` | The new value, or `None` when it was removed |
+    | `previous_value` | `any` | The value before the change, or `None` |
+
+## Character Events
+
+### character.activated
+
+Emitted when a character enters the scene.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `character` | `Character` | The character |
+    | `transition` | `CharacterTransitionMessage` | The arrival entry in the history, or `None` when none was written (for example while a scene loads). Read it with **Unpack Character Transition** |
+
+---
+
+### character.deactivated
+
+Emitted when a character leaves the scene.
+
+Example: a module narrates the exit, or notes where the character went.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `character` | `Character` | The character |
+    | `transition` | `CharacterTransitionMessage` | The departure entry in the history, or `None` when none was written |
+
+## Knowledge Events
+
+### knowledge.changed
+
+Emitted when what a character knows changes: an entry is learned or blocked (Learn, Never Learn, Known by of static history) or information is shared as a disclosure. It is sent right after the change, without waiting for it.
+
+Example: when the player learns where the key is hidden, a module shows a hint.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `changes` | `list` | One entry per change: `character`, `target` (entry or disclosure id), `kind` (`grant` or `revoke`), `label` |
+
+---
+
+### knowledge.visibility_changed
+
+Emitted when the Known by setting of a world entry or a character sheet entry changes. It is sent right after the change, without waiting for it.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `entry_id` | `str` | The entry, e.g. `Hidden Door` or `Bob.secret` |
+    | `kind` | `str` | `world_entry` or `sheet` |
+    | `owner` | `str` | The character a sheet entry belongs to |
+    | `key` | `str` | The sheet entry key, e.g. `secret` or `detail.the fall` |
+    | `previous` | `EntryVisibility` | The setting before (`mode`, `characters`) |
+    | `visibility` | `EntryVisibility` | The new setting |
+
+---
+
+### knowledge.edge_removed
+
+Emitted when a Learn or Never Learn rule is removed. It is sent right after the change, without waiting for it.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `edge` | `KnowledgeEdge` | The removed rule (`character`, `target`, `kind`, `source`, `note`) |
+    | `changed` | `bool` | Whether the Learn / Never Learn state between the character and the entry changed. The entry's Known by or the character's presence can still give the same access as before |
+
+---
+
+### knowledge.disclosure_added
+
+Emitted when information is shared with characters as a disclosure (Character Perspectives). It is sent right after the change, without waiting for it.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `disclosure_id` | `str` | The disclosure |
+    | `text` | `str` | The shared information |
+    | `audience` | `list[str]` | Who knows it now |
+    | `origin` | `str` | The entry it comes from, or `None` |
+
+---
+
+### perspective.view_edited
+
+Emitted when one character's view of a message is replaced by hand, in the perspective panel or with the **Set Message View** node. It is sent right after the change, without waiting for it.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `scene` | `Scene` | The scene |
+    | `message_id` | `int` | The message |
+    | `character` | `str` | The character |
+    | `status` | `str` | `ready`, or `omitted` for an empty view |
+    | `text` | `str` | The new view |
+    | `dependents` | `int` | Later views built on this one; they stay valid |
+
+## Decision Model Events
+
+!!! note
+    These events report the decision checks Talemate runs itself (editor checks, yes/no queries, pin conditions, tracked states, portraits, character references). A question asked with the **Ask Decision Model** node returns its answer to the node and does not emit them.
+
+    Some checks run while a prompt is put together, for example the character references for memory retrieval. Their events are sent once that prompt is complete, so a handler can start a generation. The handler then runs while the generation that built the prompt continues, so a message it adds can come before the generated line.
+
+### decision.invocation.finished
+
+Emitted when a decision policy has finished.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `invocation_id` | `str` | The Decision Log invocation |
+    | `template_uid` | `str` | The policy, e.g. `world_state.decision-query` |
+    | `source_group` | `str` | Where the policy template came from, e.g. `scene` for a scene override |
+    | `status` | `str` | `completed`: the policy ran; answers the decision model was not sure of still went to the usual request (see `fallback_ids` of `decision.gate.resolved`). `fallback`: the decision model was off or failed and the usual request ran instead. `preserved`: the original result was kept |
+    | `requests` | `list` | One entry per decision model request: `request_id`, `label`, `status`, `failure_code`, `answers`, `elapsed_ms` |
+    | `actions` | `list[dict]` | The actions the policy ran |
+
+---
+
+### decision.gate.resolved
+
+Emitted when a yes/no decision gate has settled its candidates: queries, pin conditions, tracked states, portraits and character references.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `uid` | `str` | The policy, e.g. `world_state.decision-pin-conditions` |
+    | `gate_enabled` | `bool` | Whether the decision model was used |
+    | `candidates` | `list[str]` | The candidate ids |
+    | `decided` | `dict` | Answers the decision model gave |
+    | `fallback_ids` | `list[str]` | Candidates the usual request answered |
+    | `result` | `dict` | The final answer for every candidate |
+
+## Client Events
+
+!!! note
+    Clients change in the settings, also when no scene is loaded. Scene node graphs only see these events while their scene is loaded.
+
+### client.enabled
+
+Emitted when a client is switched on.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `client` | `ClientBase` | The client (`client.name` is its name) |
+    | `enabled` | `bool` | `True` |
+
+---
+
+### client.disabled
+
+Emitted when a client is switched off.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `client` | `ClientBase` | The client |
+    | `enabled` | `bool` | `False` |
+
+---
+
+### client.embeddings_available
+
+Emitted when a client reports that it can serve embeddings (KoboldCpp).
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `client` | `ClientBase` | The client |
+    | `embedding_name` | `str` | The embedding model name |
+    | `seen` | `bool` | **Mutable.** Set by the Memory agent when it offered the embeddings |
+
+## Scene revision events
+
+Use a **Listen** event module to react to saved scene states, and **Get** to read its detached payload. These events describe committed revision storage. Changes made by a listener belong to a later save. Save events run outside the save lock; loading an existing save and read-only previews do not emit them.
+
+For a node with a required `state` input, such as **Set State (Path)** or **Update Game State**, connect the **Event** node's `event` output, or another value from the module, to that input. Pass the event data through the node's separate data inputs; its `state` output passes the activation value through unchanged. **Set State** and **Unset State** have no `state` input.
+
+Every payload identifies the project with `project_path` and the save with `filename`. Revision numbers belong to that save's ancestry; `revision_id` identifies the recorded state independently of its filename.
+
+### scene.revision_saved
+
+Fires after a normal save commits a new revision. Usually the JSON file has also been written. If a later part of the save fails, this event still fires with `error` set: the revision exists even though the save operation reported an error. A save that records no new revision emits no saved event. A save made while character knowledge is being updated sends its event when that update has finished.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `operation` | `str` | `save` |
+    | `project_path` | `str` | Project directory |
+    | `filename` | `str` | Save filename |
+    | `revision` | `int` | Committed revision number |
+    | `revision_id` | `str` | Committed revision identity |
+    | `parent_id` | `str \| None` | Preceding revision |
+    | `error` | `str \| None` | Error after the revision committed, or `None` |
+
+---
+
+### scene.revision_forked
+
+Fires when a fork's file and inherited link are ready. **Save As** also emits this event when its inherited link and new revision commit together, followed by `scene.revision_saved` for the new state. If writing the destination's JSON later fails, both events include `error`.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `operation` | `str` | `fork` |
+    | `project_path` | `str` | Project directory |
+    | `filename` | `str` | New save filename |
+    | `source_filename` | `str` | Source save filename |
+    | `revision` | `int` | Fork-point revision number |
+    | `revision_id` | `str` | Fork-point identity |
+    | `parent_id` | `str \| None` | Revision preceding the fork point |
+    | `error` | `str \| None` | Later Save As error, or `None` |
+
+---
+
+### scene.revisions_deleted
+
+Fires after removing a save's revision link and collecting content that no remaining save uses. Inherited revisions still used by forks remain available. If damaged content prevents safe collection, unused blobs are retained and `removed_blobs` is zero.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `operation` | `str` | `delete` |
+    | `project_path` | `str` | Project directory |
+    | `filename` | `str` | Deleted save filename |
+    | `removed_revisions` | `int` | Revisions collected |
+    | `removed_blobs` | `int` | Unused content items collected |
+
+---
+
+### scene.revision_failed
+
+Fires when saving, forking or deleting revisions fails without committing that revision operation. A save rejected before recording starts, such as a scene without a name, emits no revision event. A committed revision followed by a JSON write error emits `scene.revision_saved` with an error instead. If recording a Save As replacement fails, the destination keeps its previous revisions and no fork event is emitted.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `operation` | `str` | `save`, `fork` or `delete` |
+    | `project_path` | `str` | Project directory |
+    | `filename` | `str` | Affected save filename |
+    | `error` | `str` | Failure reason |
+
+The shared payload also has `source_filename`, revision fields and deletion counts when they are not relevant to an event: unused source and revision fields default to `None`, and counts to zero.

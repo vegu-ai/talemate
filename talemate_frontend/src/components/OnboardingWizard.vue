@@ -1,5 +1,5 @@
 <template>
-  <v-dialog :model-value="dialog" persistent scrollable max-width="960" @update:model-value="onDialogUpdate">
+  <v-dialog :model-value="wizardSessionActive" persistent scrollable max-width="960" @update:model-value="onDialogUpdate">
     <v-card class="pa-4 wizard-card">
       <v-btn
         class="wizard-close"
@@ -8,34 +8,35 @@
         color="muted"
         @click="dismissWizard"
       />
-      <v-card-title class="text-h5 text-center mb-6">
+      <v-card-title class="text-headline-small text-center mb-6">
         <v-icon icon="mdi-book-open-page-variant-outline" size="small" class="mr-2" color="primary"></v-icon>
         Welcome to Talemate
       </v-card-title>
       
-      <v-window v-model="step" class="wizard-window">
+      <!-- no swipe: it would change the step outside the transition methods -->
+      <v-window v-model="step" :touch="false" class="wizard-window">
         <!-- Step 1: Choose Client Type -->
         <v-window-item :value="1">
           <v-card-text>
-            <div class="text-body-1 text-center mb-8">
+            <div class="text-body-large text-center mb-8">
               Talemate relies on an AI model to write the story with you.
               <br class="hidden-sm-and-down">First, we need to get you connected to one.
             </div>
 
-            <v-row justify="center" class="mb-4">
+            <v-row class="justify-center mb-4">
               <v-col cols="12" md="5">
                 <v-card variant="outlined" class="h-100 cursor-pointer hover-card pa-4" @click="selectClientType('local')">
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-desktop-tower-monitor" size="small" class="mr-1" color="secondary"></v-icon>
                       Self-hosted
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
-                    KoboldCPP, Text-Generation-WebUI, llama.cpp, LMStudio, TabbyAPI
+                  <v-card-text class="text-center text-body-medium">
+                    llama.cpp, KoboldCPP, Text-Generation-WebUI, LMStudio, TabbyAPI
                   </v-card-text>
                   <v-card-text class="text-center pt-0">
-                    <div class="text-caption text-medium-emphasis">
+                    <div class="text-body-small text-medium-emphasis">
                       You're running your own inference service on your PC or a server you control 
                     </div>
                   </v-card-text>
@@ -45,20 +46,26 @@
               <v-col cols="12" md="5">
                 <v-card variant="outlined" class="h-100 cursor-pointer hover-card pa-4" @click="selectClientType('remote')">
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-cloud-outline" size="small" class="mr-1" color="primary"></v-icon>
                       Hosted API
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
+                  <v-card-text class="text-center text-body-medium">
                     Connect to OpenRouter, Google, Anthropic, etc.
                   </v-card-text>
                   <v-card-text class="text-center pt-0">
-                    <div class="text-caption text-medium-emphasis">
+                    <div class="text-body-small text-medium-emphasis">
                       Requires an API key to the provider.
                     </div>
                   </v-card-text>
                 </v-card>
+              </v-col>
+            </v-row>
+
+            <v-row class="justify-center mb-2">
+              <v-col cols="12" md="10">
+                <ModelExpectationsPanel />
               </v-col>
             </v-row>
 
@@ -80,12 +87,12 @@
         <!-- Step 2: Add Client -->
         <v-window-item :value="2">
           <v-card-text class="text-center py-8">
-            <div class="text-h5 mb-3">Configure {{ clientType === 'remote' ? 'Hosted API' : 'Self-hosted' }} Client</div>
-            <div class="text-body-1 mb-6">
+            <div class="text-headline-small mb-3">Configure {{ clientType === 'remote' ? 'Hosted API' : 'Self-hosted' }} Client</div>
+            <div class="text-body-large mb-6">
               Choose which client type you want to set up:
             </div>
 
-            <v-row justify="center" class="mb-6">
+            <v-row class="justify-center mb-6">
               <v-col cols="12" md="8">
                 <v-select
                   v-model="selectedClientPreset"
@@ -100,7 +107,7 @@
               </v-col>
             </v-row>
 
-            <v-row v-if="selectedClientPreset === 'openrouter'" justify="center" class="mb-6">
+            <v-row v-if="selectedClientPreset === 'openrouter'" class="justify-center mb-6">
               <v-col cols="12" md="8">
                 <v-alert
                   density="comfortable"
@@ -110,14 +117,14 @@
                   <template v-slot:prepend>
                     <v-icon icon="mdi-brain" size="small" class="mr-1" color="primary"></v-icon>
                   </template>
-                  <div class="text-body-2">
-                    Google's Gemini 3.6 Flash model will be selected by default. Since it's a reasoning model, reasoning will be enabled automatically. If you change to a non-reasoning model in the next  setup step (or at a later point), you should turn reasoning off in the client settings.
+                  <div class="text-body-medium">
+                    Google's Gemini 3.8 Flash model will be selected by default. Since it's a reasoning model, reasoning will be enabled automatically. If you change to a non-reasoning model in the next  setup step (or at a later point), you should turn reasoning off in the client settings.
                   </div>
                 </v-alert>
               </v-col>
             </v-row>
 
-            <v-row v-if="clientType !== 'remote'" justify="center" class="mb-6">
+            <v-row v-if="clientType !== 'remote'" class="justify-center mb-6">
               <v-col cols="12" md="8">
                 <v-alert
                   density="comfortable"
@@ -127,37 +134,87 @@
                   <template v-slot:prepend>
                     <v-icon icon="mdi-brain" size="small" class="mr-1" color="primary"></v-icon>
                   </template>
-                  <div class="text-body-2">
+                  <div class="text-body-medium">
                     <strong>Reasoning models:</strong> If you load a reasoning model (like DeepSeek R1, GLM, etc.) in your self-hosted service, you'll need to enable reasoning in Talemate's client settings. You can do this by clicking the <v-icon icon="mdi-brain" size="x-small" class="mx-1" /> brain icon in the client card or in the advanced client setup view.
                   </div>
                 </v-alert>
               </v-col>
             </v-row>
             
-            <v-btn color="primary" variant="tonal" :disabled="clientTypesLoading || !clientPresetOptions.length" @click="openClientModal" prepend-icon="mdi-plus">
+            <v-row class="justify-center mb-6">
+              <v-col cols="12" md="8">
+                <v-alert
+                  density="comfortable"
+                  variant="outlined"
+                  color="muted"
+                >
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-layers-outline" size="small" class="mr-1" color="primary"></v-icon>
+                  </template>
+                  <div class="text-body-medium">
+                    <strong>Context size:</strong> {{ smallContextNote }}
+                  </div>
+                </v-alert>
+              </v-col>
+            </v-row>
+
+            <v-row v-if="draftClient" class="justify-center">
+              <v-col cols="12" md="8" class="text-left">
+                <ModelExpectationsPanel compact class="mb-2" />
+              </v-col>
+            </v-row>
+
+            <!-- the same editor the settings Clients page uses, in its
+                 reduced (simple) field set — bound to a local draft client
+                 that is written on Add Client -->
+            <v-row v-if="draftClient" class="justify-center mb-2">
+              <v-col cols="12" md="8" class="text-left">
+                <ClientConfigEditor
+                  ref="clientEditor"
+                  simple
+                  :client="draftClient"
+                  :meta="draftClientMeta"
+                  :config="draftConfig"
+                  :validate-name="validateClientName"
+                  @rename="(name) => draftClient.name = name"
+                />
+              </v-col>
+            </v-row>
+
+            <v-btn
+              color="primary"
+              variant="tonal"
+              :loading="waitingForClient"
+              :disabled="clientTypesLoading || !draftClient || saveInFlight"
+              @click="addClient"
+              prepend-icon="mdi-plus"
+            >
               Add Client
             </v-btn>
-            
-            <div v-if="waitingForClient" class="mt-8 text-caption text-medium-emphasis">
-              <v-progress-circular indeterminate size="24" color="primary" class="mr-2"></v-progress-circular>
-              Waiting for you to add a client...
-            </div>
+
+            <v-row v-if="saveError" class="justify-center mt-4">
+              <v-col cols="12" md="8">
+                <v-alert type="error" variant="tonal" density="compact" icon="mdi-alert-circle-outline">
+                  <div class="text-body-medium">{{ saveErrorText('client') }}</div>
+                </v-alert>
+              </v-col>
+            </v-row>
           </v-card-text>
         </v-window-item>
 
         <!-- Step 3: Long term memory -->
         <v-window-item :value="3">
           <v-card-text class="py-6 text-center">
-            <div class="text-h5 mb-3">
+            <div class="text-headline-small mb-3">
               <v-icon icon="mdi-brain" size="small" class="mr-1" color="highlight2"></v-icon>
               Long term memory
             </div>
-            <div class="text-body-1 text-medium-emphasis mb-8">
+            <div class="text-body-large text-medium-emphasis mb-8">
               Talemate uses embeddings to store and retrieve story details over time (names, relationships, places, facts, and other context that shouldn’t get lost as the chat grows).
               <br class="hidden-sm-and-down">A more capable embeddings model generally improves recall quality and reduces “forgotten details”.
             </div>
 
-            <v-row justify="center">
+            <v-row class="justify-center">
               <v-col cols="12" md="5">
                 <v-card
                   variant="outlined"
@@ -176,16 +233,16 @@
                     Selected
                   </v-chip>
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-lightning-bolt-outline" size="small" class="mr-1" color="primary"></v-icon>
                       Better (Recommended)
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
+                  <v-card-text class="text-center text-body-medium">
                     Uses <code>Alibaba-NLP/gte-base-en-v1.5</code>.
                   </v-card-text>
                   <v-card-text class="text-center pt-0">
-                    <div class="text-caption text-medium-emphasis">
+                    <div class="text-body-small text-medium-emphasis">
                       More capable and recommended for best recall. Talemate will download/load this model when a scene is loaded (first use). Model weights are ~550MB; on CUDA plan ~1GB+ free VRAM.
                     </div>
                   </v-card-text>
@@ -210,16 +267,16 @@
                     Selected
                   </v-chip>
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-cpu-64-bit" size="small" class="mr-1" color="muted"></v-icon>
                       Standard
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
+                  <v-card-text class="text-center text-body-medium">
                     Smaller and less capable.
                   </v-card-text>
                   <v-card-text class="text-center pt-0">
-                    <div class="text-caption text-medium-emphasis">
+                    <div class="text-body-small text-medium-emphasis">
                       Recommended only if you can't spare ~1GB+ free VRAM for the better model.
                     </div>
                   </v-card-text>
@@ -229,8 +286,8 @@
 
             <v-divider class="my-6" />
 
-            <div class="text-subtitle-1 mb-2">Device</div>
-            <div class="text-body-2 text-medium-emphasis mb-4">
+            <div class="text-body-large mb-2">Device</div>
+            <div class="text-body-medium text-medium-emphasis mb-4">
               CUDA can be used with either model, but it helps most with the recommended model.
             </div>
 
@@ -241,7 +298,7 @@
                 :color="cudaAvailable ? 'success' : 'warning'"
                 icon="mdi-information-outline"
               >
-                <div class="text-body-2">
+                <div class="text-body-medium">
                   <strong>Detected:</strong>
                   <span v-if="cudaAvailable">
                     CUDA available
@@ -254,12 +311,12 @@
                 </div>
               </v-alert>
             </div>
-            <div v-else-if="systemCapabilitiesLoading" class="text-caption text-medium-emphasis mb-4">
+            <div v-else-if="systemCapabilitiesLoading" class="text-body-small text-medium-emphasis mb-4">
               <v-progress-circular indeterminate size="18" color="primary" class="mr-2"></v-progress-circular>
               Checking CUDA / VRAM…
             </div>
 
-            <v-row justify="center">
+            <v-row class="justify-center">
               <v-col cols="12" md="5">
                 <v-card
                   variant="outlined"
@@ -278,19 +335,19 @@
                     Selected
                   </v-chip>
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-expansion-card-variant" size="small" class="mr-1" color="primary"></v-icon>
                       CUDA
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
+                  <v-card-text class="text-center text-body-medium">
                     Faster on supported NVIDIA GPUs.
                   </v-card-text>
                   <v-card-text class="text-center pt-0">
-                    <div class="text-caption text-medium-emphasis">
+                    <div class="text-body-small text-medium-emphasis">
                       Highly recommended if you have an NVIDIA GPU with ~1GB+ free VRAM (especially for the better model).
                     </div>
-                    <div v-if="systemCapabilities" class="text-caption text-medium-emphasis mt-1">
+                    <div v-if="systemCapabilities" class="text-body-small text-medium-emphasis mt-1">
                       <span v-if="cudaAvailable">
                         Detected: available
                         <span v-if="cudaPrimaryVramText"> — {{ cudaPrimaryVramText }}</span>
@@ -321,12 +378,12 @@
                     Selected
                   </v-chip>
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-cpu-64-bit" size="small" class="mr-1" color="muted"></v-icon>
                       CPU
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
+                  <v-card-text class="text-center text-body-medium">
                     Works anywhere.
                   </v-card-text>
                 </v-card>
@@ -334,12 +391,20 @@
             </v-row>
 
             <div class="mt-6">
-              <v-btn color="primary" variant="tonal" @click="nextOrFinish">
+              <v-btn color="primary" variant="tonal" :loading="finishing" :disabled="finishing" @click="nextOrFinish">
                 {{ shouldShowVisualStep ? 'Next' : 'Apply & finish' }}
               </v-btn>
             </div>
 
-            <div class="text-caption text-medium-emphasis mt-4">
+            <v-row v-if="saveError" class="justify-center mt-4">
+              <v-col cols="12" md="8">
+                <v-alert type="error" variant="tonal" density="compact" icon="mdi-alert-circle-outline">
+                  <div class="text-body-medium">{{ saveErrorText('agent settings') }}</div>
+                </v-alert>
+              </v-col>
+            </v-row>
+
+            <div class="text-body-small text-medium-emphasis mt-4">
               You can change these settings any time in <strong>Agents → Memory</strong>.
             </div>
           </v-card-text>
@@ -348,20 +413,20 @@
         <!-- Step 4: Visual Agent -->
         <v-window-item :value="4">
           <v-card-text class="py-6 text-center">
-            <div class="text-h5 mb-3">
+            <div class="text-headline-small mb-3">
               <v-icon icon="mdi-image-multiple-outline" size="small" class="mr-1" color="secondary"></v-icon>
               Visual Agent
             </div>
-            <div class="text-body-1 text-medium-emphasis mb-8">
+            <div class="text-body-large text-medium-emphasis mb-8">
               Since you chose <strong>{{ visualAgentProviderName }}</strong>, you can also use it for image generation, editing, and analysis
               <span v-if="selectedClientPreset === 'openrouter'" class="text-primary font-weight-bold">
                 (via Google's gemini visual models)
               </span>.
               <br class="hidden-sm-and-down">This will configure the Visual Agent to use {{ visualAgentProviderName }} for all image operations.
-              <br class="hidden-sm-and-down"><span class="text-caption text-medium-emphasis mt-2 d-block">Note: Talemate may send existing images as references during visual editing.</span>
+              <br class="hidden-sm-and-down"><span class="text-body-small text-medium-emphasis mt-2 d-block">Note: Talemate may send existing images as references during visual editing.</span>
             </div>
 
-            <v-row justify="center">
+            <v-row class="justify-center">
               <v-col cols="12" md="5">
                 <v-card
                   variant="outlined"
@@ -380,12 +445,12 @@
                     Selected
                   </v-chip>
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-check-circle-outline" size="small" class="mr-1" color="primary"></v-icon>
                       Enable
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
+                  <v-card-text class="text-center text-body-medium">
                     Automatically configure {{ visualAgentProviderName }} for creating, editing, and analyzing images.
                   </v-card-text>
                 </v-card>
@@ -409,12 +474,12 @@
                     Selected
                   </v-chip>
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-skip-next-outline" size="small" class="mr-1" color="muted"></v-icon>
                       Skip
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
+                  <v-card-text class="text-center text-body-medium">
                     Don't change visual settings. You can configure them later.
                   </v-card-text>
                 </v-card>
@@ -422,10 +487,18 @@
             </v-row>
 
             <div class="mt-6">
-              <v-btn color="primary" variant="tonal" @click="finishWizard">
+              <v-btn color="primary" variant="tonal" :loading="finishing" :disabled="finishing" @click="finishWizard">
                 Apply & finish
               </v-btn>
             </div>
+
+            <v-row v-if="saveError" class="justify-center mt-4">
+              <v-col cols="12" md="8">
+                <v-alert type="error" variant="tonal" density="compact" icon="mdi-alert-circle-outline">
+                  <div class="text-body-medium">{{ saveErrorText('agent settings') }}</div>
+                </v-alert>
+              </v-col>
+            </v-row>
           </v-card-text>
         </v-window-item>
       </v-window>
@@ -433,15 +506,21 @@
       <v-divider class="mt-2" />
       <v-card-actions class="justify-space-between">
         <div>
+          <!-- no way back from step 3: the client it follows is already created, so the step behind it could only add a second one -->
           <v-btn
-            v-if="step > 1"
+            v-if="step > 1 && step !== 3"
             variant="text"
+            :disabled="saveInFlight"
             @click="goBack"
             prepend-icon="mdi-arrow-left"
           >
             Back
           </v-btn>
         </div>
+        <!-- leaving the wizard stays possible while a save is unanswered, or a
+             save that never gets answered would trap the user in the dialog —
+             they forfeit the report, not the save. Back waits: it stays inside
+             the wizard, which would have to show that answer. -->
         <v-btn variant="text" color="muted" @click="dismissWizard">Skip setup for now</v-btn>
       </v-card-actions>
     </v-card>
@@ -449,8 +528,19 @@
 </template>
 
 <script>
+import { getProperty, setProperty } from 'dot-prop';
+import ClientConfigEditor from './ClientConfigEditor.vue';
+import ModelExpectationsPanel from './ModelExpectationsPanel.vue';
+import { SMALL_CONTEXT_NOTE } from '@/constants/modelExpectations';
+import { buildClientFromDefaults } from '@/utils/clientPresets';
+import { cloneNameKeyedMap, isReservedName } from '@/utils/nameKeyedMap';
+
 export default {
   name: 'OnboardingWizard',
+  components: {
+    ClientConfigEditor,
+    ModelExpectationsPanel,
+  },
   props: {
     clients: {
       type: Array,
@@ -461,15 +551,32 @@ export default {
       default: () => []
     }
   },
-  emits: ['open-client-modal', 'wizard-completed'],
-  inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler'],
+  emits: ['wizard-completed'],
+  inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'appConfig', 'saveAppConfig'],
     data() {
     return {
-      dialog: false,
+      // set once in mounted(); cleared only by dismiss or the finishing save
+      wizardSessionActive: false,
+      smallContextNote: SMALL_CONTEXT_NOTE,
       step: 1,
       clientType: null, // 'remote' | 'local'
       selectedClientPreset: null,
       clientTypes: {},
+      // the client the embedded editor edits, and the config copy it writes
+      // cross-references (the provider's unified API key) into — both are
+      // folded into the app config when the client is added
+      draftClient: null,
+      draftConfig: {},
+      // error message of a failed save, shown in the wizard itself
+      saveError: null,
+      // that failure was an apply failure — the settings were stored, only
+      // applying them to the running clients/agents failed
+      applyFailed: false,
+      // the client a failed apply stored: it exists in the config (and in the
+      // `clients` prop) but not in the running client set, so it is neither a
+      // taken name nor a client that still needs adding — re-sending it is the
+      // retry, and a fresh draft would only ever add a second client
+      applyFailedClient: null,
       clientTypesLoading: false,
       memoryEmbeddingsPreset: 'default',
       memoryDevice: 'cpu',
@@ -477,24 +584,19 @@ export default {
       memoryEmbeddingsUserSelected: false,
       visualAgentChoice: 'enable', // 'enable' | 'skip'
       waitingForClient: false,
-      completed: false,
-      dismissed: false,
+      // the finishing save is in flight; the wizard stays open until it is
+      // answered so a failure can be shown instead of a false success
+      finishing: false,
       systemCapabilities: null,
       systemCapabilitiesLoading: false,
     }
   },
   computed: {
-    shouldShow() {
-      if (this.dismissed) return false;
-      if (this.completed) return false;
-
-      // Show if we have no clients
-      if (this.clients.length === 0) return true;
-
-      // If we have clients but are in the middle of the wizard (step 3 specifically)
-      if (this.step === 3 || this.step === 4) return true;
-
-      return false;
+    // a config save this wizard is waiting on — Back waits for it and Add
+    // Client can't re-fire while it's out; the exits deliberately do not
+    // (see the actions block)
+    saveInFlight() {
+      return this.finishing || this.waitingForClient;
     },
     clientPresetOptions() {
       const entries = Object.entries(this.clientTypes || {});
@@ -577,6 +679,9 @@ export default {
       if (total && total >= fourGiB) return true;
       return false;
     },
+    draftClientMeta() {
+      return (this.clientTypes || {})[this.selectedClientPreset] || {};
+    },
     shouldShowVisualStep() {
       return ['google', 'openrouter'].includes(this.selectedClientPreset);
     },
@@ -587,33 +692,19 @@ export default {
     },
   },
   watch: {
-    shouldShow: {
-      immediate: true,
-      handler(newVal) {
-        this.dialog = !!newVal;
-        if (newVal) {
-          this.ensureClientTypesLoaded();
-          if (this.step === 3) {
-            this.requestSystemCapabilities();
-          }
-        }
-      },
-    },
-    step(newVal) {
-      if (newVal === 3 && this.dialog) {
-        this.requestSystemCapabilities();
+    selectedClientPreset() {
+      if (this.step === 2) {
+        // a different client type is a different field set — start over, and
+        // whatever the old form's save reported no longer belongs on screen.
+        // Clearing has to happen here rather than in prepareDraftClient: that
+        // one also runs when the type list arrives late, where it would wipe
+        // an error the restored form is still the answer to.
+        // An armed retry stays armed: prepareDraftClient refuses to restore
+        // one whose type doesn't match, and only a completed save retires it.
+        this.clearSaveError();
+        this.prepareDraftClient();
       }
     },
-    clients: {
-      handler(newVal) {
-        if (newVal.length > 0 && this.step === 2) {
-          this.step = 3;
-          this.waitingForClient = false;
-          this.requestSystemCapabilities();
-        }
-      },
-      deep: true
-    }
   },
   methods: {
     ensureClientTypesLoaded() {
@@ -637,6 +728,12 @@ export default {
         this.clientTypes = data.data || {};
         this.clientTypesLoading = false;
         this.ensureSelectedPreset();
+        if (this.step === 2) {
+          // the type list is what the draft is built from — it may have
+          // arrived only now (the preset watcher wouldn't fire if the
+          // pre-selected type is already the right one)
+          this.prepareDraftClient();
+        }
         return;
       }
 
@@ -693,7 +790,7 @@ export default {
       const options = this.clientPresetOptions;
       if (!options.length) return;
 
-      const preferred = this.clientType === 'remote' ? 'openrouter' : 'koboldcpp';
+      const preferred = this.clientType === 'remote' ? 'openrouter' : 'llamacpp';
       const values = new Set(options.map(o => o.value));
 
       if (!this.selectedClientPreset || !values.has(this.selectedClientPreset)) {
@@ -703,54 +800,149 @@ export default {
     onDialogUpdate(newVal) {
       // Dialog is persistent; only allow closing via our explicit dismiss action
       if (newVal) {
-        this.dialog = true;
+        this.wizardSessionActive = true;
       }
     },
     dismissWizard() {
-      this.dismissed = true;
-      this.dialog = false;
+      this.wizardSessionActive = false;
     },
     goBack() {
-      // Step navigation (only needed for 2 -> 1, but support 3 -> 2 as well)
+      // 4 -> 3 and 2 -> 1
       this.waitingForClient = false;
       if (this.step === 4) {
         this.step = 3;
         return;
       }
-      if (this.step === 3) {
-        this.step = 2;
-        return;
-      }
       this.step = 1;
     },
     selectClientType(type) {
+      const changed = this.clientType !== type;
       this.clientType = type;
-      // Default selection for Step 2; will be validated once client types are loaded.
-      this.selectedClientPreset = (type === 'remote') ? 'openrouter' : 'koboldcpp';
+      if (changed || !this.selectedClientPreset) {
+        this.selectedClientPreset = (type === 'remote') ? 'openrouter' : 'llamacpp';
+      }
       this.step = 2;
       this.ensureClientTypesLoaded();
-      this.ensureSelectedPreset();
+      // seeds the step's form from the selected type — with the type list
+      // still in flight this leaves no draft, and its arrival seeds it instead
+      this.prepareDraftClient();
     },
     buildClientPreset(typeValue) {
       const meta = (this.clientTypes || {})[typeValue];
       if (!meta) {
-        return { type: typeValue, name: typeValue };
+        return { type: typeValue, name: typeValue, enabled: true };
       }
-
-      const defaults = meta.defaults || {};
-
-      return {
-        type: typeValue,
-        name: meta.name_prefix || meta.title || typeValue,
-        ...defaults,
-      };
+      return buildClientFromDefaults(meta, typeValue, this.takenClientNames());
     },
-    openClientModal() {
-      this.waitingForClient = true;
+    takenClientNames() {
+      return (this.clients || [])
+        .map(client => client.name)
+        .filter(name => name !== this.applyFailedClient?.name);
+    },
+    validateClientName(value) {
+      const name = (value || '').trim();
+      if (!name) {
+        return 'Client name is required.';
+      }
+      // ahead of the retry exemption below: a name the interface cannot carry
+      // must not get in on any path
+      if (isReservedName(name)) {
+        return `"${name}" is reserved and cannot be used as a client name.`;
+      }
+      // the client of a failed apply is in the config under its own name —
+      // re-sending it overwrites that entry instead of adding a second client,
+      // so it must not read as taken
+      if (name === this.applyFailedClient?.name) {
+        return true;
+      }
+      if ((this.clients || []).some(client => client.name === name)) {
+        return 'Client name already exists.';
+      }
+      return true;
+    },
+    // Seeds the embedded editor: a fresh client from the type's defaults and
+    // a config copy for the cross-references the editor writes (the
+    // provider's unified API key).
+    prepareDraftClient() {
       this.ensureSelectedPreset();
-      const preset = this.buildClientPreset(this.selectedClientPreset);
-      preset._simpleMode = true;
-      this.$emit('open-client-modal', preset);
+      if (!this.selectedClientPreset || !this.clientTypes[this.selectedClientPreset]) {
+        this.draftClient = null;
+        return;
+      }
+      if (this.draftClient?.type === this.selectedClientPreset) return;
+      this.draftConfig = JSON.parse(JSON.stringify(this.appConfig() || {}));
+      const retry = this.applyFailedClient;
+      if (retry && retry.type === this.selectedClientPreset) {
+        // the draft is being rebuilt (a re-entry of this step, or the type
+        // list arriving late) while a retry is armed — restore what was sent,
+        // so Add Client re-sends it instead of seeding a second client
+        this.draftClient = JSON.parse(JSON.stringify(retry));
+        return;
+      }
+      this.draftClient = this.buildClientPreset(this.selectedClientPreset);
+      this.clearSaveError();
+    },
+    clearSaveError() {
+      this.saveError = null;
+      this.applyFailed = false;
+    },
+    // An apply failure already reads as a whole sentence from the backend
+    // ("saved, but applying it failed") — the settings did land, so the
+    // refusal wording would contradict it.
+    saveErrorText(subject) {
+      return this.applyFailed ? this.saveError : `The ${subject} could not be saved: ${this.saveError}`;
+    },
+    addClient() {
+      if (!this.draftClient || this.validateClientName(this.draftClient.name) !== true) {
+        return;
+      }
+      const client = JSON.parse(JSON.stringify(this.draftClient));
+      // the unified API key is application state, not client state — carry
+      // the editor's edit over from the draft config
+      const keyPath = this.draftClientMeta.unified_api_key_config_path || null;
+      const apiKey = keyPath ? getProperty(this.draftConfig, keyPath) : undefined;
+      this.clearSaveError();
+      this.waitingForClient = true;
+      const requestId = this.saveAppConfig((config) => {
+        const clients = cloneNameKeyedMap(config.clients);
+        clients[client.name] = client;
+        config.clients = clients;
+        if (keyPath) {
+          setProperty(config, keyPath, apiKey || null);
+        }
+      }, {
+        label: 'client setup',
+        // neither a refused save nor a failed apply creates the client, so
+        // the "adding" state would run forever
+        onError: (error, applyFailed) => {
+          this.waitingForClient = false;
+          this.saveError = error;
+          this.applyFailed = !!applyFailed;
+          // a failed apply DID store the client, so a fresh draft would only
+          // ever add a second one — remember what was sent, so this step
+          // re-sends it as the retry. A refusal stores nothing and un-stores
+          // nothing: whatever is armed stays armed, and only a completed save
+          // (which re-applies everything stored) retires it.
+          if (applyFailed) {
+            this.applyFailedClient = client;
+          }
+        },
+        onComplete: () => {
+          // the client is running now, and with it anything an earlier failed
+          // apply left behind (the backend re-applies those on any save)
+          this.applyFailedClient = null;
+          this.clearSaveError();
+          this.waitingForClient = false;
+          if (this.wizardSessionActive && this.step === 2) {
+            this.step = 3;
+            this.requestSystemCapabilities();
+          }
+        },
+      });
+      if (!requestId) {
+        this.waitingForClient = false;
+        this.saveError = 'Talemate is still starting up — try again in a moment.';
+      }
     },
     nextOrFinish() {
       if (this.shouldShowVisualStep) {
@@ -760,82 +952,102 @@ export default {
       }
     },
     finishWizard() {
-      this.applyMemorySettings();
-      if (this.shouldShowVisualStep && this.visualAgentChoice === 'enable') {
-        this.applyVisualSettings();
+      const withVisual = this.shouldShowVisualStep && this.visualAgentChoice === 'enable';
+      this.clearSaveError();
+      this.finishing = true;
+      // one save carries both agent mutations — two saves would race, the
+      // second building on a config copy the first hasn't landed in yet
+      const requestId = this.saveAppConfig((config) => {
+        this.applyMemorySettings(config);
+        if (withVisual) {
+          this.applyVisualSettings(config);
+        }
+      }, {
+        label: 'agent setup',
+        // closing on a refused save would claim an agent setup that never
+        // happened — same handling the client step already does. An apply
+        // failure stays open too: the settings are stored but the agents are
+        // still the old ones, and pressing the button again re-applies them.
+        onError: (error, applyFailed) => {
+          this.finishing = false;
+          this.saveError = error;
+          this.applyFailed = !!applyFailed;
+        },
+        onComplete: () => {
+          this.finishing = false;
+          this.wizardSessionActive = false;
+          this.$emit('wizard-completed');
+        },
+      });
+      if (!requestId) {
+        this.finishing = false;
+        this.saveError = 'Talemate is still starting up — try again in a moment.';
       }
-      this.completed = true;
-      this.$emit('wizard-completed');
     },
-    applyMemorySettings() {
+    // agent settings are stored as {enabled, client, actions: {<key>: {enabled,
+    // config: {<key>: {value}}}}} — reach into (and create) that entry without
+    // disturbing anything else the agent has persisted
+    agentActionEntry(config, agentName, actionKey) {
+      if (!config.agents) {
+        config.agents = {};
+      }
+      const agent = config.agents[agentName] || (config.agents[agentName] = {});
+      if (!agent.actions) {
+        agent.actions = {};
+      }
+      const action = agent.actions[actionKey] || (agent.actions[actionKey] = {});
+      if (!action.config) {
+        action.config = {};
+      }
+      return action;
+    },
+    applyMemorySettings(config) {
       const memoryAgent = this.agents.find(a => a.name === 'memory' || a.type === 'memory');
-      if (memoryAgent) {
-        this.getWebsocket().send(JSON.stringify({
-          type: 'configure_agents',
-          agents: {
-            [memoryAgent.name]: {
-              actions: {
-                _config: {
-                  config: {
-                    embeddings: { value: this.memoryEmbeddingsPreset },
-                    device: { value: this.memoryDevice },
-                  },
-                },
-              },
-            },
-          },
-        }));
-      }
+      if (!memoryAgent) return;
+
+      const action = this.agentActionEntry(config, memoryAgent.name, '_config');
+      action.config.embeddings = { value: this.memoryEmbeddingsPreset };
+      action.config.device = { value: this.memoryDevice };
     },
-    applyVisualSettings() {
+    applyVisualSettings(config) {
       const visualAgent = this.agents.find(a => a.name === 'visual' || a.type === 'visual');
       if (!visualAgent) return;
 
       const provider = this.selectedClientPreset; // 'google' or 'openrouter'
       if (!['google', 'openrouter'].includes(provider)) return;
 
-      const configUpdate = {
-        _config: {
-          config: {
-            backend: { value: provider },
-            backend_image_edit: { value: provider },
-            backend_image_analyzation: { value: provider },
-            automatic_generation: { value: true },
-          }
-        },
-        [`${provider}_image_create`]: { enabled: true },
-        [`${provider}_image_edit`]: { enabled: true },
-        [`${provider}_image_analyzation`]: { enabled: true },
-      };
+      const general = this.agentActionEntry(config, visualAgent.name, '_config');
+      general.config.backend = { value: provider };
+      general.config.backend_image_edit = { value: provider };
+      general.config.backend_image_analyzation = { value: provider };
+      general.config.automatic_generation = { value: true };
 
-      if (provider === 'google') {
-        configUpdate['google_image_analyzation'] = {
-          config: { model: { value: 'gemini-3-flash-preview' } },
-          enabled: true,
-        };
-        configUpdate['google_image_create'] = {
-          config: { model: { value: 'gemini-3-pro-image-preview' } },
-          enabled: true,
-        };
-        configUpdate['google_image_edit'] = {
-          config: { model: { value: 'gemini-3-pro-image-preview' } },
-          enabled: true,
-        };
+      const models = provider === 'google' ? {
+        google_image_analyzation: 'gemini-3-flash-preview',
+        google_image_create: 'gemini-3-pro-image-preview',
+        google_image_edit: 'gemini-3-pro-image-preview',
+      } : {};
+
+      for (const operation of ['image_create', 'image_edit', 'image_analyzation']) {
+        const key = `${provider}_${operation}`;
+        const action = this.agentActionEntry(config, visualAgent.name, key);
+        action.enabled = true;
+        if (models[key]) {
+          action.config.model = { value: models[key] };
+        }
       }
-
-      this.getWebsocket().send(JSON.stringify({
-        type: 'configure_agents',
-        agents: {
-          [visualAgent.name]: {
-            actions: configUpdate
-          },
-        },
-      }));
     }
   }
   ,
   created() {
     this.registerMessageHandler(this.handleMessage);
+  },
+  mounted() {
+    // per the parent's v-if, mount means this connection's config is in hand
+    if (this.clients.length === 0) {
+      this.wizardSessionActive = true;
+      this.ensureClientTypesLoaded();
+    }
   },
   beforeUnmount() {
     if (this.unregisterMessageHandler) {
@@ -893,4 +1105,3 @@ export default {
   background-color: rgba(var(--v-theme-primary), 0.05);
 }
 </style>
-

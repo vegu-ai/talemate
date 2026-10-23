@@ -1,18 +1,63 @@
-from typing import TYPE_CHECKING
+import hashlib
+import json
+from typing import TYPE_CHECKING, Callable
+
 import structlog
+
+import talemate.instance as instance
 from talemate.agents.base import (
     AgentAction,
+    AgentActionConditional,
     AgentActionConfig,
     AgentActionNote,
-    AgentActionConditional,
 )
-import talemate.instance as instance
-from talemate.util.dedupe import compile_text_to_sentences, compile_sentences_to_length
+from talemate.knowledge.bucket import KnowledgeIndex, knowledge_digest
+from talemate.decisions.characters import (
+    character_named,
+    referenced_characters,
+)
+from talemate.decisions.gate import decision_gate_enabled
+from talemate.knowledge.context import ContextHistoryMessage, project_character_history
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.perspective_models import content_digest
+from talemate.knowledge.revision_browsing import RevisionCheck
+from talemate.util.dedupe import compile_sentences_to_length, compile_text_to_sentences
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Character
+    from talemate.tale_mate import Character, Scene
 
-__all__ = ["MemoryRAGMixin"]
+__all__ = ["MemoryRAGMixin", "context_history_message_ids"]
+
+
+def context_history_message_ids(context_history: list) -> set[str]:
+    """The ids of the scene messages a rendered history shows."""
+    return {
+        str(part.message_id)
+        for part in context_history
+        if isinstance(part, ContextHistoryMessage)
+    }
+
+
+def knowledge_retrieval_filter(scene: "Scene", viewer: str | None):
+    """
+    The filter memory retrieval applies: in a Standard scene with a viewer,
+    what the viewer does not know; otherwise stale documents only, or None.
+    """
+    check = RevisionCheck(scene)
+    if viewer is not None and not character_knowledge_enabled(scene):
+        # the retrieval filter rejects stale documents itself
+        return KnowledgeIndex.from_scene(scene, check).retrieval_filter(
+            scene, viewer, check
+        )
+    if not check.revisions.stale:
+        return None
+    return check
+
+
+def _paragraph_order(doc_id: str) -> tuple[int, int]:
+    tail = doc_id.rsplit(".", 1)[-1]
+    return (1, int(tail)) if tail.isdigit() else (0, 0)
+
 
 log = structlog.get_logger()
 
@@ -76,7 +121,7 @@ class MemoryRAGMixin:
                     type="number",
                     label="Number of Queries",
                     description="The number of queries to use when retrieving context from the long term memory.",
-                    value=3,
+                    value=5,
                     min=1,
                     max=10,
                     step=1,
@@ -97,7 +142,7 @@ class MemoryRAGMixin:
                 "cache": AgentActionConfig(
                     type="bool",
                     label="Cache RAG results",
-                    description="Cache the long term memory for faster retrieval.",
+                    description="Reuse published long term memory retrieval results when regenerating the same story tail. AI-assisted retrieval publishes a result; character-scoped direct retrieval can publish one too.",
                     note="This is a cross-agent cache, assuming they use the same options.",
                     value=True,
                 ),
@@ -140,39 +185,376 @@ class MemoryRAGMixin:
             self.long_term_memory_retrieval_method,
             self.long_term_memory_number_of_queries,
             self.long_term_memory_answer_length,
+            self.long_term_memory_num_messages,
         ]
 
         return "-".join(map(str, parts))
+
+    def long_term_memory_cache_key_for(self, character: "Character | None") -> str:
+        memory = instance.get_agent("memory")
+        viewer = self.rag_knowledge_viewer(character)
+        settings = (
+            memory.retrieval_recency_weight,
+            memory.retrieval_mmr_threshold,
+            memory.retrieval_entity_lookup,
+            decision_gate_enabled(memory.retrieval_entity_decision_model),
+            memory.retrieval_rerank,
+            memory.max_distance,
+            getattr(self.client, "max_token_length", None),
+        )
+        scope = (
+            "author"
+            if character is None
+            else "shared"
+            if viewer is None
+            else "perception"
+            if character_knowledge_enabled(self.scene)
+            else "standard"
+        )
+        character_name = character.name if character is not None else None
+        if character_knowledge_enabled(self.scene):
+            settings += (
+                tuple(self.scene.active_characters),
+                tuple(
+                    (name, tuple(aliases))
+                    for name, aliases in self.scene.world_state.character_name_mappings.items()
+                ),
+                self.scene.conversation_format,
+                instance.get_agent("director").actor_direction_mode,
+            )
+        settings_digest = hashlib.sha256(
+            json.dumps(
+                (
+                    self.long_term_memory_cache_key,
+                    viewer,
+                    settings,
+                ),
+                default=str,
+            ).encode()
+        ).hexdigest()
+        if scope == "perception":
+            return settings_digest
+        return "-".join(
+            (
+                self.long_term_memory_cache_key,
+                settings_digest,
+                *((character_name,) if character_name is not None else ()),
+                scope,
+            )
+        )
+
+    def rag_history_boundary(self) -> tuple[tuple[int, str], ...]:
+        """Identify the exact history prefix used before a reply is generated."""
+        return tuple(
+            (
+                message.id,
+                hashlib.sha256(
+                    json.dumps(
+                        (
+                            content_digest(message.perception_text),
+                            message.knowledge.revision if message.knowledge else None,
+                            bool(message.hidden),
+                        )
+                    ).encode()
+                ).hexdigest(),
+            )
+            for message in self.scene.history
+        )
+
+    def _memoized_rag_digest(self, key: tuple, build: Callable[[], str]) -> str:
+        cache = getattr(self.scene, "_rag_source_digest_cache", None)
+        if cache is None:
+            cache = self.scene._rag_source_digest_cache = {}
+        if key not in cache:
+            if len(cache) >= 32:
+                cache.clear()
+            cache[key] = build()
+        return cache[key]
+
+    def _canonical_memory_digest(self, boundary_ids: set[int]) -> str:
+        """Hash author-visible memory records."""
+        memory = instance.get_agent("memory")
+        db = getattr(memory, "db", None)
+        if db is None:
+            return "no-memory-collection"
+
+        def build():
+            stored = db.get(
+                include=["documents", "metadatas"],
+                where={"knowledge_index": {"$ne": True}},
+            )
+            records = []
+            for identity, document, meta in zip(
+                stored.get("ids", ()),
+                stored.get("documents", ()),
+                stored.get("metadatas", ()),
+            ):
+                meta = meta or {}
+                records.append((identity, document, meta))
+            return hashlib.sha256(
+                json.dumps(
+                    sorted(records, key=lambda item: item[0]), sort_keys=True
+                ).encode()
+            ).hexdigest()
+
+        return self._memoized_rag_digest(
+            (
+                "canonical",
+                getattr(memory, "_db_generation", 0),
+                id(db),
+                self.scene.memory_revision,
+                tuple(sorted(boundary_ids)),
+            ),
+            build,
+        )
+
+    def _audience_memory_digest(
+        self, character: "Character", boundary_ids: set[int], state
+    ) -> str:
+        """Hash the viewer's indexed sources."""
+
+        def build():
+            eligible = []
+            for identity, document in state.documents.items():
+                meta = document["meta"]
+                if not (
+                    meta["knowledge_common"]
+                    or character.name in meta.get("knowledge_audience", ())
+                ):
+                    continue
+                eligible.append(identity)
+            return hashlib.sha256(json.dumps(sorted(eligible)).encode()).hexdigest()
+
+        return self._memoized_rag_digest(
+            (
+                "audience",
+                state.collection_revision,
+                state.documents_revision,
+                character.name,
+                tuple(sorted(boundary_ids)),
+            ),
+            build,
+        )
+
+    def rag_cache_dependencies(
+        self,
+        character: "Character | None",
+        boundary: tuple[tuple[int, str], ...],
+    ) -> dict:
+        boundary_ids = {identity for identity, _ in boundary}
+        memory = instance.get_agent("memory")
+        viewer = self.rag_knowledge_viewer(character)
+        dependencies = {
+            "memory_collection_generation": getattr(memory, "_db_generation", 0),
+            "memory_collection": id(memory.db),
+        }
+        if viewer is not None:
+            dependencies["knowledge"] = knowledge_digest(
+                self.scene,
+                viewer=viewer,
+                boundary_ids=boundary_ids,
+            )
+        else:
+            dependencies["intro"] = content_digest(self.scene.intro or "")
+        if viewer is not None and character_knowledge_enabled(self.scene):
+            state = memory._audience_state(self.scene)
+            dependencies.update(
+                audience_collection_revision=state.collection_revision,
+                audience_sources=self._audience_memory_digest(
+                    character, boundary_ids, state
+                ),
+            )
+        else:
+            dependencies["memory_sources"] = self._canonical_memory_digest(boundary_ids)
+        return dependencies
 
     def connect(self, scene):
         super().connect(scene)
 
         # new scene, reset cache
         scene.rag_cache = {}
+        scene._rag_source_digest_cache = {}
 
     # methods
 
-    async def rag_set_cache(self, content: list[str]):
-        self.scene.rag_cache[self.long_term_memory_cache_key] = {
+    async def _rag_publish(
+        self,
+        content,
+        character,
+        *,
+        key,
+        scene,
+        memory_revision,
+        dependencies,
+        boundary,
+        use_cache,
+    ):
+        if (
+            use_cache
+            and self.scene is scene
+            and memory_revision == scene.memory_revision
+            and not scene.memory_writes_in_flight
+            and key == self.long_term_memory_cache_key_for(character)
+            and boundary == self.rag_history_boundary()
+            and dependencies == self.rag_cache_dependencies(character, boundary)
+        ):
+            await self.rag_set_cache(
+                content,
+                character,
+                key=key,
+                memory_revision=memory_revision,
+                dependencies=dependencies,
+                boundary=boundary,
+            )
+
+    async def rag_set_cache(
+        self,
+        content: list[str],
+        character: "Character | None" = None,
+        *,
+        key=None,
+        memory_revision: int | None = None,
+        dependencies: dict | None = None,
+        boundary: tuple[tuple[int, str], ...] | None = None,
+    ):
+        boundary = boundary if boundary is not None else self.rag_history_boundary()
+        if memory_revision is None:
+            memory_revision = self.scene.memory_revision
+        if memory_revision != self.scene.memory_revision:
+            return
+        if self.scene.memory_writes_in_flight:
+            return
+        if boundary != self.rag_history_boundary():
+            return
+        dependencies = dependencies or self.rag_cache_dependencies(character, boundary)
+        if dependencies != self.rag_cache_dependencies(character, boundary):
+            return
+        self.scene.rag_cache[key or self.long_term_memory_cache_key_for(character)] = {
             "content": content,
-            "fingerprint": self.scene.history[-1].fingerprint
-            if self.scene.history
-            else 0,
+            "dependencies": dependencies,
+            "character_name": character.name if character is not None else None,
+            "processed": {},
+            "history_boundary": boundary,
         }
 
-    async def rag_get_cache(self) -> list[str] | None:
+    def rag_cache_entry(self, character: "Character | None" = None) -> dict | None:
+        rag_cache = getattr(self.scene, "rag_cache", None)
+        if not rag_cache:
+            return None
+        entry = rag_cache.get(self.long_term_memory_cache_key_for(character))
+        boundary = self.rag_history_boundary()
+        if not entry or entry.get("history_boundary") != boundary:
+            return None
+        memory_revision = self.scene.memory_revision
+        if self.scene.memory_writes_in_flight:
+            return None
+        dependencies = self.rag_cache_dependencies(character, boundary)
+        if (
+            self.scene.memory_writes_in_flight
+            or self.scene.memory_revision != memory_revision
+        ):
+            return None
+        if entry.get("dependencies") == dependencies:
+            return entry
+        return None
+
+    async def rag_get_cache(
+        self, character: "Character | None" = None
+    ) -> list[str] | None:
         if not self.long_term_memory_cache:
             return None
 
-        fingerprint = self.scene.history[-1].fingerprint if self.scene.history else 0
-        cache = self.scene.rag_cache.get(self.long_term_memory_cache_key)
+        viewer = self.rag_knowledge_viewer(character)
+        if viewer is not None and character_knowledge_enabled(self.scene):
+            await instance.get_agent("memory").ensure_audience_index(self.scene)
 
-        if cache and cache["fingerprint"] == fingerprint:
+        cache = self.rag_cache_entry(character)
+        if cache is not None:
             return cache["content"]
 
         return None
 
+    @staticmethod
+    async def rag_exclude_context_history(
+        context: list[str], context_history: list[str]
+    ) -> list[str]:
+        message_ids = context_history_message_ids(context_history)
+        filtered = []
+        for item in context:
+            meta = getattr(item, "meta", {})
+            if (
+                meta.get("knowledge_kind") == "message"
+                and str(meta.get("knowledge_id")) in message_ids
+            ):
+                continue
+            filtered.append(item)
+        return filtered
+
     async def rag_build(
+        self,
+        character: "Character | None" = None,
+        sub_instruction: str = "",
+        retrieval_method: str | None = None,
+        include_raw_semantic: bool = True,
+    ) -> list[str]:
+        """Derive history internally; sub_instruction is an authored/director goal."""
+        if not self.long_term_memory_enabled:
+            return []
+
+        async def retrieve(_collection=None):
+            context = await self._rag_build(
+                character=character,
+                sub_instruction=sub_instruction,
+                retrieval_method=retrieval_method,
+                include_raw_semantic=include_raw_semantic,
+            )
+            return await self.rag_process_context(character, context)
+
+        viewer = self.rag_knowledge_viewer(character)
+        if viewer is not None and character_knowledge_enabled(self.scene):
+            return await instance.get_agent("memory").audience_operation(
+                viewer, retrieve
+            )
+        return await retrieve()
+
+    async def rag_process_context(self, character, context):
+        return context
+
+    def rag_projected_history(
+        self, viewer, *, budget=None, max_messages=None, keep_director=False
+    ):
+        """Use K04's projection options and hard token budget for retrieval."""
+        return project_character_history(
+            self.scene,
+            viewer,
+            budget=budget,
+            max_messages=max_messages,
+            keep_director=keep_director,
+            direction_mode=instance.get_agent("director").actor_direction_mode,
+        )
+
+    async def rag_build_for_author(
+        self,
+        prompt: str = "",
+        sub_instruction: str = "",
+        retrieval_method: str | None = None,
+        include_raw_semantic: bool = True,
+        character: "Character | None" = None,
+    ) -> list[str]:
+        if character is not None and character_knowledge_enabled(self.scene):
+            raise ValueError(
+                "Perception characters must use rag_build without a raw prompt"
+            )
+        context = await self._rag_build(
+            character=character,
+            prompt=prompt,
+            sub_instruction=sub_instruction,
+            retrieval_method=retrieval_method,
+            include_raw_semantic=include_raw_semantic,
+        )
+        return await self.rag_process_context(character, context)
+
+    async def _rag_build(
         self,
         character: "Character | None" = None,
         prompt: str = "",
@@ -196,24 +578,47 @@ class MemoryRAGMixin:
         if not self.long_term_memory_enabled:
             return []
 
-        # When retrieval_method is overridden, skip cache to avoid
-        # poisoning the shared cache with non-standard results
-        use_cache = retrieval_method is None
+        viewer = self.rag_knowledge_viewer(character)
+        scoped = viewer is not None and character_knowledge_enabled(self.scene)
+        # Cache only the configured, goal-free retrieval operation.
+        use_cache = (
+            self.long_term_memory_cache
+            and retrieval_method is None
+            and not prompt
+            and not sub_instruction
+            and include_raw_semantic
+            # Legacy direct retrieval queries the store each time and needs no AI cache.
+            and (scoped or self.long_term_memory_retrieval_method != "direct")
+        )
+        cache_key = self.long_term_memory_cache_key_for(character)
+        cache_scene = self.scene
 
         if use_cache:
-            cached = await self.rag_get_cache()
+            cached = await self.rag_get_cache(character)
 
-            if cached:
+            if cached is not None:
                 log.debug(
                     "Using cached long term memory",
                     agent=self.agent_type,
-                    key=self.long_term_memory_cache_key,
+                    key=self.long_term_memory_cache_key_for(character),
                 )
                 return cached
 
+        if use_cache:
+            memory_revision = cache_scene.memory_revision
+            cache_boundary = self.rag_history_boundary()
+            cache_dependencies = self.rag_cache_dependencies(character, cache_boundary)
+        else:
+            memory_revision = None
+            cache_boundary = ()
+            cache_dependencies = {}
+
         memory_context = ""
+        memory_filter = self.rag_knowledge_filter(character)
         semantic_context = await self.semantic_context(
-            num_messages=self.long_term_memory_num_messages
+            num_messages=self.long_term_memory_num_messages,
+            filter=memory_filter,
+            **({"viewer": viewer} if scoped else {}),
         )
 
         if retrieval_method is None:
@@ -221,6 +626,16 @@ class MemoryRAGMixin:
 
         if retrieval_method == "direct":
             # configuration is set to only use direct semantic matched context
+            await self._rag_publish(
+                semantic_context,
+                character,
+                key=cache_key,
+                scene=cache_scene,
+                memory_revision=memory_revision,
+                dependencies=cache_dependencies,
+                boundary=cache_boundary,
+                use_cache=use_cache,
+            )
             return semantic_context
 
         if not sub_instruction:
@@ -235,12 +650,24 @@ class MemoryRAGMixin:
         world_state = instance.get_agent("world_state")
 
         if not prompt:
-            prompt = self.scene.context_history(
-                keep_director=False,
-                budget=int(self.client.max_token_length * 0.75),
+            prompt = (
+                self.rag_projected_history(
+                    viewer, budget=int(self.client.max_token_length * 0.75)
+                )
+                if scoped
+                else self.scene.context_history(
+                    keep_director=False,
+                    budget=int(self.client.max_token_length * 0.75),
+                    perspective=viewer,
+                )
             )
 
+        extra_context = semantic_context
         if isinstance(prompt, list):
+            if scoped:
+                extra_context = await self.rag_exclude_context_history(
+                    semantic_context, prompt
+                )
             prompt = "\n".join(prompt)
 
         log.debug(
@@ -257,7 +684,9 @@ class MemoryRAGMixin:
                     include_character_context=True,
                     response_length=self.long_term_memory_answer_length,
                     num_queries=self.long_term_memory_number_of_queries,
-                    extra_context=semantic_context,
+                    extra_context=extra_context,
+                    filter=memory_filter,
+                    viewer=viewer,
                 )
             ).split("\n")
         elif retrieval_method == "queries":
@@ -268,25 +697,50 @@ class MemoryRAGMixin:
                     include_character_context=True,
                     response_length=self.long_term_memory_answer_length,
                     num_queries=self.long_term_memory_number_of_queries,
-                    extra_context=semantic_context,
+                    extra_context=extra_context,
+                    filter=memory_filter,
+                    viewer=viewer,
                 )
             )
 
+        # keep the order (the entity lookup leads the semantic results)
         if include_raw_semantic:
-            complete_context = list(set(semantic_context + memory_context))
+            complete_context = list(dict.fromkeys(semantic_context + memory_context))
         else:
-            complete_context = list(set(memory_context))
+            complete_context = list(dict.fromkeys(memory_context))
 
-        if use_cache:
-            await self.rag_set_cache(complete_context)
+        await self._rag_publish(
+            complete_context,
+            character,
+            key=cache_key,
+            scene=cache_scene,
+            memory_revision=memory_revision,
+            dependencies=cache_dependencies,
+            boundary=cache_boundary,
+            use_cache=use_cache,
+        )
 
         return complete_context
+
+    def rag_knowledge_viewer(self, character: "Character | None") -> str | None:
+        """
+        The character whose knowledge filters this agent's prompt, or None
+        for the shared record. Agents with a switch override this.
+        """
+        return character.name if character is not None else None
+
+    def rag_knowledge_filter(self, character: "Character | None"):
+        return knowledge_retrieval_filter(
+            self.scene, self.rag_knowledge_viewer(character)
+        )
 
     async def semantic_context(
         self,
         num_messages: int = 3,
         min_query_length: int = 100,
         max_response_tokens: int = 1024,
+        filter: Callable | None = None,
+        viewer: str | None = None,
     ):
         """Will retrieve context from the long term memory based on semantic similarity
 
@@ -299,14 +753,26 @@ class MemoryRAGMixin:
             list[str]: The context retrieved from the long term memory
         """
 
-        history = list(
-            map(
-                str,
-                self.scene.collect_messages(
-                    max_iterations=100,
-                    max_messages=num_messages,
-                    typ=["character", "narrator", "director"],
-                ),
+        history = (
+            list(
+                reversed(
+                    self.rag_projected_history(
+                        viewer,
+                        max_messages=num_messages,
+                        keep_director=viewer,
+                    )
+                )
+            )
+            if viewer is not None
+            else list(
+                map(
+                    str,
+                    self.scene.collect_messages(
+                        max_iterations=100,
+                        max_messages=num_messages,
+                        typ=["character", "narrator", "director"],
+                    ),
+                )
             )
         )
         log.debug(
@@ -335,8 +801,69 @@ class MemoryRAGMixin:
         for query in queries:
             log.debug("memory_rag_mixin.build_prompt_default_memory", query=query)
 
-        context = await memory.multi_query(
-            queries, max_tokens=max_response_tokens, iterate=5
+        entity_context = await self.entity_lookup(
+            history, filter=filter, **({"viewer": viewer} if viewer is not None else {})
         )
 
-        return context
+        context = await memory.multi_query(
+            queries,
+            max_tokens=max_response_tokens,
+            iterate=5,
+            filter=filter,
+            over_fetch=3 if filter is not None else 1,
+            **({"viewer": viewer} if viewer is not None else {}),
+        )
+
+        if not entity_context:
+            return context
+        return entity_context + [item for item in context if item not in entity_context]
+
+    async def entity_lookup(
+        self, history: list[str], filter: Callable | None = None, *, viewer=None
+    ) -> list:
+        """
+        Descriptions of characters the recent lines refer to who are not in the
+        scene, fetched by metadata (no similarity search).
+        """
+        memory = instance.get_agent("memory")
+        if not memory.retrieval_entity_lookup:
+            return []
+
+        text = "\n".join(history)
+        if not text.strip():
+            return []
+
+        scene = self.scene
+        named = await referenced_characters(
+            scene,
+            text,
+            list(scene.inactive_characters),
+            uid="memory.decision-entity-references",
+            enabled=memory.retrieval_entity_decision_model,
+            match=lambda name: character_named(scene, name, text),
+            is_current=lambda: self.scene is scene,
+        )
+        if not named:
+            return []
+
+        found = []
+        for name in named:
+            documents = await memory.get_documents_by_meta(
+                {"character": name, "typ": "base_attribute", "attr": "description"},
+                **({"viewer": viewer} if viewer is not None else {}),
+            )
+            # `<name>.description`, then the paragraphs `.description.<n>` in
+            # number order (text order would put .10 before .2)
+            for doc_id in sorted(
+                documents,
+                key=lambda identity: _paragraph_order(
+                    documents[identity].meta.get("knowledge_id", identity)
+                ),
+            ):
+                doc = documents[doc_id]
+                if filter is not None and not filter(doc):
+                    continue
+                found.append(doc)
+
+        log.debug("entity lookup", named=named, documents=len(found))
+        return found

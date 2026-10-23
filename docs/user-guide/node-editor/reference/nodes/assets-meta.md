@@ -27,6 +27,7 @@ This controls how assets are automatically attached to messages when created.
 Note:
 - When message_ids is empty, assets will be attached to the most recent appropriate message
 - When message_ids is provided, assets will only be attached to those specific messages
+- A scene background generated with allow_auto_attach becomes the scene backdrop instead of a message asset (only while auto-attach is on in the appearance settings)
 - Use allow_override=true to replace existing message assets, false to skip messages that already have assets
 - Use delete_old=true to delete the old asset when replacing (requires allow_override=true)
 
@@ -48,6 +49,7 @@ Note:
 | `current_avatar` | `bool` | (optional) whether to set the current avatar image |
 | `override_default_avatar` | `bool` | (optional) whether to override the default avatar image (requires default_avatar=true) |
 | `override_current_avatar` | `bool` | (optional) whether to override the current avatar image (requires current_avatar=true) |
+| `scene_backdrop` | `bool` | (optional) whether the saved image becomes the scene backdrop; while it is generated, a pending backdrop message waits for it in the history (right after the last of message_ids, or at the end) |
 
 **Outputs**
 
@@ -68,6 +70,7 @@ Note:
 | `current_avatar` | `bool` | current avatar flag (passed through) |
 | `override_default_avatar` | `bool` | default avatar override flag (passed through) |
 | `override_current_avatar` | `bool` | current avatar override flag (passed through) |
+| `scene_backdrop` | `bool` | scene backdrop flag (passed through) |
 
 **Properties**
 
@@ -87,6 +90,7 @@ Note:
 | `current_avatar` | `bool` | `False` | Whether to set the current avatar image |
 | `override_default_avatar` | `bool` | `False` | Whether to override the default avatar image (requires default_avatar=true) |
 | `override_current_avatar` | `bool` | `False` | Whether to override the current avatar image (requires current_avatar=true) |
+| `scene_backdrop` | `bool` | `False` | Whether the saved image becomes the scene backdrop |
 
 ## Make Asset Meta
 

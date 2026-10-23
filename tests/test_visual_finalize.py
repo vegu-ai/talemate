@@ -1,3 +1,6 @@
+import asyncio
+import pathlib
+
 import pytest
 import yaml
 
@@ -20,6 +23,7 @@ from talemate.agents.visual.schema import (
     PromptFinalizer,
 )
 from talemate.character import Character
+from talemate.world_state.templates.base import TEMPLATE_PATH_TALEMATE, Group
 
 
 def test_cleanup_prompt():
@@ -331,6 +335,8 @@ class TestFinalizePromptRequest:
         monkeypatch.setattr(finalize.Prompt, "request", fake_request)
 
         class FakeClient:
+            name = "finalizer-test"
+            current_status = "idle"
             max_token_length = 8192
 
         agent.client = FakeClient()
@@ -347,6 +353,105 @@ class TestFinalizePromptRequest:
         request = GenerationRequest(prompt="a woman")
         await agent.finalize_prompt_request(request)
         assert request.prompt == "a woman"
+
+    async def test_ai_finalizer_pair_runs_concurrently(self, agent, monkeypatch):
+        set_finalizers(agent, [{"mode": "AI", "replace": "Rewrite.", "target": "BOTH"}])
+
+        in_flight = 0
+        max_in_flight = 0
+
+        async def fake_request(uid, client, kind, vars=None, **kwargs):
+            nonlocal in_flight, max_in_flight
+            in_flight += 1
+            max_in_flight = max(max_in_flight, in_flight)
+            await asyncio.sleep(0.01)
+            in_flight -= 1
+            text = vars["prompt_text"]
+            return (f"<FINALIZED_PROMPT>{text} [done]</FINALIZED_PROMPT>", {})
+
+        monkeypatch.setattr(finalize.Prompt, "request", fake_request)
+
+        class FakeClient:
+            name = "finalizer-test"
+            current_status = "idle"
+            max_token_length = 8192
+            supports_concurrent_inference = True
+
+        agent.client = FakeClient()
+
+        request = GenerationRequest(prompt="pos", negative_prompt="neg")
+        await agent.finalize_prompt_request(request)
+
+        assert request.prompt == "pos [done]"
+        assert request.negative_prompt == "neg [done]"
+        assert max_in_flight == 2
+
+    async def test_ai_finalizer_pair_sequential_without_support(
+        self, agent, monkeypatch
+    ):
+        set_finalizers(agent, [{"mode": "AI", "replace": "Rewrite.", "target": "BOTH"}])
+
+        in_flight = 0
+        max_in_flight = 0
+
+        async def fake_request(uid, client, kind, vars=None, **kwargs):
+            nonlocal in_flight, max_in_flight
+            in_flight += 1
+            max_in_flight = max(max_in_flight, in_flight)
+            await asyncio.sleep(0.01)
+            in_flight -= 1
+            text = vars["prompt_text"]
+            return (f"<FINALIZED_PROMPT>{text} [done]</FINALIZED_PROMPT>", {})
+
+        monkeypatch.setattr(finalize.Prompt, "request", fake_request)
+
+        class FakeClient:
+            name = "finalizer-test"
+            current_status = "idle"
+            max_token_length = 8192
+            supports_concurrent_inference = False
+
+        agent.client = FakeClient()
+
+        request = GenerationRequest(prompt="pos", negative_prompt="neg")
+        await agent.finalize_prompt_request(request)
+
+        assert request.prompt == "pos [done]"
+        assert request.negative_prompt == "neg [done]"
+        assert max_in_flight == 1
+
+    async def test_ai_finalizer_pair_failure_propagates_after_sibling_settles(
+        self, agent, monkeypatch
+    ):
+        set_finalizers(agent, [{"mode": "AI", "replace": "Rewrite.", "target": "BOTH"}])
+
+        completed = []
+
+        async def fake_request(uid, client, kind, vars=None, **kwargs):
+            text = vars["prompt_text"]
+            if text == "pos":
+                await asyncio.sleep(0.01)
+                raise RuntimeError("boom")
+            await asyncio.sleep(0.05)
+            completed.append(text)
+            return (f"<FINALIZED_PROMPT>{text}</FINALIZED_PROMPT>", {})
+
+        monkeypatch.setattr(finalize.Prompt, "request", fake_request)
+
+        class FakeClient:
+            name = "finalizer-test"
+            current_status = "idle"
+            max_token_length = 8192
+            supports_concurrent_inference = True
+
+        agent.client = FakeClient()
+
+        request = GenerationRequest(prompt="pos", negative_prompt="neg")
+        with pytest.raises(RuntimeError, match="boom"):
+            await agent.finalize_prompt_request(request)
+
+        # the failing call raised only after the sibling settled - no orphan
+        assert completed == ["neg"]
 
 
 @pytest.fixture
@@ -457,3 +562,58 @@ class TestPromptFinalizeSignals:
             "a woman", None, VIS_TYPE.UNSPECIFIED
         )
         assert positive == "a woman, masterpiece"
+
+
+class TestShippedQwenImageReferences:
+    """
+    The Qwen 2.1 Image preset rewrites the `IMAGE <n>` reference labels that
+    `visual/refine-prompt.jinja2` writes into the tag form the model expects.
+    """
+
+    @pytest.fixture
+    def finalizers(self):
+        group = Group.load(
+            str(pathlib.Path(TEMPLATE_PATH_TALEMATE) / "visual-finalizers.yaml")
+        )
+        return group.templates["qwen_image_references"].finalizers
+
+    def apply(self, finalizers, text):
+        for finalizer in finalizers:
+            text = apply_regex(
+                text, finalizer.match, finalizer.replace, finalizer.flags
+            )
+        return text
+
+    def test_the_preset_holds_one_enabled_regex_action(self, finalizers):
+        assert len(finalizers) == 1
+        finalizer = finalizers[0]
+        assert finalizer.enabled
+        assert finalizer.mode == FINALIZER_MODE.REGEX
+        assert finalizer.target == FINALIZER_TARGET.POSITIVE
+        assert finalizer.vis_types == []
+        assert finalizer.case_sensitive
+
+    def test_every_label_becomes_a_tag(self, finalizers):
+        assert (
+            self.apply(finalizers, "Marcus (IMAGE 1) and Elena (IMAGE 2) in a garden")
+            == "Marcus (<image1>) and Elena (<image2>) in a garden"
+        )
+
+    def test_a_label_without_a_space_is_rewritten(self, finalizers):
+        assert self.apply(finalizers, "the coat in IMAGE3") == "the coat in <image3>"
+
+    def test_lower_case_prose_is_left_alone(self, finalizers):
+        text = "a mirror image 2 metres from the window"
+        assert self.apply(finalizers, text) == text
+
+    async def test_the_agent_applies_the_preset_to_the_positive_prompt_only(
+        self, agent, finalizers
+    ):
+        set_finalizers(agent, finalizers)
+
+        positive, negative = await agent.finalize_prompts(
+            "Elena (IMAGE 1) in a tavern", "IMAGE 2", VIS_TYPE.UNSPECIFIED
+        )
+
+        assert positive == "Elena (<image1>) in a tavern"
+        assert negative == "IMAGE 2"

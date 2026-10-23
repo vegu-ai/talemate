@@ -1,0 +1,13 @@
+[
+  {
+    "type": "dialogue",
+    "entries": [
+      "You find yourself in a quiet forest clearing.",
+      "Rain drums on the lighthouse roof as the lamp turns overhead.",
+      "*shakes the water from his coat* \"Anyone up here?\"",
+      "\"Only the keeper.\" *She sets the logbook aside.* \"And now you.\"",
+      "10 minutes later",
+      "\"The ferry left without me.\" *He glances at the stairs.*"
+    ]
+  }
+]

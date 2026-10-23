@@ -18,7 +18,7 @@ if [ ! -f config.yaml ]; then
     cp config.example.yaml config.yaml
 fi
 
-# provision a portable Node.js runtime (pnpm 11 needs Node >= 22.13)
+# provision a portable Node.js runtime compatible with the pinned pnpm release
 echo "Setting up the Node.js runtime..."
 source install-utils/node-env.sh
 if ! install_embedded_node; then

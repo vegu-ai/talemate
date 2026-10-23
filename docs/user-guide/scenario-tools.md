@@ -29,6 +29,7 @@ Above the scene tools sits a row of small toggle chips. Click a chip to toggle i
 - **:material-content-save: Auto Save** — Automatically save after each game loop. Requires the scene to have been saved manually once; until then the chip shows a warning explaining why it is unavailable.
 - **:material-robot: Auto Progress** — The AI automatically progresses the scene after your turn.
 - **:material-image-area: Immersive** — Render the [scene backdrop](/talemate/user-guide/inline-visuals/#scene-backdrop) behind the scene text. This chip only appears when the scene has a backdrop image set (or a generated background is available to become one); toggling it off remembers the chosen image, so you can switch back at any time.
+- **:material-play-box-outline: Replay** — Replay the scene from the beginning, one message at a time. See [Replay](replay.md). The chip is there only when the scene holds more than 15 character and narrator messages, and it is unavailable while an agent is busy.
 - **:material-cog: Settings** — Not a toggle: opens a shortcut menu to commonly used [application settings](/talemate/user-guide/app-settings/) (Game, Appearance) and the settings of individual agents (Conversation, Narrator, Creator, Director, Visualizer, Text to Speech).
 
 ## Tool Bar
@@ -101,7 +102,7 @@ Automatically picks a character to generate dialogue and actions based on the cu
 
 Opens a context menu with director-driven actions for the scene.
 
-![Director Actions](../img/0.37.0/director-scene-tools-menu.png)
+![Director Actions](../img/0.40.0/director-scene-tools-menu.png)
 
 #### :material-tournament: Generate dynamic actions
 
@@ -118,6 +119,13 @@ Greyed out when Scene Direction is disabled in the [director agent settings](/ta
 
 !!! note "Keyboard modifiers"
     Hold `ctrl` (Cmd on macOS) while clicking to provide one-off instructions for the director to follow on this turn only.
+
+#### :material-flag-variant: Evaluate scene intent
+
+Asks the director to evaluate the current [scene intent](/talemate/user-guide/world-editor/scene/direction) and update it if the scene has moved on. The director may also decide the current intent still fits — the status message "Director left the scene intent unchanged" reports that outcome.
+
+!!! note "Keyboard modifiers"
+    Hold `ctrl` (Cmd on macOS) while clicking to provide an optional direction that guides the determination.
 
 #### :material-movie-open: Generate long progress
 
@@ -204,7 +212,7 @@ By default the [:material-script-text: Narrator Agent](/talemate/user-guide/agen
 
 The :material-earth: world state menu lets you set up and manage tracked states, apply favorited state templates, and generate or edit world context — all without leaving the scene.
 
-![World State Actions](/talemate/img/0.39.0/scene-tool-world-state-actions.png)
+![World State Actions](/talemate/img/0.40.0/scene-tool-world-state-actions.png)
 
 !!! info "What is a tracked state?"
 
@@ -243,7 +251,7 @@ Open the World State Manager to view and edit world entries and character contex
 
 #### :material-refresh: Update world snapshot
 
-Regenerates the world state snapshot shown in the left :material-earth: `World` panel. Hold ++ctrl++ (or ++cmd++) while clicking to wipe the snapshot and start fresh.
+Regenerates the world state snapshot shown in the left :material-earth: `World` panel. Hold ++ctrl++ (or ++cmd++) while clicking to open a dialog with an optional instructions box that guides this one update and a **Wipe and start fresh** checkbox that discards the current snapshot. A plain click updates immediately.
 
 !!! info "Does not run state re-inforcement"
     This only refreshes the world state snapshot displayed in the left panel under the :material-earth: `World` section; it does not re-inforce the tracked states of the world or characters.
@@ -354,6 +362,14 @@ Once it is done, the character will now be part of the scene and can be interact
     ![Indicator](/talemate/img/0.26.0/scene-tool-creative-introduce-indicator.png) a little human icon will appear next to the :material-puzzle-edit: `Creative Actions` button if there is a character that can be introduced.
 
 
+### :material-console-line: Custom Commands
+
+Commands that a scene defines through [command modules](/talemate/user-guide/node-editor/core-concepts/command_module/) in the node editor can be run from this menu instead of being typed with `!`.
+
+The menu only appears when the loaded scene actually exposes commands to it — a command module decides that by carrying a menu id. Commands sharing a menu id sit together in one sub menu, labelled with that id.
+
+Clicking a command runs it. If the command takes arguments, a dialog asks for them first — a checkbox, a number field, a text area (one list item per line) or a text field, depending on the argument. Leave a field blank to let the command's own handling for that argument apply.
+
 ### :material-image-frame: Visualizer
 
 !!! info "Availability"
@@ -371,6 +387,25 @@ As of version 0.37.0, per-character entries are grouped into submenus. Scene-lev
 
 At the top of the menu, you can toggle the **Auto-attach visuals** option. When enabled, generated images will automatically appear alongside relevant messages in your scene feed. See [Inline Visuals](/talemate/user-guide/inline-visuals) for more details.
 
+#### Automatic generation
+
+![Automatic generation toggles in the scene tools visualizer menu](../img/0.40.0/scene-tools-visual-automatic-generation.png)
+
+**Automatic generation** decides whether Talemate may create images you did not ask for. It is the Visualizer's [Automatic Generation](/talemate/user-guide/agents/visualizer/settings/#automatic-generation) setting. While it is on, two more toggles appear below it:
+
+- **Character portraits**: create a new portrait when none of a character's portraits fits the moment.
+- **Backgrounds**: create a new scene background when none of the scene's backgrounds fits.
+
+Say your story moves Mara from the harbour to a formal ball. With **Character portraits** on, Talemate notices that none of her portraits shows her dressed for the ball and creates one. With **Backgrounds** on, the ballroom gets its own backdrop.
+
+Switching **Character portraits** or **Backgrounds** on also starts the World State agent's portrait or background selection if it was off. New images are only made while it picks. Switching them off stops new images only, so the agent keeps picking from the portraits and backgrounds you already have.
+
+The :material-cog: button next to each toggle opens its settings, where you can choose how often the agent picks and more.
+
+- **Needs Director Generate Visuals**: new portraits also need the Director's **Character Management → Generate Visuals** setting. **Settings** next to the note opens it.
+- :material-movie-open-cog-outline: the loaded scene overrides this setting. The toggle then changes the scene's values only, like the [quick-toggle chips](/talemate/user-guide/agents/scene-overrides/#quick-toggle-chips). For **Character portraits** and **Backgrounds** that includes the selection frequency the toggle may raise, even if the scene only overrode one of the two settings.
+- Greyed out: the Visualizer has no working image backend yet. The note below the toggles says so.
+
 !!! note "Keyboard modifiers"
     - Hold **ALT** to generate only the prompt without creating an image (useful for reviewing prompts before generation)
     - Hold **CTRL** to open a dialog where you can provide custom instructions for the generation
@@ -381,7 +416,7 @@ Generates a portrait-oriented cover image of the current scene, suitable for use
 
 #### :material-image-filter-hdr: Visualize Scene (Background)
 
-Generates a purely environmental image of the scene without characters. Good for establishing shots or backgrounds.
+Generates a purely environmental image of the scene without characters. Good for establishing shots or backgrounds. With **Auto-attach visuals** on, the image becomes the [scene backdrop](/talemate/user-guide/inline-visuals/#scene-backdrop): a **Generating background…** entry appears at the end of the story and shows the image once it is ready.
 
 #### :material-account-tie: / :material-account: Character submenus
 
@@ -407,4 +442,68 @@ Generated images can be viewed and managed in the [Visual Library](/talemate/use
 
 ### :material-content-save: Saving
 
-Context menu that will provide you with `Save` and `Save As` options, restoration actions — `Restore` to the configured [restore point](/talemate/user-guide/world-editor/scene/settings#restoration-settings) and the [`Timeline`](/talemate/user-guide/restoring-scenes) for previewing or forking from any revision — and `Reset Scene State`.
+Context menu that will provide you with `Save` and `Save As` options, restoration actions — `Restore` to the configured [restore point](/talemate/user-guide/world-editor/scene/settings#restoration-settings) and the [`Scene revisions`](/talemate/user-guide/restoring-scenes) for previewing or forking from any revision — and `Reset Scene State`.
+
+### :material-lightning-bolt: Shortcuts
+
+A shortcut is a menu entry you define yourself: an agent action with a label, an icon and optional standing instructions. If you keep typing the same direction into the same action, turn it into a shortcut and it becomes a single click.
+
+The :material-account-voice: Actor, :material-bullhorn: Director, :material-script-text: Narrator and :material-image-frame: Visualizer menus each carry an **:material-plus: Add shortcut** entry at the bottom, below their regular actions.
+
+#### Creating a shortcut
+
+Clicking **Add shortcut** opens the shortcut dialog.
+
+![Shortcut creation dialog](/talemate/img/0.40.0/scene-tool-shortcut-modal.png)
+
+**Action** — the agent action the shortcut runs. The dropdown lists every eligible action, prefixed with the menu section it belongs to:
+
+| Section | Actions |
+| --- | --- |
+| :material-account-voice: **Actor** | Actor Action |
+| :material-bullhorn: **Director** | Generate dynamic actions, Scene direction turn |
+| :material-script-text: **Narrator** | Progress Story, Narrate Environment, Look at Scene, Look at Character |
+| :material-image-frame: **Visual** | Visualize Scene (Card), Visualize Scene (Background), Visualize Character (Card), Visualize Character (Portrait) |
+
+**Label** — the title the shortcut gets in the menu.
+
+**Instructions** — optional direction handed to the agent whenever the shortcut runs. This is the same kind of text you would type into the `ctrl`-click direction prompt of the action itself. Leave it empty to run the action as-is.
+
+**Icon** — click one of the common icons in the grid, or type any Material Design Icon name (for example `mdi-sword-cross`) into the field below it. The icon is previewed in the field as soon as the name matches an icon that actually exists — misspelled or unknown names are rejected. The link below the field opens the [full Material Design Icons listing](https://pictogrammers.com/library/mdi/) to browse names.
+
+Saving adds the shortcut to its menu right away, below the menu's regular actions and above the **Add shortcut** entry.
+
+![Shortcut entries in a scene tool menu](/talemate/img/0.40.0/scene-tool-shortcut-menu.png)
+
+#### Running a shortcut
+
+Click the shortcut and the action runs immediately with the stored instructions — you are not prompted for anything.
+
+Actions that target a character — **Actor Action**, **Look at Character** and the **Visualize Character** actions — render one entry per character in the scene, with the character's name appended to the label. **Actor Action** and **Look at Character** list the non-player characters; the **Visualize Character** actions also include the player character, like their regular menu entries. The character is decided by which entry you click, not stored in the shortcut, so a single shortcut keeps up with whoever is in the scene. An **Actor Action** shortcut additionally gets one entry with no character attached, which picks a random non-player character to act.
+
+A shortcut that cannot run right now stays visible as a dimmed entry with the reason under its label — when the scene has no character the action could target, or when the action itself is disabled (for example **Scene direction turn** while scene direction is off). A plain click does nothing there; `ctrl`+click still opens it for editing.
+
+#### Editing and deleting a shortcut
+
+!!! note "Keyboard modifiers"
+    Hold `ctrl` (Cmd on macOS) while clicking a shortcut to open it in the dialog instead of running it. Every field can be changed, and **Delete** removes the shortcut.
+
+!!! info "Shortcuts are application wide"
+    Shortcuts are stored in the application configuration, not in the scene, so they are available in every scene you load.
+
+#### Sharing a shortcut as a template
+
+A shortcut can be saved as a [Scene tool shortcut template](/talemate/user-guide/templates/scene-tool-shortcut), which is what makes it shareable.
+
+Open a shortcut with `ctrl` (Cmd on macOS) + click and click **:material-cube-scan: Save as template** in the dialog. A second dialog asks for a **Template group** — pick one of the existing groups from the dropdown, or type a name to create a new group. The shortcut's action, label, icon and instructions are written into that group as a template, and the dialog confirms which group it went into.
+
+Template groups are stored as single files in the `templates/world-state` directory, so sharing a shortcut means handing that group's file to someone else, who drops it into the same directory.
+
+#### Installing a shortcut from a template
+
+Every menu that carries shortcuts also carries an **:material-cube-scan: Add from template** entry below **Add shortcut**, whenever there is at least one shortcut template for that menu. Hovering it opens a submenu listing the templates, each with the action it runs below its label. Clicking one adds it to your shortcuts right away.
+
+Shortcut templates can also be installed from the template itself — see [Scene tool shortcut templates](/talemate/user-guide/templates/scene-tool-shortcut).
+
+!!! info "Installed shortcuts are copies"
+    Installing a template copies it into your own shortcuts, so editing or deleting the shortcut afterwards leaves the template alone. Installing the same template twice does nothing — a shortcut with the same action, label, icon and instructions is not added a second time.

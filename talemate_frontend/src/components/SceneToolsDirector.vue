@@ -26,6 +26,15 @@
                 <v-list-item-title>Scene direction turn<v-chip variant="text" color="highlight5" class="ml-1" size="x-small">{{ primaryModifierLabel }}: Provide direction</v-chip></v-list-item-title>
                 <v-list-item-subtitle>Manually trigger a scene direction turn</v-list-item-subtitle>
             </v-list-item>
+            <!-- Evaluate scene intent -->
+            <v-list-item
+                density="compact"
+                @click="actionDetermineSceneIntent"
+                prepend-icon="mdi-flag-variant"
+            >
+                <v-list-item-title>Evaluate scene intent<v-chip variant="text" color="highlight5" class="ml-1" size="x-small">{{ primaryModifierLabel }}: Provide direction</v-chip></v-list-item-title>
+                <v-list-item-subtitle>Have the director evaluate and possibly update the scene intent</v-list-item-subtitle>
+            </v-list-item>
             <!-- Generate long progress -->
             <v-list-item
                 density="compact"
@@ -35,6 +44,20 @@
                 <v-list-item-title>Generate long progress</v-list-item-title>
                 <v-list-item-subtitle>Plan and generate a whole progress arc</v-list-item-subtitle>
             </v-list-item>
+
+            <SceneToolsShortcutItems
+                section="director"
+                :catalog="shortcutCatalog"
+                :shortcuts="shortcuts"
+                :templates="shortcutTemplates"
+                :characters="npcCharacters"
+                :disabled="disabled"
+                :disabled-actions="sceneDirectionEnabled ? {} : { 'director.scene_direction_turn': 'Scene direction is disabled' }"
+                @run="runShortcut"
+                @edit="(shortcut) => $emit('shortcut-edit', shortcut)"
+                @add="(section) => $emit('shortcut-add', section)"
+                @add-template="(template) => $emit('shortcut-add-template', template)"
+            />
         </v-list>
     </v-menu>
 
@@ -121,25 +144,25 @@
                         v-if="scenePlanMode === 'generate_arc_expand'"
                     ></v-checkbox>
                 </div>
-                <div class="text-caption text-muted mb-1" v-if="scenePlanMode === 'generate_arc'">Each beat is executed individually through narrator and conversation agents. Slower, but the director can adjust strategy between beats.</div>
-                <div class="text-caption text-muted mb-1" v-else>Beats are expanded into prose in chunks. Much faster, with automatic chunking and arc-aware pacing.</div>
-                <div class="text-caption text-muted mb-4">
+                <div class="text-body-small text-muted mb-1" v-if="scenePlanMode === 'generate_arc'">Each beat is executed individually through narrator and conversation agents. Slower, but the director can adjust strategy between beats.</div>
+                <div class="text-body-small text-muted mb-1" v-else>Beats are expanded into prose in chunks. Much faster, with automatic chunking and arc-aware pacing.</div>
+                <div class="text-body-small text-muted mb-4">
                     <v-icon size="x-small" class="mr-1">mdi-information-outline</v-icon>
                     <span v-if="scenePlanCloseArc">Closed arc: lands a full resolution. Use when writing a self-contained short story.</span>
                     <span v-else>Continuation: ends on a handoff moment so you can keep playing from where the arc leaves off.</span>
                 </div>
 
                 <!-- Warnings - compact format -->
-                <div v-if="narratorProgressStoryLength < minRecommendedNarratorLength" class="text-caption text-warning mb-1">
+                <div v-if="narratorProgressStoryLength < minRecommendedNarratorLength" class="text-body-small text-warning mb-1">
                     <v-icon size="x-small" color="warning" class="mr-1">mdi-alert</v-icon>
                     Narrator Progress Story length ({{ narratorProgressStoryLength }} tokens) is below recommended {{ minRecommendedNarratorLength }}.
                     <v-btn size="x-small" variant="text" color="warning" @click="openAgentSettings('narrator', 'generation_override')">Fix</v-btn>
                 </div>
-                <div v-if="charactersMissingActingInstructions.length > 0" class="text-caption text-warning mb-1">
+                <div v-if="charactersMissingActingInstructions.length > 0" class="text-body-small text-warning mb-1">
                     <v-icon size="x-small" color="warning" class="mr-1">mdi-alert</v-icon>
                     Missing acting instructions: <strong>{{ charactersMissingActingInstructions.join(', ') }}</strong>
                 </div>
-                <div class="text-caption text-muted mb-1">
+                <div class="text-body-small text-muted mb-1">
                     <v-icon size="x-small" class="mr-1">mdi-information-outline</v-icon>
                     May generate actions and dialogue for player controlled characters. Requires a strong LLM (100B+ parameters).
                 </div>
@@ -156,6 +179,7 @@
 
 <script>
 import RequestInput from './RequestInput.vue';
+import SceneToolsShortcutItems from './SceneToolsShortcutItems.vue';
 import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
 
@@ -163,14 +187,28 @@ export default {
     name: "SceneToolsDirector",
     components: {
         RequestInput,
+        SceneToolsShortcutItems,
     },
     props: {
         npcCharacters: Array,
         sceneCharacters: Array,
         disabled: Boolean,
         agentStatus: Object,
+        shortcutCatalog: {
+            type: Array,
+            default: () => [],
+        },
+        shortcuts: {
+            type: Object,
+            default: () => ({}),
+        },
+        shortcutTemplates: {
+            type: Object,
+            default: () => ({}),
+        },
     },
     inject: ['getWebsocket', 'getActAsCharacterName', 'openDirectorConsole', 'openAgentSettings'],
+    emits: ['shortcut-add', 'shortcut-edit', 'shortcut-add-template'],
     data() {
         return {
             primaryModifierLabel,
@@ -221,6 +259,19 @@ export default {
             }
         },
 
+        runShortcut({shortcut, entry}) {
+            switch (entry.id) {
+                case 'director.request_dynamic_choices':
+                    this.actionRequestDynamicChoices({}, shortcut.instructions);
+                    break;
+                case 'director.scene_direction_turn':
+                    this.actionSceneDirectionTurn({}, shortcut.instructions);
+                    break;
+                default:
+                    console.warn('unhandled scene tool shortcut action', entry.id);
+            }
+        },
+
         // Director actions
 
         /**
@@ -263,6 +314,28 @@ export default {
                 {
                     type: 'director',
                     action: 'scene_direction_turn',
+                    instructions: instructions || "",
+                }
+            ));
+        },
+
+        /**
+         * Manually trigger a scene intent evaluation
+         * @method actionDetermineSceneIntent
+         * @param {string} instructions - Direction for the evaluation
+         */
+
+        actionDetermineSceneIntent(ev, instructions="") {
+
+            if (isPrimaryModifier(ev)) {
+                this.requestDirection({action: 'DetermineSceneIntent'});
+                return;
+            }
+
+            this.getWebsocket().send(JSON.stringify(
+                {
+                    type: 'director',
+                    action: 'determine_scene_intent',
                     instructions: instructions || "",
                 }
             ));

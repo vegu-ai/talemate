@@ -14,6 +14,7 @@ import os
 import random
 import re
 import uuid
+from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime
 from typing import Any, Literal
@@ -24,19 +25,22 @@ import nest_asyncio
 import pydantic
 import structlog
 
+import talemate.emit.async_signals as async_signals
 import talemate.instance as instance
 import talemate.thematic_generators as thematic_generators
 from talemate.config import get_config
 from talemate.context import regeneration_context, active_scene
 from talemate.emit import emit
 from talemate.exceptions import LLMAccuracyError, RenderPromptError
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.util import (
     count_tokens,
     limit_tokens,
     dedupe_string,
     extract_list,
     remove_extra_linebreaks,
-    iso8601_diff_to_human,
+    coerce_ts,
+    diff_to_human,
 )
 from talemate.util.data import extract_data_auto, DataParsingError
 from talemate.util.path import get_path_value
@@ -50,6 +54,7 @@ from talemate.agents.context import active_agent
 from talemate.prompts.extensions import CaptureContextExtension
 from talemate.prompts.groups import get_group_template_path, resolve_template
 from talemate.prompts.response import (
+    ExtractionError,
     ResponseSpec,
     AsIsExtractor,
     AnchorExtractor,
@@ -72,6 +77,73 @@ log = structlog.get_logger("talemate")
 
 prepended_template_dirs = ContextVar("prepended_template_dirs", default=[])
 active_template_uid = ContextVar("active_template_uid", default=None)
+
+TEMPLATE_EXTRACTOR_SETTERS = (
+    "set_anchor_extractor",
+    "set_as_is_extractor",
+    "set_after_anchor_extractor",
+    "set_code_block_extractor",
+    "set_block_list_extractor",
+)
+
+# (template uid, source group, response key) already reported this process
+_reported_override_misses: set[tuple[str, str, str]] = set()
+
+
+class _HeldSignals(list):
+    # set once the render has sent them; a task started inside the render
+    # keeps this list in its context and must then send directly
+    closed: bool = False
+
+
+# signals held back while a template renders; see send_outside_render
+_render_signals: ContextVar[_HeldSignals | None] = ContextVar(
+    "render_signals", default=None
+)
+
+
+@contextmanager
+def signals_after_render():
+    """
+    Hold back signals sent while a template renders. A template's
+    agent_action and decision policy calls run in a nested event loop, where a
+    listener graph must not run; the outermost render sends the held
+    signals in tasks once it returns.
+    """
+    current = _render_signals.get()
+    if current is not None and not current.closed:
+        yield
+        return
+    held = _HeldSignals()
+    token = _render_signals.set(held)
+    try:
+        yield
+    finally:
+        _render_signals.reset(token)
+        held.closed = True
+        for name, emission in held:
+            async_signals.send_soon(name, emission)
+
+
+async def send_outside_render(name: str, emission) -> None:
+    """Send a signal now, or after the template render it happens in."""
+    held = _render_signals.get()
+    if held is not None and not held.closed:
+        held.append((name, emission))
+        return
+    await async_signals.get(name).send(emission)
+
+
+def send_soon_outside_render(name: str, emission) -> None:
+    """
+    From synchronous code: send a signal in a task, or after the template
+    render it happens in.
+    """
+    held = _render_signals.get()
+    if held is not None and not held.closed:
+        held.append((name, emission))
+        return
+    async_signals.send_soon(name, emission)
 
 
 class PydanticJsonEncoder(json.JSONEncoder):
@@ -115,6 +187,8 @@ class GroupAwareLoader(jinja2.FileSystemLoader):
         super().__init__(searchpath)
         self.agent_type = agent_type
         self._config = config
+        # files served to renders through this loader, includes too
+        self.loaded: list[str] = []
 
     def get_source(self, environment, template):
         """
@@ -141,6 +215,7 @@ class GroupAwareLoader(jinja2.FileSystemLoader):
                 path = get_group_template_path(group, self.agent_type, template_name)
                 if path.exists():
                     source = path.read_text(encoding="utf-8")
+                    self.loaded.append(str(path))
                     return source, str(path), lambda: path.stat().st_mtime
 
                 # If explicit source not found, log warning and fall through to normal resolution
@@ -151,7 +226,9 @@ class GroupAwareLoader(jinja2.FileSystemLoader):
                 )
 
         # Fall back to normal FileSystemLoader behavior
-        return super().get_source(environment, template)
+        source, filename, uptodate = super().get_source(environment, template)
+        self.loaded.append(filename)
+        return source, filename, uptodate
 
 
 nest_asyncio.apply()
@@ -281,6 +358,7 @@ class Prompt(pydantic.BaseModel):
 
     # Track which source group the template was loaded from
     _source_group: str | None = pydantic.PrivateAttr(default=None)
+    _loaded_template_files: list[str] = pydantic.PrivateAttr(default_factory=list)
 
     @classmethod
     def get(cls, uid: str, vars: dict = None):
@@ -515,6 +593,12 @@ class Prompt(pydantic.BaseModel):
             raise ValueError(f"Unsupported loader type for template '{name}'")
 
     def render(self, force: bool = False, apply_sectioning: bool = True) -> str:
+        with signals_after_render():
+            return self._render_template(force=force, apply_sectioning=apply_sectioning)
+
+    def _render_template(
+        self, force: bool = False, apply_sectioning: bool = True
+    ) -> str:
         """
         Render the prompt using jinja2.
 
@@ -533,6 +617,7 @@ class Prompt(pydantic.BaseModel):
         env = self.template_env()
 
         ctx = {
+            "character_knowledge_enabled": character_knowledge_enabled,
             "bot_token": "<|BOT|>",
             "thematic_generator": thematic_generators.ThematicGenerator(),
             "regeneration_context": regeneration_context.get(),
@@ -542,6 +627,54 @@ class Prompt(pydantic.BaseModel):
             else {},
         }
 
+        self.register_template_globals(env)
+        ctx.update(self.vars)
+
+        if "decensor" not in ctx:
+            ctx["decensor"] = False
+
+        # Load the template corresponding to the prompt name
+        if not self.template:
+            # no template text specified, load from file
+            template = env.get_template("{}.jinja2".format(self.name))
+        else:
+            template = env.from_string(self.template)
+
+        # Track source group for recently rendered templates feature
+        if self.agent_type and self.name and not self.template:
+            _, self._source_group = resolve_template(
+                self.agent_type, self.name, active_scene.get()
+            )
+
+        sectioning_handler = SECTIONING_HANDLERS.get(self.sectioning_handler)
+
+        try:
+            self.prompt = template.render(ctx)
+            if isinstance(env.loader, GroupAwareLoader):
+                self._loaded_template_files = list(dict.fromkeys(env.loader.loaded))
+            if apply_sectioning:
+                if not sectioning_handler:
+                    log.warning(
+                        "prompt.render",
+                        prompt=self.name,
+                        warning=f"Sectioning handler `{self.sectioning_handler}` not found",
+                    )
+                else:
+                    self.prompt = sectioning_handler(self)
+        except jinja2.exceptions.TemplateError as e:
+            log.error("prompt.render", prompt=self.name, error=traceback.format_exc())
+            emit(
+                "system",
+                status="error",
+                message=f"Error rendering prompt `{self.name}`: {e}",
+            )
+            raise RenderPromptError(f"Error rendering prompt: {e}")
+
+        self.prompt = self.render_cleanup(self.prompt)
+
+        return self.prompt
+
+    def register_template_globals(self, env: jinja2.Environment) -> None:
         env.globals["render_template"] = self.render_template
         env.globals["render_game_state"] = self.render_game_state
         env.globals["render_and_request"] = self.render_and_request
@@ -608,57 +741,10 @@ class Prompt(pydantic.BaseModel):
         )
         env.globals["text_to_chunks"] = self.text_to_chunks
         env.globals["emit_narrator"] = lambda message: emit("system", message=message)
-        # Template-defined extractors
-        env.globals["set_anchor_extractor"] = self.set_anchor_extractor
-        env.globals["set_as_is_extractor"] = self.set_as_is_extractor
-        env.globals["set_after_anchor_extractor"] = self.set_after_anchor_extractor
-        env.globals["set_code_block_extractor"] = self.set_code_block_extractor
-        env.globals["set_block_list_extractor"] = self.set_block_list_extractor
+        for name in TEMPLATE_EXTRACTOR_SETTERS:
+            env.globals[name] = getattr(self, name)
         env.filters["condensed"] = condensed_for_dedupe
         env.filters["no_chapters"] = no_chapters
-        ctx.update(self.vars)
-
-        if "decensor" not in ctx:
-            ctx["decensor"] = False
-
-        # Load the template corresponding to the prompt name
-        if not self.template:
-            # no template text specified, load from file
-            template = env.get_template("{}.jinja2".format(self.name))
-        else:
-            template = env.from_string(self.template)
-
-        # Track source group for recently rendered templates feature
-        if self.agent_type and self.name and not self.template:
-            _, self._source_group = resolve_template(
-                self.agent_type, self.name, active_scene.get()
-            )
-
-        sectioning_handler = SECTIONING_HANDLERS.get(self.sectioning_handler)
-
-        try:
-            self.prompt = template.render(ctx)
-            if apply_sectioning:
-                if not sectioning_handler:
-                    log.warning(
-                        "prompt.render",
-                        prompt=self.name,
-                        warning=f"Sectioning handler `{self.sectioning_handler}` not found",
-                    )
-                else:
-                    self.prompt = sectioning_handler(self)
-        except jinja2.exceptions.TemplateError as e:
-            log.error("prompt.render", prompt=self.name, error=traceback.format_exc())
-            emit(
-                "system",
-                status="error",
-                message=f"Error rendering prompt `{self.name}`: {e}",
-            )
-            raise RenderPromptError(f"Error rendering prompt: {e}")
-
-        self.prompt = self.render_cleanup(self.prompt)
-
-        return self.prompt
 
     def render_cleanup(self, prompt_text: str):
         """
@@ -963,13 +1049,18 @@ class Prompt(pydantic.BaseModel):
         loop = asyncio.get_event_loop()
         memory = instance.get_agent("memory")
         query = query.format(**self.vars)
+        if self.vars.get("memory_viewer") is not None:
+            kwargs["viewer"] = self.vars["memory_viewer"]
 
         exclude_history = kwargs.pop("exclude_history", False)
         if exclude_history:
-            base_filter = kwargs.get("filter", lambda x: True)
+            base_filter = kwargs.get("filter") or (lambda x: True)
             kwargs["filter"] = lambda m: (
                 getattr(m, "meta", {}).get("typ") != "history" and base_filter(m)
             )
+        elif kwargs.get("filter") is not None:
+            # a knowledge filter narrows the pool, so fetch more candidates
+            kwargs.setdefault("over_fetch", 3)
 
         if not kwargs.get("iterate"):
             if not as_question_answer:
@@ -1008,13 +1099,30 @@ class Prompt(pydantic.BaseModel):
             return response
 
     def retrieve_memories(self, lines: list[str], goal: str = None):
+        """Retrieve from supplied author lines, or the prompt viewer's projection."""
         loop = asyncio.get_event_loop()
         world_state = instance.get_agent("world_state")
+        viewer = self.vars.get("memory_viewer")
 
-        lines = [str(line) for line in lines]
+        async def retrieve(_collection=None):
+            context = (
+                world_state.rag_projected_history(
+                    viewer,
+                    budget=int(world_state.client.max_token_length * 0.75),
+                )
+                if viewer is not None
+                else [str(line) for line in lines]
+            )
+            return await world_state.analyze_text_and_extract_context(
+                "\n".join(context),
+                goal=goal,
+                **({"viewer": viewer} if viewer is not None else {}),
+            )
 
         return loop.run_until_complete(
-            world_state.analyze_text_and_extract_context("\n".join(lines), goal=goal)
+            instance.get_agent("memory").audience_operation(viewer, retrieve)
+            if viewer is not None
+            else retrieve()
         )
 
     def agent_config(self, config_path: str):
@@ -1061,11 +1169,16 @@ class Prompt(pydantic.BaseModel):
         else:
             emit("status", status=status, message=message)
 
-    def time_diff(self, iso8601_time: str):
-        scene = active_scene.get()
-        if not iso8601_time:
+    def time_diff(self, ts: int | str | None):
+        if ts is None or ts == "":
             return ""
-        return iso8601_diff_to_human(iso8601_time, scene.ts)
+        scene = active_scene.get()
+        try:
+            # templates may hand us legacy ISO8601 durations from memory metadata
+            ts = coerce_ts(ts)
+        except ValueError:
+            return ""
+        return diff_to_human(ts, scene.ts)
 
     def system_time(
         self, format: Literal["full", "date", "time", "iso", "datetime"] = "full"
@@ -1500,6 +1613,28 @@ class Prompt(pydantic.BaseModel):
             except IndexError:
                 return {}
 
+    def prepare(self, client: Any, dedupe_enabled: bool | None = None) -> str:
+        """Render with client settings, retaining the prompt for a later send."""
+        self.client = client
+
+        # Resolve dedupe: explicit arg > existing prompt setting > client default.
+        if dedupe_enabled is not None:
+            self.dedupe_enabled = dedupe_enabled
+        elif self.dedupe_enabled is None:
+            self.dedupe_enabled = bool(getattr(client, "dedupe_enabled", False))
+
+        # Apply client's section format preference if set
+        client_section_format = getattr(client, "section_format", None)
+        if client_section_format:
+            handler = SECTION_FORMAT_TO_HANDLER.get(client_section_format)
+            if handler:
+                self.sectioning_handler = handler
+
+        # Ensure template is rendered before sending (render() is a no-op
+        # if already rendered, but must happen here while context like
+        # active_agent is still available).
+        return self.render()
+
     async def send(
         self,
         client: Any,
@@ -1525,26 +1660,7 @@ class Prompt(pydantic.BaseModel):
                 returns (response, parsed_data). Otherwise returns (response, extracted_dict)
                 where extracted_dict contains fields defined in response_spec.
         """
-
-        self.client = client
-
-        # Resolve dedupe: explicit arg > existing prompt setting > client default.
-        if dedupe_enabled is not None:
-            self.dedupe_enabled = dedupe_enabled
-        elif self.dedupe_enabled is None:
-            self.dedupe_enabled = bool(getattr(client, "dedupe_enabled", False))
-
-        # Apply client's section format preference if set
-        client_section_format = getattr(client, "section_format", None)
-        if client_section_format:
-            handler = SECTION_FORMAT_TO_HANDLER.get(client_section_format)
-            if handler:
-                self.sectioning_handler = handler
-
-        # Ensure template is rendered before sending (render() is a no-op
-        # if already rendered, but must happen here while context like
-        # active_agent is still available).
-        self.render()
+        self.prepare(client, dedupe_enabled)
 
         # Set the active template_uid context for tracking
         token = active_template_uid.set(self.uid if self.uid else None)
@@ -1632,7 +1748,12 @@ class Prompt(pydantic.BaseModel):
             extractors=merged_extractors, required=response_spec.required
         )
 
-        extracted = effective_spec.extract_all(response)
+        try:
+            extracted = effective_spec.extract_all(response)
+        except ExtractionError:
+            self.report_override_misses(effective_spec, response)
+            raise
+        self.report_override_misses(effective_spec, response, extracted)
 
         # Post-process parse_data fields using extract_data_auto
         if any(ext.parse_data for ext in effective_spec.extractors.values()):
@@ -1650,6 +1771,92 @@ class Prompt(pydantic.BaseModel):
             )
 
         return response, extracted
+
+    def report_override_misses(
+        self,
+        spec: ResponseSpec,
+        response: str,
+        extracted: dict | None = None,
+    ) -> None:
+        """
+        Warn when a template override used by this render (the template itself
+        or one of its partials) lost the extractor or anchor of a response field
+        that came back empty: a required field, or one whose anchor the rendered
+        prompt never asks for.
+        """
+        rendered = (self.prompt or "").lower()
+        empty = []
+        for key, extractor in spec.extractors.items():
+            value = (
+                extracted[key]
+                if extracted is not None and key in extracted
+                else extractor.extract(response)
+            )
+            if value in (None, "", []):
+                empty.append((key, extractor.anchors()))
+        if not empty:
+            return
+
+        # compatibility imports this module
+        from talemate.prompts.compatibility import rendered_overrides
+
+        overrides = rendered_overrides(
+            self._loaded_template_files, active_scene.get(), self.agent_type
+        )
+        if not overrides:
+            return
+
+        for key, anchors in empty:
+            if key in spec.required:
+                reason = "required field missing"
+            elif anchors and not any(a.lower() in rendered for a in anchors):
+                reason = f"prompt never asks for {anchors[0]}"
+            else:
+                continue
+
+            # only an override that lost this field's extractor or anchor is to blame;
+            # otherwise the model did not answer what the prompt asked for
+            wanted = {a.lower() for a in anchors}
+            culprits = [
+                o
+                for o in overrides
+                if any(
+                    (m.kind == "extractor" and m.name == key)
+                    or (m.kind == "anchor" and m.name.lower() in wanted)
+                    for m in o.missing_markers
+                )
+            ]
+
+            for override in culprits:
+                report_key = (override.uid, override.group, key)
+                if report_key in _reported_override_misses:
+                    continue
+                _reported_override_misses.add(report_key)
+
+                log.warning(
+                    "Template override left a response field empty",
+                    template=override.uid,
+                    group=override.group,
+                    prompt=self.uid,
+                    key=key,
+                    reason=reason,
+                )
+                emit(
+                    "status",
+                    status="warning",
+                    message=(
+                        f"Template override `{override.uid}` ({override.group} group) "
+                        f"left `{key}` empty ({reason}). Compare it with the default "
+                        "in the Prompts tab."
+                    ),
+                    data={
+                        "template": override.uid,
+                        "group": override.group,
+                        "prompt": self.uid,
+                        "key": key,
+                        "reason": reason,
+                    },
+                )
 
     def poplines(self, num):
         """

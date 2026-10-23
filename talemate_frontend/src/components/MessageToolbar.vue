@@ -1,13 +1,13 @@
 <template>
   <!-- editing indicator -->
-  <v-chip size="x-small" label color="indigo-lighten-4" variant="tonal" v-if="editing">
+  <v-chip size="x-small" label color="highlight1" variant="tonal" v-if="editing">
     <v-icon class="mr-1">mdi-pencil</v-icon>
     Editing - Press `enter` to submit. Click anywhere to cancel.
   </v-chip>
 
   <template v-else>
     <!-- edit hint -->
-    <v-chip size="x-small" color="grey-lighten-1" variant="text" class="mr-1">
+    <v-chip size="x-small" color="mutedheader" variant="text" class="mr-1">
       <v-icon>mdi-pencil</v-icon>
       {{ uxLocked || appBusy ? 'Editing locked' : 'Double-click to edit.' }}
     </v-chip>
@@ -25,10 +25,16 @@
     </v-chip>
 
     <!-- fork scene -->
-    <v-chip v-if="showFork && forkable" size="x-small" class="ml-2" label :color="rev > 0 ? 'highlight1' : 'muted'" variant="tonal" @click="forkSceneInitiate(messageId)" :disabled="uxLocked || appBusy">
-      <v-icon class="mr-1">mdi-source-fork</v-icon>
-      Fork
-    </v-chip>
+    <v-tooltip v-if="showFork" :text="forkHint" location="top">
+      <template #activator="{ props }">
+        <span v-bind="props" class="ml-2">
+          <v-chip size="x-small" label :color="forkable ? 'highlight1' : 'muted'" variant="tonal" @click="forkSceneInitiate(messageId)" :disabled="!forkable || uxLocked || appBusy">
+            <v-icon class="mr-1">mdi-source-fork</v-icon>
+            {{ canCopyUnsaved ? 'Copy from here' : 'Fork' }}
+          </v-chip>
+        </span>
+      </template>
+    </v-tooltip>
 
     <!-- type-specific actions (e.g. Continue) -->
     <slot name="extra-actions" />
@@ -53,6 +59,17 @@
       <v-progress-circular v-if="ttsBusy" class="ml-2" size="14" indeterminate="disable-shrink" color="secondary"></v-progress-circular>
     </v-chip>
 
+    <!-- memories the memory pass gave this reply -->
+    <v-tooltip v-if="memoryPass" :text="memoryPassTooltip" location="top">
+      <template #activator="{ props }">
+        <v-chip v-bind="props" size="x-small" class="ml-2" label color="primary" variant="tonal" data-testid="memory-pass-chip" @click="$emit('open-memory-pass')">
+          <v-icon class="mr-1">mdi-head-lightbulb-outline</v-icon>
+          Memories
+          <span class="ml-1 text-medium-emphasis">{{ memoryPass.kept.length }}</span>
+        </v-chip>
+      </template>
+    </v-tooltip>
+
     <!-- insert time passage -->
     <v-chip v-if="showTimePassage" size="x-small" class="ml-2" label color="time" variant="tonal" @click="insertTimePassage(messageId)" :disabled="uxLocked || appBusy">
       <v-icon class="mr-1">mdi-clock-plus-outline</v-icon>
@@ -62,6 +79,8 @@
 </template>
 
 <script>
+import { memoryPassChipTooltip } from '@/utils/memoryPass';
+
 // Short chip labels for the editor agent's revision methods. Values mirror
 // `revision_method` choices in src/talemate/agents/editor/revision.py.
 const REVISION_METHOD_LABELS = {
@@ -120,8 +139,10 @@ export default {
     },
     rev: {
       type: Number,
-      default: 0,
+      default: null,
     },
+    canCopyUnsaved: Boolean,
+    immutableSave: Boolean,
     sceneRev: {
       type: Number,
       default: 0,
@@ -155,6 +176,15 @@ export default {
       type: Boolean,
       default: false,
     },
+    // the memory pass result of the active version; null shows no chip
+    memoryPass: {
+      type: Object,
+      default: null,
+    },
+    memoryPassCharacter: {
+      type: String,
+      default: '',
+    },
     // offer the illustration asset menu (used when the message's image is
     // the active scene backdrop, where no inline image is rendered to click on)
     showIllustrationMenu: {
@@ -162,7 +192,7 @@ export default {
       default: false,
     },
   },
-  emits: ['open-illustration-menu'],
+  emits: ['open-illustration-menu', 'open-memory-pass'],
   inject: [
     'createPin',
     'reviseMessage',
@@ -173,10 +203,18 @@ export default {
   ],
   computed: {
     forkable() {
-      return this.rev <= this.sceneRev;
+      return this.canCopyUnsaved || (Number.isInteger(this.rev) && this.rev >= 0 && this.rev <= this.sceneRev);
+    },
+    forkHint() {
+      if (this.canCopyUnsaved) return 'Copy the scene through this message, using current world state and character details';
+      if (this.forkable) return 'Open this saved state in Scene revisions';
+      return this.immutableSave ? 'Save As first to fork from this message' : 'Save the scene to fork from this message';
     },
     revisionLabel() {
       return REVISION_METHOD_LABELS[this.editorRevisionMethod] || 'Revise';
+    },
+    memoryPassTooltip() {
+      return memoryPassChipTooltip(this.memoryPass, this.memoryPassCharacter);
     },
   },
 }

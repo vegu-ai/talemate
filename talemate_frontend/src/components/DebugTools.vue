@@ -16,16 +16,23 @@
 
 
     <v-tabs v-model="tab" color="primary">
-        <v-tab v-for="tab in tabs" :key="tab.value" :value="tab.value">
-            <template v-slot:prepend>
-                <v-icon>{{ tab.icon }}</v-icon>
-            </template>
-            {{ tab.text }}
+        <v-tab
+            v-for="tab in tabs"
+            :key="tab.value"
+            :value="tab.value"
+            :aria-label="tab.text"
+            min-width="0"
+        >
+            <v-icon>{{ tab.icon }}</v-icon>
+            <v-tooltip activator="parent" location="bottom">{{ tab.text }}</v-tooltip>
         </v-tab>
     </v-tabs>
     <v-window v-model="tab">
         <v-window-item value="prompts">
             <DebugToolPromptLog ref="promptLog" :prompts="prompts" :app-config="appConfig" @clear-prompts="$emit('clear-prompts')"/>
+        </v-window-item>
+        <v-window-item value="decisions">
+            <DecisionLogView />
         </v-window-item>
         <v-window-item value="memory_requests">
             <DebugToolMemoryRequestLog ref="memoryRequestLog"/>
@@ -40,6 +47,7 @@
 <script>
 
 import DebugToolPromptLog from './DebugToolPromptLog.vue';
+import DecisionLogView from './decisions/DecisionLogView.vue';
 import DebugToolSceneState from './DebugToolSceneState.vue';
 import DebugToolMemoryRequestLog from './DebugToolMemoryRequestLog.vue';
 import DebugToolGameState from './DebugToolGameState.vue';
@@ -49,6 +57,7 @@ export default {
     name: 'DebugTools',
     components: {
         DebugToolPromptLog,
+        DecisionLogView,
         DebugToolMemoryRequestLog,
         DebugToolSceneState,
         DebugToolGameState,
@@ -77,6 +86,7 @@ export default {
             tab: "prompts",
             tabs: [ 
                 { value: "prompts", text: "Prompts", icon: "mdi-post-outline" },
+                { value: "decisions", text: "Decisions", icon: "mdi-scale-balance" },
                 { value: "memory_requests", text: "Memory", icon: "mdi-memory" },
                 { value: "gamestate", text: "Vars", icon: "mdi-variable" },
             ]

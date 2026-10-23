@@ -47,13 +47,23 @@ The state's `Context Attachment Method` determines how the state is attached to 
 
 ##### Passive
 
-The state is only included in context through relevancy, handled by the [Memory Agent](/talemate/user-guide/agents/memory/).
+The state is included in reply context through relevancy, handled by the [Memory Agent](/talemate/user-guide/agents/memory/). For character states only, perception analysis in Character perspectives mode also receives every answered state, including Passive states, with the time since it was last set or confirmed.
 
 ##### Sequential
 
 The state is inserted into the context as part of the scene progression. So when it's re-evaluated, it will be at the bottom of the context.
 
+A new answer replaces the previous answer only when the previous answer is among the last 10 messages. Otherwise the previous answer stays in the scene history, so with the default interval the answers collect in the history as the scene goes on. A change to another method removes every answer of this state from the scene history.
+
 This is the default for character states.
+
+Each answer shows in the scene as a compact **State Update** row that names the character (or World) and the question, for example **State Update · Mara — What is Mara's current mood?**. Click the row to read the answer, and click it again to fold it away. A long answer shows its first lines with **Show more**.
+
+![A tracked state row in the scene, folded and unfolded](/talemate/img/0.40.0/tracked-state-scene-row.png)
+
+- **Edit**: hover the unfolded row to see **Double-click to edit.**, then double-click the answer, change it and press Enter (Shift+Enter starts a new line, Esc cancels). Later generations use your text. Editing the newest row of a state also makes it the state's current answer, the one you see in the World Editor; editing an older row changes only that row. When later messages follow the row, a note warns that they may no longer match it.
+- **Remove**: hover the row and click :material-close:. This removes that answer from the scene history; the state stays tracked.
+- **Hide**: switch off **Show** for **State Reinforcements** in [Settings → Appearance → Messages](/talemate/user-guide/app-settings/appearance/). Hidden rows still reach the AI.
 
 ##### Conversation Context
 

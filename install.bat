@@ -212,22 +212,19 @@ ECHO Node.js version:
 node -v
 
 REM ---------[ Frontend ]---------
-REM pnpm is provisioned on demand via corepack (bundled with Node.js); the
-REM version is pinned by the "packageManager" field in package.json.
-SET "COREPACK_ENABLE_DOWNLOAD_PROMPT=0"
 ECHO Installing frontend dependencies...
 CD talemate_frontend
-CALL corepack pnpm install --frozen-lockfile || CALL :die "pnpm install failed."
+node ..\install-utils\pnpm.cjs install --frozen-lockfile || CALL :die "pnpm install failed."
 
 ECHO Building frontend...
-CALL corepack pnpm build
+node ..\install-utils\pnpm.cjs build
 IF ERRORLEVEL 1 (
     ECHO.
     ECHO Frontend build failed - retrying with a clean node_modules...
     ECHO.
     rmdir /s /q node_modules 2>nul
-    CALL corepack pnpm install --frozen-lockfile || CALL :die "pnpm install failed on retry."
-    CALL corepack pnpm build || CALL :die "Frontend build failed on retry."
+    node ..\install-utils\pnpm.cjs install --frozen-lockfile || CALL :die "pnpm install failed on retry."
+    node ..\install-utils\pnpm.cjs build || CALL :die "Frontend build failed on retry."
 )
 
 REM Return to repo root

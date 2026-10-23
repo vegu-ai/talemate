@@ -15,7 +15,7 @@ The OpenAI Compatible backend for image analysis allows you to connect to any AP
 
 ### Configuration
 
-![OpenAI Compatible vision backend settings](../../../../img/0.36.0/visual-backend-openai-compatible-vision.png)
+![OpenAI Compatible vision backend settings](../../../../img/0.40.0/visual-backend-openai-compatible-vision.png)
 
 ##### Base URL
 
@@ -33,6 +33,10 @@ Optional API key for authentication. Leave empty if your endpoint does not requi
 ##### Model
 
 The model name to use for vision analysis. This may be optional depending on the API endpoint -- some single-model servers do not require it, while multi-model servers need it to route requests correctly.
+
+##### Concurrent requests
+
+Allows batch image analysis (for example the Analyze Images node) to send multiple requests to this endpoint at the same time. Off by default -- only enable it if the endpoint genuinely serves concurrent requests. Local single-slot vision servers usually do not; they queue the extra requests at best, and with the toggle off Talemate analyzes one image at a time instead.
 
 ## Usage
 

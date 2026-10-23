@@ -59,7 +59,7 @@ class DetermineSceneIntent(AgentNode):
         self.add_output("scene_phase", socket_type="scene_intent/scene_phase")
 
     async def run(self, state: GraphState):
-        phase: ScenePhase = await self.agent.auto_direct_set_scene_intent()
+        phase: ScenePhase | None = await self.agent.auto_direct_set_scene_intent()
 
         self.set_output_values({"state": state, "scene_phase": phase})
 

@@ -22,7 +22,7 @@ from talemate.character import Character
 from talemate.exceptions import LLMAccuracyError
 from talemate.game import focal
 from talemate.prompts import Prompt
-from talemate.prompts.response import ResponseSpec, StrictAnchorExtractor
+from talemate.prompts.response import BlockListExtractor, ResponseSpec
 from talemate.util.data import parse_attribute_lines
 from talemate.util.strings import replace_smart_quotes
 from talemate.ux.schema import Condition
@@ -97,6 +97,16 @@ def one_shot_effective_response_budget(configured_budget: int, max_tokens: int) 
             max_tokens - ONE_SHOT_MIN_HISTORY_TOKENS - ONE_SHOT_CONTEXT_OVERHEAD_TOKENS,
         ),
     )
+
+
+def one_shot_prefill_tag(aspects: list[CharacterGenerationAspect]) -> str:
+    """Opening tag the consolidated one-shot prefills its response with: the
+    first requested aspect, in the order the prompt's RESPONSE FORMAT section
+    lists them."""
+    for aspect in CHARACTER_GENERATION_ASPECTS:
+        if aspect in aspects:
+            return f"<{aspect.upper()}>"
+    return ""
 
 
 class AttributeInstructionSpec(TypedDict):
@@ -311,10 +321,10 @@ class CharacterCreatorMixin:
                         "(one request instead of several), but note that less "
                         "detail in the individual aspects is a possible failure "
                         "mode of this approach, and the model needs a large "
-                        "context window and reliable structured output. Keep "
+                        "context window and reliable structured output. Turn "
                         "this off for older or smaller models."
                     ),
-                    value=False,
+                    value=True,
                     title="Generation Mode",
                     quick_toggle=True,
                 ),
@@ -719,12 +729,19 @@ class CharacterCreatorMixin:
             aspects extracted at all means the response was unprocessable.
         """
         aspects = request.aspects
+        # an unclosed section is a miss; every aspect's tag is a section
+        # boundary, so an unrequested section nested in a requested one leaves
+        # that one unclosed; a repeated section is not merged, the last wins
         response_spec = ResponseSpec(
             extractors={
-                aspect: StrictAnchorExtractor(
-                    left=f"<{aspect.upper()}>", right=f"</{aspect.upper()}>"
+                "sections": BlockListExtractor(
+                    blocks=[
+                        (aspect, rf"<\s*{aspect}\s*>", f"</{aspect.upper()}>")
+                        for aspect in CHARACTER_GENERATION_ASPECTS
+                    ],
+                    unclosed="drop",
+                    merge_consecutive=False,
                 )
-                for aspect in aspects
             },
             required=[],
         )
@@ -749,6 +766,7 @@ class CharacterCreatorMixin:
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "aspects": aspects,
+                "prefill_tag": one_shot_prefill_tag(aspects),
                 "character_name": request.effective_name,
                 "content": request.content,
                 "description": request.description,
@@ -773,14 +791,19 @@ class CharacterCreatorMixin:
             response_spec=response_spec,
         )
 
+        sections = {
+            section["type"]: section["content"]
+            for section in extracted.get("sections") or []
+            if section["type"] in aspects
+        }
         log.debug(
             "generate_character_unified",
             aspects=aspects,
-            extracted={k: bool(v) for k, v in extracted.items()},
+            extracted={aspect: bool(sections.get(aspect)) for aspect in aspects},
         )
 
         return self._parse_unified_character_response(
-            extracted,
+            sections,
             aspects,
             fallback_name=request.effective_name,
             max_examples=request.max_examples,
@@ -797,9 +820,8 @@ class CharacterCreatorMixin:
     ) -> CharacterGenerationResult:
         """Normalize the extracted sections into a CharacterGenerationResult.
 
-        Aspects whose section could not be extracted (missing or unclosed
-        tags - see StrictAnchorExtractor) are left empty for the caller's
-        fill-misses policy.
+        Aspects whose section could not be extracted (missing, or without its
+        closing tag) are left empty for the caller's fill-misses policy.
         """
         result = CharacterGenerationResult()
 

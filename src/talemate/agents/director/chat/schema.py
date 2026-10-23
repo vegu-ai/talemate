@@ -13,6 +13,7 @@ from talemate.agents.director.chat.settings import ChatModeSettings
 
 __all__ = [
     "DirectorChatMessage",
+    "DirectorChatBatchResultMessage",
     "DirectorChatFunctionSelected",
     "DirectorChat",
     "DirectorChatActionResultMessage",
@@ -54,6 +55,15 @@ class DirectorChatMessage(ActionCoreMessage):
     asset_id: str | None = None
 
 
+class DirectorChatBatchResultMessage(DirectorChatMessage):
+    """Batch details with counts of all proposed calls, including nested calls."""
+
+    type: Literal["batch_result"] = "batch_result"
+    source: Literal["director"] = "director"
+    applied_count: int = pydantic.Field(ge=0)
+    not_applied_count: int = pydantic.Field(ge=0)
+
+
 class DirectorChatFunctionSelected(pydantic.BaseModel):
     """
     A function that has been selected by the director
@@ -68,7 +78,9 @@ class DirectorChat(pydantic.BaseModel):
     A history of messages from the user or the director
     """
 
-    messages: list["DirectorChatMessage | DirectorChatActionResultMessage"]
+    messages: list[
+        "DirectorChatMessage | DirectorChatBatchResultMessage | DirectorChatActionResultMessage"
+    ]
     id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:10])
     title: str | None = None
     mode: Literal[

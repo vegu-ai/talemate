@@ -17,10 +17,10 @@ When enabled, character generation is consolidated into a **single prompt**
 instead of one prompt per aspect. This is much faster (one request instead
 of several), but note that less detail in the individual aspects is a
 possible failure mode of this approach, and the model needs a large context
-window and reliable structured output. Keep this off for older or smaller
+window and reliable structured output. Turn this off for older or smaller
 models.
 
-Off by default. Can also be flipped quickly via the quick-toggle chip.
+On by default. Can also be flipped quickly via the quick-toggle chip.
 
 When the scene has a writing style template configured, the consolidated
 prompt applies it.
@@ -73,7 +73,7 @@ On by default.
 
 These settings control the [Autocomplete](/talemate/user-guide/agents/creator/autocomplete) feature.
 
-![Conversation agent autocomplete settings](/talemate/img/0.38.0/creator-autocomplete-settings.png)
+![Conversation agent autocomplete settings](/talemate/img/0.40.0/creator-autocomplete-settings.png)
 
 ##### Dialogue Suggestion Length
 
@@ -82,6 +82,22 @@ How many tokens to generate (max.) when autocompleting character actions.
 ##### Narrative Suggestion Length
 
 How many tokens to generate (max.) when autocompleting narrative text.
+
+##### Character Attribute Suggestion Length
+
+How many tokens to generate (max.) when autocompleting a character attribute field.
+
+##### Character Detail Suggestion Length
+
+How many tokens to generate (max.) when autocompleting a character detail or description field.
+
+##### Scene Intro Suggestion Length
+
+How many tokens to generate (max.) when autocompleting the scene intro field.
+
+##### Context Investigation Suggestion Length
+
+How many tokens to generate (max.) when autocompleting a context-investigation message.
 
 ##### Enable Hints
 

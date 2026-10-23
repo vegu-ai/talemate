@@ -24,7 +24,7 @@
                 <v-tab value="templates">
                     <v-icon start>mdi-file-document-multiple-outline</v-icon>
                     Template Files
-                    <v-icon v-if="outdatedCount > 0" size="x-small" color="warning" class="ml-1">mdi-alert</v-icon>
+                    <v-icon v-if="attentionState" size="x-small" :color="attentionConfig.color" class="ml-1">{{ attentionConfig.icon }}</v-icon>
                 </v-tab>
                 <v-tab value="llm-templates">
                     <v-icon start>mdi-code-braces</v-icon>
@@ -121,21 +121,21 @@
 
                 <!-- Prompts Tab -->
                 <v-window-item value="prompts">
-                    <div v-if="openPrompts.length === 0" class="text-center pa-8 text-grey">
+                    <div v-if="openPrompts.length === 0" class="text-center pa-8 text-medium-emphasis">
                         <v-icon size="64" class="mb-4">mdi-message-text-outline</v-icon>
                         <p>No prompts open.</p>
-                        <p class="text-caption">Click on a prompt in the sidebar to view its details here.</p>
+                        <p class="text-body-small">Click on a prompt in the sidebar to view its details here.</p>
                     </div>
 
                     <template v-else>
                         <v-tabs v-model="activePromptIndex" color="secondary">
                             <v-tab
                                 v-for="(prompt, index) in openPrompts"
-                                :key="prompt.num"
+                                :key="prompt.request_id"
                                 :value="index"
                             >
                                 <span class="mr-2">#{{ prompt.num }}</span>
-                                <span class="text-caption text-truncate" style="max-width: 150px;">{{ prompt.agent_action }}</span>
+                                <span class="text-body-small text-truncate" style="max-width: 150px;">{{ prompt.agent_action }}</span>
                                 <v-btn
                                     icon
                                     size="x-small"
@@ -151,7 +151,7 @@
                         <v-window v-model="activePromptIndex">
                             <v-window-item
                                 v-for="(prompt, index) in openPrompts"
-                                :key="prompt.num"
+                                :key="prompt.request_id"
                                 :value="index"
                             >
                                 <PromptDetailView
@@ -172,8 +172,10 @@
                 <!-- Context Review Tab -->
                 <v-window-item value="context-review">
                     <SceneContextReviewInline
-                        :visible="mainTab === 'context-review'"
+                        :visible="visible && effectiveMainTab === 'context-review'"
                         :agent-status="agentStatus"
+                        :scene-id="currentSceneId"
+                        :connected="connected"
                     />
                 </v-window-item>
             </v-window>
@@ -202,7 +204,7 @@
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn
-                        color="grey"
+                        color="muted"
                         variant="text"
                         @click="showNewGroupDialog = false"
                     >
@@ -238,6 +240,7 @@ import GroupTab from './GroupTab.vue';
 import LLMTemplatesTab from './LLMTemplatesTab.vue';
 import PromptDetailView from './PromptDetailView.vue';
 import SceneContextReviewInline from '../SceneContextReviewInline.vue';
+import { OVERRIDE_STATES, overrideState, worstState } from '@/utils/templateCompatibility.js';
 
 export default {
     name: 'PromptsView',
@@ -268,6 +271,10 @@ export default {
         appConfig: {
             type: Object,
             default: () => ({})
+        },
+        connected: {
+            type: Boolean,
+            default: true
         }
     },
     emits: ['clear-prompts', 'update:mainTab'],
@@ -281,6 +288,7 @@ export default {
         return {
             // Local-only tab (for context-review which isn't synced to the menu)
             internalMainTab: null,
+            pendingPreview: null,
             // Open prompts state
             openPrompts: [],
             activePromptIndex: 0,
@@ -306,8 +314,15 @@ export default {
         };
     },
     computed: {
+        promptIds() {
+            return this.prompts.map(prompt => prompt.request_id);
+        },
         effectiveMainTab() {
             return this.internalMainTab || this.mainTab;
+        },
+        currentSceneId() {
+            const value = typeof this.scene === 'function' ? this.scene() : this.scene;
+            return value?.data?.id ?? value?.id ?? null;
         },
         editableGroups() {
             // Filter out scene and default, return user + custom groups
@@ -315,11 +330,19 @@ export default {
                 g.name !== 'scene' && g.name !== 'default'
             );
         },
-        outdatedCount() {
-            return this.templates.filter(t => t.is_outdated).length;
+        attentionState() {
+            return worstState(this.templates.map(overrideState));
+        },
+        attentionConfig() {
+            return OVERRIDE_STATES[this.attentionState] || null;
         }
     },
     watch: {
+        promptIds(ids) {
+            const active = this.openPrompts[this.activePromptIndex];
+            this.openPrompts = this.openPrompts.filter(prompt => ids.includes(prompt.request_id));
+            this.activePromptIndex = Math.max(0, this.openPrompts.indexOf(active));
+        },
         visible: {
             immediate: true,
             handler(newVal) {
@@ -355,7 +378,7 @@ export default {
         // Handle opening a prompt from PromptsMenu
         handleOpenPrompt(prompt) {
             // Check if prompt is already open
-            const existingIndex = this.openPrompts.findIndex(p => p.num === prompt.num);
+            const existingIndex = this.openPrompts.findIndex(p => p.request_id === prompt.request_id);
             if (existingIndex >= 0) {
                 // Already open, just switch to it
                 this.activePromptIndex = existingIndex;
@@ -501,6 +524,8 @@ export default {
             }));
         },
         requestTemplate({ uid, group }) {
+            // group tabs request templates too; the preview applies only its own reply
+            this.pendingPreview = { uid, group: group || null };
             this.getWebsocket().send(JSON.stringify({
                 type: 'prompts',
                 action: 'get_template',
@@ -577,7 +602,10 @@ export default {
                     this.templates = data.data.templates || [];
                     break;
 
-                case 'get_template':
+                case 'get_template': {
+                    const pending = this.pendingPreview;
+                    if (!pending || data.data.uid !== pending.uid || (pending.group && data.data.group !== pending.group)) break;
+                    this.pendingPreview = null;
                     if (data.data.error) {
                         console.error('Error getting template:', data.data.error);
                         this.showNotification(`Failed to load template: ${data.data.error}`);
@@ -585,6 +613,7 @@ export default {
                         this.$refs.activeTabRef.setTemplateContent(data.data.content || '');
                     }
                     break;
+                }
 
                 case 'set_group_priority':
                     if (data.data.success) {

@@ -5,7 +5,7 @@
 
 Pocket TTS is a local CPU-based text-to-speech model from [Kyutai](https://kyutai.org/) that supports voice cloning from audio files. Unlike other local TTS options that require a GPU, Pocket TTS runs efficiently on your CPU, making it accessible on a wider range of hardware.
 
-![Pocket TTS API settings](/talemate/img/0.38.0/pocket-tts-api-settings.png)
+![Pocket TTS API settings](/talemate/img/0.40.0/pocket-tts-api-settings.png)
 
 ## Key Features
 
@@ -35,7 +35,7 @@ The first time you generate audio with Pocket TTS, it will automatically downloa
 
 Optional. Only needed if the voice-cloning model download is gated by Hugging Face. Paste a [Hugging Face access token](https://huggingface.co/settings/tokens) here and Talemate will use it when downloading the model weights.
 
-This is the same setting as the token on the [HuggingFace application settings page](../../app-settings/application.md#huggingface-token) — set it in either place. A read token is sufficient, and you still need to accept the model terms on Hugging Face with the same account (see [First-Time Setup](#first-time-setup)).
+This is the same setting as the [HuggingFace token on the API Keys page](../../app-settings/application.md#huggingface-token) — set it in either place. A read token is sufficient, and you still need to accept the model terms on Hugging Face with the same account (see [First-Time Setup](#first-time-setup)).
 
 ##### Language / Model
 

@@ -198,6 +198,69 @@ def active_context(director_agent, mock_scene, setup_agents):
     instance.AGENTS.update(original_agents)
 
 
+@pytest.mark.parametrize(
+    ("narrator_closer", "character_closer", "include_narrator"),
+    [
+        pytest.param("</NARRATOR>", "</CHARACTER>", True, id="valid"),
+        pytest.param("", "</CHARACTER>", True, id="missing-middle-closer"),
+        pytest.param("</NARRATOR>", "", True, id="missing-final-closer"),
+        pytest.param("", "", True, id="both-closers-missing"),
+        pytest.param("", "", False, id="single-unclosed-block"),
+    ],
+)
+async def test_xml_block_list_prompt_extraction(
+    active_context, narrator_closer, character_closer, include_narrator
+):
+    from talemate.agents.base import ActiveAgent
+    from talemate.prompts import Prompt
+    from talemate.prompts.response import BlockListExtractor
+
+    director = active_context
+    narrator = instance.AGENTS["narrator"]
+    narrator.agent_type = "narrator"
+    narrator.client = director.client
+    narrator.extra_instructions = ""
+    narrator.content_use_writing_style = False
+    narrator.action_response_length = Mock(return_value=4096)
+    narration = (
+        f"<NARRATOR>The wind rose.{narrator_closer}\n" if include_narrator else ""
+    )
+    director.client.send_prompt = AsyncMock(
+        return_value=narration
+        + f'<CHARACTER name="Elena">Elena: Rain is coming.{character_closer}'
+    )
+
+    with ActiveAgent(narrator, lambda: None):
+        _, extracted = await Prompt.request(
+            "narrator.arc-expand-xml",
+            narrator.client,
+            "narrate_4096",
+            vars={
+                "scene": director.scene,
+                "max_tokens": 8192,
+                "beats": [],
+                "following_beats": [],
+                "preceding_text": "",
+                "director_notes": "",
+                "extra_instructions": "",
+                "response_length": 4096,
+                "arc_info": None,
+            },
+            dedupe_enabled=False,
+        )
+
+    director.client.send_prompt.assert_awaited_once()
+    prompt = director.client.send_prompt.call_args.args[0]
+    assert isinstance(prompt._template_extractors["response"], BlockListExtractor)
+    expected = []
+    if include_narrator:
+        expected.append({"type": "narrator", "content": "The wind rose."})
+    expected.append(
+        {"type": "character", "name": "Elena", "content": "Rain is coming."}
+    )
+    assert extracted["response"] == expected
+
+
 class TestGuideSceneMethods:
     """Tests for director guide scene methods that call the LLM."""
 
@@ -378,6 +441,43 @@ class TestAutoDirectMethods:
 
         # Verify prompt contains scene type options
         assert len(prompt_text) > 0
+
+    @pytest.mark.asyncio
+    async def test_auto_direct_set_scene_intent_renders_instructions(
+        self, active_context
+    ):
+        """User direction for the determination is rendered into the prompt."""
+        director = active_context
+
+        director.client.send_prompt = AsyncMock(
+            return_value='{"function": "do_nothing"}'
+        )
+
+        await director.auto_direct_set_scene_intent(
+            require=False, instructions="Move them out of the tavern."
+        )
+
+        prompt_text = str(director.client.send_prompt.call_args[0][0])
+
+        assert "The user has given the following direction" in prompt_text
+        assert "Move them out of the tavern." in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_auto_direct_set_scene_intent_without_instructions(
+        self, active_context
+    ):
+        """No instructions - no direction block."""
+        director = active_context
+
+        director.client.send_prompt = AsyncMock(
+            return_value='{"function": "do_nothing"}'
+        )
+
+        await director.auto_direct_set_scene_intent(require=False)
+
+        prompt_text = str(director.client.send_prompt.call_args[0][0])
+
+        assert "The user has given the following direction" not in prompt_text
 
     @pytest.mark.asyncio
     async def test_auto_direct_generate_scene_types_calls_client(self, active_context):

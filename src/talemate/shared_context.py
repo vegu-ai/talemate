@@ -1,13 +1,21 @@
 import json
 import pydantic
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 from pathlib import Path
 import structlog
 
 from .character import Character
+from .context import scene_is_loading
 from .world_state import WorldState, ManualContext
 from .save import SceneEncoder
-from .history import ArchiveEntry, static_history as get_static_history
+from .history import (
+    ArchiveEntry,
+    emit_archive_add,
+    legacy_start_ts,
+    shift_scene_timeline,
+    static_history as get_static_history,
+)
+from .util.time import migrate_entry_time, migrate_world_entry_times
 import deepdiff
 
 if TYPE_CHECKING:
@@ -18,12 +26,18 @@ log = structlog.get_logger("talemate.shared_context")
 
 
 class SharedContext(pydantic.BaseModel):
+    FORMAT_VERSION: ClassVar[int] = 1
+
     filepath: Path = pydantic.Field(exclude=True)
     character_data: dict[str, Character] = pydantic.Field(default_factory=dict)
     world_state: WorldState = pydantic.Field(default_factory=WorldState)
     static_history: list[ArchiveEntry] = pydantic.Field(default_factory=list)
+    # the start of the scene that wrote `static_history`; None in older files
+    start_ts: int | None = None
 
     share_static_history: bool = False
+    # None until this version writes the file
+    format_version: int | None = None
 
     @property
     def filename(self) -> str:
@@ -40,7 +54,9 @@ class SharedContext(pydantic.BaseModel):
         # world entries
         self.world_state = WorldState(
             manual_context={
-                id: ManualContext(**manual_context.model_dump())
+                id: ManualContext(
+                    **manual_context.model_dump(exclude={"reinforcement"})
+                )
                 for id, manual_context in scene.world_state.manual_context.items()
                 if manual_context.shared
             },
@@ -53,6 +69,7 @@ class SharedContext(pydantic.BaseModel):
                 ArchiveEntry(**entry.model_dump())
                 for entry in await get_static_history(scene)
             ]
+            self.start_ts = scene.start_ts
         if write:
             await self.write_to_file()
 
@@ -67,7 +84,9 @@ class SharedContext(pydantic.BaseModel):
         # world entries
         for id, manual_context in scene.world_state.manual_context.items():
             if manual_context.shared:
-                self.world_state.manual_context[id] = manual_context
+                self.world_state.manual_context[id] = ManualContext(
+                    **manual_context.model_dump(exclude={"reinforcement"})
+                )
 
         # static history
         if self.share_static_history:
@@ -76,6 +95,29 @@ class SharedContext(pydantic.BaseModel):
                 ArchiveEntry(**entry.model_dump())
                 for entry in await get_static_history(scene)
             ]
+            self.start_ts = scene.start_ts
+
+    def _place_static_history(self, scene: "Scene") -> tuple[list[dict], set[str]]:
+        """
+        The shared static entries in the scene's timeline, each at the same
+        distance from the scene start as from the start of the scene that
+        wrote it. A file without `start_ts` was written when the newest static
+        entry was the scene start. An entry older than the zero moves the
+        scene's timeline forward.
+        """
+        entries = [entry.model_dump(exclude_none=True) for entry in self.static_history]
+        writer_start = (
+            self.start_ts if self.start_ts is not None else legacy_start_ts(entries)
+        )
+        for entry in entries:
+            entry["ts"] += scene.start_ts - writer_start
+        oldest = min((entry["ts"] for entry in entries), default=0)
+        if oldest >= 0:
+            return entries
+        shift_scene_timeline(scene, -oldest)
+        for entry in entries:
+            entry["ts"] -= oldest
+        return entries
 
     async def update_to_scene(self, scene: "Scene") -> bool:
         """
@@ -83,7 +125,9 @@ class SharedContext(pydantic.BaseModel):
         Returns True if the scene was updated, False otherwise.
         """
         compare_context = SharedContext(
-            filepath=self.filepath, share_static_history=self.share_static_history
+            filepath=self.filepath,
+            share_static_history=self.share_static_history,
+            format_version=self.format_version,
         )
         await compare_context.init_from_scene(scene)
 
@@ -93,25 +137,86 @@ class SharedContext(pydantic.BaseModel):
             log.debug("shared context data is the same, no need to update scene")
             return False
 
-        # import shared context into scene
+        # the static history first: its shift moves the scene's own timeline,
+        # and the shared world entries keep the time the writer stored
+        await self.apply_static_history(scene)
+        await self.apply_characters(scene)
+        await self.apply_world_entries(scene)
+
+        return True
+
+    async def apply_static_history(self, scene: "Scene", relative: bool = True):
+        """
+        `relative=False` copies the static entries with their saved times: a
+        save from an older version takes its scene start from them afterwards.
+        """
+        log.info(
+            "apply static history from shared context",
+            share_static_history=self.share_static_history,
+        )
+        if self.share_static_history:
+            try:
+                # the memory copy of a static entry follows its text and Known by
+                previous = {
+                    entry.get("id"): (entry.get("text"), entry.get("present"))
+                    for entry in scene.archived_history
+                    if entry.get("end") is None and entry.get("id")
+                }
+                # summarized entries are those with an end value
+                summarized_entries = [
+                    entry
+                    for entry in scene.archived_history
+                    if entry.get("end") is not None
+                ]
+                if relative:
+                    static_entries = self._place_static_history(scene)
+                else:
+                    static_entries = [
+                        entry.model_dump(exclude_none=True)
+                        for entry in self.static_history
+                    ]
+                # replace archived_history with shared static entries first, then summarized
+                scene.archived_history = static_entries + summarized_entries
+                # a load writes every entry to memory once the store is ready
+                entries = static_entries if scene_is_loading.get() is None else []
+                for entry in entries:
+                    before = previous.get(entry.get("id"))
+                    if before is not None and before != (
+                        entry.get("text"),
+                        entry.get("present"),
+                    ):
+                        await emit_archive_add(scene, ArchiveEntry(**entry))
+            except Exception as e:
+                log.error("apply static history failed", error=e)
+
+    async def apply_characters(self, scene: "Scene"):
         for name, character_data in list(self.character_data.items()):
             scene_character: Character | None = scene.character_data.get(name)
             if not scene_character:
                 # character does not exist in scene, add it
-                scene.character_data[name] = character_data
-            else:
-                # character exists in scene, update it
-                await scene_character.apply_shared_context(character_data)
-        for id, manual_context in list(self.world_state.manual_context.items()):
-            if manual_context.shared:
-                scene.world_state.manual_context[id] = manual_context
+                scene_character = Character(name=character_data.name)
+                scene.character_data[name] = scene_character
+            await scene_character.apply_shared_context(character_data)
 
         # handle characters removed from shared context
         for character in list(scene.character_data.values()):
             if character.shared and character.name not in self.character_data:
                 # We dont ever want to remove a character once its been added
                 # to a scene, so we just make sure it is no longer shared
-                await scene_character.set_shared(False)
+                await character.set_shared(False)
+
+    async def apply_world_entries(self, scene: "Scene"):
+        for id, manual_context in list(self.world_state.manual_context.items()):
+            if manual_context.shared:
+                existing = scene.world_state.manual_context.get(id)
+                scene.world_state.manual_context[id] = ManualContext(
+                    **manual_context.model_dump(exclude={"reinforcement"}),
+                    reinforcement=(
+                        existing.reinforcement
+                        if existing and existing.text == manual_context.text
+                        else None
+                    ),
+                )
 
         # handle world entries removed from shared context
         for id, world_entry in list(scene.world_state.manual_context.items()):
@@ -122,29 +227,6 @@ class SharedContext(pydantic.BaseModel):
                 )
                 del scene.world_state.manual_context[id]
 
-        # apply static history from shared context (replace all static entries)
-        log.info(
-            "apply static history from shared context",
-            share_static_history=self.share_static_history,
-        )
-        if self.share_static_history:
-            try:
-                # summarized entries are those with an end value
-                summarized_entries = [
-                    entry
-                    for entry in scene.archived_history
-                    if entry.get("end") is not None
-                ]
-                static_entries = [
-                    entry.model_dump(exclude_none=True) for entry in self.static_history
-                ]
-                # replace archived_history with shared static entries first, then summarized
-                scene.archived_history = static_entries + summarized_entries
-            except Exception as e:
-                log.error("apply static history failed", error=e)
-
-        return True
-
     async def init_from_file(self):
         with open(self.filepath, "r") as f:
             data = json.load(f)
@@ -152,11 +234,17 @@ class SharedContext(pydantic.BaseModel):
             name: Character(**character_data)
             for name, character_data in data["character_data"].items()
         }
-        self.world_state = WorldState(**data["world_state"])
+        # Sidecar files written before scene time became integer seconds carry
+        # ISO8601 durations and are never rewritten on disk, so they have to be
+        # converted on every read.
+        self.world_state = WorldState(**migrate_world_entry_times(data["world_state"]))
         # optional fields for backward compatibility
         self.share_static_history = data.get("share_static_history", False)
+        self.start_ts = data.get("start_ts")
+        self.format_version = data.get("format_version")
         self.static_history = [
-            ArchiveEntry(**entry) for entry in data.get("static_history", [])
+            ArchiveEntry(**migrate_entry_time(entry))
+            for entry in data.get("static_history", [])
         ]
         log.debug(
             "init_from_file",
@@ -167,7 +255,27 @@ class SharedContext(pydantic.BaseModel):
         )
         return self
 
+    async def add_missing_world_entries(self, scene: "Scene"):
+        """
+        Adds the scene's shared entries that the file lacks and writes the
+        file if it added one. An entry that the file holds keeps the file's
+        text.
+        """
+        missing = {
+            id: entry
+            for id, entry in scene.world_state.manual_context.items()
+            if entry.shared and id not in self.world_state.manual_context
+        }
+        if not missing:
+            return
+        for id, entry in missing.items():
+            self.world_state.manual_context[id] = ManualContext(
+                **entry.model_dump(exclude={"reinforcement"})
+            )
+        await self.write_to_file()
+
     async def write_to_file(self):
+        self.format_version = self.FORMAT_VERSION
         with open(self.filepath, "w") as f:
             json.dump(self.model_dump(), f, indent=2, cls=SceneEncoder)
 

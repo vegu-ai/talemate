@@ -18,8 +18,9 @@ from talemate.util.data import (
     extract_data,
 )
 from talemate.instance import get_agent
+from talemate.exceptions import GenerationCancelled
 
-from .schema import Argument, Call, Callback, State
+from .schema import Argument, Call, Callback, CallRejected, State
 
 
 if TYPE_CHECKING:
@@ -44,6 +45,8 @@ class FocalContext:
     def __init__(self):
         self.hooks_before_call = []
         self.hooks_after_call = []
+        self.hooks_after_batch = []
+        self.batch_owner = None
         self.value = {}
 
     def __enter__(self):
@@ -61,6 +64,13 @@ class FocalContext:
         for hook in self.hooks_after_call:
             await hook(call)
 
+    async def process_batch_hooks(self, calls: list[Call]):
+        for hook in self.hooks_after_batch:
+            try:
+                await hook(calls)
+            except Exception:
+                log.exception("focal.batch_hook_error")
+
 
 class Focal:
     schema_formats: list[str] = ["json", "yaml"]
@@ -74,6 +84,7 @@ class Focal:
         schema_format: str = "json",
         response_length: int = 1024,
         max_concurrent: int = 3,
+        parent_call: Call | None = None,
         **kwargs,
     ):
         self.client = client
@@ -82,6 +93,7 @@ class Focal:
         self.retries = retries
         self.response_length = response_length
         self.max_concurrent = max_concurrent
+        self.parent_call = parent_call
         self.state = State(schema_format=schema_format)
         self.callbacks = {callback.name: callback for callback in callbacks}
 
@@ -95,6 +107,11 @@ class Focal:
             {
                 "max_calls": self.max_calls,
                 "state": self.state,
+                "budget_exempt": [
+                    cb.name
+                    for cb in self.callbacks.values()
+                    if not cb.counts_toward_budget
+                ],
             },
         )
         return prompt.render(apply_sectioning=False)
@@ -180,37 +197,66 @@ class Focal:
             log.error("focal.extract_error", error=str(e))
             return
 
+        calls = [Call(name=call.name, arguments=call.arguments) for call in calls]
         focal_context = current_focal_context.get()
         director: "DirectorAgent" = get_agent("director")
         use_concurrency = getattr(self.client, "supports_concurrent_inference", False)
+        if self.parent_call is not None:
+            self.parent_call.subcalls.extend(calls)
+        if focal_context and focal_context.batch_owner is None:
+            focal_context.batch_owner = self
+        self.state.batch = calls
 
         calls_made = 0
         i = 0
 
-        while i < len(calls) and calls_made < self.max_calls:
-            call = calls[i]
+        try:
+            while i < len(calls):
+                call = calls[i]
+                callback = self.callbacks.get(call.name)
+                if callback is None:
+                    call.skipped_reason = "unknown_callback"
+                    i += 1
+                    continue
+                if callback.counts_toward_budget and calls_made >= self.max_calls:
+                    call.skipped_reason = "over_budget"
+                    i += 1
+                    continue
 
-            if call.name not in self.callbacks:
-                log.warning("focal.execute.unknown_callback", name=call.name)
-                i += 1
-                continue
-
-            callback = self.callbacks[call.name]
-
-            # Check if this starts a concurrent streak
-            if use_concurrency and callback.concurrent:
-                streak, i = self._collect_concurrent_streak(calls, i, calls_made)
-                await self._execute_concurrent(streak, focal_context, director)
-                calls_made += len(streak)
-            else:
-                # Sequential execution
-                await self._execute_single(call, callback, focal_context, director)
-                self.state.calls.append(call)
-                calls_made += 1
-                i += 1
-
-        if calls_made >= self.max_calls and i < len(calls):
-            log.warning("focal.execute.max_calls_reached", max_calls=self.max_calls)
+                if (
+                    use_concurrency
+                    and callback.concurrent
+                    and callback.counts_toward_budget
+                ):
+                    streak, i = self._collect_concurrent_streak(calls, i, calls_made)
+                    try:
+                        await self._execute_concurrent(streak, focal_context, director)
+                    except BaseException:
+                        for remaining in calls[i:]:
+                            remaining.skipped_reason = "aborted"
+                        raise
+                    calls_made += len(streak)
+                else:
+                    try:
+                        await self._execute_single(
+                            call, callback, focal_context, director
+                        )
+                    except CallRejected as exc:
+                        if exc.reason != "reject_with_instructions":
+                            for remaining in calls[i + 1 :]:
+                                remaining.skipped_reason = "aborted"
+                            raise
+                    except BaseException:
+                        for remaining in calls[i + 1 :]:
+                            remaining.skipped_reason = "aborted"
+                        raise
+                    else:
+                        self.state.calls.append(call)
+                    calls_made += int(callback.counts_toward_budget)
+                    i += 1
+        finally:
+            if focal_context and focal_context.batch_owner is self:
+                await focal_context.process_batch_hooks(calls)
 
     def _collect_concurrent_streak(
         self,
@@ -224,7 +270,7 @@ class Focal:
         while i < len(calls) and calls_made + len(streak) < self.max_calls:
             c = calls[i]
             cb = self.callbacks.get(c.name)
-            if not cb or not cb.concurrent:
+            if not cb or not cb.concurrent or not cb.counts_toward_budget:
                 break
             streak.append((c, cb))
             i += 1
@@ -245,15 +291,33 @@ class Focal:
         semaphore = asyncio.Semaphore(self.max_concurrent)
 
         async def _run_bounded(c, cb):
-            async with semaphore:
-                return await self._execute_single(c, cb, focal_context, director)
+            try:
+                async with semaphore:
+                    return await self._execute_single(c, cb, focal_context, director)
+            except asyncio.CancelledError:
+                # A cancelled call may still be waiting for a concurrency slot.
+                if not c.called and c.skipped_reason is None:
+                    c.skipped_reason = "interrupted"
+                    c.error = "Cancelled while waiting to execute"
+                raise
 
-        await asyncio.gather(
+        results = await asyncio.gather(
             *[_run_bounded(c, cb) for c, cb in streak],
+            return_exceptions=True,
         )
 
-        for c, _ in streak:
-            self.state.calls.append(c)
+        abort = None
+        for (call, _), result in zip(streak, results):
+            if isinstance(result, BaseException):
+                if (
+                    not isinstance(result, CallRejected)
+                    or result.reason != "reject_with_instructions"
+                ):
+                    abort = abort or result
+            else:
+                self.state.calls.append(call)
+        if abort is not None:
+            raise abort
 
     async def _execute_single(
         self,
@@ -273,22 +337,34 @@ class Focal:
 
             await director.log_function_call(call)
 
-            result = await callback.fn(**call.arguments)
+            arguments = dict(call.arguments)
+            if callback.pass_call:
+                arguments["_focal_call"] = call
+            result = await callback.fn(**arguments)
             call.result = result
             call.called = True
 
             if focal_context:
                 await focal_context.process_after_hooks(call)
 
-        except Exception as e:
-            if getattr(e, "focal_reraise", False):
-                raise e
+        except BaseException as e:
+            call.error = str(e) or type(e).__name__
+            call.skipped_reason = (
+                e.reason
+                if isinstance(e, CallRejected)
+                else "interrupted"
+                if isinstance(e, (GenerationCancelled, asyncio.CancelledError))
+                else "failed"
+            )
+            if isinstance(e, CallRejected):
+                call.rejection_instructions = e.instructions
+            if not isinstance(e, Exception) or getattr(e, "focal_reraise", False):
+                raise
             log.error(
                 "focal.execute.callback_error",
                 callback=call.name,
                 error=traceback.format_exc(),
             )
-            call.error = str(e)
 
     async def _extract(self, response: str) -> list[Call]:
         # first try to extract data from the response using tooling

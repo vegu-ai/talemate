@@ -1,11 +1,9 @@
 <template>
   <v-alert  v-if="show" @mouseover="hovered=true" @mouseleave="hovered=false" @click="toggle()" class="clickable" variant="text" density="compact" :style="{ opacity: revisionBusy ? 0.65 : 1, transition: 'opacity 0.2s ease' }" :color="getMessageColor('context_investigation')">
     <template v-slot:close>
-      <v-btn size="small" icon variant="text" class="close-button" @click="deleteMessage" :disabled="uxLocked">
-        <v-icon>mdi-close</v-icon>
-      </v-btn>
+      <MessageCloseButton :disabled="uxLocked" @click="deleteMessage" />
     </template>
-    <v-alert-title v-if="title !== ''" class="muted-title text-caption">{{ title }}</v-alert-title>
+    <v-alert-title v-if="title !== ''" class="muted-title text-body-small">{{ title }}</v-alert-title>
     
     <!-- Scene illustration (big) renders above message -->
     <MessageAssetImage 
@@ -29,13 +27,13 @@
         :message_content="message.text"
         :message_id="message.id"
       />
-      <RevisionNav v-if="isLastMessage" :count="revisionsCount" :index="revisionIndex" :source="revisionSource" :reason="revisionReason" :disabled="uxLocked" :busy="revisionBusy" @navigate="(dir) => $emit('navigate-revision', dir)" />
+      <RevisionNav v-if="isLastMessage" :count="revisionsCount" :index="revisionIndex" :source="revisionSource" :reason="revisionReason" :disabled="uxLocked" :busy="revisionBusy" :uncommitted="revisionUncommitted" :refresh="revisionRefresh" @keep="$emit('keep-revision')" @navigate="(dir) => $emit('navigate-revision', dir)" />
       <div v-if="editing" class="position-relative context-investigation-editor">
         <v-textarea
           ref="textarea"
           v-model="editing_text"
-          color="indigo-lighten-4"
-          bg-color="black"
+          color="highlight1"
+          bg-color="surface"
           auto-grow
           :hint="autocompleteInfoMessage(autocompleting) + ', Shift+Enter for newline'"
           :loading="autocompleting"
@@ -49,6 +47,7 @@
           :disabled="autocompleting"
           @redo="autocompleteField.redo()"
           @undo="autocompleteField.undo()" />
+        <HistoryEditNotice :message-id="message.id" />
       </div>
       <div v-if="!editing" @dblclick="startEdit()" v-html="renderedText">
       </div>
@@ -90,14 +89,18 @@ import MessageAssetMixin from './MessageAssetMixin.js';
 import RevisionNav from './RevisionNav.vue';
 import MessageToolbar from './MessageToolbar.vue';
 import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
+import HistoryEditNotice from './HistoryEditNotice.vue';
+import MessageCloseButton from './MessageCloseButton.vue';
 
 export default {
   name: 'ContextInvestigationMessage',
   components: {
+    MessageCloseButton,
     MessageAssetImage,
     RevisionNav,
     MessageToolbar,
     AutocompleteRedoChip,
+    HistoryEditNotice,
   },
   mixins: [MessageAssetMixin],
   data() {
@@ -250,6 +253,8 @@ export default {
       type: String,
       default: null,
     },
+    revisionUncommitted: { type: Boolean, default: false },
+    revisionRefresh: { type: Object, default: null },
     revisionBusy: {
       type: [Boolean, String],
       default: false,
@@ -259,7 +264,7 @@ export default {
       default: () => [],
     },
   },
-  emits: ['navigate-revision'],
+  emits: ['navigate-revision', 'keep-revision'],
   inject: ['requestDeleteMessage', 'getWebsocket', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'getMessageColor', 'isMessageVisualizing'],
   methods: {
     toggle() {
@@ -331,16 +336,5 @@ export default {
 
 :deep(.scene-paragraph:last-child) {
   margin-bottom: 0;
-}
-
-.close-button {
-  opacity: 0.4;
-  color: rgba(255, 255, 255, 0.6) !important;
-  transition: opacity 0.2s ease;
-}
-
-.close-button:hover {
-  opacity: 1;
-  color: rgba(255, 255, 255, 0.9) !important;
 }
 </style>

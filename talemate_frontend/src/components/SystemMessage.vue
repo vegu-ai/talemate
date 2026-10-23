@@ -1,5 +1,8 @@
 <template>
-    <v-alert :variant="display" closable :color="color" density="compact" :icon="icon" class="mb-3 text-caption" @click:close="handleClose">
+    <v-alert :variant="display" :color="color" density="compact" :icon="icon" class="mb-3 text-body-small">
+        <template v-slot:close>
+            <MessageCloseButton label="Dismiss" @click="handleClose" />
+        </template>
         <v-alert-title v-if="title">{{ title }}</v-alert-title>
         <div class="message-body message-body-plain" v-if="!as_markdown">
             {{ message }}
@@ -8,10 +11,14 @@
     </v-alert>
 </template>
 <script>
-import { marked } from 'marked';
+import { renderChatMarkdown } from '@/utils/chatMarkdownRenderer.js';
+import MessageCloseButton from './MessageCloseButton.vue';
 
 export default {
     name: 'SystemMessage',
+    components: {
+        MessageCloseButton,
+    },
     props: {
         message: {
             type: String,
@@ -49,7 +56,7 @@ export default {
     emits: ['close'],
     computed: {
         renderedMarkdown() {
-            return marked.parse(this.message);
+            return renderChatMarkdown(this.message);
         },
     },
     methods: {

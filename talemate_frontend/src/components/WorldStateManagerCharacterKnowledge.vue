@@ -1,0 +1,272 @@
+<template>
+    <div v-if="character">
+        <v-alert v-if="!perceptionMode" variant="text" density="compact" icon="mdi-head-lightbulb-outline" class="text-medium-emphasis mb-2">
+            What {{ character.name }} knows follows from where they were present, what belongs to them, and what is shared with everyone.
+            Choose Learn to add an entry to their knowledge, or Never Learn to keep it out.
+        </v-alert>
+        <v-alert v-if="!perceptionMode && error" type="error" variant="tonal" density="compact" closable class="mb-3 knowledge-rule-error" @click:close="error = null">{{ error }}</v-alert>
+
+        <v-card v-if="perceptionMode" variant="tonal" class="mb-4">
+            <v-card-title class="text-body-large">Establish character knowledge</v-card-title>
+            <v-card-text>
+                <p class="mb-3">Give {{ character.name }} selected information now, without adding dialogue or changing what they knew earlier.</p>
+                <v-autocomplete v-model="newTarget" :items="targets" item-title="label" item-value="id" label="Source entry" variant="underlined" clearable />
+                <v-switch v-model="wholeEntry" label="Give the whole entry" color="primary" hide-details />
+                <p class="text-body-small mb-3">{{ wholeEntry ? 'All text in this entry will be copied into the character’s knowledge, including any private details.' : 'Only the information you enter below will be copied. Other details in the source entry stay undisclosed.' }}</p>
+                <v-textarea v-if="!wholeEntry" v-model="information" label="Information to disclose" auto-grow rows="3" variant="outlined" />
+                <v-alert v-if="error" type="error" variant="tonal">{{ error }}</v-alert>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer />
+                <v-btn :disabled="!newTarget || (!wholeEntry && !information.trim()) || busy" color="primary" @click="addDisclosure">{{ wholeEntry ? 'Give all entry content' : 'Give selected information' }}</v-btn>
+            </v-card-actions>
+        </v-card>
+        <v-list v-if="perceptionMode" density="compact">
+            <v-list-item v-for="disclosure in disclosures" :key="disclosure.id">
+                <v-list-item-title class="text-wrap">{{ disclosure.text }}</v-list-item-title>
+                <v-list-item-subtitle>Source: {{ targetLabel(disclosure.origin) }}</v-list-item-subtitle>
+            </v-list-item>
+        </v-list>
+        <v-card v-else variant="tonal" class="mb-4">
+            <v-card-title class="text-body-large">Adjust entry knowledge</v-card-title>
+            <v-card-text>
+                <v-row>
+                    <v-col cols="12" md="6">
+                        <v-autocomplete
+                            v-model="newTarget"
+                            :items="targets"
+                            item-title="label"
+                            item-value="id"
+                            label="Entry"
+                            density="compact"
+                            variant="underlined"
+                            hide-details
+                            clearable>
+                            <template v-slot:item="{ props, item }">
+                                <v-list-item v-bind="props" :subtitle="item.kind"></v-list-item>
+                            </template>
+                        </v-autocomplete>
+                    </v-col>
+                    <v-col cols="6" md="2">
+                        <v-select v-model="newKind" :items="kinds" item-title="label" item-value="value" label="Action" density="compact" variant="underlined" hide-details></v-select>
+                    </v-col>
+                    <v-col cols="6" md="4">
+                        <v-text-field v-model="newNote" label="Note (optional)" density="compact" variant="underlined" hide-details @keyup.enter="addEdge"></v-text-field>
+                    </v-col>
+                </v-row>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="primary" prepend-icon="mdi-plus" :disabled="!newTarget || busy" @click="addEdge">Apply</v-btn>
+            </v-card-actions>
+        </v-card>
+
+        <p v-if="perceptionMode && edges.length" class="mb-2">Removing an access rule does not erase information already given to this character.</p>
+        <v-list v-if="edges.length" density="compact">
+            <v-list-item v-for="edge in edges" :key="edge.id">
+                <template v-slot:prepend>
+                    <v-chip size="small" :color="rule(edge).color" variant="tonal" class="mr-2" :prepend-icon="rule(edge).icon">
+                        {{ rule(edge).label }}
+                        <v-tooltip activator="parent" location="top">{{ edgeHint(edge) }}</v-tooltip>
+                    </v-chip>
+                </template>
+                <v-list-item-title>{{ targetLabel(edge.target) }}</v-list-item-title>
+                <v-list-item-subtitle>
+                    <span class="text-body-small">{{ edge.source }}</span>
+                    <span v-if="edge.note" class="text-body-small ml-2">— {{ edge.note }}</span>
+                </v-list-item-subtitle>
+                <template v-slot:append>
+                    <ConfirmActionInline icon="mdi-close-box-outline" color="delete" action-label="Remove" confirm-label="Confirm" :disabled="busy" @confirm="removeEdge(edge)" />
+                </template>
+            </v-list-item>
+        </v-list>
+        <v-alert v-else-if="!perceptionMode" variant="text" density="compact" class="text-medium-emphasis" icon="mdi-information-outline">
+            No entry access rules for {{ character.name }} yet. Their knowledge follows presence, ownership and sharing.
+        </v-alert>
+
+    </div>
+</template>
+
+<script>
+import ConfirmActionInline from './ConfirmActionInline.vue';
+import { KNOWLEDGE_RULES } from '@/constants/knowledgeRules';
+import { newUuid } from '@/utils/uuid';
+
+export default {
+    name: 'WorldStateManagerCharacterKnowledge',
+    components: { ConfirmActionInline },
+    props: {
+        scene: Object,
+        immutableCharacter: Object,
+        appBusy: Boolean,
+        appReady: { type: Boolean, default: true },
+        visible: { type: Boolean, default: true },
+    },
+    inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler'],
+    emits: ['require-scene-save'],
+    data() {
+        return {
+            character: null,
+            perceptionMode: false,
+            disclosures: [],
+            information: '',
+            wholeEntry: false,
+            error: null,
+
+            disclosureRequestId: null,
+            edges: [],
+
+            targets: [],
+            newTarget: null,
+            newKind: 'grant',
+            newNote: '',
+            busy: false,
+
+            kinds: ['grant', 'revoke'].map((value) => ({ label: KNOWLEDGE_RULES[value].label, value })),
+        }
+    },
+    watch: {
+
+        // the pane stays mounted while hidden and skips its refetches then
+        visible(value) {
+            if (value) this.request();
+        },
+        immutableCharacter: {
+            immediate: true,
+            handler(value) {
+                if (!value) {
+                    this.character = null;
+                    this.edges = [];
+                    return;
+                }
+                const changed = !this.character || this.character.name !== value.name;
+                this.character = { ...value };
+                if (changed) {
+                    this.error = null;
+                    this.disclosureRequestId = null;
+                    this.busy = false;
+                    this.perceptionMode = false;
+                    this.disclosures = [];
+                    this.newTarget = null;
+                    this.information = '';
+                    this.wholeEntry = false;
+                    this.request();
+                }
+            },
+        },
+    },
+    methods: {
+        request() {
+            if (!this.character) return;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'get_character_knowledge',
+                name: this.character.name,
+            }));
+        },
+        targetLabel(id) {
+            const target = this.targets.find(t => t.id === id);
+            return target ? target.label : id;
+        },
+        rule(edge) {
+            return KNOWLEDGE_RULES[edge.kind] || KNOWLEDGE_RULES.grant;
+        },
+
+        edgeHint(edge) {
+            const name = this.character.name;
+            if (edge.kind === 'revoke') return `${name} does not know this even when they would otherwise, and cannot learn it until a Learn lifts this rule.`;
+            return `${name} knows this even when they were not present for it.`;
+        },
+
+        addDisclosure() {
+            if (!this.newTarget || (!this.wholeEntry && !this.information.trim()) || this.busy) return;
+            this.busy = true;
+            this.error = null;
+            this.disclosureRequestId = newUuid();
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager', action: 'grant_disclosure',
+                request_id: this.disclosureRequestId,
+                name: this.character.name, target: this.newTarget,
+                information: this.wholeEntry ? null : this.information,
+                whole_entry: this.wholeEntry,
+            }));
+        },
+        addEdge() {
+            if (!this.newTarget) return;
+            this.busy = true;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'set_knowledge_edge',
+                edge: {
+                    character: this.character.name,
+                    target: this.newTarget,
+                    kind: this.newKind,
+                    source: 'manual',
+                    note: this.newNote || null,
+                },
+            }));
+            this.newTarget = null;
+            this.newNote = '';
+        },
+        removeEdge(edge) {
+            this.busy = true;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'remove_knowledge_edge',
+                name: this.character.name,
+                edge_id: edge.id,
+            }));
+        },
+        handleMessage(message) {
+            if (message.type === 'knowledge_changed') {
+                if (this.character && message.data?.changes?.some(change => change.character === this.character.name)) {
+                    this.request();
+                }
+                return;
+            }
+            if (message.type !== 'world_state_manager') return;
+            if (message.action === 'operation_done' && message.failed_action === 'set_knowledge_edge') {
+                this.busy = false;
+                this.error = message.error?.message || 'The change could not be applied.';
+                return;
+            }
+            const failedDisclosureAction = message.action === 'operation_done'
+                && ['grant_disclosure'].includes(message.failed_action);
+            const activeRequestId = this.disclosureRequestId;
+            if (failedDisclosureAction
+                && (message.request_id ? message.request_id === activeRequestId : message.data?.name === this.character?.name)) {
+                this.busy = false;
+                this.disclosureRequestId = null;
+                this.error = message.error.message;
+            }
+            if (message.action === 'character_knowledge') {
+                if (!this.character || message.data.name !== this.character.name) return;
+                this.perceptionMode = message.data.perception_mode === true;
+                this.disclosures = message.data.disclosures || [];
+                this.edges = message.data.edges;
+                this.targets = message.data.targets;
+                // Indexing refreshes can arrive after another grant has started.
+                const activeRequestId = this.disclosureRequestId;
+                const completesRequest = activeRequestId
+                    ? message.request_id === activeRequestId
+                    : !message.request_id;
+                if (this.busy && completesRequest) {
+                    this.busy = false;
+                    if (this.disclosureRequestId) {
+                        this.information = '';
+                        this.wholeEntry = false;
+                        this.disclosureRequestId = null;
+                    }
+                    this.$emit('require-scene-save');
+                }
+            }
+        },
+    },
+    mounted() {
+        this.registerMessageHandler(this.handleMessage);
+    },
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
+    },
+}
+</script>

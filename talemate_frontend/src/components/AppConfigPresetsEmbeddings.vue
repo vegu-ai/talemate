@@ -94,6 +94,7 @@
                             <v-select :disabled="busy" v-model="config.embeddings[selected[0]].distance_function" :items="distanceFunctions" label="Distance Function" @update:model-value="setPresetChanged(selected[0])"></v-select>
 
 
+
                             <v-row>
                                 <v-col cols="3">
                                     <v-checkbox :disabled="busy" v-model="config.embeddings[selected[0]].fast" label="Fast" @update:model-value="setPresetChanged(selected[0])"></v-checkbox>
@@ -116,7 +117,7 @@
                 </v-form>
             </div>
             <div v-else>
-                <v-alert color="grey" variant="text">Select a preset to edit</v-alert>
+                <v-alert class="text-medium-emphasis" variant="text">Select a preset to edit</v-alert>
             </div>
         </v-col>
     </v-row>
@@ -137,7 +138,6 @@ export default {
     watch: {
         immutableConfig: {
             handler: function(newVal) {
-                console.log('immutableConfig changed', newVal);
                 if(!newVal) {
                     this.config = {};
                     return;
@@ -181,7 +181,6 @@ export default {
             return this.config.embeddings[this.selected[0]].embeddings === 'sentence-transformer';
         },
         isCurrentyLoaded() {
-            console.log('isCurrentyLoaded', this.memoryAgentStatus, this.selected, this.sceneActive);
             if(!this.memoryAgentStatus || !this.selected.length || !this.sceneActive) {
                 return false;
             }
@@ -207,6 +206,7 @@ export default {
             embeddings: [
                 {title: 'SentenceTransformer', value: 'sentence-transformer'},
                 {title: 'OpenAI', value: 'openai'},
+                {title: 'OpenRouter', value: 'openrouter'},
                 {title: 'Client API', value: 'client-api'},
             ],
             distanceFunctions: [
@@ -272,7 +272,7 @@ export default {
 
             let identifier = `${this.newPreset.embeddings}/${this.newPreset.model || this.newPreset.url || this.newPreset.client}`;
 
-            if(this.newPreset.embeddings === 'client-api') {
+            if(this.newPreset.embeddings !== 'sentence-transformer') {
                 this.newPreset.local = false;
             }
 

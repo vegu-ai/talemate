@@ -1,8 +1,8 @@
 <template>
   <div>
     <v-card elevation="2" class="mb-4" v-if="pendingItems.length > 0">
-      <v-toolbar density="compact" color="grey-darken-3">
-        <v-toolbar-title class="text-subtitle-2">
+      <v-toolbar density="compact" color="surface-light">
+        <v-toolbar-title class="text-title-small">
           <v-icon class="mr-2" size="small">mdi-clock-outline</v-icon>
           Pending Queue ({{ pendingItems.length }})
         </v-toolbar-title>
@@ -44,12 +44,12 @@
                 <v-icon
                   v-else
                   size="32"
-                  color="grey"
+                  color="muted"
                   class="mb-2"
                 >
                   mdi-image-outline
                 </v-icon>
-                <div class="text-caption text-center text-truncate" style="width: 100%;">
+                <div class="text-body-small text-center text-truncate" style="width: 100%;">
                   {{ truncatePrompt(item.prompt) }}
                 </div>
               </v-card-text>
@@ -59,7 +59,7 @@
 
         <div v-if="selectedItem" class="mt-4">
           <v-card variant="outlined" color="muted">
-            <v-card-title class="text-subtitle-2 d-flex align-center">
+            <v-card-title class="text-title-small d-flex align-center">
               <v-icon class="mr-2" size="small">mdi-information-outline</v-icon>
               Pending Generation Details
               <v-spacer></v-spacer>
@@ -95,27 +95,27 @@
                   label
                   size="small"
                   class="ma-1"
-                  color="grey"
+                  color="muted"
                 >
                   <v-icon start size="x-small">mdi-clock-outline</v-icon>
                   Queued
                 </v-chip>
               </div>
 
-              <v-card elevation="2" class="mt-2" color="grey" variant="tonal">
-                <v-card-title class="text-caption">Prompt</v-card-title>
-                <v-card-text class="pre-wrap text-body-2">{{ selectedItem.prompt }}</v-card-text>
+              <v-card elevation="2" class="mt-2" color="muted" variant="tonal">
+                <v-card-title class="text-body-small">Prompt</v-card-title>
+                <v-card-text class="pre-wrap text-body-medium">{{ selectedItem.prompt }}</v-card-text>
               </v-card>
 
               <v-card
                 v-if="selectedItem.negative_prompt"
                 elevation="2"
                 class="mt-2"
-                color="grey"
+                color="muted"
                 variant="tonal"
               >
-                <v-card-title class="text-caption">Negative Prompt</v-card-title>
-                <v-card-text class="pre-wrap text-body-2">{{ selectedItem.negative_prompt }}</v-card-text>
+                <v-card-title class="text-body-small">Negative Prompt</v-card-title>
+                <v-card-text class="pre-wrap text-body-medium">{{ selectedItem.negative_prompt }}</v-card-text>
               </v-card>
 
               <VisualReferenceImages
@@ -135,8 +135,8 @@
       <div class="d-flex align-center">
         <v-icon class="mr-3" size="32" color="muted">mdi-clock-outline</v-icon>
         <div>
-          <div class="text-subtitle-2">Pending queue is empty</div>
-          <div class="text-caption text-medium-emphasis mt-1">
+          <div class="text-title-small">Pending queue is empty</div>
+          <div class="text-body-small text-medium-emphasis mt-1">
             Batch generations you queue (e.g. from Character Portraits) will appear here.
           </div>
         </div>

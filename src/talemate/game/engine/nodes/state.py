@@ -14,6 +14,12 @@ from talemate.game.engine.nodes.core import (
     PropertyField,
     InputValueError,
 )
+from talemate.game.state import (
+    pin_game_state_path,
+    set_game_state_value,
+    unset_game_state_value,
+    update_game_state,
+)
 from talemate.util.path import split_state_path, get_path_parent
 
 if TYPE_CHECKING:
@@ -86,6 +92,11 @@ class StateManipulation(Node):
             return scene.game_state
         else:
             raise InputValueError(self, "scope", f"Unknown scope: {scope}")
+
+    def game_scene(self) -> "Scene | None":
+        # the game scope writes through talemate.game.state, which sends
+        # game_state.changed for each changed value
+        return active_scene.get() if self.get_property("scope") == "game" else None
 
 
 @register("state/SetState")
@@ -354,6 +365,31 @@ class CounterState(StateManipulation):
         self.add_output("reset", socket_type="bool")
         self.add_output("new_cycle", socket_type="bool")
 
+    def count(self, current_value, increment, reset, reset_cap, name, scope):
+        """The counter's next value, and the reset and cap it used."""
+        value = 0 if reset else current_value + increment
+        try:
+            reset_cap = int(reset_cap)
+            if reset_cap > 0 and value >= reset_cap:
+                log.debug(
+                    "Resetting counter state from reset cap",
+                    node_id=self.id,
+                    name=name,
+                    scope=scope,
+                    reset_cap=reset_cap,
+                )
+                reset = True
+                value = 0
+        except Exception:
+            log.error(
+                "Error resetting counter state from reset cap",
+                node_id=self.id,
+                name=name,
+                scope=scope,
+                reset_cap=reset_cap,
+            )
+        return value, reset, reset_cap
+
     async def run(self, state: GraphState):
         name = self.require_input("name")
         scope = self.require_input("scope")
@@ -363,39 +399,18 @@ class CounterState(StateManipulation):
 
         container = self.get_state_container(state)
 
-        new_cycle: bool = container.get(name, 0) == 0
-
-        if reset:
-            container[name] = 0
-        else:
-            container[name] = container.get(name, 0) + increment
-
-        try:
-            reset_cap = int(reset_cap)
-            if reset_cap > 0 and container[name] >= reset_cap:
-                log.debug(
-                    "Resetting counter state from reset cap",
-                    node_id=self.id,
-                    name=name,
-                    scope=scope,
-                    reset_cap=reset_cap,
-                )
-                reset = True
-                container[name] = 0
-        except Exception:
-            log.error(
-                "Error resetting counter state from reset cap",
-                node_id=self.id,
-                name=name,
-                scope=scope,
-                reset_cap=reset_cap,
-            )
-            pass
+        current_value = container.get(name, 0)
+        new_cycle: bool = current_value == 0
+        value, reset, reset_cap = self.count(
+            current_value, increment, reset, reset_cap, name, scope
+        )
+        # one write: a counter that reaches its cap changes once, to 0
+        container[name] = value
 
         self.set_output_values(
             {
                 "state": state,
-                "value": container[name],
+                "value": value,
                 "name": name,
                 "scope": scope,
                 "reset_cap": reset_cap,
@@ -518,14 +533,18 @@ class SetStatePath(SetState):
             )
 
         container = self.get_state_container(state)
+        game_scene = self.game_scene()
 
         # Split path and traverse/create intermediate containers
         try:
-            parts = split_state_path(name)
-            parent_container, leaf_key = get_path_parent(
-                container, parts, create=True, node_for_errors=self
-            )
-            parent_container[leaf_key] = value
+            if game_scene is not None:
+                set_game_state_value(game_scene, name, value)
+            else:
+                parts = split_state_path(name)
+                parent_container, leaf_key = get_path_parent(
+                    container, parts, create=True, node_for_errors=self
+                )
+                parent_container[leaf_key] = value
         except ValueError as e:
             raise InputValueError(self, "name", str(e))
 
@@ -656,6 +675,7 @@ class UnsetStatePath(UnsetState):
         scope = self.require_input("scope")
 
         container = self.get_state_container(state)
+        game_scene = self.game_scene()
 
         # Split path and traverse (without creating)
         try:
@@ -667,6 +687,8 @@ class UnsetStatePath(UnsetState):
             if parent_container is None:
                 # Path doesn't exist, nothing to unset
                 value = None
+            elif game_scene is not None:
+                value = unset_game_state_value(game_scene, name)
             else:
                 # Pop value from parent container
                 if hasattr(parent_container, "pop"):
@@ -784,54 +806,39 @@ class CounterStatePath(CounterState):
         increment = self.get_input_value("increment")
 
         container = self.get_state_container(state)
+        game_scene = self.game_scene()
 
-        # Split path and traverse/create intermediate containers
+        # Split path and traverse/create intermediate containers; the game
+        # scope only reads here and creates them in its one write
         try:
             parts = split_state_path(name)
             parent_container, leaf_key = get_path_parent(
-                container, parts, create=True, node_for_errors=self
+                container, parts, create=game_scene is None, node_for_errors=self
             )
 
             # Get current value (defaulting to 0)
-            current_value = (
-                parent_container.get(leaf_key, 0)
-                if hasattr(parent_container, "get")
-                else (parent_container[leaf_key] if leaf_key in parent_container else 0)
-            )
+            if parent_container is None:
+                current_value = 0
+            elif hasattr(parent_container, "get"):
+                current_value = parent_container.get(leaf_key, 0)
+            else:
+                current_value = (
+                    parent_container[leaf_key] if leaf_key in parent_container else 0
+                )
 
             new_cycle: bool = current_value == 0
-
-            if reset:
-                parent_container[leaf_key] = 0
+            value, reset, reset_cap = self.count(
+                current_value, increment, reset, reset_cap, name, scope
+            )
+            if game_scene is not None:
+                set_game_state_value(game_scene, name, value)
             else:
-                parent_container[leaf_key] = current_value + increment
-
-            try:
-                reset_cap = int(reset_cap)
-                if reset_cap > 0 and parent_container[leaf_key] >= reset_cap:
-                    log.debug(
-                        "Resetting counter state from reset cap",
-                        node_id=self.id,
-                        name=name,
-                        scope=scope,
-                        reset_cap=reset_cap,
-                    )
-                    reset = True
-                    parent_container[leaf_key] = 0
-            except Exception:
-                log.error(
-                    "Error resetting counter state from reset cap",
-                    node_id=self.id,
-                    name=name,
-                    scope=scope,
-                    reset_cap=reset_cap,
-                )
-                pass
+                parent_container[leaf_key] = value
 
             self.set_output_values(
                 {
                     "state": self.get_input_value("state"),
-                    "value": parent_container[leaf_key],
+                    "value": value,
                     "name": name,
                     "scope": scope,
                     "reset_cap": reset_cap,
@@ -846,7 +853,9 @@ class CounterStatePath(CounterState):
 @register("state/Gamestate")
 class UnpackGameState(Node):
     """
-    Get the game state variables of the active scene.
+    Get the game state variables of the active scene. Change them with
+    Update Game State or a state node in the game scope: a change made in
+    place sends no game_state.changed event.
 
     Outputs:
 
@@ -864,3 +873,205 @@ class UnpackGameState(Node):
         game_state: "GameState" = scene.game_state
         variables = game_state.variables
         self.set_output_values({"variables": variables})
+
+
+@register("state/UpdateGameState")
+class UpdateGameState(Node):
+    """
+    Apply update dicts to the game state variables, in order; each changed
+    value sends game_state.changed.
+
+    Inputs:
+
+    - state: graph state
+    - updates: one dict, or a list of dicts applied one after another
+
+    Properties:
+
+    - merge: merge nested dicts (an empty dict clears its key); off, each
+      top-level key is replaced
+
+    Outputs:
+
+    - state: graph state
+    - variables: the game state variables after the update
+    """
+
+    class Fields:
+        merge = PropertyField(
+            name="merge",
+            description="Merge nested dicts; off replaces each top-level key",
+            type="bool",
+            default=True,
+        )
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(title_color="#2e4657", icon="F01DA")  # upload
+
+    def __init__(self, title="Update Game State", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("updates", socket_type="dict,list")
+        self.set_property("merge", True)
+        self.add_output("state")
+        self.add_output("variables", socket_type="dict")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        updates = self.require_input("updates")
+        try:
+            variables = update_game_state(
+                scene, updates, merge=bool(self.get_property("merge"))
+            )
+        except (TypeError, ValueError) as exc:
+            raise InputValueError(self, "updates", str(exc)) from exc
+        self.set_output_values(
+            {"state": self.get_input_value("state"), "variables": variables}
+        )
+
+
+def _game_state_path(node: Node, path) -> str:
+    try:
+        return "/".join(split_state_path(path))
+    except ValueError as e:
+        raise InputValueError(node, "path", str(e))
+
+
+@register("state/GetGameStatePathSettings")
+class GetGameStatePathSettings(Node):
+    """
+    How a game state path is pinned: as a control in the scene header
+    (control), listed in Debug Tools (debug), and the control's settings.
+
+    Inputs:
+
+    - path: the game state path (e.g. 'player/health')
+
+    Outputs:
+
+    - path: the normalized path
+    - pinned: True when the path is shown in the header or in Debug Tools
+    - control: True when the path is a control in the scene header
+    - debug: True when the path is listed in Debug Tools
+    - read_only: True when the path or a pinned container above it is read only
+    - settings: label, description, minimum, maximum, step, slider, choices, read_only and order, as set
+    """
+
+    def __init__(self, title="Get Game State Path Settings", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("path", socket_type="str")
+        self.set_property("path", "")
+        self.add_output("path", socket_type="str")
+        self.add_output("pinned", socket_type="bool")
+        self.add_output("control", socket_type="bool")
+        self.add_output("debug", socket_type="bool")
+        self.add_output("read_only", socket_type="bool")
+        self.add_output("settings", socket_type="dict")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        path = _game_state_path(self, self.require_input("path"))
+        settings = scene.game_state_path_settings.get(path)
+        self.set_output_values(
+            {
+                "path": path,
+                "pinned": path in scene.pinned_game_state_paths,
+                "control": path in scene.game_state_control_paths,
+                "debug": path in scene.game_state_watch_paths,
+                "read_only": scene.game_state_path_is_read_only(path),
+                "settings": settings.model_dump(exclude_defaults=True)
+                if settings
+                else {},
+            }
+        )
+
+
+@register("state/PinGameStatePath")
+class PinGameStatePath(Node):
+    """
+    Pin or unpin a game state path: `control` shows it as a control in the scene
+    header, `debug` lists it in Debug Tools. `settings` changes only the
+    fields given. Unpinning from both targets removes the settings.
+
+    Inputs:
+
+    - state: graph state (passthrough)
+    - path: the game state path (e.g. 'player/health')
+    - enabled: pin (true) or unpin (false)
+    - settings: control settings to apply (optional)
+
+    Properties:
+
+    - target: control or debug
+
+    Outputs:
+
+    - state: graph state
+    - path: the normalized path
+    - settings: the path's settings after the change
+    """
+
+    class Fields:
+        target = PropertyField(
+            name="target",
+            description="Where the path is pinned",
+            type="str",
+            default="control",
+            choices=["control", "debug"],
+        )
+        enabled = PropertyField(
+            name="enabled",
+            description="Pin (true) or unpin (false)",
+            type="bool",
+            default=True,
+        )
+
+    def __init__(self, title="Pin Game State Path", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("path", socket_type="str")
+        self.add_input("enabled", socket_type="bool", optional=True)
+        self.add_input("settings", socket_type="dict", optional=True)
+        self.set_property("path", "")
+        self.set_property("target", "control")
+        self.set_property("enabled", True)
+        self.add_output("state")
+        self.add_output("path", socket_type="str")
+        self.add_output("settings", socket_type="dict")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        path = _game_state_path(self, self.require_input("path"))
+        enabled = self.normalized_input_value("enabled")
+        try:
+            pin_game_state_path(
+                scene,
+                path,
+                self.get_property("target"),
+                True if enabled is None else bool(enabled),
+                self.normalized_input_value("settings") or None,
+            )
+        except pydantic.ValidationError as e:
+            raise InputValueError(self, "settings", str(e))
+        except ValueError as e:
+            raise InputValueError(self, "target", str(e))
+        scene.emit_status()
+
+        current = scene.game_state_path_settings.get(path)
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "path": path,
+                "settings": current.model_dump(exclude_defaults=True)
+                if current
+                else {},
+            }
+        )

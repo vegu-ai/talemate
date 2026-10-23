@@ -25,22 +25,29 @@ Choose this if you want to use a cloud-based AI service. This requires an API ke
 - Anthropic
 - And others
 
-![Setup wizard step 1 - choose provider type](../img/0.35.0/setup-wizard-step1-provider-type.png)
+Below the two options, the wizard shows **What Talemate expects from your model**: the bar a model has to meet for the full experience, known good examples for each provider type, and what still works without it. Read it before you pick a model; the [Model expectations](model-expectations.md) page has the details and the symptoms of a model below the bar.
+
+![Setup wizard step 1 - choose provider type](../img/0.40.0/setup-wizard-step1-provider-type.png)
 
 ## Step 2: Add Your Client
 
 After selecting your provider type, you will choose a specific client to configure.
 
-For **Hosted API** users, OpenRouter is selected by default. For **Self-hosted** users, KoboldCpp is selected by default.
+For **Hosted API** users, OpenRouter is selected by default. For **Self-hosted** users, llama.cpp is selected by default.
 
-Select your preferred client from the dropdown and click **Add Client** to open the client configuration dialog.
+Select your preferred client from the dropdown. Returning to this step keeps your selected client and edited configuration. The essential settings for that client type — its name, API URL and key, and the model — appear right below the dropdown. Fill them in and click **Add Client** to create the client.
 
-![Setup wizard step 2 - add client](../img/0.35.0/setup-wizard-step2-add-client.png)
+A one-line pointer above the settings links to the [Model expectations](model-expectations.md) page. A new client starts with a Context Length of 16384 tokens. The wizard does not show that setting; the editor on **Settings → Connections → Clients** shows the value and warns when it sits below the floor.
 
-Once you complete the client configuration, the wizard will automatically advance to the next step.
+![Setup wizard step 2 - add client](../img/0.40.0/setup-wizard-step2-add-client.png)
+
+Once the client has been created, the wizard will automatically advance to the next step.
 
 !!! info "Reasoning Models"
-    If you are using a reasoning model (like DeepSeek R1 or GLM), you will need to enable reasoning in the client settings after setup. For OpenRouter users, new clients have reasoning enabled by default with a budget of 2048 reasoning tokens, so the default model selected during the wizard (Gemini 3.6 Flash) and other reasoning models work out of the box. If you switch to a model that does not reason, you can turn reasoning off in the client settings.
+    If you are using a reasoning model (like DeepSeek R1 or GLM), you will need to enable reasoning in the client settings after setup. For OpenRouter users, new clients have reasoning on by default at the model's default effort, so the default model selected during the wizard (Gemini 3.8 Flash) and other reasoning models work out of the box. If you switch to a model that does not reason, you can turn reasoning off in the client settings.
+
+!!! info "Context size"
+    Talemate is made to work well with smaller context sizes: its summarization layers keep the story context compact, so 16k to 48k is usually enough. A larger context works, but is usually not needed. See [Model expectations](model-expectations.md).
 
 ## Step 3: Configure Long-term Memory
 
@@ -70,7 +77,7 @@ Faster performance on NVIDIA GPUs. Recommended if you have an NVIDIA GPU with su
 
 Works on any system. Use this if you do not have an NVIDIA GPU or prefer not to use GPU memory for embeddings.
 
-![Setup wizard step 3 - memory configuration](../img/0.35.0/setup-wizard-step3-memory.png)
+![Setup wizard step 3 - memory configuration](../img/0.40.0/setup-wizard-step3-memory.png)
 
 The wizard will automatically detect your system capabilities and suggest appropriate defaults based on your available hardware.
 

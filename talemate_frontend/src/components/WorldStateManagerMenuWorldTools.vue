@@ -1,24 +1,24 @@
 <template>
 
     <v-list density="compact" slim>
-        <v-list-subheader color="grey">
+        <v-list-subheader>
             <v-icon color="primary" class="mr-1">mdi-plus</v-icon>
             Create
         </v-list-subheader>
         <v-list-item prepend-icon="mdi-text-box-plus" @click.stop="createNewEntry">
             <v-list-item-title>New Entry</v-list-item-title>
-            <v-list-item-subtitle class="text-caption">Information and details.</v-list-item-subtitle>
+            <v-list-item-subtitle class="text-body-small">Information and details.</v-list-item-subtitle>
         </v-list-item>
         <v-list-item prepend-icon="mdi-image-auto-adjust" @click.stop="createNewState">
             <v-list-item-title>New State Reinforcement</v-list-item-title>
-            <v-list-item-subtitle class="text-caption">Automatically tracked state</v-list-item-subtitle>
+            <v-list-item-subtitle class="text-body-small">Automatically tracked state</v-list-item-subtitle>
         </v-list-item>
         <v-list-item>
             <v-text-field class="mt-1" variant="underlined" v-model="filter" label="Filter" density="compact"></v-text-field>
         </v-list-item>
         <v-list-item>
             <div class="px-2">
-                <div class="text-caption text-medium-emphasis mb-1">Show max.: {{ maxEntriesDisplay }}</div>
+                <div class="text-body-small text-medium-emphasis mb-1">Show max.: {{ maxEntriesDisplay }}</div>
                 <v-slider 
                     v-model="maxEntriesDisplay" 
                     :min="10" 
@@ -98,7 +98,6 @@ export default {
         selected: {
             immediate: true,
             handler(selected) {
-                console.log('selected', selected);
                 if (selected) {
                     this.load(selected[0]);
                 }
@@ -167,8 +166,6 @@ export default {
             if (message.action == 'world') {
                 this.entries = message.data.entries;
                 this.reinforcements = message.data.reinforcements;
-                console.log('entries', this.entries);
-                console.log('reinforcements', this.reinforcements);
             }
         },
         load(id) {

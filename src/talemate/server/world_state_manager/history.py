@@ -17,12 +17,14 @@ from talemate.history import (
     compute_layer_stats,
     collect_time_passages,
 )
+from talemate.knowledge.presence import layer_entry_presence
+from talemate.knowledge.schema import EntryVisibility
 from talemate.scene_message import TimePassageMessage
 from talemate.server.world_state_manager import world_state_templates
 from talemate.status import background_task
 from talemate.util.time import (
-    amount_unit_to_iso8601_duration,
-    iso8601_duration_to_human,
+    amount_unit_to_seconds,
+    duration_to_human,
 )
 
 log = structlog.get_logger("talemate.server.world_state_manager.history")
@@ -34,6 +36,11 @@ class RegenerateHistoryPayload(pydantic.BaseModel):
 
 class HistoryEntryPayload(pydantic.BaseModel):
     entry: HistoryEntry
+
+
+class HistoryEntryKnownByPayload(pydantic.BaseModel):
+    entry_id: str
+    visibility: EntryVisibility
 
 
 class AddHistoryEntryPayload(pydantic.BaseModel):
@@ -50,12 +57,14 @@ class UpdateTimePassagePayload(pydantic.BaseModel):
     history_index: int
     amount: int
     unit: str
+    title: str | None = None
 
 
 class InsertTimePassagePayload(pydantic.BaseModel):
     archive_index: int
     amount: int
     unit: str
+    title: str | None = None
 
 
 class DeleteTimePassagePayload(pydantic.BaseModel):
@@ -79,16 +88,16 @@ class HistoryMixin:
         history = history_with_relative_time(
             self.scene.archived_history, self.scene.ts, layer=0
         )
+        summarizer = get_agent("summarizer")
 
         layered_history = []
 
-        summarizer = get_agent("summarizer")
-
         if summarizer.layered_history_enabled:
             for index, layer in enumerate(self.scene.layered_history):
-                layered_history.append(
-                    history_with_relative_time(layer, self.scene.ts, layer=index + 1)
-                )
+                rows = history_with_relative_time(layer, self.scene.ts, layer=index + 1)
+                for row, entry in zip(rows, layer):
+                    row["present"] = layer_entry_presence(self.scene, index, entry)
+                layered_history.append(rows)
 
         time_passages = collect_time_passages(self.scene)
 
@@ -165,11 +174,12 @@ class HistoryMixin:
 
         entry = await regenerate_history_entry(self.scene, payload.entry)
         log.debug("regenerate_history_entry (done)", entry=entry)
+        row = entry.model_dump()
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
                 "action": "history_entry_regenerated",
-                "data": entry.model_dump(),
+                "data": row,
             }
         )
         await self.signal_operation_done()
@@ -194,6 +204,20 @@ class HistoryMixin:
             }
         )
 
+    async def handle_set_history_entry_known_by(self, data):
+        payload = HistoryEntryKnownByPayload(**data)
+        try:
+            await self.world_state_manager.set_static_history_known_by(
+                payload.entry_id, payload.visibility
+            )
+        except ValueError as exc:
+            await self.signal_operation_failed(
+                str(exc), failed_action="set_history_entry_known_by"
+            )
+            return
+        await self.handle_request_scene_history({})
+        await self.signal_operation_done()
+
     async def handle_add_history_entry(self, data):
         """
         Add a new manual history entry to the base (archived) layer.
@@ -202,15 +226,13 @@ class HistoryMixin:
         payload = AddHistoryEntryPayload(**data)
 
         try:
-            iso_offset = amount_unit_to_iso8601_duration(
-                int(payload.amount), payload.unit
-            )
+            offset = amount_unit_to_seconds(int(payload.amount), payload.unit)
         except ValueError as e:
             await self.signal_operation_failed(str(e))
             return
 
         try:
-            await add_history_entry(self.scene, payload.text, iso_offset)
+            await add_history_entry(self.scene, payload.text, offset)
         except Exception as e:
             log.error("add_history_entry", error=e)
             await self.signal_operation_failed(str(e))
@@ -248,9 +270,7 @@ class HistoryMixin:
         payload = UpdateTimePassagePayload(**data)
 
         try:
-            iso_duration = amount_unit_to_iso8601_duration(
-                int(payload.amount), payload.unit
-            )
+            duration = amount_unit_to_seconds(int(payload.amount), payload.unit)
         except ValueError as e:
             await self.signal_operation_failed(str(e))
             return
@@ -266,8 +286,9 @@ class HistoryMixin:
             await self.signal_operation_failed("Entry is not a time passage")
             return
 
-        message.ts = iso_duration
-        message.message = iso8601_duration_to_human(iso_duration, suffix=" later")
+        message.ts = duration
+        message.message = duration_to_human(duration, suffix=" later")
+        message.title = payload.title
 
         self.scene.fix_time()
         self.scene.emit_status()
@@ -292,6 +313,7 @@ class HistoryMixin:
                 payload.archive_index,
                 payload.amount,
                 payload.unit,
+                payload.title,
             )
         except (ValueError, IndexError) as e:
             await self.signal_operation_failed(str(e))

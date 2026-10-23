@@ -28,7 +28,7 @@
                     <td style="padding: 4px 12px;">
                         <div class="d-flex align-center">
                             <v-icon class="mr-2">mdi-account-circle</v-icon>
-                            <div class="text-caption font-weight-medium">Portrait</div>
+                            <div class="text-body-small font-weight-medium">Portrait</div>
                         </div>
                     </td>
                     <td style="padding: 4px 12px;">
@@ -57,7 +57,7 @@
                     <td style="padding: 4px 12px;">
                         <div class="d-flex align-center">
                             <v-icon class="mr-2">mdi-card-account-details</v-icon>
-                            <div class="text-caption font-weight-medium">Card</div>
+                            <div class="text-body-small font-weight-medium">Card</div>
                         </div>
                     </td>
                     <td style="padding: 4px 12px;">
@@ -86,7 +86,7 @@
                     <td style="padding: 4px 12px;">
                         <div class="d-flex align-center">
                             <v-icon class="mr-2">mdi-image-area</v-icon>
-                            <div class="text-caption font-weight-medium">Scene Illustration</div>
+                            <div class="text-body-small font-weight-medium">Scene Illustration</div>
                         </div>
                     </td>
                     <td style="padding: 4px 12px;">
@@ -122,7 +122,7 @@
                     <td style="padding: 4px 12px;">
                         <div class="d-flex align-center">
                             <v-icon class="mr-2">mdi-image-filter-hdr</v-icon>
-                            <div class="text-caption font-weight-medium">Scene Background</div>
+                            <div class="text-body-small font-weight-medium">Scene Background</div>
                         </div>
                     </td>
                     <td style="padding: 4px 12px;">
@@ -145,14 +145,7 @@
                             style="max-width: 200px;"
                         ></v-select>
                     </td>
-                    <td style="padding: 4px 12px;">
-                        <v-checkbox
-                            v-model="config.scene_background.auto_backdrop"
-                            color="primary"
-                            density="compact"
-                            hide-details
-                        ></v-checkbox>
-                    </td>
+                    <td></td>
                 </tr>
             </tbody>
         </v-table>
@@ -184,13 +177,13 @@
 
         <v-card color="muted" variant="text" class="mt-3">
             <v-card-text class="text-muted">
-                <div class="text-caption">
+                <div class="text-body-small">
                     <strong>Always:</strong> Show visual on every message<br>
                     <strong>Never:</strong> Never show visual inline with messages<br>
                     <strong>On change:</strong> Only show when visual changes (portraits: tracked per character)<br><br>
                     <strong>Scene Illustration</strong> covers images of the current moment ("Visualize Moment"), <strong>Scene Background</strong> covers purely environmental images ("Visualize Scene (Background)").<br>
                     <strong>Sizes:</strong> Big = full width above message, Small/Medium = inline with text.<br>
-                    <strong>Auto Backdrop:</strong> Newly generated images of this type automatically become the scene backdrop (rendered behind the scene text). Any illustration can also be set as the backdrop manually via its image menu, and the scene-tools Immersive chip toggles the backdrop on and off.
+                    <strong>Auto Backdrop:</strong> Newly generated scene illustrations automatically become the scene backdrop (rendered behind the scene text). While auto-attach is on, scene backgrounds generated for the story always become the backdrop and are recorded as Backdrop entries in the history. Any illustration can also be set as the backdrop manually via its image menu, and the scene-tools Immersive chip toggles the backdrop on and off.
                 </div>
             </v-card-text>
         </v-card>
@@ -216,7 +209,6 @@ function defaultAssetConfig() {
         scene_background: {
             cadence: 'always',
             size: 'big',
-            auto_backdrop: false,
         },
     };
 }
@@ -270,9 +262,8 @@ export default {
                 this.autoAttachAssets = sceneConfig.auto_attach_assets !== undefined ? sceneConfig.auto_attach_assets : true;
 
                 // Backdrop legibility settings
-                this.backdropPanelOpacity = sceneConfig.backdrop_panel_opacity ?? 0.8;
-                this.backdropTextShadow = sceneConfig.backdrop_text_shadow ?? true;
-                
+                this.syncBackdropSettings();
+
                 // Overlay stored values onto the defaults (?? so 0 / false
                 // survive)
                 const config = defaultAssetConfig();
@@ -332,6 +323,13 @@ export default {
         // Expose auto_attach_assets for parent component
         get_auto_attach_assets() {
             return this.autoAttachAssets;
+        },
+        // called by the parent after it changed these values elsewhere, so the
+        // merge does not write the ones this page still holds back over them
+        syncBackdropSettings() {
+            const sceneConfig = this.immutableConfig?.appearance?.scene || {};
+            this.backdropPanelOpacity = sceneConfig.backdrop_panel_opacity ?? 0.8;
+            this.backdropTextShadow = sceneConfig.backdrop_text_shadow ?? true;
         },
         // Expose shared backdrop legibility settings for parent component
         get_backdrop_settings() {

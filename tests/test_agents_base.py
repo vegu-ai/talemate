@@ -10,12 +10,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+import unittest.mock
+from pathlib import Path
 from typing import Optional
 
+import pydantic
 import pytest
 
 import talemate.agents as agents_module
+import talemate.agents.base as agents_base
 from talemate.agents.base import (
+    _NON_OVERRIDABLE_WARNED,
     Agent,
     AgentAction,
     AgentActionConfig,
@@ -30,8 +35,11 @@ from talemate.agents.base import (
     optimize_prompt_caching_action,
     set_processing,
     store_context_state,
+    _warn_once_non_overridable,
 )
 from talemate.agents.context import active_agent
+from talemate.scene_agent_settings import AgentOverride, SceneAgentSettings
+from talemate.ux.schema import SECRET_FIELD_TYPES
 
 
 # ---------------------------------------------------------------------------
@@ -117,6 +125,46 @@ class TestAgentActionConfigNoteValidation:
     def test_none_note_remains_none(self):
         cfg = AgentActionConfig(type="text", label="x")
         assert cfg.note is None
+
+
+class TestAgentActionConfigSecretFields:
+    """Secret-typed fields are non-overridable at the field-type level, so no
+    declaration can opt a credential into a shareable scene file."""
+
+    def test_password_cannot_be_declared_overridable(self):
+        cfg = AgentActionConfig(
+            type="password", label="API Key", scene_overridable=True
+        )
+        assert cfg.scene_overridable is False
+
+    def test_unified_api_key_cannot_be_declared_overridable(self):
+        cfg = AgentActionConfig(
+            type="unified_api_key", label="API Key", scene_overridable=True
+        )
+        assert cfg.scene_overridable is False
+
+    def test_non_secret_field_keeps_the_default(self):
+        cfg = AgentActionConfig(type="text", label="x")
+        assert cfg.scene_overridable is True
+
+    def test_no_shipped_secret_field_is_scene_overridable(self):
+        """Derived from production so a new secret field is covered without
+        touching this test."""
+        offenders = []
+        secret_fields = []
+        for agent_type, agent_cls in agents_module.AGENT_CLASSES.items():
+            for action_key, action in agent_cls.init_actions().items():
+                for config_key, field in (action.config or {}).items():
+                    if field.type not in SECRET_FIELD_TYPES:
+                        continue
+                    secret_fields.append(f"{agent_type}.{action_key}.{config_key}")
+                    if field.scene_overridable:
+                        offenders.append(f"{agent_type}.{action_key}.{config_key}")
+
+        assert not offenders
+        # Guards against a vacuous pass if init_actions ever stops returning
+        # the shipped set.
+        assert len(secret_fields) >= 10
 
 
 class TestAgentActionConditionalModel:
@@ -221,6 +269,136 @@ class TestAgentActionDisabledRequiresCanBeDisabled:
 
 
 # ---------------------------------------------------------------------------
+# Agent._scene_overrides_payload
+# ---------------------------------------------------------------------------
+
+
+def _payload_agent(overlay_actions: dict) -> _MinimalAgent:
+    agent = _MinimalAgent(
+        actions={
+            "container": AgentAction(
+                enabled=True,
+                label="Container",
+                can_be_disabled=True,
+                config={
+                    "fmt": AgentActionConfig(type="text", label="fmt", value="g"),
+                    "api_key": AgentActionConfig(
+                        type="password", label="api key", value="g"
+                    ),
+                },
+            ),
+            "locked": AgentAction(label="Locked", can_be_disabled=False),
+        }
+    )
+    overlay = SceneAgentSettings(
+        filepath=Path("unused.json"),
+        agents={agent.agent_type: AgentOverride(actions=overlay_actions)},
+    )
+    agent.scene = type("_SceneStub", (), {"agent_overrides": overlay})()
+    return agent
+
+
+class TestSceneOverridesPayload:
+    """Entries the resolvers ignore must not reach the frontend — it seeds its
+    override buffer from this payload and would flag the following save's
+    (stripped) echo as a conflicting edit."""
+
+    def test_no_scene_returns_empty(self):
+        agent = _MinimalAgent()
+        assert type(agent)._scene_overrides_payload(agent) == {}
+
+    def test_keeps_overridable_config_entry(self):
+        agent = _payload_agent({"container": {"config": {"fmt": {"value": "scene"}}}})
+        payload = type(agent)._scene_overrides_payload(agent)
+        assert payload["actions"]["container"]["config"]["fmt"]["value"] == "scene"
+
+    def test_drops_inert_config_entry(self):
+        agent = _payload_agent(
+            {
+                "container": {
+                    "config": {
+                        "fmt": {"value": "scene"},
+                        "api_key": {"value": "leaked"},
+                    }
+                }
+            }
+        )
+        config = type(agent)._scene_overrides_payload(agent)["actions"]["container"][
+            "config"
+        ]
+        assert "api_key" not in config
+        assert "fmt" in config
+
+    def test_keeps_enabled_flag_when_disableable(self):
+        agent = _payload_agent({"container": {"enabled": False}})
+        payload = type(agent)._scene_overrides_payload(agent)
+        assert payload["actions"]["container"]["enabled"] is False
+
+    def test_drops_inert_enabled_flag(self):
+        agent = _payload_agent({"locked": {"enabled": False}})
+        payload = type(agent)._scene_overrides_payload(agent)
+        assert "enabled" not in payload["actions"]["locked"]
+
+    def test_drops_undeclared_config_entry_of_a_declared_action(self):
+        agent = _payload_agent(
+            {"container": {"config": {"fmt": {"value": "scene"}, "gone": {"value": 1}}}}
+        )
+        config = type(agent)._scene_overrides_payload(agent)["actions"]["container"][
+            "config"
+        ]
+        assert config == {"fmt": {"value": "scene"}}
+
+    def test_undeclared_keys_pass_through(self):
+        """Dynamic children are installed per config, so an unknown action is
+        not proof the field is gone."""
+        agent = _payload_agent(
+            {"child": {"enabled": False, "config": {"api_key": {"value": "keep"}}}}
+        )
+        child = type(agent)._scene_overrides_payload(agent)["actions"]["child"]
+        assert child["enabled"] is False
+        assert child["config"]["api_key"]["value"] == "keep"
+
+
+# ---------------------------------------------------------------------------
+# _warn_once_non_overridable
+# ---------------------------------------------------------------------------
+
+
+class TestWarnOnceNonOverridable:
+    @pytest.fixture(autouse=True)
+    def _clear_cache(self):
+        _NON_OVERRIDABLE_WARNED.clear()
+        yield
+        _NON_OVERRIDABLE_WARNED.clear()
+
+    def test_warns_once_per_field(self):
+        _warn_once_non_overridable("a", "act", "cfg")
+        assert ("a", "act", "cfg") in _NON_OVERRIDABLE_WARNED
+
+        with unittest.mock.patch.object(agents_base.log, "warning") as warn:
+            _warn_once_non_overridable("a", "act", "cfg")
+        warn.assert_not_called()
+
+    def test_distinct_fields_each_warn(self):
+        with unittest.mock.patch.object(agents_base.log, "warning") as warn:
+            _warn_once_non_overridable("a", "act", "one")
+            _warn_once_non_overridable("a", "act", "two")
+        assert warn.call_count == 2
+
+    def test_reads_and_writes_share_one_key(self):
+        """Same anomaly either way — a write must not re-warn after a read."""
+        agent = _payload_agent(
+            {"container": {"config": {"api_key": {"value": "legacy"}}}}
+        )
+        agent.resolve_config("container", "api_key")
+        assert (agent.agent_type, "container", "api_key") in _NON_OVERRIDABLE_WARNED
+
+        with unittest.mock.patch.object(agents_base.log, "warning") as warn:
+            agent.write_config("container", "api_key", "new")
+        warn.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
 # args_and_kwargs_to_dict
 # ---------------------------------------------------------------------------
 
@@ -298,11 +476,19 @@ class TestDynamicInstruction:
 
 
 class TestAgentDetail:
-    def test_default_color_is_grey(self):
+    def test_default_color_is_a_theme_slot(self):
         d = AgentDetail()
-        assert d.color == "grey"
+        assert d.color == "muted"
         assert d.hidden is False
         assert d.value is None
+
+    @pytest.mark.parametrize("color", ["grey", "orange"])
+    def test_a_material_palette_name_is_rejected(self, color):
+        """A palette name paints a fixed color no theme can reach - the detail
+        chips are the one place the backend picks a color for the frontend."""
+
+        with pytest.raises(pydantic.ValidationError):
+            AgentDetail(color=color)
 
     def test_full_construction(self):
         d = AgentDetail(

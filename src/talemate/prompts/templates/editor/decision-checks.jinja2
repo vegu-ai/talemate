@@ -1,0 +1,24 @@
+{% import "decision-check-macros.jinja2" as checks %}
+{% set batch = namespace() %}
+{% set _ = checks.build_questions(decision_passages(), decision_checks, batch) %}
+{% if batch.questions %}
+    {% set answers = ask("editor-checks", state=decision_state, questions=batch.questions, presentation=batch.presentation) %}
+    {% set results = namespace() %}
+    {% call(answer, evaluation, match) checks.collect_findings(answers, batch.evaluations, results) %}
+        {% set match.value = answer.yes %}
+    {% endcall %}
+    {% set minimum = agent_config("editor.revision.min_issues") %}
+    {% if not results.findings %}
+        {{ note("no_action", "below_thresholds", thresholds=results.thresholds, flagged_question_ids=results.flagged_questions, skipped_passages=batch.skipped) }}
+        {{ keep() }}
+    {% elif len(results.flagged) < minimum %}
+        {{ note("no_action", "below_minimum", minimum=minimum, flagged_passages=len(results.flagged), flagged_question_ids=results.flagged_questions, skipped_passages=batch.skipped) }}
+        {{ keep() }}
+    {% else %}
+        {{ note("revision_" ~ revision_method, "flagged_passages", flagged_question_ids=results.flagged_questions, skipped_passages=batch.skipped) }}
+        {{ revise(results.findings) }}
+    {% endif %}
+{% else %}
+    {% if batch.skipped %}{{ note("no_action", "nothing_in_scope", skipped_passages=batch.skipped) }}{% endif %}
+    {{ keep() }}
+{% endif %}

@@ -1,0 +1,12 @@
+{% set questions = {} %}
+{% for character in characters %}
+    {% set _ = questions.update({character.name: yes_no(
+        "Does this text refer to " ~ character.name ~ ", by name, pronoun, title, nickname or description? Resolve meaning in context rather than matching words. Aliases: " ~ (character.aliases | join(", ")) ~ ". Description: " ~ character.description,
+        threshold=threshold
+    )}) %}
+{% endfor %}
+{% set answers = ask(label, state=state, questions=questions) %}
+{% for name, answer in answers.items() %}
+    {{ note("include" if answer.yes else "exclude" if answer.no else "fallback", "uncertain" if answer.uncertain else "confident", answer, character=name) }}
+{% endfor %}
+{{ resolve(answers) }}

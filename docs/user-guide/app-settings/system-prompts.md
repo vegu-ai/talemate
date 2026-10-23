@@ -26,9 +26,9 @@ App-level overrides apply to every client unless that client has its own overrid
 
 ### Per-client overrides
 
-Open a client's [configuration dialog](../clients/client-configuration.md) from the cogwheels on its sidebar row, then switch to the **System Prompts** tab.
+Open a client's [editor](../clients/client-configuration.md) from the cogwheels on its sidebar row, then open the **System Prompts** section.
 
-![Per-client System Prompts tab with the override list and editor](/talemate/img/0.37.0/client-system-prompts-tab.png)
+![Per-client System Prompts panel with the override list and editor](/talemate/img/0.40.0/client-system-prompts-panel.png)
 
 Per-client overrides only apply to generations that go through that specific client. They take precedence over the app-level override.
 
@@ -94,5 +94,5 @@ Points to know:
 
 ## Related
 
-- [Client Configuration](../clients/client-configuration.md) — the dialog that hosts the per-client **System Prompts** tab.
+- [Client Configuration](../clients/client-configuration.md) — the page that hosts the per-client **System Prompts** section.
 - [Prompt Manager](../prompts/index.md) — manages the Jinja2 prompt templates themselves, which is a separate mechanism from these system prompt overrides.

@@ -1,0 +1,2734 @@
+[
+  {
+    "questions": {
+      "c0": {
+        "type": "choice",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. How much of the current passage is perceptible to Alice? Classify access to information, not narrative point of view.",
+        "options": {
+          "none": "The character perceives nothing of this passage; their view must be omitted.",
+          "partial": "Some information is perceptible, but some must be excluded or locally repaired.",
+          "full": "Every detail is accessible; copying the entire current passage verbatim exposes no inaccessible information."
+        }
+      },
+      "c1": {
+        "type": "choice",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. How much of the current passage is perceptible to Bob? Classify access to information, not narrative point of view.",
+        "options": {
+          "none": "The character perceives nothing of this passage; their view must be omitted.",
+          "partial": "Some information is perceptible, but some must be excluded or locally repaired.",
+          "full": "Every detail is accessible; copying the entire current passage verbatim exposes no inaccessible information."
+        }
+      },
+      "c2": {
+        "type": "choice",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. How much of the current passage is perceptible to Cora? Classify access to information, not narrative point of view.",
+        "options": {
+          "none": "The character perceives nothing of this passage; their view must be omitted.",
+          "partial": "Some information is perceptible, but some must be excluded or locally repaired.",
+          "full": "Every detail is accessible; copying the entire current passage verbatim exposes no inaccessible information."
+        }
+      },
+      "c3": {
+        "type": "choice",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. How much of the current passage is perceptible to Dorian? Classify access to information, not narrative point of view.",
+        "options": {
+          "none": "The character perceives nothing of this passage; their view must be omitted.",
+          "partial": "Some information is perceptible, but some must be excluded or locally repaired.",
+          "full": "Every detail is accessible; copying the entire current passage verbatim exposes no inaccessible information."
+        }
+      }
+    },
+    "response": {
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "c0": {
+          "type": "choice",
+          "choice": "full",
+          "probabilities": {
+            "full": 0.79,
+            "none": 0,
+            "partial": 0.21
+          },
+          "confidence": 0.69
+        },
+        "c1": {
+          "type": "choice",
+          "choice": "partial",
+          "probabilities": {
+            "full": 0.48,
+            "none": 0.01,
+            "partial": 0.51
+          },
+          "confidence": 0.27
+        },
+        "c2": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "full": 0.05,
+            "none": 0.58,
+            "partial": 0.37
+          },
+          "confidence": 0.37
+        },
+        "c3": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "full": 0.03,
+            "none": 0.68,
+            "partial": 0.28
+          },
+          "confidence": 0.52
+        }
+      },
+      "usage": {
+        "input_tokens": 1436,
+        "output_tokens": 147,
+        "cost": 6.0312e-05
+      }
+    }
+  },
+  {
+    "questions": {
+      "c0": {
+        "type": "choice",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. How much of the current passage is perceptible to Alice? Classify access to information, not narrative point of view.",
+        "options": {
+          "none": "The character perceives nothing of this passage; their view must be omitted.",
+          "partial": "Some information is perceptible, but some must be excluded or locally repaired.",
+          "full": "Every detail is accessible; copying the entire current passage verbatim exposes no inaccessible information."
+        }
+      },
+      "c1": {
+        "type": "choice",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. How much of the current passage is perceptible to Bob? Classify access to information, not narrative point of view.",
+        "options": {
+          "none": "The character perceives nothing of this passage; their view must be omitted.",
+          "partial": "Some information is perceptible, but some must be excluded or locally repaired.",
+          "full": "Every detail is accessible; copying the entire current passage verbatim exposes no inaccessible information."
+        }
+      },
+      "c2": {
+        "type": "choice",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. How much of the current passage is perceptible to Cara? Classify access to information, not narrative point of view.",
+        "options": {
+          "none": "The character perceives nothing of this passage; their view must be omitted.",
+          "partial": "Some information is perceptible, but some must be excluded or locally repaired.",
+          "full": "Every detail is accessible; copying the entire current passage verbatim exposes no inaccessible information."
+        }
+      },
+      "c3": {
+        "type": "choice",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. How much of the current passage is perceptible to Dan? Classify access to information, not narrative point of view.",
+        "options": {
+          "none": "The character perceives nothing of this passage; their view must be omitted.",
+          "partial": "Some information is perceptible, but some must be excluded or locally repaired.",
+          "full": "Every detail is accessible; copying the entire current passage verbatim exposes no inaccessible information."
+        }
+      }
+    },
+    "response": {
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "c0": {
+          "type": "choice",
+          "choice": "partial",
+          "probabilities": {
+            "none": 0.01,
+            "full": 0.3,
+            "partial": 0.69
+          },
+          "confidence": 0.54
+        },
+        "c1": {
+          "type": "choice",
+          "choice": "partial",
+          "probabilities": {
+            "none": 0.03,
+            "full": 0.21,
+            "partial": 0.76
+          },
+          "confidence": 0.63
+        },
+        "c2": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.96,
+            "full": 0,
+            "partial": 0.04
+          },
+          "confidence": 0.93
+        },
+        "c3": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.93,
+            "full": 0.02,
+            "partial": 0.04
+          },
+          "confidence": 0.9
+        }
+      },
+      "usage": {
+        "input_tokens": 1412,
+        "output_tokens": 147,
+        "cost": 5.9304e-05
+      }
+    }
+  },
+  {
+    "questions": {
+      "c0": {
+        "type": "choice",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. How much of the current passage is perceptible to Alice? Classify access to information, not narrative point of view.",
+        "options": {
+          "none": "The character perceives nothing of this passage; their view must be omitted.",
+          "partial": "Some information is perceptible, but some must be excluded or locally repaired.",
+          "full": "Every detail is accessible; copying the entire current passage verbatim exposes no inaccessible information."
+        }
+      },
+      "c1": {
+        "type": "choice",
+        "instructions": "Use only the supplied passage and context. Presence alone does not imply consciousness, attention or hearing. A speaker knows their own thoughts; nobody else does. Whispers reach only supported recipients. Sleep, absence, hidden acts, private intentions and reader-only investigation headings can block access. Tracked states remain in effect. A character can perceive an act without hearing or reading its secret content. The original narrator and grammatical person are preserved, not changed to the viewing character. Do not count physical-author context as character knowledge or invent discoveries. How much of the current passage is perceptible to Bob? Classify access to information, not narrative point of view.",
+        "options": {
+          "none": "The character perceives nothing of this passage; their view must be omitted.",
+          "partial": "Some information is perceptible, but some must be excluded or locally repaired.",
+          "full": "Every detail is accessible; copying the entire current passage verbatim exposes no inaccessible information."
+        }
+      }
+    },
+    "response": {
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "c0": {
+          "type": "choice",
+          "choice": "full",
+          "probabilities": {
+            "full": 0.85,
+            "partial": 0.14,
+            "none": 0.01
+          },
+          "confidence": 0.78
+        },
+        "c1": {
+          "type": "choice",
+          "choice": "partial",
+          "probabilities": {
+            "full": 0.33,
+            "partial": 0.55,
+            "none": 0.11
+          },
+          "confidence": 0.33
+        }
+      },
+      "usage": {
+        "input_tokens": 909,
+        "output_tokens": 75,
+        "cost": 3.8178e-05
+      }
+    }
+  },
+  {
+    "questions": {
+      "v0": {
+        "type": "choice",
+        "instructions": "Judge assembled projections[0] for Alice against the WHOLE original passage and scene evidence. Fragments and original narrator voice are allowed. Count missing observable activity even when a private thought names it; preserve acts without private content. Reader-only details are not discoveries. Status?",
+        "options": {
+          "complete": "All disclosed facts are accessible and faithful; every accessible fact/act/situation is retained. Empty is complete only when the character perceives nothing.",
+          "incomplete": "No inaccessible/unsupported information is disclosed, but accessible content is missing.",
+          "unsafe": "At least one inaccessible or unsupported fact/relation/binding is disclosed.",
+          "uncertain": "Evidence is insufficient to establish complete, incomplete or unsafe."
+        }
+      },
+      "v1": {
+        "type": "choice",
+        "instructions": "Judge assembled projections[1] for Bob against the WHOLE original passage and scene evidence. Fragments and original narrator voice are allowed. Count missing observable activity even when a private thought names it; preserve acts without private content. Reader-only details are not discoveries. Status?",
+        "options": {
+          "complete": "All disclosed facts are accessible and faithful; every accessible fact/act/situation is retained. Empty is complete only when the character perceives nothing.",
+          "incomplete": "No inaccessible/unsupported information is disclosed, but accessible content is missing.",
+          "unsafe": "At least one inaccessible or unsupported fact/relation/binding is disclosed.",
+          "uncertain": "Evidence is insufficient to establish complete, incomplete or unsafe."
+        }
+      },
+      "v2": {
+        "type": "choice",
+        "instructions": "Judge assembled projections[2] for Cora against the WHOLE original passage and scene evidence. Fragments and original narrator voice are allowed. Count missing observable activity even when a private thought names it; preserve acts without private content. Reader-only details are not discoveries. Status?",
+        "options": {
+          "complete": "All disclosed facts are accessible and faithful; every accessible fact/act/situation is retained. Empty is complete only when the character perceives nothing.",
+          "incomplete": "No inaccessible/unsupported information is disclosed, but accessible content is missing.",
+          "unsafe": "At least one inaccessible or unsupported fact/relation/binding is disclosed.",
+          "uncertain": "Evidence is insufficient to establish complete, incomplete or unsafe."
+        }
+      },
+      "v3": {
+        "type": "choice",
+        "instructions": "Judge assembled projections[3] for Dorian against the WHOLE original passage and scene evidence. Fragments and original narrator voice are allowed. Count missing observable activity even when a private thought names it; preserve acts without private content. Reader-only details are not discoveries. Status?",
+        "options": {
+          "complete": "All disclosed facts are accessible and faithful; every accessible fact/act/situation is retained. Empty is complete only when the character perceives nothing.",
+          "incomplete": "No inaccessible/unsupported information is disclosed, but accessible content is missing.",
+          "unsafe": "At least one inaccessible or unsupported fact/relation/binding is disclosed.",
+          "uncertain": "Evidence is insufficient to establish complete, incomplete or unsafe."
+        }
+      }
+    },
+    "response": {
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "v0": {
+          "type": "choice",
+          "choice": "complete",
+          "probabilities": {
+            "incomplete": 0.15,
+            "unsafe": 0.28,
+            "complete": 0.56,
+            "uncertain": 0
+          },
+          "confidence": 0.41
+        },
+        "v1": {
+          "type": "choice",
+          "choice": "incomplete",
+          "probabilities": {
+            "incomplete": 0.41000000000000003,
+            "unsafe": 0.23,
+            "complete": 0.36,
+            "uncertain": 0
+          },
+          "confidence": 0.21
+        },
+        "v2": {
+          "type": "choice",
+          "choice": "incomplete",
+          "probabilities": {
+            "unsafe": 0,
+            "incomplete": 0.91,
+            "complete": 0.09,
+            "uncertain": 0
+          },
+          "confidence": 0.87
+        },
+        "v3": {
+          "type": "choice",
+          "choice": "incomplete",
+          "probabilities": {
+            "incomplete": 0.82,
+            "unsafe": 0,
+            "complete": 0.18,
+            "uncertain": 0
+          },
+          "confidence": 0.76
+        }
+      },
+      "usage": {
+        "input_tokens": 6881,
+        "output_tokens": 197,
+        "cost": 0.000289002
+      }
+    }
+  },
+  {
+    "questions": {
+      "n0": {
+        "type": "choice",
+        "instructions": "Considering the entire current passage and the scene context, what does Alice perceive? Tracked states apply; reader headings are not discoveries.",
+        "options": {
+          "some": "At least one fact, observable act, audible/readable content, or own thought is available.",
+          "none": "Nothing in the passage is available to this character.",
+          "uncertain": "The evidence does not establish either conclusion."
+        }
+      },
+      "a0_u0": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u0: {\"kind\": \"sentence\", \"pieces\": [\"Alice: *She leans to Bob and whispers too quietly for Cara to hear,* \\\"The key is inside the blue vase.\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u1": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u1: {\"kind\": \"fragment\", \"pieces\": [\"Alice: *She leans to Bob\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u2": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u2: {\"kind\": \"fragment\", \"pieces\": [\"whispers too quietly for Cara to hear\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u3": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u3: {\"kind\": \"fragment\", \"pieces\": [\"\\\"The key is inside the blue vase.\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u4": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u4: {\"kind\": \"contentless_act\", \"pieces\": [\"Alice: *She leans to Bob and whispers too quietly for Cara to hear,*\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u5": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u5: {\"kind\": \"sentence\", \"pieces\": [\"*Cara can see Alice lean toward Bob, but cannot make out any words.*\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u6": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u6: {\"kind\": \"fragment\", \"pieces\": [\"*Cara can see Alice lean toward Bob\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u7": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u7: {\"kind\": \"fragment\", \"pieces\": [\"cannot make out any words.*\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "n1": {
+        "type": "choice",
+        "instructions": "Considering the entire current passage and the scene context, what does Bob perceive? Tracked states apply; reader headings are not discoveries.",
+        "options": {
+          "some": "At least one fact, observable act, audible/readable content, or own thought is available.",
+          "none": "Nothing in the passage is available to this character.",
+          "uncertain": "The evidence does not establish either conclusion."
+        }
+      },
+      "a1_u0": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u0: {\"kind\": \"sentence\", \"pieces\": [\"Alice: *She leans to Bob and whispers too quietly for Cara to hear,* \\\"The key is inside the blue vase.\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u1": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u1: {\"kind\": \"fragment\", \"pieces\": [\"Alice: *She leans to Bob\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u2": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u2: {\"kind\": \"fragment\", \"pieces\": [\"whispers too quietly for Cara to hear\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u3": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u3: {\"kind\": \"fragment\", \"pieces\": [\"\\\"The key is inside the blue vase.\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u4": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u4: {\"kind\": \"contentless_act\", \"pieces\": [\"Alice: *She leans to Bob and whispers too quietly for Cara to hear,*\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u5": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u5: {\"kind\": \"sentence\", \"pieces\": [\"*Cara can see Alice lean toward Bob, but cannot make out any words.*\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u6": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u6: {\"kind\": \"fragment\", \"pieces\": [\"*Cara can see Alice lean toward Bob\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u7": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u7: {\"kind\": \"fragment\", \"pieces\": [\"cannot make out any words.*\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "n2": {
+        "type": "choice",
+        "instructions": "Considering the entire current passage and the scene context, what does Cara perceive? Tracked states apply; reader headings are not discoveries.",
+        "options": {
+          "some": "At least one fact, observable act, audible/readable content, or own thought is available.",
+          "none": "Nothing in the passage is available to this character.",
+          "uncertain": "The evidence does not establish either conclusion."
+        }
+      },
+      "a2_u0": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Cara? Candidate u0: {\"kind\": \"sentence\", \"pieces\": [\"Alice: *She leans to Bob and whispers too quietly for Cara to hear,* \\\"The key is inside the blue vase.\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a2_u1": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Cara? Candidate u1: {\"kind\": \"fragment\", \"pieces\": [\"Alice: *She leans to Bob\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a2_u2": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Cara? Candidate u2: {\"kind\": \"fragment\", \"pieces\": [\"whispers too quietly for Cara to hear\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a2_u3": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Cara? Candidate u3: {\"kind\": \"fragment\", \"pieces\": [\"\\\"The key is inside the blue vase.\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a2_u4": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Cara? Candidate u4: {\"kind\": \"contentless_act\", \"pieces\": [\"Alice: *She leans to Bob and whispers too quietly for Cara to hear,*\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a2_u5": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Cara? Candidate u5: {\"kind\": \"sentence\", \"pieces\": [\"*Cara can see Alice lean toward Bob, but cannot make out any words.*\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a2_u6": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Cara? Candidate u6: {\"kind\": \"fragment\", \"pieces\": [\"*Cara can see Alice lean toward Bob\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a2_u7": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Cara? Candidate u7: {\"kind\": \"fragment\", \"pieces\": [\"cannot make out any words.*\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "n3": {
+        "type": "choice",
+        "instructions": "Considering the entire current passage and the scene context, what does Dan perceive? Tracked states apply; reader headings are not discoveries.",
+        "options": {
+          "some": "At least one fact, observable act, audible/readable content, or own thought is available.",
+          "none": "Nothing in the passage is available to this character.",
+          "uncertain": "The evidence does not establish either conclusion."
+        }
+      },
+      "a3_u0": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Dan? Candidate u0: {\"kind\": \"sentence\", \"pieces\": [\"Alice: *She leans to Bob and whispers too quietly for Cara to hear,* \\\"The key is inside the blue vase.\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a3_u1": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Dan? Candidate u1: {\"kind\": \"fragment\", \"pieces\": [\"Alice: *She leans to Bob\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a3_u2": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Dan? Candidate u2: {\"kind\": \"fragment\", \"pieces\": [\"whispers too quietly for Cara to hear\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a3_u3": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Dan? Candidate u3: {\"kind\": \"fragment\", \"pieces\": [\"\\\"The key is inside the blue vase.\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a3_u4": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Dan? Candidate u4: {\"kind\": \"contentless_act\", \"pieces\": [\"Alice: *She leans to Bob and whispers too quietly for Cara to hear,*\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a3_u5": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Dan? Candidate u5: {\"kind\": \"sentence\", \"pieces\": [\"*Cara can see Alice lean toward Bob, but cannot make out any words.*\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a3_u6": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Dan? Candidate u6: {\"kind\": \"fragment\", \"pieces\": [\"*Cara can see Alice lean toward Bob\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a3_u7": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Dan? Candidate u7: {\"kind\": \"fragment\", \"pieces\": [\"cannot make out any words.*\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      }
+    },
+    "response": {
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "n0": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.05,
+            "some": 0.94,
+            "uncertain": 0.01
+          },
+          "confidence": 0.91
+        },
+        "a0_u0": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.01,
+            "all": 0.65,
+            "some": 0.34
+          },
+          "confidence": 0.47
+        },
+        "a0_u1": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.02,
+            "all": 0.91,
+            "some": 0.07
+          },
+          "confidence": 0.87
+        },
+        "a0_u2": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.1,
+            "all": 0.58,
+            "some": 0.32
+          },
+          "confidence": 0.36
+        },
+        "a0_u3": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.05,
+            "all": 0.86,
+            "some": 0.09
+          },
+          "confidence": 0.78
+        },
+        "a0_u4": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.01,
+            "all": 0.76,
+            "some": 0.23
+          },
+          "confidence": 0.64
+        },
+        "a0_u5": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.14,
+            "all": 0.19,
+            "some": 0.67
+          },
+          "confidence": 0.51
+        },
+        "a0_u6": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.16,
+            "all": 0.33,
+            "some": 0.51
+          },
+          "confidence": 0.27
+        },
+        "a0_u7": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.57,
+            "all": 0.09,
+            "some": 0.34
+          },
+          "confidence": 0.37
+        },
+        "n1": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.08,
+            "some": 0.89,
+            "uncertain": 0.03
+          },
+          "confidence": 0.84
+        },
+        "a1_u0": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.02,
+            "all": 0.6,
+            "some": 0.38
+          },
+          "confidence": 0.4
+        },
+        "a1_u1": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.03,
+            "all": 0.88,
+            "some": 0.09
+          },
+          "confidence": 0.81
+        },
+        "a1_u2": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.15,
+            "all": 0.4,
+            "some": 0.45
+          },
+          "confidence": 0.18
+        },
+        "a1_u3": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.14,
+            "all": 0.77,
+            "some": 0.09
+          },
+          "confidence": 0.66
+        },
+        "a1_u4": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.02,
+            "all": 0.6,
+            "some": 0.38
+          },
+          "confidence": 0.4
+        },
+        "a1_u5": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.24,
+            "all": 0.14,
+            "some": 0.62
+          },
+          "confidence": 0.42
+        },
+        "a1_u6": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.26,
+            "all": 0.31,
+            "some": 0.43
+          },
+          "confidence": 0.14
+        },
+        "a1_u7": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.74,
+            "all": 0.03,
+            "some": 0.23
+          },
+          "confidence": 0.6
+        },
+        "n2": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0,
+            "some": 1,
+            "uncertain": 0
+          },
+          "confidence": 0.99
+        },
+        "a2_u0": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.03,
+            "all": 0,
+            "some": 0.97
+          },
+          "confidence": 0.95
+        },
+        "a2_u1": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.03,
+            "all": 0.77,
+            "some": 0.2
+          },
+          "confidence": 0.65
+        },
+        "a2_u2": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.5,
+            "all": 0.15,
+            "some": 0.35
+          },
+          "confidence": 0.25
+        },
+        "a2_u3": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.95,
+            "all": 0,
+            "some": 0.05
+          },
+          "confidence": 0.92
+        },
+        "a2_u4": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.02,
+            "all": 0.27,
+            "some": 0.71
+          },
+          "confidence": 0.57
+        },
+        "a2_u5": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.05,
+            "all": 0.66,
+            "some": 0.29
+          },
+          "confidence": 0.48
+        },
+        "a2_u6": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.07,
+            "all": 0.82,
+            "some": 0.11
+          },
+          "confidence": 0.73
+        },
+        "a2_u7": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.28,
+            "all": 0.54,
+            "some": 0.17
+          },
+          "confidence": 0.31
+        },
+        "n3": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 1,
+            "some": 0,
+            "uncertain": 0
+          },
+          "confidence": 0.99
+        },
+        "a3_u0": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.97,
+            "all": 0,
+            "some": 0.03
+          },
+          "confidence": 0.95
+        },
+        "a3_u1": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.98,
+            "all": 0.01,
+            "some": 0.01
+          },
+          "confidence": 0.98
+        },
+        "a3_u2": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.97,
+            "all": 0.01,
+            "some": 0.02
+          },
+          "confidence": 0.95
+        },
+        "a3_u3": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.98,
+            "all": 0,
+            "some": 0.02
+          },
+          "confidence": 0.96
+        },
+        "a3_u4": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.97,
+            "all": 0.01,
+            "some": 0.02
+          },
+          "confidence": 0.96
+        },
+        "a3_u5": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.98,
+            "all": 0.01,
+            "some": 0.01
+          },
+          "confidence": 0.98
+        },
+        "a3_u6": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.98,
+            "all": 0.01,
+            "some": 0.01
+          },
+          "confidence": 0.98
+        },
+        "a3_u7": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.93,
+            "all": 0.01,
+            "some": 0.06
+          },
+          "confidence": 0.9
+        }
+      },
+      "usage": {
+        "input_tokens": 8439,
+        "output_tokens": 1371,
+        "cost": 0.000354438
+      }
+    }
+  },
+  {
+    "questions": {
+      "n0": {
+        "type": "choice",
+        "instructions": "Considering the entire current passage and the scene context, what does Alice perceive? Tracked states apply; reader headings are not discoveries.",
+        "options": {
+          "some": "At least one fact, observable act, audible/readable content, or own thought is available.",
+          "none": "Nothing in the passage is available to this character.",
+          "uncertain": "The evidence does not establish either conclusion."
+        }
+      },
+      "a0_u0": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u0: {\"kind\": \"sentence\", \"pieces\": [\"Alice: \\\"The train leaves at dawn,\\\" I said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u1": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u1: {\"kind\": \"fragment\", \"pieces\": [\"\\\"The train leaves at dawn,\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u2": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u2: {\"kind\": \"fragment\", \"pieces\": [\"I said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u3": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u3: {\"kind\": \"contentless_act\", \"pieces\": [\"Alice:\", \"I said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u4": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u4: {\"kind\": \"sentence\", \"pieces\": [\"I put a ticket on the table.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "n1": {
+        "type": "choice",
+        "instructions": "Considering the entire current passage and the scene context, what does Bob perceive? Tracked states apply; reader headings are not discoveries.",
+        "options": {
+          "some": "At least one fact, observable act, audible/readable content, or own thought is available.",
+          "none": "Nothing in the passage is available to this character.",
+          "uncertain": "The evidence does not establish either conclusion."
+        }
+      },
+      "a1_u0": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u0: {\"kind\": \"sentence\", \"pieces\": [\"Alice: \\\"The train leaves at dawn,\\\" I said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u1": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u1: {\"kind\": \"fragment\", \"pieces\": [\"\\\"The train leaves at dawn,\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u2": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u2: {\"kind\": \"fragment\", \"pieces\": [\"I said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u3": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u3: {\"kind\": \"contentless_act\", \"pieces\": [\"Alice:\", \"I said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u4": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u4: {\"kind\": \"sentence\", \"pieces\": [\"I put a ticket on the table.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      }
+    },
+    "response": {
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "n0": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "some": 0.93,
+            "none": 0.06,
+            "uncertain": 0.01
+          },
+          "confidence": 0.89
+        },
+        "a0_u0": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "some": 0.24,
+            "all": 0.69,
+            "none": 0.07
+          },
+          "confidence": 0.54
+        },
+        "a0_u1": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "some": 0.08,
+            "all": 0.83,
+            "none": 0.09
+          },
+          "confidence": 0.74
+        },
+        "a0_u2": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "some": 0.04,
+            "all": 0.9,
+            "none": 0.06
+          },
+          "confidence": 0.85
+        },
+        "a0_u3": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "some": 0.25,
+            "all": 0.62,
+            "none": 0.13
+          },
+          "confidence": 0.44
+        },
+        "a0_u4": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "some": 0.02,
+            "all": 0.95,
+            "none": 0.03
+          },
+          "confidence": 0.93
+        },
+        "n1": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "some": 0,
+            "none": 1,
+            "uncertain": 0
+          },
+          "confidence": 1
+        },
+        "a1_u0": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "some": 0.05,
+            "all": 0.01,
+            "none": 0.94
+          },
+          "confidence": 0.92
+        },
+        "a1_u1": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "some": 0.02,
+            "all": 0.01,
+            "none": 0.97
+          },
+          "confidence": 0.96
+        },
+        "a1_u2": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "some": 0.04,
+            "all": 0.03,
+            "none": 0.93
+          },
+          "confidence": 0.88
+        },
+        "a1_u3": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "some": 0.05,
+            "all": 0.01,
+            "none": 0.93
+          },
+          "confidence": 0.9
+        },
+        "a1_u4": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "some": 0.03,
+            "all": 0.02,
+            "none": 0.95
+          },
+          "confidence": 0.92
+        }
+      },
+      "usage": {
+        "input_tokens": 3546,
+        "output_tokens": 459,
+        "cost": 0.000148932
+      }
+    }
+  },
+  {
+    "questions": {
+      "n0": {
+        "type": "choice",
+        "instructions": "Considering the entire current passage and the scene context, what does Alice perceive? Tracked states apply; reader headings are not discoveries.",
+        "options": {
+          "some": "At least one fact, observable act, audible/readable content, or own thought is available.",
+          "none": "Nothing in the passage is available to this character.",
+          "uncertain": "The evidence does not establish either conclusion."
+        }
+      },
+      "a0_u0": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u0: {\"kind\": \"sentence\", \"pieces\": [\"Alice: I placed the red cup beside Bob.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u1": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u1: {\"kind\": \"sentence\", \"pieces\": [\"\\\"Good morning,\\\" I said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u2": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u2: {\"kind\": \"fragment\", \"pieces\": [\"\\\"Good morning,\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u3": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u3: {\"kind\": \"fragment\", \"pieces\": [\"I said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u4": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u4: {\"kind\": \"sentence\", \"pieces\": [\"Bob watched my hand and heard me clearly.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u5": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u5: {\"kind\": \"fragment\", \"pieces\": [\"Bob watched my hand\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u6": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u6: {\"kind\": \"fragment\", \"pieces\": [\"heard me clearly.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "n1": {
+        "type": "choice",
+        "instructions": "Considering the entire current passage and the scene context, what does Bob perceive? Tracked states apply; reader headings are not discoveries.",
+        "options": {
+          "some": "At least one fact, observable act, audible/readable content, or own thought is available.",
+          "none": "Nothing in the passage is available to this character.",
+          "uncertain": "The evidence does not establish either conclusion."
+        }
+      },
+      "a1_u0": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u0: {\"kind\": \"sentence\", \"pieces\": [\"Alice: I placed the red cup beside Bob.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u1": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u1: {\"kind\": \"sentence\", \"pieces\": [\"\\\"Good morning,\\\" I said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u2": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u2: {\"kind\": \"fragment\", \"pieces\": [\"\\\"Good morning,\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u3": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u3: {\"kind\": \"fragment\", \"pieces\": [\"I said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u4": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u4: {\"kind\": \"sentence\", \"pieces\": [\"Bob watched my hand and heard me clearly.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u5": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u5: {\"kind\": \"fragment\", \"pieces\": [\"Bob watched my hand\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u6": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u6: {\"kind\": \"fragment\", \"pieces\": [\"heard me clearly.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      }
+    },
+    "response": {
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "n0": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.03,
+            "uncertain": 0.01,
+            "some": 0.96
+          },
+          "confidence": 0.95
+        },
+        "a0_u0": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.01,
+            "some": 0.01,
+            "all": 0.98
+          },
+          "confidence": 0.98
+        },
+        "a0_u1": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0,
+            "some": 0.01,
+            "all": 0.99
+          },
+          "confidence": 0.98
+        },
+        "a0_u2": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "some": 0.01,
+            "none": 0.01,
+            "all": 0.98
+          },
+          "confidence": 0.97
+        },
+        "a0_u3": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.01,
+            "some": 0.02,
+            "all": 0.97
+          },
+          "confidence": 0.95
+        },
+        "a0_u4": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.13,
+            "some": 0.55,
+            "all": 0.32
+          },
+          "confidence": 0.33
+        },
+        "a0_u5": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.12,
+            "some": 0.18,
+            "all": 0.7
+          },
+          "confidence": 0.55
+        },
+        "a0_u6": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.36,
+            "some": 0.34,
+            "all": 0.3
+          },
+          "confidence": 0.05
+        },
+        "n1": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0,
+            "uncertain": 0,
+            "some": 1
+          },
+          "confidence": 1
+        },
+        "a1_u0": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.12,
+            "some": 0.55,
+            "all": 0.33
+          },
+          "confidence": 0.32
+        },
+        "a1_u1": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.04,
+            "some": 0.32,
+            "all": 0.64
+          },
+          "confidence": 0.46
+        },
+        "a1_u2": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.01,
+            "some": 0.05,
+            "all": 0.93
+          },
+          "confidence": 0.9
+        },
+        "a1_u3": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "some": 0.2,
+            "none": 0.35,
+            "all": 0.45
+          },
+          "confidence": 0.18
+        },
+        "a1_u4": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "some": 0.54,
+            "none": 0.07,
+            "all": 0.39
+          },
+          "confidence": 0.31
+        },
+        "a1_u5": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.2,
+            "some": 0.27,
+            "all": 0.53
+          },
+          "confidence": 0.3
+        },
+        "a1_u6": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.17,
+            "some": 0.2,
+            "all": 0.63
+          },
+          "confidence": 0.44
+        }
+      },
+      "usage": {
+        "input_tokens": 4416,
+        "output_tokens": 611,
+        "cost": 0.000185472
+      }
+    }
+  },
+  {
+    "questions": {
+      "n0": {
+        "type": "choice",
+        "instructions": "Considering the entire current passage and the scene context, what does Alice perceive? Tracked states apply; reader headings are not discoveries.",
+        "options": {
+          "some": "At least one fact, observable act, audible/readable content, or own thought is available.",
+          "none": "Nothing in the passage is available to this character.",
+          "uncertain": "The evidence does not establish either conclusion."
+        }
+      },
+      "a0_u0": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u0: {\"kind\": \"sentence\", \"pieces\": [\"Alice: She drummed two fingers beside the board\u2014tap, tap.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u1": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u1: {\"kind\": \"fragment\", \"pieces\": [\"Alice: She drummed two fingers beside the board\u2014tap\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u2": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u2: {\"kind\": \"sentence\", \"pieces\": [\"Playing chess with Bob was her one private delight.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u3": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u3: {\"kind\": \"activity\", \"pieces\": [\"Playing chess with Bob\"], \"actor_ref\": \"she\"} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u4": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u4: {\"kind\": \"sentence\", \"pieces\": [\"Beneath the table, unseen by anyone else, she hid a brass key in her cuff.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u5": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u5: {\"kind\": \"fragment\", \"pieces\": [\"Beneath the table\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u6": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u6: {\"kind\": \"fragment\", \"pieces\": [\"unseen by anyone else\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u7": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u7: {\"kind\": \"fragment\", \"pieces\": [\"she hid a brass key in her cuff.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u8": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u8: {\"kind\": \"sentence\", \"pieces\": [\"\\\"Your turn,\\\" she said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u9": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u9: {\"kind\": \"fragment\", \"pieces\": [\"\\\"Your turn,\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u10": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u10: {\"kind\": \"fragment\", \"pieces\": [\"she said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u11": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u11: {\"kind\": \"sentence\", \"pieces\": [\"Rain rattled the glass.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "n1": {
+        "type": "choice",
+        "instructions": "Considering the entire current passage and the scene context, what does Bob perceive? Tracked states apply; reader headings are not discoveries.",
+        "options": {
+          "some": "At least one fact, observable act, audible/readable content, or own thought is available.",
+          "none": "Nothing in the passage is available to this character.",
+          "uncertain": "The evidence does not establish either conclusion."
+        }
+      },
+      "a1_u0": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u0: {\"kind\": \"sentence\", \"pieces\": [\"Alice: She drummed two fingers beside the board\u2014tap, tap.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u1": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u1: {\"kind\": \"fragment\", \"pieces\": [\"Alice: She drummed two fingers beside the board\u2014tap\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u2": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u2: {\"kind\": \"sentence\", \"pieces\": [\"Playing chess with Bob was her one private delight.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u3": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u3: {\"kind\": \"activity\", \"pieces\": [\"Playing chess with Bob\"], \"actor_ref\": \"she\"} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u4": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u4: {\"kind\": \"sentence\", \"pieces\": [\"Beneath the table, unseen by anyone else, she hid a brass key in her cuff.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u5": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u5: {\"kind\": \"fragment\", \"pieces\": [\"Beneath the table\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u6": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u6: {\"kind\": \"fragment\", \"pieces\": [\"unseen by anyone else\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u7": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u7: {\"kind\": \"fragment\", \"pieces\": [\"she hid a brass key in her cuff.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u8": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u8: {\"kind\": \"sentence\", \"pieces\": [\"\\\"Your turn,\\\" she said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u9": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u9: {\"kind\": \"fragment\", \"pieces\": [\"\\\"Your turn,\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u10": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u10: {\"kind\": \"fragment\", \"pieces\": [\"she said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u11": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u11: {\"kind\": \"sentence\", \"pieces\": [\"Rain rattled the glass.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      }
+    },
+    "response": {
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "n0": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.01,
+            "uncertain": 0,
+            "some": 0.99
+          },
+          "confidence": 0.98
+        },
+        "a0_u0": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.05,
+            "all": 0.74,
+            "some": 0.21
+          },
+          "confidence": 0.6
+        },
+        "a0_u1": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.05,
+            "all": 0.7,
+            "some": 0.25
+          },
+          "confidence": 0.55
+        },
+        "a0_u2": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.18,
+            "some": 0.14,
+            "all": 0.68
+          },
+          "confidence": 0.51
+        },
+        "a0_u3": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.02,
+            "all": 0.85,
+            "some": 0.13
+          },
+          "confidence": 0.77
+        },
+        "a0_u4": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.03,
+            "some": 0.65,
+            "all": 0.32
+          },
+          "confidence": 0.47
+        },
+        "a0_u5": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.06,
+            "some": 0.04,
+            "all": 0.9
+          },
+          "confidence": 0.85
+        },
+        "a0_u6": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.34,
+            "all": 0.3,
+            "some": 0.36
+          },
+          "confidence": 0.04
+        },
+        "a0_u7": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.06,
+            "some": 0.16,
+            "all": 0.78
+          },
+          "confidence": 0.67
+        },
+        "a0_u8": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.02,
+            "some": 0.09,
+            "all": 0.89
+          },
+          "confidence": 0.83
+        },
+        "a0_u9": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.01,
+            "all": 0.98,
+            "some": 0.01
+          },
+          "confidence": 0.98
+        },
+        "a0_u10": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.12,
+            "all": 0.74,
+            "some": 0.14
+          },
+          "confidence": 0.61
+        },
+        "a0_u11": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0,
+            "some": 0,
+            "all": 1
+          },
+          "confidence": 0.99
+        },
+        "n1": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.06,
+            "some": 0.92,
+            "uncertain": 0.02
+          },
+          "confidence": 0.87
+        },
+        "a1_u0": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.03,
+            "some": 0.31,
+            "all": 0.66
+          },
+          "confidence": 0.48
+        },
+        "a1_u1": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.04,
+            "all": 0.57,
+            "some": 0.39
+          },
+          "confidence": 0.35
+        },
+        "a1_u2": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.91,
+            "some": 0.08,
+            "all": 0.01
+          },
+          "confidence": 0.86
+        },
+        "a1_u3": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "none": 0.18,
+            "all": 0.38,
+            "some": 0.44
+          },
+          "confidence": 0.16
+        },
+        "a1_u4": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.53,
+            "all": 0.01,
+            "some": 0.46
+          },
+          "confidence": 0.31
+        },
+        "a1_u5": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.26,
+            "all": 0.55,
+            "some": 0.19
+          },
+          "confidence": 0.32
+        },
+        "a1_u6": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.85,
+            "some": 0.11,
+            "all": 0.04
+          },
+          "confidence": 0.77
+        },
+        "a1_u7": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.81,
+            "all": 0.01,
+            "some": 0.17
+          },
+          "confidence": 0.72
+        },
+        "a1_u8": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0,
+            "all": 0.97,
+            "some": 0.03
+          },
+          "confidence": 0.96
+        },
+        "a1_u9": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0,
+            "all": 0.99,
+            "some": 0.01
+          },
+          "confidence": 0.98
+        },
+        "a1_u10": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0.18,
+            "all": 0.68,
+            "some": 0.14
+          },
+          "confidence": 0.52
+        },
+        "a1_u11": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "none": 0,
+            "all": 1,
+            "some": 0
+          },
+          "confidence": 0.99
+        }
+      },
+      "usage": {
+        "input_tokens": 11630,
+        "output_tokens": 995,
+        "cost": 0.00048846
+      }
+    }
+  },
+  {
+    "questions": {
+      "n0": {
+        "type": "choice",
+        "instructions": "Considering the entire current passage and the scene context, what does Alice perceive? Tracked states apply; reader headings are not discoveries.",
+        "options": {
+          "some": "At least one fact, observable act, audible/readable content, or own thought is available.",
+          "none": "Nothing in the passage is available to this character.",
+          "uncertain": "The evidence does not establish either conclusion."
+        }
+      },
+      "a0_u0": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u0: {\"kind\": \"sentence\", \"pieces\": [\"Alice: She slid her bishop across the chessboard\u2014one square, then another.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u1": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u1: {\"kind\": \"fragment\", \"pieces\": [\"Alice: She slid her bishop across the chessboard\u2014one square\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u2": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u2: {\"kind\": \"fragment\", \"pieces\": [\"then another.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u3": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u3: {\"kind\": \"sentence\", \"pieces\": [\"\\\"Your turn,\\\" she said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u4": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u4: {\"kind\": \"fragment\", \"pieces\": [\"\\\"Your turn,\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u5": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u5: {\"kind\": \"fragment\", \"pieces\": [\"she said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u6": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u6: {\"kind\": \"sentence\", \"pieces\": [\"Tap, tap: rain on the glass.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u7": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u7: {\"kind\": \"fragment\", \"pieces\": [\"tap: rain on the glass.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u8": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u8: {\"kind\": \"sentence\", \"pieces\": [\"Bob watched her move and heard every word.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u9": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u9: {\"kind\": \"fragment\", \"pieces\": [\"Bob watched her move\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u10": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u10: {\"kind\": \"fragment\", \"pieces\": [\"heard every word.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "n1": {
+        "type": "choice",
+        "instructions": "Considering the entire current passage and the scene context, what does Bob perceive? Tracked states apply; reader headings are not discoveries.",
+        "options": {
+          "some": "At least one fact, observable act, audible/readable content, or own thought is available.",
+          "none": "Nothing in the passage is available to this character.",
+          "uncertain": "The evidence does not establish either conclusion."
+        }
+      },
+      "a1_u0": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u0: {\"kind\": \"sentence\", \"pieces\": [\"Alice: She slid her bishop across the chessboard\u2014one square, then another.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u1": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u1: {\"kind\": \"fragment\", \"pieces\": [\"Alice: She slid her bishop across the chessboard\u2014one square\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u2": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u2: {\"kind\": \"fragment\", \"pieces\": [\"then another.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u3": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u3: {\"kind\": \"sentence\", \"pieces\": [\"\\\"Your turn,\\\" she said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u4": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u4: {\"kind\": \"fragment\", \"pieces\": [\"\\\"Your turn,\\\"\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u5": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u5: {\"kind\": \"fragment\", \"pieces\": [\"she said.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u6": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u6: {\"kind\": \"sentence\", \"pieces\": [\"Tap, tap: rain on the glass.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u7": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u7: {\"kind\": \"fragment\", \"pieces\": [\"tap: rain on the glass.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u8": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u8: {\"kind\": \"sentence\", \"pieces\": [\"Bob watched her move and heard every word.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u9": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u9: {\"kind\": \"fragment\", \"pieces\": [\"Bob watched her move\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u10": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u10: {\"kind\": \"fragment\", \"pieces\": [\"heard every word.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      }
+    },
+    "response": {
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "n0": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "some": 0.93,
+            "uncertain": 0.01,
+            "none": 0.05
+          },
+          "confidence": 0.9
+        },
+        "a0_u0": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.8,
+            "some": 0.12,
+            "none": 0.08
+          },
+          "confidence": 0.69
+        },
+        "a0_u1": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.67,
+            "some": 0.19,
+            "none": 0.14
+          },
+          "confidence": 0.5
+        },
+        "a0_u2": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.67,
+            "some": 0.13,
+            "none": 0.2
+          },
+          "confidence": 0.51
+        },
+        "a0_u3": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.86,
+            "some": 0.09,
+            "none": 0.05
+          },
+          "confidence": 0.79
+        },
+        "a0_u4": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.98,
+            "some": 0.01,
+            "none": 0.01
+          },
+          "confidence": 0.96
+        },
+        "a0_u5": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.59,
+            "some": 0.13,
+            "none": 0.28
+          },
+          "confidence": 0.38
+        },
+        "a0_u6": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.98,
+            "some": 0.01,
+            "none": 0.01
+          },
+          "confidence": 0.96
+        },
+        "a0_u7": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.84,
+            "some": 0.12,
+            "none": 0.04
+          },
+          "confidence": 0.75
+        },
+        "a0_u8": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "all": 0.16,
+            "some": 0.62,
+            "none": 0.22
+          },
+          "confidence": 0.43
+        },
+        "a0_u9": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.44,
+            "some": 0.21,
+            "none": 0.35
+          },
+          "confidence": 0.15
+        },
+        "a0_u10": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "all": 0.08,
+            "some": 0.21,
+            "none": 0.71
+          },
+          "confidence": 0.56
+        },
+        "n1": {
+          "type": "choice",
+          "choice": "some",
+          "probabilities": {
+            "some": 1,
+            "uncertain": 0,
+            "none": 0
+          },
+          "confidence": 1
+        },
+        "a1_u0": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.72,
+            "some": 0.21,
+            "none": 0.07
+          },
+          "confidence": 0.58
+        },
+        "a1_u1": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.64,
+            "some": 0.3,
+            "none": 0.06
+          },
+          "confidence": 0.45
+        },
+        "a1_u2": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.51,
+            "some": 0.16,
+            "none": 0.33
+          },
+          "confidence": 0.26
+        },
+        "a1_u3": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.89,
+            "some": 0.09,
+            "none": 0.02
+          },
+          "confidence": 0.84
+        },
+        "a1_u4": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.99,
+            "some": 0.01,
+            "none": 0
+          },
+          "confidence": 0.97
+        },
+        "a1_u5": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.62,
+            "some": 0.15,
+            "none": 0.23
+          },
+          "confidence": 0.43
+        },
+        "a1_u6": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.96,
+            "some": 0.03,
+            "none": 0.01
+          },
+          "confidence": 0.94
+        },
+        "a1_u7": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.8200000000000001,
+            "some": 0.15,
+            "none": 0.03
+          },
+          "confidence": 0.72
+        },
+        "a1_u8": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.6,
+            "some": 0.33,
+            "none": 0.07
+          },
+          "confidence": 0.41
+        },
+        "a1_u9": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.83,
+            "some": 0.06,
+            "none": 0.11
+          },
+          "confidence": 0.75
+        },
+        "a1_u10": {
+          "type": "choice",
+          "choice": "all",
+          "probabilities": {
+            "all": 0.71,
+            "some": 0.12,
+            "none": 0.17
+          },
+          "confidence": 0.57
+        }
+      },
+      "usage": {
+        "input_tokens": 7811,
+        "output_tokens": 917,
+        "cost": 0.000328062
+      }
+    }
+  },
+  {
+    "questions": {
+      "n0": {
+        "type": "choice",
+        "instructions": "Considering the entire current passage and the scene context, what does Alice perceive? Tracked states apply; reader headings are not discoveries.",
+        "options": {
+          "some": "At least one fact, observable act, audible/readable content, or own thought is available.",
+          "none": "Nothing in the passage is available to this character.",
+          "uncertain": "The evidence does not establish either conclusion."
+        }
+      },
+      "a0_u0": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u0: {\"kind\": \"sentence\", \"pieces\": [\"What does Alice keep hidden in her locked drawer?\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u1": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u1: {\"kind\": \"sentence\", \"pieces\": [\"A sapphire stolen from Mira lay under the false bottom.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a0_u2": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Alice? Candidate u2: {\"kind\": \"sentence\", \"pieces\": [\"Nobody opened the drawer or discovered it in the scene.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "n1": {
+        "type": "choice",
+        "instructions": "Considering the entire current passage and the scene context, what does Bob perceive? Tracked states apply; reader headings are not discoveries.",
+        "options": {
+          "some": "At least one fact, observable act, audible/readable content, or own thought is available.",
+          "none": "Nothing in the passage is available to this character.",
+          "uncertain": "The evidence does not establish either conclusion."
+        }
+      },
+      "a1_u0": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u0: {\"kind\": \"sentence\", \"pieces\": [\"What does Alice keep hidden in her locked drawer?\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u1": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u1: {\"kind\": \"sentence\", \"pieces\": [\"A sapphire stolen from Mira lay under the false bottom.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      },
+      "a1_u2": {
+        "type": "choice",
+        "instructions": "How much of this candidate observation is accessible to Bob? Candidate u2: {\"kind\": \"sentence\", \"pieces\": [\"Nobody opened the drawer or discovered it in the scene.\"]} Use the original passage and scene evidence. Fragments preserve the SOURCE narrative voice. Own mental content is available to its actor. A visible act can remain without its private content.",
+        "options": {
+          "all": "Every fact in this candidate is available to the character, and the candidate faithfully preserves source meaning and participant references.",
+          "some": "Some information is available but another part is hidden, or this candidate drops a necessary factual qualifier.",
+          "none": "No information is available, or the candidate asserts an unsupported/ambiguous event or binding."
+        }
+      }
+    },
+    "response": {
+      "model": "typesafe/jev-1.13-20260917",
+      "answers": {
+        "n0": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.59,
+            "some": 0.4,
+            "uncertain": 0.01
+          },
+          "confidence": 0.38
+        },
+        "a0_u0": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "all": 0.1,
+            "none": 0.79,
+            "some": 0.11
+          },
+          "confidence": 0.68
+        },
+        "a0_u1": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.56,
+            "all": 0.28,
+            "some": 0.15
+          },
+          "confidence": 0.34
+        },
+        "a0_u2": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "all": 0.12,
+            "none": 0.68,
+            "some": 0.2
+          },
+          "confidence": 0.53
+        },
+        "n1": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "none": 0.55,
+            "some": 0.44,
+            "uncertain": 0.01
+          },
+          "confidence": 0.32
+        },
+        "a1_u0": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "all": 0.02,
+            "none": 0.94,
+            "some": 0.04
+          },
+          "confidence": 0.91
+        },
+        "a1_u1": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "all": 0,
+            "none": 0.99,
+            "some": 0.01
+          },
+          "confidence": 0.98
+        },
+        "a1_u2": {
+          "type": "choice",
+          "choice": "none",
+          "probabilities": {
+            "all": 0.16,
+            "none": 0.78,
+            "some": 0.06
+          },
+          "confidence": 0.67
+        }
+      },
+      "usage": {
+        "input_tokens": 4167,
+        "output_tokens": 307,
+        "cost": 0.000175014
+      }
+    }
+  }
+]

@@ -15,7 +15,8 @@ In 0.32.0 Talemate's TTS (Text-to-Speech) agent has been completely refactored t
 ### Local APIs
 - **[Kokoro](kokoro.md)** - Fastest generation with predefined voice models and mixing
 - **[F5-TTS](f5tts.md)** - Fast voice cloning with occasional mispronunciations
-- **[Chatterbox](chatterbox.md)** - High-quality voice cloning (slower generation)
+- **[Chatterbox](chatterbox.md#standard-chatterbox-settings)** - Standard local voice cloning with exaggeration, CFG/Pace and temperature controls
+- **[Chatterbox Turbo](chatterbox.md#chatterbox-turbo)** - Separate opt-in English voice cloning; requires a WAV longer than five seconds and offers sampling/normalization controls and native sound tags. Existing standard voices and settings are preserved.
 - **[Pocket TTS](pocket-tts.md)** - CPU-based voice cloning from Kyutai (no GPU required)
 
 ### Remote APIs

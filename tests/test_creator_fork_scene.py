@@ -2,11 +2,12 @@
 Tests for the save-name guard on ``creator.fork_scene``.
 
 Forking from a message reaches this path with a user-typed name. Like the
-timeline fork, it must refuse a name that is unsafe as a filename or that
+revision fork, it must refuse a name that is unsafe as a filename or that
 would land on an existing save, rather than escaping the save directory or
 overwriting a save with forked data.
 """
 
+import json
 import os
 import re
 
@@ -14,6 +15,7 @@ import pytest
 
 import talemate.instance as instance
 from talemate.scene_message import NarratorMessage
+from talemate.changelog import SceneChangelog
 
 from conftest import MockClient, MockScene, bootstrap_engine
 
@@ -37,9 +39,7 @@ class _ForkScene(MockScene):
 def creator(tmp_path):
     bootstrap_engine()
     scene = _ForkScene(save_dir=str(tmp_path))
-    # distinct from the name, so a test can tell which one a generated save
-    # name was built from
-    scene.filename = "test_scene.json"
+    scene.filename = None
     scene.name = "Project Scene"
     scene.history.append(NarratorMessage("the scene begins"))
     agent = instance.get_agent("creator")
@@ -79,6 +79,8 @@ async def test_fork_writes_a_new_save(creator, message_id, tmp_path):
 async def test_fork_without_a_name_writes_a_timestamped_save(
     creator, message_id, tmp_path, save_name
 ):
+    creator.scene.filename = "test_scene.json"
+    await SceneChangelog(creator.scene).record()
     fork_path = await creator.fork_scene(message_id, save_name=save_name)
 
     assert fork_path is not None
@@ -136,7 +138,7 @@ async def test_fork_refuses_a_name_that_escapes_the_save_dir(
     assert_refused(emitted, "'../escaped' is not a valid save name")
 
 
-@pytest.mark.parametrize("save_name", ["nested/fork", "..", "with\x00nul"])
+@pytest.mark.parametrize("save_name", ["nested/fork", "..", "with\x00nul", "   "])
 async def test_fork_refuses_unsafe_names(creator, message_id, tmp_path, save_name):
     assert await creator.fork_scene(message_id, save_name=save_name) is None
     assert list(tmp_path.iterdir()) == []
@@ -151,3 +153,18 @@ async def test_fork_refuses_an_existing_save(creator, message_id, tmp_path, emit
     assert_refused(
         emitted, "A save named 'taken' already exists — pick a different name"
     )
+
+
+async def test_shallow_fork_writes_a_visible_scene(creator, message_id, tmp_path):
+    # the fork is built from Scene.serialize, which carries the browser flags;
+    # the copy belongs to the user, not to the retired file it came from
+    creator.scene.hidden = True
+    creator.scene.deprecated = True
+
+    fork_path = await creator.fork_scene(message_id, save_name="forked")
+
+    with open(fork_path) as file:
+        forked = json.load(file)
+
+    assert forked["hidden"] is False
+    assert forked["deprecated"] is False

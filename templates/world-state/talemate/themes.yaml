@@ -1,0 +1,245 @@
+author: Talemate
+description: The themes that ship with Talemate.
+name: Themes
+templates:
+  dark:
+    appearance:
+      actor:
+        bold: false
+        italic: false
+      backdrop_panel_opacity: 0.8
+      backdrop_text_shadow: true
+      brackets:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      context_investigation:
+        bold: false
+        italic: false
+        show: true
+      director:
+        bold: false
+        italic: false
+        show: true
+      emphasis:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      entities:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      information:
+        bold: false
+        italic: false
+      narrator:
+        bold: false
+        italic: false
+      parentheses:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      quotes:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      reinforcement:
+        bold: false
+        italic: false
+        show: true
+      time:
+        bold: false
+        italic: false
+    code_editor: one-dark
+    colors:
+      app:
+        cancel: '#B0BEC5'
+        delete: '#D32F2F'
+        dirty: '#FFB74D'
+        error: '#CF6679'
+        favorite: '#FFD740'
+        highlight1: '#9FA8DA'
+        highlight2: '#CE93D8'
+        highlight3: '#C5E1A5'
+        highlight4: '#EF5350'
+        highlight5: '#FFE082'
+        highlight6: '#FFCC80'
+        highlight7: '#90CAF9'
+        inactive: '#E57373'
+        info: '#2196F3'
+        module_locked_selected: '#78909C'
+        module_selected: '#7E57C2'
+        muted: '#9E9E9E'
+        mutedbg: '#212121'
+        mutedheader: '#BDBDBD'
+        normal: '#9E9E9E'
+        persona: '#F48FB1'
+        primary: '#9575CD'
+        secondary: '#FF5722'
+        success: '#4CAF50'
+        unsaved: '#FFD54F'
+        warning: '#FB8C00'
+      chats:
+        dchat_msg_action_result: '#FFCCBC'
+        dchat_msg_compaction: '#616161'
+        dchat_msg_director: '#FF8A65'
+        hchat_msg_doc_result: '#64B5F6'
+        hchat_msg_help: '#90A4AE'
+      messages:
+        actor: '#B39DDB'
+        border: '#424242'
+        brackets: '#DC5D5D'
+        context_investigation: '#D5C0A1'
+        defaultBadge: '#E64A19'
+        director: '#FF5722'
+        emphasis: '#B39DDB'
+        entities: '#FFE082'
+        information: '#BA8574'
+        narrator: '#A180AE'
+        parentheses: '#DB9DC2'
+        play_audio: '#FBC02D'
+        quotes: '#FFFFFF'
+        reinforcement: '#80CBC4'
+        time: '#FFECB3'
+      surfaces:
+        background: '#121212'
+        on_surface_variant: '#000000'
+        surface: '#212121'
+        surface_bright: '#CCBFD6'
+        surface_light: '#424242'
+        surface_variant: '#C8C8C8'
+    dark: true
+    favorite: false
+    group: themes
+    instructions: null
+    locked: true
+    name: Talemate Dark
+    priority: 1
+    template_type: theme
+    uid: dark
+  light:
+    appearance:
+      actor:
+        bold: false
+        italic: false
+      backdrop_panel_opacity: 0.8
+      backdrop_text_shadow: false
+      brackets:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      context_investigation:
+        bold: false
+        italic: false
+        show: true
+      director:
+        bold: false
+        italic: false
+        show: true
+      emphasis:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      entities:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      information:
+        bold: false
+        italic: false
+      narrator:
+        bold: false
+        italic: false
+      parentheses:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      quotes:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      reinforcement:
+        bold: false
+        italic: false
+        show: true
+      time:
+        bold: false
+        italic: false
+    code_editor: vscode-light
+    colors:
+      app:
+        cancel: '#546E7A'
+        delete: '#CD2729'
+        dirty: '#A15700'
+        error: '#B3261E'
+        favorite: '#9E8300'
+        highlight1: '#3F51B5'
+        highlight2: '#9C27B0'
+        highlight3: '#4D7322'
+        highlight4: '#B71C1C'
+        highlight5: '#806000'
+        highlight6: '#9D5600'
+        highlight7: '#1565C0'
+        inactive: '#C62828'
+        info: '#01579B'
+        module_locked_selected: '#607D8B'
+        module_selected: '#5E35B1'
+        muted: '#6B655D'
+        mutedbg: '#E3DBD0'
+        mutedheader: '#4E4A43'
+        normal: '#3C3C3C'
+        persona: '#C2185B'
+        primary: '#7B56C1'
+        secondary: '#C62E00'
+        success: '#2E7D32'
+        unsaved: '#8A6700'
+        warning: '#B25000'
+      chats:
+        dchat_msg_action_result: '#854A39'
+        dchat_msg_compaction: '#868178'
+        dchat_msg_director: '#AD3D1A'
+        hchat_msg_doc_result: '#0E65AB'
+        hchat_msg_help: '#4D6876'
+      messages:
+        actor: '#6C3BC6'
+        border: '#BDB5AC'
+        brackets: '#CD2D2D'
+        context_investigation: '#86693C'
+        defaultBadge: '#C74016'
+        director: '#C62E00'
+        emphasis: '#6C3BC6'
+        entities: '#806000'
+        information: '#954F38'
+        narrator: '#7D4D90'
+        parentheses: '#A23C7A'
+        play_audio: '#B38104'
+        quotes: '#212121'
+        reinforcement: '#2F6B66'
+        time: '#674D00'
+      surfaces:
+        background: '#F6F1E9'
+        on_surface_variant: '#F1EDE7'
+        surface: '#FBF8F3'
+        surface_bright: '#FEFCF8'
+        surface_light: '#EBE4DA'
+        surface_variant: '#4A4458'
+    dark: false
+    favorite: false
+    group: themes
+    instructions: null
+    locked: true
+    name: Talemate Light
+    priority: 1
+    template_type: theme
+    uid: light
+uid: themes

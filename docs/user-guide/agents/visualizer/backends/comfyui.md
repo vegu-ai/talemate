@@ -29,7 +29,7 @@ Confirm ComfyUI is running in your browser by visiting http://localhost:8188 or 
 
 In the Visualizer agent settings, select ComfyUI as your backend for text-to-image generation, image editing, or both. You'll need to configure each backend separately if you want to use ComfyUI for different operations.
 
-![The image displays the General settings tab of the Visualizer interface, featuring a sidebar with active indicators for ComfyUI and Google modules. Dropdown menus in the main panel show ComfyUI selected for text-to-image and image editing backends, with Google selected for image analysis. The interface also includes an image generation timeout slider set to 301 and an enabled Automatic Setup checkbox.](/talemate/img/0.34.0/visual-agent-comfyui-1.png)
+![The image displays the "General" section of the Visualizer agent settings. Dropdown menus show "openrouter" as the client, ComfyUI selected for the text-to-image and image editing backends, and Google selected for image analysis. The section also includes an image generation timeout slider set to 301 and an enabled Automatic Setup checkbox, with collapsed sections for the configured backends and Styles below it.](/talemate/img/0.40.0/visual-agent-comfyui-1.png)
 
 ### Text-to-Image Configuration
 
@@ -38,24 +38,27 @@ For text-to-image generation, configure the following settings:
 - **API URL**: The URL where your ComfyUI instance is running (e.g., `http://localhost:8188`)
 - **Workflow**: Select the workflow file to use for generation. Talemate includes several pre-configured workflows including `qwen_image.json` and `z_image_turbo.json`
 - **Model**: Select the model to use from your ComfyUI models directory. If your workflow doesn't include a "Talemate Load Model" or "Talemate Load Checkpoint" node, this will be set to "- Workflow default -" and the model specified in the workflow file will be used.
-- **Prompt Type**: Choose between "Keywords" or "Descriptive" prompt formatting
+- **Prompt Type**: Choose between "Keywords" or "Descriptive" prompt formatting. Descriptive is the default.
+
+    !!! warning "The default workflow is SDXL-based"
+        The default workflow, `default-sdxl.json`, is SDXL-based and works best with **Keywords**. Either switch Prompt Type to **Keywords**, or pick a workflow for a model that prefers descriptive prompts, such as `qwen_image.json` or `z_image_turbo.json`.
 
     !!! tip "Choosing Prompt Type"
-        As a general rule: **SDXL models** typically work best with **Keywords** formatting, while most other models (including Qwen Image, Flux, etc.) work better with **Descriptive** formatting. If you're unsure, start with Descriptive and switch to Keywords if you're using an SDXL-based workflow.
+        As a general rule: **SDXL models** typically work best with **Keywords** formatting, while most other models (including Qwen Image, Flux, etc.) work better with **Descriptive** formatting. If you're using an SDXL-based workflow, switch to Keywords.
 
 - **Resolutions**: Configure the pixel dimensions for Square, Portrait, and Landscape formats
 
-![A screenshot of the "Visualizer" application's dark-mode settings panel specifically for ComfyUI text-to-image generation. The interface features configuration fields for the API URL, a workflow dropdown set to "z_image_turbo.json," model selection, and a "Descriptive" prompting type. The lower section includes adjustable numeric inputs for defining pixel dimensions for Square, Portrait, and Landscape image resolutions.](/talemate/img/0.34.0/visual-agent-comfyui-2.png)
-![This screenshot displays the dark-themed settings interface of an application named "Visualizer," specifically configured for ComfyUI text-to-image generation. The main panel features input fields for the API URL, workflow selection (set to default-sdxl), and model choice (juggernautXL), along with a prompting type setting. Below these options is a "Resolutions" section allowing users to define specific pixel dimensions for Square, Portrait, and Landscape image outputs.](/talemate/img/0.34.0/visual-agent-comfyui-3.png)
+![A screenshot of the "Visualizer" agent's dark-mode settings section for ComfyUI text-to-image generation. It features configuration fields for the API URL, a workflow dropdown set to "default-sdxl.json," an empty model selection, and a "Descriptive" prompting type. The lower part includes adjustable numeric inputs for defining pixel dimensions for Square, Portrait, and Landscape image resolutions.](/talemate/img/0.40.0/visual-agent-comfyui-2.png)
+![This screenshot displays the dark-themed "Visualizer" agent settings, specifically the section configured for ComfyUI text-to-image generation. It features input fields for the API URL, workflow selection (set to default-sdxl.json), and an empty model choice, along with the prompting type set to "Keywords". Below these options is a "Resolutions" section allowing users to define specific pixel dimensions for Square, Portrait, and Landscape image outputs.](/talemate/img/0.40.0/visual-agent-comfyui-3.png)
 
 ### Image Editing Configuration
 
 For image editing, configure similar settings but select an image editing workflow such as `qwen_image_edit.json`. The number of reference images supported depends on your model - for example, Qwen Image Edit can handle up to 3 reference images that can be used to guide the editing process.
 
 !!! note "Prompt Type for Image Editing"
-    Image editing workflows typically use **Descriptive** prompt formatting by default, as most image editing models (like Qwen Image Edit) work better with descriptive instructions rather than keyword-based prompts.
+    Image editing workflows typically use **Descriptive** prompt formatting, as most image editing models (like Qwen Image Edit) work better with descriptive instructions rather than keyword-based prompts.
 
-![A screenshot of the "Visualizer" application settings interface, specifically showing the configuration panel for "ComfyUI Image Editing." The main view displays input fields for the API URL, a selected workflow file named "qwen_image_edit.json," descriptive prompting settings, and resolution presets for square, portrait, and landscape aspect ratios.](/talemate/img/0.34.0/visual-agent-comfyui-4.png)
+![A screenshot of the "Visualizer" agent settings, specifically showing the "ComfyUI Image editing" section. It displays input fields for the API URL, a selected workflow file named "default-sdxl.json," descriptive prompting settings, and resolution presets for square, portrait, and landscape aspect ratios.](/talemate/img/0.40.0/visual-agent-comfyui-4.png)
 ![This screenshot shows a browser tab group labeled "Visualizer" marked with a green status dot on a dark background. The group contains four tabs: a Google link, two green-tinted ComfyUI tabs with image and pencil icons, and a gray tab titled "References 3".](/talemate/img/0.34.0/visual-agent-comfyui-5.png)
 
 
@@ -89,6 +92,8 @@ For Talemate to properly interact with your workflow, you need to rename specifi
 1. **Talemate Positive Prompt**: The node that encodes the positive prompt (typically a `CLIPTextEncode` or `TextEncodeQwenImageEditPlus` node). This is required - workflows without this node will fail validation.
 2. **Talemate Negative Prompt**: The node that encodes the negative prompt (same node types as above)
 3. **Talemate Resolution**: The node that sets the image dimensions (typically an `EmptySD3LatentImage` or similar latent image node)
+
+For each prompt node, Talemate first looks for an input named `text`, `prompt`, or `value`, in that order, including when that input is currently connected to another node. This means intermediate nodes such as `PrimitiveStringMultiline` are served through their named `value` input. For any other node, Talemate reads the node schema from ComfyUI and uses the only input declared as `STRING`; the only direct string-valued input is used only when ComfyUI does not describe the node class. If the schema request fails, Talemate logs a warning and continues with that schema-unavailable fallback. If Talemate cannot select a receiver unambiguously, it leaves the node unchanged and logs a warning containing the node title, type, and input names.
 
 **Optional Node Titles:**
 
@@ -173,8 +178,7 @@ After exporting, place the workflow JSON file in Talemate's `templates/comfyui-w
     Workflow files must be placed in Talemate's `templates/comfyui-workflows` directory, not ComfyUI's workflows directory. Talemate loads workflows from its own templates directory to ensure compatibility and proper integration.
 
 !!! tip "Workflow Not Appearing?"
-    If your workflow file doesn't appear in the agent's settings dropdown after placing it in the correct directory, try reloading the Talemate browser window. The workflow list is refreshed when the page loads.
+    New workflow files appear when you open **Settings → Agents → Visualizer**. If the Visualizer is already open, select another agent and then the Visualizer again.
 
 !!! info "Hot-Reloading Workflows"
     Changes to workflow files are automatically detected and reloaded by the agent. After modifying a workflow file, your changes will be applied to the next image generation without needing to restart Talemate or reload the browser window.
-

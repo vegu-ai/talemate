@@ -7,7 +7,11 @@ Override example:
   {{ set_anchor_extractor("analysis", "<MY_TAG>", "</MY_TAG>") }}
   {{ set_as_is_extractor("analysis") }}
 -#}
+{% set planning_context %}{% include "character-evidence-planning.jinja2" %}{% endset %}
+{{ planning_context }}
+{% with max_tokens=max_tokens - count_tokens(planning_context) %}
 {% include "scene-context.jinja2" %}
+{% endwith %}
 {% include "world-state-snapshot.jinja2" %}
 {% include "scene-intent.jinja2" %}
 <|SECTION:TASK|>

@@ -3,7 +3,11 @@
         <v-card variant="text">
             <v-card-text>
                 <div class="d-flex align-center mb-2">
-                    <v-btn size="small" :disabled="busy" color="primary" variant="text" class="mr-2" prepend-icon="mdi-refresh" @click.stop="refresh">Refresh</v-btn>
+                    <v-btn size="small" :disabled="busy" color="primary" variant="text" class="mr-2" prepend-icon="mdi-refresh" @mousedown.prevent @click.stop="refresh">Refresh</v-btn>
+                    <v-chip v-if="externalChange" size="small" label color="warning" variant="text" prepend-icon="mdi-alert-circle-outline" class="mr-2">
+                        Changed outside this view — saving overwrites
+                        <v-tooltip activator="parent" location="bottom" max-width="400">The game state was changed elsewhere while you have unsaved edits here. Refresh to load the latest, or keep editing and save to overwrite.</v-tooltip>
+                    </v-chip>
                     <v-spacer></v-spacer>
                 </div>
 
@@ -12,7 +16,7 @@
                 <v-alert v-if="!loaded" color="muted" density="compact" variant="text">No game state loaded.</v-alert>
 
                 <v-row v-else>
-                    <v-col cols="12" md="8">
+                    <v-col cols="12" md="7">
                         <div class="codemirror-container">
                             <v-alert v-if="validationError" type="error" density="compact" variant="tonal" class="mb-2">
                                 {{ validationError }}
@@ -26,12 +30,16 @@
                         </div>
                     </v-col>
 
-                    <v-col cols="12" md="4">
+                    <v-col cols="12" md="5">
                         <GameStateWatchedPaths
-                            v-model:watched-paths="watchedPaths"
+                            :watched-paths="watchedPaths"
+                            :control-paths="controlPaths"
+                            :path-settings="pathSettings"
+                            :variables="gameStateVariables"
                             :available-paths="gameStatePaths"
-                            @path-added="onPathAdded"
-                            @update:watched-paths="onWatchedPathsChanged"
+                            @debug-path-added="onPathAdded"
+                            @set-target="onTargetChanged"
+                            @set-settings="onSettingsChanged"
                         />
                     </v-col>
                 </v-row>
@@ -44,8 +52,7 @@
 
 import { Codemirror } from 'vue-codemirror'
 import { json } from '@codemirror/lang-json'
-import { oneDark } from '@codemirror/theme-one-dark'
-import { EditorView } from '@codemirror/view'
+import { codeEditorExtensions } from '@/utils/codeEditorTheme.js'
 import { linter } from '@codemirror/lint'
 import { extractGameStatePaths } from '@/utils/gameStatePaths.js'
 import GameStateWatchedPaths from './GameStateWatchedPaths.vue'
@@ -77,17 +84,27 @@ export default {
             lastLoadedJSON: '',
             validationError: null,
             gameStatePaths: [],
+            outsideJSON: null,
         };
     },
     computed: {
-        watchedPaths: {
-            get() {
-                return this.scene?.data?.game_state_watch_paths || [];
-            },
-            set(value) {
-                // This setter is for v-model compatibility in GameStateWatchedPaths
-                // The actual update happens through onWatchedPathsChanged
-            }
+        watchedPaths() {
+            return this.scene?.data?.game_state_watch_paths || [];
+        },
+        controlPaths() {
+            return this.scene?.data?.game_state_control_paths || [];
+        },
+        pathSettings() {
+            return this.scene?.data?.game_state_path_settings || {};
+        },
+        gameStateVariables() {
+            return this.scene?.data?.game_state?.variables || {};
+        },
+        dirty() {
+            return this.gameStateJSON !== this.lastLoadedJSON;
+        },
+        externalChange() {
+            return this.dirty && this.outsideJSON !== null;
         },
     },
     watch: {
@@ -101,13 +118,39 @@ export default {
                 if (variables) {
                     const paths = extractGameStatePaths(variables, '', { includeContainers: true });
                     this.gameStatePaths = [...new Set(paths)].sort();
+                    this.onSceneVariables(variables);
                 }
             },
             deep: true,
             immediate: true,
         },
+        dirty(dirty) {
+            if (!dirty && this.outsideJSON !== null) {
+                this.adopt(this.outsideJSON);
+            }
+        },
     },
     methods: {
+        adopt(json) {
+            this.gameStateJSON = json;
+            this.lastLoadedJSON = json;
+            this.outsideJSON = null;
+            this.validationError = null;
+        },
+        onSceneVariables(variables) {
+            // a pending save's own reply replaces the editor
+            if (!this.loaded || this.busy) {
+                return;
+            }
+            const json = JSON.stringify(variables, null, 2);
+            if (json === this.lastLoadedJSON) {
+                this.outsideJSON = null;
+            } else if (this.dirty && json !== this.gameStateJSON) {
+                this.outsideJSON = json;
+            } else {
+                this.adopt(json);
+            }
+        },
         refresh() {
             this.getWebsocket().send(
                 JSON.stringify({ type: 'devtools', action: 'get_game_state' })
@@ -123,6 +166,10 @@ export default {
 
             try {
                 const parsed = JSON.parse(this.gameStateJSON);
+                if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                    this.validationError = 'Game state must be a JSON object';
+                    return;
+                }
                 this.commitChanges(parsed);
             } catch (e) {
                 this.validationError = `Invalid JSON: ${e.message}`;
@@ -140,25 +187,22 @@ export default {
         },
         handleMessage(message) {
             if (message.type === 'devtools') {
-                if (message.action === 'game_state') {
+                if (message.action === 'operation_done' && message.failed_action === 'update_game_state' && this.busy) {
+                    this.busy = false;
+                    this.validationError = message.error.message;
+                } else if (message.action === 'game_state') {
                     this.loaded = true;
                     this.busy = false;
-                    const json = JSON.stringify(message.data.variables || {}, null, 2);
-                    this.gameStateJSON = json;
-                    this.lastLoadedJSON = json;
-                    this.validationError = null;
-                    
+                    this.adopt(JSON.stringify(message.data.variables || {}, null, 2));
+
                     // Extract paths from game state variables
                     const variables = message.data.variables || {};
                     const paths = extractGameStatePaths(variables, '', { includeContainers: true });
                     this.gameStatePaths = [...new Set(paths)].sort();
                 } else if (message.action === 'game_state_updated') {
                     this.busy = false;
-                    const json = JSON.stringify(message.data.variables || {}, null, 2);
-                    this.gameStateJSON = json;
-                    this.lastLoadedJSON = json;
-                    this.validationError = null;
-                    
+                    this.adopt(JSON.stringify(message.data.variables || {}, null, 2));
+
                     // Extract paths from game state variables
                     const variables = message.data.variables || {};
                     const paths = extractGameStatePaths(variables, '', { includeContainers: true });
@@ -166,18 +210,30 @@ export default {
                 }
             }
         },
-        onWatchedPathsChanged(newPaths) {
-            // Persist the updated watch paths
+        onTargetChanged({ path, target, enabled, settings }) {
+            const payload = {
+                type: 'devtools',
+                action: 'set_game_state_path_target',
+                path,
+                target,
+                enabled,
+            };
+            if (settings !== undefined) payload.settings = settings;
+            this.getWebsocket().send(
+                JSON.stringify(payload)
+            );
+        },
+        onSettingsChanged({ path, settings }) {
             this.getWebsocket().send(
                 JSON.stringify({
                     type: 'devtools',
-                    action: 'set_game_state_watch_paths',
-                    paths: newPaths,
+                    action: 'set_game_state_path_settings',
+                    path,
+                    settings,
                 })
             );
         },
         onPathAdded(path) {
-            // When a new path is added, open DebugTools and select gamestate tab
             if (this.openDebugTools) {
                 this.$nextTick(() => {
                     this.openDebugTools('gamestate');
@@ -237,12 +293,7 @@ export default {
             return diagnostics;
         });
 
-        const extensions = [
-            json(),
-            oneDark,
-            EditorView.lineWrapping,
-            jsonLinter
-        ];
+        const extensions = codeEditorExtensions(json(), jsonLinter);
 
         const editorStyle = {
             height: "calc(100vh - 470px)",
@@ -263,5 +314,3 @@ export default {
     width: 100%;
 }
 </style>
-
-

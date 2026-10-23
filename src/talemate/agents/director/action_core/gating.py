@@ -9,7 +9,10 @@ import pydantic
 import structlog
 from typing import Literal, TYPE_CHECKING
 
-from talemate.game.engine.nodes.registry import get_nodes_by_base_type
+from talemate.game.engine.nodes.registry import (
+    get_nodes_by_base_type,
+    register_module_sync_base_type,
+)
 from talemate.game.engine.nodes.core import Graph, UNRESOLVED, GraphState, Node
 
 if TYPE_CHECKING:
@@ -24,11 +27,16 @@ __all__ = [
     "is_action_id_enabled",
     "get_disabled_action_ids",
     "ActionMode",
+    "DIRECTOR_CHAT_ACTION_BASE_TYPE",
 ]
 
 ActionMode = Literal["chat", "scene_direction"]
 
 CALLBACK_NODE_REGISTRY = "agents/director/chat/DirectorChatSubAction"
+
+DIRECTOR_CHAT_ACTION_BASE_TYPE = register_module_sync_base_type(
+    "agents/director/DirectorChatAction"
+)
 
 
 class CallbackDescriptor(pydantic.BaseModel):
@@ -152,7 +160,7 @@ async def extract_callback_descriptors(action_name: str) -> list[CallbackDescrip
     Returns:
         List of CallbackDescriptor instances found in the action's graph
     """
-    for node_cls in get_nodes_by_base_type("agents/director/DirectorChatAction"):
+    for node_cls in get_nodes_by_base_type(DIRECTOR_CHAT_ACTION_BASE_TYPE):
         node = node_cls()
         if node.get_property("name") == action_name:
             if isinstance(node, Graph):
@@ -171,7 +179,7 @@ async def extract_all_callback_descriptors(
     """
     result: dict[str, list[CallbackDescriptor]] = {}
 
-    for node_cls in get_nodes_by_base_type("agents/director/DirectorChatAction"):
+    for node_cls in get_nodes_by_base_type(DIRECTOR_CHAT_ACTION_BASE_TYPE):
         node = node_cls()
         action_name = node.get_property("name")
         if action_name and isinstance(node, Graph):

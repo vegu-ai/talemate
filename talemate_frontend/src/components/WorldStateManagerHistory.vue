@@ -21,7 +21,7 @@
                     <v-divider v-else class="mt-2"></v-divider>
 
                     <v-card v-if="summaryEntriesExist" variant="tonal" color="muted" density="compact" class="mt-4 mb-2" style="min-height: 52px;">
-                        <v-card-text class="text-caption">
+                        <v-card-text class="text-body-small">
                             <div v-if="layerStats[0]" class="d-flex flex-wrap ga-4">
                                 <div>
                                     <span class="text-muted">Compression:</span>
@@ -43,7 +43,7 @@
                         </v-card-text>
                     </v-card>
 
-                    <v-sheet class="ma-4 text-caption">
+                    <v-sheet color="transparent" class="ma-4 text-body-small">
                         <span class="text-muted">Total time passed:</span> {{ scene?.data?.scene_time || '?' }}
                     </v-sheet>
 
@@ -59,11 +59,17 @@
 
                     <v-card-title>Summarized History</v-card-title>
 
-
-                    <template v-for="(item, index) in interleavedHistory" :key="item.type + '_' + index">
+                    <template v-for="(item, index) in interleavedHistory" :key="historyItemKey(item, index)">
                         <WorldStateManagerHistoryEntry
                             v-if="item.type === 'entry'"
                             :entry="item.data"
+                            :character-names="characterNames"
+                            :perception-mode="perceptionMode"
+                            :refreshes="entryRefreshes[item.data.id] || []"
+                            :refresh-requests="refreshRequests"
+                            :refresh-errors="refreshErrors"
+                            :known-by-refusals="knownByRefusals"
+                            @refresh="runRefresh"
                             :app-busy="appBusy"
                             :app-ready="appReady"
                             :app-config="appConfig"
@@ -95,7 +101,7 @@
                 <v-card-text>
 
                     <v-card variant="tonal" color="muted" density="compact" class="mb-4" style="min-height: 52px;">
-                        <v-card-text class="text-caption">
+                        <v-card-text class="text-body-small">
                             <div v-if="layerStats[index + 1]" class="d-flex flex-wrap ga-4">
                                 <div>
                                     <span class="text-muted">Compression:</span>
@@ -117,7 +123,7 @@
                         </v-card-text>
                     </v-card>
 
-                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index"
+                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="entry.id ?? l_index"
                     :entry="entry"
                     :app-busy="appBusy"
                     :app-config="appConfig"
@@ -138,7 +144,8 @@ import WorldStateManagerHistoryEntry from './WorldStateManagerHistoryEntry.vue';
 import WorldStateManagerHistoryAdd from './WorldStateManagerHistoryAdd.vue';
 import WorldStateManagerTimePassageEntry from './WorldStateManagerTimePassageEntry.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
-
+import { newUuid } from '@/utils/uuid';
+import { perspectivesEnabled } from '@/utils/sceneSettings';
 
 export default {
     name: 'WorldStateManagerHistory',
@@ -146,6 +153,7 @@ export default {
         WorldStateManagerHistoryEntry,
         WorldStateManagerHistoryAdd,
         WorldStateManagerTimePassageEntry,
+
     },
     props: {
         generationOptions: Object,
@@ -157,10 +165,12 @@ export default {
         },
         appConfig: Object,
         visible: Boolean,
+        characterList: Object,
     },
     data() {
         return {
             history: [],
+
             layered_history: [],
             time_passages: [],
             busy: false,
@@ -169,10 +179,26 @@ export default {
             showAddDialog: false,
             layerStats: {},
             layerStatsLoading: {},
+
+            // message id -> request id of a refresh run from this tab
+            refreshRequests: {},
+            // message id -> the error of the last refresh run from this tab
+            refreshErrors: {},
+            // message id -> the selection a run or an error from this tab belongs to
+            refreshSelections: {},
+            // counts the refused Known by changes of static entries
+            knownByRefusals: 0,
             MAX_CONTENT_WIDTH,
         }
     },
     watch: {
+
+        entryRefreshes() {
+            this.pruneRefreshes();
+        },
+        'scene.data.scene_ts'() {
+            if (this.visible) this.requestSceneHistory();
+        },
         tab(val) {
             if (val === 'base') {
                 if (!this.layerStats[0] && !this.layerStatsLoading[0] && this.summaryEntriesExist) {
@@ -188,6 +214,25 @@ export default {
         },
     },
     computed: {
+        // archive id -> required perspective or memory refreshes for that entry
+        entryRefreshes() {
+            const byEntry = {};
+            for (const item of this.scene?.data?.revision_refreshes || []) {
+                const refresh = item.revision_refresh;
+                if (!refresh?.required) continue;
+                if (!refresh.operations?.some((operation) => ['perceptions', 'index_repair'].includes(operation))) continue;
+                for (const archiveId of item.archive_ids || []) {
+                    (byEntry[archiveId] ||= []).push(item);
+                }
+            }
+            return byEntry;
+        },
+        characterNames() {
+            return Object.keys(this.characterList?.characters || {});
+        },
+        perceptionMode() {
+            return perspectivesEnabled(this.scene?.data);
+        },
         layers() {
             return this.layered_history.map((layer, index) => {
                 return {
@@ -241,7 +286,8 @@ export default {
         },
         summaryEntriesExist() {
             return this.history.some(e => e.start !== null && e.end !== null);
-        }
+        },
+
     },
     inject:[
         'getWebsocket',
@@ -255,6 +301,9 @@ export default {
             this.history = [];
             this.time_passages = [];
             this.busy = false;
+            this.refreshRequests = {};
+            this.refreshErrors = {};
+            this.refreshSelections = {};
         },
         regenerate() {
             this.history = [];
@@ -281,8 +330,12 @@ export default {
             }));
         },
 
+        historyItemKey(item, index) {
+            const id = item.type === 'entry' ? item.data.id : item.data.message_id;
+            return `${item.type}_${id ?? 'index_' + index}`;
+        },
+
         collapseSourceEntries(layer, entry_id) {
-            console.log("collapseSourceEntries", layer, entry_id);
             if(layer == 0) {
                 const entry = this.history.find(e => e.id === entry_id);
                 if(entry) {
@@ -297,7 +350,6 @@ export default {
         },
 
         setBusyEntry(entry_id) {
-            console.log("setBusyEntry", entry_id);
             this.busyEntry = entry_id;
         },
 
@@ -330,7 +382,60 @@ export default {
             }));
         },
 
+        runRefresh(item) {
+            const refresh = item.revision_refresh;
+            const requestId = `history-refresh:${item.id}:${newUuid()}`;
+            this.refreshRequests = { ...this.refreshRequests, [item.id]: requestId };
+            this.refreshErrors = Object.fromEntries(Object.entries(this.refreshErrors).filter(([id]) => Number(id) !== item.id));
+            this.refreshSelections = { ...this.refreshSelections, [item.id]: this.refreshSelection(refresh) };
+            this.getWebsocket().send(JSON.stringify({
+                type: 'scene_message',
+                action: 'commit_revision',
+                id: item.id,
+                index: refresh.selection_index,
+                request_id: requestId,
+                scene_id: refresh.scene_id,
+                selection_digest: refresh.selection_digest,
+                selection_serial: refresh.selection_serial,
+            }));
+        },
+        refreshSelection(refresh) {
+            return `${refresh.scene_id}:${refresh.selection_digest}:${refresh.selection_serial}`;
+        },
+        // a run the server never answers (the selection changed, the scene
+        // closed) or an old error stays only while its passage still needs
+        // the same refresh
+        pruneRefreshes() {
+            const current = {};
+            for (const items of Object.values(this.entryRefreshes)) {
+                for (const item of items) current[item.id] = this.refreshSelection(item.revision_refresh);
+            }
+            const stale = Object.keys(this.refreshSelections).filter((id) => current[id] !== this.refreshSelections[id]);
+            if (!stale.length) return;
+            const keep = (runs) => Object.fromEntries(Object.entries(runs).filter(([id]) => !stale.includes(id)));
+            this.refreshRequests = keep(this.refreshRequests);
+            this.refreshErrors = keep(this.refreshErrors);
+            this.refreshSelections = keep(this.refreshSelections);
+        },
+        finishRefresh(message) {
+            const entry = Object.entries(this.refreshRequests).find(([, requestId]) => requestId === message.request_id);
+            if (!entry || !['revision_committed', 'operation_done'].includes(message.action)) return;
+            const [messageId] = entry;
+            this.refreshRequests = Object.fromEntries(Object.entries(this.refreshRequests).filter(([id]) => id !== messageId));
+            if (message.action === 'operation_done' && message.error) {
+                this.refreshErrors = { ...this.refreshErrors, [messageId]: message.error.message || 'The refresh failed.' };
+            }
+        },
+
         handleMessage(message) {
+            if (message.type === 'knowledge_changed') {
+                if (this.visible) this.requestSceneHistory();
+                return;
+            }
+            if (message.type === 'scene_message' && message.request_id) {
+                this.finishRefresh(message);
+                return;
+            }
             if (message.type != 'world_state_manager') {
                 return;
             }
@@ -366,7 +471,6 @@ export default {
                 const entries = message.data.entries;
                 const entry = message.data.entry;
 
-                console.log("history_entry_source_entries", entries, entry);
 
                 if(entry.layer == 0) {
                     const existingEntry = this.history.find(e => e.id === message.data.entry.id);
@@ -382,7 +486,6 @@ export default {
             } else if (message.action == 'history_entry_regenerated') {
                 const entry = message.data;
 
-                console.log("history_entry_updated", entry);
 
                 if(entry.layer == 0) {
                     this.history = this.history.map(e => e.id === entry.id ? entry : e);
@@ -392,6 +495,7 @@ export default {
                 this.busyEntry = null;
             } else if (message.action == 'operation_done') {
                 this.busyEntry = null;
+                if (message.failed_action === 'set_history_entry_known_by') this.knownByRefusals += 1;
             }
         },
     },

@@ -98,7 +98,15 @@ export default {
         },
 
         handleImageGenerationFailed(data) {
-            if (data.type !== 'image_generation_failed') return;
+            // The agent reports the failures it knows about; anything that
+            // throws before it gets that far - a validation error, a refused
+            // action - only ever comes back as an operation_done carrying an
+            // error. Both mean nothing is coming, and a dialog left locked
+            // cannot even be closed.
+            const refused = data.type === 'visual'
+                && data.action === 'operation_done'
+                && !!data.error;
+            if (data.type !== 'image_generation_failed' && !refused) return;
             // Unlock dialogs to allow retry; prompts and dialogs stay open
             this.isGenerating = false;
             this.isGeneratingNew = false;

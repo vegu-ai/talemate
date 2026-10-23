@@ -22,7 +22,7 @@
                 hint="Available template variables: {character_name}, {player_name}, {spice}. If left empty will default to simply `{spice}`."
             ></v-textarea>
 
-            <v-card elevation="7" density="compact">
+            <v-card elevation="3" density="compact">
                 <v-card-title>
                     <v-icon size="small" class="mr-2">mdi-chili-mild</v-icon>
                     Spices
@@ -85,7 +85,7 @@
                         :specify-length="true"
                         @generate="onSpicesGenerated"
                     />
-                    <div v-if="!sceneActive" class="text-caption text-muted text-right">Requires an active scene to generate.</div>
+                    <div v-if="!sceneActive" class="text-body-small text-muted text-right">Requires an active scene to generate.</div>
                 </v-card-actions> 
             </v-card>
 

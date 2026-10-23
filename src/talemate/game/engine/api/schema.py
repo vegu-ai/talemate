@@ -187,7 +187,7 @@ class TimePassageMessageSchema(pydantic.BaseModel):
     - raw: str - The raw message content
     - id: int - The unique message id
     - source: str - The source of the message
-    - ts: str - The time passage (iso8601 duration)
+    - ts: int - The time passage in seconds
     - hidden: bool - Whether the message is hidden
     """
 
@@ -195,7 +195,7 @@ class TimePassageMessageSchema(pydantic.BaseModel):
     raw: str
     id: int
     source: str
-    ts: str
+    ts: int
     hidden: bool
 
     @classmethod

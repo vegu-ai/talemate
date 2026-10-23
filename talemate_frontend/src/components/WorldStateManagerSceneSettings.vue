@@ -3,6 +3,22 @@
     <v-row>
         <v-col cols="12">
             <v-form class="mt-4">
+                <v-switch
+                    :model-value="perspectives"
+                    :disabled="!scene?.data?.can_change_knowledge_eligibility"
+                    label="Character perspectives"
+                    color="primary"
+                    :hint="scene?.data?.can_change_knowledge_eligibility ? PERSPECTIVES_OPEN_HINT : PERSPECTIVES_LOCKED_HINT"
+                    persistent-hint
+                    class="mb-4"
+                    @update:model-value="updateCharacterKnowledge"
+                />
+                <v-alert v-if="!scene?.data?.can_change_knowledge_eligibility" variant="tonal" class="mb-4" icon="mdi-head-lightbulb-outline">
+                    <strong>Character knowledge: {{ modeTitle }}</strong>
+                    <p v-if="perspectives">Characters receive their own views of events and memories. Extra Summarizer requests track what they learn after passages and changed tracker answers. If analysis fails, character generation pauses: retry the failed request, or cancel, correct the source and retry generation. Saves and forks keep this mode.</p>
+                    <p v-else>Character knowledge follows where characters were present, what belongs to them, and what you share with them. Use the Conversation agent's Character Knowledge settings to adjust how this shapes replies. For separate character views of events, choose Character perspectives when creating a new story or importing a character card, or before a scene has history.</p>
+                </v-alert>
+                <CharacterKnowledgeModeComparison :perspectives="perspectives" selected-label="current" compact class="mb-4" />
 
 
                 <v-row>
@@ -47,7 +63,7 @@
                             v-model="scene.data.immutable_save" 
                             @update:model-value="update()"
                             label="Locked save file" 
-                            messages="When activated, progress such as conversation and narration cannot be saved to the current file and requires a `Save As` action.">
+                            messages="Blocks autosave and Scene tools → Save. World Editor → Save still writes the whole current scene, including story progress, to the loaded file and keeps the lock. Play in a Save As copy to preserve a shipped starting state.">
                         </v-checkbox>
                         <v-checkbox 
                             v-model="scene.data.experimental" 
@@ -124,7 +140,19 @@
 <script>
 
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
+import { queueEffortAcrossSwitch } from '@/utils/knowledgeEffort';
+import {
+    PERSPECTIVES_LOCKED_HINT,
+    PERSPECTIVES_OPEN_HINT,
+    buildSceneSettingsPayload,
+    canChangePerspectives,
+    perspectivesEnabled,
+    visualStyleOptions,
+    writingStyleOptions,
+} from '@/utils/sceneSettings';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
+import { characterKnowledgeMode } from '@/constants/characterKnowledgeModes';
 
 export default {
     name: "WorldStateManagerSceneSettings",
@@ -135,6 +163,7 @@ export default {
         generationOptions: Object,
     },
     components: {
+        CharacterKnowledgeModeComparison,
         ConfirmActionPrompt,
     },
     watch: {
@@ -159,23 +188,14 @@ export default {
         },
     },
     computed: {
+        perspectives() {
+            return perspectivesEnabled(this.scene?.data);
+        },
+        modeTitle() {
+            return characterKnowledgeMode(this.perspectives).title;
+        },
         writingStyleTemplates() {
-            let templates = Object.values(this.templates.by_type.writing_style).map((template) => {
-                return {
-                    value: `${template.group}__${template.uid}`,
-                    title: template.name,
-                    props: { subtitle: template.description }
-                }
-            });
-
-            // add empty option to the top
-            templates.unshift({
-                value: null,
-                title: 'None',
-                props: { subtitle: 'No writing style template selected.' }
-            });
-
-            return templates;
+            return writingStyleOptions(this.templates);
         },
         agentPersonaTemplates() {
             if(!this.templates || !this.templates.by_type.agent_persona) return [{ value: null, title: 'None' }];
@@ -219,27 +239,14 @@ export default {
             return items;
         },
         visualStyleTemplates() {
-            if(!this.templates || !this.templates.by_type.visual_style) return [{ value: null, title: 'Use Agent Default' }];
-            let templates = Object.values(this.templates.by_type.visual_style)
-                .filter((template) => template.visual_type === 'STYLE')
-                .map((template) => {
-                    return {
-                        value: `${template.group}__${template.uid}`,
-                        title: template.name,
-                        props: { subtitle: template.description }
-                    }
-                });
-            templates.unshift({ 
-                value: null, 
-                title: 'Use Agent Default', 
-                props: { subtitle: 'Use the default art style from agent configuration.' } 
-            });
-            return templates;
+            return visualStyleOptions(this.templates);
         }
     },
     data() {
         return {
             MAX_CONTENT_WIDTH,
+            PERSPECTIVES_LOCKED_HINT,
+            PERSPECTIVES_OPEN_HINT,
             scene: null,
             contentContext: [],
         }
@@ -250,6 +257,8 @@ export default {
         'autocompleteRequest',
         'registerMessageHandler',
         'unregisterMessageHandler',
+        'getAgents',
+        'queueKnowledgeEffort',
     ],
     methods: {
         restoreScene(confirmed=false) {
@@ -266,33 +275,22 @@ export default {
                 restore_from: this.scene.data.restore_from,
             }));
         },
-        update() {
-            return this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'update_scene_settings',
-                experimental: this.scene.data.experimental,
-                immutable_save: this.scene.data.immutable_save,
-                writing_style_template: this.scene.data.writing_style_template,
-                agent_persona_templates: this.scene.data.agent_persona_templates || {},
-                visual_style_template: this.scene.data.visual_style_template,
-                restore_from: this.scene.data.restore_from,
-            }));
+        updateCharacterKnowledge(enabled) {
+            if (!canChangePerspectives(this.scene?.data)) return;
+            queueEffortAcrossSwitch(this.getAgents(), enabled, this.queueKnowledgeEffort);
+            return this.update(enabled ? 'perception' : 'legacy');
+        },
+        update(knowledgeEligibility) {
+            return this.getWebsocket().send(JSON.stringify(
+                buildSceneSettingsPayload(this.scene.data, { knowledgeEligibility })
+            ));
         },
         updateAgentSettings(value) {
             // Translate picker value into a backend payload. Server reads
             // presence-vs-absence of these keys (via pydantic
             // model_fields_set) to distinguish "explicit None = opt out"
             // from "absent = leave the link alone".
-            const payload = {
-                type: 'world_state_manager',
-                action: 'update_scene_settings',
-                experimental: this.scene.data.experimental,
-                immutable_save: this.scene.data.immutable_save,
-                writing_style_template: this.scene.data.writing_style_template,
-                agent_persona_templates: this.scene.data.agent_persona_templates || {},
-                visual_style_template: this.scene.data.visual_style_template,
-                restore_from: this.scene.data.restore_from,
-            };
+            const payload = buildSceneSettingsPayload(this.scene.data);
 
             if (value === '__opt_out__') {
                 payload.agent_settings_file = null;

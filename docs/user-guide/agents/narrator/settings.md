@@ -1,36 +1,44 @@
 # Settings
 
 ## :material-cog: General
-![Narrator agent settings](/talemate/img/0.29.0/narrator-general-settings.png)
+![Narrator agent settings](/talemate/img/0.40.0/narrator-general-settings.png)
 
 ##### Client
 
-The text-generation client to use for conversation generation.
+The text-generation client to use for narration generation.
 
-##### Generation Override
+##### Optimize for Prompt Caching
 
-Checkbox that exposes further settings to configure the conversation agent generation.
+Places volatile context (long term memory, dynamic notes) after the scene history so that the stable part of the prompt can be cached by API backends. May confuse weaker models. `Auto` defers to the client setting.
+
+##### Generation
+
+Generation settings for the narrator agent.
+
+###### Jiggle
+
+The amount of randomness to apply to the generation. This can help to avoid repetitive responses.
 
 ###### Instructions
 
 Extra instructions for the generation. This should be short and generic as it will be applied for all narration.
 
-##### Generation Length Per Narration Type
+###### Generation Length Per Narration Type
 
 Generation length is configurable per narration type. Each type of narration can have its own maximum token length, allowing you to control how verbose different types of narration are:
 
-- **Progress story** -- general story progression narration
-- **Scene narration** -- environment and scene descriptions
-- **Query** -- responses to player queries
-- **Character** -- character-focused narration (look at character)
-- **Time passage** -- narration during time jumps
-- **After dialogue** -- automatic narration after character speech
-- **Character entry** -- narration when a character enters the scene
-- **Character exit** -- narration when a character leaves the scene
+- **Progress Story** -- general story progression narration
+- **Scene Narration** -- environment and scene descriptions
+- **Query Narration** -- responses to player queries
+- **Character Narration** -- character-focused narration (look at character)
+- **Time Passage** -- narration during time jumps
+- **After Dialogue** -- automatic narration after character speech
+- **Character Entry** -- narration when a character enters the scene
+- **Character Exit** -- narration when a character leaves the scene
 
 ## :material-script-text: Content
 
-![Narrator agent content settings](/talemate/img/0.29.0/narrator-content-settings.png)
+![Narrator agent content settings](/talemate/img/0.40.0/narrator-content-settings.png)
 
 Content settings control what contextual information is included in the prompts sent to the AI when generating narration.
 
@@ -48,7 +56,7 @@ Disable this if you want the AI to generate narration without following the scen
 
 ## :material-clock-fast: Narrate time passage
 
-![Narrator agent time passage settings](/talemate/img/0.29.0/narrator-narrate-time-passage-settings.png)
+![Narrator agent time passage settings](/talemate/img/0.40.0/narrator-narrate-time-passage-settings.png)
 
 The narrator can automatically narrate the passage of time when you indicate it using the [Scene tools](/talemate/user-guide/scenario-tools).
 

@@ -1,7 +1,7 @@
 <template>
-    <v-sheet class="text-left ma-1">
+    <v-sheet color="transparent" class="text-left ma-1">
         
-        <span class="text-caption mr-2 text-muted"><v-icon>mdi-auto-fix</v-icon> Generation Settings</span>
+        <span class="text-body-small mr-2 text-muted"><v-icon>mdi-auto-fix</v-icon> Generation Settings</span>
         <v-menu>
             <template v-slot:activator="{ props }">
                 <v-chip size="small"  v-bind="props" label class="mr-2" :color="(generationOptions.writing_style ? 'highlight5' : 'muted')">
@@ -17,11 +17,20 @@
 
             <v-list slim density="compact">
                 <v-list-subheader>Writing Styles</v-list-subheader>
-                <p class="text-caption text-muted mb-2 ml-4 mr-4">Writing styles can be added in <v-chip size="small" variant="text" class="text-primary" @click="showManagerEditor('templates')" prepend-icon="mdi-cube-scan">templates</v-chip></p>
+                <p class="text-body-small text-muted mb-2 ml-4 mr-4">Writing styles can be added in <v-chip size="small" variant="text" class="text-primary" @click="showManagerEditor('templates')" prepend-icon="mdi-cube-scan">templates</v-chip></p>
                 <v-list-item v-for="(template, index) in styleTemplates" :key="index" @click="generationOptions.writing_style = template" :prepend-icon="template.favorite ? 'mdi-star' : 'mdi-script-text'">
                     <v-list-item-title>{{ template.name }}</v-list-item-title>
                     <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
                 </v-list-item>
+                <template v-if="generationOptions.writing_style">
+                    <v-divider class="mb-1" />
+                    <v-list-item
+                        :title="`Edit ${generationOptions.writing_style.name}`"
+                        prepend-icon="mdi-pencil-outline"
+                        role="menuitem"
+                        @click="editWritingStyle"
+                    />
+                </template>
             </v-list>
         </v-menu>
 
@@ -53,7 +62,7 @@
             </template>
             <v-list slim density="compact">
                 <v-list-subheader>Select spice</v-list-subheader>
-                <p class="text-caption text-muted mb-2 ml-4 mr-4">Spice collections can be added in <v-chip size="small" variant="text" class="text-primary" @click="showManagerEditor('templates')" prepend-icon="mdi-cube-scan">templates</v-chip></p>
+                <p class="text-body-small text-muted mb-2 ml-4 mr-4">Spice collections can be added in <v-chip size="small" variant="text" class="text-primary" @click="showManagerEditor('templates')" prepend-icon="mdi-cube-scan">templates</v-chip></p>
                 <v-list-item v-for="(template, index) in spiceTemplates" :key="index" @click="generationOptions.spices = template" :prepend-icon="template.favorite ? 'mdi-star' : 'mdi-chili-mild'" @click.ctrl="generationOptions.spice_level = 1">
                     <v-list-item-title>{{ template.name }}</v-list-item-title>
                     <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
@@ -134,6 +143,10 @@ export default {
         },
         openTemplates() {
             this.showManagerEditor("templates");
+        },
+        editWritingStyle() {
+            const { group, uid } = this.generationOptions.writing_style;
+            this.showManagerEditor("templates", `${group}__${uid}`);
         },
         spiceLevelFormat(value) {
             // render as %

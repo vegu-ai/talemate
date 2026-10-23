@@ -47,7 +47,7 @@ For our example, we want to know the state of the ship, so we could add:
 
 ### Create the state
 
-Click :material-text-box-plus: **Create** to create the new state.
+Click :material-text-box-plus: **Create** to create the new state. Until then the state is a draft: changing its fields saves nothing, and selecting another entry or state discards it.
 
 This will create the state, but also immediately generate its current value.
 

@@ -20,6 +20,8 @@ As part of the chat session the director can query for information as well as ma
 
 Once a scene is loaded click the **:material-bullhorn:** director console icon in the top right corner of the screen.
 
+The icon is not there while a [replay](../../replay.md) is running — it plays the scene back and adds nothing to it, so the console is put away until you leave it.
+
 ![Director Console](/talemate/img/0.33.0/open-director-console.png)
 
 ![Director Console](/talemate/img/0.33.0/director-console-chat.png)
@@ -40,8 +42,17 @@ The director can help you with many tasks:
 - Advance time in your story
 - Manage game state variables (if your story uses them)
 - Generate images and illustrations (if the [Visualizer Agent](/talemate/user-guide/agents/visualizer) is configured)
+- Decide who knows what: set the Known by of a sheet entry or world entry, grant or revoke a character's knowledge of an entry, and ask what a character knows (see [Knowledge](/talemate/user-guide/world-editor/knowledge/#the-director))
 
 Simply describe what you want in natural language, and the director will figure out how to accomplish it.
+
+Knowledge changes use **Update Context → Existing Characters**, including changes
+to who knows a world or history entry. Give one instruction, such as “Make the
+Hidden Door private, then let Alice know about it.” With write confirmation
+enabled, each concrete change asks for approval. In Character perspectives,
+sharing information creates a disclosure; revocation and forgetting are
+unavailable. **Query → Character Knowledge** remains the way to inspect what a
+character knows.
 
 !!! tip "Visual Generation"
     When asking the director to create images, the generated visuals can appear in your scene feed as [inline visuals](/talemate/user-guide/inline-visuals). This is controlled by the **Auto-attach visuals** setting in the scene tools visualizer menu.
@@ -53,6 +64,11 @@ When the director performs an action, you can expand it to see exactly what was 
 ![Expanded Function Call](/talemate/img/0.33.0/director-chat-expanded-function-call.png)
 
 This gives you full transparency into the changes being made to your scene.
+
+If Create Image, Direct Scene or Prompt User cannot start because the model's
+response contains no supported function call, the action summary tells the
+director that nothing happened. For example, an image request reports "No image was started"
+so the director can explain the failure on its next turn.
 
 ## Chat modes
 
@@ -108,13 +124,20 @@ The director then analyzes the result and discusses what happened:
 
 ### Rejecting actions
 
-You can also reject actions if you change your mind or want to revise your request:
+Each confirmation offers two ways to reject a proposed call:
 
-![Action Rejection Request](/talemate/img/0.33.0/director-chat-reject-0001.png)
+- **Reject and abort** stops the batch and ends the turn. This is the default rejection. A chat note lists the calls already applied and those not applied, including their arguments. Earlier changes remain applied.
+- **Reject with instructions** opens a text field for your correction. Type the correction, then choose **Reject with instructions** again or press **Enter** to skip this call and continue the rest of the batch. **Confirm** is disabled while the field contains text; clear it to approve the original call. **Shift+Enter** adds a new line. After the current prompt finishes, the director receives one follow-up request containing all rejected calls, their arguments and your instructions. You can reject proposals in that follow-up the same way. Each further correction round requires another explicit rejection with instructions.
 
-When rejected, the director acknowledges and waits for your next instruction:
+![Action Rejection Request](/talemate/img/0.40.0/director-confirm-methods.png)
 
-![Action Rejected](/talemate/img/0.33.0/director-chat-reject-0002.png)
+Enter the correction, then choose **Reject with instructions** or press **Enter**:
+
+![Rejection instructions](/talemate/img/0.40.0/director-confirm-instructions.png)
+
+When you abort, the director waits for your next instruction. The batch note starts collapsed; its header counts applied and unapplied calls, including nested calls. Select the header to expand the full details:
+
+![Action Rejected](/talemate/img/0.40.0/director-confirm-abort.png)
 
 ### Confirmation timeout
 
@@ -124,9 +147,15 @@ Each confirmation card shows a countdown timer in the top-right corner. The numb
 
 ![Confirmation Timer](/talemate/img/0.37.0/director-chat-confirm-timer.png)
 
-If the timer runs out before you confirm or reject, the action is treated as rejected and the director will acknowledge and wait for your next instruction — the same behaviour as clicking **Reject**.
+If the timer runs out, the batch stops and the chat note identifies the calls not applied because of the timeout. No correction request runs. This has the same stopping behavior as **Reject and abort**.
 
 The default timeout is **3 minutes**. You can change it (or disable it entirely) from the [Director Chat settings](/talemate/user-guide/agents/director/settings/#action-confirm-timeout).
+
+Interrupting generation or closing the scene cancels a pending confirmation. The call is reported as interrupted. API calls that clear or delete a chat also cancel its pending confirmation, and the notes and results of that batch are not added back. The console does not offer a clear control and disables deletion while busy. A confirmation received before the final timeout check is accepted.
+
+### Partial batches and reported problems
+
+If a model proposes more calls than an action's call limit allows, the chat note lists the applied calls and those omitted because of the limit. Nested action outcomes appear under their enclosing call, so the note retains both the requested action and its individual results. Calls omitted by the executor are not automatically retried. Instruct actions also offer a `report_issue` function for the model to explain tasks it cannot fulfill; reporting a problem does not consume the action's call budget.
 
 ## Enabling and Disabling Actions
 
@@ -147,8 +176,8 @@ Actions are organized into groups:
 | Group | Actions |
 |-------|---------|
 | **Direct Scene** | Advance time, Create new narration, Direct character action, Yield to User |
-| **Query** | Query World Information, Retrieve Context Directly, Query Game State, Query Scene Direction |
-| **Update Context** | Existing Characters, World Information, Story Configuration, Static History, Character Creation |
+| **Query** | Query World Information, Retrieve Context Directly, Query Game State, Query Scene Direction, Character Knowledge |
+| **Update Context** | Existing Characters (including knowledge changes), World Information, Story Configuration, Static History, Character Creation |
 | **Gamestate** | Make Changes (game state variables) |
 | **User Interaction** | Prompt for text input (Scene Direction only) |
 | **Visuals** | Create new Image(s), Edit Image(s) |
@@ -156,6 +185,9 @@ Actions are organized into groups:
 
 !!! note "Scene Direction Only Actions"
     Some actions are only available during autonomous Scene Direction, not in Director Chat. The **Prompt for text input** action is one example - it allows the director to request information from you during autonomous direction but is not used during interactive chat sessions. See [Prompting the User for Input](/talemate/user-guide/agents/director/scene-direction/#prompting-the-user-for-input) for more details.
+
+!!! note "Images during Scene Direction"
+    An image you ask for in Director Chat is your request and is always allowed. During autonomous Scene Direction, **Create new Image(s)** is only offered while the Visualizer's [Automatic Generation](/talemate/user-guide/agents/visualizer/settings/#automatic-generation) setting is on.
 
 ### Toggling Actions
 

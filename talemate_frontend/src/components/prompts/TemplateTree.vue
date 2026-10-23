@@ -18,7 +18,7 @@
             <v-icon v-else size="small" :color="item.isUnresolvable ? 'warning' : item.isOverride ? 'success' : undefined">mdi-file-document-outline</v-icon>
         </template>
         <template #title="{ item }">
-            <span :class="{ 'text-grey': isMuted(item) }">
+            <span :class="{ 'text-medium-emphasis': isMuted(item) }">
                 {{ abbreviateName(item.name) }}
                 <v-tooltip v-if="item.name.length > 40" activator="parent" location="top">{{ item.name }}</v-tooltip>
             </span>
@@ -32,34 +32,18 @@
             >
                 overrides
             </v-chip>
-            <v-chip
-                v-if="item.isDirectory && item.hasOutdated"
-                size="x-small"
-                label
-                color="warning"
-                variant="tonal"
+            <TemplateStateChip
+                v-if="item.state"
+                :state="item.state"
+                :markers="item.missingMarkers"
+                :show-tooltip="!item.isDirectory"
                 class="ml-1"
-            >
-                outdated
-            </v-chip>
-            <v-chip
-                v-if="item.isOutdated && !item.isDirectory"
-                size="x-small"
-                label
-                color="warning"
-                variant="tonal"
-                class="ml-1"
-            >
-                outdated
-                <v-tooltip activator="parent" location="top">
-                    This override is older than the default template and may need updating.
-                </v-tooltip>
-            </v-chip>
+            />
             <v-chip
                 v-if="item.isUnresolvable && !item.isDirectory"
                 size="x-small"
                 label
-                color="grey"
+                color="muted"
                 variant="tonal"
                 class="ml-1"
             >
@@ -86,8 +70,15 @@
 </template>
 
 <script>
+import TemplateStateChip from './TemplateStateChip.vue';
+import { overrideState, worstState } from '@/utils/templateCompatibility.js';
+import { templateFolder } from '@/utils/promptTemplateUid.js';
+
 export default {
     name: 'TemplateTree',
+    components: {
+        TemplateStateChip
+    },
     props: {
         templates: {
             type: Array,
@@ -125,8 +116,7 @@ export default {
             const agentMap = {};
 
             for (const template of this.templates) {
-                // Use 'scene' as the agent/category when agent is empty (scene templates)
-                const agent = template.agent || 'scene';
+                const agent = templateFolder(template.agent);
                 // For scene templates with empty agent, the UID should be scene.{name}
                 const uid = template.uid || `scene.${template.name}`;
                 const isOverride = this.isOverrideTemplate(template);
@@ -176,7 +166,8 @@ export default {
                         availableIn: template.available_in || [],
                         existsInGroup: template.exists_in_group,
                         isOverride: isOverride,
-                        isOutdated: template.is_outdated || false,
+                        state: overrideState(template),
+                        missingMarkers: template.missing_markers || [],
                         isUnresolvable: template.is_unresolvable || false
                     });
                 } else {
@@ -190,7 +181,8 @@ export default {
                         availableIn: template.available_in || [],
                         existsInGroup: template.exists_in_group,
                         isOverride: isOverride,
-                        isOutdated: template.is_outdated || false,
+                        state: overrideState(template),
+                        missingMarkers: template.missing_markers || [],
                         isUnresolvable: template.is_unresolvable || false
                     });
                 }
@@ -208,7 +200,7 @@ export default {
                 });
 
                 let hasOverride = false;
-                let hasOutdated = false;
+                const states = [];
                 for (const item of items) {
                     if (item.children) {
                         // Recurse into children first (bottom-up)
@@ -218,20 +210,13 @@ export default {
                             item.hasOverride = true;
                             foldersWithOverrides.push(item.path);
                         }
-                        if (result.hasOutdated) {
-                            hasOutdated = true;
-                            item.hasOutdated = true;
-                        }
-                    } else {
-                        if (item.isOverride) {
-                            hasOverride = true;
-                        }
-                        if (item.isOutdated) {
-                            hasOutdated = true;
-                        }
+                        item.state = result.state;
+                    } else if (item.isOverride) {
+                        hasOverride = true;
                     }
+                    states.push(item.state);
                 }
-                return { hasOverride, hasOutdated };
+                return { hasOverride, state: worstState(states) };
             };
 
             const items = Object.values(agentMap).sort((a, b) => {
@@ -250,9 +235,7 @@ export default {
                     item.hasOverride = true;
                     foldersWithOverrides.push(item.path);
                 }
-                if (result.hasOutdated) {
-                    item.hasOutdated = true;
-                }
+                item.state = result.state;
             }
 
             return { items, foldersWithOverrides };
@@ -298,7 +281,7 @@ export default {
                 case 'user':
                     return 'success';
                 case 'default':
-                    return 'grey';
+                    return 'muted';
                 default:
                     return 'primary';
             }
@@ -342,7 +325,7 @@ export default {
             const dotIndex = uid.indexOf('.');
             if (dotIndex === -1) return;
 
-            const agent = uid.substring(0, dotIndex);
+            const agent = templateFolder(uid.substring(0, dotIndex));
             const templatePath = uid.substring(dotIndex + 1);
 
             // Collect all folder paths that need to be opened

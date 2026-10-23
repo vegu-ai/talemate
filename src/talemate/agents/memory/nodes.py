@@ -12,6 +12,11 @@ from talemate.game.engine.nodes.agent import AgentNode
 from talemate.game.engine.nodes.run import FunctionWrapper
 
 from talemate.agents.memory.schema import MemoryDocument
+from talemate.context import active_scene
+from talemate.decisions.characters import character_named, referenced_characters
+from talemate.agents.memory.rag import knowledge_retrieval_filter
+from talemate.character import character_name
+from talemate.knowledge.mode import character_knowledge_enabled
 
 log = structlog.get_logger("talemate.game.engine.nodes.agents.memory")
 
@@ -38,6 +43,9 @@ class QueryContextDB(AgentNode):
       keep it (optional)
     - fn_formatter: Function that receives a result and returns its
       formatted replacement (optional)
+    - viewer: Return only what this character knows (optional). With
+      Character Perspectives on, results come from the character's own
+      memories; otherwise entries the character does not know are left out.
 
     Properties:
 
@@ -94,6 +102,7 @@ class QueryContextDB(AgentNode):
         self.add_input("max_tokens", socket_type="int", optional=True)
         self.add_input("fn_filter", socket_type="function", optional=True)
         self.add_input("fn_formatter", socket_type="function", optional=True)
+        self.add_input("viewer", socket_type="str,character", optional=True)
         self.set_property("queries", [])
         self.set_property("meta_filters", {})
         self.set_property("max_tokens", 1024)
@@ -149,6 +158,27 @@ class QueryContextDB(AgentNode):
             meta_filters=meta_filters,
         )
 
+        viewer_kwargs = {}
+        viewer = self.normalized_input_value("viewer")
+        if viewer is not None:
+            scene = active_scene.get()
+            viewer = character_name(viewer)
+            if viewer not in scene.character_data:
+                raise InputValueError(
+                    self, "viewer", f"Character `{viewer}` does not exist."
+                )
+            if character_knowledge_enabled(scene):
+                viewer_kwargs["viewer"] = viewer
+            else:
+                knows = knowledge_retrieval_filter(scene, viewer)
+                graph_filter = fn_filter
+
+                def fn_filter(x):
+                    return knows(x) and graph_filter(x)
+
+                # the filter drops results after the vector search
+                viewer_kwargs["over_fetch"] = 3
+
         results = await self.agent.multi_query(
             queries,
             iterate=iterate,
@@ -156,9 +186,74 @@ class QueryContextDB(AgentNode):
             filter=fn_filter,
             formatter=fn_formatter,
             limit=limit,
+            **viewer_kwargs,
             **meta_filters,
         )
         self.set_output_values({"state": state, "results": results})
+
+
+@register("agents/memory/ReferencedCharacters")
+class ReferencedCharacters(AgentNode):
+    """
+    Which characters a text refers to, by name, by a mapped alias or, with
+    the decision model, by pronoun, title or nickname ("her brother", "the
+    Captain"). The candidates default to the characters not in the scene.
+
+    Uses the memory agent's entity lookup setting "Use Decision Model" and the
+    same editable decision policy; without a decision model, or when it is
+    uncertain, names and aliases are matched in the text.
+
+    Inputs:
+
+    - state: graph state (passthrough)
+    - text: the text to check
+    - candidates: character names to check (optional)
+
+    Outputs:
+
+    - state: graph state
+    - characters: the candidates the text refers to, in candidate order
+    """
+
+    _agent_name: ClassVar[str] = "memory"
+
+    def __init__(self, title="Referenced Characters", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("text", socket_type="str")
+        self.add_input("candidates", socket_type="list", optional=True)
+        self.add_output("state")
+        self.add_output("characters", socket_type="list")
+
+    async def run(self, state: GraphState):
+        scene = active_scene.get()
+        text = self.require_input("text")
+        candidates = self.normalized_input_value("candidates")
+        if candidates is None:
+            candidates = list(scene.inactive_characters)
+        unknown = [name for name in candidates if name not in scene.character_data]
+        if unknown:
+            raise InputValueError(
+                self, "candidates", f"Unknown characters: {', '.join(unknown)}"
+            )
+        characters = (
+            await referenced_characters(
+                scene,
+                text,
+                list(candidates),
+                uid="memory.decision-entity-references",
+                enabled=self.agent.retrieval_entity_decision_model,
+                match=lambda name: character_named(scene, name, text),
+                is_current=lambda: self.agent.scene is scene,
+            )
+            if text.strip() and candidates
+            else []
+        )
+        self.set_output_values(
+            {"state": self.get_input_value("state"), "characters": characters}
+        )
 
 
 @register("agents/memory/UnpackMemoryDocument")

@@ -1,0 +1,87 @@
+{
+  "id": "legacy-time-scene",
+  "memory_id": "legacytime",
+  "name": "Legacy Time Scene",
+  "title": "Legacy Time Scene",
+  "description": "A scene saved before scene time became integer seconds.",
+  "intro": "The station hums around you.",
+  "environment": "scene",
+  "context": "science fiction",
+  "immutable_save": false,
+  "experimental": false,
+  "ts": "P3MT25H",
+  "history": [
+    {
+      "typ": "narrator",
+      "message": "The docking clamps release with a shudder.",
+      "source": "ai",
+      "flags": 0,
+      "id": 1
+    },
+    {
+      "typ": "time",
+      "message": "An hour passes.",
+      "ts": "PT1H",
+      "source": "manual",
+      "flags": 0,
+      "id": 2
+    },
+    {
+      "typ": "character",
+      "message": "Kaira: We are clear of the station.",
+      "source": "ai",
+      "flags": 0,
+      "id": 3
+    },
+    {
+      "typ": "time",
+      "message": "A day passes.",
+      "ts": "P1D",
+      "source": "manual",
+      "flags": 0,
+      "id": 4
+    }
+  ],
+  "archived_history": [
+    {
+      "text": "Kaira signed on to the survey fleet a month before launch.",
+      "ts": "P1M",
+      "id": "arch0001"
+    },
+    {
+      "text": "Three months of transit left the crew restless.",
+      "ts": "P3M",
+      "id": "arch0002"
+    },
+    {
+      "text": "The survey ship broke orbit and set course for the rift.",
+      "ts": "P3MT1H",
+      "start": 0,
+      "end": 2,
+      "id": "arch0003"
+    }
+  ],
+  "layered_history": [
+    [
+      {
+        "text": "Transit, departure and the first day out.",
+        "ts": "P1M",
+        "ts_start": "P1M",
+        "ts_end": "P3MT1H",
+        "start": 0,
+        "end": 2,
+        "id": "layer001"
+      }
+    ]
+  ],
+  "character_data": {},
+  "active_characters": [],
+  "world_state": {},
+  "game_state": {},
+  "agent_state": {},
+  "assets": {
+    "cover_image": null,
+    "backdrop": null,
+    "assets": {}
+  }
+}

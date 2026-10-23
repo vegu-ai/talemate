@@ -1,6 +1,6 @@
 <template>
     <div>
-        <v-alert v-if="readonly" variant="text" color="grey" icon="mdi-lock">
+        <v-alert v-if="readonly" variant="text" class="text-medium-emphasis" icon="mdi-lock">
             This pin is controlled by game state. It cannot be manually toggled and does not decay.
         </v-alert>
 
@@ -10,13 +10,13 @@
                     Add condition group
                 </v-btn>
                 <v-spacer></v-spacer>
-                <div class="text-caption text-grey" v-if="groups.length > 0">
+                <div class="text-body-small text-medium-emphasis" v-if="groups.length > 0">
                     A pin matches if any group matches. Inside a group, conditions combine with the group operator.
                 </div>
             </v-card-actions>
 
             <v-alert v-if="groups.length === 0" variant="outlined" color="muted">
-                <div class="text-body-2">
+                <div class="text-body-medium">
                     <strong>No game-state conditions set.</strong>
                     <br><br>
                     Game-state conditions allow you to automatically pin/unpin entries based on game state variables. 
@@ -36,7 +36,7 @@
                 <v-card variant="outlined" color="muted" class="mb-3">
                     <v-card-title class="py-2">
                         <div class="d-flex align-center" style="width: 100%; gap: 8px;">
-                            <div class="text-subtitle-2">Group {{ groupIdx + 1 }}</div>
+                            <div class="text-title-small">Group {{ groupIdx + 1 }}</div>
                             <v-spacer></v-spacer>
                             <v-select
                                 hide-details
@@ -60,12 +60,12 @@
                     <v-divider></v-divider>
 
                     <v-card-text>
-                        <v-alert v-if="!group.conditions || group.conditions.length === 0" variant="text" color="grey" icon="mdi-alert-circle-outline">
+                        <v-alert v-if="!group.conditions || group.conditions.length === 0" variant="text" class="text-medium-emphasis" icon="mdi-alert-circle-outline">
                             Empty groups never match. Add at least one condition.
                         </v-alert>
 
                         <div v-for="(cond, condIdx) in group.conditions" :key="condIdx" class="mb-2">
-                            <v-row dense>
+                            <v-row density="compact">
                                 <v-col cols="12" md="5">
                                     <v-combobox
                                         hide-details
@@ -126,7 +126,7 @@
                     </v-card-text>
                 </v-card>
                 <div v-if="groupIdx < groups.length - 1" class="text-center my-2">
-                    <span class="text-subtitle-1 font-weight-bold text-grey">OR</span>
+                    <span class="text-body-large font-weight-bold text-medium-emphasis">OR</span>
                 </div>
             </div>
         </v-card>

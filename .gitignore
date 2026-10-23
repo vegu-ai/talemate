@@ -28,6 +28,7 @@ tts/voice/piper/*.json
 tts/voice/kokoro/*.pt
 tts/voice/xtts2/*.wav
 tts/voice/chatterbox/*.wav
+tts/voice/chatterbox_turbo/*.wav
 tts/voice/f5tts/*.wav
 tts/voice/voice-library.json
 scenes/
@@ -43,3 +44,7 @@ legacy-state-reinforcements.yaml
 CLAUDE.md
 docs/update-progress
 talemate_frontend/eslint.config.cjs
+
+/data.db
+/data.db-wal
+/data.db-shm

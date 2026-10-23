@@ -2,7 +2,7 @@
     <v-list-subheader class="text-uppercase">
         <v-icon>mdi-transit-connection-variant</v-icon>
         Agents
-        <v-tooltip v-if="overrideCount > 0" location="top" :text="`${overrideCount} per-action override${overrideCount === 1 ? '' : 's'} active — manage`">
+        <v-tooltip location="top" text="Manage agent action overrides — per-action settings such as turning reasoning off">
             <template #activator="{ props }">
                 <v-btn
                     v-bind="props"
@@ -11,24 +11,32 @@
                     variant="tonal"
                     color="primary"
                     prepend-icon="mdi-tune"
-                    class="ml-2"
-                >{{ overrideCount }}</v-btn>
+                    class="ml-2 text-none"
+                    data-testid="agent-action-overrides-door"
+                >
+                    Agent action overrides
+                    <v-chip v-if="overrideCount > 0" size="x-small" label color="primary" variant="flat" class="ml-1">{{ overrideCount }}</v-chip>
+                </v-btn>
             </template>
         </v-tooltip>
     </v-list-subheader>
+    <div v-if="overridesState.pendingSave || chipError" class="px-4 pb-2" data-testid="agent-scene-override-feedback">
+        <SceneOverridePendingSave v-if="overridesState.pendingSave" />
+        <div v-if="chipError" class="text-body-small text-error">{{ chipError }}</div>
+    </div>
     <div v-if="isConnected()">
         <v-list density="compact">
             <!-- Ctrl + click toggles agent enable/disable when allowed -->
-            <v-list-item  v-for="(agent, index) in state.agents" :key="index" @click="listItemClicked($event, agent, index)">
+            <v-list-item  v-for="(agent, index) in state.agents" :key="index" @click="listItemClicked($event, agent)">
                 <v-list-item-title>
                     <v-progress-circular v-if="agent.status === 'busy'" indeterminate="disable-shrink" color="primary"
                         size="14"></v-progress-circular>
                     <v-progress-circular v-else-if="agent.status === 'busy_bg'" indeterminate="disable-shrink" color="secondary"
                         size="14"></v-progress-circular>
-                    <v-icon v-else-if="agent.status === 'uninitialized'" color="orange" size="14">mdi-checkbox-blank-circle</v-icon>
-                    <v-icon v-else-if="agent.status === 'disabled'" color="grey-darken-2" size="14">mdi-checkbox-blank-circle</v-icon>
-                    <v-icon v-else-if="agent.status === 'error'" color="red-darken-1" size="14">mdi-checkbox-blank-circle</v-icon>
-                    <v-icon v-else color="green" size="14">mdi-checkbox-blank-circle</v-icon>
+                    <v-icon v-else-if="agent.status === 'uninitialized'" color="warning" size="14">mdi-checkbox-blank-circle</v-icon>
+                    <v-icon v-else-if="agent.status === 'disabled'" color="muted" size="14">mdi-checkbox-blank-circle</v-icon>
+                    <v-icon v-else-if="agent.status === 'error'" color="delete" size="14">mdi-checkbox-blank-circle</v-icon>
+                    <v-icon v-else color="success" size="14">mdi-checkbox-blank-circle</v-icon>
 
                     <span class="ml-1" v-if="agent.label"> {{ agent.label }}</span>
                     <span class="ml-1" v-else> {{ agent.name }}</span>
@@ -51,7 +59,7 @@
                     <v-chip v-if="typeof(agent.client) === 'string'" 
                         prepend-icon="mdi-network-outline" 
                         size="x-small" 
-                        color="grey" 
+                        color="muted" 
                         variant="tonal" 
                         label>
                         {{ agent.client }}
@@ -66,7 +74,7 @@
                                 v-bind="props"
                                 :prepend-icon="detail.icon"
                                 label
-                                :color="detail.color || 'grey'"
+                                :color="detail.color || 'muted'"
                                 variant="tonal"
                                 >
                                 {{ detail.value }}
@@ -87,6 +95,31 @@
 
                     <!-- Quick toggle action chips with their sub-config chips -->
                     <template v-for="(action, action_name) in agent.actions" :key="action_name">
+                        <template v-if="actionEnabled(agent, action_name) && action.config && agent.enabled">
+                            <v-tooltip
+                                v-for="(config, config_name) in getRootQuickToggleConfigs(action)"
+                                :key="`${action_name}-${config_name}-root`"
+                                :text="configChipTooltip(agent, action_name, config_name, config)"
+                                density="compact"
+                            >
+                                <template v-slot:activator="{ props }">
+                                    <v-chip
+                                        v-bind="props"
+                                        size="x-small"
+                                        label
+                                        :color="configValue(agent, action_name, config_name) ? 'success' : 'muted'"
+                                        variant="tonal"
+                                        :prepend-icon="config.icon"
+                                        @click.stop="toggleSubConfig(agent, action_name, config_name, config)"
+                                    >
+                                        {{ config.label }}
+                                        <v-icon class="ml-1" size="small" v-if="configValue(agent, action_name, config_name)">mdi-check-circle-outline</v-icon>
+                                        <v-icon class="ml-1" size="small" v-else>mdi-circle-outline</v-icon>
+                                        <v-icon class="ml-1" size="x-small" color="primary" v-if="isConfigOverridden(agent, action_name, config_name)">mdi-movie-open-cog-outline</v-icon>
+                                    </v-chip>
+                                </template>
+                            </v-tooltip>
+                        </template>
                         <!-- Action chip (if it has quick_toggle) -->
                         <template v-if="action.quick_toggle && agent.enabled">
                             <v-tooltip :text="actionChipTooltip(agent, action_name, action)" density="compact">
@@ -95,7 +128,7 @@
                                         v-bind="props"
                                         size="x-small"
                                         label
-                                        :color="actionEnabled(agent, action_name) ? 'success' : 'grey'"
+                                        :color="actionEnabled(agent, action_name) ? 'success' : 'muted'"
                                         variant="tonal"
                                         :prepend-icon="action.icon"
                                         @click.stop="toggleAction(agent, action_name, action)"
@@ -121,7 +154,7 @@
                                         v-bind="props"
                                         size="x-small"
                                         label
-                                        :color="configValue(agent, action_name, config_name) ? 'highlight3' : 'grey'"
+                                        :color="configValue(agent, action_name, config_name) ? 'highlight3' : 'muted'"
                                         variant="tonal"
                                         @click.stop="toggleSubConfig(agent, action_name, config_name, config)"
                                     >
@@ -137,44 +170,50 @@
                 </div>
             </v-list-item>
         </v-list>
-        <AgentModal :dialog="state.dialog" :formTitle="state.formTitle" :templates="templates" :app-config="appConfig" :scene="scene" @save="saveAgent" @update:dialog="updateDialog" ref="modal"></AgentModal>
     </div>
 </template>
-    
+
 <script>
-import AgentModal from './AgentModal.vue';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
+import { countOverrides } from '@/utils/agentActionOverrides';
+import { effortMode, effortPatch, effortPinPatch } from '@/utils/knowledgeEffort';
+import { perspectivesEnabled } from '@/utils/sceneSettings';
+import { SceneAgentOverridesCoordinator, sceneIdentityOf } from '@/utils/sceneAgentOverrides';
+import { replyAfterAll } from '@/utils/writeReply';
+import { applyHeldValues, expectedValues, isEmptyWrite, reportedValues, writtenValues } from '@/utils/pendingAgentWrites';
 import AgentMessages from './AgentMessages.vue';
+import SceneOverridePendingSave from './SceneOverridePendingSave.vue';
 import {
     configOverrideActive,
     countSceneOverrides,
     effectiveActionEnabled,
     effectiveConfigValue,
     enabledOverrideActive,
-    setActionOverrideSlice,
 } from '@/constants/sceneAgentSettings';
+
+const EFFORT_AGENTS = ['conversation', 'summarizer', 'memory'];
+const PENDING_EFFORT_TTL = 30000;
 
 export default {
     components: {
-        AgentModal,
-        AgentMessages
+        AgentMessages,
+        SceneOverridePendingSave,
     },
     emits: ['agents-updated'],
 
     data() {
         return {
+            pendingEffort: null,
+            // agent name -> reportedValues() of its last status frame
+            lastReported: {},
+            // agent name -> [{id, held}] written by a save not answered yet
+            pendingWrites: {},
+            pendingWriteSeq: 0,
+            chipError: null,
+            // the story mode of the last scene status frame
+            sceneMode: 'legacy',
             state: {
                 agents: [],
-                dialog: false,
-                currentAgent: {
-                    type: '',
-                    client: '',
-                    status: 'idle',
-                    label: '',
-                    name: '',
-                    data: {},
-                },
-                formTitle: ''
             },
             maxMessagesPerAgent: 25,
             agentHasMessages: {},
@@ -187,13 +226,20 @@ export default {
             type: Object,
             default: () => ({})
         },
-        templates: Object,
         appConfig: Object,
         scene: Object,
     },
+    watch: {
+        'overridesState.pendingSave'(pending) {
+            if (!pending) this.chipError = null;
+        },
+    },
     computed: {
+        overridesState() {
+            return this.sceneOverridesState();
+        },
         overrideCount() {
-            return Object.keys(this.appConfig?.agent_actions?.overrides || {}).length;
+            return countOverrides(this.appConfig?.agent_actions?.overrides);
         },
         agentStateNotifications() {
             // if key begins with 'notify__' and value is a string, return the key and value
@@ -211,34 +257,33 @@ export default {
                     }
                 });
             }
-            console.log("agentStateNotifications", notifications);
             return notifications;
         }
     },
     inject: [
         'getWebsocket',
         'registerMessageHandler',
+        'unregisterMessageHandler',
         'isConnected',
         'getClients',
         'openAgentActionOverrides',
+        'openAgentSettings',
+        'requestSceneSave',
+        'sceneOverridesState',
     ],
-    provide() {
-        return {
-            state: this.state
-        };
-    },
     methods: {
-        uxSnapshot() {
-            // what the open agent modal shows, for the help agent's UX snapshot
-            if(!this.state.dialog) return null;
-            const tab = this.$refs.modal?.tab || null;
-            return {
-                agent: this.state.currentAgent?.name || null,
-                agent_label: this.state.currentAgent?.label || null,
-                tab: tab === '_config' ? 'general' : tab,
-            };
+        // The scene-only write path outside the settings page. A sparse
+        // per-agent patch, so a delayed change never replaces an unrelated edit
+        // that landed first.
+        applySceneAgentValues(entries, label, reply = null) {
+            this.overrides?.applySceneAgentValues(entries, label, reply);
         },
-
+        clearSceneAgentValues(entries, reply = null) {
+            this.overrides?.clearSceneAgentValues(entries, reply);
+        },
+        patchSceneAgentValues(patch, label, reply = null) {
+            this.overrides?.patchSceneAgentValues(patch, label, reply);
+        },
         sceneOverrideCount(agent) {
             return countSceneOverrides(agent?.data?.scene_overrides);
         },
@@ -259,10 +304,10 @@ export default {
          * Handles clicks on an agent list item.
          *
          * Behaviour:
-         *  - Regular click opens the agent edit modal (existing behaviour).
+         *  - Regular click takes the user to the agent's settings page.
          *  - Ctrl-/Cmd-click toggles the agent's enabled state **iff** the agent supports toggling (agent.data.has_toggle).
          */
-        listItemClicked(event, agent, index) {
+        listItemClicked(event, agent) {
             // If the user is holding Ctrl (Windows/Linux) or Cmd (macOS)
             if (isPrimaryModifier(event)) {
                 // Only toggle agents that explicitly allow it
@@ -275,8 +320,8 @@ export default {
                 return;
             }
 
-            // Fallback to default behaviour – open the edit dialog
-            this.editAgent(index);
+            // Fallback to default behaviour – open the agent's settings page
+            this.openAgentSettings(agent.name);
         },
         configurationRequired() {
             let clients = this.getClients();
@@ -295,7 +340,6 @@ export default {
                     continue
 
                 if(agent.status === 'warning' || agent.status === 'error' || agent.status === 'uninitialized') {
-                    console.log("agents: configuration required (1)", agent.status)
                     return true;
                 }
 
@@ -305,7 +349,6 @@ export default {
                     let client = clients[j];
                     if(client.name === agent.client) {
                         if(client.status === 'warning' || client.status === 'error' || client.status === 'disabled') {
-                            console.log("agents: configuration required (2)", client.status)
                             return true;
                         }
                     }
@@ -357,28 +400,58 @@ export default {
             return `Toggles ${config.label} globally`;
         },
         /**
-         * Persist a changed per-action override slice. The server replaces the
-         * whole per-agent slice, so the full overlay goes over the wire.
+         * Write overridden values of one action through the scene-only writer.
+         * entry: { action, enabled?, config: { key: value } }. The chip shows
+         * the written values until the writer answers.
          */
-        saveSceneOverrideSlice(agent, action_name, slice) {
-            const overlay = {
-                actions: setActionOverrideSlice(this.sceneOverlay(agent).actions || {}, action_name, slice),
+        writeSceneOverride(agent, entry, label, reply = null) {
+            const slice = { config: {} };
+            if (entry.enabled !== undefined) slice.enabled = entry.enabled;
+            for (const [key, value] of Object.entries(entry.config || {})) slice.config[key] = { value };
+            const held = { actions: {}, scene_overrides_set: { actions: { [entry.action]: slice } } };
+            applyHeldValues(agent, held);
+            const release = this.holdWrite(agent.name, held);
+            if (!reply) this.chipError = null;
+            this.applySceneAgentValues([{ agent: agent.name, ...entry }], label, {
+                onComplete: () => {
+                    release();
+                    reply?.onComplete();
+                },
+                // a refused or discarded change stored nothing; an unanswered one may be stored
+                onError: (message, applyFailed = false, unknown = false) => {
+                    release(!unknown);
+                    if (reply) reply.onError(message, applyFailed, unknown);
+                    else this.chipError = message;
+                },
+            });
+        },
+        // Returns release(restore): call it once the write is answered.
+        // `restore` puts the last reported values back — a refused write
+        // stored nothing, and the frame that said so was masked by the hold.
+        holdWrite(agentName, held) {
+            if (isEmptyWrite(held)) return () => {};
+            const id = ++this.pendingWriteSeq;
+            (this.pendingWrites[agentName] ||= []).push({ id, held });
+            return (restore = false) => {
+                const rest = (this.pendingWrites[agentName] || []).filter((write) => write.id !== id);
+                if (rest.length) this.pendingWrites[agentName] = rest;
+                else delete this.pendingWrites[agentName];
+                const agent = this.state.agents.find((candidate) => candidate.name === agentName);
+                if (restore && agent && this.lastReported[agentName]) {
+                    applyHeldValues(agent, this.lastReported[agentName]);
+                    this.reapplyPendingWrites(agent);
+                }
             };
-            // Keep the local copy in sync so the chip updates immediately
-            // instead of waiting for the agent status echo.
-            agent.data.scene_overrides = overlay;
-            this.getWebsocket().send(JSON.stringify({
-                type: 'agent_config',
-                action: 'save_scene_overrides',
-                agent_type: agent.name,
-                override: overlay,
-            }));
+        },
+        reapplyPendingWrites(agent) {
+            for (const { held } of this.pendingWrites[agent.name] || []) {
+                applyHeldValues(agent, held);
+            }
         },
         toggleAction(agent, action_name, action) {
             if (this.isEnabledOverridden(agent, action_name)) {
-                const slice = JSON.parse(JSON.stringify(this.sceneOverlay(agent).actions[action_name]));
-                slice.enabled = !slice.enabled;
-                this.saveSceneOverrideSlice(agent, action_name, slice);
+                const enabled = !this.sceneOverlay(agent).actions[action_name].enabled;
+                this.writeSceneOverride(agent, { action: action_name, enabled }, `${action.label}: ${enabled ? 'On' : 'Off'}`);
                 return;
             }
 
@@ -390,20 +463,11 @@ export default {
 
             // Save the agent to persist the changes
             this.saveAgent(agent);
-
-            // Send update to server
-            this.getWebsocket().send(JSON.stringify({
-                type: 'agent_action',
-                agent_name: agent.name,
-                action_name: action_name,
-                enabled: action.enabled
-            }));
         },
         toggleSubConfig(agent, action_name, config_name, config) {
             if (this.isConfigOverridden(agent, action_name, config_name)) {
-                const slice = JSON.parse(JSON.stringify(this.sceneOverlay(agent).actions[action_name]));
-                slice.config[config_name] = { value: !slice.config[config_name].value };
-                this.saveSceneOverrideSlice(agent, action_name, slice);
+                const value = !this.sceneOverlay(agent).actions[action_name].config[config_name].value;
+                this.writeSceneOverride(agent, { action: action_name, config: { [config_name]: value } }, `${config.label}: ${value ? 'On' : 'Off'}`);
                 return;
             }
 
@@ -415,16 +479,109 @@ export default {
 
             // Save the agent to persist the changes
             this.saveAgent(agent);
-
-            // Send update to server using the same type as action toggles
-            this.getWebsocket().send(JSON.stringify({
-                type: 'agent_action',
-                agent_name: agent.name,
-                action_name: action_name,
-                config: {
-                    [config_name]: config.value
+        },
+        // Every change of one agent action in one write: values already under a
+        // scene override go to the scene-only writer, the rest to the agent, each
+        // saved once. Returns false when the action is unknown. `reply`
+        // ({onComplete, onError}) hears the backend's answer to the change;
+        // `label` names the scene-only part where it is shown as pending.
+        applyActionValues(agent, action_name, { enabled, config = {} } = {}, reply = null, label = null) {
+            const action = agent?.actions?.[action_name];
+            if (!action) return false;
+            let sceneEntry = null;
+            const overrideEntry = () => (sceneEntry ||= { action: action_name, config: {} });
+            let agentChanged = false;
+            const restores = [];
+            if (enabled !== undefined) {
+                if (this.isEnabledOverridden(agent, action_name)) {
+                    if (this.sceneOverlay(agent).actions[action_name].enabled !== enabled) overrideEntry().enabled = enabled;
+                } else if (action.enabled !== enabled) {
+                    const previous = action.enabled;
+                    action.enabled = enabled;
+                    restores.push(() => { if (action.enabled === enabled) action.enabled = previous; });
+                    agentChanged = true;
                 }
-            }));
+            }
+            for (const [config_name, value] of Object.entries(config)) {
+                const field = action.config?.[config_name];
+                if (!field) continue;
+                if (this.isConfigOverridden(agent, action_name, config_name)) {
+                    overrideEntry().config[config_name] = value;
+                } else if (field.value !== value) {
+                    const previous = field.value;
+                    field.value = value;
+                    restores.push(() => { if (field.value === value) field.value = previous; });
+                    agentChanged = true;
+                }
+            }
+            const answer = replyAfterAll(reply, (sceneEntry ? 1 : 0) + (agentChanged ? 1 : 0));
+            if (sceneEntry) this.writeSceneOverride(agent, sceneEntry, label || `${agent.label || agent.name}: ${action.label || action_name}`, answer);
+            if (agentChanged) this.saveAgent(agent, {
+                onComplete: () => answer?.onComplete(),
+                // the field objects are shared with every agent status reader: a
+                // refused save stored nothing, so its values go back; a failed
+                // apply stored them
+                onError: (message, applyFailed = false) => {
+                    if (!applyFailed) restores.forEach((restore) => restore());
+                    answer?.onError(message, applyFailed);
+                },
+            });
+            return true;
+        },
+        // A stop for a mode the loaded scene is about to be in: a story created
+        // from the New Story dialog (armed once it has loaded) or a story-mode
+        // switch. It is written when the scene reports the target mode and the
+        // three knowledge agents have reported since, refused when the change is
+        // rejected, and dropped unwritten after PENDING_EFFORT_TTL. `scope`
+        // 'scene' sends it through the scene-only hub writer; the other hosts
+        // keep the mixed-scope writer they had.
+        queueEffort(stop, mode, { afterLoad = false, scope = null } = {}) {
+            this.pendingEffort = {
+                stop,
+                mode,
+                scope,
+                // A hub stop belongs to the scene it was queued in; the
+                // generation it was composed for travels with it so a load can
+                // never apply it to the next scene.
+                sceneIdentity: scope === 'scene' ? sceneIdentityOf(this.scene) : null,
+                armed: !afterLoad,
+                seen: new Set(),
+                // a New Story stop starts its clock when the load arms it
+                until: afterLoad ? null : Date.now() + PENDING_EFFORT_TTL,
+            };
+        },
+        applyPendingEffort() {
+            const pending = this.pendingEffort;
+            if (!pending) return;
+            if (pending.until !== null && Date.now() > pending.until) {
+                this.pendingEffort = null;
+                return;
+            }
+            if (!pending.armed || this.sceneMode !== pending.mode) return;
+            if (pending.sceneIdentity && pending.sceneIdentity !== sceneIdentityOf(this.scene)) {
+                // the scene changed under a hub stop: drop it, never replay it
+                this.pendingEffort = null;
+                return;
+            }
+            if (!EFFORT_AGENTS.every((name) => pending.seen.has(name))) return;
+            this.pendingEffort = null;
+            if (pending.scope === 'scene') {
+                this.applySceneAgentValues(effortPinPatch(this.state.agents, pending.mode, pending.stop));
+                return;
+            }
+            for (const entry of effortPatch(this.state.agents, pending.mode, pending.stop)) {
+                const agent = this.state.agents.find((candidate) => candidate.name === entry.agent);
+                this.applyActionValues(agent, entry.action, entry);
+            }
+        },
+        // Transport teardown / unmount: drop the hub writer's queued and
+        // in-flight work and any stop still waiting for a scene to report.
+        resetSceneAgentOverrides() {
+            this.overrides?.reset(
+                'The connection closed before the change was sent.',
+                'The connection closed before the answer arrived; the change may have been saved.',
+            );
+            this.pendingEffort = null;
         },
         getQuickToggleActions(agent) {
             const result = {};
@@ -433,6 +590,15 @@ export default {
                     if (agent.actions[action_name] && agent.actions[action_name].quick_toggle) {
                         result[action_name] = agent.actions[action_name];
                     }
+                }
+            }
+            return result;
+        },
+        getRootQuickToggleConfigs(action) {
+            const result = {};
+            for (const config_name in action.config || {}) {
+                if (action.config[config_name]?.quick_toggle_root) {
+                    result[config_name] = action.config[config_name];
                 }
             }
             return result;
@@ -451,55 +617,63 @@ export default {
         getActive() {
             return this.state.agents.find(a => a.status === 'busy');
         },
-        openModal() {
-            this.state.formTitle = 'Add AI Agent';
-            this.state.dialog = true;
-        },
-        saveAgent(agent) {
+        saveAgent(agent, reply = null) {
             const index = this.state.agents.findIndex(c => c.name === agent.name);
             if (index === -1) {
                 this.state.agents.push(agent);
             } else {
                 this.state.agents[index] = agent;
             }
-            this.$emit('agents-updated', this.state.agents);
-        },
-        editAgent(index) {
-            // deep clone to prevent real-time status updates from overriding unsaved edits
-            this.state.currentAgent = JSON.parse(JSON.stringify(this.state.agents[index]));
-            this.state.formTitle = 'Edit AI Agent';
-            this.state.dialog = true;
-        },
-        deleteAgent(index) {
-            if (window.confirm('Are you sure you want to delete this agent?')) {
-                this.state.agents.splice(index, 1);
-                this.$emit('agents-updated', this.state.agents);
-            }
-        },
-        updateDialog(newVal) {
-            this.state.dialog = newVal;
-        },
-        openSettings(agentName, section) {
-            let index = this.state.agents.findIndex(a => a.name === agentName);
-            if (index !== -1) {
-                this.editAgent(index);
-                if(section)
-                    this.$refs.modal.tab = section;
-            }
+            const pending = (this.pendingWrites[agent.name] || []).map((write) => write.held);
+            const release = this.holdWrite(agent.name, writtenValues(expectedValues(this.lastReported[agent.name], pending), agent));
+            this.$emit('agents-updated', this.state.agents, {
+                onComplete: () => {
+                    release();
+                    reply?.onComplete?.();
+                },
+                // a failed apply stored the payload, so there is nothing to restore
+                onError: (message, applyFailed = false) => {
+                    release(!applyFailed);
+                    reply?.onError?.(message, applyFailed);
+                },
+            });
         },
         openMessages(agentName) {
-            console.log("openMessages", agentName, this.agentMessagesRefs);
             if(!this.agentMessagesRefs[agentName]) {
                 return;
             }
             this.agentMessagesRefs[agentName].openDialog();
         },
         handleMessage(data) {
+            // The scene-only writer tracks its own requests and scene generation
+            this.overrides?.handleMessage(data);
 
             // When a new scene is loaded, clear the messages and agentHasMessages
             if (data.type === "system" && data.id === 'scene.loaded') {
+                this.chipError = null;
                 this.messages = {};
                 this.agentHasMessages = {};
+                // a hub stop belongs to the scene it was queued in: a load is a
+                // different scene, so it is dropped rather than re-armed
+                if (this.pendingEffort?.scope === 'scene') {
+                    this.pendingEffort = null;
+                } else if (this.pendingEffort) {
+                    // the agents report after this frame; frames from the load itself do not count
+                    this.pendingEffort.armed = true;
+                    this.pendingEffort.seen = new Set();
+                    this.pendingEffort.until = Date.now() + PENDING_EFFORT_TTL;
+                }
+            }
+            if (data.type === "system" && data.id === 'scene.load_failure') {
+                this.pendingEffort = null;
+            }
+            if (data.type === 'scene_status') {
+                this.sceneMode = effortMode(perspectivesEnabled(data.data));
+                this.applyPendingEffort();
+            }
+            if (data.type === 'world_state_manager' && data.action === 'operation_done'
+                && data.error && data.failed_action === 'update_scene_settings') {
+                this.pendingEffort = null;
             }
 
             // Handle agent_status message type
@@ -519,12 +693,6 @@ export default {
                         agent.actions[i] = {...data.data.actions[i]};
                     }
                     agent.enabled = data.data.enabled;
-
-                    // If the modal is open and this is the current agent, update choices only (preserve user's unsaved values)
-                    if (this.state.dialog && this.state.currentAgent && this.state.currentAgent.name === data.name && this.$refs.modal) {
-                        // Update choices directly in the modal's local agent object to avoid triggering the watcher
-                        this.$refs.modal.updateChoicesOnly(agent);
-                    }
 
                     // sort agents by label
 
@@ -551,7 +719,12 @@ export default {
                         enabled: data.data.enabled,
                         meta: data.meta,
                     });
-                    console.log("agents: added new agent", this.state.agents[this.state.agents.length - 1], data)
+                }
+                this.lastReported[data.name] = reportedValues(data.data);
+                this.reapplyPendingWrites(this.state.agents.find((candidate) => candidate.name === data.name));
+                if (this.pendingEffort?.armed) {
+                    this.pendingEffort.seen.add(data.name);
+                    this.applyPendingEffort();
                 }
                 return;
             }
@@ -571,7 +744,17 @@ export default {
         }
     },
     created() {
+        this.overrides = new SceneAgentOverridesCoordinator({
+            getWebsocket: () => this.getWebsocket(),
+            scene: () => this.scene,
+            state: this.overridesState,
+            requestSave: () => this.requestSceneSave(),
+        });
         this.registerMessageHandler(this.handleMessage);
+    },
+    beforeUnmount() {
+        this.unregisterMessageHandler(this.handleMessage);
+        this.resetSceneAgentOverrides();
     },
 }
 </script>

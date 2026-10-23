@@ -2,7 +2,7 @@
   "title": "On Message Set Avatar",
   "id": "abca5ca0-9a7d-4b59-beb3-2a470ffbf090",
   "properties": {
-    "event_name": "agent.conversation.generated"
+    "event_name": "agent.conversation.finalized"
   },
   "x": 0,
   "y": 0,
@@ -186,6 +186,36 @@
       "inherited": false,
       "registry": "core/Stage",
       "base_type": "core/Node"
+    },
+    "537e1014-e6fd-42dd-bc50-812326165eb7": {
+      "title": "GET obj.message_ids",
+      "id": "537e1014-e6fd-42dd-bc50-812326165eb7",
+      "properties": {
+        "attribute": "message_ids"
+      },
+      "x": -240,
+      "y": 456,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "81515c8d-ba77-4f58-9427-d90366875aa5": {
+      "title": "Automatic source",
+      "id": "81515c8d-ba77-4f58-9427-d90366875aa5",
+      "properties": {
+        "value": "world_state.portraits"
+      },
+      "x": 600,
+      "y": 360,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -198,7 +228,8 @@
     ],
     "58259836-0151-4aa7-b324-3bb773a6cfba.event": [
       "c7b902e2-3aaf-4748-916d-d4e9a2fcf0c6.object",
-      "35097f10-d0eb-472b-beef-29eb1bf59523.object"
+      "35097f10-d0eb-472b-beef-29eb1bf59523.object",
+      "537e1014-e6fd-42dd-bc50-812326165eb7.object"
     ],
     "d88a1e6e-d680-4f20-be2f-b6ab0311cac7.context": [
       "dfb5d077-a85e-4f44-ae23-eb58d5a6d2f4.asset_ctx"
@@ -217,6 +248,12 @@
     ],
     "e6d43942-eff1-48a9-b1d7-7f95b781ef18.yes": [
       "eb65e40c-b609-4868-9df2-d85e773801ea.state"
+    ],
+    "537e1014-e6fd-42dd-bc50-812326165eb7.value": [
+      "d88a1e6e-d680-4f20-be2f-b6ab0311cac7.message_ids"
+    ],
+    "81515c8d-ba77-4f58-9427-d90366875aa5.value": [
+      "dfb5d077-a85e-4f44-ae23-eb58d5a6d2f4.automatic_source"
     ]
   },
   "groups": [

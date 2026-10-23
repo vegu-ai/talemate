@@ -335,7 +335,7 @@ class TestNarratorTimePassageMethods:
         narrator.client.send_prompt.return_value = expected_narration
 
         response = await narrator.narrate_time_passage(
-            duration="PT2H",
+            duration=7200,
             time_passed="Two hours later",
             narrative_direction="The sun has set",
         )

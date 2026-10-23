@@ -18,7 +18,7 @@ Start with your client that has a template already assigned (either automaticall
 
 ![Lock Template - Starting Point](/talemate/img/0.33.0/client-lock-template-0001.png)
 
-1. Open the client settings by clicking the cogwheels icon next to the client
+1. Open the client's editor by clicking the cogwheels icon next to the client, which takes you to the Clients settings page
 2. Review the currently assigned template in the preview area
 
 ### Step 2: Enable Template Lock

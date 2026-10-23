@@ -349,7 +349,7 @@
       "id": "5849479f-a26b-44b2-8f96-107ba935a798",
       "properties": {
         "name": "remove_attribute",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": true
       },
       "x": 4702,
       "y": 1699,
@@ -1686,7 +1686,7 @@
       "properties": {
         "name": "context_id",
         "typ": "str",
-        "instructions": "The exact attribute name you want to update. Must exist in the current character attributes. This must NEVER be description."
+        "instructions": "The exact Context ID of the attribute or detail you want to update, for example `character.attribute:Elena.00df696235df`. If you do not know the Context ID, give the exact attribute or detail name instead, for example `character.attribute:Elena.Skills`. It must exist on the character, and it must NEVER be description."
       },
       "x": -507,
       "y": -1111,
@@ -1785,7 +1785,7 @@
       "id": "f67f6775-0cc4-4554-b93d-df8e24e03832",
       "properties": {
         "name": "add_attribute",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": true
       },
       "x": 4700,
       "y": 1350,
@@ -1816,7 +1816,7 @@
       "id": "09602a83-b16d-4d14-87e6-5d976cecab07",
       "properties": {
         "name": "add_attribute",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": true
       },
       "x": 4700,
       "y": 1520,
@@ -1862,7 +1862,7 @@
       "id": "1941a582-79cf-4521-b3e6-15b7f4df1b72",
       "properties": {
         "name": "set_description",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": true
       },
       "x": 4683,
       "y": 2079,
@@ -2105,6 +2105,12 @@
             "instructions": "Completely rewrite her relationships to focus on her new romantic life. She is now in a committed relationship with Riley, whom she met at a medical conference. Include that this relationship has become her priority and she's distanced herself from most of her previous colleagues and friends to focus on this new chapter in her life.",
             "replace": true,
             "context_id": "character.detail:Dr. Chen.73649cbdef73"
+          },
+          {
+            "character_name": "Elena",
+            "instructions": "Note that she now walks with a slight limp after the fall.",
+            "replace": false,
+            "context_id": "character.detail:Elena.Physical condition"
           }
         ]
       },
@@ -2122,7 +2128,7 @@
       "id": "59fae325-d3d6-408a-bbc6-6f6720b926f1",
       "properties": {
         "name": "set_description",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": true
       },
       "x": 4680,
       "y": 1900,
@@ -2164,6 +2170,10 @@
         {
           "name": "item4",
           "type": "*"
+        },
+        {
+          "name": "item5",
+          "type": "*"
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
@@ -2192,6 +2202,37 @@
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
+    },
+    "f4c433c6-627d-4b6a-b929-a89f4eaafe27": {
+      "title": "Agent Report Issue",
+      "id": "f4c433c6-627d-4b6a-b929-a89f4eaafe27",
+      "properties": {
+        "name": "report_issue"
+      },
+      "x": 4410,
+      "y": 2260,
+      "width": 151,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/agentReportIssue",
+      "base_type": "core/functions/Function"
+    },
+    "d4aa5bfa-8c36-43d8-8f69-1a347d7bc3ef": {
+      "title": "AI Function Callback",
+      "id": "d4aa5bfa-8c36-43d8-8f69-1a347d7bc3ef",
+      "properties": {
+        "name": "report_issue",
+        "allow_multiple_calls": true
+      },
+      "x": 4700,
+      "y": 2260,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -2647,6 +2688,12 @@
     ],
     "a4c97845-e135-4514-ba43-23a27f401900.result": [
       "5aa6c8f7-0c8d-4e7f-a163-9e3168b9384f.instructions"
+    ],
+    "f4c433c6-627d-4b6a-b929-a89f4eaafe27.fn": [
+      "d4aa5bfa-8c36-43d8-8f69-1a347d7bc3ef.fn"
+    ],
+    "d4aa5bfa-8c36-43d8-8f69-1a347d7bc3ef.callback": [
+      "13a64d1b-456a-48ea-b4b3-74efee5b99cb.item5"
     ]
   },
   "groups": [

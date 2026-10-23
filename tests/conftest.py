@@ -5,10 +5,14 @@ Provides MockClient, MockScene, and bootstrap functions used across
 multiple test modules (test_graphs, test_layered_history, etc.).
 """
 
+import builtins
 import contextvars
+import io
 import os
+import tempfile
 from collections import deque
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 import yaml
@@ -25,6 +29,26 @@ from talemate.tale_mate import Scene
 
 # Root of the repository (where config.example.yaml lives)
 _REPO_ROOT = Path(__file__).resolve().parent.parent
+_REAL_CONFIG_FILE = _REPO_ROOT / "config.yaml"
+_TEST_CONFIG_DIR = tempfile.TemporaryDirectory(prefix="talemate-pytest-config-")
+config_state.CONFIG_FILE = Path(_TEST_CONFIG_DIR.name) / "config.yaml"
+
+
+def _guard_config_writes(open_file):
+    def guarded_open(file, mode="r", *args, **kwargs):
+        try:
+            path = Path(os.fsdecode(file)).resolve()
+        except TypeError:
+            pass
+        else:
+            if path == _REAL_CONFIG_FILE.resolve() and any(
+                flag in mode for flag in "wax+"
+            ):
+                pytest.fail(f"test attempted to write the real config file: {path}")
+        return open_file(file, mode, *args, **kwargs)
+
+    return guarded_open
+
 
 # ---------------------------------------------------------------------------
 # Parallel execution (pytest-xdist)
@@ -147,6 +171,12 @@ def _use_example_config():
     config_state.CONFIG = original
 
 
+@pytest.fixture(autouse=True)
+def _prevent_real_config_writes(monkeypatch):
+    monkeypatch.setattr(builtins, "open", _guard_config_writes(builtins.open))
+    monkeypatch.setattr(io, "open", _guard_config_writes(io.open))
+
+
 # ---------------------------------------------------------------------------
 # Contextvar-based response queue for MockClient
 # ---------------------------------------------------------------------------
@@ -229,13 +259,18 @@ def restore_global_registries():
     ``AGENTS`` is restored in place: ``talemate/server/agent_config.py`` and
     friends do ``from talemate.instance import AGENTS``, so rebinding it hands
     them a stale dict — the exact defect this suite already tripped over.
+    ``config_state.PENDING_APPLY`` (the config sections a failed apply leaves
+    to the next save) is restored in place for the same reason.
     """
     agents_snapshot = dict(instance.AGENTS)
     voice_library_snapshot = voice_library.VOICE_LIBRARY
+    pending_apply_snapshot = set(config_state.PENDING_APPLY)
     yield
     instance.AGENTS.clear()
     instance.AGENTS.update(agents_snapshot)
     voice_library.VOICE_LIBRARY = voice_library_snapshot
+    config_state.PENDING_APPLY.clear()
+    config_state.PENDING_APPLY.update(pending_apply_snapshot)
 
 
 @pytest.fixture
@@ -272,6 +307,15 @@ def isolate_signals():
     for sig, receivers in restores:
         sig.receivers.clear()
         sig.receivers.extend(receivers)
+
+
+@pytest.fixture
+def cfg_isolation():
+    """Snapshot/restore the client config section a test mutates."""
+    saved_clients = dict(config_state.CONFIG.clients)
+    yield
+    config_state.CONFIG.clients.clear()
+    config_state.CONFIG.clients.update(saved_clients)
 
 
 def connect_recorder(signal) -> list:
@@ -317,11 +361,29 @@ class MockClient(ClientBase):
 class MockMemoryAgent(talemate.agents.memory.MemoryAgent):
     """MemoryAgent with no-op persistence methods."""
 
+    async def add(self, text, character=None, uid=None, ts: int = None, **kwargs):
+        return True
+
     async def add_many(self, items: list[dict]):
         pass
 
     async def delete(self, filters: dict):
         pass
+
+    def close_db(self, scene, remove_unsaved_memory: bool = True):
+        pass
+
+    def drop_db(self):
+        pass
+
+    def _set_db(self):
+        pass
+
+    def _get_document(self, id):
+        return {}
+
+    def _get_documents_by_meta(self, meta: dict):
+        return {}
 
 
 class MockScene(Scene):
@@ -362,6 +424,51 @@ def pytest_addoption(parser):
 def update_baselines(request):
     """Whether to update baseline files instead of comparing."""
     return request.config.getoption("--update-baselines")
+
+
+@pytest.fixture
+def scene():
+    """A ``MockScene`` with the real agent stack wired onto it."""
+    s = MockScene()
+    bootstrap_scene(s)
+    return s
+
+
+@pytest.fixture
+def director(scene):
+    return instance.get_agent("director")
+
+
+@pytest.fixture
+def activation_signal():
+    """Own the ``character.activated`` receivers for the duration of a test."""
+    signal = async_signals.get("character.activated")
+    saved = list(signal.receivers)
+    signal.receivers.clear()
+    yield signal
+    signal.receivers.clear()
+    signal.receivers.extend(saved)
+
+
+@pytest.fixture
+def persistence_scene_factory(tmp_path, monkeypatch):
+    """Real scene file I/O with empty memory storage, confined to tmp_path.
+
+    Each call rebinds the global agent stack to the new scene; use the returned
+    scenes sequentially. Memory persistence and the global recents list are excluded.
+    """
+    monkeypatch.setattr(Scene, "scenes_dir", classmethod(lambda cls: str(tmp_path)))
+
+    def create():
+        scene = MockScene()
+        bootstrap_scene(scene)
+        monkeypatch.setattr(
+            instance.get_agent("memory"), "rebuild_audience_index", AsyncMock()
+        )
+        monkeypatch.setattr(scene, "add_to_recent_scenes", AsyncMock())
+        return scene
+
+    return create
 
 
 def bootstrap_scene(mock_scene):

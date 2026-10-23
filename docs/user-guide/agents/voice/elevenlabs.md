@@ -2,7 +2,7 @@
 
 Professional voice synthesis with voice cloning capabilities using ElevenLabs API.
 
-![ElevenLabs API settings](/talemate/img/0.32.0/elevenlabs-api-settings.png)
+![ElevenLabs API settings](/talemate/img/0.40.0/elevenlabs-api-settings.png)
 
 ## API Setup
 
@@ -11,6 +11,10 @@ ElevenLabs requires an API key. See the [ElevenLabs API setup](/talemate/user-gu
 ## Configuration
 
 **Model:** Select from available ElevenLabs models
+
+**Chunk size:** Split text into chunks of this size. Smaller values will increase responsiveness at the cost of lost context between chunks. 0 = no chunking
+
+**Audio tag format:** Jinja2 template used to format the audio tags injected by the [Audio tags](settings.md#audio-tags) setting. `{{ tag }}` is replaced with the tag name, so the default `[{{ tag }}]` turns `laughing` into `[laughing]`.
 
 !!! warning "Voice Limits"
     Your ElevenLabs subscription allows you to maintain a set number of voices (10 for the cheapest plan). Any voice that you generate audio for is automatically added to your voices at [https://elevenlabs.io/app/voice-lab](https://elevenlabs.io/app/voice-lab). This also happens when you use the "Test" button. It is recommended to test voices via their voice library instead.
@@ -36,6 +40,6 @@ ElevenLabs requires an API key. See the [ElevenLabs API setup](/talemate/user-gu
 
 **Label:** Descriptive name for the voice
 
-**Provider ID:** Paste the ElevenLabs voice ID you copied
+**Voice ID:** Paste the ElevenLabs voice ID you copied
 
 **Tags:** Add descriptive tags for organization

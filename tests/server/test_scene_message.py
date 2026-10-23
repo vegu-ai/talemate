@@ -15,7 +15,13 @@ exercised in its own agent tests and isn't the contract under test here.
 
 import pytest
 
-from talemate.scene_message import CharacterMessage, reset_message_id
+from talemate.scene_message import (
+    CharacterMessage,
+    DirectorMessage,
+    Flags,
+    NarratorMessage,
+    reset_message_id,
+)
 from talemate.server.scene_message import SceneMessagePlugin
 from talemate.tale_mate import Scene
 
@@ -224,6 +230,63 @@ class TestSceneMessagePluginHandleDelete:
         assert plugin._spy_calls["delete"] == [msg.id]
 
 
+class TestSceneMessagePluginHistoryPosition:
+    @pytest.mark.asyncio
+    async def test_final_entry(self, plugin, scene_with_message):
+        _, msg = scene_with_message
+        await plugin.handle_get_history_position(
+            {"id": msg.id, "request_id": "edit:1:1"}
+        )
+
+        assert plugin.websocket_handler.messages == [
+            {
+                "type": "scene_message",
+                "action": "history_position",
+                "id": msg.id,
+                "final": True,
+                "request_id": "edit:1:1",
+            }
+        ]
+
+    @pytest.mark.asyncio
+    async def test_earlier_entry(self, plugin, scene_with_message):
+        scene, msg = scene_with_message
+        scene.history.append(NarratorMessage(message="Rain falls."))
+        await plugin.handle_get_history_position({"id": msg.id})
+
+        assert plugin.websocket_handler.messages[-1]["final"] is False
+
+    @pytest.mark.asyncio
+    async def test_hidden_entry_after_the_last_visible_one(
+        self, plugin, scene_with_message
+    ):
+        scene, msg = scene_with_message
+        scene.history.append(
+            DirectorMessage(message="Checked the pacing.", flags=Flags.HIDDEN)
+        )
+        await plugin.handle_get_history_position({"id": msg.id})
+
+        assert plugin.websocket_handler.messages[-1]["final"] is False
+
+    @pytest.mark.asyncio
+    async def test_unknown_id_is_refused_without_a_position(self, plugin):
+        await plugin.handle_get_history_position(
+            {"id": 999, "request_id": "delete:999:1"}
+        )
+
+        assert plugin.websocket_handler.messages[0] == {
+            "type": "scene_message",
+            "action": "operation_done",
+            "error": {"message": "Message 999 not found in scene history"},
+            "request_id": "delete:999:1",
+            "failed_action": "get_history_position",
+        }
+        assert all(
+            frame.get("action") != "history_position"
+            for frame in plugin.websocket_handler.messages
+        )
+
+
 class TestSceneMessagePluginAutosavesAfterMutation:
     """All four mutation handlers must autosave AFTER their mutation so the
     change reaches the on-disk changelog — forks taken from the changelog
@@ -262,4 +325,5 @@ class TestSceneMessagePluginAutosavesAfterMutation:
         await plugin.handle_swap_revision({"id": msg.id, "index": 2})
 
         names = [name for name, _ in plugin._spy_order]
-        assert names == ["swap_revision", "auto_save"]
+        assert names == ["swap_revision"]
+        assert plugin.scene.saved is False

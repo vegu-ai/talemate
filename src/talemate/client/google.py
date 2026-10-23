@@ -42,6 +42,8 @@ SUPPORTED_MODELS = [
     "gemini-3.1-pro-preview",
     "gemini-3-flash-preview",
     "gemini-3.5-flash",
+    "gemini-3.7-flash",
+    "gemini-3.8-flash",
 ]
 
 ALWAYS_REASONING_MODELS = [
@@ -51,7 +53,7 @@ ALWAYS_REASONING_MODELS = [
     "gemini-3.5",
 ]
 
-DEFAULT_MODEL = "gemini-3.5-flash"
+DEFAULT_MODEL = "gemini-3.8-flash"
 
 # Older versions communicated an incomplete setup by overwriting the client's
 # model name with this sentinel. That value could leak back into the persisted
@@ -68,6 +70,7 @@ class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
 
 
 class ClientConfig(ConcurrentInference, EndpointOverride, BaseClientConfig):
+    concurrent_inference_enabled: bool = True
     disable_safety_settings: bool = False
 
 

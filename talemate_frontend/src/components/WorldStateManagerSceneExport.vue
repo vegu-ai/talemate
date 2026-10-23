@@ -32,7 +32,7 @@
                 <v-row v-if="format === 'talemate_complete'">
                     <v-col cols="12">
                         <v-card variant="outlined" class="pa-3">
-                            <v-card-title class="text-subtitle-1">Include in Export</v-card-title>
+                            <v-card-title class="text-body-large">Include in Export</v-card-title>
                             <v-row>
                                 <v-col cols="6" md="3">
                                     <v-checkbox

@@ -1,0 +1,7 @@
+{% import "decision-visual-selection.jinja2" as visual %}
+{% set threshold = 0.9 %}
+{{ visual.select("avatar-selection", state, slot="avatar", kind="portrait",
+    current=state.current_avatar.id if state.current_avatar else none, assets=assets, threshold=threshold,
+    fits_current="Does the current avatar still fit this character in this message? Judge the name and tags of current_avatar in the state against the character's appearance and situation. If there is no current avatar, answer no.",
+    which="Which existing portrait fits this character in this message? Choose none if none fits well.",
+    none_fits="None of the existing portraits fits well; use the usual selection or generation request.") }}

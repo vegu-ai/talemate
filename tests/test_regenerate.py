@@ -35,6 +35,7 @@ from talemate.scene_message import (
     ContextInvestigationMessage,
     NarratorMessage,
     ReinforcementMessage,
+    SceneBackdropMessage,
 )
 from talemate.tale_mate import Actor, Scene
 
@@ -724,6 +725,231 @@ class TestRegenerate:
         assert isinstance(result, list)
         # Result should contain the new narrator message + new reinforcement.
         assert any(m.message == new_text for m in result)
+
+    @pytest.mark.asyncio
+    async def test_replaced_reinforcements_leave_the_feed(
+        self, scene, register_agent, _silence_emit_and_signals
+    ):
+        class _NarratorAgent:
+            async def progress_story(self, **kwargs):
+                return NarratorMessage(message="regen narration")
+
+        class _WorldStateAgent:
+            async def update_reinforcement(self, **kwargs):
+                return ReinforcementMessage(message="new reinforced")
+
+        register_agent("narrator", _NarratorAgent())
+        register_agent("world_state", _WorldStateAgent())
+        narration = NarratorMessage(message="old")
+        narration.meta = {
+            "agent": "narrator",
+            "function": "progress_story",
+            "arguments": {},
+        }
+        reinforce = ReinforcementMessage(message="reinforced")
+        reinforce.meta = {
+            "agent": "world_state",
+            "function": "update_reinforcement",
+            "arguments": {},
+        }
+        scene.history = [narration, reinforce]
+
+        await regenerate(scene)
+
+        removed = [
+            e["kwargs"].get("id")
+            for e in _silence_emit_and_signals
+            if e["name"] == "remove_message"
+        ]
+        assert removed == [reinforce.id]
+
+    CHOICES = "player_choice"
+
+    @classmethod
+    def _feed_after(cls, initial, emitted):
+        """Replay the frames on a feed of row ids the way the frontend does
+        for the state update, backdrop and transition rows a regenerate
+        touches: a removal drops the row (never the choices row, which answers
+        the story), a row frame updates it in place or adds it before a
+        trailing choices row, and a reorder puts the listed rows in order at
+        the first of them."""
+        feed = list(initial)
+        for entry in emitted:
+            row = entry["kwargs"].get("id")
+            if entry["name"] == "remove_message":
+                feed = [item for item in feed if item != row]
+            elif entry["name"] == "row" and row not in feed:
+                if feed and feed[-1] == cls.CHOICES:
+                    feed.insert(len(feed) - 1, row)
+                else:
+                    feed.append(row)
+            elif entry["name"] == "reorder_messages":
+                ids = entry["kwargs"]["kwargs"]["ids"]
+                start = next(i for i, item in enumerate(feed) if item in ids)
+                rest = [item for item in feed if item not in ids]
+                feed = rest[:start] + [i for i in ids if i in feed] + rest[start:]
+        return feed
+
+    @staticmethod
+    def _reinforcement(message="reinforced"):
+        reinforce = ReinforcementMessage(message=message)
+        reinforce.meta = {
+            "agent": "world_state",
+            "function": "update_reinforcement",
+            "arguments": {},
+        }
+        return reinforce
+
+    @pytest.mark.asyncio
+    async def test_a_new_answer_keeps_its_place_above_a_restored_backdrop(
+        self, scene, register_agent, _silence_emit_and_signals, monkeypatch
+    ):
+        emitted = _silence_emit_and_signals
+
+        class _NarratorAgent:
+            async def progress_story(self, **kwargs):
+                return NarratorMessage(message="regen narration")
+
+        class _WorldStateAgent:
+            async def update_reinforcement(self, **kwargs):
+                answer = ReinforcementMessage(message="new reinforced")
+                scene.history.append(answer)
+                emitted.append({"name": "row", "kwargs": {"id": answer.id}})
+                return answer
+
+        register_agent("narrator", _NarratorAgent())
+        register_agent("world_state", _WorldStateAgent())
+        monkeypatch.setattr(
+            scene,
+            "emit_history_message",
+            lambda message: emitted.append(
+                {"name": "row", "kwargs": {"id": message.id}}
+            ),
+        )
+        narration = NarratorMessage(message="old")
+        narration.meta = {
+            "agent": "narrator",
+            "function": "progress_story",
+            "arguments": {},
+        }
+        reinforce = self._reinforcement()
+        backdrop = SceneBackdropMessage(backdrop="harbour-night")
+        scene.history = [narration, reinforce, backdrop]
+
+        await regenerate(scene)
+
+        history = [message.id for message in scene.history]
+        assert scene.history[1].message == "new reinforced"
+        assert history[2] == backdrop.id
+        assert self._feed_after(
+            [narration.id, reinforce.id, backdrop.id, self.CHOICES], emitted
+        ) == [*history, self.CHOICES]
+        removed = [e["kwargs"]["id"] for e in emitted if e["name"] == "remove_message"]
+        assert removed == [reinforce.id]
+
+    @pytest.mark.asyncio
+    async def test_a_new_answer_lands_before_the_choices_row(
+        self, scene, register_agent, _silence_emit_and_signals
+    ):
+        emitted = _silence_emit_and_signals
+
+        class _NarratorAgent:
+            async def progress_story(self, **kwargs):
+                return NarratorMessage(message="regen narration")
+
+        class _WorldStateAgent:
+            async def update_reinforcement(self, **kwargs):
+                answer = ReinforcementMessage(message="new reinforced")
+                scene.history.append(answer)
+                emitted.append({"name": "row", "kwargs": {"id": answer.id}})
+                return answer
+
+        register_agent("narrator", _NarratorAgent())
+        register_agent("world_state", _WorldStateAgent())
+        narration = NarratorMessage(message="old")
+        narration.meta = {
+            "agent": "narrator",
+            "function": "progress_story",
+            "arguments": {},
+        }
+        reinforce = self._reinforcement()
+        scene.history = [narration, reinforce]
+
+        await regenerate(scene)
+
+        history = [message.id for message in scene.history]
+        assert self._feed_after(
+            [narration.id, reinforce.id, self.CHOICES], emitted
+        ) == [*history, self.CHOICES]
+
+    @pytest.mark.asyncio
+    async def test_a_failed_regenerate_sends_nothing_for_unchanged_rows(
+        self, scene, register_agent, _silence_emit_and_signals, monkeypatch
+    ):
+        emitted = _silence_emit_and_signals
+
+        class _NarratorAgent:
+            async def progress_story(self, **kwargs):
+                raise RuntimeError("provider error")
+
+        register_agent("narrator", _NarratorAgent())
+        monkeypatch.setattr(
+            scene,
+            "emit_history_message",
+            lambda message: emitted.append(
+                {"name": "row", "kwargs": {"id": message.id}}
+            ),
+        )
+        narration = NarratorMessage(message="old")
+        narration.meta = {
+            "agent": "narrator",
+            "function": "progress_story",
+            "arguments": {},
+        }
+        reinforce = self._reinforcement()
+        backdrop = SceneBackdropMessage(backdrop="harbour-night")
+        scene.history = [narration, reinforce, backdrop]
+
+        await regenerate(scene)
+
+        assert scene.history == [narration, reinforce, backdrop]
+        assert [
+            e for e in emitted if e["name"] in ("remove_message", "reorder_messages")
+        ] == []
+        initial = [narration.id, reinforce.id, backdrop.id, self.CHOICES]
+        assert self._feed_after(initial, emitted) == initial
+
+    @pytest.mark.asyncio
+    async def test_an_interrupted_rerun_leaves_no_popped_answer_in_the_feed(
+        self, scene, register_agent, _silence_emit_and_signals
+    ):
+        class _NarratorAgent:
+            async def progress_story(self, **kwargs):
+                return NarratorMessage(message="regen narration")
+
+        class _WorldStateAgent:
+            async def update_reinforcement(self, **kwargs):
+                raise GenerationCancelled("interrupted")
+
+        register_agent("narrator", _NarratorAgent())
+        register_agent("world_state", _WorldStateAgent())
+        narration = NarratorMessage(message="old")
+        narration.meta = {
+            "agent": "narrator",
+            "function": "progress_story",
+            "arguments": {},
+        }
+        first = self._reinforcement("first")
+        second = self._reinforcement("second")
+        scene.history = [narration, first, second]
+
+        with pytest.raises(GenerationCancelled):
+            await regenerate(scene)
+
+        assert [message.id for message in scene.history] == [narration.id]
+        assert self._feed_after(
+            [narration.id, first.id, second.id], _silence_emit_and_signals
+        ) == [narration.id]
 
     @pytest.mark.asyncio
     async def test_inplace_update_preserves_message_id_and_swaps_text(

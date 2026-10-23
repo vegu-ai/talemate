@@ -6,7 +6,7 @@
                     <v-row>
                         <v-col cols="12">
                             <v-text-field 
-                                :disabled="!isNewState" 
+                                :disabled="!isNewState || creating" 
                                 v-model="state.question" 
                                 label="Question or State description" 
                                 :rules="rules"
@@ -25,7 +25,7 @@
                                 hint="You can leave this blank as it will be automatically generated. Or you can fill it in to start with a specific answer."
                                 :color="dirty ? 'dirty' : ''"
                                 @update:model-value="dirty = true"
-                                @blur="handleBlur(false)"
+                                @blur="handleBlur(false, true)"
                                 max-rows="15"
                                 auto-grow
                                 rows="5">
@@ -81,9 +81,10 @@
                 <p v-if="busy">
                     <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
                 </p>
+                <v-alert v-if="error" type="error" variant="tonal" density="compact" closable class="mx-4 mb-2" @click:close="error = null">{{ error }}</v-alert>
                 <v-card-actions v-if="isNewState">
                     <v-spacer></v-spacer>
-                    <v-btn @click="save()" color="primary" prepend-icon="mdi-text-box-plus">Create</v-btn>
+                    <v-btn @click="createState" color="primary" prepend-icon="mdi-text-box-plus" :loading="creating" :disabled="creating">Create</v-btn>
                 </v-card-actions>
                 <v-card-actions v-else>
                     <ConfirmActionInline @confirm="remove" action-label="Remove State Reinforcement" confirm-label="Confirm removal" />
@@ -100,7 +101,7 @@
                     <br><br>
                     Add a new state or select an existing one to get started.
                     <br><br>
-                    <v-icon color="orange" class="mr-1">mdi-alert</v-icon> If you want to track states for an acting character, do that through the character manager instead.
+                    <v-icon color="warning" class="mr-1">mdi-alert</v-icon> If you want to track states for an acting character, do that through the character manager instead.
                 </v-alert>
             </v-card>
         </v-col>
@@ -111,6 +112,7 @@
 <script>
 
 import ConfirmActionInline from './ConfirmActionInline.vue';
+import { newUuid } from '@/utils/uuid';
 
 export default {
     name: 'WorldStateManagerWorldEntries',
@@ -126,6 +128,9 @@ export default {
         isNewState() {
             return this.state && this.state.isNew;
         },
+        creating() {
+            return this.creatingQuestion !== null;
+        },
     },
     data() {
         return {
@@ -135,6 +140,12 @@ export default {
             state: null,
             busy: false,
             dirty: false,
+            // the question a running Create saved; the card binds to that state once it arrives
+            creatingQuestion: null,
+            createFailure: null,
+            // a failure belongs to this Create only when it echoes this id
+            creatingRequestId: null,
+            error: null,
             formValid: false,
             rules: [
                 v => !!v || 'Question is required',
@@ -167,6 +178,27 @@ export default {
             immediate: true,
             handler(states) {
                 this.states = {...states}
+                if (!this.creating) {
+                    return;
+                }
+                const question = this.creatingQuestion;
+                const failure = this.createFailure;
+                if (this.states[question]) {
+                    this.creatingQuestion = null;
+                    this.creatingRequestId = null;
+                    this.createFailure = null;
+                    this.$nextTick(() => {
+                        this.select(question);
+                        if (failure) {
+                            this.error = `The state was created, but its first answer failed: ${failure}`;
+                        }
+                    });
+                } else if (failure) {
+                    this.creatingQuestion = null;
+                    this.creatingRequestId = null;
+                    this.createFailure = null;
+                    this.error = `The state was not created: ${failure}`;
+                }
             }
         },
     },
@@ -187,33 +219,61 @@ export default {
             }, delay);
         },
 
-        save(updateState, only_if_dirty = false) {
+        // autosave of an existing state; a draft is only saved by createState
+        save(updateState, only_if_dirty = false, answerConfirmed = false) {
+
+            if(this.isNewState) {
+                return;
+            }
 
             if(only_if_dirty && !this.dirty) {
                 return;
             }
 
-            this.busy = true;
             this.$refs.form.validate();
             if(!this.formValid) {
                 return;
             }
+            this.busy = true;
+            this.sendSave(updateState, answerConfirmed);
+        },
+
+        async createState() {
+            if(!this.isNewState || this.creating) {
+                return;
+            }
+            const { valid } = await this.$refs.form.validate();
+            if(!valid) {
+                return;
+            }
+            this.error = null;
+            this.createFailure = null;
+            this.creatingQuestion = this.state.question;
+            this.creatingRequestId = newUuid();
+            this.busy = true;
+            this.sendSave(true, false, this.creatingRequestId);
+        },
+
+        sendSave(updateState, answerConfirmed, requestId = undefined) {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'set_world_state_reinforcement',
                 question: this.state.question,
                 answer: this.state.answer,
+                answer_confirmed: answerConfirmed,
                 instructions: this.state.instructions,
                 interval: this.state.interval,
                 insert: this.state.insert,
-                update_state: updateState || this.state.isNew,
+                update_state: !!updateState,
+                request_id: requestId,
             }));
-            if(this.state.isNew) {
-                this.state.isNew = false;
-            }
         },
 
         create() {
+            this.creatingQuestion = null;
+            this.creatingRequestId = null;
+            this.createFailure = null;
+            this.error = null;
             this.state = {
                 question: '',
                 answer: '',
@@ -225,12 +285,15 @@ export default {
         },
 
         select(id) {
-            console.log({id, states: this.states})
             if (!this.states[id]) {
                 console.warn(`State "${id}" not found`);
                 return;
             }
             this.state = this.states[id];
+            this.creatingQuestion = null;
+            this.creatingRequestId = null;
+            this.createFailure = null;
+            this.error = null;
             this.$nextTick(() => {
                 this.dirty = false;
                 this.$refs.form.validate();
@@ -252,10 +315,10 @@ export default {
             this.state = null;
         },
 
-        handleBlur(update = false) {
+        handleBlur(update = false, answerConfirmed = false) {
             // Only auto-save on blur for existing states
             if (!this.isNewState) {
-                this.save(update, true);
+                this.save(update, true, answerConfirmed);
             }
         },
 
@@ -290,6 +353,12 @@ export default {
                 }
             } else if(message.action === 'operation_done') {
                 this.busy = false;
+                // the state is stored before its first answer is generated, so a
+                // failure may still have created it: the reload decides
+                if (message.error && message.failed_action === 'set_world_state_reinforcement' && this.creating && message.request_id === this.creatingRequestId) {
+                    this.createFailure = message.error.message;
+                    this.requestWorld();
+                }
             }
         },
     },

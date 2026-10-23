@@ -1,4 +1,5 @@
 import asyncio
+
 import structlog
 from typing import ClassVar
 from talemate.game.engine.nodes.core import (
@@ -26,7 +27,10 @@ from talemate.agents.visual.schema import (
     AssetAttachmentContext,
     AnalysisRequest,
 )
+from talemate.agents.visual.analyze import DEFAULT_ANALYSIS_PROMPT
 from talemate.context import active_scene
+from talemate.exceptions import ControlFlowException, GenerationCancelled
+from talemate.util.async_tools import bounded_gather
 
 __all__ = [
     "VisualSettings",
@@ -307,7 +311,7 @@ class Prompt(Node):
             name="prompt_type",
             type="str",
             description="The type of prompt to create",
-            default="KEYWORDS",
+            default="DESCRIPTIVE",
             choices=PROMPT_TYPE.choice_values(),
         )
 
@@ -317,7 +321,7 @@ class Prompt(Node):
     def setup(self):
         self.add_input("prompt_type", socket_type="str", optional=True)
         self.add_input("parts", socket_type="list", optional=True)
-        self.set_property("prompt_type", "KEYWORDS")
+        self.set_property("prompt_type", "DESCRIPTIVE")
         self.add_output("prompt", socket_type="visual/prompt")
 
     async def run(self, state: GraphState):
@@ -351,6 +355,8 @@ class UnpackPrompt(Node):
     - negative_prompt: Negative prompt compiled according to prompt_type
     - positive_prompt_keywords: Positive prompt compiled as comma-separated keywords
     - negative_prompt_keywords: Negative prompt compiled as comma-separated keywords
+    - positive_keywords: Positive keywords of all parts as a list ("no X" keywords excluded)
+    - negative_keywords: Negative keywords of all parts as a list (implied "no X" negatives included)
     - positive_prompt_descriptive: Positive prompt compiled as descriptive text
     - negative_prompt_descriptive: Negative prompt compiled as descriptive text
     """
@@ -368,6 +374,8 @@ class UnpackPrompt(Node):
         self.add_output("negative_prompt", socket_type="str")
         self.add_output("positive_prompt_keywords", socket_type="str")
         self.add_output("negative_prompt_keywords", socket_type="str")
+        self.add_output("positive_keywords", socket_type="list")
+        self.add_output("negative_keywords", socket_type="list")
         self.add_output("positive_prompt_descriptive", socket_type="str")
         self.add_output("negative_prompt_descriptive", socket_type="str")
 
@@ -384,6 +392,8 @@ class UnpackPrompt(Node):
                 "negative_prompt": prompt.negative_prompt,
                 "positive_prompt_keywords": prompt.positive_prompt_keywords,
                 "negative_prompt_keywords": prompt.negative_prompt_keywords,
+                "positive_keywords": prompt.positive_keywords,
+                "negative_keywords": prompt.negative_keywords,
                 "positive_prompt_descriptive": prompt.positive_prompt_descriptive,
                 "negative_prompt_descriptive": prompt.negative_prompt_descriptive,
             }
@@ -628,7 +638,12 @@ class SelectBackend(AgentNode):
 
     async def run(self, state: GraphState):
         vis_type = self.normalized_input_value("vis_type")
-        reference_assets = self.normalized_input_value("reference_assets") or []
+        scene = active_scene.get()
+        reference_assets = [
+            asset_id
+            for asset_id in self.normalized_input_value("reference_assets") or []
+            if scene.assets.validate_asset_id(asset_id)
+        ]
 
         gen_type: GEN_TYPE = GEN_TYPE.TEXT_TO_IMAGE
 
@@ -681,6 +696,11 @@ class GenerationRequestNode(AgentNode):
     - callback: callback function to run after generation (optional)
     - extra_config: additional configuration dict (optional)
     - asset_attachment_context: controls automatic asset attachment behavior (optional)
+    - purpose: why the image is generated, checked by Generation Running (optional)
+    - automatic_source: the feature that starts this generation without a user
+      request; leave empty when the user asked for the image. An automatic
+      request is refused while the Visualizer's Automatic Generation setting is
+      off (optional)
 
     Outputs:
     - generation_request: the created generation request object
@@ -735,6 +755,18 @@ class GenerationRequestNode(AgentNode):
             description="The instructions for the generation request",
             default="",
         )
+        purpose = PropertyField(
+            name="purpose",
+            type="str",
+            description="Why the image is generated, checked by Generation Running",
+            default="",
+        )
+        automatic_source = PropertyField(
+            name="automatic_source",
+            type="str",
+            description="The feature that starts this generation without a user request; empty when the user asked for it",
+            default="",
+        )
 
     def __init__(self, title="Visual Generation Request", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -754,12 +786,16 @@ class GenerationRequestNode(AgentNode):
             socket_type="asset_attachment_context",
             optional=True,
         )
+        self.add_input("purpose", socket_type="str", optional=True)
+        self.add_input("automatic_source", socket_type="str", optional=True)
         self.set_property("vis_type", "UNSPECIFIED")
         self.set_property("gen_type", "TEXT_TO_IMAGE")
         self.set_property("format", "LANDSCAPE")
         self.set_property("character_name", "")
         self.set_property("instructions", "")
         self.set_property("extra_config", {})
+        self.set_property("purpose", "")
+        self.set_property("automatic_source", "")
         self.add_output("generation_request", socket_type="visual/generation_request")
         self.add_output("prompt", socket_type="visual/prompt")
         self.add_output("vis_type", socket_type="str")
@@ -804,6 +840,8 @@ class GenerationRequestNode(AgentNode):
             extra_config=extra_config,
             asset_attachment_context=asset_attachment_context
             or AssetAttachmentContext(),
+            purpose=self.normalized_input_value("purpose") or None,
+            automatic_source=self.normalized_input_value("automatic_source") or None,
         )
         self.set_output_values(
             {
@@ -837,7 +875,8 @@ class GenerateImage(AgentNode):
 
     - state: The state input, passed through
     - generation_request: The generation request, passed through
-    - generation_response: The generation response containing the image
+    - generation_response: The generation response containing the image;
+      its refused flag is set when the agent refused an automatic request
     """
 
     _agent_name: ClassVar[str] = "visual"
@@ -866,6 +905,51 @@ class GenerateImage(AgentNode):
         )
 
 
+@register("agents/visual/GenerationRunning")
+class GenerationRunning(AgentNode):
+    """
+    Whether image generations for a purpose are still running in the active
+    scene. A generation counts from its request until its image is saved, or
+    until it fails or is cancelled. The purpose is the one given to the
+    Visual Generation Request (or to Generate Visual Asset).
+
+    Inputs:
+
+    - purpose: The purpose to check
+
+    Outputs:
+
+    - running: True while at least one generation for the purpose runs
+    - count: How many generations for the purpose are running
+    """
+
+    _agent_name: ClassVar[str] = "visual"
+
+    class Fields:
+        purpose = PropertyField(
+            name="purpose",
+            type="str",
+            description="The purpose to check",
+            default="",
+        )
+
+    def __init__(self, title="Generation Running", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("purpose", socket_type="str", optional=True)
+        self.set_property("purpose", "")
+        self.add_output("running", socket_type="bool")
+        self.add_output("count", socket_type="int")
+
+    async def run(self, state: GraphState):
+        purpose = self.require_input("purpose")
+        if not purpose:
+            raise InputValueError(self, "purpose", "Give the purpose to check.")
+        count = self.agent.generations_running(purpose)
+        self.set_output_values({"running": count > 0, "count": count})
+
+
 @register("agents/visual/UnpackGenerationRequest")
 class UnpackGenerationRequest(AgentNode):
     """
@@ -886,6 +970,8 @@ class UnpackGenerationRequest(AgentNode):
     - gen_type: The generation type
     - extra_config: The extra configuration dict
     - asset_attachment_context: The asset attachment context
+    - automatic_source: The feature that started the generation without a
+      user request; empty for a user request
     """
 
     _agent_name: ClassVar[str] = "visual"
@@ -906,6 +992,7 @@ class UnpackGenerationRequest(AgentNode):
         self.add_output(
             "asset_attachment_context", socket_type="asset_attachment_context"
         )
+        self.add_output("automatic_source", socket_type="str")
 
     async def run(self, state: GraphState):
         generation_request: GenerationRequest = self.require_input("generation_request")
@@ -920,6 +1007,7 @@ class UnpackGenerationRequest(AgentNode):
                 "gen_type": generation_request.gen_type,
                 "extra_config": generation_request.extra_config,
                 "asset_attachment_context": generation_request.asset_attachment_context,
+                "automatic_source": generation_request.automatic_source or "",
             }
         )
 
@@ -941,6 +1029,8 @@ class UnpackGenerationResponse(AgentNode):
     - id: The generation's ID
     - backend_name: The name of the backend that generated the image
     - request: The generation request that produced this response
+    - refused: True when the visual agent refused the request without
+      generating (see the agent.visual.generation.refused event)
     """
 
     _agent_name: ClassVar[str] = "visual"
@@ -956,6 +1046,7 @@ class UnpackGenerationResponse(AgentNode):
         self.add_output("id", socket_type="str")
         self.add_output("backend_name", socket_type="str")
         self.add_output("request", socket_type="visual/generation_request")
+        self.add_output("refused", socket_type="bool")
 
     async def run(self, state: GraphState):
         generation_response: GenerationResponse = self.normalized_input_value(
@@ -969,6 +1060,7 @@ class UnpackGenerationResponse(AgentNode):
                 "id": generation_response.id,
                 "backend_name": generation_response.backend_name,
                 "request": generation_response.request,
+                "refused": generation_response.refused,
             }
         )
 
@@ -976,7 +1068,9 @@ class UnpackGenerationResponse(AgentNode):
 @register("agents/visual/AnalyzeImages")
 class AnalyzeImages(AgentNode):
     """
-    Analyzes images in batches using asyncio.Semaphore to limit concurrent requests.
+    Analyzes images in batches, limiting concurrency to what the analysis
+    backend supports (sequential when the backend does not support concurrent
+    analysis).
 
     Inputs:
     - state: graph state (required)
@@ -1009,7 +1103,7 @@ class AnalyzeImages(AgentNode):
             name="prompt",
             type="text",
             description="The prompt to use for image analysis",
-            default="Describe this image in detail. (3 paragraphs max.)",
+            default=DEFAULT_ANALYSIS_PROMPT,
         )
         save = PropertyField(
             name="save",
@@ -1029,9 +1123,7 @@ class AnalyzeImages(AgentNode):
         self.add_input("save", socket_type="bool", optional=True)
 
         self.set_property("missing_only", True)
-        self.set_property(
-            "prompt", "Describe this image in detail. (3 paragraphs max.)"
-        )
+        self.set_property("prompt", DEFAULT_ANALYSIS_PROMPT)
         self.set_property("save", True)
 
         self.add_output("state")
@@ -1072,33 +1164,45 @@ class AnalyzeImages(AgentNode):
             else:
                 assets_to_analyze.append(asset_id)
 
-        # Analyze in batches using semaphore (max 3 concurrent)
-        semaphore = asyncio.Semaphore(3)
+        backend = self.agent.backend_image_analyzation
+        max_concurrent = 3 if backend.supports_concurrent_analysis else 1
+
         analyzed_ids = []
         failed_ids = []
 
         async def analyze_asset(asset_id: str):
-            async with semaphore:
-                try:
-                    log.debug("analyze_images_analyzing", asset_id=asset_id)
-                    request = AnalysisRequest(
-                        prompt=prompt,
-                        asset_id=asset_id,
-                        save=save,
-                    )
-                    await self.agent.analyze(request)
-                    analyzed_ids.append(asset_id)
-                    log.info("analyze_images_success", asset_id=asset_id)
-                except Exception as e:
-                    log.error("analyze_images_failed", asset_id=asset_id, error=str(e))
-                    failed_ids.append(asset_id)
+            try:
+                log.debug("analyze_images_analyzing", asset_id=asset_id)
+                request = AnalysisRequest(
+                    prompt=prompt,
+                    asset_id=asset_id,
+                    save=save,
+                )
+                await self.agent.analyze(request, await_completion=True)
+                analyzed_ids.append(asset_id)
+                log.info("analyze_images_success", asset_id=asset_id)
+            except ControlFlowException:
+                # a user interrupt is batch-fatal, not a per-asset failure -
+                # analyze() consumes the cancel latch on entry, so swallowing
+                # it here would let every queued asset run post-cancel
+                raise
+            except Exception as e:
+                log.error("analyze_images_failed", asset_id=asset_id, error=str(e))
+                failed_ids.append(asset_id)
 
-        # Create tasks for all assets
-        tasks = [analyze_asset(asset_id) for asset_id in assets_to_analyze]
-
-        # Wait for all tasks to complete
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
+        try:
+            await bounded_gather(
+                [analyze_asset(asset_id) for asset_id in assets_to_analyze],
+                max_concurrent=max_concurrent,
+            )
+        except asyncio.CancelledError:
+            # an outer cancel (scene unload, module test-stop) must propagate
+            # or the scene loop zombifies - only a cancel that originated
+            # below (cancel_analysis cancelling the backend tasks) is
+            # translated to the interrupt the graph engine passes through
+            if asyncio.current_task().cancelling() > 0:
+                raise
+            raise GenerationCancelled("Image analysis cancelled")
 
         log.info(
             "analyze_images_complete",
@@ -1118,5 +1222,60 @@ class AnalyzeImages(AgentNode):
                 "analyzed_ids": analyzed_ids,
                 "skipped_ids": skipped_ids,
                 "failed_ids": failed_ids,
+            }
+        )
+
+
+@register("agents/visual/MarkAsReference")
+class MarkAsReference(AgentNode):
+    """
+    Prepares an image as a reference candidate for later generations:
+    analyses it when a vision backend is available and it has no analysis
+    yet, tags it from its analysis, and marks it as a reference for the
+    generation types its own type can serve (a portrait for portraits, cards,
+    scene cards and scene illustrations, a background for backgrounds, scene
+    illustrations and character cards). A failed step does not stop the
+    next. An image without a type is not marked; `errors` says so.
+
+    Inputs:
+    - state: graph state (required)
+    - asset_id: the image to prepare
+
+    Outputs:
+    - state: graph state (passed through)
+    - asset_id: the image (passed through)
+    - marked: whether the image is now marked as a reference
+    - analyzed: whether an analysis was added
+    - tagged: whether tags were added
+    - errors: the failed steps, each as a dict with step and message
+    """
+
+    _agent_name: ClassVar[str] = "visual"
+
+    def __init__(self, title="Mark As Reference", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("asset_id", socket_type="str")
+
+        self.add_output("state")
+        self.add_output("asset_id", socket_type="str")
+        self.add_output("marked", socket_type="bool")
+        self.add_output("analyzed", socket_type="bool")
+        self.add_output("tagged", socket_type="bool")
+        self.add_output("errors", socket_type="list")
+
+    async def run(self, state: GraphState):
+        asset_id = self.require_input("asset_id")
+        progress = await self.agent.mark_as_reference(asset_id)
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "asset_id": asset_id,
+                "marked": progress.marked,
+                "analyzed": progress.analyzed,
+                "tagged": progress.tagged,
+                "errors": [error.model_dump() for error in progress.errors],
             }
         )

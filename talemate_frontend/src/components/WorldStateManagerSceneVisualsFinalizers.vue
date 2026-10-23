@@ -22,13 +22,13 @@
 
     <div v-else-if="actionSchema">
         <v-alert density="compact" variant="tonal" color="primary" class="mt-4 mb-3" icon="mdi-movie-open-cog-outline">
-            <div class="text-caption">
+            <div class="text-body-small">
                 These are the Visualizer agent's scene overrides for Prompt Finalization, stored in
                 <code v-if="sceneProjectName">{{ sceneProjectName }}/{{ sceneSettingsDirname }}/{{ effectiveFilename }}</code>
                 <code v-else>{{ sceneSettingsDirname }}/{{ effectiveFilename }}</code>
             </div>
         </v-alert>
-        <div class="text-caption text-muted mb-3">
+        <div class="text-body-small text-muted mb-3">
             <v-icon size="x-small" class="mr-1">mdi-gesture-tap-button</v-icon>
             Click <v-icon size="x-small" class="mx-1">mdi-link-variant-off</v-icon> next to a field to activate an override for this scene.
         </div>
@@ -45,12 +45,24 @@
             @change="dirty = true"
         />
 
+        <SceneOverridePendingSave v-if="pendingSave" class="mt-3" />
+        <v-alert
+            v-if="error"
+            type="error"
+            variant="tonal"
+            density="compact"
+            closable
+            class="mt-3 text-body-small"
+            @click:close="error = null"
+        >{{ error }}</v-alert>
+
         <div class="mt-4">
             <v-btn
                 color="primary"
                 variant="tonal"
                 prepend-icon="mdi-content-save"
-                :disabled="!dirty"
+                :disabled="!dirty || saving"
+                :loading="saving"
                 @click="saveSceneOverrides"
             >
                 Save
@@ -60,7 +72,7 @@
                 color="cancel"
                 variant="text"
                 prepend-icon="mdi-cancel"
-                :disabled="!dirty"
+                :disabled="!dirty || saving"
                 @click="resetOverrides"
             >
                 Reset
@@ -81,9 +93,11 @@
 
 <script>
 import AgentSceneSettings from './AgentSceneSettings.vue';
+import SceneOverridePendingSave from './SceneOverridePendingSave.vue';
 import {
     DEFAULT_SCENE_AGENT_SETTINGS_FILENAME,
     SCENE_AGENT_SETTINGS_DIRNAME,
+    actionOverridePatch,
     setActionOverrideSlice,
 } from '@/constants/sceneAgentSettings';
 
@@ -93,6 +107,7 @@ export default {
     name: 'WorldStateManagerSceneVisualsFinalizers',
     components: {
         AgentSceneSettings,
+        SceneOverridePendingSave,
     },
     props: {
         scene: Object,
@@ -100,15 +115,16 @@ export default {
         appConfig: Object,
         templates: Object,
     },
-    inject: ['getWebsocket'],
+    inject: ['patchSceneAgentValues', 'sceneOverridesState'],
     data() {
         return {
             ACTION_KEY,
-            // Full sparse overlay for the visual agent — save_scene_overrides
-            // replaces the agent's whole entry, so untouched actions must be
-            // carried along.
             localOverrides: { actions: {} },
+            // the slice the edits started from: Save writes only what differs
+            seedSlice: {},
             dirty: false,
+            saving: false,
+            error: null,
         }
     },
     computed: {
@@ -133,6 +149,9 @@ export default {
         effectiveFilename() {
             return this.scene?.data?.agent_settings_file || DEFAULT_SCENE_AGENT_SETTINGS_FILENAME;
         },
+        pendingSave() {
+            return !!this.sceneOverridesState?.()?.pendingSave;
+        },
     },
     watch: {
         'visualAgent.scene_overrides': {
@@ -150,7 +169,9 @@ export default {
             this.localOverrides = {
                 actions: seed.actions ? JSON.parse(JSON.stringify(seed.actions)) : {},
             };
+            this.seedSlice = JSON.parse(JSON.stringify(this.localOverrides.actions[ACTION_KEY] || {}));
             this.dirty = false;
+            this.error = null;
         },
 
         updateActionOverrides(perActionOverride) {
@@ -160,19 +181,27 @@ export default {
         },
 
         saveSceneOverrides() {
-            const payload = {
-                type: 'agent_config',
-                action: 'save_scene_overrides',
-                agent_type: 'visual',
-                override: this.localOverrides,
-            };
-            // No file linked yet — fall back to the default filename so other
-            // scenes in this project auto-link to it.
-            if (!this.scene?.data?.agent_settings_file) {
-                payload.filename = DEFAULT_SCENE_AGENT_SETTINGS_FILENAME;
+            const written = JSON.parse(JSON.stringify(this.localOverrides.actions[ACTION_KEY] || {}));
+            const patch = actionOverridePatch('visual', ACTION_KEY, this.seedSlice, written);
+            if (!patch.set.length && !patch.clear.length) {
+                this.resetOverrides();
+                return;
             }
-            this.getWebsocket().send(JSON.stringify(payload));
-            this.dirty = false;
+            this.saving = true;
+            this.error = null;
+            this.patchSceneAgentValues(patch, 'Prompt finalization', {
+                // the status frame that follows reseeds the editor
+                onComplete: () => {
+                    this.saving = false;
+                    this.seedSlice = written;
+                    // an edit made while the save was in flight is still unsaved
+                    this.dirty = JSON.stringify(this.localOverrides.actions[ACTION_KEY] || {}) !== JSON.stringify(written);
+                },
+                onError: (message) => {
+                    this.saving = false;
+                    this.error = message;
+                },
+            });
         },
     },
 }

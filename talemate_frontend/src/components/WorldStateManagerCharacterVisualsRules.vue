@@ -17,15 +17,15 @@
             <div class="d-flex align-start">
                 <v-icon class="mr-3 mt-1" color="primary">mdi-information-outline</v-icon>
                 <div class="text-muted">
-                    <div class="text-primary text-subtitle-2 font-weight-bold mb-1">About Static Visual Rules</div>
-                    <p class="text-body-2 mb-2">
+                    <div class="text-primary text-title-small font-weight-bold mb-1">About Static Visual Rules</div>
+                    <p class="text-body-medium mb-2">
                         These rules define permanent physical traits that are enforced for <strong>every</strong> image generated for this character.
                     </p>
-                    <p class="text-body-2 mb-2">
+                    <p class="text-body-medium mb-2">
                         <v-icon size="x-small" color="warning" class="mr-1">mdi-alert-circle-outline</v-icon>
                         <strong>Important:</strong> Do NOT include clothing details, art styles, or anything that might change between scenes.
                     </p>
-                    <p class="text-body-2 mb-0">
+                    <p class="text-body-medium mb-0">
                         <strong>Examples:</strong> "Always has a cybernetic left arm", "Has a distinct birthmark on their neck", "Has heterochromia (left eye blue, right eye green)"
                     </p>
                 </div>

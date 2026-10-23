@@ -377,11 +377,13 @@
     "8b28b6d7-1e6d-454b-b851-94c073f5ce07": {
       "title": "Director Action Summary",
       "id": "8b28b6d7-1e6d-454b-b851-94c073f5ce07",
-      "properties": {},
+      "properties": {
+        "no_calls_result": "Action `direct_scene` FAILED: No scene direction was started because the model returned no callable function."
+      },
       "x": 1418,
       "y": 71,
       "width": 193,
-      "height": 26,
+      "height": 46,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/directorActionSummary",
@@ -699,7 +701,7 @@
       "id": "9f2040ea-b7e0-4e55-9da4-cb34b5aae137",
       "properties": {
         "narration_instructions": "",
-        "duration": "P0T1S"
+        "duration": 1
       },
       "x": -1476,
       "y": 1487,
@@ -728,7 +730,7 @@
       "base_type": "core/Node"
     },
     "d45f746a-3cd4-46f3-82e9-5c2d6bd88ed4": {
-      "title": "ISO Date Duration",
+      "title": "Duration",
       "id": "d45f746a-3cd4-46f3-82e9-5c2d6bd88ed4",
       "properties": {
         "unit": "day",
@@ -1034,6 +1036,10 @@
         {
           "name": "item2",
           "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
@@ -1084,6 +1090,69 @@
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "558b82ea-9332-4c8d-a918-5b123e199d03": {
+      "title": "Agent Report Issue",
+      "id": "558b82ea-9332-4c8d-a918-5b123e199d03",
+      "properties": {
+        "name": "report_issue"
+      },
+      "x": 30,
+      "y": 1920,
+      "width": 151,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/agentReportIssue",
+      "base_type": "core/functions/Function"
+    },
+    "138bfb6f-e4b8-4b9d-ba0f-95abc6460169": {
+      "title": "AI Function Callback",
+      "id": "138bfb6f-e4b8-4b9d-ba0f-95abc6460169",
+      "properties": {
+        "name": "report_issue",
+        "allow_multiple_calls": true
+      },
+      "x": 320,
+      "y": 1920,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "66443ba0-441a-4bd9-81b5-895df0d0dfea": {
+      "title": "SET local.focal_batch",
+      "id": "66443ba0-441a-4bd9-81b5-895df0d0dfea",
+      "properties": {
+        "name": "focal_batch",
+        "scope": "local"
+      },
+      "x": 1450,
+      "y": 1220,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "57adeeb1-6180-45ca-b969-5a0059b64b44": {
+      "title": "GET local.focal_batch",
+      "id": "57adeeb1-6180-45ca-b969-5a0059b64b44",
+      "properties": {
+        "name": "focal_batch",
+        "scope": "local"
+      },
+      "x": 1128,
+      "y": -10,
+      "width": 210,
+      "height": 30,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
       "base_type": "core/Node"
     }
   },
@@ -1284,6 +1353,21 @@
     ],
     "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d.state": [
       "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.item1"
+    ],
+    "558b82ea-9332-4c8d-a918-5b123e199d03.fn": [
+      "138bfb6f-e4b8-4b9d-ba0f-95abc6460169.fn"
+    ],
+    "138bfb6f-e4b8-4b9d-ba0f-95abc6460169.callback": [
+      "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.item3"
+    ],
+    "2a73c2ba-0d80-4e52-9699-e52d9e1244cb.batch": [
+      "66443ba0-441a-4bd9-81b5-895df0d0dfea.value"
+    ],
+    "66443ba0-441a-4bd9-81b5-895df0d0dfea.value": [
+      "777ed1a2-5cb4-4c62-9f20-d6a4ac426944.state_b"
+    ],
+    "57adeeb1-6180-45ca-b969-5a0059b64b44.value": [
+      "8b28b6d7-1e6d-454b-b851-94c073f5ce07.batch"
     ]
   },
   "groups": [

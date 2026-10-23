@@ -1,21 +1,21 @@
 <template>
     <v-list density="compact" slim>
-        <v-list-subheader color="grey">
+        <v-list-subheader>
             <v-icon color="primary" class="mr-1">mdi-account-multiple-plus</v-icon>
             Create
         </v-list-subheader>
         <v-list-item :disabled="newCharacter !== null" prepend-icon="mdi-account-plus" @click.stop="openCharacterCreator(true)">
             <v-list-item-title>Create Character</v-list-item-title>
-            <v-list-item-subtitle class="text-caption">Add a new character to the scene.</v-list-item-subtitle>
+            <v-list-item-subtitle class="text-body-small">Add a new character to the scene.</v-list-item-subtitle>
         </v-list-item>
 
         <v-list-item prepend-icon="mdi-account-arrow-right" @click.stop="openCharacterImporter">
             <v-list-item-title>Import Character</v-list-item-title>
-            <v-list-item-subtitle class="text-caption">Import from another scene.</v-list-item-subtitle>
+            <v-list-item-subtitle class="text-body-small">Import from another scene.</v-list-item-subtitle>
         </v-list-item>
     </v-list>
     <v-list density="compact" slim selectable color="primary" v-model:selected="selected" :opened="openedFolders" @update:opened="onOpenedChange" open-strategy="multiple">
-        <v-list-subheader color="grey">
+        <v-list-subheader>
             <v-icon color="primary" class="mr-1">mdi-account-group</v-icon>
             Characters
         </v-list-subheader>
@@ -24,9 +24,9 @@
                 {{ newCharacter.name || "New character" }}
             </v-list-item-title>
             <v-list-item-subtitle>
-                <div class="text-caption">
-                    <v-chip v-if="!newCharacter.is_player" label size="x-small" color="warning" elevation="7">AI</v-chip>
-                    <v-chip v-else label size="x-small" color="info" elevation="7">Player</v-chip>
+                <div class="text-body-small">
+                    <v-chip v-if="!newCharacter.is_player" label size="x-small" color="warning">AI</v-chip>
+                    <v-chip v-else label size="x-small" color="info">Player</v-chip>
                 </div>
             </v-list-item-subtitle>
         </v-list-item>
@@ -51,7 +51,7 @@
             <template v-slot:activator="{ props }">
                 <v-list-item v-bind="props">
                     <template v-slot:prepend>
-                        <v-chip label size="x-small" variant="flat" :color="folder.anyActive ? 'success' : 'grey-darken-3'" class="mr-2 folder-count-chip">{{ folder.count }}</v-chip>
+                        <v-chip label size="x-small" variant="flat" :color="folder.anyActive ? 'success' : 'surface-light'" class="mr-2 folder-count-chip">{{ folder.count }}</v-chip>
                     </template>
                     <v-list-item-title>{{ folder.name }}</v-list-item-title>
                     <template v-slot:append>
@@ -96,7 +96,7 @@
                     density="compact"
                     :maxlength="folderNameMaxLength"
                 />
-                <p class="text-caption text-muted">
+                <p class="text-body-small text-muted">
                     Renaming "<span class="text-primary">{{ renameDialog.oldName }}</span>" will update every character currently assigned to it.
                 </p>
             </v-card-text>

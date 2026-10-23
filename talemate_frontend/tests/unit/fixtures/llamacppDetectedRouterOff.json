@@ -1,0 +1,9 @@
+{
+  "configured_model": null,
+  "router_mode": false,
+  "router_detected": true,
+  "server_role": "router",
+  "models_autoload": true,
+  "manual_model_choices": ["team/model:Q4 + special&tag", "second"],
+  "error_message": "Router detected. Turn on Router mode to pick a model."
+}

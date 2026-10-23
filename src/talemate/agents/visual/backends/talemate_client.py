@@ -49,6 +49,16 @@ class Backend(backends.Backend):
     def status_cache_key(self) -> str:
         return f"{self.name}-{self.client_name or 'none'}"
 
+    @property
+    def supports_concurrent_analysis(self) -> bool:
+        if not self.client_name:
+            return False
+        try:
+            client = instance.get_client(self.client_name)
+        except KeyError:
+            return False
+        return client.supports_concurrent_inference
+
     def _get_vision_client(self):
         """Retrieve the configured Talemate client and validate vision support."""
         if not self.client_name:
@@ -180,10 +190,9 @@ class TalemateClientMixin:
                     description=(
                         "Select which Talemate client to use for image analysis. "
                         "Only clients with vision enabled are shown. If no clients "
-                        "appear, ensure you have enabled vision in the client's "
-                        "settings (Vision tab) for a client with a vision-capable model."
+                        "appear, enable vision via the eye icon on the client card "
+                        "for a client with a vision-capable model."
                     ),
-                    save_on_change=True,
                     scene_overridable=False,
                 ),
             },
@@ -213,11 +222,8 @@ class TalemateClientMixin:
     ) -> Backend:
         return self.backend_image_analyzation
 
-    async def talemate_client_emit_status(self, processing: bool = None):
-        """Update client choices when status is emitted."""
-        action = self.actions.get("talemate_client_image_analyzation")
-        if not action or "client" not in action.config:
-            return
-
-        choices = TalemateClientMixin._get_vision_client_choices()
-        action.config["client"].choices = choices
+    def talemate_client_update_choices(self):
+        """Offer the vision capable clients as choices."""
+        self.actions["talemate_client_image_analyzation"].config[
+            "client"
+        ].choices = TalemateClientMixin._get_vision_client_choices()

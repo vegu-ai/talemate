@@ -1,7 +1,10 @@
+from talemate.knowledge.transitions import DEPARTURES_KEY
 from typing import Union
 
 import pydantic
 import structlog
+
+from talemate.scene_signals import scene_reset
 
 log = structlog.get_logger("talemate.server.world_state_manager.scene_state_reset")
 
@@ -83,10 +86,13 @@ class SceneStateResetMixin:
             layered_count = len(scene.layered_history)
 
             scene.history = []
+            scene.agent_state.get("conversation", {}).pop(DEPARTURES_KEY, None)
             scene.layered_history = []
+            scene_reset.send(scene)
 
             if payload.wipe_history_include_static:
                 scene.archived_history = []
+                scene.start_ts = 0
                 reset_summary.append(
                     f"Wiped all history ({history_count} messages, {archived_count} archived, {layered_count} layered)"
                 )
@@ -99,6 +105,8 @@ class SceneStateResetMixin:
                 reset_summary.append(
                     f"Wiped history ({history_count} messages, {removed_count} archived, {layered_count} layered), kept {len(static_entries)} static entries"
                 )
+
+            scene.sync_time()
 
             log.info(
                 "Wiped scene history",

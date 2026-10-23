@@ -338,3 +338,103 @@ def test_scene_meta_cache_invalidates_on_mtime(scenes_root):
     _touch(str(save), 2000)
     tree = list_scenes_tree()
     assert tree["projects"][0]["files"][0]["scene_name"] == "Second"
+
+
+def test_save_entries_carry_the_browser_flags(scenes_root):
+    _make_project(scenes_root, "plain", {"save.json": (1000, {"name": "Plain"})})
+
+    entry = list_scenes_tree()["projects"][0]["files"][0]
+
+    assert entry["hidden"] is False
+    assert entry["deprecated"] is False
+
+
+def test_project_dropped_when_every_save_is_hidden(scenes_root):
+    _make_project(
+        scenes_root,
+        "deprecated-project",
+        {
+            "shipped.json": (
+                1000,
+                {"name": "Shipped", "hidden": True, "deprecated": True},
+            ),
+            "shipped-two.json": (2000, {"name": "Shipped Two", "hidden": True}),
+        },
+    )
+    _make_project(
+        scenes_root, "adventure", {"save.json": (1000, {"name": "Adventure"})}
+    )
+
+    tree = list_scenes_tree()
+
+    assert [project["name"] for project in tree["projects"]] == ["adventure"]
+
+
+def test_user_save_unhides_project_and_its_hidden_saves(scenes_root):
+    _make_project(
+        scenes_root,
+        "deprecated-project",
+        {
+            "shipped.json": (
+                1000,
+                {"name": "Shipped", "hidden": True, "deprecated": True},
+            ),
+            "my-playthrough.json": (2000, {"name": "My Playthrough"}),
+        },
+    )
+
+    tree = list_scenes_tree()
+
+    assert [project["name"] for project in tree["projects"]] == ["deprecated-project"]
+
+    files = {entry["filename"]: entry for entry in tree["projects"][0]["files"]}
+    assert set(files) == {"shipped.json", "my-playthrough.json"}
+
+    assert files["shipped.json"]["hidden"] is True
+    assert files["shipped.json"]["deprecated"] is True
+    assert files["my-playthrough.json"]["hidden"] is False
+    assert files["my-playthrough.json"]["deprecated"] is False
+
+
+def test_deprecated_save_is_listed_without_hidden(scenes_root):
+    _make_project(
+        scenes_root,
+        "labelled",
+        {"save.json": (1000, {"name": "Labelled", "deprecated": True})},
+    )
+
+    entry = list_scenes_tree()["projects"][0]["files"][0]
+
+    assert entry["hidden"] is False
+    assert entry["deprecated"] is True
+
+
+def test_sidecar_json_does_not_unhide_a_project(scenes_root):
+    project = _make_project(
+        scenes_root,
+        "deprecated-project",
+        {"shipped.json": (1000, {"name": "Shipped", "hidden": True})},
+    )
+
+    # a scene project writes these for itself and neither write refuses a
+    # hidden or immutable scene, so a user can hold one without a save
+    _write_json(str(project / "agent-settings" / "agent-settings.json"), {})
+    _write_json(str(project / "shared-context" / "ctx.json"), {})
+
+    tree = list_scenes_tree()
+
+    assert tree["projects"] == []
+
+
+def test_sidecar_json_is_not_listed_as_a_save(scenes_root):
+    project = _make_project(
+        scenes_root, "adventure", {"save.json": (1000, {"name": "Adventure"})}
+    )
+    _write_json(str(project / "agent-settings" / "agent-settings.json"), {})
+    _write_json(str(project / "shared-context" / "ctx.json"), {})
+
+    tree = list_scenes_tree()
+
+    assert [entry["filename"] for entry in tree["projects"][0]["files"]] == [
+        "save.json"
+    ]

@@ -22,6 +22,9 @@ __all__ = [
     "separate_sentences",
     "strip_hidden_markers",
     "DialogueChunk",
+    "PassageParts",
+    "split_passages_dialogue_and_prose",
+    "TextScope",
 ]
 
 log = structlog.get_logger("talemate.util.dialogue")
@@ -29,10 +32,18 @@ log = structlog.get_logger("talemate.util.dialogue")
 AUTOCOMPLETE_HINT_RE = re.compile(r"\s*\{([^{}]+)\}\s*$")
 
 
+TextScope = Literal["all", "dialogue", "prose"]
+
+
 class DialogueChunk(pydantic.BaseModel):
     text: str
     type: Literal["dialogue", "exposition"]
     speaker: str | None = None
+
+
+class PassageParts(pydantic.BaseModel):
+    dialogue: str
+    prose: str
 
 
 def handle_endofline_special_delimiter(content: str) -> str:
@@ -315,9 +326,6 @@ def ensure_dialog_line_format(line: str, default_wrap: str = None) -> str:
 
     for i in range(len(line)):
         c = line[i]
-
-        # print("segment_open", segment_open)
-        # print("segment", segment)
 
         if c in ['"', "*"]:
             if segment_open == c:
@@ -624,6 +632,49 @@ def separate_dialogue_from_exposition(text: str) -> list[DialogueChunk]:
         chunks.append(DialogueChunk(text=current_segment, type=chunk_type))
 
     return chunks
+
+
+def _join_parts(parts: list[str]) -> str:
+    return " ".join(
+        part.strip() for part in parts if any(char.isalnum() for char in part)
+    )
+
+
+def split_passages_dialogue_and_prose(
+    text: str, passages: list[str]
+) -> list[PassageParts]:
+    """
+    The dialogue and the prose of each passage, where the passages are consecutive
+    substrings of `text` (sentences, for example). The text is split as a whole, so
+    a quote that spans passages stays dialogue. A part with no word characters is
+    empty.
+    """
+    spans = []
+    position = 0
+    for chunk in separate_dialogue_from_exposition(text):
+        length = len(chunk.text)
+        # the split drops a leading {speaker} marker from the chunk text
+        if chunk.speaker and text.startswith(f'"{{{chunk.speaker}}}', position):
+            length += len(chunk.speaker) + 2
+        spans.append((position, position + length, chunk.type))
+        position += length
+
+    result = []
+    cursor = 0
+    for passage in passages:
+        start = text.index(passage, cursor)
+        end = cursor = start + len(passage)
+        parts = {"dialogue": [], "exposition": []}
+        for span_start, span_end, kind in spans:
+            if span_start < end and span_end > start:
+                parts[kind].append(text[max(span_start, start) : min(span_end, end)])
+        result.append(
+            PassageParts(
+                dialogue=_join_parts(parts["dialogue"]),
+                prose=_join_parts(parts["exposition"]),
+            )
+        )
+    return result
 
 
 def strip_hidden_markers(

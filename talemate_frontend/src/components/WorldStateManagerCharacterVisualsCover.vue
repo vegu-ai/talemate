@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="mb-4">
-            <div class="text-subtitle-2 text-medium-emphasis">
+            <div class="text-title-small text-medium-emphasis">
                 Select a cover image for <span class="text-primary">{{ character.name }}</span>
             </div>
         </div>
@@ -21,7 +21,7 @@
         >
             <template #empty>
                 <p class="mt-2">No cover images found for {{ character.name }}</p>
-                <p class="text-caption">Generate a CHARACTER_CARD image in the Visual Library to add cover images.</p>
+                <p class="text-body-small">Generate a CHARACTER_CARD image in the Visual Library to add cover images.</p>
             </template>
             <template #badges="{ asset }">
                 <VisualAssetBadge v-if="currentCoverImageId === asset.id" icon="mdi-check" label="Current" />
@@ -74,7 +74,7 @@
             </template>
         </VisualAssetGrid>
 
-        <v-alert icon="mdi-image-frame" density="compact" variant="text" color="grey" class="mt-4">
+        <v-alert icon="mdi-image-frame" density="compact" variant="text" class="mt-4 text-medium-emphasis">
             <p>
                 Cover images showcase a character's appearance, personality, and style. They are typically
                 full-body or upper-body images with a <strong>portrait orientation</strong>, ideal for character reference cards.
@@ -180,7 +180,8 @@
 </template>
 
 <script>
-import { v4 as uuidv4 } from 'uuid';
+import { newUuid } from '@/utils/uuid';
+import { assetTarget, setAssetMessage } from '@/utils/assetTargets';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import AssetViewMixin from './AssetViewMixin.js';
 import VisualAssetGenerateMixin from './VisualAssetGenerateMixin.js';
@@ -310,12 +311,9 @@ export default {
         setCoverImageForAsset(assetId) {
             if (!assetId) return;
 
-            this.getWebsocket().send(JSON.stringify({
-                type: 'scene_assets',
-                action: 'set_character_cover_image',
-                asset_id: assetId,
-                character_name: this.character.name,
-            }));
+            this.getWebsocket().send(JSON.stringify(
+                setAssetMessage(assetId, [assetTarget.characterCover(this.character.name)]),
+            ));
 
             // Request character details to sync up the UI after setting cover image
             this.requestCharacterDetails();
@@ -324,11 +322,7 @@ export default {
         setSceneCoverImage(assetId) {
             if (!assetId) return;
 
-            this.getWebsocket().send(JSON.stringify({
-                type: 'scene_assets',
-                action: 'set_scene_cover_image',
-                asset_id: assetId,
-            }));
+            this.getWebsocket().send(JSON.stringify(setAssetMessage(assetId, [assetTarget.sceneCover()])));
         },
 
         startGenerateNew() {
@@ -395,7 +389,7 @@ export default {
                 inline_reference: null,
                 asset_attachment_context: {
                     allow_override: true,
-                    asset_name: `cover_${this.character.name}_${uuidv4().slice(0, 10)}_${idx + 1}`,
+                    asset_name: `cover_${this.character.name}_${newUuid().slice(0, 10)}_${idx + 1}`,
                 },
             }));
         },

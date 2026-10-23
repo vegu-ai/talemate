@@ -3,7 +3,15 @@ from typing import TYPE_CHECKING, Literal
 
 import pydantic
 
-from talemate.world_state.templates.base import Template, register
+from talemate.world_state.templates.base import (
+    Template,
+    register,
+    repairs_unknown_choices,
+)
+from talemate.world_state.templates.decision_checks import (
+    DecisionCheck,
+    load_decision_checks,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -35,6 +43,34 @@ class PhraseDetection(pydantic.BaseModel):
 class WritingStyle(Template):
     description: str | None = None
     phrases: list[PhraseDetection] = pydantic.Field(default_factory=list)
+    decision_checks: list[DecisionCheck] = pydantic.Field(default_factory=list)
+
+    @pydantic.field_validator("decision_checks", mode="before")
+    @classmethod
+    def repair_stored_checks(cls, value, info):
+        return (
+            load_decision_checks(value, info)
+            if repairs_unknown_choices(info)
+            else value
+        )
+
+    @pydantic.field_validator("decision_checks")
+    @classmethod
+    def unique_question_ids(cls, checks):
+        ids = [question.id for check in checks for question in check.questions]
+        if len(ids) != len(set(ids)):
+            raise ValueError(
+                "Decision question IDs must be unique within a writing style"
+            )
+        return checks
+
+    @property
+    def active_prose_rules(self) -> list[PhraseDetection]:
+        return [
+            rule
+            for rule in self.phrases
+            if rule.active and rule.phrase and rule.instructions
+        ]
 
     def render(self, scene: "Scene", character_name: str):
         return self.formatted("instructions", scene, character_name)

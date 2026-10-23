@@ -17,31 +17,31 @@
                                 <span class="mr-2">{{ key }}</span> {{ value }}
                             </v-chip>
                         </v-list-item-title>
-                        <div class="text-muted text-caption agent-message-text" v-if="typeof message.message === 'string'">
+                        <div class="text-muted text-body-small agent-message-text" v-if="typeof message.message === 'string'">
                             {{ message.message }}
                         </div>
                         <v-list v-else>
                             <v-list-item v-for="(section, key) in message.message" :key="key">
                                 <v-list-item-subtitle>{{ section.subtitle }}</v-list-item-subtitle>
                                 <div v-if="typeof section.content === 'string'">
-                                    <div v-if="section.process === 'diff'" v-html="section.content" class="text-muted text-caption agent-message-text"></div>
-                                    <div v-else class="text-muted text-caption agent-message-text">
+                                    <div v-if="section.process === 'diff'" v-html="sanitizeHtml(section.content)" class="text-muted text-body-small agent-message-text"></div>
+                                    <div v-else class="text-muted text-body-small agent-message-text">
                                         {{ section.content }}
                                     </div>  
                                 </div>
                                 <div v-else-if="typeof section.content === 'object'">
-                                    <div v-for="(item, index) in section.content" :key="index" class="text-muted text-caption agent-message-text">
+                                    <div v-for="(item, index) in section.content" :key="index" class="text-muted text-body-small agent-message-text">
                                        {{ item }}
                                     </div>
                                 </div>
                                 <div v-else>
-                                    <div class="text-muted text-caption agent-message-text">
+                                    <div class="text-muted text-body-small agent-message-text">
                                         {{ section.content }}
                                     </div>
                                 </div>
                             </v-list-item>
                         </v-list>
-                        <v-divider color="white"></v-divider>
+                        <v-divider color="border"></v-divider>
                     </v-list-item>
 
                 </v-list>
@@ -50,6 +50,8 @@
     </v-dialog>
 </template>
 <script>
+
+import { sanitizeHtml } from '@/utils/htmlSanitizer.js';
 
 export default {
     name: "AgentMessages",
@@ -88,14 +90,14 @@ export default {
     },
     watch: {
         messageReceiveTime: {
-            handler(val) {
-                console.log("messageReceiveTime", val)
+            handler() {
                 this.pulseButton();
             },
             immediate: true
         }
     },
     methods: {
+        sanitizeHtml,
         openDialog() {
             this.dialog = true
         },
@@ -119,7 +121,7 @@ export default {
 </style>
 <style>
 span.diff-delete {
-    color: rgb(var(--v-theme-disabled));
+    color: rgb(var(--v-theme-inactive));
 }
 .diff-insert {
     color: rgb(var(--v-theme-success));

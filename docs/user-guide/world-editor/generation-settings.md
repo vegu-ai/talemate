@@ -72,7 +72,9 @@ Allows you to apply a writing style to AI generated content.
 
 Writing styles are managed through [:material-script-text: writing style templates](/talemate/user-guide/templates/writing-style). 
 
-Once there is a writing style template available, you can select it from the dropdown list.
+Once there is a writing style template available, you can select it from the dropdown list. With a style selected, **Edit** at the end of the list opens it in the Templates tab.
+
+The selected style starts out as the writing style of the scene you opened, or empty if the scene has none.
 
 ![world editor generation settings 1](/talemate/img/0.26.0/world-editor-generation-settings-2.png)
 

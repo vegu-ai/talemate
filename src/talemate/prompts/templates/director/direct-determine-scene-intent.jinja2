@@ -42,7 +42,15 @@ Determine whether or not a new scene intention is needed. If so, provide the typ
 {% else %}
 Determine the type classification and intention of the new scene.
 {% endif %}
+{% if instructions %}
+The user has given the following direction for this determination:
 
+``` direction
+{{ instructions }}
+```
+
+This direction MUST be respected when deciding whether and how to set the scene intention.
+{% endif %}
 {% include "scene-intent-technical.jinja2" %}
 
 {% if last_message -%}

@@ -54,7 +54,7 @@ SECTION_DESCRIPTIONS = {
     "user-guide": "Top-level guides: interacting with scenes, saving/restoring, world state, tracking states, character import, scene tools, debug tools, visual and voice library",
     "user-guide/agents": "Every agent's settings and behavior: conversation, creator, director, editor, help, memory, narrator, summarizer, visualizer, voice, world state",
     "user-guide/apis": "Third-party inference API key setup (OpenAI, Anthropic, Google, OpenRouter, ...)",
-    "user-guide/app-settings": "Application settings dialog pages",
+    "user-guide/app-settings": "Application settings pages",
     "user-guide/clients": "LLM client types, setup and per-client options",
     "user-guide/howto": "Tutorials and walkthroughs, including the multi-part dynamic scenario crash course",
     "user-guide/integrations": "Third-party integrations",
@@ -62,7 +62,6 @@ SECTION_DESCRIPTIONS = {
     "user-guide/prompts": "Prompt template overrides",
     "user-guide/templates": "World-state templates (attributes, details, spices, writing styles, ...)",
     "user-guide/world-editor": "World editor: scene, characters, world entries, context DB, history, pins, suggestions",
-    "dev": "Developer documentation: agent/client internals, templates, third-party reference",
 }
 
 # tokens too generic to contribute to find_docs scoring

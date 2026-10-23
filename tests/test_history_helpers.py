@@ -4,7 +4,6 @@ exported via ``__all__``).
 
 Focuses on pure-ish helpers and Scene-state mutation:
 - history_with_relative_time
-- pop_history
 - count_message_types_at_tail
 - collect_source_entries (additional edge cases not covered by test_layered_history)
 - collect_time_passages
@@ -23,6 +22,7 @@ Reuses the conftest infrastructure (MockScene, bootstrap_scene) for character_ac
 and add/delete/reimport tests that touch the memory agent and signal system.
 """
 
+import json
 import uuid
 
 import pytest
@@ -49,7 +49,6 @@ from talemate.history import (
     history_with_relative_time,
     insert_time_passage,
     insert_time_passage_after_message,
-    pop_history,
     regenerate_history_entry,
     reimport_history,
     resolve_history_entry,
@@ -64,6 +63,7 @@ from talemate.scene_message import (
     TimePassageMessage,
 )
 from talemate.tale_mate import Actor, Player, Scene
+from talemate.util.time import UNIT_TO_SECONDS
 
 
 # ---------------------------------------------------------------------------
@@ -82,9 +82,9 @@ def make_archived_entry(
     entry_id: str | None = None,
     start: int | None = None,
     end: int | None = None,
-    ts: str = "PT1M",
-    ts_start: str | None = None,
-    ts_end: str | None = None,
+    ts: int = 60,
+    ts_start: int | None = None,
+    ts_end: int | None = None,
 ) -> dict:
     """Construct a raw archived_history entry dict (the on-disk shape)."""
     entry: dict = {
@@ -117,7 +117,7 @@ def dummy_scene():
         history=None,
         archived_history=None,
         layered_history=None,
-        ts: str = "PT0S",
+        ts: int = 0,
     ):
         scene = Scene()
         scene.history = list(history or [])
@@ -149,10 +149,10 @@ def real_scene():
 class TestHistoryWithRelativeTime:
     def test_returns_one_entry_per_input_with_human_time(self):
         history = [
-            {"text": "First", "ts": "PT0S", "id": "a"},
-            {"text": "Second", "ts": "PT30M", "id": "b"},
+            {"text": "First", "ts": 0, "id": "a"},
+            {"text": "Second", "ts": 1800, "id": "b"},
         ]
-        result = history_with_relative_time(history, scene_time="PT1H")
+        result = history_with_relative_time(history, scene_time=3600)
 
         assert len(result) == 2
         # Index/layer should be set per-entry; layer defaults to 0.
@@ -163,107 +163,35 @@ class TestHistoryWithRelativeTime:
         assert result[1]["time"]
 
     def test_layer_is_passed_through(self):
-        history = [{"text": "x", "ts": "PT0S"}]
-        result = history_with_relative_time(history, scene_time="PT1H", layer=2)
+        history = [{"text": "x", "ts": 0}]
+        result = history_with_relative_time(history, scene_time=3600, layer=2)
         assert result[0]["layer"] == 2
 
     def test_includes_ts_start_and_ts_end_human_strings(self):
         history = [
             {
                 "text": "block",
-                "ts": "PT30M",
-                "ts_start": "PT0S",
-                "ts_end": "PT30M",
+                "ts": 1800,
+                "ts_start": 0,
+                "ts_end": 1800,
             }
         ]
-        result = history_with_relative_time(history, scene_time="PT1H")
-        assert result[0]["ts_start"] == "PT0S"
-        assert result[0]["ts_end"] == "PT30M"
-        # time_start/time_end should be human-readable, not raw ISO durations.
+        result = history_with_relative_time(history, scene_time=3600)
+        assert result[0]["ts_start"] == 0
+        assert result[0]["ts_end"] == 1800
+        # time_start/time_end should be human-readable, not raw second counts.
         assert result[0]["time_start"]
         assert result[0]["time_end"]
 
     def test_missing_ts_start_end_yields_empty_human_string(self):
-        # iso8601_diff_to_human returns "" when one side is falsy.
-        history = [{"text": "block", "ts": "PT30M"}]
-        result = history_with_relative_time(history, scene_time="PT1H")
+        # diff_to_human returns "" when one side is missing.
+        history = [{"text": "block", "ts": 1800}]
+        result = history_with_relative_time(history, scene_time=3600)
         assert result[0]["time_start"] == ""
         assert result[0]["time_end"] == ""
 
     def test_empty_history_returns_empty_list(self):
-        assert history_with_relative_time([], scene_time="PT1H") == []
-
-
-# ---------------------------------------------------------------------------
-# pop_history
-# ---------------------------------------------------------------------------
-
-
-class TestPopHistory:
-    def test_pops_only_last_matching_by_default(self):
-        history = [
-            make_character_message("hi"),
-            NarratorMessage(message="N1", source="ai"),
-            make_character_message("bye"),
-            NarratorMessage(message="N2", source="ai"),
-        ]
-        pop_history(history, typ="narrator")
-        # Only the *last* narrator is removed.
-        assert [type(m).__name__ for m in history] == [
-            "CharacterMessage",
-            "NarratorMessage",
-            "CharacterMessage",
-        ]
-        assert history[1].message == "N1"
-
-    def test_pops_all_when_all_true(self):
-        history = [
-            NarratorMessage(message="N1", source="ai"),
-            make_character_message("hi"),
-            NarratorMessage(message="N2", source="ai"),
-        ]
-        pop_history(history, typ="narrator", all=True)
-        assert len(history) == 1
-        assert isinstance(history[0], CharacterMessage)
-
-    def test_filter_by_source(self):
-        history = [
-            NarratorMessage(message="from-ai-1", source="ai"),
-            NarratorMessage(message="from-manual", source="manual"),
-            NarratorMessage(message="from-ai-2", source="ai"),
-        ]
-        pop_history(history, typ="narrator", source="manual", all=True)
-        assert len(history) == 2
-        assert all(m.source == "ai" for m in history)
-
-    def test_max_iterations_limits_search_depth(self):
-        history = [
-            NarratorMessage(message="oldest", source="ai"),
-            make_character_message("a"),
-            make_character_message("b"),
-            make_character_message("c"),
-        ]
-        # Walking from tail, iterations are counted on *non-matching* steps.
-        # With max_iterations=2 we only inspect the last 2-3 messages and
-        # never reach the lone NarratorMessage at index 0.
-        pop_history(history, typ="narrator", max_iterations=2)
-        assert any(isinstance(m, NarratorMessage) for m in history)
-
-    def test_reverse_pops_oldest_match_first(self):
-        history = [
-            NarratorMessage(message="N-old", source="ai"),
-            make_character_message("a"),
-            NarratorMessage(message="N-new", source="ai"),
-        ]
-        pop_history(history, typ="narrator", reverse=True)
-        # The *oldest* narrator should be the one removed in reverse mode.
-        remaining = [m.message for m in history if isinstance(m, NarratorMessage)]
-        assert remaining == ["N-new"]
-
-    def test_no_match_leaves_history_untouched(self):
-        history = [make_character_message("only one")]
-        pop_history(history, typ="narrator", all=True)
-        assert len(history) == 1
+        assert history_with_relative_time([], scene_time=3600) == []
 
 
 # ---------------------------------------------------------------------------
@@ -331,7 +259,7 @@ class TestCollectSourceEntriesExtra:
 
         entry = HistoryEntry(
             text="summary",
-            ts="PT1H",
+            ts=3600,
             index=0,
             layer=0,
             start=0,
@@ -356,8 +284,8 @@ class TestCollectTimePassages:
         assert collect_time_passages(scene) == []
 
     def test_collects_each_time_passage_with_human_string(self, dummy_scene):
-        tp1 = TimePassageMessage(ts="PT1H", message="an hour later")
-        tp2 = TimePassageMessage(ts="P1D", message="a day later")
+        tp1 = TimePassageMessage(ts=3600, message="an hour later")
+        tp2 = TimePassageMessage(ts=86400, message="a day later")
         scene = dummy_scene(
             history=[make_character_message("x"), tp1, make_character_message("y"), tp2]
         )
@@ -367,9 +295,12 @@ class TestCollectTimePassages:
         # Indices should match the positions in scene.history.
         assert result[0]["history_index"] == 1
         assert result[1]["history_index"] == 3
-        # ISO durations should be passed through unchanged.
-        assert result[0]["ts"] == "PT1H"
-        assert result[1]["ts"] == "P1D"
+        # The message id identifies a passage across inserts and deletes.
+        assert result[0]["message_id"] == tp1.id
+        assert result[1]["message_id"] == tp2.id
+        # Durations should be passed through unchanged.
+        assert result[0]["ts"] == 3600
+        assert result[1]["ts"] == 86400
         # Human strings are non-empty (specific format is owned by util.time).
         assert result[0]["human"]
         assert result[1]["human"]
@@ -431,7 +362,7 @@ class TestComputeLayerStats:
                 "text": "rolled up",
                 "start": 0,
                 "end": 1,
-                "ts": "PT2H",
+                "ts": 7200,
             }
         ]
         scene = dummy_scene(archived_history=archived, layered_history=[layer1])
@@ -443,10 +374,10 @@ class TestComputeLayerStats:
 
     def test_layer_two_sources_from_layered_history_zero(self, dummy_scene):
         layer1 = [
-            {"id": "L1-0", "text": "x", "start": 0, "end": 0, "ts": "PT1H"},
-            {"id": "L1-1", "text": "y", "start": 1, "end": 1, "ts": "PT2H"},
+            {"id": "L1-0", "text": "x", "start": 0, "end": 0, "ts": 3600},
+            {"id": "L1-1", "text": "y", "start": 1, "end": 1, "ts": 7200},
         ]
-        layer2 = [{"id": "L2-0", "text": "rolled", "start": 0, "end": 1, "ts": "PT3H"}]
+        layer2 = [{"id": "L2-0", "text": "rolled", "start": 0, "end": 1, "ts": 10800}]
         scene = dummy_scene(layered_history=[layer1, layer2])
 
         stats = compute_layer_stats(scene, layer=2)
@@ -468,7 +399,7 @@ class TestResolveHistoryEntry:
     def test_layer_zero_returns_archive_entry(self, dummy_scene):
         archived = [make_archived_entry("hello", entry_id="aa", start=0, end=1)]
         scene = dummy_scene(archived_history=archived)
-        entry = HistoryEntry(text="hello", ts="PT1M", index=0, layer=0)
+        entry = HistoryEntry(text="hello", ts=60, index=0, layer=0)
         resolved = resolve_history_entry(scene, entry)
 
         assert isinstance(resolved, ArchiveEntry)
@@ -488,18 +419,18 @@ class TestResolveHistoryEntry:
                 "text": "rolled",
                 "start": 0,
                 "end": 0,
-                "ts": "PT3H",
-                "ts_start": "PT0S",
-                "ts_end": "PT3H",
+                "ts": 10800,
+                "ts_start": 0,
+                "ts_end": 10800,
             }
         ]
         scene = dummy_scene(layered_history=[layer1])
-        entry = HistoryEntry(text="rolled", ts="PT3H", index=0, layer=1)
+        entry = HistoryEntry(text="rolled", ts=10800, index=0, layer=1)
         resolved = resolve_history_entry(scene, entry)
 
         assert isinstance(resolved, LayeredArchiveEntry)
-        assert resolved.ts_start == "PT0S"
-        assert resolved.ts_end == "PT3H"
+        assert resolved.ts_start == 0
+        assert resolved.ts_end == 10800
 
 
 # ---------------------------------------------------------------------------
@@ -515,7 +446,7 @@ class TestEntryContained:
 
         container = HistoryEntry(
             text="summary",
-            ts="PT1M",
+            ts=60,
             index=0,
             layer=0,
             start=0,
@@ -527,7 +458,7 @@ class TestEntryContained:
         scene = dummy_scene(history=[make_character_message("hello")])
         container = HistoryEntry(
             text="summary",
-            ts="PT1M",
+            ts=60,
             index=0,
             layer=0,
             start=0,
@@ -540,7 +471,7 @@ class TestEntryContained:
         # to history[0..0]; we should be able to find the underlying message id.
         msg = make_character_message("deep")
         archived = [
-            make_archived_entry("summary", entry_id="arch-0", start=0, end=0, ts="PT1H")
+            make_archived_entry("summary", entry_id="arch-0", start=0, end=0, ts=3600)
         ]
         layer1 = [
             {
@@ -548,7 +479,7 @@ class TestEntryContained:
                 "text": "rolled",
                 "start": 0,
                 "end": 0,
-                "ts": "PT1H",
+                "ts": 3600,
             }
         ]
         scene = dummy_scene(
@@ -556,7 +487,7 @@ class TestEntryContained:
         )
 
         container = HistoryEntry(
-            text="rolled", ts="PT1H", index=0, layer=2, start=0, end=0
+            text="rolled", ts=3600, index=0, layer=2, start=0, end=0
         )
         assert entry_contained(scene, msg.id, container)
         # Negative case: an arbitrary id is not found.
@@ -580,7 +511,7 @@ class TestEmitArchiveAdd:
         signal = async_signals.get("archive_add")
         signal.connect(listener)
         try:
-            entry = ArchiveEntry(text="my entry", id="abc123", ts="PT5M")
+            entry = ArchiveEntry(text="my entry", id="abc123", ts=300)
             await emit_archive_add(scene, entry)
         finally:
             signal.disconnect(listener)
@@ -590,7 +521,7 @@ class TestEmitArchiveAdd:
         assert evt.scene is scene
         assert evt.event_type == "archive_add"
         assert evt.text == "my entry"
-        assert evt.ts == "PT5M"
+        assert evt.ts == 300
         assert evt.memory_id == "abc123"
 
 
@@ -616,7 +547,7 @@ class TestUpdateHistoryEntry:
         try:
             entry = HistoryEntry(
                 text="new text",
-                ts="PT2H",
+                ts=7200,
                 id="x",
                 index=0,
                 layer=0,
@@ -638,12 +569,12 @@ class TestUpdateHistoryEntry:
 
     @pytest.mark.asyncio
     async def test_updates_layered_history_in_place(self, dummy_scene):
-        layer1 = [{"id": "L1", "text": "old", "start": 0, "end": 1, "ts": "PT2H"}]
+        layer1 = [{"id": "L1", "text": "old", "start": 0, "end": 1, "ts": 7200}]
         scene = dummy_scene(layered_history=[layer1])
 
         entry = HistoryEntry(
             text="rolled-new",
-            ts="PT2H",
+            ts=7200,
             id="L1",
             index=0,
             layer=1,
@@ -664,7 +595,7 @@ class TestUpdateHistoryEntry:
 class TestRegenerateHistoryEntryErrors:
     @pytest.mark.asyncio
     async def test_no_start_end_raises(self, real_scene):
-        entry = HistoryEntry(text="static", ts="PT0S", index=0, layer=0)
+        entry = HistoryEntry(text="static", ts=0, index=0, layer=0)
         with pytest.raises(UnregeneratableEntryError):
             await regenerate_history_entry(real_scene, entry)
 
@@ -673,7 +604,7 @@ class TestRegenerateHistoryEntryErrors:
         # Layer-0 entry pointing at an empty/non-existent slice of history.
         entry = HistoryEntry(
             text="empty",
-            ts="PT0S",
+            ts=0,
             index=0,
             layer=0,
             start=0,
@@ -689,9 +620,7 @@ class TestRegenerateHistoryEntryErrors:
         # index, so resolve_history_entry hits IndexError and raises.
         real_scene.history = [make_character_message("a")]
         real_scene.archived_history = []
-        entry = HistoryEntry(
-            text="missing", ts="PT0S", index=99, layer=0, start=0, end=0
-        )
+        entry = HistoryEntry(text="missing", ts=0, index=99, layer=0, start=0, end=0)
         with pytest.raises(UnregeneratableEntryError):
             await regenerate_history_entry(real_scene, entry)
 
@@ -777,24 +706,32 @@ class TestCharacterActivity:
 # ---------------------------------------------------------------------------
 
 
+def _assert_reload_keeps_the_timeline(scene):
+    """A load of the saved data gives the state of the session."""
+    before = (scene.ts, [(e["text"], e["ts"]) for e in scene.archived_history])
+    scene.start_ts = json.loads(scene.json)["start_ts"]
+    scene.fix_time()
+    assert (scene.ts, [(e["text"], e["ts"]) for e in scene.archived_history]) == before
+
+
 class TestAddHistoryEntry:
     @pytest.mark.asyncio
     async def test_first_entry_sets_scene_ts_and_appends(self, real_scene):
         assert real_scene.archived_history == []
-        result = await add_history_entry(real_scene, "scene begins", offset="PT1H")
+        result = await add_history_entry(real_scene, "scene begins", offset=3600)
 
-        # The first entry is always pushed at PT0S, and scene.ts becomes the offset.
-        assert real_scene.ts == "PT1H"
+        # The first entry is pushed at 0, and the scene starts at the offset.
+        assert real_scene.ts == 3600
+        assert real_scene.start_ts == 3600
         assert len(real_scene.archived_history) == 1
         assert real_scene.archived_history[0]["text"] == "scene begins"
-        assert real_scene.archived_history[0]["ts"] == "PT0S"
-        assert "id" in real_scene.archived_history[0]
-        # The dict-ish return shape should round-trip through ArchiveEntry.
-        assert ArchiveEntry(**result).text == "scene begins"
+        assert real_scene.archived_history[0]["ts"] == 0
+        assert real_scene.archived_history[0]["id"] == result.id
+        assert isinstance(result, ArchiveEntry)
 
     @pytest.mark.asyncio
     async def test_must_be_older_than_first_summary_entry(self, real_scene):
-        # Pre-existing summarized archive at ts=PT30M, with history support.
+        # Pre-existing summarized archive at ts=30m, with history support.
         real_scene.history = [make_character_message("a")]
         real_scene.archived_history = [
             make_archived_entry(
@@ -802,43 +739,83 @@ class TestAddHistoryEntry:
                 entry_id="s1",
                 start=0,
                 end=0,
-                ts="PT30M",
+                ts=1800,
             )
         ]
-        real_scene.ts = "PT1H"
+        real_scene.ts = 3600
 
-        # offset PT10M means new_ts = PT50M, which is *not* older than PT30M.
+        # offset 10m means new_ts = 50m, which is *not* older than 30m.
         with pytest.raises(ValueError):
-            await add_history_entry(real_scene, "too late", offset="PT10M")
+            await add_history_entry(real_scene, "too late", offset=600)
 
     @pytest.mark.asyncio
     async def test_inserts_in_chronological_order(self, real_scene):
-        # Two pre-existing manual entries at PT5M and PT15M (both static, no
+        # Two pre-existing manual entries at 5m and 15m (both static, no
         # start/end -> first_summary stays None and the time check is skipped).
         real_scene.archived_history = [
-            make_archived_entry("first", entry_id="m1", ts="PT5M"),
-            make_archived_entry("second", entry_id="m2", ts="PT15M"),
+            make_archived_entry("first", entry_id="m1", ts=300),
+            make_archived_entry("second", entry_id="m2", ts=900),
         ]
-        real_scene.ts = "PT1H"
+        real_scene.ts = 3600
 
-        # offset PT50M -> new_ts = PT10M -> should slot between PT5M and PT15M.
-        await add_history_entry(real_scene, "middle", offset="PT50M")
+        # offset 50m -> new_ts = 10m -> should slot between 5m and 15m.
+        await add_history_entry(real_scene, "middle", offset=3000)
 
         texts = [e["text"] for e in real_scene.archived_history]
         assert texts == ["first", "middle", "second"]
+
+    @pytest.mark.asyncio
+    async def test_backstory_added_in_one_session_keeps_its_order(self, real_scene):
+        year = UNIT_TO_SECONDS["year"]
+        assert real_scene.archived_history == []
+
+        await add_history_entry(real_scene, "the war ended", offset=10 * year)
+        await add_history_entry(real_scene, "the lighthouse was built", offset=5 * year)
+
+        saved = [(e["text"], e["ts"]) for e in real_scene.archived_history]
+        assert saved == [("the war ended", 0), ("the lighthouse was built", 5 * year)]
+        assert real_scene.ts == 10 * year
+        _assert_reload_keeps_the_timeline(real_scene)
+
+    @pytest.mark.asyncio
+    async def test_entries_added_before_the_summaries_keep_their_order(
+        self, real_scene
+    ):
+        hour = UNIT_TO_SECONDS["hour"]
+        real_scene.history = [
+            make_character_message("a"),
+            make_character_message("b"),
+            make_character_message("c"),
+        ]
+        real_scene.archived_history = [
+            make_archived_entry("summary", entry_id="s1", start=0, end=1, ts=0)
+        ]
+        real_scene.ts = 0
+
+        await add_history_entry(real_scene, "five hours ago", offset=5 * hour)
+        await add_history_entry(real_scene, "four hours ago", offset=4 * hour)
+
+        saved = [(e["text"], e["ts"]) for e in real_scene.archived_history]
+        assert saved == [
+            ("five hours ago", 0),
+            ("four hours ago", hour),
+            ("summary", 5 * hour),
+        ]
+        assert real_scene.ts == 5 * hour
+        _assert_reload_keeps_the_timeline(real_scene)
 
 
 class TestDeleteHistoryEntry:
     @pytest.mark.asyncio
     async def test_only_manual_base_layer_entries_can_be_deleted(self, real_scene):
         # Layered entry must be rejected.
-        layered_entry = HistoryEntry(text="x", ts="PT0S", index=0, layer=1, id="any")
+        layered_entry = HistoryEntry(text="x", ts=0, index=0, layer=1, id="any")
         with pytest.raises(ValueError):
             await delete_history_entry(real_scene, layered_entry)
 
         # Summarized base entry (start/end set) must be rejected.
         summarized = HistoryEntry(
-            text="x", ts="PT0S", index=0, layer=0, id="x", start=0, end=1
+            text="x", ts=0, index=0, layer=0, id="x", start=0, end=1
         )
         with pytest.raises(ValueError):
             await delete_history_entry(real_scene, summarized)
@@ -846,21 +823,21 @@ class TestDeleteHistoryEntry:
     @pytest.mark.asyncio
     async def test_missing_entry_raises(self, real_scene):
         real_scene.archived_history = [
-            make_archived_entry("only", entry_id="here", ts="PT0S")
+            make_archived_entry("only", entry_id="here", ts=0)
         ]
-        entry = HistoryEntry(text="ghost", ts="PT0S", index=0, layer=0, id="missing")
+        entry = HistoryEntry(text="ghost", ts=0, index=0, layer=0, id="missing")
         with pytest.raises(ValueError):
             await delete_history_entry(real_scene, entry)
 
     @pytest.mark.asyncio
     async def test_removes_entry_and_returns_archive_entry(self, real_scene):
         real_scene.archived_history = [
-            make_archived_entry("a", entry_id="aa", ts="PT0S"),
-            make_archived_entry("b", entry_id="bb", ts="PT5M"),
+            make_archived_entry("a", entry_id="aa", ts=0),
+            make_archived_entry("b", entry_id="bb", ts=300),
         ]
-        real_scene.ts = "PT1H"
+        real_scene.ts = 3600
 
-        entry = HistoryEntry(text="b", ts="PT5M", index=1, layer=0, id="bb")
+        entry = HistoryEntry(text="b", ts=300, index=1, layer=0, id="bb")
         result = await delete_history_entry(real_scene, entry)
 
         assert isinstance(result, ArchiveEntry)
@@ -877,11 +854,11 @@ class TestReimportHistory:
     @pytest.mark.asyncio
     async def test_assigns_missing_ids_to_layered_entries(self, real_scene):
         real_scene.archived_history = [
-            make_archived_entry("ok", entry_id="a1", ts="PT0S"),
+            make_archived_entry("ok", entry_id="a1", ts=0),
         ]
         # Layered entry with no id -> validate_history should fill one in.
         real_scene.layered_history = [
-            [{"text": "no id here", "ts": "PT1H", "start": 0, "end": 0}]
+            [{"text": "no id here", "ts": 3600, "start": 0, "end": 0}]
         ]
 
         await reimport_history(real_scene, emit_status=False)
@@ -899,7 +876,7 @@ class TestReimportHistory:
         # An archived entry without an id should be regenerated through
         # ArchiveEntry validation, which assigns a default uuid-based id.
         real_scene.archived_history = [
-            {"text": "no id", "ts": "PT0S"},
+            {"text": "no id", "ts": 0},
         ]
         await reimport_history(real_scene, emit_status=False)
         normalized = real_scene.archived_history[0]
@@ -922,9 +899,9 @@ class TestInsertTimePassage:
         real_scene.history = list(msgs)
         # Archive entry covers history[0..1].
         real_scene.archived_history = [
-            make_archived_entry("summary", entry_id="s1", start=0, end=1, ts="PT0S"),
+            make_archived_entry("summary", entry_id="s1", start=0, end=1, ts=0),
         ]
-        real_scene.ts = "PT0S"
+        real_scene.ts = 0
 
         tp = insert_time_passage(real_scene, archive_index=0, amount=2, unit="hours")
 
@@ -948,7 +925,7 @@ class TestInsertTimePassage:
         # Static manual archive entry has no start/end -> can't anchor a passage.
         real_scene.history = [make_character_message("a")]
         real_scene.archived_history = [
-            make_archived_entry("static", entry_id="m", ts="PT0S"),
+            make_archived_entry("static", entry_id="m", ts=0),
         ]
         with pytest.raises(ValueError):
             insert_time_passage(real_scene, archive_index=0, amount=1, unit="hours")
@@ -957,16 +934,16 @@ class TestInsertTimePassage:
 class TestDeleteTimePassage:
     def test_deletes_passage_and_decrements_following_indices(self, real_scene):
         a = make_character_message("a")
-        tp = TimePassageMessage(ts="PT1H", message="an hour later")
+        tp = TimePassageMessage(ts=3600, message="an hour later")
         b = make_character_message("b")
         c = make_character_message("c")
         real_scene.history = [a, tp, b, c]
         # Archive covers messages after the time passage; their indices need
         # to shrink by 1 once the passage is removed.
         real_scene.archived_history = [
-            make_archived_entry("summary", entry_id="s1", start=2, end=3, ts="PT1H"),
+            make_archived_entry("summary", entry_id="s1", start=2, end=3, ts=3600),
         ]
-        real_scene.ts = "PT1H"
+        real_scene.ts = 3600
 
         delete_time_passage(real_scene, history_index=1)
 
@@ -992,7 +969,7 @@ class TestTimePassageByIdHelpers:
         a = make_character_message("a")
         b = make_character_message("b")
         real_scene.history = [a, b]
-        real_scene.ts = "PT0S"
+        real_scene.ts = 0
 
         tp = insert_time_passage_after_message(
             real_scene, message_id=a.id, amount=30, unit="minutes"
@@ -1011,10 +988,10 @@ class TestTimePassageByIdHelpers:
 
     def test_delete_by_id(self, real_scene):
         a = make_character_message("a")
-        tp = TimePassageMessage(ts="PT1H", message="an hour later")
+        tp = TimePassageMessage(ts=3600, message="an hour later")
         b = make_character_message("b")
         real_scene.history = [a, tp, b]
-        real_scene.ts = "PT1H"
+        real_scene.ts = 3600
 
         delete_time_passage_by_id(real_scene, message_id=tp.id)
         assert tp not in real_scene.history
@@ -1027,12 +1004,12 @@ class TestTimePassageByIdHelpers:
 
     def test_update_by_id_changes_duration(self, real_scene):
         a = make_character_message("a")
-        tp = TimePassageMessage(ts="PT1H", message="an hour later")
+        tp = TimePassageMessage(ts=3600, message="an hour later")
         real_scene.history = [a, tp]
-        real_scene.ts = "PT1H"
+        real_scene.ts = 3600
 
         update_time_passage_by_id(real_scene, message_id=tp.id, amount=2, unit="days")
-        assert tp.ts == "P2D"
+        assert tp.ts == 172800
         # The human-readable message should be regenerated and non-empty.
         assert tp.message
         # And the message string should reflect the new duration somehow.
@@ -1054,6 +1031,69 @@ class TestTimePassageByIdHelpers:
             )
 
 
+class TestDeleteTimePassageFromTheChat:
+    """Both delete paths must leave the same timeline (#644)."""
+
+    @staticmethod
+    def _scene(scene):
+        a = make_character_message("a")
+        tp = TimePassageMessage(ts=3600, message="an hour later")
+        b = make_character_message("b")
+        c = make_character_message("c")
+        scene.history = [a, tp, b, c]
+        scene.archived_history = [
+            make_archived_entry("early", entry_id="s1", start=0, end=0, ts=0),
+            make_archived_entry("late", entry_id="s2", start=2, end=3, ts=3600),
+        ]
+        scene.layered_history = [
+            [
+                {
+                    "id": "l1",
+                    "text": "the whole day",
+                    "start": 0,
+                    "end": 1,
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 3600,
+                }
+            ]
+        ]
+        scene.start_ts = 0
+        scene.ts = 3600
+        return tp
+
+    @staticmethod
+    def _timeline(scene):
+        entries = [
+            (entry["ts"], entry.get("start"), entry.get("end"))
+            for entry in scene.archived_history
+        ]
+        layers = [
+            (entry["ts"], entry.get("ts_start"), entry.get("ts_end"))
+            for layer in scene.layered_history
+            for entry in layer
+        ]
+        return entries, layers
+
+    @pytest.mark.asyncio
+    async def test_chat_delete_matches_the_history_view_delete(self, real_scene):
+        from_view = MockScene()
+        bootstrap_scene(from_view)
+        passage = self._scene(from_view)
+        delete_time_passage_by_id(from_view, message_id=passage.id)
+
+        bootstrap_scene(real_scene)
+        passage = self._scene(real_scene)
+        real_scene.delete_message(passage.id)
+
+        assert self._timeline(real_scene) == self._timeline(from_view)
+        assert self._timeline(real_scene) == (
+            [(0, 0, 0), (0, 1, 2)],
+            [(0, 0, 0)],
+        )
+        assert real_scene.ts == from_view.ts == 0
+
+
 # ---------------------------------------------------------------------------
 # add_history_entry: timeline-shift path
 # ---------------------------------------------------------------------------
@@ -1062,47 +1102,73 @@ class TestTimePassageByIdHelpers:
 class TestAddHistoryEntryTimelineShift:
     @pytest.mark.asyncio
     async def test_offset_predates_scene_shifts_timeline(self, real_scene):
-        # Two static manual entries at PT5M and PT15M (no start/end) so the
+        # Two static manual entries at 5m and 15m (no start/end) so the
         # first_summary check is bypassed and the shift path can fire.
         real_scene.archived_history = [
-            make_archived_entry("first", entry_id="m1", ts="PT5M"),
-            make_archived_entry("second", entry_id="m2", ts="PT15M"),
+            make_archived_entry("first", entry_id="m1", ts=300),
+            make_archived_entry("second", entry_id="m2", ts=900),
         ]
-        real_scene.ts = "PT30M"
+        real_scene.ts = 1800
+        real_scene.start_ts = 1800
 
-        # offset=PT2H means new_ts_td = scene_td(30m) - offset_td(2h) = -1h30m,
-        # which is negative -> shift_scene_timeline is invoked with PT1H30M.
-        await add_history_entry(real_scene, "ancient", offset="PT2H")
+        # offset=2h means new_ts = scene.ts(30m) - offset(2h) = -1h30m,
+        # which is negative -> shift_scene_timeline is invoked with 1h30m.
+        await add_history_entry(real_scene, "ancient", offset=7200)
 
-        # The new entry sits at zero (PT0S/P0D); existing entries are pushed
-        # forward by the shift amount (PT1H30M -> PT5M+1h30m=PT1H35M, etc.).
+        # The new entry sits at zero; existing entries are pushed forward by
+        # the shift amount (1h30m -> 5m+1h30m=1h35m, etc.).
         ts_values = [e["ts"] for e in real_scene.archived_history]
-        # The new entry was inserted at zero (rendered as P0D by isodate).
-        assert any(ts in {"PT0S", "P0D"} for ts in ts_values)
+        # The new entry was inserted at zero.
+        assert 0 in ts_values
         # And the previously-existing entries were pushed forward.
-        assert "PT1H35M" in ts_values  # PT5M  + PT1H30M
-        assert "PT1H45M" in ts_values  # PT15M + PT1H30M
-        # scene.ts was 30m; shifted forward by 1h30m -> PT2H.
-        assert real_scene.ts == "PT2H"
+        assert 5700 in ts_values  # 5m  + 1h30m
+        assert 6300 in ts_values  # 15m + 1h30m
+        # scene.ts was 30m; shifted forward by 1h30m -> 2h.
+        assert real_scene.ts == 7200
+        assert real_scene.start_ts == 7200
 
     @pytest.mark.asyncio
     async def test_delete_oldest_manual_entry_shifts_timeline(self, real_scene):
-        # Two static manual entries; deleting index 0 (PT0S) triggers the
+        # Two static manual entries; deleting index 0 (ts=0) triggers the
         # timeline-shift path: shift_scene_timeline is called with
-        # ``-PT15M`` so what *was* the second entry now anchors at zero.
+        # ``-900`` so what *was* the second entry now anchors at zero.
         real_scene.archived_history = [
-            make_archived_entry("oldest", entry_id="m1", ts="PT0S"),
-            make_archived_entry("next", entry_id="m2", ts="PT15M"),
+            make_archived_entry("oldest", entry_id="m1", ts=0),
+            make_archived_entry("next", entry_id="m2", ts=900),
         ]
-        real_scene.ts = "PT1H"
+        real_scene.ts = 3600
+        real_scene.start_ts = 3600
 
-        entry = HistoryEntry(text="oldest", ts="PT0S", index=0, layer=0, id="m1")
+        entry = HistoryEntry(text="oldest", ts=0, index=0, layer=0, id="m1")
         await delete_history_entry(real_scene, entry)
 
         # The single remaining entry's ts should now be zero (the shift moved
-        # PT15M -> P0D). isodate emits "P0D" for zero, not "PT0S".
+        # 15m -> 0), and it stays 45m before the scene time.
         assert len(real_scene.archived_history) == 1
-        remaining_ts = real_scene.archived_history[0]["ts"]
-        assert remaining_ts in {"PT0S", "P0D"}
-        # scene.ts is then re-synced from that archived entry.
-        assert real_scene.ts in {"PT0S", "P0D"}
+        assert real_scene.archived_history[0]["ts"] == 0
+        assert real_scene.start_ts == 2700
+        assert real_scene.ts == 2700
+
+    @pytest.mark.asyncio
+    async def test_delete_last_static_entry_starts_the_timeline_at_the_scene(
+        self, real_scene
+    ):
+        hour = UNIT_TO_SECONDS["hour"]
+        real_scene.history = [
+            make_character_message("a"),
+            TimePassageMessage(ts=2 * hour, message="2 hours later"),
+            make_character_message("b"),
+        ]
+        real_scene.archived_history = [
+            make_archived_entry("backstory", entry_id="m1", ts=0),
+            make_archived_entry("summary", entry_id="s1", start=0, end=0, ts=hour),
+        ]
+        real_scene.start_ts = hour
+        real_scene.ts = 3 * hour
+
+        entry = HistoryEntry(text="backstory", ts=0, index=0, layer=0, id="m1")
+        await delete_history_entry(real_scene, entry)
+
+        assert real_scene.start_ts == 0
+        assert [e["ts"] for e in real_scene.archived_history] == [0]
+        assert real_scene.ts == 2 * hour

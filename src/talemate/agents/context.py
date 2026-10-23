@@ -5,11 +5,15 @@ from typing import Callable
 import pydantic
 from pydantic import ConfigDict
 
+import talemate.emit.async_signals as async_signals
+
 __all__ = [
     "active_agent",
 ]
 
 active_agent = contextvars.ContextVar("active_agent", default=None)
+# a listener that generates must not share the sender's agent state
+async_signals.detach_in_listener_tasks(active_agent)
 
 
 class ActiveAgentContext(pydantic.BaseModel):

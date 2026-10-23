@@ -1,11 +1,20 @@
 /**
  * Shared websocket dispatchers for the entity-action surfaces (chat-view
- * tooltip via EntityHighlightMixin + WorldState.vue sidebar). Keeps the wire
- * shape for the two entity-level verbs in one place:
+ * tooltip via EntityHighlightMixin, WorldState.vue sidebar, creative tool
+ * menu). Keeps the wire shape for the entity-level verbs in one place:
+ *
+ *   - "Call into scene" / "Take out of scene" (UI labels) →
+ *     director.activate_character | director.deactivate_character
+ *     `neverNarrate` skips the narrator's entry/exit narration, which the
+ *     surfaces offer on the platform's primary modifier.
  *
  *   - "Add Detail" (UI label) → world_state_agent.examine_entity
  *     Expands the snapshot the user is looking at into a
  *     ContextInvestigationMessage. Requires a snapshot to seed from.
+ *
+ *   - "Add to world state" (UI label) → world_state_agent.add_snapshot_entity
+ *     Resolves a span of text the user selected in a scene message into a new
+ *     snapshot entry.
  *
  *   - "Look at" → narrator.look_at_character | narrator.query
  *     Fresh narrator-driven take. Characters use the dedicated handler when
@@ -26,6 +35,15 @@ function sendExamineEntity(ws, { name, kind, snapshot }) {
     }));
 }
 
+function sendAddSnapshotEntity(ws, { messageId, text }) {
+    ws.send(JSON.stringify({
+        type: 'world_state_agent',
+        action: 'add_snapshot_entity',
+        message_id: messageId,
+        text,
+    }));
+}
+
 function sendLookAtCharacter(ws, name) {
     ws.send(JSON.stringify({
         type: 'narrator',
@@ -43,9 +61,33 @@ function sendDescribeQuery(ws, name) {
     }));
 }
 
+function sendCharacterPresence(ws, { action, name, neverNarrate }) {
+    ws.send(JSON.stringify({
+        type: 'director',
+        action,
+        character_name: name,
+        never_narrate: neverNarrate,
+    }));
+}
+
+export function dispatchActivateCharacter(ws, { name, neverNarrate }) {
+    if (!ws || !name) return;
+    sendCharacterPresence(ws, { action: 'activate_character', name, neverNarrate: !!neverNarrate });
+}
+
+export function dispatchDeactivateCharacter(ws, { name, neverNarrate }) {
+    if (!ws || !name) return;
+    sendCharacterPresence(ws, { action: 'deactivate_character', name, neverNarrate: !!neverNarrate });
+}
+
 export function dispatchExamineEntity(ws, { name, kind, snapshot }) {
     if (!ws || !name || !kind || !snapshot) return;
     sendExamineEntity(ws, { name, kind, snapshot });
+}
+
+export function dispatchAddSnapshotEntity(ws, { messageId, text }) {
+    if (!ws || messageId === null || messageId === undefined || !text) return;
+    sendAddSnapshotEntity(ws, { messageId, text });
 }
 
 export function dispatchLookAtEntity(ws, { name, kind, isKnownCharacter }) {
@@ -67,9 +109,7 @@ export function isKnownSceneCharacter(sceneData, name) {
     for (const c of active) {
         if (c?.name === name) return true;
     }
-    const inactive = sceneData.inactive_characters || {};
-    for (const key in inactive) {
-        if (inactive[key]?.name === name) return true;
-    }
-    return false;
+    // scene_status sends inactive_characters as a plain list of names
+    const inactive = sceneData.inactive_characters || [];
+    return inactive.includes(name);
 }

@@ -70,4 +70,23 @@ templates:
     priority: 1
     template_type: visual_finalizer
     uid: ideogram_json
+  qwen_image_references:
+    description: Rewrites the reference image labels of a prompt into the tag form
+      that Qwen 2.1 Image expects, so `IMAGE 1` becomes `<image1>`.
+    favorite: false
+    finalizers:
+    - enabled: true
+      flags:
+      - case_sensitive
+      match: IMAGE\s*(\d+)
+      mode: REGEX
+      replace: <image\1>
+      target: POSITIVE
+      vis_types: []
+    group: visual_finalizers
+    instructions: null
+    name: Qwen 2.1 Image references
+    priority: 1
+    template_type: visual_finalizer
+    uid: qwen_image_references
 uid: visual_finalizers

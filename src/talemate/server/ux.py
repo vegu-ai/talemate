@@ -75,10 +75,7 @@ class UxPlugin(Plugin):
 
         self._set_selection(selection)
 
-        try:
-            await async_signals.get("ux.selected").send(selection)
-        except Exception as exc:
-            log.debug("ux.selected.signal_failed", error=str(exc))
+        await async_signals.get("ux.selected").send(selection)
 
     async def handle_cancel(self, data: dict):
         payload = UXCancelPayload(**data)
@@ -94,7 +91,4 @@ class UxPlugin(Plugin):
 
         self._set_selection(selection)
 
-        try:
-            await async_signals.get("ux.selected").send(selection)
-        except Exception as exc:
-            log.debug("ux.cancel.signal_failed", error=str(exc))
+        await async_signals.get("ux.selected").send(selection)

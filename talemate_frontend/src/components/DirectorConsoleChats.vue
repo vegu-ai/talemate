@@ -24,7 +24,7 @@
             <DirectorConsoleChatMessages
                 :messages="chatMessages"
                 :confirming="confirming"
-                @confirm-action="({ id, decision }) => confirmActionDecision(id, decision)"
+                @confirm-action="({ id, decision, instructions }) => confirmActionDecision(id, decision, instructions)"
                 @remove-message="removeMessage"
                 @regenerate-last="regenerateLast"
                 :app-busy="appBusy"
@@ -70,6 +70,7 @@ import DirectorConsoleChatsToolbar from './DirectorConsoleChatsToolbar.vue';
 import DirectorConsoleChatMessages from './DirectorConsoleChatMessages.vue';
 import DirectorConsoleChatInput from './DirectorConsoleChatInput.vue';
 import DirectorConsoleChatPlanBanner from './DirectorConsoleChatPlanBanner.vue';
+import { askAgentRequests, takePendingPrompt } from '@/utils/askAgent';
 export default {
     name: 'DirectorConsoleChats',
     components: { ConfirmActionPrompt, DirectorConsoleChatsToolbar, DirectorConsoleChatMessages, DirectorConsoleChatInput, DirectorConsoleChatPlanBanner },
@@ -102,9 +103,43 @@ export default {
             currentChatMode: 'normal',
             confirmWriteActions: true,
             activePlan: null,
+            // prompt from an AskAgent action, and the id of the chat created for
+            // it — the prompt is sent when that chat's own history arrives
+            askAgentPrompt: null,
+            askAgentChatId: null,
         }
     },
+    computed: {
+        askAgentRequests() {
+            return askAgentRequests('director');
+        },
+    },
+    watch: {
+        askAgentRequests() {
+            this.startAskAgentChat();
+        },
+    },
     methods: {
+        startAskAgentChat() {
+            // taken even when it is refused below, so a discarded ask leaves
+            // nothing behind for the next mount to pick up
+            const prompt = takePendingPrompt('director');
+            if(!prompt) return;
+            // one ask at a time: a second one while the first chat is still
+            // coming up would create a second chat, move the active chat off
+            // the first, and send both prompts
+            if(this.askAgentPrompt) return;
+            this.askAgentPrompt = prompt;
+            this.createChat();
+        },
+        sendAskAgentPrompt(chatId) {
+            if(!this.askAgentPrompt || chatId !== this.askAgentChatId) return;
+            const message = this.askAgentPrompt;
+            this.askAgentPrompt = null;
+            this.askAgentChatId = null;
+            this.chatInput = message;
+            this.sendChat();
+        },
         resetChatForNewScene() {
             this.chats = [];
             this.activeChatId = null;
@@ -114,6 +149,8 @@ export default {
             this.isProcessing = false;
             this.currentChatMode = 'normal';
             this.activePlan = null;
+            this.askAgentPrompt = null;
+            this.askAgentChatId = null;
             this.requestChatList();
         },
         updateChatMode(newMode) {
@@ -183,7 +220,7 @@ export default {
                 this.confirming = { ...this.confirming, [id]: false };
             }
         },
-        confirmActionDecision(id, decision) {
+        confirmActionDecision(id, decision, instructions = '') {
             if (!this.activeChatId) return;
             this.confirming = { ...this.confirming, [id]: true };
             this.getWebsocket().send(JSON.stringify({
@@ -192,6 +229,7 @@ export default {
                 chat_id: this.activeChatId,
                 id,
                 decision,
+                instructions,
             }));
         },
         hasTrailingLoading() {
@@ -345,10 +383,15 @@ export default {
             if(message.type === 'request_action_confirmation') {
                 const data = message.data || {};
                 if(!data.chat_id || data.chat_id !== this.activeChatId) return;
-                console.log('request_action_confirmation', data);
                 // Remove any trailing thinking placeholder while waiting for user decision
                 this.removeTrailingPlaceholder();
                 this.addOrUpdateConfirmRequest(data.id, data.name, data.description, data.timer);
+                return;
+            }
+
+            if(message.type === 'action_confirmation_finished') {
+                const data = message.data || {};
+                if(data.chat_id === this.activeChatId) this.markConfirmRequestDecision(data.id, data.decision);
                 return;
             }
 
@@ -375,8 +418,15 @@ export default {
                 this.chatMessages = [];
                 this.tokenTotal = null;
                 this.activePlan = null;
-                // Proactively request history to avoid any race ordering
-                this.onSelectChat();
+                // Proactively request history to avoid any race ordering. An
+                // AskAgent prompt waits for the history the backend already
+                // queues for the chat it just created: a second one would land
+                // after the prompt was sent and replace its optimistic bubbles.
+                if(this.askAgentPrompt) {
+                    this.askAgentChatId = message.chat_id;
+                } else {
+                    this.onSelectChat();
+                }
                 return;
             }
             if(message.action === 'chat_deleted') {
@@ -397,7 +447,6 @@ export default {
                 return;
             }
             if(message.action === 'chat_history') {
-                console.debug('chat_history', message);
                 // If no active chat yet (race where history arrives first), adopt this chat
                 if(!this.activeChatId) {
                     this.activeChatId = message.chat_id;
@@ -410,6 +459,9 @@ export default {
                     if('plan' in message) {
                         this.activePlan = message.plan || null;
                     }
+                    // after the replacement above: the bubbles the prompt adds
+                    // must not be wiped by this history
+                    this.sendAskAgentPrompt(message.chat_id);
                 }
                 return;
             }
@@ -470,7 +522,13 @@ export default {
     },
     mounted() {
         this.registerMessageHandler(this.handleMessage);
-        this.requestChatList();
+        // an action that opened this drawer left its prompt behind before this
+        // component existed, so the pending one is picked up here rather than
+        // by the watcher alone; the chat list would race the chat it asks for
+        this.startAskAgentChat();
+        if(!this.askAgentPrompt) {
+            this.requestChatList();
+        }
     },
     unmounted() {
         this.unregisterMessageHandler(this.handleMessage);

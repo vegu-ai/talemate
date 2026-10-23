@@ -152,13 +152,12 @@ class GoogleMixin:
             container=True,
             icon="mdi-server-outline",
             label="Google Gemini",
-            description="Google Gemini is a cloud-based text to speech API. (API key required and must be set in the Talemate Settings -> Application -> Google)",
+            description="Google Gemini is a cloud-based text to speech API. (API key required and must be set in the Talemate Settings -> Connections -> API Keys -> Google)",
             config={
                 "api_key": AgentActionConfig(
                     type="unified_api_key",
                     value="google.api_key",
                     label="Google API Key",
-                    scene_overridable=False,
                 ),
                 "model": AgentActionConfig(
                     type="text",
@@ -261,7 +260,7 @@ class GoogleMixin:
             details["google_api_key"] = AgentDetail(
                 icon="mdi-key",
                 value="Google API key not set",
-                description="Google API key not set. You can set it in the Talemate Settings -> Application -> Google",
+                description="Google API key not set. You can set it in the Talemate Settings -> Connections -> API Keys -> Google",
                 color="error",
             ).model_dump()
         else:

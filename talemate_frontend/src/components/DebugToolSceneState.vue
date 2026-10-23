@@ -5,7 +5,7 @@
                 <span class="headline">Scene State Editor</span>
             </v-card-title>
             <v-card-text>
-                <v-alert type="warning" class="text-caption" variant="tonal">
+                <v-alert type="warning" class="text-body-small" variant="tonal">
                     Editing the scene state through this editor can ABSOLUTELY brick your game. Be careful. However as long as you do not save the scene afterwards, you can always reload the game to get back to the original state.
                 </v-alert>
                 <Codemirror
@@ -27,8 +27,7 @@
 
 import { Codemirror } from 'vue-codemirror'
 import { json } from '@codemirror/lang-json'
-import { oneDark } from '@codemirror/theme-one-dark'
-import { EditorView } from '@codemirror/view'
+import { codeEditorExtensions } from '@/utils/codeEditorTheme.js'
 
 export default {
     name: 'DebugToolSceneState',
@@ -90,11 +89,7 @@ export default {
     },
     setup() {
 
-        const extensions = [
-            json(),
-            oneDark,
-            EditorView.lineWrapping
-        ];
+        const extensions = codeEditorExtensions(json());
 
         const promptEditorStyle = {
             maxHeight: "1440px",

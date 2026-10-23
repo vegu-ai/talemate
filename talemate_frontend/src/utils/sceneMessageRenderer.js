@@ -1,5 +1,12 @@
 import { marked, Marked } from 'marked';
-import { DEFAULT_APPEARANCE_COLORS } from './messageColors.js';
+import { escapeHtmlText, sanitizeHtml } from './htmlSanitizer.js';
+import { DEFAULT_APPEARANCE_COLORS, themeMessageColor } from './messageColors.js';
+
+// Stands in for the character-name prefix while marked runs, so the prefix span
+// is not fed through the parser as raw HTML — which the html renderer escapes on
+// purpose. Control characters only: a word here would be matched by an
+// entity-mention phrase and replaced before the prefix is substituted back.
+const PREFIX_PLACEHOLDER = '\x00\x01\x00';
 
 const DEFAULTS = {
     quotes: {
@@ -53,12 +60,14 @@ function escapeHtmlAttr(s) {
         .replace(/>/g, '&gt;');
 }
 
-// Escape a string for safe embedding as HTML text content.
-function escapeHtmlText(s) {
-    return String(s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+// Escape the characters that could open markup, leaving a valid character
+// reference intact — the rule marked applies to the text around it, so an
+// entity renders the same inside emphasis as outside it.
+const MARKUP_CHARS = /[<>]|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g;
+const MARKUP_CHAR_ENTITIES = { '<': '&lt;', '>': '&gt;', '&': '&amp;' };
+
+function escapeMarkupChars(s) {
+    return String(s).replace(MARKUP_CHARS, (c) => MARKUP_CHAR_ENTITIES[c]);
 }
 
 // Compile an entity-mentions list into the lookup structures used by the
@@ -115,14 +124,12 @@ function compileEntityMentions(mentions) {
 
 export class SceneTextParser {
     constructor(config = {}) {
-        // Determine default color:
-        // 1. Use config.defaultColor if explicitly provided
-        // 2. Use message type default from DEFAULT_APPEARANCE_COLORS if messageType is specified
-        // 3. Otherwise use DEFAULTS.default.color
+        const themed = (typ, fallback) => themeMessageColor(config.themeColors, typ) ?? fallback;
+
         const defaultColor = config.defaultColor ??
-                            (config.messageType && DEFAULT_APPEARANCE_COLORS[config.messageType]) ??
-                            DEFAULTS.default.color;
-        
+                            (config.messageType && themed(config.messageType, DEFAULT_APPEARANCE_COLORS[config.messageType])) ??
+                            themed('emphasis', DEFAULTS.default.color);
+
         // Get the default message color from config.default if available
         const defaultMessageColor = config.default?.color ?? defaultColor;
         
@@ -150,11 +157,11 @@ export class SceneTextParser {
         };
         
         this.config = {
-            quotes: merge('quotes', { className: 'scene-quotes' }, { color: DEFAULTS.quotes.color, bold: DEFAULTS.quotes.bold, italic: DEFAULTS.quotes.italic }, true),
-            emphasis: merge('emphasis', { className: 'scene-emphasis' }, { color: DEFAULTS.emphasis.color, bold: DEFAULTS.emphasis.bold, italic: DEFAULTS.emphasis.italic }, true),
-            parentheses: merge('parentheses', { className: 'scene-parentheses' }, { color: DEFAULTS.parentheses.color, bold: DEFAULTS.parentheses.bold, italic: DEFAULTS.parentheses.italic }, true),
-            brackets: merge('brackets', { className: 'scene-brackets' }, { color: DEFAULTS.brackets.color, bold: DEFAULTS.brackets.bold, italic: DEFAULTS.brackets.italic }, true),
-            entities: merge('entities', { className: 'scene-entity' }, { color: DEFAULTS.entities.color, bold: DEFAULTS.entities.bold, italic: DEFAULTS.entities.italic }, true),
+            quotes: merge('quotes', { className: 'scene-quotes' }, { color: themed('quotes', DEFAULTS.quotes.color), bold: DEFAULTS.quotes.bold, italic: DEFAULTS.quotes.italic }, true),
+            emphasis: merge('emphasis', { className: 'scene-emphasis' }, { color: themed('emphasis', DEFAULTS.emphasis.color), bold: DEFAULTS.emphasis.bold, italic: DEFAULTS.emphasis.italic }, true),
+            parentheses: merge('parentheses', { className: 'scene-parentheses' }, { color: themed('parentheses', DEFAULTS.parentheses.color), bold: DEFAULTS.parentheses.bold, italic: DEFAULTS.parentheses.italic }, true),
+            brackets: merge('brackets', { className: 'scene-brackets' }, { color: themed('brackets', DEFAULTS.brackets.color), bold: DEFAULTS.brackets.bold, italic: DEFAULTS.brackets.italic }, true),
+            entities: merge('entities', { className: 'scene-entity' }, { color: themed('entities', DEFAULTS.entities.color), bold: DEFAULTS.entities.bold, italic: DEFAULTS.entities.italic }, true),
             prefix:   merge('prefix',   { className: 'scene-prefix' },   { color: DEFAULTS.prefix.color,  bold: true, italic: false }),
             default: merge('default', { className: 'scene-default' }, { color: defaultColor, bold: false, italic: false }),
         };
@@ -283,23 +290,26 @@ export class SceneTextParser {
                         return text;
                     }
                     self._entitiesSeenInParse.add(seenKey);
-                    const name = escapeHtmlAttr(token.entityName);
-                    const kind = escapeHtmlAttr(token.entityKind);
-                    const styleStr = self.buildStyleString(styles);
-                    return `<span class="scene-entity" data-entity-name="${name}" data-entity-kind="${kind}" style="${styleStr}">${text}</span>`;
+                    return self.buildEntitySpan(text, token.entityName, token.entityKind);
                 },
             }
         ];
         
         // Custom renderer for emphasis (*)
         const renderer = {
-            em: ({ text }) => {
+            // Emphasis renders its own source as text rather than parsing it:
+            // markup nested in emphasis keeps the emphasis styling, and a
+            // deeply nested run costs linear rather than quadratic time. Entity
+            // mentions are marked by hand instead, since the inline tokenizer
+            // never sees what is inside emphasis and most scene prose is.
+            em: (token) => {
                 const styles = this.config.emphasis;
-                return this.buildSpan('emphasis', text, styles);
+                return this.buildSpan('emphasis', this.markEntitiesInRawText(token.text), styles);
             },
             
             // Optionally override other elements
-            strong: ({ text }) => {
+            strong: (token) => {
+                const text = this.markEntitiesInRawText(token.text);
                 if (this.config.strong) {
                     return this.buildElement('strong', text, this.config.strong);
                 }
@@ -316,13 +326,15 @@ export class SceneTextParser {
 
             // Custom renderer for horizontal rules (---) to match v-divider styling
             hr: () => {
-                return '<hr class="scene-hr" style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.12); margin: 16px 0; width: 100%;" />';
+                return '<hr class="scene-hr" style="border: none; border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); margin: 16px 0; width: 100%;" />';
             },
 
             // Disable markdown images
             image: () => {
                 return '';
             },
+
+            html: ({ text }) => escapeHtmlText(text),
         };
         
         // Apply extensions and renderer
@@ -335,6 +347,40 @@ export class SceneTextParser {
         });
     }
     
+    buildEntitySpan(content, name, kind) {
+        const styleStr = this.buildStyleString(this.config.entities);
+        return `<span class="scene-entity" data-entity-name="${escapeHtmlAttr(name)}" `
+            + `data-entity-kind="${escapeHtmlAttr(kind)}" style="${styleStr}">${content}</span>`;
+    }
+
+    // Wrap entity mentions inside a run of text a renderer emits verbatim.
+    // Shares `_entitiesSeenInParse` with the tokenizer path, so an entity that
+    // appears both inside and outside emphasis is still marked once, on its
+    // first occurrence in the message.
+    markEntitiesInRawText(text) {
+        const compiled = this._entityMentions;
+        const styles = this.config.entities;
+        if (!compiled || !this._entitiesSeenInParse || (styles && styles.show === false)) {
+            return escapeMarkupChars(text);
+        }
+        const pattern = new RegExp(compiled.startRegex.source, 'gi');
+        let marked = '';
+        let cursor = 0;
+        for (const match of text.matchAll(pattern)) {
+            const phrase = match[0];
+            const entity = compiled.phraseToEntity[phrase.toLowerCase()];
+            if (!entity) continue;
+            const seenKey = `${entity.kind}:${entity.name}`;
+            if (this._entitiesSeenInParse.has(seenKey)) continue;
+            this._entitiesSeenInParse.add(seenKey);
+            marked += escapeMarkupChars(text.slice(cursor, match.index));
+            marked += this.buildEntitySpan(
+                escapeMarkupChars(phrase), entity.name, entity.kind);
+            cursor = match.index + phrase.length;
+        }
+        return marked + escapeMarkupChars(text.slice(cursor));
+    }
+
     buildSpan(type, content, styles) {
         const styleStr = this.buildStyleString(styles);
         return `<span class="${styles.className}" style="${styleStr}">${content}</span>`;
@@ -429,11 +475,11 @@ export class SceneTextParser {
         // Detect "Character Name: " prefix at start of message
         const prefixRegex = /^([^:\n]{1,50}):\s*/; // up to 50 chars before first colon
         const m = md.match(prefixRegex);
+        let prefixHtml = null;
         if (m) {
-            const prefixStr = m[1] + ':';
-            const rest      = md.slice(m[0].length);
-            const styled    = this.buildSpan('prefix', prefixStr, this.config.prefix);
-            md = styled + ' ' + rest;
+            const prefixStr = escapeHtmlText(m[1] + ':');
+            prefixHtml = this.buildSpan('prefix', prefixStr, this.config.prefix);
+            md = PREFIX_PLACEHOLDER + ' ' + md.slice(m[0].length);
         }
 
         // Stash the compiled mention regex so the entity tokenizer extension
@@ -447,7 +493,10 @@ export class SceneTextParser {
             // Restore protected newlines as <br> tags
             // eslint-disable-next-line no-control-regex
             result = result.replace(/\x00BR\x00/g, '<br>');
-            return result;
+            if (prefixHtml) {
+                result = result.replace(PREFIX_PLACEHOLDER, () => prefixHtml);
+            }
+            return sanitizeHtml(result);
         } finally {
             this._entityMentions = null;
             this._entitiesSeenInParse = null;
@@ -455,7 +504,7 @@ export class SceneTextParser {
     }
     
     parseInline(text) {
-        return this.marked.parseInline(text);
+        return sanitizeHtml(this.marked.parseInline(text));
     }
     
     // Update configuration
@@ -467,6 +516,21 @@ export class SceneTextParser {
 
 // Export a default instance for backward compatibility
 export const defaultParser = new SceneTextParser();
+
+// Text about the story rather than a line of it (a character's view of a
+// message, a memory) takes the narrator styles
+export function narratorTextParser(appearanceConfig) {
+    const sceneConfig = appearanceConfig?.scene || {};
+    const narratorStyles = sceneConfig.narrator_messages || {};
+    return new SceneTextParser({
+        quotes: sceneConfig.quotes,
+        emphasis: sceneConfig.emphasis || narratorStyles,
+        parentheses: sceneConfig.parentheses || narratorStyles,
+        brackets: sceneConfig.brackets || narratorStyles,
+        default: narratorStyles,
+        messageType: 'narrator',
+    });
+}
 
 // Export parse function for simple usage
 export function parseSceneText(text, config = {}) {

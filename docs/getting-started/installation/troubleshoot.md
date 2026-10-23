@@ -80,6 +80,14 @@ services:
 
 ## General
 
+### Stopping Talemate
+
+Press Ctrl+C once in the backend terminal. Talemate closes frontend connections and gives background work up to five seconds to finish.
+
+If shutdown stalls, Talemate prints `Shutdown exceeded 5 seconds; forcing process exit` and ends the backend with a nonzero exit status. This forced exit abandons unfinished work. Any stop discards unsaved changes. Save your scene before you stop Talemate.
+
+If Talemate reports that it cannot start the shutdown watchdog, shutdown has no time limit; press Ctrl+C again to end the backend.
+
 ### Running behind reverse proxy with SSL
 
 To run Talemate behind a reverse proxy with SSL:

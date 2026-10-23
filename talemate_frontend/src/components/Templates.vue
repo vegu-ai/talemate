@@ -1,7 +1,8 @@
 <template>
+    <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <!-- edit template -->
 
-        
+
     <!-- group -->
     <v-card v-if="group !== null && template === null">
         <v-card-title>
@@ -17,6 +18,7 @@
                         label="Group name" 
                         :rules="[v => !!v || 'Name is required', v => validateGroupName(v)]"
                         required
+                        @update:model-value="groupDirty = true"
                         @blur="saveTemplateGroup"
                         hint="Invalid characters: &lt; &gt; : / \\ | ? *" 
                         >
@@ -26,6 +28,7 @@
                         <v-text-field 
                         v-model="group.author" 
                         label="Author" 
+                        @update:model-value="groupDirty = true"
                         @blur="saveTemplateGroup"
                         :rules="[v => !!v || 'Author is required']"
                         required
@@ -41,6 +44,7 @@
                         <v-textarea 
                         v-model="group.description"
                         label="Description"
+                        @update:model-value="groupDirty = true"
                         @blur="saveTemplateGroup"
                         hint="A short description of what this group is for."
                         auto-grow
@@ -60,8 +64,10 @@
             <ConfirmActionInline
                 :actionLabel="'Remove group'"
                 :confirmLabel="'Confirm removal'"
+                :disabled="groupHasLocked"
                 @confirm="removeTemplateGroup"
             />
+            <div v-if="groupHasLocked" class="text-body-small text-muted ml-2">The group holds locked templates and cannot be removed.</div>
         </v-card-actions>
     </v-card>
 
@@ -73,8 +79,8 @@
             <v-chip label size="x-small" color="primary" class="ml-1">
                 <strong class="mr-2 text-deep-purple-lighten-3">Group</strong>{{ toLabel(group.name) }}
             </v-chip>
-            <v-chip label size="x-small" color="grey" class="ml-1">
-                <strong class="mr-2 text-grey-lighten-2">Type</strong>{{ toLabel(template.template_type) }}
+            <v-chip label size="x-small" color="muted" class="ml-1">
+                <strong class="mr-2 text-high-emphasis">Type</strong>{{ templateTypeTitle(template.template_type) }}
             </v-chip>
         </v-card-title>
         <v-card-title v-else>
@@ -83,11 +89,14 @@
             <v-chip label size="x-small" color="primary" class="ml-1">
                 <strong class="mr-2 text-deep-purple-lighten-3">Group</strong>{{ toLabel(group.name) }}
             </v-chip>
-            <v-chip label size="x-small" color="grey" class="ml-1" v-if="template.template_type">
-                {{ toLabel(template.template_type) }}
+            <v-chip label size="x-small" color="muted" class="ml-1" v-if="template.template_type">
+                {{ templateTypeTitle(template.template_type) }}
             </v-chip>
         </v-card-title>
         <v-card-text>
+            <v-alert v-if="externalChange" density="compact" variant="tonal" color="warning" icon="mdi-alert-circle-outline" class="mb-3">
+                This template was changed elsewhere - by the help chat or another window - while you have unsaved edits here. Your edits overwrite that change when they save.
+            </v-alert>
             <v-form ref="form" v-model="formValid">
                 <div v-if="!template.uid">
                     <v-row>
@@ -102,25 +111,37 @@
                             </v-text-field>
                         </v-col>
                         <v-col cols="12" sm="6" xl="4" xxl="3">
-                            <v-select 
-                            v-model="template.template_type" 
+                            <v-select
+                            v-model="template.template_type"
                             @update:model-value="onTemplateTypeChange"
                             :items="templateTypes"
                             label="Template type">
+                                <template v-slot:item="{ props, item }">
+                                    <v-list-item v-bind="props" slim>
+                                        <template v-slot:prepend>
+                                            <v-icon :color="item.color" class="opacity-100">{{ item.icon }}</v-icon>
+                                        </template>
+                                    </v-list-item>
+                                </template>
+                                <template v-slot:selection="{ item }">
+                                    <v-icon :color="item.color" size="small" class="mr-2">{{ item.icon }}</v-icon>
+                                    {{ item.title }}
+                                </template>
                             </v-select>
                         </v-col>
                     </v-row>
                 </div>
 
                 
-                <v-alert v-if="template && helpMessages[template.template_type] !== undefined" :icon="iconForTemplate(template)" color="muted" variant="text" density="compact" class="mt-2 mb-2">
-                    {{ helpMessages[template.template_type] }}
+                <v-alert v-if="template && templateTypeHelp(template.template_type)" :icon="iconForTemplate(template)" color="muted" variant="text" density="compact" class="mt-2 mb-2">
+                    {{ templateTypeHelp(template.template_type) }}
                 </v-alert>
 
 
                 <!-- State Reinforcement Template -->
                 <div v-if="template.template_type === 'state_reinforcement'">
                     <TemplateStateReinforcement 
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -130,6 +151,7 @@
                 <!-- Character Attribute Template -->
                 <div v-else-if="template.template_type === 'character_attribute'">
                     <TemplateCharacterAttribute 
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -138,6 +160,7 @@
                 <!-- Character Detail Template -->
                 <div v-else-if="template.template_type === 'character_detail'">
                     <TemplateCharacterDetail 
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -146,6 +169,7 @@
                 <!-- Spice Collection Template -->
                 <div v-else-if="template.template_type === 'spices'">
                     <TemplateSpices
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         :templates="templates"
                         :scene-active="sceneActive"
@@ -156,7 +180,10 @@
                 <!-- Writing Style Template -->
                 <div v-else-if="template.template_type === 'writing_style'">
                     <TemplateWritingStyle
+                        ref="templateEditor"
                         :immutableTemplate="template"
+                        :default-decision-checks="templates?.defaults?.writing_style?.decision_checks || []"
+                        :default-decision-check-threshold="templates?.defaults?.writing_style?.decision_check_threshold"
                         :scene-active="sceneActive"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -165,6 +192,7 @@
                 <!-- Visual Style Template -->
                 <div v-else-if="template.template_type === 'visual_style'">
                     <TemplateVisualStyle
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -173,6 +201,7 @@
                 <!-- Visual Prompt Finalizer Template -->
                 <div v-else-if="template.template_type === 'visual_finalizer'">
                     <TemplateVisualFinalizer
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -181,6 +210,7 @@
                 <!-- Agent Persona Template -->
                 <div v-else-if="template.template_type === 'agent_persona'">
                     <TemplateAgentPersona 
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -188,23 +218,44 @@
 
                 <!-- Scene Type Template -->
                 <div v-else-if="template.template_type === 'scene_type'">
-                    <TemplateSceneType 
+                    <TemplateSceneType
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
+                    />
+                </div>
+
+                <!-- Scene Tool Shortcut Template -->
+                <div v-else-if="template.template_type === 'scene_tool_shortcut'">
+                    <TemplateSceneToolShortcut
+                        ref="templateEditor"
+                        :immutableTemplate="template"
+                        @update="(template) => applyAndSaveTemplate(template)"
+                    />
+                </div>
+
+                <!-- Theme Template -->
+                <div v-else-if="template.template_type === 'theme'">
+                    <TemplateTheme
+                        ref="templateEditor"
+                        :immutableTemplate="template"
+                        :themeTemplates="themeTemplateChoices"
+                        @update="(template) => applyAndSaveTemplate(template)"
+                        @flush="(template) => saveTemplatePayload(template)"
                     />
                 </div>
 
             </v-form>
 
         </v-card-text>
-        <v-card-actions v-if="template.uid">
+        <v-card-actions v-if="template.uid && !template.locked">
             <ConfirmActionInline
                 :actionLabel="'Remove template'"
                 :confirmLabel="'Confirm removal'"
                 @confirm="removeTemplate"
             />
         </v-card-actions>
-        <v-card-actions v-else-if="template.template_type !== null && template.name !== null">
+        <v-card-actions v-else-if="!template.uid && template.template_type !== null && template.name !== null">
             <v-btn rounded="sm" prepend-icon="mdi-cube-scan" color="primary" @click.stop="saveTemplate(true)" >
                 Create template
             </v-btn>
@@ -216,7 +267,7 @@
         <v-row>
             <v-col cols="12" lg="12" xl="8" xxl="6">
                 <v-card>
-                    <v-alert type="info" color="grey" variant="text" icon="mdi-cube-scan">
+                    <v-alert class="text-medium-emphasis" variant="text" icon="mdi-cube-scan">
                         Templates are used to facilitate the generation of content for your game. They can be used to define character attributes, character details, writing styles, and automated world or character state tracking.
                         <br><br>
                         Templates are managed in <span class="text-primary"><v-icon size="small">mdi-group</v-icon> groups.</span> Each group can contain multiple templates. When starting out, start by creating a new group and then add templates to it.
@@ -245,17 +296,18 @@
                     </v-card-actions>
                 </v-card>
 
-                <v-card elevation="7" density="compact" class="mt-2" v-for="[templateType, helpMessage] in sortedHelpMessages" :key="templateType">
+                <v-card elevation="3" density="compact" class="mt-2" v-for="templateType in templateTypes" :key="templateType.value">
                     <v-card-title>
-                        <v-icon size="small" class="mr-2" :color="colorForTemplate({template_type: templateType})">{{ iconForTemplate({template_type: templateType}) }}</v-icon>
-                        {{ toLabel(templateType) }}
+                        <v-icon size="small" class="mr-2" :color="templateType.color">{{ templateType.icon }}</v-icon>
+                        {{ templateType.title }}
                     </v-card-title>
                     <v-card-text class="text-muted">
-                        {{ helpMessage }}
+                        {{ templateType.help }}
                     </v-card-text>
                 </v-card>
             </v-col>
         </v-row>
+    </div>
     </div>
 
 </template>
@@ -273,7 +325,14 @@ import TemplateCharacterAttribute from './TemplateCharacterAttribute.vue';
 import TemplateCharacterDetail from './TemplateCharacterDetail.vue';
 import TemplateSpices from './TemplateSpices.vue';
 import TemplateSceneType from './TemplateSceneType.vue';
-import { iconForTemplate, colorForTemplate } from '../utils/templateMappings.js';
+import TemplateSceneToolShortcut from './TemplateSceneToolShortcut.vue';
+import TemplateTheme from './TemplateTheme.vue';
+import { iconForTemplate, hydrateThemeTemplate } from '../utils/templateMappings.js';
+import { templateTypeHelp, templateTypeItems, templateTypeTitle } from '../utils/templateTypes.js';
+import { getActiveCodeEditorTheme } from '../utils/codeEditorTheme.js';
+import { validateGroupName } from '../utils/sceneToolShortcuts.js';
+import { adoptedTemplateUid } from '../utils/templateSaveEcho.js';
+import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 export default {
     name: 'Templates',
@@ -289,6 +348,8 @@ export default {
         TemplateCharacterDetail,
         TemplateSpices,
         TemplateSceneType,
+        TemplateSceneToolShortcut,
+        TemplateTheme,
     },
     props: {
         immutableTemplates: Object,
@@ -302,15 +363,8 @@ export default {
     ],
     watch: {
         immutableTemplates: {
-            handler: function (val) {
-                this.templates = val ? {...val} : null;
-
-                if(this.deferredSelect) {
-                    let index = this.deferredSelect;
-                    this.deferredSelect = null;
-                    this.selectTemplate(index);
-                }
-                
+            handler(val) {
+                this.onTemplatesPushed(val);
             },
             immediate: true
         }
@@ -332,15 +386,25 @@ export default {
             // Only show guidance if there are groups and they're all defaults
             return groups.length > 0 && allGroupsAreDefault;
         },
-        sortedHelpMessages() {
-            if (!this.helpMessages) return [];
-            
-            // Convert helpMessages object to array of [key, value] pairs and sort by key
-            return Object.entries(this.helpMessages).sort((a, b) => a[0].localeCompare(b[0]));
+        groupHasLocked() {
+            return Object.values((this.group && this.group.templates) || {})
+                .some((template) => template.locked);
+        },
+        themeTemplateChoices() {
+            const groups = this.templates?.managed?.groups || [];
+            return groups
+                .map((group) => ({
+                    uid: group.uid,
+                    name: group.name || group.uid,
+                    themes: Object.values(group.templates || {})
+                        .filter((template) => template.template_type === 'theme'),
+                }))
+                .filter((group) => group.themes.length > 0);
         }
     },
     data() {
         return {
+            MAX_CONTENT_WIDTH,
             filter: null,
             newName: null,
             newType: 'state_reinforcement',
@@ -349,34 +413,16 @@ export default {
             groupFormValid: false,
             formValid: false,
             dirty: false,
+            groupDirty: false,
+            externalChange: false,
+            adoptedSnapshot: null,
             templates: null,
-            templateTypes: [
-                { "title": 'State reinforcement', "value": 'state_reinforcement' },
-                { "title": 'Character attribute', "value": 'character_attribute' },
-                { "title": 'Character detail', "value": 'character_detail' },
-                { "title": "Spice collection", "value": 'spices'},
-                { "title": "Writing style", "value": 'writing_style'},
-                { "title": "Visual style", "value": 'visual_style'},
-                { "title": "Visual prompt finalizer", "value": 'visual_finalizer'},
-                { "title": "Agent persona", "value": 'agent_persona'},
-                { "title": "Scene type", "value": 'scene_type'},
-            ],
+            templateTypes: templateTypeItems(),
             template: null,
             group: null,
             deferredSelect: null,
             selectedGroups: [],
             selected: null,
-            helpMessages: {
-                state_reinforcement: "State reinforcement templates are used to quickly (or even automatically) setup common attribues and states you want to track for characters or the world itself. They revolve around a question, statement or attribute name that you want to track for a character. The AI will use this template to generate content that matches the query, based on the current progression of the scene.",
-                character_attribute: "Character attribute templates are used to define attributes that a character can have. They can be used to define character traits, skills, or other properties. The AI will use this template to generate content that matches the attribute, based on the current progression of the scene or their backstory.",
-                character_detail: "Character detail templates are used to define details about a character. They generally are longer form questions or statements that can be used to flesh out a character's backstory or personality. The AI will use this template to generate content that matches the detail, based on the current progression of the scene or their backstory.",
-                spices: "Spice collections are used to define a set of instructions that can be applied during the generation of character attributes or details. They can be used to add a bit of randomness or unexpectedness. A template must explicitly support spice to be able to use a spice collection.",
-                writing_style: "Writing style templates are used to define a writing style that can be applied to the generated content. They can be used to add a specific flavor or tone. A template must explicitly support writing styles to be able to use a writing style template.",
-                visual_style: "Visual style templates define how image prompts are constructed (positive/negative prefixes and suffixes) and the prompting type (keywords vs descriptive).",
-                visual_finalizer: "Visual prompt finalizer templates define a reusable set of post-processing actions (exact, fuzzy or regex match and replace, or AI processing) applied to image generation prompts. Select one as the preset in the visualizer agent's Prompt Finalization settings.",
-                agent_persona: "Agent personas define how an agent should present and behave in prompts (tone, perspective, style). Assign a persona per agent in Scene Settings. (Currently director only)",
-                scene_type: "Scene type templates are used to define different types of scenes that can be played in your game. Each scene type has different rules and constraints that guide the generation and flow of the scene.",
-            }
         };
     },
     inject: [
@@ -387,8 +433,92 @@ export default {
         'toLabel',
     ],
     methods: {
+        onTemplatesPushed(val) {
+            this.templates = val ? {...val} : null;
+
+            if(this.deferredSelect) {
+                let index = this.deferredSelect;
+                this.deferredSelect = null;
+                this.selectTemplate(index);
+                return;
+            }
+
+            this.adoptSelection();
+        },
+
+        // the editor keeps the template object it was handed on selection, so a
+        // push has to hand it the fresh one - otherwise its next save writes the
+        // pre-push values back over whatever wrote them (the help chat, another
+        // window). Unsaved edits here belong to the user: those are flagged
+        // rather than discarded.
+        adoptSelection() {
+            const groups = this.templates?.managed?.groups || [];
+            const group = (this.group && this.group.uid)
+                ? groups.find((candidate) => candidate.uid === this.group.uid)
+                : null;
+
+            if (!group) {
+                return;
+            }
+
+            const incoming = (this.template && this.template.uid)
+                ? (group.templates || {})[this.template.uid] || null
+                : null;
+
+            if (this.editorDirty()) {
+                // the push echoing this view's own save carries what it just
+                // wrote - only a differing payload came from somewhere else
+                if (incoming && JSON.stringify(incoming) !== this.adoptedSnapshot) {
+                    this.externalChange = true;
+                }
+            } else if (incoming) {
+                this.template = incoming;
+                this.rememberAdopted();
+            }
+
+            // the group form binds straight onto this object and saves on blur,
+            // so half-typed text lives here and nowhere else
+            if (!this.groupDirty) {
+                this.group = group;
+            }
+        },
+
+        // baseline for telling a push that echoes this view's own save from one
+        // carrying somebody else's write
+        rememberAdopted() {
+            this.adoptedSnapshot = this.template ? JSON.stringify(this.template) : null;
+            this.externalChange = false;
+        },
+
+        // every template editor keeps its own copy and its own pending edit -
+        // keystrokes since the last blur, an open color picker - and saves
+        // through this component. One ref covers them all: only the editor for
+        // the selected template type is rendered.
+        editorDirty() {
+            const editor = this.$refs.templateEditor;
+            return this.dirty || !!(editor && editor.dirty);
+        },
+
+        uxSnapshot() {
+            // what the templates tab shows, for the help agent's UX snapshot.
+            // `dirty` gates the help agent's theme writes backend-side: the tab
+            // saves the whole template it is on, so an unsaved edit here would
+            // push the pre-change template back over an agent write.
+            //
+            // Reported off-screen too - an edit survives leaving the tab, and so
+            // must the refusal it gates. The theme editor keeps its own dirty
+            // flag (an open color picker, an unblurred notes field), which is
+            // where a pending theme edit lives.
+            return {
+                tab: 'templates',
+                dirty: this.editorDirty(),
+                selected: (this.selected && this.selected[0]) || null,
+                template_type: (this.template && this.template.template_type) || null,
+            };
+        },
         iconForTemplate,
-        colorForTemplate,
+        templateTypeHelp,
+        templateTypeTitle,
         onTemplateTypeChange() {
             if(this.template && this.template.template_type === 'character_attribute') {
                 if(!this.template.attribute)
@@ -396,6 +526,13 @@ export default {
             } else if(this.template && this.template.template_type === 'character_detail') {
                 if(!this.template.detail)
                     this.template.detail = this.template.name;
+            } else if(this.template && this.template.template_type === 'scene_tool_shortcut') {
+                if(!this.template.label)
+                    this.template.label = this.template.name;
+                if(!this.template.icon)
+                    this.template.icon = iconForTemplate(this.template);
+            } else if(this.template && this.template.template_type === 'theme') {
+                hydrateThemeTemplate(this.template, this.$vuetify.theme.current.colors, this.$vuetify.theme.current.dark, getActiveCodeEditorTheme());
             }
         },
 
@@ -410,18 +547,7 @@ export default {
             return true
         },
 
-        validateGroupName(value) {
-            if (value == null) {
-                return true;
-            }
-            // Characters invalid in Windows and Linux filenames
-            // Windows: < > : " / \ | ? *
-            // Linux: / (null byte is not possible to input from UI)
-            if(/[<>:"/\\|?*]/.test(value)) {
-                return "Name contains invalid characters";
-            }
-            return true;
-        },
+        validateGroupName,
 
         selectTemplate(index) {
             if(index === '$DESELECTED') {
@@ -429,6 +555,8 @@ export default {
                 this.template = null;
                 this.selectedGroups = [];
                 this.selected = null;
+                this.dirty = false;
+                this.groupDirty = false;
                 return;
             } else if (index === '$CREATE_GROUP') {
                 this.group = {
@@ -437,6 +565,7 @@ export default {
                     description: '',
                     templates: {},
                 }
+                this.groupDirty = false;
                 this.template = null;
                 this.selectedGroups = [];
                 this.selected = null;
@@ -458,6 +587,7 @@ export default {
                 return;
             }
             this.group = group;
+            this.groupDirty = false;
 
             // Update selected groups
             const groupIndex = safeGroups.findIndex(g => g.uid === group_id);
@@ -486,11 +616,13 @@ export default {
             } else if (template_id && (!this.template || this.template.uid !== template_id)) {
                 template = group.templates[template_id] || null;
                 this.selected = [`${group_id}__${template_id}`];
+                this.dirty = false;
             } else if (template_id && this.template && this.template.uid === template_id) {
                 template = this.template;
             }
 
             this.template = template;
+            this.rememberAdopted();
             
             // Emit update for parent component to sync with menu
             if(template_id) {
@@ -542,9 +674,21 @@ export default {
 
         // requests 
         applyAndSaveTemplate(template, saveNew = false) {
-            console.log('applyAndSaveTemplate', template, saveNew);
             this.template = template;
             this.saveTemplate(saveNew);
+        },
+
+        // persist a template without making it the current selection - a flushed
+        // edit belongs to the template the user has already navigated away from
+        saveTemplatePayload(template) {
+            if (!template || !template.uid) {
+                return;
+            }
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'save_template',
+                template: template
+            }));
         },
         
         saveTemplate(saveNew) {
@@ -556,6 +700,9 @@ export default {
             this.$refs.form.validate()
 
             if(!this.formValid) {
+                // the editor cleared its own flag before emitting, so nothing
+                // else records that the typed value never reached the backend
+                this.dirty = true;
                 return;
             }
 
@@ -564,6 +711,10 @@ export default {
                 action: 'save_template',
                 template: this.template
             }));
+            // what was just sent is what the echo will carry - without this the
+            // baseline stays on the pre-save values and the view's own echo
+            // reads as somebody else's write
+            this.rememberAdopted();
         },
 
         saveTemplateGroup(saveNew) {
@@ -612,6 +763,14 @@ export default {
 
             if (message.action == 'template_saved') {
                 this.dirty = false;
+                const uid = adoptedTemplateUid(this.template, message.data.template);
+                if (uid) {
+                    this.template.uid = uid;
+                    // the menu's re-select of the created template now finds the
+                    // form already on that uid and leaves it alone, so the
+                    // selection it stands for has to be recorded here
+                    this.selected = [`${this.template.group}__${uid}`];
+                }
                 this.requestTemplates();
             } else if (message.action == 'template_deleted') {
                 if (this.selected && this.selected[0] && this.selected[0].includes(message.data.template.uid)) {
@@ -621,6 +780,7 @@ export default {
                 this.requestTemplates();
             } else if (message.action == 'template_group_saved') {
                 this.dirty = false;
+                this.groupDirty = false;
                 if(this.group && !this.group.uid) {
                     this.group = message.data.group;
                 }

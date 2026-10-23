@@ -4,6 +4,7 @@ from contextvars import ContextVar
 
 from talemate.agents.base import set_processing, AgentAction, AgentActionConfig
 from talemate.emit import emit
+from talemate.exceptions import GenerationCancelled
 from talemate.events import UserInteractionEvent
 import talemate.emit.async_signals as async_signals
 import talemate.util as util
@@ -584,10 +585,11 @@ class SceneDirectionMixin:
         if not always_on and not self.direction_enabled_with_override:
             return [], False
 
-        # Set context to indicate we're in a direction turn
-        ctx = scene_direction_context.get()
-        ctx["in_direction_turn"] = True
-        scene_direction_context.set(ctx)
+        # a new dict, never the shared default: the flag must stay local to
+        # this task, or a concurrent Director Chat reads scene direction mode
+        token = scene_direction_context.set(
+            {**scene_direction_context.get(), "in_direction_turn": True}
+        )
 
         try:
             return await self._direction_generate(
@@ -595,9 +597,7 @@ class SceneDirectionMixin:
                 max_actions=max_actions,
             )
         finally:
-            ctx = scene_direction_context.get()
-            ctx["in_direction_turn"] = False
-            scene_direction_context.set(ctx)
+            scene_direction_context.reset(token)
 
     async def _direction_generate(
         self,
@@ -698,6 +698,8 @@ class SceneDirectionMixin:
                     actions_selected, on_action_complete
                 )
                 actions_taken.extend(action_results)
+            except GenerationCancelled:
+                raise
             except UnknownAction as e:
                 log.error("director.direction.actions.execute.unknown_action", error=e)
                 error_result = SceneDirectionActionResultMessage(

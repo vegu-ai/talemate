@@ -1,4 +1,4 @@
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+<|start_header_id|>system<|end_header_id|>
 
 You are a helpful storytelling assistant.<|eot_id|><|start_header_id|>user<|end_header_id|>
 

@@ -5,6 +5,7 @@ from typing import Literal
 import asyncio
 
 from talemate.agents.creator.assistant import ContentGenerationContext
+from talemate.changelog import ForkSaveNameError, resolve_fork_save_name
 from talemate.client.context import ClientContext
 from talemate.context import RegenerationContext
 from talemate.emit import emit
@@ -21,6 +22,7 @@ log = structlog.get_logger("talemate.server.assistant")
 class ForkScenePayload(pydantic.BaseModel):
     message_id: int
     save_name: str | None = None
+    request_id: str | None = None
 
 
 class AnalyzeCharacterCardPayload(pydantic.BaseModel):
@@ -304,20 +306,44 @@ class AssistantPlugin(Plugin):
 
         payload = ForkScenePayload(**data)
 
+        if payload.save_name:
+            try:
+                payload.save_name = resolve_fork_save_name(
+                    self.scene, payload.save_name
+                )
+            except ForkSaveNameError as e:
+                await self.signal_operation_failed(
+                    str(e),
+                    emit_status=False,
+                    request_id=payload.request_id,
+                    failed_action="fork_new_scene",
+                )
+                return
+
         creator = get_agent("creator")
 
         # Fork the scene and get the path to the new fork file
         fork_file_path = await creator.fork_scene(payload.message_id, payload.save_name)
 
-        if fork_file_path:
-            # Send message to frontend to load the forked scene
-            self.websocket_handler.queue_put(
-                {
-                    "type": "system",
-                    "id": "load_scene_request",
-                    "data": {"path": fork_file_path},
-                }
+        if not fork_file_path:
+            await self.signal_operation_failed(
+                "Scene fork failed",
+                emit_status=False,
+                request_id=payload.request_id,
+                failed_action="fork_new_scene",
             )
+            return
+
+        await self.signal_operation_done(
+            signal_only=True, request_id=payload.request_id
+        )
+        self.websocket_handler.queue_put(
+            {
+                "type": "system",
+                "id": "load_scene_request",
+                "data": {"path": fork_file_path},
+            }
+        )
 
     async def handle_analyze_character_card(self, data: dict):
         """
@@ -337,6 +363,7 @@ class AssistantPlugin(Plugin):
             self.websocket_handler.queue_put(
                 {
                     "type": "character_card_analysis",
+                    "request_id": data.get("request_id"),
                     "error": "No file path provided",
                 }
             )
@@ -346,6 +373,7 @@ class AssistantPlugin(Plugin):
                 self.websocket_handler.queue_put(
                     {
                         "type": "character_card_analysis",
+                        "request_id": data.get("request_id"),
                         "data": analysis.model_dump(),
                     }
                 )
@@ -358,6 +386,7 @@ class AssistantPlugin(Plugin):
                 self.websocket_handler.queue_put(
                     {
                         "type": "character_card_analysis",
+                        "request_id": data.get("request_id"),
                         "error": str(e),
                     }
                 )

@@ -1,37 +1,41 @@
 /**
- * Parse an ISO-8601 duration string into {amount, unit} for the UI picker.
+ * Duration helpers for the amount/unit pickers.
  *
- * Handles simple durations like PT30M, PT2H, P3D, P1W, P2M, P1Y.
- * For mixed durations, converts down to the smallest applicable unit.
+ * Durations travel over the wire as integer seconds; the pickers work in
+ * {amount, unit}. A month is 30 days and a year is 365 days, matching the
+ * backend.
  */
-export function parseIsoDuration(iso) {
-    if (!iso) return { amount: 0, unit: 'minutes' };
+export const UNIT_SECONDS = Object.freeze({
+    minutes: 60,
+    hours: 3600,
+    days: 86400,
+    weeks: 604800,
+    months: 2592000,
+    years: 31536000,
+});
 
-    const match = iso.match(/^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/);
-    if (!match) return { amount: 0, unit: 'minutes' };
+const UNITS_LARGEST_FIRST = ['years', 'months', 'weeks', 'days', 'hours', 'minutes'];
 
-    const years = parseInt(match[1] || 0);
-    const months = parseInt(match[2] || 0);
-    const weeks = parseInt(match[3] || 0);
-    const days = parseInt(match[4] || 0);
-    const hours = parseInt(match[5] || 0);
-    const minutes = parseInt(match[6] || 0);
+export function amountUnitToSeconds(amount, unit) {
+    const unitSeconds = UNIT_SECONDS[unit];
+    if (!unitSeconds) throw new Error(`Invalid unit: ${unit}`);
+    return Math.round(Math.abs(Number(amount) || 0)) * unitSeconds;
+}
 
-    // Return the largest single unit if only one is set
-    if (years && !months && !weeks && !days && !hours && !minutes) return { amount: years, unit: 'years' };
-    if (months && !years && !weeks && !days && !hours && !minutes) return { amount: months, unit: 'months' };
-    if (weeks && !years && !months && !days && !hours && !minutes) return { amount: weeks, unit: 'weeks' };
-    if (days && !years && !months && !weeks && !hours && !minutes) return { amount: days, unit: 'days' };
-    if (hours && !years && !months && !weeks && !days && !minutes) return { amount: hours, unit: 'hours' };
-    if (minutes && !years && !months && !weeks && !days && !hours) return { amount: minutes, unit: 'minutes' };
+/**
+ * Split a second count into {amount, unit} for the UI picker.
+ *
+ * Picks the largest unit that divides the duration evenly, so a passage saved
+ * as "3 days" comes back as "3 days" rather than "72 hours".
+ */
+export function secondsToAmountUnit(seconds) {
+    const total = Math.round(Math.abs(Number(seconds) || 0));
+    if (!total) return { amount: 0, unit: 'minutes' };
 
-    // Mixed duration: convert to smallest applicable unit
-    const totalMinutes = (years * 525600) + (months * 43800) + (weeks * 10080) + (days * 1440) + (hours * 60) + minutes;
+    for (const unit of UNITS_LARGEST_FIRST) {
+        if (total % UNIT_SECONDS[unit] === 0) return { amount: total / UNIT_SECONDS[unit], unit };
+    }
 
-    if (totalMinutes % 525600 === 0) return { amount: totalMinutes / 525600, unit: 'years' };
-    if (totalMinutes % 43800 === 0) return { amount: totalMinutes / 43800, unit: 'months' };
-    if (totalMinutes % 10080 === 0) return { amount: totalMinutes / 10080, unit: 'weeks' };
-    if (totalMinutes % 1440 === 0) return { amount: totalMinutes / 1440, unit: 'days' };
-    if (totalMinutes % 60 === 0) return { amount: totalMinutes / 60, unit: 'hours' };
-    return { amount: totalMinutes, unit: 'minutes' };
+    // the picker offers no sub-minute unit, so anything finer rounds up to it
+    return { amount: Math.max(1, Math.round(total / UNIT_SECONDS.minutes)), unit: 'minutes' };
 }

@@ -391,7 +391,8 @@
         "template": null,
         "max_calls": 1,
         "retries": 0,
-        "response_length": 1024
+        "response_length": 1024,
+        "inherit_parent_call": false
       },
       "x": 1964,
       "y": 1936,

@@ -6,34 +6,34 @@
                 <span v-if="busy">
                     <v-progress-circular class="ml-1 mr-3" size="14" indeterminate="disable-shrink" color="primary">
                     </v-progress-circular>
-                    <span class="text-caption text-primary">Generating...</span>
+                    <span class="text-body-small text-primary">Generating...</span>
                 </span>
             </v-card-title>
             <v-card-text>
 
-                <v-alert density="compact" v-if="character" icon="mdi-account" variant="text" color="grey">
+                <v-alert density="compact" v-if="character" icon="mdi-account" variant="text" class="text-medium-emphasis">
                     {{ character }}    
                 </v-alert>
 
-                <v-alert density="compact" icon="mdi-text-box" variant="text" color="grey">
+                <v-alert density="compact" icon="mdi-text-box" variant="text" class="text-medium-emphasis">
                     {{ contextTypeLabel }}
                 </v-alert>
 
-                <v-alert v-if="generationOptions.writing_style" density="compact" icon="mdi-script-text" variant="text" color="grey">
+                <v-alert v-if="generationOptions.writing_style" density="compact" icon="mdi-script-text" variant="text" class="text-medium-emphasis">
                     Writing Style: {{ generationOptions.writing_style.name }}
                 </v-alert>
 
-                <v-alert v-if="generationOptions.spices && generationOptions.spices.spices.length > 0" density="compact" icon="mdi-chili-mild" variant="text" color="grey">
+                <v-alert v-if="generationOptions.spices && generationOptions.spices.spices.length > 0" density="compact" icon="mdi-chili-mild" variant="text" class="text-medium-emphasis">
                     Spice collection: {{ generationOptions.spices.name }}
                 </v-alert>
 
-                <v-alert v-if="effectiveLength" density="compact" icon="mdi-text-box-outline" variant="text" color="grey">
+                <v-alert v-if="effectiveLength" density="compact" icon="mdi-text-box-outline" variant="text" class="text-medium-emphasis">
                     Length: {{ effectiveLength }} tokens
                 </v-alert>
 
-                <v-alert dense icon="mdi-pencil" variant="text" color="grey" v-if="original && withOriginal">
+                <v-alert dense icon="mdi-pencil" variant="text" class="text-medium-emphasis" v-if="original && withOriginal">
                    <div class="original-overflow">
-                     <span class="text-grey-lighten-2">[Rewriting]</span> {{ original }}
+                     <span class="text-high-emphasis">[Rewriting]</span> {{ original }}
                     
                    </div>
                 </v-alert>
@@ -61,7 +61,7 @@
         </v-card>
     </v-dialog>
 
-    <v-sheet class="text-right">
+    <v-sheet color="transparent" class="text-right">
         <v-spacer></v-spacer>
         <v-tooltip class="pre-wrap" :text="tooltipText" >
             <template v-slot:activator="{ props }">
@@ -71,7 +71,7 @@
     </v-sheet>
 </template>
 <script>
-import { v4 as uuidv4 } from 'uuid';
+import { newUuid } from '@/utils/uuid';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
 
 // In-memory (non-persistent) per-uid selection memory, capped to 100 entries.
@@ -103,7 +103,7 @@ export default {
         uid: {
             type: String,
             required: false,
-            default: () => uuidv4()
+            default: () => newUuid()
         },
         templates: Object,
         generationOptions: {

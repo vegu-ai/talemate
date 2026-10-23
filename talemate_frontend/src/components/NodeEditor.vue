@@ -24,7 +24,7 @@
                 <v-toolbar-title><v-icon class="mr-2" color="highlight6">mdi-chart-timeline-variant-shimmer</v-icon>Nodes
                 </v-toolbar-title>
                 
-                <span class="text-caption" :class="editingNodeIsScene ? 'text-primary' : 'text-muted'">
+                <span class="text-body-small" :class="editingNodeIsScene ? 'text-primary' : 'text-muted'">
                     <v-icon size="small" class="mr-1">mdi-file</v-icon>
                     {{ editingNodeDisplayLabel }}
                 </span>
@@ -216,12 +216,12 @@
                         <v-card-text v-else-if="propertyEditorType === 'json'">
                             <Codemirror
                                 v-model="propertyEditorValue"
-                                ref="propertyEditorCodeInput"
                                 :extensions="extensions"
                                 :style="propertyEditorStyle"
+                                @ready="onPropertyEditorCodeReady"
                                 @keydown.capture="onPropertyEditorKeydown"
                             ></Codemirror>
-                            <span class="text-caption text-muted">({{ primaryModifierLabel }}+Enter to submit changes)</span>
+                            <span class="text-body-small text-muted">({{ primaryModifierLabel }}+Enter to submit changes)</span>
                         </v-card-text>
                         <v-card-actions v-if="propertyEditorType === 'color'">
                             <v-spacer></v-spacer>
@@ -231,26 +231,29 @@
                     </v-card>
                 </v-dialog>
 
-                <ConfirmActionPrompt 
-                    ref="confirmExitCreative" 
+                <!-- contained only while the editor is on screen: a playthrough
+                     hides this column, and a dialog contained in a hidden
+                     element would leave the exit action doing nothing -->
+                <ConfirmActionPrompt
+                    ref="confirmExitCreative"
                     action-label="Exit node editor"
                     :description="exitConfirmDescription"
                     confirm-text="Exit"
                     cancel-text="Cancel"
                     icon="mdi-exit-to-app"
                     color="delete"
-                    :contained="true"
+                    :contained="isVisible"
                     :max-width="400"
                     @confirm="exitCreativeMode"
                 />
             </div>
 
             <v-sheet v-if="editingLockedModule" class="transparent-background">
-                <p v-if="scene.env === 'creative'" class="ma-2 text-muted text-caption">
+                <p v-if="scene.env === 'creative'" class="ma-2 text-muted text-body-small">
                     <v-icon size="small" class="mr-1">mdi-lock</v-icon>
                     The node editor is locked in this environment. Switch to <v-btn size="x-small" variant="text" @click="setEnvCreative" class="text-primary" prepend-icon="mdi-palette">creative mode</v-btn> to edit nodes.
                 </p>
-                <p class="ma-2 text-muted text-caption">
+                <p class="ma-2 text-muted text-body-small">
                     <v-icon size="small" class="mr-1">mdi-lock</v-icon>
                     This module is locked and cannot be directly edited.
                     <span v-if="editingOriginalSceneLoop">
@@ -302,22 +305,23 @@
 
 
 
-    <v-snackbar v-model="testErrorMessage" color="red-darken-2" location="top" close-on-content-click :timeout="8000" elevation="5">
+    <v-snackbar v-model="testErrorMessage" color="delete" location="top" close-on-content-click :timeout="8000" elevation="5">
         <v-icon>mdi-alert-circle</v-icon>
         <span class="ml-2">{{ testErrorMessage }}</span>
     </v-snackbar>
 </template>
 
 <script>
+import { markRaw } from 'vue';
 import { LGraphCanvas, LiteGraph } from 'litegraph.js';
 import { initializeGraphFromJSON, normalizeHexColor } from '@/utils/litegraphUtils'
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
 import { convertGraphToJSON, convertSelectedGraphToJSON } from '@/utils/exportGraph.js'
+import { hasEditableProperties } from '@/utils/moduleProperties';
 //import '@/utils/litegraphSearchBox'
 import { Codemirror } from 'vue-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
-import { oneDark } from '@codemirror/theme-one-dark'
-import { EditorView } from '@codemirror/view'
+import { codeEditorExtensions } from '@/utils/codeEditorTheme.js'
 
 import NodeEditorLibrary from './NodeEditorLibrary.vue';
 import NodeEditorLog from './NodeEditorLog.vue';
@@ -328,6 +332,8 @@ import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 const UNRESOLVED = "type(<class 'talemate.game.engine.nodes.core.UNRESOLVED'>)";
 const NONE = "NoneType(None)";
 const CANVAS_HEIGHT_OFFSET = 500;
+// the vuetify dialog focus trap steals focus right after open, so focus has to be applied once it has settled
+const PROPERTY_EDITOR_FOCUS_DELAY = 100;
 
 export default {
     name: 'NodeEditor',
@@ -378,6 +384,7 @@ export default {
             propertyEditorValidator: (v) => v,
             propertyEditorValidationErrorMessage: null,
             propertyEditorTitle: null,
+            propertyEditorCodeView: null,
             nodeLibrarySearch: '',
             selectedNodePath: null,
             debugLoadPath: "select-actor-for-turn.json",
@@ -498,13 +505,7 @@ export default {
             if (!this.graph || !this.graph.talemateFields) {
                 return false;
             }
-            const editableTypes = ['str', 'int', 'float', 'bool', 'text'];
-            for (let key in this.graph.talemateFields) {
-                if (editableTypes.includes(this.graph.talemateFields[key].type)) {
-                    return true;
-                }
-            }
-            return false;
+            return hasEditableProperties(this.graph.talemateFields);
         },
         sceneReadyForNodeEditing() {
             if(!this.scene) {
@@ -520,7 +521,6 @@ export default {
                 if (newVal) {
                     // reload only if nothing is currently loaded
                     if(!this.graph) {
-                        console.log("Loading node module");
                         this.requestSceneNodes();
                     } else {
                         // Just resize and refresh the canvas when becoming visible again
@@ -545,6 +545,13 @@ export default {
                 }
             },
             deep: true
+        },
+
+        propertyEditor(isOpen) {
+            if (!isOpen) {
+                // closing the dialog unmounts and destroys the editor, a new one announces itself via @ready
+                this.propertyEditorCodeView = null;
+            }
         },
     },
     
@@ -591,14 +598,20 @@ export default {
             this.propertyEditorTitle = title;
             this.propertyEditorValidationErrorMessage = null;
 
-            // focus on text field
             this.$nextTick(() => {
-                if(this.propertyEditorType === 'text') {
-                    setTimeout(() => {
+                setTimeout(() => {
+                    if(this.propertyEditorType === 'text') {
                         this.$refs.propertyEditorTextInput.focus();
-                    }, 100);
-                }
+                    } else if(this.propertyEditorType === 'json' && this.propertyEditorCodeView) {
+                        this.propertyEditorCodeView.focus();
+                    }
+                }, PROPERTY_EDITOR_FOCUS_DELAY);
             });
+        },
+
+        onPropertyEditorCodeReady(payload) {
+            // markRaw: deep reactivity on the CodeMirror EditorView breaks its internals
+            this.propertyEditorCodeView = markRaw(payload.view);
         },
 
         cancelPropertyEditor() {
@@ -698,7 +711,6 @@ export default {
             // Initialize new graph from scene nodes
             this.graph = initializeGraphFromJSON(this.sceneNodes, this.centerOnNode);
             this.centerOnNode = null;
-            console.log("Loaded graph", this.graph, this.sceneNodes);
 
             // If canvas exists, update it with new graph
             if (this.canvas) {
@@ -756,7 +768,6 @@ export default {
         },
 
         requestSceneNodes() {
-            console.log("Requesting node module", this.editingNodePath);
             this.getWebsocket().send(JSON.stringify({
                 type: 'node_editor',
                 action: 'request_node_module',
@@ -767,7 +778,6 @@ export default {
         updateSceneNodes() {
             const graph_data = convertGraphToJSON(this.graph);
 
-            console.log({graph_data});
 
             this.getWebsocket().send(JSON.stringify({
                 type: 'node_editor',
@@ -947,7 +957,6 @@ export default {
 
             this.nodeState[nodeState.node_id] = nodeState;
 
-            //console.log("Applying node state", nodeState);
 
             const ltNode = this.graph._nodes.find(node => node.talemateId === nodeState.node_id);
             let error = (nodeState && nodeState.error);
@@ -963,7 +972,6 @@ export default {
                 return;
             }
 
-            //console.log({ltNode, title:ltNode.title, nodeState: nodeState});
 
             ltNode.talemateState = nodeState;
 
@@ -986,7 +994,6 @@ export default {
                     this.indicatedDeactivatedSocket(deactivated, ltInput, nodeState.input_values[ltInput.name]);
                     const ltLink = this.graph.links[ltInput.link];
                     if(!ltLink) {
-                        //console.log("No link for "+(ltNode.title+"."+ltInput.name), ltInput);
                         continue;
                     }
 
@@ -1002,7 +1009,6 @@ export default {
                         ltLink.color = "#9575cd";
                     }
 
-                    //console.log({ltInput, ltLink});
                 }
             }
 
@@ -1151,7 +1157,6 @@ export default {
         }
 
         LGraphCanvas.prototype.showSearchBox = function(event, options) {
-            console.log("Showing search box", event, options);
             nodeEditor.$refs.nodeSearch.open(event);
             return {
                 focus: () => {}
@@ -1172,11 +1177,7 @@ export default {
 
     setup() {
 
-        const extensions = [
-            markdown(),
-            oneDark,
-            EditorView.lineWrapping
-        ];
+        const extensions = codeEditorExtensions(markdown());
 
         const propertyEditorStyle = {
             maxHeight: "600px"
@@ -1206,7 +1207,7 @@ export default {
 
 .litegraph.lite-search-item:hover {
     color: rgb(var(--v-theme-primary));
-    background-color: #000;
+    background-color: rgb(var(--v-theme-surface));
 }
 
 .litegraph.litesearchbox input {

@@ -721,3 +721,41 @@ def test_strip_hidden_markers(input, hide_brackets, hide_parentheses, expected):
     )
 
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    "text, passages, expected",
+    [
+        (
+            '"Hello. How are you?" she asked. He nodded.',
+            ['"Hello.', 'How are you?" she asked.', "He nodded."],
+            [('"Hello.', ""), ('How are you?"', "she asked."), ("", "He nodded.")],
+        ),
+        (
+            '"Up," she said, "now." *She climbed.*',
+            ['"Up," she said, "now."', "*She climbed.*"],
+            [('"Up," "now."', "she said,"), ("", "*She climbed.*")],
+        ),
+        (
+            '*He set honey by her bowl.* "Dive her soon."',
+            ["*He set honey by her bowl.", '* "Dive her soon."'],
+            [("", "*He set honey by her bowl."), ('"Dive her soon."', "")],
+        ),
+        (
+            '"{John}Hi." He waved. "Bye."',
+            ['"{John}Hi."', "He waved.", '"Bye."'],
+            [('"{John}Hi."', ""), ("", "He waved."), ('"Bye."', "")],
+        ),
+        (
+            'He paused. "Unfinished',
+            ["He paused.", '"Unfinished'],
+            [("", "He paused."), ('"Unfinished', "")],
+        ),
+    ],
+)
+def test_split_passages_dialogue_and_prose(text, passages, expected):
+    from talemate.util.dialogue import split_passages_dialogue_and_prose
+
+    result = split_passages_dialogue_and_prose(text, passages)
+
+    assert [(parts.dialogue, parts.prose) for parts in result] == expected

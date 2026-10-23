@@ -13,7 +13,8 @@ The function under test is always invoked via its real public entry point.
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -23,15 +24,42 @@ from _world_state_helpers import (
     scene_with_memory,  # noqa: F401 - pytest fixture
 )
 
+import talemate.emit.async_signals
 import talemate.instance as instance_module
 import talemate.agents.world_state as world_state_module
+import talemate.agents.world_state.snapshot as snapshot_module
+from talemate.world_state.snapshot_revision import (
+    IncompatibleSnapshotTemplate,
+    SnapshotProvenance,
+)
 from talemate.agents.world_state import (
     SNAPSHOT_TASK,
     TimePassageEmission,
     WorldStateAgent,
     WorldStateAgentEmission,
 )
-from talemate.world_state import ContextPin, Reinforcement
+from talemate.agents.world_state.snapshot import (
+    SNAPSHOT_ENTITY_SELECTION_MAX,
+    SnapshotEntityAddition,
+    resolve_character_name,
+)
+from talemate.agents.world_state.websocket_handler import WorldStateWebsocketHandler
+from talemate.exceptions import GenerationCancelled
+from talemate.world_state.merge import has_time_passage_boundary
+from talemate.scene_message import (
+    CharacterMessage,
+    NarratorMessage,
+    TimePassageMessage,
+)
+from talemate.world_state import (
+    CharacterState,
+    ContextPin,
+    ObjectState,
+    PlaceState,
+    Reinforcement,
+    WorldState,
+    WorldStateResponse,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -117,11 +145,11 @@ class TestEmissionDataclasses:
         agent = instance_module.get_agent("world_state")
         em = TimePassageEmission(
             agent=agent,
-            duration="PT1H",
+            duration=3600,
             narrative="time passed",
             human_duration="1 hour later",
         )
-        assert em.duration == "PT1H"
+        assert em.duration == 3600
         assert em.narrative == "time passed"
         assert em.human_duration == "1 hour later"
 
@@ -135,9 +163,9 @@ class TestAdvanceTime:
     @pytest.mark.asyncio
     async def test_emits_time_passage_message(self, scene):  # noqa: F811
         agent = instance_module.get_agent("world_state")
-        msg = await agent.advance_time("PT30M", narrative="thirty minutes pass")
+        msg = await agent.advance_time(1800, narrative="thirty minutes pass")
         # Returns a TimePassageMessage with the duration we passed
-        assert msg.ts == "PT30M"
+        assert msg.ts == 1800
         # Human duration formatted
         assert "later" in msg.message
 
@@ -145,7 +173,7 @@ class TestAdvanceTime:
     async def test_pushes_message_into_history(self, scene):  # noqa: F811
         agent = instance_module.get_agent("world_state")
         before = len(scene.history)
-        await agent.advance_time("PT1H")
+        await agent.advance_time(3600)
         assert len(scene.history) == before + 1
 
     @pytest.mark.asyncio
@@ -347,6 +375,133 @@ class TestUpdateWorldState:
         assert observed["background"] is True
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("mode", ["perception", "legacy"])
+    async def test_perspectives_mode_waits_for_the_snapshot_turn(  # noqa: F811
+        self, scene, monkeypatch, mode
+    ):
+        """In Character perspectives mode the world state update returns only
+        once the snapshot has finished, even with a concurrent-capable client."""
+        from talemate.world_state import WorldState
+
+        agent = instance_module.get_agent("world_state")
+        scene.knowledge_eligibility = mode
+        _enable_client_concurrency(monkeypatch, agent)
+        release = asyncio.Event()
+        finished = []
+
+        async def _slow_request_update(self, *args, **kwargs):
+            await release.wait()
+            finished.append(True)
+
+        monkeypatch.setattr(WorldState, "request_update", _slow_request_update)
+        turn = asyncio.create_task(agent.update_world_state(force=True))
+        await asyncio.sleep(0.05)
+        assert turn.done() is (mode == "legacy")
+        release.set()
+        await asyncio.wait_for(turn, 2)
+        await asyncio.wait_for(
+            agent._tracked_task(SNAPSHOT_TASK) or asyncio.sleep(0), 2
+        )
+        assert finished == [True]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("cancel", ["stop", "dialog"])
+    @pytest.mark.parametrize("mode", ["perception", "legacy"])
+    async def test_a_cancel_in_a_waited_snapshot_ends_the_turn(  # noqa: F811
+        self, scene, monkeypatch, cancel, mode
+    ):
+        agent = instance_module.get_agent("world_state")
+        scene.knowledge_eligibility = mode
+        _enable_client_concurrency(monkeypatch, agent)
+
+        async def cancelled(**kwargs):
+            if cancel == "stop":
+                scene.interrupt()
+            raise GenerationCancelled("Generation cancelled by user", by_user=True)
+
+        monkeypatch.setattr(agent, "request_world_state", cancelled)
+        agent.next_update = 5
+        try:
+            if mode == "perception":
+                with pytest.raises(GenerationCancelled):
+                    await agent.update_world_state(force=True)
+                assert agent.next_update == 5
+            else:
+                await agent.update_world_state(force=True)
+                await asyncio.wait_for(agent._tracked_task(SNAPSHOT_TASK), 2)
+                assert agent.next_update == 0
+        finally:
+            scene.cancel_requested = False
+
+    @pytest.mark.asyncio
+    async def test_a_turn_that_joins_a_snapshot_ends_on_its_cancel(  # noqa: F811
+        self, scene, monkeypatch
+    ):
+        agent = instance_module.get_agent("world_state")
+        scene.knowledge_eligibility = "perception"
+        _enable_client_concurrency(monkeypatch, agent)
+        release = asyncio.Event()
+
+        async def dialog_cancel(**kwargs):
+            await release.wait()
+            raise GenerationCancelled("Generation cancelled by user", by_user=True)
+
+        monkeypatch.setattr(agent, "request_world_state", dialog_cancel)
+        # the World panel's refresh starts it without waiting
+        assert await agent.dispatch_world_state_update()
+        connected = talemate.emit.async_signals.get("game_loop_actor_iter")
+        monkeypatch.setattr(connected, "receivers", [agent.on_game_loop_actor_iter])
+        agent.next_update = agent.update_world_state_turns
+        turn = asyncio.create_task(
+            connected.send(SimpleNamespace(scene=scene, actor=None))
+        )
+        await asyncio.sleep(0.05)
+        assert not turn.done()
+        release.set()
+        with pytest.raises(GenerationCancelled):
+            await asyncio.wait_for(turn, 2)
+
+    @pytest.mark.asyncio
+    async def test_a_cancel_in_the_initial_snapshot_ends_only_the_snapshot(  # noqa: F811
+        self, scene, monkeypatch
+    ):
+        agent = instance_module.get_agent("world_state")
+        scene.knowledge_eligibility = "perception"
+        monkeypatch.setattr(type(agent), "initial_update", property(lambda self: True))
+
+        async def cancelled(**kwargs):
+            raise GenerationCancelled("Generation cancelled by user", by_user=True)
+
+        monkeypatch.setattr(agent, "request_world_state", cancelled)
+        await agent.on_scene_loop_init_after(None)
+        assert agent.get_scene_state("inital_update_done")
+
+    @pytest.mark.asyncio
+    async def test_dispatch_forwards_instructions_through_the_chain(  # noqa: F811
+        self, scene, monkeypatch
+    ):
+        """Instructions handed to the dispatch survive the whole chain — tracked
+        task -> WorldState.request_update -> apply_snapshot_update -> the
+        snapshot prompt call. Only the LLM-calling end is stubbed."""
+        from talemate.world_state import WorldStateResponse
+
+        agent = instance_module.get_agent("world_state")
+        # Empty response: apply_snapshot_update returns right after the call,
+        # so nothing but the threading is under test here.
+        request_world_state = AsyncMock(return_value=WorldStateResponse())
+        monkeypatch.setattr(agent, "request_world_state", request_world_state)
+
+        assert await agent.dispatch_world_state_update(
+            instructions="Focus on the broken door."
+        )
+        await agent._tracked_task(SNAPSHOT_TASK)
+
+        assert (
+            request_world_state.await_args.kwargs["instructions"]
+            == "Focus on the broken door."
+        )
+
+    @pytest.mark.asyncio
     async def test_increments_when_not_due(self, scene, monkeypatch):  # noqa: F811
         from talemate.world_state import WorldState
 
@@ -364,6 +519,81 @@ class TestUpdateWorldState:
         await agent.update_world_state()
         assert agent.next_update == 1
         assert called["flag"] is False
+
+
+# ---------------------------------------------------------------------------
+# websocket handler — handle_request_update
+# ---------------------------------------------------------------------------
+
+
+class TestRequestUpdateWebsocketHandler:
+    """The manual refresh: reset stays handler-side, instructions travel to
+    the agent's dispatch."""
+
+    def _handler(self, scene) -> WorldStateWebsocketHandler:  # noqa: F811
+        ws = SimpleNamespace(scene=scene, queue_put=Mock())
+        handler = WorldStateWebsocketHandler(websocket_handler=ws)
+        handler.signal_operation_done = AsyncMock()
+        return handler
+
+    def _record_calls(self, monkeypatch, agent) -> tuple[list[str], AsyncMock]:
+        """Record reset/dispatch in call order. reset is patched on the
+        WorldState class (pydantic models don't allow per-instance overrides)."""
+        from talemate.world_state import WorldState
+
+        calls: list[str] = []
+        monkeypatch.setattr(WorldState, "reset", lambda self: calls.append("reset"))
+        dispatch = AsyncMock(side_effect=lambda **kwargs: calls.append("dispatch"))
+        monkeypatch.setattr(agent, "dispatch_world_state_update", dispatch)
+        return calls, dispatch
+
+    @pytest.mark.asyncio
+    async def test_default_payload_dispatches_without_reset(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        calls, dispatch = self._record_calls(monkeypatch, agent)
+
+        await self._handler(scene).handle_request_update({})
+
+        assert calls == ["dispatch"]
+        assert dispatch.await_args.kwargs["cancel_in_flight"] is True
+        assert dispatch.await_args.kwargs["instructions"] == ""
+
+    @pytest.mark.asyncio
+    async def test_reset_applied_before_dispatch(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        calls, _ = self._record_calls(monkeypatch, agent)
+
+        await self._handler(scene).handle_request_update({"reset": True})
+
+        assert calls == ["reset", "dispatch"]
+
+    @pytest.mark.asyncio
+    async def test_instructions_forwarded_to_dispatch(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        _, dispatch = self._record_calls(monkeypatch, agent)
+
+        await self._handler(scene).handle_request_update(
+            {"instructions": "Focus on the broken door."}
+        )
+
+        assert dispatch.await_args.kwargs["instructions"] == "Focus on the broken door."
+
+    @pytest.mark.asyncio
+    async def test_reset_and_instructions_together(self, scene, monkeypatch):  # noqa: F811
+        """What the refresh dialog sends when the user types instructions and
+        ticks reset."""
+        agent = instance_module.get_agent("world_state")
+        calls, dispatch = self._record_calls(monkeypatch, agent)
+
+        await self._handler(scene).handle_request_update(
+            {"reset": True, "instructions": "Rebuild from the fire onward."}
+        )
+
+        assert calls == ["reset", "dispatch"]
+        assert (
+            dispatch.await_args.kwargs["instructions"]
+            == "Rebuild from the fire onward."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -804,7 +1034,9 @@ class TestUpdateReinforcementsRequireActive:
 
         called = {"args": None}
 
-        async def _fake_update(question, character, reset=False):
+        async def _fake_update(
+            question, character, reset=False, *, decision_model=False
+        ):
             called["args"] = (question, character, reset)
 
         monkeypatch.setattr(agent, "update_reinforcement", _fake_update)
@@ -856,3 +1088,1017 @@ class TestUpdateReinforcementMissing:
         agent = instance_module.get_agent("world_state")
         result = await agent.update_reinforcement("unknown question", None)
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# add_snapshot_entity — the manual add from a text selection
+# ---------------------------------------------------------------------------
+
+
+def _stub_entity_response(monkeypatch, entity: dict) -> AsyncMock:
+    """Answer the manual-add prompt with `entity`, bypassing the template."""
+    from talemate.prompts import Prompt
+
+    async def respond(*args, vars, **kwargs):
+        vars["snapshot_request"].context_history(budget=0)
+        return "", {"entity": entity}
+
+    request = AsyncMock(side_effect=respond)
+    monkeypatch.setattr(Prompt, "request", request)
+    return request
+
+
+def _capture_status(monkeypatch) -> list[tuple[str, str]]:
+    """The (message, status) pairs the agent emits while the test runs."""
+    messages: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        snapshot_module,
+        "emit",
+        lambda typ, message="", status="", **kwargs: messages.append((message, status)),
+    )
+    return messages
+
+
+def _seed_message(scene, text: str) -> NarratorMessage:  # noqa: F811
+    message = NarratorMessage(message=text)
+    scene.history.append(message)
+    return message
+
+
+class TestAddSnapshotEntity:
+    @pytest.mark.asyncio
+    async def test_adds_a_manual_item_entry(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "dented locker",
+                "snapshot": "Its door is welded shut.",
+                "mentions": ["A dented locker"],
+            },
+        )
+
+        result = await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert result.resolved is True
+        assert result.kind == "item"
+        entry = scene.world_state.items["Dented Locker"]
+        assert entry.manual is True
+        assert entry.snapshot == "Its door is welded shut."
+
+    @pytest.mark.asyncio
+    async def test_updates_an_existing_entry_instead_of_duplicating(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        agent = instance_module.get_agent("world_state")
+        scene.world_state.items["Dented Locker"] = ObjectState(
+            snapshot="Sealed.", mentions=["the locker"]
+        )
+        message = _seed_message(scene, "The dented locker rattles.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Dented Locker",
+                "snapshot": "Something inside is loose.",
+                "mentions": ["The dented locker"],
+            },
+        )
+
+        await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert list(scene.world_state.items) == ["Dented Locker"]
+        assert scene.world_state.items["Dented Locker"].snapshot == (
+            "Something inside is loose."
+        )
+
+    @pytest.mark.asyncio
+    async def test_refusal_writes_nothing(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        message = _seed_message(scene, "And then she said nothing at all.")
+        _stub_entity_response(monkeypatch, {"resolved": False})
+
+        result = await agent.add_snapshot_entity(message.id, "and then she said")
+
+        assert result.resolved is False
+        assert scene.world_state.items == {}
+        assert scene.world_state.characters == {}
+        assert scene.world_state.places == {}
+
+    @pytest.mark.asyncio
+    async def test_unknown_kind_writes_nothing(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "concept",
+                "name": "Dented Locker",
+                "snapshot": "Its door is welded shut.",
+            },
+        )
+
+        result = await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert result.resolved is False
+        assert scene.world_state.items == {}
+
+    @pytest.mark.asyncio
+    async def test_mentions_keep_only_literal_phrases(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Dented Locker",
+                "snapshot": "Its door is welded shut.",
+                "mentions": ["A dented locker", "the storage unit"],
+            },
+        )
+
+        await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert scene.world_state.items["Dented Locker"].mentions == ["A dented locker"]
+
+    @pytest.mark.asyncio
+    async def test_the_selection_stands_in_when_no_model_phrase_survives(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        agent = instance_module.get_agent("world_state")
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Dented Locker",
+                "snapshot": "Its door is welded shut.",
+                "mentions": ["the storage unit"],
+            },
+        )
+
+        await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert scene.world_state.items["Dented Locker"].mentions == ["dented locker"]
+
+    @pytest.mark.asyncio
+    async def test_a_partial_word_match_is_not_a_mention(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Dented Locker",
+                "snapshot": "Its door is welded shut.",
+                "mentions": ["lock"],
+            },
+        )
+
+        await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert scene.world_state.items["Dented Locker"].mentions == ["dented locker"]
+
+    @pytest.mark.asyncio
+    async def test_a_character_name_prefix_is_not_a_mention(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        message = CharacterMessage(message="Elmer: The locker stands open.")
+        scene.history.append(message)
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Locker",
+                "snapshot": "Its door is welded shut.",
+                "mentions": ["Elmer", "The locker"],
+            },
+        )
+
+        await agent.add_snapshot_entity(message.id, "locker")
+
+        assert scene.world_state.items["Locker"].mentions == ["The locker"]
+
+    @pytest.mark.asyncio
+    async def test_an_updated_entry_keeps_its_earlier_mentions(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        agent = instance_module.get_agent("world_state")
+        scene.world_state.items["Dented Locker"] = ObjectState(
+            snapshot="Sealed.", mentions=["the steel cabinet"]
+        )
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Dented Locker",
+                "snapshot": "Something inside is loose.",
+                "mentions": ["A dented locker"],
+            },
+        )
+
+        await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert scene.world_state.items["Dented Locker"].mentions == [
+            "the steel cabinet",
+            "A dented locker",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_a_bare_string_of_mentions_is_ignored(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Dented Locker",
+                "snapshot": "Its door is welded shut.",
+                "mentions": "A dented locker",
+            },
+        )
+
+        await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert scene.world_state.items["Dented Locker"].mentions == ["dented locker"]
+
+    @pytest.mark.asyncio
+    async def test_character_name_resolves_onto_the_cast(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        make_actor(scene, "Elmer")
+        message = _seed_message(scene, "Old Elmer leans on the rail.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "character",
+                "name": "Old Elmer",
+                "emotion": "weary",
+                "snapshot": "He favors his left leg.",
+                "mentions": ["Old Elmer"],
+            },
+        )
+
+        await agent.add_snapshot_entity(message.id, "Old Elmer")
+
+        assert "Elmer" in scene.world_state.characters
+        assert scene.world_state.characters["Elmer"].emotion == "weary"
+        assert scene.world_state.characters["Elmer"].manual is True
+
+    @pytest.mark.asyncio
+    async def test_entry_outside_the_moment_is_not_highlighted(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        """A message the current moment has moved past — the default moment is
+        the last three narrative messages."""
+        agent = instance_module.get_agent("world_state")
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        for line in ("She turned away.", "The lamp guttered.", "Rain began."):
+            _seed_message(scene, line)
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Dented Locker",
+                "snapshot": "Its door is welded shut.",
+                "mentions": ["A dented locker"],
+            },
+        )
+
+        result = await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert result.in_moment is False
+        assert result.highlighted is False
+        assert "Dented Locker" in scene.world_state.items
+        assert message.id not in scene.world_state.anchor_message_ids
+
+    @pytest.mark.asyncio
+    async def test_entry_in_the_moment_is_highlighted(self, scene, monkeypatch):  # noqa: F811
+        """The newest message is in the moment even though the last refresh
+        anchored older ones — the anchors are stale the instant a message is
+        pushed, so membership comes from the live walk."""
+        agent = instance_module.get_agent("world_state")
+        stale = _seed_message(scene, "An older beat.")
+        scene.world_state.anchor_message_ids = [stale.id]
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Dented Locker",
+                "snapshot": "Its door is welded shut.",
+                "mentions": ["A dented locker"],
+            },
+        )
+
+        result = await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert result.highlighted is True
+        # the client renders a highlight only on an anchored message
+        assert message.id in scene.world_state.anchor_message_ids
+        assert stale.id in scene.world_state.anchor_message_ids
+
+    @pytest.mark.asyncio
+    async def test_the_panel_sees_a_requested_status_and_then_an_update(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        agent = instance_module.get_agent("world_state")
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Dented Locker",
+                "snapshot": "Its door is welded shut.",
+                "mentions": ["A dented locker"],
+            },
+        )
+        statuses = []
+        monkeypatch.setattr(
+            WorldState,
+            "emit",
+            lambda self, status="update": statuses.append(status),
+        )
+
+        await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert statuses[0] == "requested"
+        assert statuses[-1] == "update"
+
+    @pytest.mark.asyncio
+    async def test_the_emitted_payload_carries_the_mentions_and_the_anchor(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        """The emitted world_state frame is the only source of inline
+        highlights — the client rebuilds its mention list from it and renders
+        a highlight only on a message the frame anchors."""
+        agent = instance_module.get_agent("world_state")
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        scene.world_state.anchor_message_ids = [message.id]
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Dented Locker",
+                "snapshot": "Its door is welded shut.",
+                "mentions": ["A dented locker"],
+            },
+        )
+        frames = []
+        monkeypatch.setattr(
+            WorldState,
+            "emit",
+            lambda self, status="update": frames.append((status, self.model_dump())),
+        )
+
+        await agent.add_snapshot_entity(message.id, "dented locker")
+
+        status, payload = frames[-1]
+        assert status == "update"
+        assert payload["items"]["Dented Locker"]["mentions"] == ["A dented locker"]
+        assert message.id in payload["anchor_message_ids"]
+
+    @pytest.mark.asyncio
+    async def test_a_refusal_also_lowers_the_requested_status(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        agent = instance_module.get_agent("world_state")
+        message = _seed_message(scene, "And then she said nothing at all.")
+        _stub_entity_response(monkeypatch, {"resolved": False})
+        statuses = []
+        monkeypatch.setattr(
+            WorldState,
+            "emit",
+            lambda self, status="update": statuses.append(status),
+        )
+
+        await agent.add_snapshot_entity(message.id, "and then she said")
+
+        assert statuses == ["requested", "update"]
+
+    @pytest.mark.asyncio
+    async def test_a_failure_after_the_request_still_lowers_the_status(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        """Nothing else lowers it — a stuck spinner would outlive the session
+        and its cancel button would have no task to cancel."""
+        agent = instance_module.get_agent("world_state")
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Dented Locker",
+                "snapshot": "Its door is welded shut.",
+                "mentions": ["A dented locker"],
+            },
+        )
+        statuses = []
+        monkeypatch.setattr(
+            WorldState,
+            "emit",
+            lambda self, status="update": statuses.append(status),
+        )
+        monkeypatch.setattr(
+            snapshot_module,
+            "literal_mentions",
+            Mock(side_effect=RuntimeError("boom")),
+        )
+
+        with pytest.raises(RuntimeError):
+            await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert statuses == ["requested", "update"]
+
+    @pytest.mark.asyncio
+    async def test_the_item_cap_is_left_to_durable_mode(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        agent.actions["update_world_state"].config["durable_snapshot"].value = False
+        agent.actions["update_world_state"].config["max_items"].value = 1
+        scene.world_state.items["Older Crate"] = ObjectState(snapshot="sealed")
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Dented Locker",
+                "snapshot": "Its door is welded shut.",
+                "mentions": ["A dented locker"],
+            },
+        )
+
+        await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert set(scene.world_state.items) == {"Older Crate", "Dented Locker"}
+
+    @pytest.mark.asyncio
+    async def test_a_scene_cut_wipes_before_the_entry_lands(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        """A TimePassage since the last snapshot invalidates it, so the entry
+        joins a fresh snapshot rather than the moment before the cut — and the
+        anchors it leaves keep the cut visible to the next refresh."""
+        agent = instance_module.get_agent("world_state")
+        older = _seed_message(scene, "An older beat.")
+        scene.world_state.anchor_message_ids = [older.id]
+        scene.world_state.items["Older Crate"] = ObjectState(snapshot="sealed")
+        scene.history.append(TimePassageMessage(ts=3600, message="an hour later"))
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Dented Locker",
+                "snapshot": "Its door is welded shut.",
+                "mentions": ["A dented locker"],
+            },
+        )
+
+        await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert set(scene.world_state.items) == {"Dented Locker"}
+        assert scene.world_state.anchor_message_ids == [message.id]
+
+    @pytest.mark.asyncio
+    async def test_an_item_name_is_matched_against_the_bucket(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        """The model is asked to reuse a tracked name but cannot be relied on
+        to: a duplicate pin would survive both eviction and the cap."""
+        agent = instance_module.get_agent("world_state")
+        scene.world_state.items["Dented Locker"] = ObjectState(
+            snapshot="Sealed.", mentions=["the locker"]
+        )
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "The dented locker",
+                "snapshot": "Something inside is loose.",
+                "mentions": ["A dented locker"],
+            },
+        )
+
+        result = await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert list(scene.world_state.items) == ["Dented Locker"]
+        assert result.name == "Dented Locker"
+        assert scene.world_state.items["Dented Locker"].manual is True
+
+    @pytest.mark.asyncio
+    async def test_a_place_name_is_matched_against_the_bucket(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        agent = instance_module.get_agent("world_state")
+        scene.world_state.places["Vester Light"] = PlaceState(snapshot="A lighthouse.")
+        message = _seed_message(scene, "The light stood on its rock.")
+        # normalize_name only fixes the casing, so the name has to be one it
+        # cannot collapse onto the tracked key on its own.
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "place",
+                "name": "The Vester light",
+                "snapshot": "Its lamp turns every five seconds.",
+                "mentions": ["The light"],
+            },
+        )
+
+        await agent.add_snapshot_entity(message.id, "the light")
+
+        assert list(scene.world_state.places) == ["Vester Light"]
+
+    @pytest.mark.asyncio
+    async def test_a_cast_name_is_not_remapped_onto_a_background_entry(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        """The cast confirms the name, so no tracked entry that merely shares a
+        word with it may take the snapshot, the emotion and the pin."""
+        agent = instance_module.get_agent("world_state")
+        make_actor(scene, "Emma")
+        scene.world_state.characters["Emma's Mother"] = CharacterState(
+            snapshot="Storming down the hall.", emotion="furious"
+        )
+        message = _seed_message(scene, "Emma waited by the door.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "character",
+                "name": "Emma",
+                "emotion": "wary",
+                "snapshot": "She keeps one hand on the latch.",
+                "mentions": ["Emma"],
+            },
+        )
+
+        result = await agent.add_snapshot_entity(message.id, "Emma")
+
+        assert result.name == "Emma"
+        assert scene.world_state.characters["Emma"].emotion == "wary"
+        assert scene.world_state.characters["Emma's Mother"].emotion == "furious"
+        assert scene.world_state.characters["Emma's Mother"].manual is False
+
+    @pytest.mark.asyncio
+    async def test_a_longer_cast_name_is_not_remapped_onto_a_shorter_entry(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        agent = instance_module.get_agent("world_state")
+        make_actor(scene, "Emma")
+        make_actor(scene, "Emma Watson")
+        scene.world_state.characters["Emma"] = CharacterState(snapshot="Reading.")
+        message = _seed_message(scene, "Emma Watson stormed down the hall.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "character",
+                "name": "Emma Watson",
+                "emotion": "furious",
+                "snapshot": "She has not put the letter down.",
+                "mentions": ["Emma Watson"],
+            },
+        )
+
+        result = await agent.add_snapshot_entity(message.id, "Emma Watson")
+
+        assert result.name == "Emma Watson"
+        assert scene.world_state.characters["Emma"].snapshot == "Reading."
+        assert scene.world_state.characters["Emma Watson"].emotion == "furious"
+
+    @pytest.mark.asyncio
+    async def test_a_pending_scene_cut_keeps_its_watermark(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        """Adding from a message before the cut still wipes, and the anchors it
+        leaves keep the cut visible to the next refresh — an empty list would
+        make has_time_passage_boundary answer False and the pinned entry would
+        survive into the post-cut snapshot."""
+        agent = instance_module.get_agent("world_state")
+        older = _seed_message(scene, "A dented locker sits against the wall.")
+        scene.world_state.anchor_message_ids = [older.id]
+        scene.history.append(TimePassageMessage(ts=3600, message="an hour later"))
+        _seed_message(scene, "Rain began.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Dented Locker",
+                "snapshot": "Its door is welded shut.",
+                "mentions": ["A dented locker"],
+            },
+        )
+
+        result = await agent.add_snapshot_entity(older.id, "dented locker")
+
+        assert result.in_moment is False
+        assert scene.world_state.anchor_message_ids
+        assert has_time_passage_boundary(
+            scene.history, scene.world_state.anchor_message_ids
+        )
+
+    @pytest.mark.asyncio
+    async def test_an_unrelated_name_starts_its_own_entry(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        scene.world_state.items["Notebook Page"] = ObjectState(snapshot="Creased.")
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        _stub_entity_response(
+            monkeypatch,
+            {
+                "resolved": True,
+                "kind": "item",
+                "name": "Dented Locker",
+                "snapshot": "Its door is welded shut.",
+                "mentions": ["A dented locker"],
+            },
+        )
+
+        await agent.add_snapshot_entity(message.id, "dented locker")
+
+        assert set(scene.world_state.items) == {"Notebook Page", "Dented Locker"}
+
+    @pytest.mark.asyncio
+    async def test_empty_selection_raises(self, scene):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        with pytest.raises(ValueError):
+            await agent.add_snapshot_entity(message.id, "   ")
+
+    @pytest.mark.asyncio
+    async def test_over_long_selection_raises(self, scene):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        message = _seed_message(scene, "A dented locker sits against the wall.")
+        with pytest.raises(ValueError):
+            await agent.add_snapshot_entity(
+                message.id, "x" * (SNAPSHOT_ENTITY_SELECTION_MAX + 1)
+            )
+
+    @pytest.mark.asyncio
+    async def test_unknown_message_raises(self, scene):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        with pytest.raises(ValueError):
+            await agent.add_snapshot_entity(123456789, "dented locker")
+
+
+class TestResolveCharacterName:
+    """The refresh path's name resolution. The cast is a closed, authoritative
+    set, so the loose tail is what keeps one person in one row."""
+
+    @pytest.mark.parametrize(
+        "raw,cast,expected",
+        [
+            ("Sam", ["Samuel"], "Samuel"),
+            ("Kate", ["Katelyn"], "Katelyn"),
+            ("Bobby", ["Bob"], "Bob"),
+            ("Guards", ["Guard"], "Guard"),
+            ("Ana", ["Ana Blackwood"], "Ana Blackwood"),
+            ("Elmer's", ["Elmer"], "Elmer"),
+            # an exact cast name wins before the loose tail runs
+            ("Man", ["Man", "Norman"], "Man"),
+            ("Emma", ["Emma", "Emma Watson"], "Emma"),
+        ],
+    )
+    def test_folds_onto_the_cast(self, scene, raw, cast, expected):  # noqa: F811
+        assert resolve_character_name(scene.world_state, cast, raw) == expected
+
+
+class TestAddSnapshotEntityAvailability:
+    @pytest.mark.asyncio
+    async def test_a_disabled_action_starts_no_task(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        agent.actions["update_world_state"].enabled = False
+        add = AsyncMock()
+        monkeypatch.setattr(agent, "add_snapshot_entity", add)
+
+        assert await agent.dispatch_add_snapshot_entity(1, "the locker") is False
+        add.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_a_missing_client_starts_no_task(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        monkeypatch.setattr(agent, "client", None)
+        add = AsyncMock()
+        monkeypatch.setattr(agent, "add_snapshot_entity", add)
+
+        assert await agent.dispatch_add_snapshot_entity(1, "the locker") is False
+        add.assert_not_awaited()
+
+
+class TestManualEntriesThroughARefresh:
+    async def _refresh(self, agent, scene, monkeypatch, raw):  # noqa: F811
+        monkeypatch.setattr(
+            agent,
+            "request_world_state",
+            AsyncMock(
+                return_value=WorldStateResponse(
+                    world_state=raw,
+                    anchor_message_ids=[1],
+                    provenance=SnapshotProvenance.capture(scene),
+                )
+            ),
+        )
+        await agent.apply_snapshot_update(scene.world_state)
+
+    @pytest.mark.asyncio
+    async def test_a_durable_refresh_keeps_an_untouched_manual_entry(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        agent = instance_module.get_agent("world_state")
+        scene.world_state.items["Beacon"] = ObjectState(
+            snapshot="still blinking", manual=True
+        )
+
+        await self._refresh(agent, scene, monkeypatch, {"characters": {}, "items": {}})
+
+        assert "Beacon" in scene.world_state.items
+
+    @pytest.mark.asyncio
+    async def test_a_legacy_refresh_rebuilds_the_bucket_and_drops_it(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        agent = instance_module.get_agent("world_state")
+        agent.actions["update_world_state"].config["durable_snapshot"].value = False
+        scene.world_state.items["Beacon"] = ObjectState(
+            snapshot="still blinking", manual=True
+        )
+
+        await self._refresh(agent, scene, monkeypatch, {"characters": {}, "items": {}})
+
+        assert "Beacon" not in scene.world_state.items
+
+
+class TestDispatchAddSnapshotEntity:
+    @pytest.mark.asyncio
+    async def test_takes_the_snapshot_slot_from_a_running_refresh(
+        self,
+        scene,  # noqa: F811
+        monkeypatch,
+    ):
+        agent = instance_module.get_agent("world_state")
+        _enable_client_concurrency(monkeypatch, agent)
+        release = asyncio.Event()
+
+        async def _blocking_request_update(self, *args, **kwargs):
+            await release.wait()
+
+        monkeypatch.setattr(WorldState, "request_update", _blocking_request_update)
+        monkeypatch.setattr(agent, "add_snapshot_entity", AsyncMock())
+
+        await agent.update_world_state(force=True)
+        refresh = agent._tracked_task(SNAPSHOT_TASK)
+        assert refresh is not None and not refresh.done()
+
+        await agent.dispatch_add_snapshot_entity(1, "the locker")
+        add = agent._tracked_task(SNAPSHOT_TASK)
+
+        assert add is not refresh
+        with pytest.raises(asyncio.CancelledError):
+            await refresh
+        await add
+
+    @pytest.mark.asyncio
+    async def test_a_running_add_is_cancellable(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        _enable_client_concurrency(monkeypatch, agent)
+        release = asyncio.Event()
+
+        async def _blocking_add(*args, **kwargs):
+            await release.wait()
+
+        monkeypatch.setattr(agent, "add_snapshot_entity", _blocking_add)
+
+        await agent.dispatch_add_snapshot_entity(1, "the locker")
+        task = agent._tracked_task(SNAPSHOT_TASK)
+        assert task is not None and not task.done()
+
+        assert agent.cancel_world_state_update() is True
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+
+class TestAddAndReportSnapshotEntity:
+    @pytest.mark.asyncio
+    async def test_reports_a_refusal(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        messages = _capture_status(monkeypatch)
+        monkeypatch.setattr(
+            agent,
+            "add_snapshot_entity",
+            AsyncMock(return_value=SnapshotEntityAddition()),
+        )
+
+        await agent.add_and_report_snapshot_entity(1, "whatever")
+
+        assert messages[0][1] == "warning"
+
+    @pytest.mark.asyncio
+    async def test_reports_a_highlighted_add(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        messages = _capture_status(monkeypatch)
+        monkeypatch.setattr(
+            agent,
+            "add_snapshot_entity",
+            AsyncMock(
+                return_value=SnapshotEntityAddition(
+                    resolved=True,
+                    name="Dented Locker",
+                    kind="item",
+                    in_moment=True,
+                    mentions=["the locker"],
+                )
+            ),
+        )
+
+        await agent.add_and_report_snapshot_entity(1, "the locker")
+
+        assert messages[0][1] == "success"
+        assert "Dented Locker" in messages[0][0]
+
+    @pytest.mark.asyncio
+    async def test_reports_an_entry_outside_the_moment(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        messages = _capture_status(monkeypatch)
+        monkeypatch.setattr(
+            agent,
+            "add_snapshot_entity",
+            AsyncMock(
+                return_value=SnapshotEntityAddition(
+                    resolved=True,
+                    name="Dented Locker",
+                    kind="item",
+                    in_moment=False,
+                    mentions=["the locker"],
+                )
+            ),
+        )
+
+        await agent.add_and_report_snapshot_entity(1, "the locker")
+
+        assert messages[0][1] == "info"
+        assert "current moment" in messages[0][0]
+
+
+class TestAddSnapshotEntityErrors:
+    @pytest.mark.asyncio
+    async def test_a_cancelled_add_reports_nothing(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        messages = _capture_status(monkeypatch)
+
+        await agent.on_add_snapshot_entity_error(GenerationCancelled("scene changed"))
+
+        assert messages == []
+
+    @pytest.mark.asyncio
+    async def test_a_real_failure_is_reported(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        messages = _capture_status(monkeypatch)
+
+        await agent.on_add_snapshot_entity_error(RuntimeError("boom"))
+
+        assert messages and messages[0][1] == "error"
+
+    @pytest.mark.asyncio
+    async def test_incompatible_manual_add_override_reports_repair(
+        self, scene, monkeypatch
+    ):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        messages = _capture_status(monkeypatch)
+        error = IncompatibleSnapshotTemplate("world_state/add-snapshot-entity.jinja2")
+        await agent.on_add_snapshot_entity_error(error)
+        assert messages == [(str(error), "error")]
+        assert "Prompt Manager" in messages[0][0]
+
+
+class TestAddSnapshotEntityHandler:
+    def _handler(self, scene) -> WorldStateWebsocketHandler:  # noqa: F811
+        ws = SimpleNamespace(scene=scene, queue_put=Mock())
+        handler = WorldStateWebsocketHandler(websocket_handler=ws)
+        handler.signal_operation_done = AsyncMock()
+        handler.signal_operation_failed = AsyncMock()
+        return handler
+
+    @pytest.mark.asyncio
+    async def test_dispatches_the_normalized_selection(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        dispatch = AsyncMock(return_value=True)
+        monkeypatch.setattr(agent, "dispatch_add_snapshot_entity", dispatch)
+        handler = self._handler(scene)
+
+        await handler.handle_add_snapshot_entity(
+            {"message_id": 7, "text": "  the dented\n locker "}
+        )
+
+        dispatch.assert_awaited_once_with(7, "the dented locker")
+        handler.signal_operation_done.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_refuses_while_the_action_is_off(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        agent.actions["update_world_state"].enabled = False
+        dispatch = AsyncMock()
+        monkeypatch.setattr(agent, "dispatch_add_snapshot_entity", dispatch)
+        handler = self._handler(scene)
+
+        await handler.handle_add_snapshot_entity(
+            {"message_id": 7, "text": "the dented locker"}
+        )
+
+        dispatch.assert_not_awaited()
+        message = handler.signal_operation_failed.await_args.args[0]
+        assert "World State agent" in message
+
+    @pytest.mark.asyncio
+    async def test_refuses_without_a_client(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        monkeypatch.setattr(agent, "client", None)
+        dispatch = AsyncMock()
+        monkeypatch.setattr(agent, "dispatch_add_snapshot_entity", dispatch)
+        handler = self._handler(scene)
+
+        await handler.handle_add_snapshot_entity(
+            {"message_id": 7, "text": "the dented locker"}
+        )
+
+        dispatch.assert_not_awaited()
+        message = handler.signal_operation_failed.await_args.args[0]
+        assert "no client" in message
+
+    @pytest.mark.asyncio
+    async def test_refuses_an_empty_selection(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        dispatch = AsyncMock()
+        monkeypatch.setattr(agent, "dispatch_add_snapshot_entity", dispatch)
+        handler = self._handler(scene)
+
+        await handler.handle_add_snapshot_entity({"message_id": 7, "text": "   "})
+
+        dispatch.assert_not_awaited()
+        handler.signal_operation_failed.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_refuses_an_over_long_selection(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        dispatch = AsyncMock()
+        monkeypatch.setattr(agent, "dispatch_add_snapshot_entity", dispatch)
+        handler = self._handler(scene)
+
+        await handler.handle_add_snapshot_entity(
+            {"message_id": 7, "text": "x" * (SNAPSHOT_ENTITY_SELECTION_MAX + 1)}
+        )
+
+        dispatch.assert_not_awaited()
+        handler.signal_operation_failed.assert_awaited_once()

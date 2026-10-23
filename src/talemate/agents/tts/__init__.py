@@ -69,7 +69,7 @@ log = structlog.get_logger("talemate.agents.tts")
 
 HOT_SWAP_NOTIFICATION_TIME = 60
 
-VOICE_LIBRARY_NOTE = "Voices are not managed here, but in the voice library which can be accessed through the Talemate application bar at the top. When disabling/enabling APIS, close and open this window to refresh the choices."
+VOICE_LIBRARY_NOTE = "Voices are not managed here, but in the voice library which can be accessed through the Talemate application bar at the top. When disabling/enabling APIs, the choices refresh once the changes are saved."
 
 async_signals.register(
     "agent.tts.prepare.before",
@@ -257,6 +257,10 @@ class TTSAgent(
         self._queue_id: str | None = None
         self._queue_task: asyncio.Task | None = None
         self._queue_lock = asyncio.Lock()
+        # the message whose chunk the queue task is generating right now. It has
+        # already left the deque, so a cancellation from outside can only tell
+        # who still owes a completion by looking here.
+        self._in_flight_message_id: int | str | None = None
 
     @contextlib.contextmanager
     def suppress_auto_generation(self):
@@ -457,32 +461,45 @@ class TTSAgent(
             await self.emit_status()
         return any_changed
 
-    async def refresh_backend_voices(self, slug: str) -> int:
-        """Fetch voices for *slug* and union them into the global library.
+    async def refresh_backend_voices(self, slug: str) -> int | None:
+        """Fetch the voice listing of *slug* and merge it into the global library.
 
-        Returns the number of fetched voices. A return of 0 means the backend
-        has no listing endpoint *or* the response was empty. Hard failures
-        (HTTP errors, JSON shape mismatches, etc.) propagate to the caller
-        so the UI can surface the real error rather than a generic "no
-        endpoint" message.
+        A voice the refresh adds is marked ``managed_by="refresh"``: later
+        refreshes update its label and remove it once the listing no longer
+        holds it. A voice the user added or edited is never changed or removed.
+        A voice saved before the marker existed is never changed, and is
+        removed only when it has no tags and its label is its ``provider_id``.
+
+        Returns the number of listed voices (0 for an empty listing), or None
+        when the backend gave no complete listing: no listing endpoint, a
+        failed request or a page that could not be read. The library then stays
+        as it is. An exception from the fetcher reaches the caller.
         """
         if slug not in self.dynamic_child_slugs(OPENAI_COMPAT_REGISTRY_KEY):
-            return 0
+            return None
         fetcher = self.api_method(slug, "fetch_voices")
         if fetcher is None:
-            return 0
-        fetched: list[Voice] = await fetcher()
+            return None
+        fetched: list[Voice] | None = await fetcher()
+        if fetched is None:
+            return None
 
         library = self.voice_library
         fetched_ids = {v.id for v in fetched}
         for v in fetched:
-            library.voices.setdefault(v.id, v)
-        # Drop auto-fetched voices the server no longer reports.
+            existing = library.voices.get(v.id)
+            if existing is None:
+                v.managed_by = "refresh"
+                library.voices[v.id] = v
+            elif existing.managed_by == "refresh":
+                existing.label = v.label
         for vid in list(library.voices.keys()):
             v = library.voices[vid]
             if v.provider != slug or vid in fetched_ids:
                 continue
-            if not v.tags and v.label == v.provider_id:
+            if v.managed_by == "refresh" or (
+                v.managed_by is None and not v.tags and v.label == v.provider_id
+            ):
                 del library.voices[vid]
         await voice_library.save_voice_library(library)
         return len(fetched)
@@ -968,7 +985,13 @@ class TTSAgent(
         new request to it; if not, we create a new queue (with its own unique
         id) and start processing.
         """
+        # Priority: explicit message_id parameter > message.id > None
+        resolved_message_id = (
+            message_id if message_id is not None else (message.id if message else None)
+        )
+
         if not self.enabled or not self.ready or not text:
+            self.signal_generation_complete(resolved_message_id)
             return
 
         # Apply appearance config filtering for hidden markers
@@ -982,15 +1005,10 @@ class TTSAgent(
         # After filtering, check if there's still text to generate
         if not text:
             log.debug("tts skipped - no text after filtering hidden markers")
+            self.signal_generation_complete(resolved_message_id)
             return
 
         self.playback_done_event.set()
-
-        # Determine the message_id to use for this generation
-        # Priority: explicit message_id parameter > message.id > None
-        resolved_message_id = (
-            message_id if message_id is not None else (message.id if message else None)
-        )
 
         summarizer: "SummarizeAgent" = instance.get_agent("summarizer")
 
@@ -1091,6 +1109,15 @@ class TTSAgent(
 
         for chunk in chunks:
             api_chunk_size = self.api_attr(chunk.api, "chunk_size", 0)
+            supported_tags = getattr(self, f"{chunk.api}_supported_audio_tags", None)
+            protected_tags = (
+                tuple(
+                    self.get_audio_tag_format(chunk.api).replace("{{ tag }}", tag)
+                    for tag in (supported_tags(model=chunk.model) or ())
+                )
+                if supported_tags and self.chunk_supports_audio_tags(chunk)
+                else ()
+            )
 
             log.debug("chunking", api=chunk.api, api_chunk_size=api_chunk_size)
 
@@ -1109,7 +1136,11 @@ class TTSAgent(
                     continue
 
                 _parsed = parse_chunks(_chunk_text)
-                _joined = rejoin_chunks(_parsed, chunk_size=max_generation_length)
+                _joined = rejoin_chunks(
+                    _parsed,
+                    chunk_size=max_generation_length,
+                    protected_phrases=protected_tags,
+                )
                 _text.extend(_joined)
 
             log.debug(
@@ -1169,6 +1200,7 @@ class TTSAgent(
                         break
 
                     context, chunk = self._generation_queue.popleft()
+                    self._in_flight_message_id = chunk.message_id
 
                     log.debug(
                         "tts queue dequeue",
@@ -1179,6 +1211,15 @@ class TTSAgent(
 
                 # Process outside lock so other coroutines can enqueue
                 await self._generate_chunk(chunk, context)
+
+                async with self._queue_lock:
+                    more_coming = any(
+                        queued.message_id == chunk.message_id
+                        for _, queued in self._generation_queue
+                    )
+                if not more_coming:
+                    self._in_flight_message_id = None
+                    self.signal_generation_complete(chunk.message_id)
         except Exception as e:
             log.error(
                 "Error processing queue", error=e, traceback=traceback.format_exc()
@@ -1186,10 +1227,23 @@ class TTSAgent(
         finally:
             # Clean up queue state after finishing (or on cancellation)
             async with self._queue_lock:
+                abandoned = {queued.message_id for _, queued in self._generation_queue}
+                in_flight = self._in_flight_message_id
+                self._in_flight_message_id = None
                 if queue_id == self._queue_id:
                     self._queue_id = None
                     self._queue_task = None
                     self._generation_queue.clear()
+            # the chunk being generated has already left the deque, so a
+            # cancellation here would otherwise report every queued message
+            # except the one actually interrupted. This task owns that report -
+            # stop_and_clear_queue leaves it out for exactly that reason.
+            if in_flight is not None:
+                abandoned.add(in_flight)
+            # every message that was queued reports exactly once, or a caller
+            # waiting for one to finish waits forever
+            for message_id in abandoned:
+                self.signal_generation_complete(message_id)
 
     # Public helper so external code (e.g. later cancellation UI) can find the current queue id
     def current_queue_id(self) -> str | None:
@@ -1225,7 +1279,28 @@ class TTSAgent(
             except Exception as e:
                 log.error("Error generating audio", error=e, chunk=_chunk)
                 continue
+
+            skipped_chunk = {
+                "api": chunk.api,
+                "text": _chunk.cleaned_text,
+                "character_name": _chunk.character_name,
+            }
+
+            # empty bytes as well as None: several backends return an empty
+            # buffer when the stream yields nothing, which plays as a decode
+            # error in the browser
+            if not emission.wav_bytes:
+                log.warning("No audio generated", **skipped_chunk)
+                continue
+
             await async_signals.get("agent.tts.generate.after").send(emission)
+
+            # the signal documents wav_bytes as mutable, so a handler can leave
+            # the chunk with nothing to play
+            if not emission.wav_bytes:
+                log.warning("Audio discarded before playback", **skipped_chunk)
+                continue
+
             self.play_audio(emission.wav_bytes, chunk.message_id)
             await asyncio.sleep(0.1)
 
@@ -1233,6 +1308,23 @@ class TTSAgent(
     async def generate_chunks(self, context: GenerationContext):
         for chunk in context.chunks:
             await self._generate_chunk(chunk, context)
+
+    def signal_generation_complete(self, message_id: int | str | None):
+        """
+        Report that no further audio is coming for `message_id`.
+
+        Playback finishing is not the same as generation finishing: a slow
+        backend leaves gaps between a message's chunks, during which the
+        player's queue is empty and looks done. A listener that has to wait
+        for a whole message needs this to tell the gaps apart from the end.
+        """
+        if message_id is None:
+            return
+
+        emit(
+            "audio_queue",
+            data={"message_id": message_id, "generation_complete": True},
+        )
 
     def play_audio(self, audio_data, message_id: int | str | None = None):
         # play audio through the websocket (browser)
@@ -1254,7 +1346,15 @@ class TTSAgent(
         running) and clears all queued items in a thread-safe manner.
         """
         async with self._queue_lock:
-            # Clear all queued items
+            # Clear all queued items - reporting them, since the queue task's
+            # own cleanup will find nothing left to account for
+            abandoned = {queued.message_id for _, queued in self._generation_queue}
+            # ... except the chunk already in flight: it left the deque before
+            # we looked, and the cancelled task's own cleanup reports it. Doing
+            # it here as well would tell a listener the same message finished
+            # twice.
+            if self._in_flight_message_id is not None:
+                abandoned.discard(self._in_flight_message_id)
             self._generation_queue.clear()
 
             # Cancel the background task if it is still running
@@ -1264,6 +1364,9 @@ class TTSAgent(
             # Reset queue identifiers/state
             self._queue_id = None
             self._queue_task = None
+
+        for message_id in abandoned:
+            self.signal_generation_complete(message_id)
 
         # Ensure downstream components know playback is finished
         self.playback_done_event.set()

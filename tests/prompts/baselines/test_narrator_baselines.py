@@ -99,7 +99,7 @@ class TestNarratorBaselines:
     async def test_narrate_time_passage(self, active_context, baseline_checker):
         narrator = active_context
         await narrator.narrate_time_passage(
-            duration="PT2H",
+            duration=7200,
             time_passed="Two hours later",
             narrative_direction="The sun has set",
         )

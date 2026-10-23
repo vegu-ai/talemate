@@ -1,4 +1,11 @@
-from .state import get_config, save_config, cleanup, update_config, commit_config
+from .state import (
+    get_config,
+    save_config,
+    cleanup,
+    update_config,
+    commit_config,
+    mark_apply_pending,
+)
 from .schema import Config
 
 __all__ = [
@@ -8,4 +15,5 @@ __all__ = [
     "Config",
     "update_config",
     "commit_config",
+    "mark_apply_pending",
 ]

@@ -537,6 +537,16 @@ def test_build_command_thinking_level(client):
     assert command[command.index("--thinking") + 1] == "high"
 
 
+def test_reasoning_display_offers_the_effort_selector(client):
+    assert client.reasoning_display is None
+
+    client.client_config.reason_enabled = True
+
+    display = client.reasoning_display
+    assert display.control == "effort"
+    assert display.effort_choices == pi_bridge.THINKING_LEVELS
+
+
 @pytest.mark.asyncio
 async def test_generate_passes_system_prompt_as_file(client, spawner, monkeypatch):
     """The system prompt goes to pi as a file path, never inline on the argv:

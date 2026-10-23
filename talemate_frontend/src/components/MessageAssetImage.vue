@@ -14,6 +14,10 @@
       class="asset-placeholder"
     ></div>
     
+    <div v-if="referenceVisible" class="message-asset-reference" @click.stop>
+      <ReferenceCandidateControl :state="referenceState" compact :disabled="isFeedLocked()" @use="markAsReference(assetId, message_id)" />
+    </div>
+
     <!-- Loading overlay -->
     <v-overlay
       v-if="isProcessing"
@@ -38,12 +42,16 @@
 
 <script>
 import AssetView from './AssetView.vue';
+import ReferenceCandidateControl from './ReferenceCandidateControl.vue';
+import { referenceState, referenceStatusVisible } from '@/utils/referenceCandidate';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
+import { VIS_TYPE } from '@/constants/visual';
 
 export default {
   name: 'MessageAssetImage',
   components: {
     AssetView,
+    ReferenceCandidateControl,
   },
   props: {
     asset_id: {
@@ -75,6 +83,11 @@ export default {
       type: Number,
       default: null,
     },
+    // the image of a backdrop entry
+    backdrop: {
+      type: Boolean,
+      default: false,
+    },
   },
   inject: [
     'requestSceneAssets',
@@ -83,6 +96,11 @@ export default {
     'showAssetMenu',
     'isAssetProcessing',
     'markAssetProcessing',
+    'getAssetMeta',
+    'getReferenceProgress',
+    'getReferenceTargets',
+    'markAsReference',
+    'isFeedLocked',
   ],
   data() {
     return {
@@ -107,13 +125,27 @@ export default {
       }
       return null;
     },
+    // Mark as reference started from this image's menu; a backdrop entry
+    // shows it on its row instead
+    referenceProgress() {
+      if (this.backdrop || !this.assetId) return null;
+      const progress = this.getReferenceProgress(this.assetId);
+      return progress && progress.message_id === this.message_id ? progress : null;
+    },
+    referenceState() {
+      const meta = this.getAssetMeta(this.assetId);
+      return referenceState(meta, this.referenceProgress, this.getReferenceTargets(meta?.vis_type));
+    },
+    referenceVisible() {
+      return referenceStatusVisible(this.referenceState, this.referenceProgress);
+    },
     isProcessing() {
       // Check if this message's asset is currently being processed
       return this.message_id && this.isAssetProcessing && this.isAssetProcessing(this.message_id);
     },
     supportsRegeneration() {
       // Check if this asset type supports regeneration
-      return this.asset_type === 'card' || this.asset_type === 'scene_illustration';
+      return ['card', 'scene_illustration', 'avatar'].includes(this.asset_type);
     },
     sizeMap() {
       const maps = {
@@ -171,13 +203,13 @@ export default {
         return;
       }
       
-      // Shift+click to regenerate (for card and scene_illustration)
+      // Shift+click to regenerate
       if (event.shiftKey && this.imageSrc && this.supportsRegeneration) {
         this.regenerateIllustration(false);
         return;
       }
       
-      // Alt+click to delete and regenerate (for card and scene_illustration)
+      // Alt+click to regenerate and replace; the server keeps an original that is used elsewhere
       if (event.altKey && this.imageSrc && this.supportsRegeneration) {
         this.regenerateIllustration(true);
         return;
@@ -191,6 +223,7 @@ export default {
           character: this.character,
           message_content: this.message_content,
           message_id: this.message_id,
+          backdrop: this.backdrop,
           onViewImage: this.openAssetView,
         });
       }
@@ -205,9 +238,11 @@ export default {
         return;
       }
       
+      const visType = this.backdrop ? VIS_TYPE.SCENE_BACKGROUND : null;
+
       // Mark this message as processing to show loading indicator
       if (this.markAssetProcessing) {
-        this.markAssetProcessing(this.message_id);
+        this.markAssetProcessing(this.message_id, this.assetId, visType);
       }
       
       const ws = this.getWebsocket();
@@ -217,7 +252,12 @@ export default {
         asset_id: this.assetId,
         asset_allow_override: true,
         asset_allow_auto_attach: true,
+        message_ids: [this.message_id],
       };
+
+      if (visType) {
+        message.vis_type = visType;
+      }
       
       if (deleteOld) {
         message.asset_delete_old = true;
@@ -242,7 +282,7 @@ export default {
   margin-bottom: 4px;
   clear: left;
   overflow: hidden;
-  border: 2px solid rgb(var(--v-theme-avatar_border));
+  border: 2px solid rgb(var(--v-theme-border));
   width: var(--asset-width);
 }
 
@@ -290,6 +330,20 @@ export default {
   width: 100% !important;
   height: auto !important;
   object-fit: contain !important;
+}
+
+.message-asset-reference {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 1;
+  display: flex;
+  border-radius: 14px;
+  background: rgba(var(--v-theme-surface), 0.85);
+}
+
+.message-asset-reference :deep(.reference-control) {
+  margin-left: 0;
 }
 
 /* Placeholder */

@@ -6,6 +6,8 @@ CharacterMessage = signal("character")
 PlayerMessage = signal("player")
 DirectorMessage = signal("director")
 TimePassageMessage = signal("time")
+CharacterTransitionMessage = signal("character_transition")
+SceneBackdropMessage = signal("scene_backdrop")
 StatusMessage = signal("status")
 AgentMessage = signal("agent")
 ReinforcementMessage = signal("reinforcement")
@@ -19,6 +21,7 @@ RequestInput = signal("request_input")
 ReceiveInput = signal("receive_input")
 
 ClientStatus = signal("client_status")
+DecisionModelStatus = signal("decision_model_status")
 RateLimited = signal("rate_limited")
 RateLimitReset = signal("rate_limit_reset")
 AutoRetry = signal("auto_retry")
@@ -29,21 +32,27 @@ RequestClientStatus = signal("request_client_status")
 AgentStatus = signal("agent_status")
 RequestAgentStatus = signal("request_agent_status")
 PromptSent = signal("prompt_sent")
+AgentActionsObserved = signal("agent_actions_observed")
+DecisionModelsChanged = signal("decision_models_changed")
 MemoryRequest = signal("memory_request")
 
 RemoveMessage = signal("remove_message")
 RegenerateFailed = signal("regenerate_failed")
+ReorderMessages = signal("reorder_messages")
 
 SceneStatus = signal("scene_status")
 SceneIntent = signal("scene_intent")
 CommandStatus = signal("command_status")
 WorldState = signal("world_state")
+KnowledgeChanged = signal("knowledge_changed")
+PerceptionStatus = signal("perception_status")
 ArchivedHistory = signal("archived_history")
 
 AudioQueue = signal("audio_queue")
 
 MessageEdited = signal("message_edited")
 MessageAssetUpdate = signal("message_asset_update")
+MessageRevs = signal("message_revs")
 
 ImageGenerated = signal("image_generated")
 ImageGenerationFailed = signal("image_generation_failed")
@@ -59,6 +68,7 @@ WorldSateManager = signal("world_state_manager")
 TalemateStarted = signal("talemate_started")
 
 RequestActionConfirmation = signal("request_action_confirmation")
+ActionConfirmationFinished = signal("action_confirmation_finished")
 
 TemplateRendered = signal("template_rendered")
 
@@ -74,11 +84,14 @@ handlers = {
     "player": PlayerMessage,
     "director": DirectorMessage,
     "time": TimePassageMessage,
+    "character_transition": CharacterTransitionMessage,
+    "scene_backdrop": SceneBackdropMessage,
     "context_investigation": ContextInvestigationMessage,
     "reinforcement": ReinforcementMessage,
     "request_input": RequestInput,
     "receive_input": ReceiveInput,
     "client_status": ClientStatus,
+    "decision_model_status": DecisionModelStatus,
     "rate_limited": RateLimited,
     "rate_limit_reset": RateLimitReset,
     "auto_retry": AutoRetry,
@@ -91,15 +104,21 @@ handlers = {
     "clear_screen": ClearScreen,
     "remove_message": RemoveMessage,
     "regenerate_failed": RegenerateFailed,
+    "reorder_messages": ReorderMessages,
     "agent_message": AgentMessage,
     "scene_status": SceneStatus,
     "scene_intent": SceneIntent,
     "command_status": CommandStatus,
     "world_state": WorldState,
+    "knowledge_changed": KnowledgeChanged,
+    "perception_status": PerceptionStatus,
     "archived_history": ArchivedHistory,
     "message_edited": MessageEdited,
+    "message_revs": MessageRevs,
     "message_asset_update": MessageAssetUpdate,
     "prompt_sent": PromptSent,
+    "agent_actions_observed": AgentActionsObserved,
+    "decision_models_changed": DecisionModelsChanged,
     "audio_queue": AudioQueue,
     "status": StatusMessage,
     "image_generated": ImageGenerated,
@@ -114,6 +133,7 @@ handlers = {
     "world_state_manager": WorldSateManager,
     "talemate_started": TalemateStarted,
     "request_action_confirmation": RequestActionConfirmation,
+    "action_confirmation_finished": ActionConfirmationFinished,
     "scene_asset_scene_cover_image": SceneCoverImageSet,
     "scene_asset_character_cover_image": CharacterCoverImageSet,
     "scene_asset_character_avatar": CharacterAvatarSet,

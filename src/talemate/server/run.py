@@ -20,6 +20,7 @@ import talemate.config  # noqa: F401
 from talemate.version import VERSION
 from talemate.path import LOGS_DIR
 from talemate.environ import env_port, env_str
+from talemate.server.shutdown import shutdown_server
 
 print("Initialization time", time.perf_counter() - t_import_start)
 
@@ -72,15 +73,6 @@ STARTUP_TEXT = f"""
    ╚═╝   ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚══════╝
 v{VERSION}
 """
-
-
-async def install_punkt():
-    import nltk
-
-    log.info("Downloading NLTK punkt tokenizer")
-    await asyncio.get_event_loop().run_in_executor(None, nltk.download, "punkt")
-    await asyncio.get_event_loop().run_in_executor(None, nltk.download, "punkt_tab")
-    log.info("Download complete")
 
 
 async def log_stream(stream, log_func, on_started=None):
@@ -150,12 +142,6 @@ async def run_frontend(host: str, port: int, on_started=None):
             await process.wait()
 
 
-async def cancel_all_tasks(loop):
-    tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task()]
-    [task.cancel() for task in tasks]
-    await asyncio.gather(*tasks, return_exceptions=True)
-
-
 def run_server(args):
     """
     Run the talemate web server using the provided arguments.
@@ -167,20 +153,21 @@ def run_server(args):
     import talemate.agents.custom
     import talemate.client.custom
     import talemate.agents
-    from talemate.agents.registry import get_agent_types
     from talemate.world_state.templates import Collection
-    from talemate.prompts.overrides import get_template_overrides
+    from talemate.prompts.compatibility import log_override_status
+    from talemate.prompts.groups import list_templates
     import talemate.client.system_prompts as system_prompts
     from talemate.emit.base import emit
     import talemate.agents.tts.voice_library as voice_library
-    from talemate.changelog import ensure_changelogs_for_all_scenes
     from talemate.scene_assets import migrate_scene_assets_to_library
+    from talemate.decisions.slot import configure_decision_service
 
     # import node libraries
     import talemate.game.engine.nodes.load_definitions
     import talemate.config
     import talemate.instance
     from talemate.server.api import websocket_endpoint
+    from talemate.server.punkt import ensure_punkt
 
     config = talemate.config.cleanup()
 
@@ -190,17 +177,7 @@ def run_server(args):
     # pre-cache system prompts
     system_prompts.cache_all()
 
-    for agent_type in get_agent_types():
-        template_overrides = get_template_overrides(agent_type)
-        for template_override in template_overrides:
-            if not template_override.override_newer:
-                continue
-            log.warning(
-                "Outdated Template Override",
-                agent_type=agent_type,
-                template=template_override.template_name,
-                age=template_override.age_difference,
-            )
+    log_override_status(list_templates())
 
     # Get (or create) the asyncio event loop
     loop = asyncio.get_event_loop()
@@ -208,6 +185,7 @@ def run_server(args):
     loop.run_until_complete(voice_library.require_instance())
     loop.run_until_complete(talemate.instance.instantiate_clients())
     loop.run_until_complete(talemate.instance.instantiate_agents())
+    configure_decision_service()
 
     # websockets>=12 requires ``websockets.serve`` to be called from within a
     # running event-loop (it uses ``asyncio.get_running_loop()`` internally).
@@ -230,14 +208,13 @@ def run_server(args):
     # Start the websocket server and keep a reference so we can shut it down
     websocket_server = loop.run_until_complete(_start_websocket_server())
 
-    # create task to ensure changelogs for all scenes exists
-    loop.create_task(ensure_changelogs_for_all_scenes())
+    # Initialize saved-state revisions without loading scene agents.
 
     # migrate scene assets to unified library.json files
     migrate_scene_assets_to_library()
 
     # start task to unstall punkt
-    loop.create_task(install_punkt())
+    loop.create_task(ensure_punkt())
 
     def _on_frontend_started():
         if args.frontend_port == 8082:
@@ -275,29 +252,9 @@ def run_server(args):
     except KeyboardInterrupt:
         pass
     finally:
-        log.info("Shutting down...")
-
-        try:
-            if frontend_task:
-                frontend_task.cancel()
-
-            # Gracefully close the websocket server
-            websocket_server.close()
-            # Shield against additional Ctrl+C during the close handshake
-            loop.run_until_complete(asyncio.shield(websocket_server.wait_closed()))
-
-            # Cancel any remaining tasks
-            loop.run_until_complete(cancel_all_tasks(loop))
-            loop.run_until_complete(loop.shutdown_asyncgens())
-        except KeyboardInterrupt:
-            # If the user hits Ctrl+C again during shutdown, exit quickly without
-            # another traceback.
-            log.warning(
-                "Forced termination requested during shutdown - exiting immediately"
-            )
-        finally:
-            loop.close()
-            log.info("Shutdown complete")
+        shutdown_server(
+            loop, websocket_server, talemate.instance.get_agent("memory"), frontend_task
+        )
 
 
 def main():

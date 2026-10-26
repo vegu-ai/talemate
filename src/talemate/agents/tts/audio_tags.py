@@ -22,6 +22,32 @@ if TYPE_CHECKING:
 log = structlog.get_logger("talemate.agents.tts.audio_tags")
 
 
+def only_tags_inserted(original: str, tagged: str, tag_format: str) -> bool:
+    """
+    Whether `tagged` is `original` with audio tags added and nothing else changed.
+
+    The original's own tags must stay, unchanged and in order. Whitespace is
+    ignored entirely: a tag placed after an opening quote leaves `" We` where
+    the original had `"We`. A format without both a prefix and a suffix cannot
+    be checked, so it never passes.
+    """
+    prefix, sep, suffix = tag_format.partition("{{ tag }}")
+    if not (sep and prefix and suffix):
+        return False
+    delimiters = re.escape(prefix) + "|" + re.escape(suffix)
+    pattern = re.compile(
+        re.escape(prefix) + rf"(?:(?!{delimiters})[^\n])+" + re.escape(suffix)
+    )
+
+    def bare(text: str) -> str:
+        return "".join(pattern.sub("", text).split())
+
+    remaining = iter(pattern.findall(tagged))
+    return bare(original) == bare(tagged) and all(
+        span in remaining for span in pattern.findall(original)
+    )
+
+
 class AudioTagsMixin:
     """
     Mixin that adds audio-tag injection capabilities to the TTS agent.
@@ -128,6 +154,7 @@ class AudioTagsMixin:
         for i, chunk in enumerate(chunks):
             is_eligible = any(idx == i for idx, _ in eligible_chunks)
             supported_tags = getattr(self, f"{chunk.api}_supported_audio_tags", None)
+            style_tags = getattr(self, f"{chunk.api}_style_audio_tags", None)
             chunk_entries.append(
                 {
                     "index": i,
@@ -138,6 +165,9 @@ class AudioTagsMixin:
                     "tag_format": self.get_audio_tag_format(chunk.api),
                     "allowed_tags": supported_tags(model=chunk.model)
                     if is_eligible and supported_tags
+                    else None,
+                    "style_tags": style_tags(model=chunk.model)
+                    if is_eligible and style_tags
                     else None,
                 }
             )
@@ -158,6 +188,16 @@ class AudioTagsMixin:
             for idx, chunk in eligible_chunks:
                 if idx in tagged_chunks:
                     tagged = tagged_chunks[idx]
+                    if not only_tags_inserted(
+                        chunk.text[0], tagged, chunk_entries[idx]["tag_format"]
+                    ):
+                        log.warning(
+                            "Audio tag response changed the chunk text, keeping the original",
+                            chunk_index=idx,
+                            original=chunk.text[0],
+                            tagged=tagged,
+                        )
+                        continue
                     allowed_tags = chunk_entries[idx]["allowed_tags"]
                     if allowed_tags is not None:
                         original_tags = set(

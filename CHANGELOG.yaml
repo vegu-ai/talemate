@@ -9,7 +9,7 @@
   - "Scene Controls: Customize the scene header with story statistics, character portraits, knowledge mode and effort, and quick access to the scene's writing and visual styles. Add reusable shortcuts to scene tools and pin game variables as labelled sliders, choices or toggles for use during play."
   - "Scene Backgrounds: The World State agent can keep the scene backdrop fitting the story, picking one of the scene's backgrounds or generating a new one. Every backdrop change, including backgrounds you generate for the story, is recorded as a Backdrop entry in the history, and Replay shows each passage with its backdrop. It is off by default."
   - "Help Chat: Ask the Help agent to create or change themes and templates, adjust settings and edit inference presets. Settings and template changes each require your permission, with both permissions off by default. The theme editor can start a help chat that sets up a theme from your description."
-  - "Voice: Chatterbox Turbo adds an optional voice backend with voice cloning and expressive sound tags."
+  - "Voice: Chatterbox Turbo adds an optional voice backend with voice cloning and expressive sound and style tags."
   improvements:
   - "Scene Revisions: Forks keep their shared world connection at its current state; shared worlds are not rewound with a revision."
   - "Story and World: Add a selected person, object or place from the story to the world snapshot and keep it tracked."
@@ -101,6 +101,7 @@
   - "Voice and Startup: Failed voice chunks no longer stop the playback queue, and compatible servers can return playable audio and complete voice listings."
   - "Voice and Startup: Ctrl+C handles cancelled image-backend probes quietly and bounds shutdown to five seconds when background work stalls."
   - "Voice and Startup: Windows installation and frontend startup are repaired; fresh source installs start without configuration, and installed tokenizers need no startup download."
+  - "Voice: With Audio tags on, voices no longer read the speaker's name aloud. If the AI changes a line's words while adding tags, the line is spoken as written, without tags."
   - "Node Editor: Time nodes have valid defaults, inactive characters have no actor output, and test runs stop when switching scenes."
   - "Node Editor: Request World State outputs the world snapshot after its update."
   - "Security: Generated HTML is displayed safely across story messages, chats and previews."

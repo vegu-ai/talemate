@@ -32,17 +32,30 @@ select standard or Turbo.
 
 ### Audio tags
 
-Turbo supports the native sound tags `[clear throat]`, `[sigh]`, `[shush]`,
-`[cough]`, `[groan]`, `[sniff]`, `[gasp]`, `[chuckle]` and `[laugh]`.
-For example: `That was a surprise! [laugh] Let's try again.` These tags can be
-tested directly in the Voice Library without an LLM request. Native tag spans,
-including `[clear throat]`, remain intact across scene text chunks. For scene text,
-bracket visibility settings still apply before voice generation.
+Turbo supports two kinds of native tags:
+
+- **Sound tags** add a sound: `[clear throat]`, `[sigh]`, `[shush]`, `[cough]`,
+  `[groan]`, `[sniff]`, `[gasp]`, `[chuckle]` and `[laugh]`.
+- **Style tags** change how a sentence is delivered: `[angry]`, `[fear]`,
+  `[surprised]`, `[whispering]`, `[crying]`, `[happy]`, `[sarcastic]`,
+  `[dramatic]`, `[narration]` and `[advertisement]`.
+
+Where you put a tag matters. Resemble does not document placement rules; this is
+what we observed with Turbo: a style tag works at the start of the sentence it
+colours, and at the end of a sentence it has no effect. A sound tag goes where
+the sound happens. For example:
+`[happy] That was a surprise! [laugh] Let's try again.`
+
+These tags can be tested directly in the Voice Library without an LLM request.
+Native tag spans, including `[clear throat]`, remain intact across scene text
+chunks. For scene text, bracket visibility settings still apply before voice
+generation.
 
 The existing **Audio tags** setting optionally asks the Summarizer to insert
-tags. It remains off by default. For Turbo, that request is limited to the sound
-tags above and unsupported newly inserted tags are removed. Standard Chatterbox
-does not opt into automatic tags. Enabling Turbo alone makes no LLM requests.
+tags. It remains off by default. For Turbo, that request is limited to the tags
+above, with the same placement rules, and unsupported newly inserted tags are
+removed. Standard Chatterbox does not opt into automatic tags. Enabling Turbo
+alone makes no LLM requests.
 
 ### Downloads and switching
 

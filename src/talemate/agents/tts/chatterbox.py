@@ -26,7 +26,7 @@ from .util import voice_is_talemate_asset
 
 log = structlog.get_logger("talemate.agents.tts.chatterbox")
 
-TURBO_AUDIO_TAGS = (
+TURBO_SOUND_TAGS = (
     "clear throat",
     "sigh",
     "shush",
@@ -37,6 +37,19 @@ TURBO_AUDIO_TAGS = (
     "chuckle",
     "laugh",
 )
+TURBO_STYLE_TAGS = (
+    "angry",
+    "fear",
+    "surprised",
+    "whispering",
+    "crying",
+    "happy",
+    "sarcastic",
+    "dramatic",
+    "narration",
+    "advertisement",
+)
+TURBO_AUDIO_TAGS = TURBO_SOUND_TAGS + TURBO_STYLE_TAGS
 
 CHATTERBOX_TURBO_INFO = """
 Chatterbox Turbo is an opt-in local English voice-cloning model.
@@ -504,6 +517,11 @@ class ChatterboxMixin:
         self, model: str | None = None
     ) -> tuple[str, ...]:
         return TURBO_AUDIO_TAGS
+
+    def chatterbox_turbo_style_audio_tags(
+        self, model: str | None = None
+    ) -> tuple[str, ...]:
+        return TURBO_STYLE_TAGS
 
     def chatterbox_turbo_delete_voice(self, voice: Voice):
         self.chatterbox_delete_voice(voice)

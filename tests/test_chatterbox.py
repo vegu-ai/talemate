@@ -523,8 +523,8 @@ async def test_mixed_provider_prompt_preserves_each_format(agent, chunk, turbo_f
     assert f"CHUNK_{turbo_idx} allowed tags: [clear throat]" in rendered[0]
     assert f"CHUNK_{eleven_idx} audio-tag format: <{{{{ tag }}}}>" in rendered[0]
     assert f"CHUNK_{eleven_idx} policy: completely free-form" in rendered[0]
-    assert "<whispering>" in rendered[0]
-    assert "[whispering]" not in rendered[0]
+    assert "<laughing>" in rendered[0]
+    assert "[laughing]" not in rendered[0]
 
 
 async def test_finite_tags_and_cache_identity(agent, chunk):
@@ -534,13 +534,13 @@ async def test_finite_tags_and_cache_identity(agent, chunk):
     chunk.text = ["Hello [authored] there."]
     summarizer = SimpleNamespace(
         inject_audio_tags_for_tts=AsyncMock(
-            return_value={0: "Hello [authored] [whispering] [laugh] there."}
+            return_value={0: "Hello [authored] [shouting] [laugh] there."}
         )
     )
     await agent._inject_audio_tags([chunk], summarizer)
     assert "[authored]" in chunk.text[0]
     assert "[laugh]" in chunk.text[0]
-    assert "[whispering]" not in chunk.text[0]
+    assert "[shouting]" not in chunk.text[0]
     entries = summarizer.inject_audio_tags_for_tts.call_args.kwargs["chunk_entries"]
     assert entries[0]["allowed_tags"] == chatterbox.TURBO_AUDIO_TAGS
     turbo_key = agent.get_audio_tags_cache.call_args.args[0]
@@ -548,7 +548,32 @@ async def test_finite_tags_and_cache_identity(agent, chunk):
     chunk.text = ["Hello [authored] there."]
     await agent._inject_audio_tags([chunk], summarizer)
     assert agent.get_audio_tags_cache.call_args.args[0] != turbo_key
-    assert "[whispering]" in chunk.text[0]
+    assert "[shouting]" in chunk.text[0]
+
+
+def test_turbo_allows_sound_and_style_tokens(agent, chunk):
+    assert set(agent.chatterbox_turbo_supported_audio_tags()) == set(
+        chatterbox.TURBO_SOUND_TAGS
+    ) | set(chatterbox.TURBO_STYLE_TAGS)
+    assert agent.chatterbox_turbo_style_audio_tags() == chatterbox.TURBO_STYLE_TAGS
+    assert not set(chatterbox.TURBO_SOUND_TAGS) & set(chatterbox.TURBO_STYLE_TAGS)
+
+
+async def test_turbo_filter_keeps_style_tokens_and_drops_lookalikes(agent, chunk):
+    agent.actions["_config"].config["audio_tags"].value = True
+    agent.get_audio_tags_cache = AsyncMock(return_value=None)
+    agent.set_audio_tags_cache = AsyncMock()
+    chunk.text = ["Hello there."]
+    style = chatterbox.TURBO_STYLE_TAGS[0]
+    summarizer = SimpleNamespace(
+        inject_audio_tags_for_tts=AsyncMock(
+            return_value={0: f"[{style}] [{style}ish] Hello [laugh] [sobbing] there."}
+        )
+    )
+    await agent._inject_audio_tags([chunk], summarizer)
+    assert chunk.text[0].split() == [f"[{style}]", "Hello", "[laugh]", "there."]
+    entries = summarizer.inject_audio_tags_for_tts.call_args.kwargs["chunk_entries"]
+    assert entries[0]["style_tags"] == chatterbox.TURBO_STYLE_TAGS
 
 
 @pytest.mark.parametrize("restricted", [True, False])
@@ -576,14 +601,18 @@ def test_tag_prompt_honors_finite_vocabulary(restricted):
                 character_name=None,
                 eligible=True,
                 allowed_tags=chatterbox.TURBO_AUDIO_TAGS if restricted else None,
+                style_tags=chatterbox.TURBO_STYLE_TAGS if restricted else None,
             )
         ],
     )
     if restricted:
         assert "CHUNK_0 allowed tags:" in rendered
         assert "[laugh]" in rendered
+        style_list = ", ".join(f"[{tag}]" for tag in chatterbox.TURBO_STYLE_TAGS)
+        assert f"Style tags ({style_list})" in rendered
+        assert "at the start of the sentence it colours" in rendered
         assert "completely free-form" not in rendered
-        assert "[whispering]" not in rendered
+        assert "[shouting]" not in rendered
     else:
         assert "completely free-form" in rendered
         assert "[whispering]" in rendered

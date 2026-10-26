@@ -261,7 +261,7 @@
   title: Chatterbox
   summary: Standard Chatterbox and opt-in English Chatterbox Turbo WAV voice cloning. Standard exposes exaggeration, CFG/Pace
     and temperature; Turbo requires references longer than five seconds and offers temperature, top-k/top-p, repetition penalty
-    and normalization. Covers finite native sound tags, optional Summarizer injection, separate downloads, model/device switching,
+    and normalization. Covers finite native sound and style tags with style-tag placement, optional Summarizer injection, separate downloads, model/device switching,
     cancellation and complete-waveform output.
 - path: user-guide/agents/voice/elevenlabs.md
   title: ElevenLabs
@@ -304,7 +304,7 @@
   summary: Voice settings for Enabled APIs, narrator fallback, speaker separation, automatic speech and client TTS setup.
     Distinguishes standard Chatterbox controls from opt-in Turbo sampling/normalization and references longer than five seconds.
     Audio-tag injection is off by default and uses one Summarizer request with per-speaker format/policy for free-form ElevenLabs
-    v3, finite native Turbo sound tags, no standard Chatterbox injection. Covers chunking and saving voice choices.
+    v3, finite native Turbo sound and style tags, no standard Chatterbox injection, untagged fallback when the Summarizer changes words. Covers chunking and saving voice choices.
 - path: user-guide/agents/voice/text-manipulation.md
   title: Text Manipulation
   summary: Rewrite TTS pronunciation without changing scene text using agent.tts.generate.before event modules, Unpack Generation

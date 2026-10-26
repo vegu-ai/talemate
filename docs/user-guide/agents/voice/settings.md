@@ -75,8 +75,10 @@ Turning this off stops the agent from auto-registering or auto-toggling any back
 Use the Summarizer to insert audio tags into dialogue for explicitly supported providers. **Off by default**; enabling a TTS provider alone does not enable this LLM request.
 
 - **ElevenLabs v3** supports free-form delivery and sound tags (for example, `[whispering]` or `[laughing]`), using its configured Audio tag format.
-- **Chatterbox Turbo** supports only its [listed native sound tags](chatterbox.md#audio-tags), such as `[clear throat]` and `[laugh]`. Tags remain intact across size-chunking. The same Summarizer request carries each eligible speaker's own format and tag policy.
+- **Chatterbox Turbo** supports only its [listed native sound and style tags](chatterbox.md#audio-tags), such as `[laugh]` and `[whispering]`. Style tags go at the start of the sentence they colour. Tags remain intact across size-chunking. The same Summarizer request carries each eligible speaker's own format and tag policy.
 - **Standard Chatterbox** does not support automatic audio-tag injection.
+
+If the Summarizer changes a line's words while adding tags, Talemate speaks the line as written, without tags.
 
 Turbo's native tags can also be authored directly without a Summarizer request; scene bracket-visibility settings still apply.
 

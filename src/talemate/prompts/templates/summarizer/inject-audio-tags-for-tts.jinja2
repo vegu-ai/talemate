@@ -34,7 +34,11 @@ For each [ELIGIBLE] chunk, output the tagged text wrapped in its corresponding `
 - CHUNK_{{ entry.index }} audio-tag format: {{ format }}
 {% if entry.allowed_tags is defined and entry.allowed_tags is not none %}
 - CHUNK_{{ entry.index }} allowed tags: {% for tag in entry.allowed_tags %}{{ format | replace("{{ tag }}", tag) }}{% if not loop.last %}, {% endif %}{% endfor %}
-  Use only these sound tags, spelled exactly; do not add free-form emotion or delivery tags.
+  Use only these tags, spelled exactly; do not add free-form emotion or delivery tags.
+{%- if entry.style_tags %}
+  Style tags ({% for tag in entry.style_tags %}{{ format | replace("{{ tag }}", tag) }}{% if not loop.last %}, {% endif %}{% endfor %}) colour the delivery of the sentence that follows them: put each one at the start of the sentence it colours. A style tag at the end of a sentence has no effect.
+  Sound tags (all other allowed tags) go where the sound happens.
+{% endif %}
 {% else %}
 - CHUNK_{{ entry.index }} policy: completely free-form short tone, mood or sound tags.
   Tone tags (e.g. {{ format | replace("{{ tag }}", "whispering") }}) go at sentence beginnings; sound tags (e.g. {{ format | replace("{{ tag }}", "laughing") }}) can go anywhere within dialogue.
@@ -42,6 +46,7 @@ For each [ELIGIBLE] chunk, output the tagged text wrapped in its corresponding `
 {% endfor %}
 - Do NOT over-tag — be selective and natural. A few well-placed tags are far better than many.
 - Do NOT change, remove, or rephrase any of the original text — only insert tags
+- The `(Name)` marker in front of each chunk is metadata, not chunk text. Never write a speaker name or label (such as `Name:` or `(Name)`) into a `<CHUNK_N>` output.
 - Keep tag descriptions concise (1-3 words)
 - It is perfectly fine to return a chunk unchanged if no tags are appropriate
 - Consider the character's personality and the scene's emotional tone
@@ -113,12 +118,13 @@ Be creative and specific — the more precisely a tag captures the intended deli
 <|SECTION:GUIDELINES|>
 - Read ALL chunks (including [CONTEXT]) to understand the full scene and emotional context
 - Only output [ELIGIBLE] chunks in your response, each wrapped in its `<CHUNK_N>` tag
-- Tone tags go at the start of a sentence or clause — they set the delivery for everything after
+- Tone and style tags go at the start of a sentence or clause — they set the delivery for everything after
 - Sound tags go wherever the sound naturally happens — beginning, middle, or end of a line
 - Less is more — prioritize impact over quantity
 - Eligible chunk indices: {{ eligible | map(attribute="index") | list | join(", ") }}
 <|CLOSE_SECTION|>
 <|SECTION:TEXT|>
+Each line starts with metadata: the chunk index, its eligibility and the speaker in parentheses. The chunk text follows the metadata.
 <TEXT>
 {% for entry in chunk_entries -%}
 [INDEX:{{ entry.index }}] [{{ "ELIGIBLE" if entry.eligible else "CONTEXT" }}] ({{ entry.character_name or "Narrator" }}) {{ entry.text }}

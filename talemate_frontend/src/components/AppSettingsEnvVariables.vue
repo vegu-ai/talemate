@@ -1,10 +1,10 @@
 <template>
     <v-card variant="tonal">
         <v-card-text>
-            <div v-if="envVariableNames.length === 0" class="text-grey text-body-2 mb-4">
+            <div v-if="envVariableNames.length === 0" class="text-medium-emphasis text-body-medium mb-4">
                 No environment variables defined yet — add one below.
             </div>
-            <v-row v-for="name in envVariableNames" :key="name" dense>
+            <v-row v-for="name in envVariableNames" :key="name" density="compact">
                 <v-col cols="5">
                     <v-text-field :model-value="name" label="Name" readonly density="compact" hide-details></v-text-field>
                 </v-col>
@@ -16,7 +16,7 @@
                 </v-col>
             </v-row>
             <v-divider v-if="envVariableNames.length > 0" class="my-4"></v-divider>
-            <v-row dense>
+            <v-row density="compact">
                 <v-col cols="5">
                     <v-text-field v-model="env_variable_name_input" label="Name" density="compact"
                         :rules="[validateEnvVariableName]" placeholder="MY_API_KEY"
@@ -36,6 +36,8 @@
 </template>
 
 <script>
+import { hasOwnName, isReservedName } from '@/utils/nameKeyedMap';
+
 export default {
     name: 'AppSettingsEnvVariables',
     props: {
@@ -64,18 +66,23 @@ export default {
             if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
                 return 'Letters, digits and underscores only; must not start with a digit';
             }
-            if (this.config?.env && name in this.config.env) {
+            if (hasOwnName(this.config?.env, name)) {
                 return 'Already exists — edit its row above';
+            }
+            if (isReservedName(name)) {
+                return `"${name}" is reserved and cannot be used as a variable name`;
             }
             return true;
         },
         envVariableAdd() {
             if (!this.envVariableAddValid) return;
             const name = this.env_variable_name_input.trim();
-            if (!this.config.env) {
-                this.config.env = {};
-            }
-            this.config.env[name] = this.env_variable_value_input;
+            // a computed key in a literal defines an own property; assigning
+            // `env[name]` would hit the prototype setter for '__proto__'
+            this.config.env = {
+                ...this.config.env,
+                [name]: this.env_variable_value_input,
+            };
             this.env_variable_name_input = '';
             this.env_variable_value_input = '';
         },

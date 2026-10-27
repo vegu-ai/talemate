@@ -121,9 +121,10 @@ class Backend(backends.Backend):
                 )
             return backends.BackendStatus(type=backends.BackendStatusType.OK)
         except Exception as e:
-            log.error("google.test_connection.error", error=str(e))
+            message = backends.describe_error(e)
+            log.error("google.test_connection.error", error=message)
             return backends.BackendStatus(
-                type=backends.BackendStatusType.ERROR, message=str(e)
+                type=backends.BackendStatusType.ERROR, message=message
             )
 
     async def _generate_text(
@@ -338,7 +339,6 @@ class GoogleImageMixin:
                 type="unified_api_key",
                 value="google.api_key",
                 label="Google API Key",
-                scene_overridable=False,
             ),
             "model": AgentActionConfig(
                 type="text",
@@ -355,7 +355,6 @@ class GoogleImageMixin:
                 ],
                 label="Model",
                 description="Google image model",
-                save_on_change=True,
                 scene_overridable=False,
             ),
         }
@@ -386,7 +385,6 @@ class GoogleImageMixin:
             step=1,
             label="Max References",
             description="Maximum number of reference images for editing (1-3)",
-            save_on_change=True,
             scene_overridable=False,
         )
         actions["google_image_edit"] = AgentAction(

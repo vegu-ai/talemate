@@ -1,7 +1,10 @@
 """Unit tests for talemate.scene_message message models and helpers."""
 
+import json
+
 import pytest
 
+from talemate.memory_pass import MemoryPassItem, MemoryPassResult
 from talemate.scene_message import (
     CharacterMessage,
     ContextInvestigationMessage,
@@ -163,7 +166,7 @@ class TestSceneMessageBase:
         assert d["typ"] == "scene"
         assert d["source"] == "ai"
         assert d["flags"] == int(Flags.HIDDEN)
-        assert d["rev"] == 0
+        assert d["rev"] is None
         assert "id" in d
         assert "meta" not in d  # omitted when None
 
@@ -210,6 +213,17 @@ class TestSceneMessageBase:
         m.set_meta(x=1)
         h2 = m.meta_hash
         assert h1 != h2
+
+    def test_meta_hash_matches_a_loaded_message(self):
+        fresh = SceneMessage(message="hi")
+        fresh.set_source(
+            "world_state", "update_reinforcement", question="Q", character="Bob"
+        )
+        loaded = SceneMessage(
+            **json.loads(json.dumps(fresh.model_dump(), sort_keys=True))
+        )
+        assert list(loaded.meta) != list(fresh.meta)
+        assert loaded.meta_hash == fresh.meta_hash
 
     def test_fingerprint_is_stable_for_same_message(self):
         a = SceneMessage(message="same")
@@ -305,6 +319,52 @@ class TestCharacterMessage:
         m = CharacterMessage(message="Alice: hi")
         assert m.source == "ai"
         assert m.typ == "character"
+
+    def test_memory_pass_follows_the_version_it_belongs_to(self):
+        m = CharacterMessage(message="Alice: hi")
+        result = MemoryPassResult(
+            status="kept",
+            candidates=2,
+            kept=[MemoryPassItem(text="Bob owes her a coin.", kind="story")],
+            dropped=[MemoryPassItem(text="The tide turns.", kind="insight")],
+        )
+        m.set_memory_pass(result)
+
+        m.append_version("Alice: hi there", source="revision")
+        assert m.memory_pass is result
+        m.append_version("Alice: hello", source="regenerate")
+        assert m.memory_pass is None
+        assert "memory_pass" not in m.versions_payload()
+        m.append_version("Alice: hello, Bob", source="continue")
+        assert m.memory_pass is None
+
+        m.set_active_version(1)
+        assert m.memory_pass is result
+        assert m.versions_payload()["memory_pass"] == result.model_dump(mode="json")
+
+    def test_regenerated_versions_carry_the_regenerated_memory_pass(self):
+        m = CharacterMessage(message="Alice: hi")
+        first = MemoryPassResult(status="none", candidates=1)
+        regenerated = MemoryPassResult(status="none", candidates=2)
+        m.set_memory_pass(first)
+
+        with m.regenerated_memory_pass(regenerated):
+            # a revision-only regenerate has no raw version before it
+            m.append_version("Alice: hello", source="revision")
+        assert m.memory_pass is regenerated
+        m.append_version("Alice: hello, Bob", source="continue")
+        assert m.memory_pass is regenerated
+
+        m.set_active_version(0)
+        m.append_version("Alice: hi, Bob", source="continue")
+        assert m.memory_pass is first
+
+    def test_memory_pass_is_never_saved(self):
+        m = CharacterMessage(message="Alice: hi")
+        m.set_memory_pass(MemoryPassResult(status="none", candidates=3))
+        data = m.to_dict()
+        assert "memory_pass" not in str(data)
+        assert CharacterMessage(**data).memory_pass is None
 
 
 # ---------------------------------------------------------------------------
@@ -541,12 +601,12 @@ class TestTimePassageMessage:
         m = TimePassageMessage(message="A day later")
         assert m.typ == "time"
         assert m.source == "manual"
-        assert m.ts == "PT0S"
+        assert m.ts == 0
 
     def test_dict_includes_ts(self):
-        m = TimePassageMessage(message="A day later", ts="P1D")
+        m = TimePassageMessage(message="A day later", ts=86400)
         d = m.to_dict()
-        assert d["ts"] == "P1D"
+        assert d["ts"] == 86400
         assert d["typ"] == "time"
 
 

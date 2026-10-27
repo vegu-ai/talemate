@@ -1,7 +1,7 @@
 <template>
     <div class="help-chat-root">
 
-    <v-toolbar density="compact" flat color="mutedbg" class="chat-selector-toolbar">
+    <v-toolbar density="compact" flat color="transparent" class="chat-selector-toolbar">
         <v-select
             v-if="chatSelectItems.length > 0"
             :model-value="activeChatId"
@@ -41,8 +41,8 @@
         </v-btn>
     </v-toolbar>
 
-    <v-toolbar density="compact" flat color="mutedbg">
-        <v-toolbar-title class="text-subtitle-2 text-muted d-flex align-center" style="overflow: visible;">
+    <v-toolbar density="compact" flat color="transparent">
+        <v-toolbar-title class="text-title-small text-muted d-flex align-center" style="overflow: visible;">
             <v-tooltip v-if="activeChatId" :text="sceneAware ? 'The help chat can see your loaded scene. Click to make it unaware.' : 'The help chat cannot see your loaded scene. Click to make it aware.'" location="top" max-width="300">
                 <template v-slot:activator="{ props }">
                     <v-chip
@@ -77,6 +77,44 @@
             </template>
         </v-tooltip>
     </v-toolbar>
+
+    <div class="d-flex align-center flex-wrap px-4 pt-1">
+        <span class="text-body-small text-muted mr-2">May change:</span>
+        <v-tooltip
+            v-for="permission in permissionChips"
+            :key="permission.key"
+            :text="permission.tooltip"
+            location="bottom"
+            max-width="300"
+        >
+            <template v-slot:activator="{ props }">
+                <v-chip
+                    v-bind="props"
+                    size="x-small"
+                    class="mr-1"
+                    :color="permission.granted ? 'success' : 'muted'"
+                    label
+                    clickable
+                    variant="tonal"
+                    @click="togglePermission(permission.key)"
+                >
+                    <v-icon start>{{ permission.icon }}</v-icon>
+                    {{ permission.label }}
+                    <v-icon class="ml-1" size="x-small">{{ permission.granted ? 'mdi-check-circle-outline' : 'mdi-circle-outline' }}</v-icon>
+                </v-chip>
+            </template>
+        </v-tooltip>
+        <span v-if="permissionError" class="text-body-small text-error ml-1">{{ permissionError }}</span>
+    </div>
+
+    <v-tooltip v-if="permissionWarning" :text="permissionWarning" location="bottom" max-width="400">
+        <template v-slot:activator="{ props }">
+            <div v-bind="props" class="text-body-small text-warning px-4 pb-1">
+                <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
+                The help agent can write changes on its own - a strong agentic reasoning model is recommended.
+            </div>
+        </template>
+    </v-tooltip>
 
     <v-divider class="mb-2"></v-divider>
 
@@ -122,7 +160,7 @@
                         </v-btn>
                     </div>
                 </div>
-                <div v-if="chatMessages.length === 0" class="text-caption text-muted pa-2">
+                <div v-if="chatMessages.length === 0" class="text-body-small text-muted pa-2">
                     {{ activeChatId ? 'No messages yet' : 'Click + to begin' }}
                 </div>
             </div>
@@ -161,8 +199,15 @@ import DirectorConsoleChatInput from './DirectorConsoleChatInput.vue';
 import DirectorConsoleChatMessageActionResult from './DirectorConsoleChatMessageActionResult.vue';
 import DirectorConsoleChatMessageLoading from './DirectorConsoleChatMessageLoading.vue';
 import DirectorConsoleChatMessageMarkdown from './DirectorConsoleChatMessageMarkdown.vue';
+import { askAgentRequests, takePendingPrompt } from '@/utils/askAgent';
 
 const usageCheatSheet = "Ask anything about how to use Talemate - settings, agents, clients, the world editor and more.\n\nAnswers are grounded in the bundled documentation.\n\nThe help chat cannot change your scene; ask the director chat for that."
+
+// short chip labels; everything else about a permission is read off the agent
+const PERMISSION_CHIPS = [
+    { key: 'allow_settings_changes', label: 'Settings', icon: 'mdi-cog-outline' },
+    { key: 'allow_template_changes', label: 'Templates', icon: 'mdi-cube-scan' },
+];
 
 export default {
     name: 'HelpChat',
@@ -177,6 +222,7 @@ export default {
         'getWebsocket',
         'registerMessageHandler',
         'unregisterMessageHandler',
+        'saveAppConfig',
     ],
     props: {
         sceneActive: {
@@ -202,9 +248,21 @@ export default {
             tokenTotal: null,
             sceneAware: false,
             usageCheatSheet: usageCheatSheet,
+            // what a click asked for, until the agent's status frame carries
+            // it - the frame is a round trip away, and a second click in that
+            // window would otherwise re-send the first one's value
+            pendingPermissions: {},
+            permissionError: null,
+            // prompt from an AskAgent action, and the id of the chat created for
+            // it — the prompt is sent when that chat's own history arrives
+            askAgentPrompt: null,
+            askAgentChatId: null,
         }
     },
     computed: {
+        askAgentRequests() {
+            return askAgentRequests('help');
+        },
         helpAvailable() {
             return this.agentStatus?.help?.available || false;
         },
@@ -213,6 +271,34 @@ export default {
                 return 'The Help agent is disabled. Enable it in the agent settings to use the help chat.';
             }
             return 'The Help agent needs a configured client. Check the agent settings.';
+        },
+        permissionConfig() {
+            // TalemateApp flattens an agent_status frame, so the actions sit
+            // directly on the entry rather than under its `data`
+            return this.agentStatus?.help?.actions?.permissions?.config || {};
+        },
+        permissionChips() {
+            // the tooltip text comes from the agent's own action config; the
+            // chip's own label is the short one defined here
+            return PERMISSION_CHIPS.map(chip => {
+                const field = this.permissionConfig[chip.key] || {};
+                const granted = this.permissionGranted(chip.key);
+                return {
+                    key: chip.key,
+                    label: chip.label,
+                    icon: chip.icon,
+                    granted: granted,
+                    tooltip: `${field.label || chip.label}: ${granted ? 'allowed' : 'not allowed'}. `
+                        + `${field.description || ''} Click to ${granted ? 'revoke' : 'grant'}.`,
+                };
+            });
+        },
+        permissionWarning() {
+            // one note for the section, shown while anything is granted - the
+            // full text is the agent's own, the line in the chat is the short one
+            const granted = this.permissionChips.some(chip => chip.granted);
+            if(!granted) return null;
+            return this.agentStatus?.help?.actions?.permissions?.warning || null;
         },
         chatSelectItems() {
             return this.chats.map(chat => {
@@ -229,9 +315,86 @@ export default {
             return !!(last && last.source === 'help' && (last.type === undefined || last.type === 'text') && !last.loading);
         },
     },
+    watch: {
+        askAgentRequests() {
+            this.startAskAgentChat();
+        },
+        permissionConfig: {
+            handler(config) {
+                this.adoptPermissionState(config);
+            },
+            deep: true,
+        },
+    },
     methods: {
+        startAskAgentChat() {
+            // taken even when it is refused below, so a discarded ask leaves
+            // nothing behind for the next mount to pick up
+            const prompt = takePendingPrompt('help');
+            if(!prompt) return;
+            // one ask at a time: a second one while the first chat is still
+            // coming up would create a second chat, move the active chat off
+            // the first, and send both prompts
+            if(this.askAgentPrompt) return;
+            this.askAgentPrompt = prompt;
+            this.createChat();
+        },
+        sendAskAgentPrompt(chatId) {
+            if(!this.askAgentPrompt || chatId !== this.askAgentChatId) return;
+            const message = this.askAgentPrompt;
+            this.askAgentPrompt = null;
+            this.askAgentChatId = null;
+            this.chatInput = message;
+            this.sendChat();
+        },
+        permissionGranted(key) {
+            if(key in this.pendingPermissions) {
+                return this.pendingPermissions[key];
+            }
+            return this.permissionConfig[key]?.value === true;
+        },
+        togglePermission(key) {
+            const next = !this.permissionGranted(key);
+            this.pendingPermissions = { ...this.pendingPermissions, [key]: next };
+            this.permissionError = null;
+
+            const requestId = this.saveAppConfig((config) => {
+                const agents = config.agents || (config.agents = {});
+                const help = agents.help || (agents.help = {});
+                const actions = help.actions || (help.actions = {});
+                const permissions = actions.permissions || (actions.permissions = {});
+                const fields = permissions.config || (permissions.config = {});
+                const field = fields[key] || (fields[key] = {});
+                field.value = next;
+            }, {
+                label: 'help agent permissions',
+                onError: () => this.clearPendingPermission(key),
+            });
+
+            if(!requestId) {
+                // the queue has no config to build a save from yet, and says so
+                // to the console only - a click that did nothing has to show
+                this.clearPendingPermission(key);
+                this.permissionError = 'Permissions are not ready yet - try again in a moment.';
+            }
+        },
+        clearPendingPermission(key) {
+            if(!(key in this.pendingPermissions)) return;
+            const pending = { ...this.pendingPermissions };
+            delete pending[key];
+            this.pendingPermissions = pending;
+        },
+        adoptPermissionState(config) {
+            // drop a pending value once the agent reports it, so the chip goes
+            // back to rendering what the backend holds
+            for(const [key, value] of Object.entries(this.pendingPermissions)) {
+                if((config[key]?.value === true) === value) {
+                    this.clearPendingPermission(key);
+                }
+            }
+        },
         getMessageColor(m) {
-            if(m && m.source === 'user') return 'hchat_msg_user';
+            if(m && m.source === 'user') return 'actor';
             if(m && m.type === 'doc_result') return 'hchat_msg_doc_result';
             return 'hchat_msg_help';
         },
@@ -378,7 +541,14 @@ export default {
                 this.activeChatId = message.chat_id;
                 this.chatMessages = [];
                 this.tokenTotal = null;
-                this.requestChatHistory();
+                // an AskAgent prompt waits for the history the backend already
+                // queues for the chat it just created: a second one would land
+                // after the prompt was sent and replace its optimistic bubbles
+                if(this.askAgentPrompt) {
+                    this.askAgentChatId = message.chat_id;
+                } else {
+                    this.requestChatHistory();
+                }
                 return;
             }
             if(message.action === 'chat_deleted') {
@@ -407,6 +577,9 @@ export default {
                     if(this.isProcessing) {
                         this.ensureTrailingPlaceholder();
                     }
+                    // after the replacement above: the bubbles the prompt adds
+                    // must not be wiped by this history
+                    this.sendAskAgentPrompt(message.chat_id);
                 }
                 return;
             }
@@ -433,7 +606,13 @@ export default {
     },
     mounted() {
         this.registerMessageHandler(this.handleMessage);
-        this.requestChatList();
+        // an action that opened this drawer left its prompt behind before this
+        // component existed, so the pending one is picked up here rather than
+        // by the watcher alone
+        this.startAskAgentChat();
+        if(!this.askAgentPrompt) {
+            this.requestChatList();
+        }
     },
     unmounted() {
         this.unregisterMessageHandler(this.handleMessage);

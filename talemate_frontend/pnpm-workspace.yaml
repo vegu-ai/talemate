@@ -9,8 +9,8 @@
 # set to 0 to disable. Use `minimumReleaseAgeExclude` to exempt packages.
 minimumReleaseAge: 10080
 
-# Dependency lifecycle scripts (postinstall etc.) are blocked by default in
-# pnpm 11 — another supply-chain safeguard, since these worms typically run
+# Dependency lifecycle scripts (postinstall etc.) are blocked by default by
+# pnpm — another supply-chain safeguard, since these worms typically run
 # their payload from an install script. `allowBuilds` is the explicit decision
 # for every dependency that ships a build script: true = may run it,
 # false = must not (and is acknowledged, so installs don't error).

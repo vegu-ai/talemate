@@ -1,9 +1,10 @@
 import base64
+import hashlib
 import io
 import pydantic
 import structlog
 import httpx
-from typing import Literal
+from typing import Literal, ClassVar
 from PIL import Image
 
 from openai import AsyncOpenAI
@@ -28,8 +29,6 @@ from talemate.agents.visual.schema import (
 import talemate.agents.visual.backends as backends
 from talemate.client import openrouter as openrouter_client
 
-AVAILABLE_PROVIDERS = openrouter_client.AVAILABLE_PROVIDERS
-
 
 log = structlog.get_logger("talemate.agents.visual.openrouter")
 
@@ -38,6 +37,78 @@ BACKEND_NAME = "openrouter"
 
 DEFAULT_IMAGE_MODEL = "google/gemini-3-pro-image-preview"
 DEFAULT_ANALYSIS_MODEL = "google/gemini-3-flash-preview"
+
+IMAGES_URL = "https://openrouter.ai/api/v1/images"
+
+
+def _choices(values) -> list[dict[str, str]]:
+    return [{"label": value, "value": value} for value in values]
+
+
+def _text_to_image_models() -> list[str]:
+    return [
+        model.id
+        for model in openrouter_client.IMAGE_MODELS.values()
+        if not model.svg_only and not model.needs_references
+    ]
+
+
+def _image_edit_models() -> list[str]:
+    return [
+        model.id
+        for model in openrouter_client.IMAGE_MODELS.values()
+        if not model.svg_only and model.takes_references
+    ]
+
+
+def _ratio_value(ratio: str) -> float | None:
+    width, _, height = ratio.partition(":")
+    try:
+        return float(width) / float(height)
+    except (ValueError, ZeroDivisionError):
+        return None
+
+
+def nearest_aspect_ratio(target: str, listed: list[str]) -> str | None:
+    """The listed aspect ratio closest to `target`; None when the list holds
+    no ratio (it can hold `auto`)."""
+    values = {ratio: _ratio_value(ratio) for ratio in listed}
+    values = {ratio: value for ratio, value in values.items() if value}
+    if not values:
+        return None
+    wanted = _ratio_value(target)
+    return min(values, key=lambda ratio: abs(values[ratio] - wanted))
+
+
+def as_png(image_bytes: bytes, media_type: str | None = None) -> bytes:
+    """Talemate stores generated images as PNG; OpenRouter models also return
+    JPEG and WebP."""
+    try:
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            if image.format == "PNG":
+                return image_bytes
+            buffer = io.BytesIO()
+            image.save(buffer, format="PNG")
+            return buffer.getvalue()
+    except OSError as e:
+        raise ValueError(
+            f"OpenRouter returned an image Talemate cannot read ({media_type or 'unknown format'})"
+        ) from e
+
+
+def _image_url_part(image_bytes: bytes) -> dict:
+    encoded = base64.b64encode(image_bytes).decode("utf-8")
+    return {
+        "type": "image_url",
+        "image_url": {"url": f"data:image/png;base64,{encoded}"},
+    }
+
+
+def _error_message(result: httpx.Response) -> str:
+    try:
+        return result.json()["error"]["message"]
+    except (ValueError, KeyError, TypeError):
+        return result.text
 
 
 @backends.register
@@ -57,7 +128,7 @@ class Backend(backends.Backend):
     provider_only: list[str] = pydantic.Field(default_factory=list)
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
 
-    _test_conn_cache_maxage: int = 60
+    _test_conn_cache_maxage: ClassVar[int] = 60
 
     @property
     def instance_label(self) -> str:
@@ -69,6 +140,11 @@ class Backend(backends.Backend):
 
     @property
     def max_references(self) -> int:
+        # an Image API model takes no more than its listed maximum; 0 reads as
+        # "no limit" to consumers, so a model that takes none keeps the setting
+        image_model = openrouter_client.IMAGE_MODELS.get(self.model)
+        if image_model and not image_model.outputs_text and image_model.max_references:
+            return min(self.max_references_config, image_model.max_references)
         return self.max_references_config
 
     @property
@@ -78,13 +154,23 @@ class Backend(backends.Backend):
     @property
     def status_cache_key(self) -> str:
         config = get_config()
-        return (
-            f"{self.name}-{config.openrouter.api_key[:10]}"
-            if config.openrouter.api_key
-            else self.name
-        )
+        api_key = config.openrouter.api_key
+        if not api_key:
+            return self.name
+        # full-key digest: openrouter keys share the fixed sk-or-v1- prefix,
+        # so a raw prefix would collide across distinct keys and reuse a
+        # stale cached status after a key change
+        digest = hashlib.sha256(api_key.encode()).hexdigest()[:16]
+        return f"{self.name}-{digest}"
 
     async def ready(self) -> backends.BackendStatus:
+        # not part of the connection test: its cached result is shared by
+        # the three openrouter backends, which each have their own model
+        if not self.model:
+            self.status = backends.BackendStatus(
+                type=backends.BackendStatusType.ERROR, message="No model set"
+            )
+            return self.status
         try:
             await self.ensure_test_connection_task()
         except Exception as e:
@@ -93,7 +179,7 @@ class Backend(backends.Backend):
             )
         return self.status
 
-    async def test_connection(self, timeout: int = 2) -> backends.BackendStatus:
+    async def test_connection(self, timeout: int = 5) -> backends.BackendStatus:
         api_key = get_config().openrouter.api_key
         if not api_key:
             return backends.BackendStatus(
@@ -108,18 +194,23 @@ class Backend(backends.Backend):
                     headers={"Authorization": f"Bearer {api_key}"},
                     timeout=timeout,
                 )
-                if response.status_code == 200:
-                    return backends.BackendStatus(type=backends.BackendStatusType.OK)
-                else:
-                    return backends.BackendStatus(
-                        type=backends.BackendStatusType.ERROR,
-                        message=f"API returned status {response.status_code}",
-                    )
         except Exception as e:
-            log.error("openrouter.test_connection.error", error=str(e))
+            message = backends.describe_error(e)
+            log.error("openrouter.test_connection.error", error=message)
             return backends.BackendStatus(
-                type=backends.BackendStatusType.ERROR, message=str(e)
+                type=backends.BackendStatusType.ERROR, message=message
             )
+
+        if response.status_code != 200:
+            return backends.BackendStatus(
+                type=backends.BackendStatusType.ERROR,
+                message=f"API returned status {response.status_code}",
+            )
+
+        # retries an image model list that failed to load; returns at once
+        # when the list is loaded
+        await openrouter_client.fetch_available_image_models()
+        return backends.BackendStatus(type=backends.BackendStatusType.OK)
 
     def _make_client(self) -> AsyncOpenAI:
         api_key = get_config().openrouter.api_key
@@ -248,7 +339,7 @@ class Backend(backends.Backend):
         message = result.choices[0].message
 
         try:
-            response.generated = await self._extract_image_from_message(message)
+            image_bytes = await self._extract_image_from_message(message)
         except ValueError as e:
             log.error(
                 "openrouter._generate_text.no_image",
@@ -260,20 +351,23 @@ class Backend(backends.Backend):
             )
             raise ValueError("OpenRouter generation response missing image data") from e
 
+        response.generated = as_png(image_bytes)
+
         # Post-process: record actual image resolution
         self._set_request_resolution_from_image(request, response)
         return response
+
+    def _edit_references(self, request: GenerationRequest) -> list[bytes]:
+        refs = [rb for rb in (request.reference_bytes or []) if rb]
+        if not refs:
+            raise ValueError("Image edit requires at least one reference image")
+        return refs[: self.max_references_config]
 
     async def _generate_edit(
         self, request: GenerationRequest, response: GenerationResponse
     ) -> GenerationResponse:
         client = self._make_client()
-        refs = [rb for rb in (request.reference_bytes or []) if rb]
-        if not refs:
-            raise ValueError("Image edit requires at least one reference image")
-
-        # Limit to configured max references
-        refs = refs[: self.max_references_config]
+        refs = self._edit_references(request)
 
         aspect_ratio = self._aspect_ratio(request.format)
         log.debug(
@@ -293,16 +387,7 @@ class Backend(backends.Backend):
         ]
 
         # Add reference images
-        for ref_bytes in refs:
-            ref_base64 = base64.b64encode(ref_bytes).decode("utf-8")
-            content.append(
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/png;base64,{ref_base64}",
-                    },
-                }
-            )
+        content.extend(_image_url_part(ref_bytes) for ref_bytes in refs)
 
         # Aspect ratio must be nested under image_config according to OpenRouter docs
         extra_body = {
@@ -336,17 +421,116 @@ class Backend(backends.Backend):
         message = result.choices[0].message
 
         try:
-            response.generated = await self._extract_image_from_message(message)
+            image_bytes = await self._extract_image_from_message(message)
         except ValueError as e:
             raise ValueError("OpenRouter edit response missing image data") from e
 
+        response.generated = as_png(image_bytes)
+
         # Post-process: record actual image resolution
+        self._set_request_resolution_from_image(request, response)
+        return response
+
+    async def _image_api_model(self) -> openrouter_client.ImageModel | None:
+        """The model's Image API entry when it outputs images only: such a
+        model refuses chat completions."""
+        image_model = openrouter_client.IMAGE_MODELS.get(self.model)
+        if image_model is None:
+            # released after the list loaded, or the list failed to load
+            image_models = await openrouter_client.fetch_available_image_models(
+                refresh=True
+            )
+            image_model = image_models.get(self.model)
+        if image_model and not image_model.outputs_text:
+            return image_model
+        return None
+
+    async def _generate_image_api(
+        self,
+        request: GenerationRequest,
+        response: GenerationResponse,
+        image_model: openrouter_client.ImageModel,
+    ) -> GenerationResponse:
+        api_key = get_config().openrouter.api_key
+        if not api_key:
+            raise ValueError("OpenRouter API Key not set")
+        if image_model.svg_only:
+            raise ValueError(
+                f"{self.model} only makes SVG images, and Talemate stores images as PNG"
+            )
+
+        is_edit = request.gen_type == GEN_TYPE.IMAGE_EDIT
+        references = []
+        if is_edit:
+            if not image_model.takes_references:
+                raise ValueError(
+                    f"{self.model} does not accept reference images, so it cannot edit images"
+                )
+            references = self._edit_references(request)[: image_model.max_references]
+        if len(references) < (image_model.min_references or 0):
+            raise ValueError(
+                f"{self.model} needs at least {image_model.min_references} reference image(s)"
+            )
+
+        payload = {
+            "model": self.model,
+            "prompt": request.prompt
+            or ("Edit this image" if is_edit else "Generate an image"),
+        }
+        # the Image API refuses a parameter that the model does not honor
+        aspect_ratio = nearest_aspect_ratio(
+            self._aspect_ratio(request.format), image_model.aspect_ratios
+        )
+        if aspect_ratio:
+            payload["aspect_ratio"] = aspect_ratio
+        if "png" in image_model.output_formats:
+            payload["output_format"] = "png"
+        if references:
+            payload["input_references"] = [_image_url_part(ref) for ref in references]
+        self._add_provider_config(payload)
+
+        log.debug(
+            "openrouter.generate_image_api",
+            model=self.model,
+            format=request.format,
+            aspect_ratio=aspect_ratio,
+            output_format=payload.get("output_format"),
+            num_refs=len(payload.get("input_references", [])),
+        )
+        try:
+            async with httpx.AsyncClient() as client:
+                result = await client.post(
+                    IMAGES_URL,
+                    json=payload,
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=self.generate_timeout,
+                )
+        except httpx.HTTPError as e:
+            raise ValueError(
+                f"OpenRouter image request failed: {backends.describe_error(e)}"
+            ) from e
+
+        if result.status_code != 200:
+            raise ValueError(
+                f"OpenRouter image request failed (HTTP {result.status_code}): {_error_message(result)}"
+            )
+
+        images = result.json().get("data") or []
+        if not images or not images[0].get("b64_json"):
+            raise ValueError("OpenRouter image response missing image data")
+
+        response.generated = as_png(
+            base64.b64decode(images[0]["b64_json"]), images[0].get("media_type")
+        )
         self._set_request_resolution_from_image(request, response)
         return response
 
     async def generate(
         self, request: GenerationRequest, response: GenerationResponse
     ) -> GenerationResponse:
+        image_model = await self._image_api_model()
+        if image_model:
+            return await self._generate_image_api(request, response, image_model)
         if request.gen_type == GEN_TYPE.IMAGE_EDIT:
             return await self._generate_edit(request, response)
         return await self._generate_text(request, response)
@@ -429,41 +613,23 @@ class OpenRouterHandler(pydantic.BaseModel):
 class OpenRouterMixin:
     @classmethod
     def openrouter_shared_config(
-        cls, default_model: str = DEFAULT_IMAGE_MODEL
+        cls, default_model: str, models: list[str]
     ) -> dict[str, AgentActionConfig]:
-        # Use all available models - let user pick the correct one
-        # AVAILABLE_MODELS may be empty at import time, so handle gracefully
-        try:
-            # Access AVAILABLE_MODELS through the module to get the current value
-            models = (
-                list(openrouter_client.AVAILABLE_MODELS)
-                if openrouter_client.AVAILABLE_MODELS
-                else []
-            )
-        except (AttributeError, NameError):
-            models = []
-
-        choices = [{"label": model, "value": model} for model in models]
-
-        # Create provider choices from AVAILABLE_PROVIDERS
-        provider_choices = [
-            {"label": provider, "value": provider} for provider in AVAILABLE_PROVIDERS
-        ]
+        provider_choices = _choices(openrouter_client.AVAILABLE_PROVIDERS)
 
         config = {
             "api_key": AgentActionConfig(
                 type="unified_api_key",
                 value="openrouter.api_key",
                 label="OpenRouter API Key",
-                scene_overridable=False,
             ),
             "model": AgentActionConfig(
-                type="autocomplete",
+                type="combobox",
                 value=default_model,
-                choices=choices,
+                choices=_choices(models),
                 label="Model",
-                description="OpenRouter model (select appropriate model for the task)",
-                save_on_change=True,
+                description="OpenRouter model id. Pick one from the list or type one.",
+                required=True,
                 scene_overridable=False,
             ),
             "provider_only": AgentActionConfig(
@@ -472,7 +638,6 @@ class OpenRouterMixin:
                 choices=provider_choices,
                 label="Only use these providers",
                 description="Manually limit the providers to use for the selected model. This will override the default provider selection for this model.",
-                save_on_change=True,
                 scene_overridable=False,
             ),
             "provider_ignore": AgentActionConfig(
@@ -481,7 +646,6 @@ class OpenRouterMixin:
                 choices=provider_choices,
                 label="Ignore these providers",
                 description="Ignore these providers for the selected model. This will override the default provider selection for this model.",
-                save_on_change=True,
                 scene_overridable=False,
             ),
         }
@@ -493,14 +657,14 @@ class OpenRouterMixin:
         cls, default_model: str = DEFAULT_IMAGE_MODEL
     ) -> dict[str, AgentActionConfig]:
         """Config for image generation backend."""
-        return cls.openrouter_shared_config(default_model=default_model)
+        return cls.openrouter_shared_config(default_model, _text_to_image_models())
 
     @classmethod
     def openrouter_edit_config(
         cls, default_model: str = DEFAULT_IMAGE_MODEL
     ) -> dict[str, AgentActionConfig]:
         """Config for image editing backend."""
-        config = cls.openrouter_shared_config(default_model=default_model)
+        config = cls.openrouter_shared_config(default_model, _image_edit_models())
 
         # Add max_references config for edit backend
         config["max_references"] = AgentActionConfig(
@@ -511,7 +675,6 @@ class OpenRouterMixin:
             step=1,
             label="Max References",
             description="Maximum number of reference images for editing (1-3)",
-            save_on_change=True,
             scene_overridable=False,
         )
 
@@ -535,7 +698,7 @@ class OpenRouterMixin:
         )
         actions["openrouter_image_create"].config[
             "model"
-        ].note = "There is no good way for us to determine which models support basic text to image generation, so this is an unfiltered list. Please consult the openrouter documentation for more information."
+        ].note = "The list holds OpenRouter's image generation models. You can also type the id of a model that is not in the list."
         # Image editing backend
         config_edit = cls.openrouter_edit_config(default_model=DEFAULT_IMAGE_MODEL)
         actions["openrouter_image_edit"] = AgentAction(
@@ -552,10 +715,10 @@ class OpenRouterMixin:
         )
         actions["openrouter_image_edit"].config[
             "model"
-        ].note = "There is no good way for us to determine which models support image editing, so this is an unfiltered list. Please consult the openrouter documentation for more information. Image editing refers to image generation with support for 1 or more contextual references."
+        ].note = "Image editing sends 1 or more reference images with the prompt, so the list holds OpenRouter's image generation models that accept reference images. You can also type the id of a model that is not in the list."
         # Image analysis backend
         config_analysis = cls.openrouter_shared_config(
-            default_model=DEFAULT_ANALYSIS_MODEL
+            DEFAULT_ANALYSIS_MODEL, openrouter_client.AVAILABLE_MODELS
         )
         actions["openrouter_image_analyzation"] = AgentAction(
             enabled=True,
@@ -571,7 +734,7 @@ class OpenRouterMixin:
         )
         actions["openrouter_image_analyzation"].config[
             "model"
-        ].note = "There is no good way for us to determine which models support image analysis, so this is an unfiltered list. Please consult the openrouter documentation for more information. Image analysis requires a text generation model to be multi-modal and support vision."
+        ].note = "There is no good way for us to determine which models support image analysis, so this is an unfiltered list. Please consult the openrouter documentation for more information. Image analysis requires a text generation model to be multi-modal and support vision. You can also type the id of a model that is not in the list."
         return actions
 
     def _openrouter_handler(
@@ -617,7 +780,8 @@ class OpenRouterMixin:
     ) -> Backend | None:
         backend_instance_exists = isinstance(backend, Backend)
         action_config = self.actions[action_name].config
-        model = action_config["model"].value
+        # a cleared model field saves null
+        model = action_config["model"].value or ""
 
         # Determine capabilities based on backend type
         image_create_enabled = action_name == "openrouter_image_create"
@@ -670,60 +834,43 @@ class OpenRouterMixin:
     async def openrouter_backend(
         self, old_config: dict | None = None, force: bool = False
     ) -> Backend:
-        backend = await self._openrouter_backend(
+        return await self._openrouter_backend(
             self.backend, "openrouter_image_create", old_config, force
         )
-        # Update model choices if AVAILABLE_MODELS has been populated
-        await self._update_openrouter_model_choices("openrouter_image_create")
-        return backend
 
     async def openrouter_backend_image_edit(
         self, old_config: dict | None = None, force: bool = False
     ) -> Backend:
-        backend = await self._openrouter_backend(
+        return await self._openrouter_backend(
             self.backend_image_edit, "openrouter_image_edit", old_config, force
         )
-        # Update model choices if AVAILABLE_MODELS has been populated
-        await self._update_openrouter_model_choices("openrouter_image_edit")
-        return backend
 
     async def openrouter_backend_image_analyzation(
         self, old_config: dict | None = None, force: bool = False
     ) -> Backend:
-        backend = await self._openrouter_backend(
+        return await self._openrouter_backend(
             self.backend_image_analyzation,
             "openrouter_image_analyzation",
             old_config,
             force,
         )
-        # Update model choices if AVAILABLE_MODELS has been populated
-        await self._update_openrouter_model_choices("openrouter_image_analyzation")
-        return backend
 
-    async def _update_openrouter_model_choices(self, action_name: str):
-        """Update model choices from AVAILABLE_MODELS if it has been populated."""
-        # Access AVAILABLE_MODELS through the module to get the current value
-        available_models = openrouter_client.AVAILABLE_MODELS
-
-        if not available_models:
-            return
-
-        action = self.actions.get(action_name)
-        if not action or "model" not in action.config:
-            return
-
-        choices = [{"label": model, "value": model} for model in available_models]
-        action.config["model"].choices = choices
-
-    async def openrouter_emit_status(self, processing: bool = None):
-        """Update model choices when status is emitted."""
-        # Update choices for all openrouter actions if models are available
-        for action_name in [
-            "openrouter_image_create",
-            "openrouter_image_edit",
-            "openrouter_image_analyzation",
-        ]:
-            await self._update_openrouter_model_choices(action_name)
+    def openrouter_update_choices(self):
+        """Offer the fetched OpenRouter lists as choices on the three openrouter
+        actions: image models to generate and edit, text models to analyze."""
+        providers = _choices(openrouter_client.AVAILABLE_PROVIDERS)
+        for action_name, models in (
+            ("openrouter_image_create", _choices(_text_to_image_models())),
+            ("openrouter_image_edit", _choices(_image_edit_models())),
+            (
+                "openrouter_image_analyzation",
+                _choices(openrouter_client.AVAILABLE_MODELS),
+            ),
+        ):
+            config = self.actions[action_name].config
+            config["model"].choices = models
+            config["provider_only"].choices = providers
+            config["provider_ignore"].choices = providers
 
     async def openrouter_prepare_generation(
         self, request: GenerationRequest

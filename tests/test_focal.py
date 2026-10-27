@@ -23,6 +23,8 @@ from talemate.game.focal import (
     collect_calls,
 )
 from talemate.game.focal.schema import Argument, Call, Callback, State
+from talemate.agents.director.action_core.exceptions import ActionRejected
+from talemate.exceptions import GenerationCancelled
 
 
 # ---------------------------------------------------------------------------
@@ -108,6 +110,138 @@ class _ConcurrentClient(_SequentialClient):
     @property
     def supports_concurrent_inference(self):
         return True
+
+
+async def test_plain_callback_cancellation_aborts_remaining_calls(setup_director):
+    async def cancelled(text):
+        raise GenerationCancelled("Character development cancelled")
+
+    later = AsyncMock()
+    handler = Focal(
+        _SequentialClient("cancellation-test"),
+        [make_callback("develop", cancelled), make_callback("later", later)],
+    )
+    with pytest.raises(GenerationCancelled, match="Character development cancelled"):
+        await handler._execute(
+            make_response(
+                make_call_dict("develop", text="first"),
+                make_call_dict("later", text="second"),
+            ),
+            State(),
+        )
+    assert handler.state.batch[0].skipped_reason == "interrupted"
+    assert handler.state.batch[1].skipped_reason == "aborted"
+    assert not handler.state.calls
+    later.assert_not_awaited()
+
+
+@pytest.mark.parametrize("reason", ["reject", "timed_out", "reject_with_instructions"])
+async def test_batch_records_rejection_and_remainder(
+    mock_client, setup_director, reason
+):
+    applied = []
+
+    async def write(text):
+        if text == "2":
+            raise ActionRejected(
+                "write",
+                text,
+                reason=reason,
+                instructions="Use blue" if reason == "reject_with_instructions" else "",
+            )
+        applied.append(text)
+
+    handler = Focal(mock_client, [make_callback("write", fn=write)])
+    response = make_response(
+        *(make_call_dict("write", text=str(i)) for i in range(1, 6))
+    )
+    hook = AsyncMock()
+    with FocalContext() as context:
+        context.hooks_after_batch.append(hook)
+        if reason == "reject_with_instructions":
+            await handler._execute(response, State())
+            assert applied == ["1", "3", "4", "5"]
+            assert handler.state.batch[1].rejection_instructions == "Use blue"
+        else:
+            with pytest.raises(ActionRejected):
+                await handler._execute(response, State())
+            assert applied == ["1"]
+            assert [c.skipped_reason for c in handler.state.batch[1:]] == [reason] + [
+                "aborted"
+            ] * 3
+    hook.assert_awaited_once_with(handler.state.batch)
+    assert handler.state.batch[1].arguments == {"text": "2"}
+    assert not handler.state.batch[1].called
+
+
+async def test_budget_preserves_dropped_calls_and_still_reports(
+    mock_client, setup_director
+):
+    write = AsyncMock()
+    report = AsyncMock()
+    handler = Focal(
+        mock_client,
+        [
+            Callback(name="write", fn=write),
+            Callback(name="report_issue", fn=report, counts_toward_budget=False),
+        ],
+        max_calls=1,
+    )
+    await handler._execute(
+        make_response(
+            make_call_dict("write", text="one"),
+            make_call_dict("write", text="two"),
+            make_call_dict("report_issue", issue="limit"),
+        ),
+        State(),
+    )
+    write.assert_awaited_once_with(text="one")
+    report.assert_awaited_once_with(issue="limit")
+    assert handler.state.batch[1].skipped_reason == "over_budget"
+    assert handler.state.batch[1].arguments == {"text": "two"}
+    assert "report_issue calls do not count" in handler.render_instructions()
+
+
+async def test_nested_abort_retains_leaf_outcomes_and_emits_one_batch(
+    mock_client, setup_director
+):
+    async def write(text):
+        if text == "two":
+            raise ActionRejected("write", text)
+
+    inner = Focal(mock_client, [Callback(name="write", fn=write)])
+
+    async def outer(tag, _focal_call):
+        inner.parent_call = _focal_call
+        await inner._execute(
+            make_response(
+                *(
+                    make_call_dict("write", text=text)
+                    for text in ("one", "two", "three")
+                )
+            ),
+            State(),
+        )
+
+    handler = Focal(mock_client, [Callback(name="outer", fn=outer, pass_call=True)])
+    hook = AsyncMock()
+    with FocalContext() as context:
+        context.hooks_after_batch.append(hook)
+        with pytest.raises(ActionRejected):
+            await handler._execute(
+                make_response(
+                    make_call_dict("outer", tag="first"),
+                    make_call_dict("outer", tag="second"),
+                ),
+                State(),
+            )
+    hook.assert_awaited_once_with(handler.state.batch)
+    assert handler.state.batch[0].subcalls[0].called
+    assert [call.skipped_reason for call in handler.state.batch[0].subcalls[1:]] == [
+        "reject",
+        "aborted",
+    ]
+    assert handler.state.batch[1].skipped_reason == "aborted"
 
 
 @pytest.fixture
@@ -704,3 +838,24 @@ class TestExecuteConcurrent:
         after_count = sum(1 for entry in hook_log if entry[0] == "after")
         assert before_count == 2
         assert after_count == 2
+
+
+async def test_execution_outcomes_cannot_be_supplied_by_model(
+    mock_client, setup_director
+):
+    handler = Focal(mock_client, [Callback(name="write", fn=AsyncMock())], max_calls=1)
+    response = make_response(
+        make_call_dict("write", text="one"),
+        {
+            **make_call_dict("write", text="two"),
+            "called": True,
+            "result": "applied",
+            "subcalls": [{"name": "spoof", "called": True}],
+        },
+    )
+    await handler._execute(response, State())
+    dropped = handler.state.batch[1]
+    assert not dropped.called
+    assert dropped.result is None
+    assert dropped.subcalls == []
+    assert dropped.skipped_reason == "over_budget"

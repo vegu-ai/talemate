@@ -227,7 +227,7 @@ Combines a list of strings into a single string with a specified delimiter betwe
 | Input | Type | Description |
 | --- | --- | --- |
 | `strings` | `list` | List of strings to join |
-| `delimiter` | `str` | (optional) Character(s) to insert between each string (optional; a literal "\n" is treated as a newline) |
+| `delimiter` | `str` | (optional) Character(s) to insert between each string (optional; decodes `\n`, `\t`, and `\\`; any other backslash sequence stays as typed) |
 
 **Outputs**
 
@@ -239,7 +239,7 @@ Combines a list of strings into a single string with a specified delimiter betwe
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| `delimiter` | `str` | `" "` | Character(s) to insert between each string |
+| `delimiter` | `str` | `" "` | Character(s) to insert between each string; decodes `\n`, `\t`, and `\\`; any other backslash sequence stays as typed |
 
 ## Make String
 
@@ -322,7 +322,7 @@ Divides a string into multiple parts using a specified delimiter.
 | Input | Type | Description |
 | --- | --- | --- |
 | `string` | `str` | The string to split |
-| `delimiter` | `str` | (optional) Character(s) to use as the split point (optional; a literal "\n" is treated as a newline) |
+| `delimiter` | `str` | (optional) Character(s) to use as the split point (optional; decodes `\n`, `\t`, and `\\`; any other backslash sequence stays as typed) |
 
 **Outputs**
 
@@ -334,7 +334,7 @@ Divides a string into multiple parts using a specified delimiter.
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| `delimiter` | `str` | `" "` | Character(s) to use as the split point |
+| `delimiter` | `str` | `" "` | Character(s) to use as the split point; decodes `\n`, `\t`, and `\\`; any other backslash sequence stays as typed |
 | `max_splits` | `int` | `-1` | Maximum number of splits to perform (-1 for all possible splits) |
 
 ## String Check

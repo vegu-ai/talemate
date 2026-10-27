@@ -59,6 +59,19 @@
                 <v-list-item-title>Query</v-list-item-title>
                 <v-list-item-subtitle>Ask a question or give a task to the narrator</v-list-item-subtitle>
             </v-list-item>
+
+            <SceneToolsShortcutItems
+                section="narrator"
+                :catalog="shortcutCatalog"
+                :shortcuts="shortcuts"
+                :templates="shortcutTemplates"
+                :characters="npcCharacters"
+                :disabled="disabled"
+                @run="runShortcut"
+                @edit="(shortcut) => $emit('shortcut-edit', shortcut)"
+                @add="(section) => $emit('shortcut-add', section)"
+                @add-template="(template) => $emit('shortcut-add-template', template)"
+            />
         </v-list>
     </v-menu>
 
@@ -76,6 +89,7 @@
 
 <script>
 import RequestInput from './RequestInput.vue';
+import SceneToolsShortcutItems from './SceneToolsShortcutItems.vue';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
 
 const PROGRESS_SHORTCUT_MINOR = "Introduce a minor change to the story.";
@@ -86,12 +100,26 @@ export default {
     name: "SceneToolsNarrator",
     components: {
         RequestInput,
+        SceneToolsShortcutItems,
     },
     props: {
         npcCharacters: Array,
         disabled: Boolean,
+        shortcutCatalog: {
+            type: Array,
+            default: () => [],
+        },
+        shortcuts: {
+            type: Object,
+            default: () => ({}),
+        },
+        shortcutTemplates: {
+            type: Object,
+            default: () => ({}),
+        },
     },
     inject: ['getWebsocket'],
+    emits: ['shortcut-add', 'shortcut-edit', 'shortcut-add-template'],
     data() {
         return {
             PROGRESS_SHORTCUT_MINOR,
@@ -112,6 +140,25 @@ export default {
             let callback = this[`action${params.action}`];
             if(callback){
                 callback({}, input, params);
+            }
+        },
+
+        runShortcut({shortcut, entry, character}) {
+            switch (entry.id) {
+                case 'narrator.progress':
+                    this.actionProgress({}, shortcut.instructions);
+                    break;
+                case 'narrator.narrate_environment':
+                    this.actionNarrateEnvironment({}, shortcut.instructions);
+                    break;
+                case 'narrator.look_at_scene':
+                    this.actionLookAtScene({}, shortcut.instructions);
+                    break;
+                case 'narrator.look_at_character':
+                    this.actionLookAtCharacter({}, shortcut.instructions, {character});
+                    break;
+                default:
+                    console.warn('unhandled scene tool shortcut action', entry.id);
             }
         },
 

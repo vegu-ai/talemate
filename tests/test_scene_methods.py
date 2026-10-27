@@ -13,13 +13,16 @@ MagicMock for domain objects.
 from __future__ import annotations
 
 import os
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 import talemate.emit.async_signals as async_signals
+import talemate.instance as instance
 from conftest import MockScene, bootstrap_scene
 from talemate.character import Character
 from talemate.exceptions import GenerationCancelled
+from talemate.knowledge.schema import KnowledgeEdge
 from talemate.scene_message import (
     CharacterMessage,
     DirectorMessage,
@@ -175,6 +178,73 @@ class TestAddActorAndCharacterLookups:
         assert real_scene.actors == [a2]
 
     @pytest.mark.asyncio
+    async def test_add_actor_refuses_a_second_object_under_one_name(self, real_scene):
+        # `actors` counts by object and `active_characters` by name, so two
+        # objects under one name give two actors and one name.
+        first = Character(name="Alice")
+        await real_scene.add_actor(
+            Actor(character=first, agent=None), commit_to_memory=False
+        )
+
+        with pytest.raises(ValueError, match='Name "Alice" already exists.'):
+            await real_scene.add_actor(
+                Actor(character=Character(name="Alice"), agent=None),
+                commit_to_memory=False,
+            )
+
+        assert real_scene.character_data["Alice"] is first
+        assert [actor.character for actor in real_scene.actors] == [first]
+        assert real_scene.active_characters == ["Alice"]
+
+    @pytest.mark.asyncio
+    async def test_add_actor_refuses_a_second_object_for_an_inactive_name(
+        self, real_scene
+    ):
+        first = Character(name="Alice")
+        actor = Actor(character=first, agent=None)
+        await real_scene.add_actor(actor, commit_to_memory=False)
+        await real_scene.remove_actor(actor)
+
+        with pytest.raises(ValueError, match='Name "Alice" already exists.'):
+            await real_scene.add_actor(
+                Actor(character=Character(name="Alice"), agent=None),
+                commit_to_memory=False,
+            )
+
+        assert real_scene.character_data["Alice"] is first
+
+    @pytest.mark.asyncio
+    async def test_add_actor_refuses_a_name_that_differs_only_in_case(self, real_scene):
+        # `get_character` resolves without case, so a scene holding Alice and
+        # alice has two records its own lookup cannot tell apart
+        first = Character(name="Alice")
+        await real_scene.add_actor(
+            Actor(character=first, agent=None), commit_to_memory=False
+        )
+
+        with pytest.raises(ValueError, match='Name "alice" already exists.'):
+            await real_scene.add_actor(
+                Actor(character=Character(name="alice"), agent=None),
+                commit_to_memory=False,
+            )
+
+        assert list(real_scene.character_data) == ["Alice"]
+        assert real_scene.active_characters == ["Alice"]
+
+    @pytest.mark.asyncio
+    async def test_add_actor_swaps_the_actor_of_a_character_it_holds(self, real_scene):
+        # the Actor/Player swap in `set_character_is_player` depends on this
+        char = Character(name="Alice")
+        await real_scene.add_actor(
+            Actor(character=char, agent=None), commit_to_memory=False
+        )
+        player = Player(character=char, agent=None)
+        await real_scene.add_actor(player, commit_to_memory=False)
+
+        assert real_scene.actors == [player]
+        assert real_scene.active_characters == ["Alice"]
+
+    @pytest.mark.asyncio
     async def test_add_actor_marks_player_character_is_player(self, real_scene):
         char = Character(name="Player", is_player=False)
         player = Player(character=char, agent=None)
@@ -218,14 +288,31 @@ class TestAddActorAndCharacterLookups:
         assert real_scene.intro == "Pre-existing intro"
 
     @pytest.mark.asyncio
+    async def test_add_actor_marks_the_character_active(self, real_scene):
+        char = Character(name="Alice")
+        await real_scene.add_actor(
+            Actor(character=char, agent=None), commit_to_memory=False
+        )
+        assert real_scene.active_characters == ["Alice"]
+        assert "Alice" not in real_scene.inactive_characters
+
+    @pytest.mark.asyncio
+    async def test_add_actor_twice_marks_the_character_once(self, real_scene):
+        char = Character(name="Alice")
+        await real_scene.add_actor(
+            Actor(character=char, agent=None), commit_to_memory=False
+        )
+        await real_scene.add_actor(
+            Actor(character=char, agent=None), commit_to_memory=False
+        )
+        assert real_scene.active_characters == ["Alice"]
+
+    @pytest.mark.asyncio
     async def test_remove_character_clears_state(self, real_scene):
         char = Character(name="Alice")
         await real_scene.add_actor(
             Actor(character=char, agent=None), commit_to_memory=False
         )
-        # add_actor populates character_data; active_characters is managed
-        # separately (e.g. via load_scene). Manually mark active for this test.
-        real_scene.active_characters.append("Alice")
 
         await real_scene.remove_character(char, purge_from_memory=False)
         assert "Alice" not in real_scene.character_data
@@ -240,6 +327,21 @@ class TestAddActorAndCharacterLookups:
         await real_scene.remove_actor(actor)
         assert actor not in real_scene.actors
         assert actor.character is None
+        assert "Alice" not in real_scene.active_characters
+
+    @pytest.mark.asyncio
+    async def test_remove_all_actors_clears_the_active_list(self, real_scene):
+        await real_scene.add_actor(
+            Actor(character=Character(name="Alice"), agent=None),
+            commit_to_memory=False,
+        )
+        await real_scene.add_actor(
+            Actor(character=Character(name="Bob"), agent=None),
+            commit_to_memory=False,
+        )
+        await real_scene.remove_all_actors()
+        assert real_scene.actors == []
+        assert real_scene.active_characters == []
 
     @pytest.mark.asyncio
     async def test_remove_all_actors_clears_actors_list(self, real_scene):
@@ -425,6 +527,44 @@ class TestSimpleSetters:
         assert real_scene.title == "the title"
         assert real_scene.description == "the description"
 
+    def test_set_intro_does_not_emit(self, real_scene):
+        """`set_intro` is the silent setter behind the sync scripting API;
+        emitting writers go through `apply_intro`."""
+        real_scene.emit_status = MagicMock()
+        real_scene.emit_history = AsyncMock()
+        real_scene.set_intro("the intro")
+        assert real_scene.intro == "the intro"
+        real_scene.emit_status.assert_not_called()
+        real_scene.emit_history.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_apply_intro_emits_status_and_history(self, real_scene):
+        real_scene.emit_status = MagicMock()
+        real_scene.emit_history = AsyncMock()
+        await real_scene.apply_intro("a brand new intro")
+        assert real_scene.intro == "a brand new intro"
+        real_scene.emit_status.assert_called_once()
+        real_scene.emit_history.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_apply_intro_without_history_emit(self, real_scene):
+        real_scene.emit_status = MagicMock()
+        real_scene.emit_history = AsyncMock()
+        await real_scene.apply_intro("a brand new intro", emit_history=False)
+        assert real_scene.intro == "a brand new intro"
+        real_scene.emit_status.assert_called_once()
+        real_scene.emit_history.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_apply_intro_none_coerces_to_empty(self, real_scene):
+        """A None intro must never be stored or reach get_intro via the emits."""
+        real_scene.emit_status = MagicMock()
+        real_scene.emit_history = AsyncMock()
+        await real_scene.apply_intro(None)
+        assert real_scene.intro == ""
+        real_scene.emit_status.assert_called_once()
+        real_scene.emit_history.assert_awaited_once()
+
     @pytest.mark.asyncio
     async def test_set_environment_writes_attribute(self, real_scene):
         # set_environment also calls emit_status which requires a running loop;
@@ -489,7 +629,6 @@ class TestPathProperties:
         assert isolated_scene.template_dir == os.path.join(save_dir, "templates")
         assert isolated_scene.nodes_dir == os.path.join(save_dir, "nodes")
         assert isolated_scene.info_dir == os.path.join(save_dir, "info")
-        assert isolated_scene.backups_dir == os.path.join(save_dir, "backups")
         assert isolated_scene.changelog_dir == os.path.join(save_dir, "changelog")
         assert isolated_scene.shared_context_dir == os.path.join(
             save_dir, "shared-context"
@@ -579,6 +718,41 @@ class TestHistoryAccessors:
         # With max_iterations=1, the loop returns None on the very first non-match.
         real_scene.history = [_char_msg("c"), NarratorMessage(message="n", source="ai")]
         assert real_scene.find_message("narrator", max_iterations=1) is None
+
+    def test_find_message_skips_filter_mismatches(self, real_scene):
+        older = _char_msg("older", character="Alice", source="player")
+        match = _char_msg("match", character="Alice", source="player")
+        real_scene.history = [
+            older,
+            match,
+            _char_msg("wrong character", character="Bob", source="player"),
+            _char_msg("wrong source", character="Alice", source="ai"),
+            NarratorMessage(message="wrong type", source="player"),
+        ]
+
+        assert (
+            real_scene.find_message(
+                "character", source="player", character_name="Alice"
+            )
+            is match
+        )
+
+    def test_find_message_returns_none_when_all_filters_mismatch(self, real_scene):
+        real_scene.history = [_char_msg("first"), _char_msg("last")]
+        assert real_scene.find_message("character", source="player") is None
+        assert real_scene.find_message("character", missing_attribute="value") is None
+
+    def test_find_message_filters_respect_iteration_limit(self, real_scene):
+        match = _char_msg("match", source="player")
+        real_scene.history = [match, _char_msg("later"), _char_msg("latest")]
+        assert (
+            real_scene.find_message("character", max_iterations=3, source="player")
+            is None
+        )
+        assert (
+            real_scene.find_message("character", max_iterations=4, source="player")
+            is match
+        )
 
     def test_message_index_finds_id(self, real_scene):
         a = _char_msg("a")
@@ -670,7 +844,7 @@ class TestCountCharacterMessagesSinceDirector:
         real_scene.history = [
             director,
             _char_msg("a1", character="Alice"),
-            TimePassageMessage(ts="PT1H", message="an hour later"),
+            TimePassageMessage(ts=3600, message="an hour later"),
             _char_msg("a2", character="Alice"),
         ]
         result = real_scene.count_character_messages_since_director(
@@ -718,7 +892,7 @@ class TestLastMessageOfType:
 
     def test_stop_on_time_passage(self, real_scene):
         n = NarratorMessage(message="n", source="ai")
-        tp = TimePassageMessage(ts="PT1H", message="later")
+        tp = TimePassageMessage(ts=3600, message="later")
         real_scene.history = [n, tp, _char_msg("c")]
         # Walking from the end: char (no match), time-passage (stop) -> None.
         assert (
@@ -764,7 +938,7 @@ class TestCollectMessages:
 
     def test_stop_on_time_passage_breaks(self, real_scene):
         a = _char_msg("a")
-        tp = TimePassageMessage(ts="PT1H", message="later")
+        tp = TimePassageMessage(ts=3600, message="later")
         b = _char_msg("b")
         real_scene.history = [a, tp, b]
         result = real_scene.collect_messages(stop_on_time_passage=True)
@@ -875,19 +1049,45 @@ class TestPopMessage:
         assert real_scene.pop_message(a) is True
         assert real_scene.history == [b]
 
-    def test_pop_by_int_returns_false_when_no_typ_match(self, real_scene):
-        # The int branch calls find_message(message) treating the int as a typ
-        # filter. Since message.typ is always a string, no message will match
-        # and pop_message returns False without mutating history.
+    def test_pop_by_missing_id_returns_false(self, real_scene):
         a = _char_msg("a")
         real_scene.history = [a]
         assert real_scene.pop_message(123) is False
         assert real_scene.history == [a]
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("index", [0, 1, 2])
+    async def test_pop_by_id_removes_only_requested_message(
+        self, real_scene, index, monkeypatch
+    ):
+        messages = [_char_msg("first"), _char_msg("middle"), _char_msg("last")]
+        real_scene.history = list(messages)
+        status = MagicMock()
+        monkeypatch.setattr(real_scene, "emit_status", status)
+
+        assert real_scene.pop_message(messages[index].id) is True
+
+        assert real_scene.history == messages[:index] + messages[index + 1 :]
+        status.assert_called_once_with()
+        assert real_scene.pop_message(messages[index].id) is False
+        status.assert_called_once_with()
+
     def test_pop_nonexistent_returns_false(self, real_scene):
         ghost = _char_msg("ghost")
         real_scene.history = [_char_msg("a")]
         assert real_scene.pop_message(ghost) is False
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("by_id", [False, True])
+    async def test_pop_empty_message_by_object_or_id(self, real_scene, by_id):
+        empty = NarratorMessage(message="", source="ai")
+        other = _char_msg("keep this message")
+        real_scene.history = [empty, other]
+
+        assert real_scene.pop_message(empty.id if by_id else empty) is True
+
+        assert real_scene.history == [other]
+        assert real_scene.get_message(empty.id) is None
 
     def test_pop_invalid_type_raises_value_error(self, real_scene):
         with pytest.raises(ValueError):
@@ -959,6 +1159,27 @@ class TestPopHistory:
         assert n_old not in real_scene.history
         assert n_new in real_scene.history
 
+    def test_no_match_leaves_history_untouched(self, real_scene):
+        a = _char_msg("only one")
+        real_scene.history = [a]
+        real_scene.pop_history(typ="narrator", all=True)
+        assert real_scene.history == [a]
+
+    @pytest.mark.parametrize("all", [False, True])
+    def test_max_iterations_limits_search_depth(self, real_scene, all):
+        narrator = NarratorMessage(message="oldest", source="ai")
+        history = [narrator, _char_msg("a"), _char_msg("b"), _char_msg("c")]
+        real_scene.history = list(history)
+        real_scene.pop_history(typ="narrator", all=all, max_iterations=2)
+        assert real_scene.history == history
+
+    @pytest.mark.asyncio
+    async def test_max_iterations_includes_the_last_inspected_message(self, real_scene):
+        narrator = NarratorMessage(message="n", source="ai")
+        real_scene.history = [narrator, _char_msg("a"), _char_msg("b")]
+        real_scene.pop_history(typ="narrator", max_iterations=3)
+        assert narrator not in real_scene.history
+
 
 class TestEditMessage:
     def test_edit_message_updates_message_text(self, real_scene):
@@ -976,10 +1197,12 @@ class TestEditMessage:
 
 
 class TestDeleteMessage:
-    def test_delete_removes_matching_message(self, real_scene):
+    @pytest.mark.asyncio
+    async def test_delete_removes_matching_message(self, real_scene):
         a = _char_msg("a")
         b = _char_msg("b")
         real_scene.history = [a, b]
+        # every deletion emits scene status, which needs a running event loop
         real_scene.delete_message(a.id)
         assert real_scene.history == [b]
 
@@ -993,12 +1216,153 @@ class TestDeleteMessage:
     async def test_delete_time_passage_resyncs_time(self, real_scene):
         # When a TimePassageMessage is removed, sync_time runs and emit_status
         # is called -- the latter requires a running event loop.
-        tp = TimePassageMessage(ts="PT1H", message="later")
+        tp = TimePassageMessage(ts=3600, message="later")
         real_scene.history = [tp]
-        real_scene.ts = "PT1H"
+        real_scene.ts = 3600
         real_scene.delete_message(tp.id)
-        # sync_time without remaining time-passage messages resets to PT0S.
-        assert real_scene.ts == "PT0S"
+        # sync_time without remaining time-passage messages resets to zero.
+        assert real_scene.ts == 0
+
+
+class TestRemovalRepairsTheArchive:
+    """Every removal path moves the archive indices (#650)."""
+
+    @staticmethod
+    def _scene(scene):
+        a = _char_msg("a")
+        b = _char_msg("b")
+        tp = TimePassageMessage(ts=3600, message="an hour later")
+        c = _char_msg("c")
+        d = _char_msg("d")
+        scene.history = [a, b, tp, c, d]
+        scene.archived_history = [
+            {"id": "s1", "text": "early", "start": 0, "end": 1, "ts": 0},
+            {"id": "s2", "text": "late", "start": 3, "end": 4, "ts": 3600},
+        ]
+        scene.start_ts = 0
+        scene.ts = 3600
+        return a, b, tp, c, d
+
+    @staticmethod
+    def _spans(scene):
+        return [
+            (entry["start"], entry["end"], entry["ts"])
+            for entry in scene.archived_history
+        ]
+
+    @staticmethod
+    def _remove(scene, method, message):
+        if method == "delete_message":
+            scene.delete_message(message.id)
+        elif method == "pop_message":
+            assert scene.pop_message(message) is True
+        elif method == "pop_message_id":
+            assert scene.pop_message(message.id) is True
+        else:
+            scene.pop_history(typ=message.typ, id=message.id)
+
+    METHODS = ["delete_message", "pop_message", "pop_message_id", "pop_history"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("method", METHODS)
+    @pytest.mark.parametrize(
+        "removed, expected",
+        [
+            (0, [(0, 0, 0), (2, 3, 3600)]),
+            (1, [(0, 0, 0), (2, 3, 3600)]),
+            (3, [(0, 1, 0), (3, 3, 3600)]),
+            (4, [(0, 1, 0), (3, 3, 3600)]),
+        ],
+    )
+    async def test_non_passage_removal_moves_indices_and_keeps_times(
+        self, real_scene, monkeypatch, method, removed, expected
+    ):
+        messages = self._scene(real_scene)
+        fix_time = MagicMock()
+        monkeypatch.setattr(real_scene, "fix_time", fix_time)
+
+        self._remove(real_scene, method, messages[removed])
+
+        assert self._spans(real_scene) == expected
+        assert real_scene.ts == 3600
+        fix_time.assert_not_called()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("method", METHODS)
+    async def test_time_passage_removal_moves_indices_and_times(
+        self, real_scene, method
+    ):
+        _, _, tp, _, _ = self._scene(real_scene)
+
+        self._remove(real_scene, method, tp)
+
+        assert self._spans(real_scene) == [(0, 1, 0), (2, 3, 0)]
+        assert real_scene.ts == 0
+
+    @pytest.mark.asyncio
+    async def test_pop_history_all_repairs_after_each_removal(self, real_scene):
+        a, b, tp, c, d = self._scene(real_scene)
+        first = ReinforcementMessage(message="calm")
+        second = ReinforcementMessage(message="calm")
+        real_scene.history = [a, first, b, tp, second, c, d]
+        real_scene.archived_history[0]["end"] = 2
+        real_scene.archived_history[1].update(start=5, end=6)
+
+        real_scene.pop_history(typ="reinforcement", all=True)
+
+        assert real_scene.history == [a, b, tp, c, d]
+        assert self._spans(real_scene) == [(0, 1, 0), (3, 4, 3600)]
+
+    @pytest.mark.asyncio
+    async def test_a_second_director_instruction_repairs_the_archive(self, real_scene):
+        a, b, tp, c, d = self._scene(real_scene)
+        first = DirectorMessage(message="look around", source="player")
+        real_scene.history = [first, a, b, tp, c, d]
+        real_scene.archived_history[0].update(start=0, end=2)
+        real_scene.archived_history[1].update(start=4, end=5)
+        second = DirectorMessage(message="open the door", source="player")
+
+        await real_scene.push_history(second)
+
+        assert real_scene.history == [a, b, tp, c, d, second]
+        assert self._spans(real_scene) == [(0, 1, 0), (3, 4, 3600)]
+
+    @pytest.mark.asyncio
+    async def test_simulation_suite_intro_calls_remove_narration_and_direction(
+        self, real_scene
+    ):
+        from talemate.game.engine.api.scene import create
+
+        narration = NarratorMessage(message="the computer hums", source="ai")
+        direction = DirectorMessage(message="set the scene", source="ai")
+        line = _char_msg("hello")
+        later = NarratorMessage(message="the room fades", source="ai")
+        real_scene.history = [narration, direction, line, later]
+        scene_api = create(real_scene)
+
+        # the calls of scenes/simulation-suite/game.py on the first narration
+        scene_api.pop_history(typ="narrator", all=True, reverse=True)
+        scene_api.pop_history(typ="director", all=True, reverse=True)
+
+        assert real_scene.history == [line]
+
+    def test_remove_message_at_refuses_a_negative_index(self, real_scene):
+        real_scene.history = [_char_msg("a")]
+        with pytest.raises(IndexError):
+            real_scene.remove_message_at(-1)
+        assert len(real_scene.history) == 1
+
+    @pytest.mark.asyncio
+    async def test_graph_api_pops_a_time_passage_and_repairs(self, real_scene):
+        from talemate.game.engine.api.scene import create
+
+        _, _, tp, _, _ = self._scene(real_scene)
+
+        create(real_scene).pop_history(typ="time_passage", all=False)
+
+        assert tp not in real_scene.history
+        assert self._spans(real_scene) == [(0, 1, 0), (2, 3, 0)]
+        assert real_scene.ts == 0
 
 
 # ---------------------------------------------------------------------------
@@ -1008,41 +1372,52 @@ class TestDeleteMessage:
 
 class TestAdvanceTime:
     def test_advance_time_adds_durations(self, real_scene):
-        real_scene.ts = "PT1H"
-        real_scene.advance_time("PT30M")
-        assert real_scene.ts == "PT1H30M"
+        real_scene.ts = 3600
+        real_scene.advance_time(1800)
+        assert real_scene.ts == 5400
 
     def test_advance_time_supports_zero(self, real_scene):
-        real_scene.ts = "PT5M"
-        real_scene.advance_time("PT0S")
-        assert real_scene.ts == "PT5M"
+        real_scene.ts = 300
+        real_scene.advance_time(0)
+        assert real_scene.ts == 300
 
 
 class TestSyncTime:
     def test_sync_time_sums_history_passages(self, real_scene):
         real_scene.history = [
             _char_msg("a"),
-            TimePassageMessage(ts="PT1H", message="later"),
+            TimePassageMessage(ts=3600, message="later"),
             _char_msg("b"),
-            TimePassageMessage(ts="PT30M", message="more later"),
+            TimePassageMessage(ts=1800, message="more later"),
         ]
-        # No archived_history, so we start from PT0S and sum.
+        # No archived_history, so we start from zero and sum.
         real_scene.sync_time()
-        assert real_scene.ts == "PT1H30M"
+        assert real_scene.ts == 5400
 
-    def test_sync_time_uses_archived_baseline(self, real_scene):
-        real_scene.archived_history = [{"ts": "PT2H", "end": 0}]
-        # No additional time passages after end=0.
+    def test_sync_time_starts_at_the_scene_start(self, real_scene):
+        real_scene.start_ts = 7200
+        real_scene.archived_history = [{"ts": 7200, "end": 0}]
+        real_scene.history = [
+            _char_msg("a"),
+            TimePassageMessage(ts=3600, message="later"),
+            _char_msg("b"),
+        ]
+        real_scene.sync_time()
+        assert real_scene.ts == 10800
+
+    def test_sync_time_ignores_the_archive_times(self, real_scene):
+        # a stale archive time does not become the clock
+        real_scene.archived_history = [{"ts": 7200, "end": 0}]
         real_scene.history = [_char_msg("a")]
         real_scene.sync_time()
-        assert real_scene.ts == "PT2H"
+        assert real_scene.ts == 0
 
     def test_sync_time_with_no_data_resets_to_zero(self, real_scene):
-        real_scene.ts = "PT5H"  # leftover
+        real_scene.ts = 18000  # leftover
         real_scene.history = []
         real_scene.archived_history = []
         real_scene.sync_time()
-        assert real_scene.ts == "PT0S"
+        assert real_scene.ts == 0
 
 
 class TestCalcTime:
@@ -1052,20 +1427,20 @@ class TestCalcTime:
 
     def test_sums_passages_in_range(self, real_scene):
         real_scene.history = [
-            TimePassageMessage(ts="PT1H", message="later"),
+            TimePassageMessage(ts=3600, message="later"),
             _char_msg("a"),
-            TimePassageMessage(ts="PT30M", message="more"),
+            TimePassageMessage(ts=1800, message="more"),
         ]
         # Full range
-        assert real_scene.calc_time() == "PT1H30M"
+        assert real_scene.calc_time() == 5400
 
     def test_partial_range(self, real_scene):
         real_scene.history = [
-            TimePassageMessage(ts="PT1H", message="later"),
-            TimePassageMessage(ts="PT30M", message="more"),
+            TimePassageMessage(ts=3600, message="later"),
+            TimePassageMessage(ts=1800, message="more"),
         ]
         # Only the first passage included.
-        assert real_scene.calc_time(0, 1) == "PT1H"
+        assert real_scene.calc_time(0, 1) == 3600
 
 
 # ---------------------------------------------------------------------------
@@ -1158,8 +1533,28 @@ class TestReset:
             {"text": "intro", "end": None},  # static, kept
             {"text": "summary", "end": 3},  # dynamic, removed
         ]
+        real_scene.history = [TimePassageMessage(ts=3600, message="later")]
+        real_scene.start_ts = 600
+        real_scene.ts = 4200
         real_scene.reset()
         assert real_scene.archived_history == [{"text": "intro", "end": None}]
+        assert (real_scene.start_ts, real_scene.ts) == (600, 600)
+
+    def test_reset_detaches_retained_edges_from_wiped_messages(self, real_scene):
+        message = _char_msg("I learned the route.")
+        real_scene.history = [message]
+        edge = KnowledgeEdge(
+            character="Bob",
+            target="world-entry",
+            message_id=message.id,
+            source="inferred",
+        )
+        real_scene.world_state.knowledge = [edge]
+
+        real_scene.reset()
+
+        assert real_scene.world_state.knowledge == [edge]
+        assert edge.message_id is None
 
 
 class TestSerialize:
@@ -1242,10 +1637,10 @@ class TestPushHistory:
 
     @pytest.mark.asyncio
     async def test_push_history_advances_time_for_time_passage(self, real_scene):
-        real_scene.ts = "PT0S"
-        tp = TimePassageMessage(ts="PT1H", message="later")
+        real_scene.ts = 0
+        tp = TimePassageMessage(ts=3600, message="later")
         await real_scene.push_history(tp)
-        assert real_scene.ts == "PT1H"
+        assert real_scene.ts == 3600
 
     @pytest.mark.asyncio
     async def test_push_history_emits_push_history_signal(self, real_scene):
@@ -1273,7 +1668,7 @@ class TestPushArchive:
     async def test_push_archive_appends_dict_form(self, real_scene):
         from talemate.history import ArchiveEntry
 
-        entry = ArchiveEntry(text="my entry", id="abc", ts="PT5M")
+        entry = ArchiveEntry(text="my entry", id="abc", ts=300)
         captured: list = []
 
         async def listener(event):
@@ -1339,12 +1734,11 @@ class TestSimpleProperties:
     def test_auto_backup_is_always_false(self, real_scene):
         assert real_scene.auto_backup is False
 
-    def test_conversation_format_property_resolves(self, real_scene):
-        # Pulls from instance.get_agent("conversation").conversation_format.
-        # We just need the access to succeed and return a non-empty string.
-        fmt = real_scene.conversation_format
-        assert fmt
-        assert isinstance(fmt, str)
+    def test_conversation_format_reads_the_summarizer(self, real_scene):
+        assert real_scene.conversation_format == "movie_script"
+        summarizer = instance.get_agent("summarizer")
+        summarizer.actions["manage_scene_history"].config["format"].value = "narrative"
+        assert real_scene.conversation_format == "narrative"
 
 
 # ---------------------------------------------------------------------------
@@ -1447,7 +1841,7 @@ class TestFixTimeErrorHandling:
     def test_fix_time_swallows_exception_and_restores_ts(self, real_scene):
         # Force _fix_time to raise by giving it malformed archived data and
         # confirm fix_time restores the original ts and does not propagate.
-        real_scene.ts = "PT3H"
+        real_scene.ts = 10800
         # archived_history is iterated as dicts; non-dict entries crash the
         # `"ts" in archived_entry` membership test.
         real_scene.archived_history = [None]  # type: ignore[list-item]
@@ -1455,7 +1849,7 @@ class TestFixTimeErrorHandling:
         # Should not raise.
         real_scene.fix_time()
         # ts is restored to the snapshot taken at the start of fix_time.
-        assert real_scene.ts == "PT3H"
+        assert real_scene.ts == 10800
 
 
 class TestRecentHistoryNoBudget:
@@ -1510,7 +1904,7 @@ class TestPushArchiveDictShape:
     async def test_archived_dict_excludes_none_fields(self, real_scene):
         from talemate.history import ArchiveEntry
 
-        entry = ArchiveEntry(text="x", id="i1", ts="PT1S")
+        entry = ArchiveEntry(text="x", id="i1", ts=1)
         await real_scene.push_archive(entry)
         stored = real_scene.archived_history[0]
         # Optional fields like start/end/ts_start/ts_end aren't on the entry,

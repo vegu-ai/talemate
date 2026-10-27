@@ -57,7 +57,7 @@ class FunctionWrapper:
         self.containing_graph = containing_graph
         self.endpoint = endpoint
 
-    async def __call__(self, **kwargs):
+    async def __call__(self, _focal_call: focal.Call | None = None, **kwargs):
         result = None
 
         async def handle_result(state: GraphState):
@@ -81,8 +81,13 @@ class FunctionWrapper:
                 self.state,
                 callbacks=[handle_result],
                 state_values={
-                    f"{arg.id}__fn_arg_value": kwargs.get(arg.get_property("name"))
-                    for arg in argument_nodes
+                    **(
+                        {"__focal_call": _focal_call} if _focal_call is not None else {}
+                    ),
+                    **{
+                        f"{arg.id}__fn_arg_value": kwargs.get(arg.get_property("name"))
+                        for arg in argument_nodes
+                    },
                 },
                 execute_forks=True,
                 emit_state=True,
@@ -101,8 +106,13 @@ class FunctionWrapper:
                 self.state,
                 callbacks=[handle_result],
                 state_values={
-                    f"{arg.id}__fn_arg_value": kwargs.get(arg.get_property("name"))
-                    for arg in argument_nodes
+                    **(
+                        {"__focal_call": _focal_call} if _focal_call is not None else {}
+                    ),
+                    **{
+                        f"{arg.id}__fn_arg_value": kwargs.get(arg.get_property("name"))
+                        for arg in argument_nodes
+                    },
                 },
             )
 
@@ -189,7 +199,11 @@ class FunctionWrapper:
             name=name,
             arguments=arguments,
             fn=self,
+            pass_call=True,
             multiple=allow_multiple_calls,
+            counts_toward_budget=metadata.get_property("counts_toward_budget")
+            if metadata
+            else True,
             instructions=metadata.normalized_input_value("instructions")
             if metadata
             else "",
@@ -739,6 +753,29 @@ class Function(Graph):
         )
 
 
+TEST_MODULE_KEY = "__test_module"
+
+
+def test_module_task_key(module_id: str) -> str:
+    return f"__run_{module_id}"
+
+
+def stop_test_module(state: GraphState) -> bool:
+    """Cancel a node-editor test module tracked in the state's shared dict.
+
+    Returns True when a test module was tracked, whether or not its task
+    still needed cancelling.
+    """
+    module = state.shared.pop(TEST_MODULE_KEY, None)
+    if module is None:
+        return False
+
+    task = state.shared.pop(test_module_task_key(module.id), None)
+    if task and not task.done():
+        task.cancel()
+    return True
+
+
 @register("core/RunModule")
 class RunModule(Node):
     """
@@ -781,7 +818,7 @@ class RunModule(Node):
                 f"Infinite loop detected. Running module from within itself: {self.title}"
             )
 
-        task_key = f"__run_{module.id}"
+        task_key = test_module_task_key(module.id)
         try:
             state.data["_in_run_module"] = module
 
@@ -810,6 +847,10 @@ class RunModule(Node):
             except asyncio.CancelledError:
                 self.set_output_values({"cancelled": True})
                 log.info("Module execution was cancelled", module=str(module))
+                # swallow only module-only cancels (test_stop); an outer cancel
+                # (scene unload) must propagate or the scene loop zombifies
+                if asyncio.current_task().cancelling() > 0:
+                    raise
                 return
             except PASSTHROUGH_ERRORS:
                 self.set_output_values({"done": True})

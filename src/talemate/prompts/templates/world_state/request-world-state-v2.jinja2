@@ -31,22 +31,22 @@ Other major characters:
 {% endset %}
 {# END VOLATILE CONTEXT #}
 
-{# FOCUSED SNAPSHOT — pre-computed by the agent. Every message in `scene_focus`
-   is a valid highlight anchor (the agent stamps their ids into
-   `anchor_message_ids`). On a fresh scene the agent falls back to the intro
-   text as the sole focus line and no anchors are produced. #}
-{% set final_line_number = len(scene_focus) if scene_focus else 1 %}
+{# FOCUSED SNAPSHOT — pre-computed by the agent. Every line is a valid
+   highlight anchor (the agent stamps the message ids, and INTRO_ANCHOR_ID for
+   `intro_text`, into `anchor_message_ids`). The intro, when it is inside the
+   current moment, is the first line. #}
+{% set intro_lines = 1 if intro_text else 0 %}
+{% set final_line_number = [(scene_focus or [])|length + intro_lines, 1]|max %}
 {% set focus_text %}
 <|SECTION:CURRENT FOCUS|>
-{% if scene_focus -%}
-{% for scene_context in scene_focus -%}
-Line {{ loop.index }}: {{ to_str(scene_context)|condensed }}
----
-{% endfor -%}
-{%- else -%}
+{% if intro_text -%}
 Line 1: {{ intro_text|condensed }}
 ---
-{%- endif %}
+{% endif -%}
+{% for scene_context in scene_focus -%}
+Line {{ loop.index + intro_lines }}: {{ to_str(scene_context)|condensed }}
+---
+{% endfor -%}
 <|CLOSE_SECTION|>
 {% endset %}
 {# END FOCUSED SNAPSHOT #}
@@ -84,7 +84,12 @@ Line 1: {{ intro_text|condensed }}
    pass replaces the snapshot entirely. #}
 {% set example_text %}
 <|SECTION:EXAMPLE|>
-{% if durable_snapshot %}
+{% if snapshot_audience_context|default(none) %}
+```{{ data_format_type() }}
+{% set audience_example = snapshot_audience_example %}
+{% if data_format_type() == "yaml" %}{{ yaml(audience_example) }}{% else %}{{ audience_example | tojson(indent=4) }}{% endif %}
+```
+{% elif durable_snapshot %}
 {% if data_format_type() == "json" %}
 ```json
 {
@@ -196,7 +201,14 @@ location: Concrete place where the scene is taking place right now.
 ```
 {% endif %}
 {% endif %}
+{% if snapshot_audience_context|default(none) %}
+The example uses placeholder entities and prose to illustrate shape only. Real names inside `audience` identify recipients, not subjects of example facts. Classify actual content from each audience's supplied evidence.
 {% if durable_snapshot %}
+Every included entity carries a complete `snapshot`, including existing characters. The example shows an explicit entity drop (`null`); omitted entities carry forward unchanged. A deliberate audience-only delta can send `views` for an existing entity without restating reader content.
+{% else %}
+This is a wholesale replacement: include every entity to retain, with its complete `snapshot` and `views` (plus `emotion` for characters). Omitted entities are removed. Do not send audience-only entries or null-to-drop entries; omit departed entities. Any count, including zero, is valid for each bucket.
+{% endif %}
+{% elif durable_snapshot %}
 Every entity in the example carries a `snapshot` — that field is mandatory, never omitted (including for characters already in CURRENT STATE). The example also shows a drop (`null`) and two buckets implicitly omitted (places + location → carried forward unchanged). The example is shape, not target — bucket counts and entry counts are decided entirely by what's in the CURRENT FOCUS.
 {% else %}
 The number of entries per bucket in the example is NOT a target — it only demonstrates shape. Bucket counts are decided entirely by the examine test below; any count (including zero) is valid for any bucket.
@@ -227,10 +239,19 @@ The number of entries per bucket in the example is NOT a target — it only demo
 {% set focus_text_tokens = count_tokens(focus_text) %}
 {% set example_text_tokens = count_tokens(example_text) %}
 {% set current_state_text_tokens = count_tokens(current_state_text) %}
+{% set audience_context_text %}
+{% if snapshot_audience_context|default(none) %}
+<|SECTION:ESTABLISHED AUDIENCE KNOWLEDGE|>
+{{ snapshot_audience_context | tojson(indent=2) }}
+<|CLOSE_SECTION|>
+{% endif %}
+{% endset %}
+{% set audience_context_tokens = count_tokens(audience_context_text) %}
 {% set custom_instructions_text_tokens = count_tokens(custom_instructions_text) %}
+{% set instructions_text_tokens = count_tokens(instructions) %}
 {% set writing_style_text_tokens = count_tokens(writing_style_text) %}
-{% set background_budget = max_tokens - 2500 - rendered_context_tokens - volatile_context_tokens - focus_text_tokens - example_text_tokens - current_state_text_tokens - custom_instructions_text_tokens - writing_style_text_tokens %}
-{% set background_history = scene.context_history(budget=background_budget) %}
+{% set background_budget = max_tokens - 2500 - rendered_context_tokens - volatile_context_tokens - focus_text_tokens - example_text_tokens - current_state_text_tokens - custom_instructions_text_tokens - instructions_text_tokens - writing_style_text_tokens - audience_context_tokens %}
+{% set background_history = snapshot_request.context_history(budget=background_budget) if snapshot_request is defined else scene.context_history(budget=background_budget) %}
 {% set background_text %}
 {% if background_history -%}
 <|SECTION:STORY SO FAR|>
@@ -253,6 +274,7 @@ The number of entries per bucket in the example is NOT a target — it only demo
 {{ background_text }}
 {{ focus_text }}
 {{ current_state_text }}
+{{ audience_context_text }}
 {% if volatile_placement == "after_history" %}
 {{ volatile_context_text }}
 {% endif %}
@@ -316,6 +338,29 @@ Each mention is a **verbatim noun phrase or proper name** copied literally from 
 - A mention must appear literally in the focus. No paraphrasing, recasing, or pluralization.
 - Keys are reader-friendly title case ("Manual override panel", not "manual_override_panel").
 
+{% if snapshot_audience_context|default(none) %}
+Audience replacements:
+- Keep `snapshot`, `emotion`, `location`, bucket keys and `mentions` complete for the reader. Reader-only discoveries and invented flavor remain reader-only.
+- Each included entity also supplies `views`, one assignment for EVERY character in ESTABLISHED AUDIENCE KNOWLEDGE. Use only those exact canonical audience names. A ready view has `audience`, `status: ready`, and `text`; otherwise use `status: omitted` and `text: null`.
+- Each ready `text` is the COMPLETE character-facing replacement, including a safe label and any emotion or location it conveys. No reader label, emotion or other field will be appended. Do not copy a secret-bearing name into public text.
+- Preserve useful public detail alongside private detail: a bystander's replacement can mention a visible injury while excluding its hidden motive. The owner's version can include a motive only if their established knowledge supports it. Do not hide the entire injury just because its motive is private.
+- Awareness means knowing the accompanying information, not knowing that an entity exists. Presence, the reader's prose, an author's snapshot, or a new invented fact do not establish discovery. Use only the supplied stored perspectives and disclosures to support audience content; invent no observation, reaction or belief. Preserve uncertainty and last-known information when current reader truth differs.
+- Omit a view when the supplied evidence does not support a useful replacement. Missing/unclassified audiences never receive reader text.
+- `location_views` follow the same rules for the separate location field; include safe descriptive location text without relying on the reader's location string.
+- Send fresh `views` WITH every entity whose snapshot/emotion changes, and `location_views` WITH any location change. Old audiences are never reused for newly supplied reader content.
+{% if durable_snapshot %}
+- Audience changes alone also require a delta even if reader text is unchanged; send a complete replacement view list. Omitted entities retain their existing state.
+{% else %}
+- Repeat complete reader fields AND the full view list for each retained entity, even if only its audience changed. Omitted entities are removed from every bucket. The separate location field changes only when supplied; pair it with `location_views`.
+{% endif %}
+- Do not emit `perspectives`, digests, source references, IDs or provenance in the response; the host attaches the evidence shown above.
+{% endif %}
+{% if instructions %}
+### Additional instructions
+
+{{ instructions }}
+
+{% endif %}
 Required response: valid {{ data_format_type() }} matching the example shape{% if durable_snapshot %} (delta-merge semantics above){% endif %}.
 <|CLOSE_SECTION|>
 

@@ -1,0 +1,34 @@
+{
+  "legacy": {
+    "off": {
+      "conversation.character_knowledge.enabled": false
+    },
+    "minimal": {
+      "conversation.character_knowledge.enabled": true,
+      "conversation.character_knowledge.perspective_filter": true,
+      "conversation.character_knowledge.memory_pass": false
+    },
+    "thorough": {
+      "conversation.character_knowledge.enabled": true,
+      "conversation.character_knowledge.perspective_filter": true,
+      "conversation.character_knowledge.memory_pass": true
+    }
+  },
+  "perception": {
+    "minimal": {
+      "conversation.character_knowledge.enabled": true,
+      "conversation.character_knowledge.memory_pass": false,
+      "summarizer.perceptions.automatic_repair": false
+    },
+    "balanced": {
+      "conversation.character_knowledge.enabled": true,
+      "conversation.character_knowledge.memory_pass": false,
+      "summarizer.perceptions.automatic_repair": true
+    },
+    "thorough": {
+      "conversation.character_knowledge.enabled": true,
+      "conversation.character_knowledge.memory_pass": true,
+      "summarizer.perceptions.automatic_repair": true
+    }
+  }
+}

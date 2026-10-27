@@ -1,7 +1,16 @@
-__all__ = ["EmbeddingsModelLoadError", "MemoryAgentError", "SetDBError"]
+__all__ = [
+    "EmbeddingsModelLoadError",
+    "MemoryAgentError",
+    "MemoryShutdownRefused",
+    "SetDBError",
+]
 
 
 class MemoryAgentError(Exception):
+    pass
+
+
+class MemoryShutdownRefused(MemoryAgentError):
     pass
 
 

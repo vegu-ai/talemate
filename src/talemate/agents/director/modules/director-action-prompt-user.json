@@ -335,11 +335,13 @@
     "9703e945-dc0e-4dee-8e21-f460520f86cd": {
       "title": "Director Action Summary",
       "id": "9703e945-dc0e-4dee-8e21-f460520f86cd",
-      "properties": {},
+      "properties": {
+        "no_calls_result": "Action `ooc` FAILED: No prompt or notice was shown to the user because the model returned no callable function."
+      },
       "x": 285,
       "y": 2067,
       "width": 193,
-      "height": 26,
+      "height": 46,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/directorActionSummary",
@@ -867,6 +869,38 @@
       "inherited": false,
       "registry": "ux/StyleElement",
       "base_type": "core/Node"
+    },
+    "b8c3ac49-3e56-4cbe-818e-87de3ec6b1de": {
+      "title": "SET local.focal_batch",
+      "id": "b8c3ac49-3e56-4cbe-818e-87de3ec6b1de",
+      "properties": {
+        "name": "focal_batch",
+        "scope": "local"
+      },
+      "x": 1490,
+      "y": 1230,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "bb24af04-edfc-4362-99f6-fb9300c75ff7": {
+      "title": "GET local.focal_batch",
+      "id": "bb24af04-edfc-4362-99f6-fb9300c75ff7",
+      "properties": {
+        "name": "focal_batch",
+        "scope": "local"
+      },
+      "x": 35,
+      "y": 2005,
+      "width": 210,
+      "height": 30,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1033,6 +1067,15 @@
     ],
     "76bbae6a-9643-48e7-97fe-557fb153b320.ux_element": [
       "ee9ad9b6-0e29-40a0-bd4a-42e9b4fec67a.ux_element"
+    ],
+    "d9f85143-26c2-46af-a9d8-d681a1a135f0.batch": [
+      "b8c3ac49-3e56-4cbe-818e-87de3ec6b1de.value"
+    ],
+    "b8c3ac49-3e56-4cbe-818e-87de3ec6b1de.value": [
+      "0fc8abfa-5ad3-4922-bd66-0377984d08e4.state_b"
+    ],
+    "bb24af04-edfc-4362-99f6-fb9300c75ff7.value": [
+      "9703e945-dc0e-4dee-8e21-f460520f86cd.batch"
     ]
   },
   "groups": [

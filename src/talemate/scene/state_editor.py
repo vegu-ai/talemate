@@ -9,6 +9,8 @@ Allows the in-memory editing of a scene's states.
 
 from typing import TYPE_CHECKING
 
+from talemate.game.state import replace_game_state
+
 from .schema import SceneState
 
 if TYPE_CHECKING:
@@ -39,7 +41,7 @@ class SceneStateEditor:
             scene.world_state = state.world_state
 
         if "game_state" in data:
-            scene.game_state = state.game_state
+            replace_game_state(scene, state.game_state)
 
         if "agent_state" in data:
             scene.agent_state.update(state.agent_state)

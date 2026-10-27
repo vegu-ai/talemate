@@ -11,13 +11,14 @@ export const SPECIAL_MESSAGE_COLORS = [
   "director",
   "time",
   "context_investigation",
+  "reinforcement",
   "information",
 ];
 
-// Canonical default colors used both as the resolution fallback (when the
-// user has not configured a color) and as the reset target in the appearance
-// config UI. Keyed by bare type name — both message types (narrator, actor,
-// director, time, context_investigation, information) and markup types
+// Canonical default colors used as the last-resort resolution fallback (no
+// user color and no theme) and as the reset target in the appearance config
+// UI. Keyed by bare type name — both message types (narrator, actor,
+// director, time, context_investigation, reinforcement, information) and markup types
 // (quotes, parentheses, brackets, emphasis, entities).
 export const DEFAULT_APPEARANCE_COLORS = {
   narrator: "#A180AE",
@@ -25,6 +26,7 @@ export const DEFAULT_APPEARANCE_COLORS = {
   director: "#FF5722",
   time: "#FFECB3",
   context_investigation: "#D5C0A1",
+  reinforcement: "#80CBC4",
   information: "#BA8574",
   quotes: "#FFFFFF",
   parentheses: "#DB9DC2",
@@ -37,21 +39,39 @@ export function isSpecialMessageColor(name) {
   return SPECIAL_MESSAGE_COLORS.includes(name);
 }
 
-// Resolve the effective color for a scene-message type against the user's
-// appearance config. Returns the configured color when set, otherwise the
-// canonical default.
-export function getMessageColor(appearanceConfig, typ) {
+// Fallback theme colors for consumers that cannot be handed the theme by
+// their caller (SceneTextParser is built by components that only receive an
+// appearance config).
+let activeThemeColors = null;
+
+export function setActiveThemeColors(themeColors) {
+  activeThemeColors = themeColors ?? null;
+}
+
+export function getActiveThemeColors() {
+  return activeThemeColors;
+}
+
+export function themeMessageColor(themeColors, typ) {
+  const colors = themeColors ?? activeThemeColors;
+  const color = colors?.messages?.[typ];
+  return typeof color === "string" && color ? color : undefined;
+}
+
+// Resolve the effective color for a scene-message type: a color the user set
+// wins, then the active theme, then the canonical default.
+export function getMessageColor(appearanceConfig, typ, themeColors) {
   const cfg = appearanceConfig?.scene?.[`${typ}_messages`];
-  return cfg?.color || DEFAULT_APPEARANCE_COLORS[typ];
+  return cfg?.color || themeMessageColor(themeColors, typ) || DEFAULT_APPEARANCE_COLORS[typ];
 }
 
 // Build an inline CSS style string (color + optional italic/bold) for a
 // scene-message type from the user's appearance config.
-export function getMessageStyle(appearanceConfig, typ) {
+export function getMessageStyle(appearanceConfig, typ, themeColors) {
   const cfg = appearanceConfig?.scene?.[`${typ}_messages`] || {};
   let styles = "";
   if (cfg.italic) styles += "font-style: italic;";
   if (cfg.bold) styles += "font-weight: bold;";
-  styles += `color: ${getMessageColor(appearanceConfig, typ)};`;
+  styles += `color: ${getMessageColor(appearanceConfig, typ, themeColors)};`;
   return styles;
 }

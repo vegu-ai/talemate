@@ -42,7 +42,19 @@
                             @update:model-value="onPerspectiveSelect('default', $event)"
                             @blur="update(true)"
                             placeholder="e.g., Third person limited, past tense"
-                        ></v-combobox>
+                        >
+                            <template v-slot:item="{ props: itemProps, item }">
+                                <PerspectivePresetItem v-bind="itemProps" :preset="item" />
+                            </template>
+                        </v-combobox>
+                        <div class="d-flex">
+                            <v-spacer></v-spacer>
+                            <AskAgent
+                                agent="director"
+                                label="Ask director to set up perspectives"
+                                :prompt="perspectivePrompt"
+                            />
+                        </div>
                     </v-col>
                     <v-col cols="12" md="8" lg="6" xl="6">
                         <v-expansion-panels variant="accordion" class="mb-2">
@@ -57,7 +69,7 @@
                                     >{{ overrideCount }} set</v-chip>
                                 </v-expansion-panel-title>
                                 <v-expansion-panel-text>
-                                    <div class="text-caption text-medium-emphasis mb-3">
+                                    <div class="text-body-small text-medium-emphasis mb-3">
                                         Each override replaces the default perspective for that speaker. Empty fields fall back to the default.
                                     </div>
                                     <v-combobox
@@ -71,7 +83,11 @@
                                         @blur="update(true)"
                                         density="comfortable"
                                         class="mb-2"
-                                    ></v-combobox>
+                                    >
+                                        <template v-slot:item="{ props: itemProps, item }">
+                                            <PerspectivePresetItem v-bind="itemProps" :preset="item" />
+                                        </template>
+                                    </v-combobox>
                                     <v-combobox
                                         :model-value="perspectives.other"
                                         :items="perspectivePresets"
@@ -83,7 +99,11 @@
                                         @blur="update(true)"
                                         density="comfortable"
                                         class="mb-2"
-                                    ></v-combobox>
+                                    >
+                                        <template v-slot:item="{ props: itemProps, item }">
+                                            <PerspectivePresetItem v-bind="itemProps" :preset="item" />
+                                        </template>
+                                    </v-combobox>
                                     <v-combobox
                                         :model-value="perspectives.narrator"
                                         :items="perspectivePresets"
@@ -94,7 +114,11 @@
                                         @update:model-value="onPerspectiveSelect('narrator', $event)"
                                         @blur="update(true)"
                                         density="comfortable"
-                                    ></v-combobox>
+                                    >
+                                        <template v-slot:item="{ props: itemProps, item }">
+                                            <PerspectivePresetItem v-bind="itemProps" :preset="item" />
+                                        </template>
+                                    </v-combobox>
                                 </v-expansion-panel-text>
                             </v-expansion-panel>
                         </v-expansion-panels>
@@ -173,8 +197,11 @@
 
 <script>
 
+import AskAgent from './AskAgent.vue';
+import PerspectivePresetItem from './PerspectivePresetItem.vue';
 import ContextualGenerate from './ContextualGenerate.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
+import { buildPerspectivePrompt } from '@/utils/perspectivePresets';
 import { createAutocompleteField } from '@/utils/autocompleteField';
 import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
 
@@ -183,6 +210,8 @@ const defaultPerspectives = () => ({ default: "", player: "", other: "", narrato
 export default {
     name: "WorldStateManagerSceneOutline",
     components: {
+        AskAgent,
+        PerspectivePresetItem,
         ContextualGenerate,
         AutocompleteRedoChip,
     },
@@ -193,16 +222,9 @@ export default {
         generationOptions: Object,
     },
     watch: {
-        generationOptions: {
-            immediate: true,
-            handler(value) {
-                console.log("generationOptions", value)
-            }
-        },
         immutableScene: {
             immediate: true,
             handler(value) {
-                console.log("immutableScene", value)
                 if(value && this.scene && value.name !== this.scene.name) {
                     this.scene = null;
                     this.selected = null;
@@ -239,7 +261,12 @@ export default {
         this.introAutocompleteField = createAutocompleteField({
             autocompleteRequest: this.autocompleteRequest,
             getValue: () => this.scene?.data?.intro || '',
-            setValue: (v) => { if (this.scene?.data) this.scene.data.intro = v; },
+            setValue: (v) => {
+                if (this.scene?.data) {
+                    this.scene.data.intro = v;
+                    this.setFieldDirty('intro');
+                }
+            },
             buildParams: () => ({
                 partial: this.scene.data.intro,
                 context: "scene intro:scene intro",
@@ -269,6 +296,9 @@ export default {
             return this.appConfig && this.appConfig.creator && this.appConfig.creator.perspective_presets
                 ? this.appConfig.creator.perspective_presets
                 : [];
+        },
+        perspectivePrompt() {
+            return buildPerspectivePrompt(this.perspectivePresets);
         },
         overrideCount() {
             const p = this.perspectives;

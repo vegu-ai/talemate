@@ -4,12 +4,13 @@
 
     <v-alert color="time" icon="mdi-clock-outline" variant="text" @dblclick="!editing && startEdit()">
       <template v-slot:close>
-        <v-btn v-if="!editing" size="small" icon variant="text" class="close-button" @click="deletePassage" :disabled="uxLocked">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
+        <MessageCloseButton v-if="!editing" label="Delete this time passage" :disabled="uxLocked" @click="deletePassage" />
       </template>
-      <span v-if="!editing">{{ text }}</span>
-      <v-chip v-if="hovered && !editing" size="x-small" color="grey-lighten-1" variant="text" class="ml-2">
+      <span v-if="!editing">
+        <span v-if="title" class="time-title mr-2">{{ title }}</span>
+        {{ text }}
+      </span>
+      <v-chip v-if="hovered && !editing" size="x-small" color="mutedheader" variant="text" class="ml-2">
         <v-icon>mdi-pencil</v-icon>
         {{ uxLocked || appBusy ? 'Editing locked' : 'Double-click to edit.' }}
       </v-chip>
@@ -18,11 +19,14 @@
             style="max-width: 140px" hide-details="auto" density="compact" />
         <v-select v-model="editUnit" :items="units" label="Unit"
             style="max-width: 140px" hide-details="auto" density="compact" class="ml-2" />
+        <v-text-field v-model="editTitle" label="Chapter title" style="max-width: 260px"
+            hide-details="auto" density="compact" class="ml-2" />
         <v-btn class="ml-2" color="success" variant="text" size="small"
             prepend-icon="mdi-content-save" @click="saveEdit" :disabled="uxLocked || appBusy">Save</v-btn>
         <v-btn class="ml-1" color="cancel" variant="text" size="small"
             prepend-icon="mdi-cancel" @click="cancelEdit">Cancel</v-btn>
       </div>
+      <HistoryEditNotice v-if="editing" :message-id="message_id" />
     </v-alert>
 
     <v-divider class="mb-4"></v-divider>
@@ -31,9 +35,15 @@
 </template>
 
 <script>
-import { parseIsoDuration } from '@/utils/time';
+import { secondsToAmountUnit } from '@/utils/time';
+import HistoryEditNotice from './HistoryEditNotice.vue';
+import MessageCloseButton from './MessageCloseButton.vue';
 
 export default {
+  components: {
+    MessageCloseButton,
+    HistoryEditNotice,
+  },
   data() {
     return {
       show: true,
@@ -42,27 +52,59 @@ export default {
       editing: false,
       editAmount: 1,
       editUnit: 'hours',
+      editTitle: '',
       units: ['minutes', 'hours', 'days', 'weeks', 'months', 'years'],
     }
   },
-  props: ['text', 'message_id', 'ts', 'uxLocked', 'appBusy', 'isLastMessage'],
-  inject: ['getWebsocket', 'getMessageStyle', 'getMessageColor'],
+  props: {
+    text: {
+      type: String,
+      required: true
+    },
+    message_id: {
+      required: true
+    },
+    ts: {
+      type: Number,
+      required: true
+    },
+    title: {
+      type: String,
+      default: null
+    },
+    uxLocked: {
+      type: Boolean,
+      required: true
+    },
+    appBusy: {
+      type: Boolean,
+      required: true
+    },
+    isLastMessage: {
+      type: Boolean,
+      default: false
+    },
+  },
+  inject: ['requestDeleteMessage', 'getWebsocket', 'getMessageStyle', 'getMessageColor'],
   methods: {
     toggle() {
       this.minimized = !this.minimized;
     },
     deletePassage() {
-      this.getWebsocket().send(JSON.stringify({
-        type: 'time_passage',
-        action: 'delete',
-        message_id: this.message_id,
-      }));
+      this.requestDeleteMessage(this.message_id, () => {
+        this.getWebsocket().send(JSON.stringify({
+          type: 'time_passage',
+          action: 'delete',
+          message_id: this.message_id,
+        }));
+      });
     },
     startEdit() {
       if (this.uxLocked || this.appBusy) return;
-      const parsed = parseIsoDuration(this.ts);
+      const parsed = secondsToAmountUnit(this.ts);
       this.editAmount = parsed.amount;
       this.editUnit = parsed.unit;
+      this.editTitle = this.title || '';
       this.editing = true;
     },
     saveEdit() {
@@ -72,6 +114,7 @@ export default {
         message_id: this.message_id,
         amount: this.editAmount,
         unit: this.editUnit,
+        title: this.editTitle || null,
       }));
       this.editing = false;
     },
@@ -83,14 +126,7 @@ export default {
 </script>
 
 <style scoped>
-.close-button {
-  opacity: 0.4;
-  color: rgba(255, 255, 255, 0.6) !important;
-  transition: opacity 0.2s ease;
-}
-
-.close-button:hover {
-  opacity: 1;
-  color: rgba(255, 255, 255, 0.9) !important;
+.time-title {
+  font-weight: 600;
 }
 </style>

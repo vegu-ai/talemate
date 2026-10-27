@@ -3,18 +3,37 @@ from enum import Enum
 from typing import Any, Union
 
 import structlog
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr, model_serializer, model_validator
 
 import talemate.instance as instance
 from talemate.emit import emit
 from talemate.prompts import Prompt
 import talemate.game.focal.schema as focal_schema
 from talemate.game.schema import ConditionGroup
+from talemate.knowledge.schema import (
+    EntryVisibility,
+    KnowledgeEdge,
+    ReinforcementEntry,
+)
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.snapshot_models import SnapshotPerspectives
+from talemate.knowledge.snapshots import snapshot_for
+from talemate.scene_message import ReinforcementMessage
+from talemate.scene_signals import reinforcement_source_released
+from talemate.knowledge.reinforcements import (
+    reinforcement_context,
+    entry_binding,
+    reinforcement_entry_context,
+    prepare_reinforcement_sources,
+    prepare_reinforcement_source,
+    write_reinforcement_entry,
+)
 from talemate.world_state.schema import (
     CharacterState,
     ObjectState,
     PlaceState,
 )
+from talemate.world_state.snapshot_revision import SnapshotProvenance, SnapshotRevision
 
 __all__ = [
     "CharacterState",
@@ -28,9 +47,16 @@ __all__ = [
     "Suggestion",
     "InsertionMode",
     "ANY_CHARACTER",
+    "INTRO_ANCHOR_ID",
 ]
 
 ANY_CHARACTER = "__any_character__"
+
+# The anchor id of the scene intro, which is not a scene message. Message ids
+# start at 1, so 0 is never taken and orders before every message — a later
+# TimePassage cuts a snapshot anchored on the intro. The frontend mirrors it in
+# talemate_frontend/src/components/EntityHighlightMixin.js.
+INTRO_ANCHOR_ID = 0
 
 log = structlog.get_logger("talemate")
 
@@ -43,13 +69,17 @@ class WorldStateResponse(BaseModel):
     the agent short-circuited because nothing in the scene could be
     snapshotted). `anchor_message_ids` is the list of scene history message
     ids the snapshot was generated against — every one of them is a valid
-    inline-highlight target. The list is empty when the snapshot was
-    generated against the scene intro (intro is not a real message and has
-    no id, so highlights don't render inline in that case).
+    inline-highlight target. It holds `INTRO_ANCHOR_ID` when the scene intro
+    was part of the current moment.
+
+    `provenance` verifies the history supplied by the rendered template,
+    which can extend beyond the focus after an asynchronous memory lookup.
     """
 
     world_state: Union[dict, None] = None
     anchor_message_ids: list[int] = Field(default_factory=list)
+    audience_context: dict | None = Field(default=None, exclude=True)
+    provenance: SnapshotProvenance | None = Field(default=None, exclude=True)
 
 
 class InsertionMode(str, Enum):
@@ -62,12 +92,53 @@ class InsertionMode(str, Enum):
 class Reinforcement(BaseModel):
     question: str
     answer: Union[str, None] = None
+    updated_ts: int | None = Field(
+        default=None,
+        description="Scene time when the answer was last set or confirmed.",
+    )
     interval: int = 10
     due: int = 0
     character: Union[str, None] = None
     instructions: Union[str, None] = None
     insert: str = "sequential"
     require_active: bool = True
+    perspective_source: ReinforcementMessage | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_perspective_source(self, handler):
+        data = handler(self)
+        if self.perspective_source is None:
+            data.pop("perspective_source", None)
+        if self.updated_ts is None:
+            data.pop("updated_ts", None)
+        return data
+
+    def source_for(self, scene):
+        if self.insert == "sequential":
+            return next(
+                (
+                    message
+                    for message in reversed(scene.history)
+                    if isinstance(message, ReinforcementMessage)
+                    and message.character_name == self.character
+                    and message.question == self.question
+                ),
+                None,
+            )
+        return self.perspective_source
+
+    def set_answer(self, scene, answer: str | None, *, confirmed: bool = True):
+        if confirmed or answer != self.answer:
+            self.updated_ts = scene.ts
+        elif self.updated_ts is None:
+            # A configuration change may replace the source that supplies this age.
+            source = self.source_for(scene)
+            if source and source.knowledge:
+                self.updated_ts = source.knowledge.acquired.ts
+        self.answer = answer
+
+    def context_for(self, scene, viewer=None):
+        return reinforcement_context(scene, self, viewer)
 
     @property
     def as_context_line(self) -> str:
@@ -88,6 +159,15 @@ class ManualContext(BaseModel):
     text: str
     meta: dict[str, Any] = {}
     shared: bool = False
+    visibility: EntryVisibility = Field(default_factory=EntryVisibility)
+    reinforcement: ReinforcementEntry | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_reinforcement(self, handler):
+        data = handler(self)
+        if self.reinforcement is None:
+            data.pop("reinforcement", None)
+        return data
 
 
 class ContextPin(BaseModel):
@@ -142,13 +222,57 @@ class WorldState(BaseModel):
 
     # location description
     location: Union[str, None] = None
+    location_perspectives: SnapshotPerspectives | None = None
 
-    # ids of the scene history messages the snapshot was generated against;
-    # every one of these can render inline entity highlights in the UI.
+    @model_serializer(mode="wrap")
+    def serialize_snapshot_perspectives(self, handler):
+        data = handler(self)
+        if self.location_perspectives is None:
+            data.pop("location_perspectives", None)
+        return data
+
+    def snapshot_for(self, viewer=None):
+        return snapshot_for(self.scene, viewer, world_state=self)
+
+    def clear_snapshot_perspectives(self):
+        self.location_perspectives = None
+        for bucket in (self.characters, self.items, self.places):
+            for entity in bucket.values():
+                entity.perspectives = None
+
+    def validate_snapshot_audiences(self, names):
+        records = [self.location_perspectives]
+        records.extend(
+            entity.perspectives
+            for bucket in (self.characters, self.items, self.places)
+            for entity in bucket.values()
+        )
+        for record in records:
+            if record and any(
+                not set(view.audience) <= set(names) for view in record.views
+            ):
+                raise ValueError("Unresolved snapshot audience")
+
+    # ids of the scene history messages the snapshot was generated against,
+    # plus INTRO_ANCHOR_ID for the intro; each can render inline highlights.
     anchor_message_ids: list[int] = Field(default_factory=list)
+
+    snapshot_provenance: SnapshotProvenance | None = None
+    previous_snapshot: SnapshotRevision | None = None
+    _snapshot_epoch: int = PrivateAttr(default=0)
+    _snapshot_regenerating: bool = PrivateAttr(default=False)
 
     # reinforcers
     reinforce: list[Reinforcement] = []
+
+    def prepare_reinforcement_perspectives(self):
+        return prepare_reinforcement_sources(self.scene)
+
+    def is_reinforcement_entry(self, entry_id):
+        return entry_binding(self.scene, entry_id) is not None
+
+    def reinforcement_entry_context(self, entry_id, viewer):
+        return reinforcement_entry_context(self.scene, entry_id, viewer)
 
     # pins
     pins: dict[str, ContextPin] = {}
@@ -159,6 +283,31 @@ class WorldState(BaseModel):
     character_name_mappings: dict[str, list[str]] = {}
 
     suggestions: list[Suggestion] = Field(default_factory=list)
+
+    # grant / revoke edges: the only per-character knowledge state that is stored
+    knowledge: list[KnowledgeEdge] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def discard_obsolete_fact_data(cls, data):
+        """Development saves may carry the removed learned-facts store."""
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        fact_ids = set(data.pop("facts", {}) or {})
+        for key in ("fact_counter", "topics", "topics_fact_count"):
+            data.pop(key, None)
+        edges = []
+        for edge in data.get("knowledge", []):
+            raw = edge.model_dump() if isinstance(edge, KnowledgeEdge) else edge
+            if (
+                raw.get("kind") != "unlearn"
+                and raw.get("target") not in fact_ids
+                and not raw.get("anchor")
+            ):
+                edges.append(edge)
+        data["knowledge"] = edges
+        return data
 
     @property
     def agent(self):
@@ -231,7 +380,11 @@ class WorldState(BaseModel):
         self.items = {}
         self.places = {}
         self.location = None
+        self.location_perspectives = None
         self.anchor_message_ids = []
+        self.snapshot_provenance = None
+        self.previous_snapshot = None
+        self._snapshot_epoch += 1
 
     def emit(self, status="update"):
         """
@@ -242,7 +395,7 @@ class WorldState(BaseModel):
         """
         emit("world_state", status=status, data=self.model_dump())
 
-    async def request_update(self, initial_only: bool = False):
+    async def request_update(self, initial_only: bool = False, instructions: str = ""):
         """
         Public entry point for refreshing the world-state snapshot.
 
@@ -254,6 +407,9 @@ class WorldState(BaseModel):
         Arguments:
         - initial_only: When true, emit the current state without requesting a
           new one if characters already exist or automatic updates are off.
+        - instructions: One-off guidance for this snapshot pass only.
+
+        Returns "cancelled" when the user cancelled the snapshot.
         """
 
         if initial_only and self.characters:
@@ -265,7 +421,7 @@ class WorldState(BaseModel):
             self.emit()
             return
 
-        await self.agent.apply_snapshot_update(self)
+        return await self.agent.apply_snapshot_update(self, instructions=instructions)
 
     async def persist(self):
         """
@@ -327,9 +483,11 @@ class WorldState(BaseModel):
         character: str = None,
         instructions: str = None,
         interval: int = 10,
-        answer: str = "",
+        answer: str | None = None,
         insert: str = "sequential",
         require_active: bool = True,
+        *,
+        answer_confirmed: bool = True,
     ) -> Reinforcement:
         """
         Adds or updates a reinforcement in the world state. If a reinforcement with the same question and character exists, it is updated.
@@ -339,8 +497,9 @@ class WorldState(BaseModel):
         - character: The character to whom the reinforcement is linked. If None, it applies globally.
         - instructions: Instructions related to the reinforcement.
         - interval: The interval for reinforcement repetition.
-        - answer: The answer to the reinforcement question.
+        - answer: The answer to the reinforcement question. None (a template or node that sets no answer) keeps a World state's current answer; an empty string clears it.
         - insert: The method of inserting the reinforcement into the context.
+        - answer_confirmed: False for configuration-only saves; an unchanged answer keeps its age.
         """
 
         # if reinforcement already exists, update it
@@ -348,42 +507,55 @@ class WorldState(BaseModel):
         idx, reinforcement = await self.find_reinforcement(question, character)
 
         if reinforcement:
+            previous_source = reinforcement.source_for(self.scene)
             # update the reinforcement object
 
             reinforcement.instructions = instructions
             reinforcement.interval = interval
-            reinforcement.answer = answer
+            # A caller with no answer (a state template, the StateReinforcement
+            # node) leaves a World state's answer and entry as they are. A
+            # re-applied character template still starts blank, which the help
+            # agent's template guard relies on.
+            answer_given = answer is not None or character is not None
+            if answer_given:
+                reinforcement.set_answer(
+                    self.scene, answer or "", confirmed=answer_confirmed
+                )
+            answer = reinforcement.answer
             reinforcement.require_active = require_active
 
             old_insert_method = reinforcement.insert
 
             reinforcement.insert = insert
+            if old_insert_method != insert and insert == "sequential":
+                reinforcement.perspective_source = None
+                reinforcement_source_released.send(self.scene, message=previous_source)
 
             # find the reinforcement message i nthe scene history and update the answer
             if old_insert_method == "sequential":
-                message = self.agent.scene.find_message(
-                    typ="reinforcement",
-                    character_name=character,
-                    question=question,
-                )
+                message = previous_source
 
                 if old_insert_method != insert and message:
                     # if it used to be sequential we need to remove its ReinforcmentMessage
                     # from the scene history
 
-                    self.scene.pop_history(typ="reinforcement", source=message.source)
+                    self.scene.pop_history(
+                        typ="reinforcement", meta_hash=message.meta_hash, all=True
+                    )
 
-                elif message:
-                    message.message = answer
+                elif message and message.message != answer:
+                    self.scene.edit_message(message.id, answer)
             elif insert == "sequential":
                 # if it used to be something else and is now sequential, we need to run the state
                 # next loop
                 reinforcement.due = 0
 
-            # update the character detail if character name is specified
-            if character:
-                character = self.agent.scene.get_character(character)
-                await character.set_detail(question, answer)
+            if character_knowledge_enabled(self.scene):
+                source = prepare_reinforcement_source(self.scene, reinforcement)
+                await write_reinforcement_entry(self.scene, reinforcement, source)
+                self.emit()
+            elif answer_given:
+                await self.store_reinforcement_answer(reinforcement)
 
             return reinforcement
 
@@ -402,14 +574,55 @@ class WorldState(BaseModel):
             character=character,
             instructions=instructions,
             interval=interval,
-            answer=answer,
+            answer=answer or "",
+            updated_ts=self.scene.ts if answer else None,
             insert=insert,
             require_active=require_active,
         )
 
         self.reinforce.append(reinforcement)
 
+        self.emit()
+
         return reinforcement
+
+    async def store_reinforcement_answer(self, reinforcement: Reinforcement):
+        """
+        Without Character perspectives the answer lives in the character's
+        detail, or for a World state in its world entry. An empty answer
+        removes either, so no question-only line is recalled.
+        """
+        if reinforcement.character:
+            character = self.scene.get_character(reinforcement.character)
+            await character.set_detail(reinforcement.question, reinforcement.answer)
+        elif reinforcement.answer:
+            await self.scene.world_state_manager.save_world_entry(
+                reinforcement.question, reinforcement.as_context_line, {}
+            )
+        elif reinforcement.question in self.manual_context:
+            await self.scene.world_state_manager.delete_context_db_entry(
+                reinforcement.question
+            )
+
+    async def reinforcement_message_edited(self, message: ReinforcementMessage):
+        """
+        A hand edit of a tracked state's newest sequential message becomes the
+        state's answer; an edit of an older one only changes that message.
+        """
+        _, reinforcement = await self.find_reinforcement(
+            message.question, message.source_arguments.get("character")
+        )
+        if reinforcement is None or reinforcement.source_for(self.scene) is not message:
+            return
+        await self.scene.world_state_manager.add_detail_reinforcement(
+            reinforcement.character,
+            reinforcement.question,
+            reinforcement.instructions,
+            reinforcement.interval,
+            message.message,
+            reinforcement.insert,
+            require_active=reinforcement.require_active,
+        )
 
     async def find_reinforcement(self, question: str, character: str = None):
         """
@@ -418,14 +631,18 @@ class WorldState(BaseModel):
         Arguments:
         - question: The question associated with the reinforcement to find.
         - character: The character to whom the reinforcement is linked. Use None for global reinforcements.
+
+        Scenes saved before 0.40.0 can hold a global reinforcement with the character "" instead of None. An exact match wins; only without one does a global lookup fall back to the other form, so a saved pair keeps resolving to the state asked for.
         """
+        alias = (None, None)
         for idx, reinforcement in enumerate(self.reinforce):
-            if (
-                reinforcement.question == question
-                and reinforcement.character == character
-            ):
+            if reinforcement.question != question:
+                continue
+            if reinforcement.character == character:
                 return idx, reinforcement
-        return None, None
+            if alias[1] is None and not reinforcement.character and not character:
+                alias = (idx, reinforcement)
+        return alias
 
     def reinforcements_for_character(self, character: str):
         """
@@ -469,6 +686,7 @@ class WorldState(BaseModel):
         # and remove them
 
         reinforcement = self.reinforce[idx]
+        direct_source = reinforcement.perspective_source
 
         self.agent.scene.pop_history(
             typ="reinforcement",
@@ -484,9 +702,15 @@ class WorldState(BaseModel):
                 await character.set_detail(reinforcement.question, None)
         else:
             if reinforcement.question in self.manual_context:
-                del self.manual_context[reinforcement.question]
+                if character_knowledge_enabled(self.scene):
+                    await self.scene.world_state_manager.delete_context_db_entry(
+                        reinforcement.question
+                    )
+                else:
+                    del self.manual_context[reinforcement.question]
 
         self.reinforce.pop(idx)
+        reinforcement_source_released.send(self.scene, message=direct_source)
 
     def render(self):
         """
@@ -502,7 +726,7 @@ class WorldState(BaseModel):
             },
         )
 
-    async def commit_to_memory(self, memory_agent):
+    async def commit_to_memory(self, memory_agent, entry_ids: set[str] | None = None):
         def is_simple_type(value):
             """Check if value is a simple type that memory database accepts."""
             return isinstance(value, (int, str, float, bool, type(None)))
@@ -518,6 +742,7 @@ class WorldState(BaseModel):
                     },
                 }
                 for manual_context in self.manual_context.values()
+                if entry_ids is None or manual_context.id in entry_ids
             ]
         )
 

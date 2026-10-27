@@ -19,14 +19,18 @@ from talemate.game.engine.context_id.character import (
     CharacterContext,
     CharacterContextItem,
 )
-from talemate.scene_message import SceneMessage
+from talemate.scene_message import CharacterTransitionMessage, SceneMessage
 from talemate.tale_mate import Actor, Scene
 
 from talemate.emit.base import Emission
 from talemate.events import (
     ArchiveEvent,
+    BeforeGenerationEvent,
+    CharacterActivatedEvent,
+    CharacterDeactivatedEvent,
     CharacterStateEvent,
     Event,
+    GameStateChangedEvent,
     GameLoopActorIterEvent,
     GameLoopBase,
     GameLoopCharacterIterEvent,
@@ -38,7 +42,14 @@ from talemate.events import (
     RegenerateGeneration,
     SceneStateEvent,
 )
-from talemate.game.engine.nodes.scene import SceneLoopEvent
+from talemate.game.engine.nodes.scene import SceneCommandsCatalogEvent, SceneLoopEvent
+from talemate.knowledge.changes import (
+    DisclosureAddedEvent,
+    KnowledgeChangedEvent,
+    KnowledgeEdgeRemovedEvent,
+    KnowledgeVisibilityChangedEvent,
+)
+from talemate.knowledge.message_views import PerspectiveViewEditedEvent
 from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.creator.assistant import (
     AutocompleteEmission,
@@ -51,6 +62,7 @@ from talemate.agents.summarize.analyze_scene import SceneAnalysisDeepAnalysisEmi
 _TYPES = {
     "Actor": Actor,
     "Character": Character,
+    "CharacterTransitionMessage": CharacterTransitionMessage,
     "Scene": Scene,
     "SceneMessage": SceneMessage,
 }
@@ -63,7 +75,10 @@ for _model in (
     Event,
     HistoryEvent,
     ArchiveEvent,
+    CharacterActivatedEvent,
+    CharacterDeactivatedEvent,
     CharacterStateEvent,
+    GameStateChangedEvent,
     SceneStateEvent,
     GameLoopBase,
     GameLoopEvent,
@@ -73,7 +88,14 @@ for _model in (
     GameLoopNewMessageEvent,
     PlayerTurnStartEvent,
     RegenerateGeneration,
+    BeforeGenerationEvent,
     SceneLoopEvent,
+    SceneCommandsCatalogEvent,
+    PerspectiveViewEditedEvent,
+    KnowledgeChangedEvent,
+    KnowledgeVisibilityChangedEvent,
+    KnowledgeEdgeRemovedEvent,
+    DisclosureAddedEvent,
     ConversationAgentEmission,
     ContextualGenerateEmission,
     AutocompleteEmission,

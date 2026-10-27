@@ -49,8 +49,8 @@
                                 @change="onFilePicked"
                             />
                             <v-icon size="48" color="primary" class="mb-2">mdi-tray-arrow-down</v-icon>
-                            <div class="text-body-2">Drop a file here or click to browse</div>
-                            <div class="text-caption text-grey mt-1">
+                            <div class="text-body-medium">Drop a file here or click to browse</div>
+                            <div class="text-body-small text-medium-emphasis mt-1">
                                 Talemate scenes (.json, .zip) and character cards (.png, .webp, .json)
                             </div>
                         </div>
@@ -63,7 +63,7 @@
                         Create new scene
                     </v-card-title>
                     <v-card-text>
-                        <p class="text-caption text-grey mb-3">Start a blank scene and build it out in the world editor.</p>
+                        <p class="text-body-small text-medium-emphasis mb-3">Start a blank scene and build it out in the world editor.</p>
                         <v-btn
                             variant="tonal"
                             block
@@ -91,6 +91,8 @@
 </template>
 
 <script>
+import { v4 as uuidv4 } from 'uuid';
+import { creationEffortSettings, effortMode } from '@/utils/knowledgeEffort';
 import CharacterCardImport from './CharacterCardImport.vue';
 import IntroRecentScenes from './IntroRecentScenes.vue';
 import NewSceneSetupModal from './NewSceneSetupModal.vue';
@@ -115,18 +117,58 @@ export default {
         worldStateTemplates: Object,
     },
     emits: ['loading', 'open-director', 'request-scene-load'],
-    inject: ['getWebsocket', 'registerMessageHandler', 'isConnected'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'isConnected'],
     data() {
         return {
             loading: false,
             dragging: false,
             sceneSaved: null,
             pendingJsonPath: null,
+            pendingJsonRequestId: null,
+            pendingCreationId: null,
+            loadEpoch: 0,
             showNewSceneSetup: false,
             pendingAssistWithSetup: false,
         }
     },
+    watch: {
+        connected(value) {
+            if (!value) this.invalidateCreation();
+        },
+    },
     methods: {
+        invalidateCreation() {
+            this.loadEpoch += 1;
+            this.pendingJsonPath = null;
+            this.pendingJsonRequestId = null;
+            this.pendingCreationId = null;
+            this.pendingAssistWithSetup = false;
+            this.showNewSceneSetup = false;
+            this.$refs.characterCardImportModal?.cancel();
+        },
+        sendCreation(source, initialization, assistWithSetup = false) {
+            this.invalidateCreation();
+            this.pendingCreationId = uuidv4();
+            this.pendingAssistWithSetup = assistWithSetup;
+            this.loading = true;
+            this.$emit('loading', true);
+            this.getWebsocket().send(JSON.stringify({
+                type: 'load_scene', ...source,
+                request_id: this.pendingCreationId,
+                scene_initialization: initialization,
+            }));
+        },
+        async importCard(source, fileData, filePath, filename) {
+            const epoch = this.loadEpoch;
+            const result = await this.showCharacterCardImportModal(fileData, filePath, filename);
+            if (epoch !== this.loadEpoch || !result?.confirmed) return false;
+            this.sendCreation(source, {
+                character_knowledge: result.characterKnowledge === true,
+                character_card_import_options: result.options,
+                agent_settings: creationEffortSettings(effortMode(result.characterKnowledge === true), result.effort),
+            });
+            return true;
+        },
         async showCharacterCardImportModal(fileData = null, filePath = null, filename = null) {
             const result = await this.$refs.characterCardImportModal.open(fileData, filePath, filename);
             return result;
@@ -144,6 +186,7 @@ export default {
                 return;
             }
             this.sceneSaved = null;
+            this.invalidateCreation();
             this.$emit('request-scene-load', path);
         },
 
@@ -151,21 +194,18 @@ export default {
             if (!this.confirmUnsaved()) {
                 return;
             }
+            this.invalidateCreation();
             this.showNewSceneSetup = true;
         },
 
         createNewScene(payload) {
-            this.loading = true;
-            this.pendingAssistWithSetup = payload.assistWithSetup;
-            this.getWebsocket().send(JSON.stringify({
-                type: 'load_scene',
-                file_path: "$NEW_SCENE$",
-                scene_initialization: {
-                    project_name: payload.sceneName || null,
-                    writing_style_template: payload.writingStyle || null,
-                    agent_persona_templates: { director: payload.directorPersona || null },
-                },
-            }));
+            this.sendCreation({ file_path: '$NEW_SCENE$' }, {
+                project_name: payload.sceneName || null,
+                character_knowledge: payload.characterKnowledge === true,
+                agent_settings: creationEffortSettings(effortMode(payload.characterKnowledge === true), payload.effort),
+                writing_style_template: payload.writingStyle || null,
+                agent_persona_templates: { director: payload.directorPersona || null },
+            }, payload.assistWithSetup);
         },
 
         // Helper function to detect if JSON content is a character card
@@ -193,67 +233,15 @@ export default {
             return false;
         },
 
-        // Shared handler for processing JSON file content
         async processJsonFile(jsonData, filePath, fileData, filename) {
-            try {
-                // Check if it's a character card
-                if (this.isCharacterCardJson(jsonData)) {
-                    // Show character card import modal
-                    const result = await this.showCharacterCardImportModal(fileData, filePath, filename);
-                    if (!result || !result.confirmed) {
-                        return false;
-                    }
-
-                    this.loading = true;
-                    this.$emit("loading", true);
-
-                    if (fileData && !filePath) {
-                        // File upload - send as scene_data
-                        this.getWebsocket().send(JSON.stringify({
-                            type: 'load_scene',
-                            scene_data: fileData,
-                            filename: filename,
-                            scene_initialization: {
-                                character_card_import_options: result.options,
-                            },
-                        }));
-                    } else {
-                        // Path-based - send file_path
-                        this.getWebsocket().send(JSON.stringify({
-                            type: 'load_scene',
-                            file_path: filePath,
-                            scene_initialization: {
-                                character_card_import_options: result.options,
-                            },
-                        }));
-                    }
-                    return true;
-                } else {
-                    // It's a Talemate scene JSON, load it directly
-                    this.loading = true;
-                    this.$emit("loading", true);
-
-                    if (fileData && !filePath) {
-                        // File upload - send as scene_data
-                        this.getWebsocket().send(JSON.stringify({
-                            type: 'load_scene',
-                            scene_data: fileData,
-                            filename: filename,
-                        }));
-                    } else {
-                        // Path-based - send file_path
-                        this.getWebsocket().send(JSON.stringify({
-                            type: 'load_scene',
-                            file_path: filePath
-                        }));
-                    }
-                    return true;
-                }
-            } catch (error) {
-                console.error("Error processing JSON file:", error);
-                alert("Error: Invalid JSON file. " + error.message);
-                return false;
+            const source = fileData && !filePath ? { scene_data: fileData, filename } : { file_path: filePath };
+            if (this.isCharacterCardJson(jsonData)) {
+                return this.importCard(source, fileData, filePath, filename);
             }
+            this.loading = true;
+            this.$emit('loading', true);
+            this.getWebsocket().send(JSON.stringify({ type: 'load_scene', ...source }));
+            return true;
         },
 
         openFilePicker() {
@@ -282,120 +270,58 @@ export default {
             }
         },
 
-        loadFromFile(file) {
-            if (!this.confirmUnsaved()) {
-                return;
-            }
+        async loadFromFile(file) {
+            if (!this.confirmUnsaved()) return;
+            this.invalidateCreation();
+            const epoch = this.loadEpoch;
             this.sceneSaved = null;
-
-            // if file is image, show character card import modal
-            if (file.type.startsWith("image/")) {
-                // Convert the uploaded file to base64 first
-                const reader = new FileReader();
+            const reader = new FileReader();
+            const fileData = await new Promise((resolve, reject) => {
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
                 reader.readAsDataURL(file);
-
-                reader.onload = async () => {
-                    // Show character card import options modal with file data
-                    const result = await this.showCharacterCardImportModal(reader.result, null, file.name);
-                    if (!result || !result.confirmed) {
-                        return;
-                    }
-
-                    this.loading = true;
-                    this.$emit("loading", true)
-                    this.getWebsocket().send(JSON.stringify({
-                        type: 'load_scene',
-                        scene_data: reader.result,
-                        filename: file.name,
-                        scene_initialization: {
-                            character_card_import_options: result.options,
-                        },
-                    }));
-                };
-            } else if (file.type === "application/json" || file.name.endsWith(".json")) {
-                // JSON file - check if it's a character card
-                const reader = new FileReader();
-                reader.readAsText(file);
-
-                reader.onload = async () => {
-                    try {
-                        const jsonData = JSON.parse(reader.result);
-
-                        // Convert to base64 for sending to backend
-                        const base64Reader = new FileReader();
-                        base64Reader.readAsDataURL(file);
-
-                        base64Reader.onload = async () => {
-                            await this.processJsonFile(
-                                jsonData,
-                                null, // filePath (not used for uploads)
-                                base64Reader.result,
-                                file.name
-                            );
-                        };
-                    } catch (error) {
-                        console.error("Error parsing JSON file:", error);
-                        alert("Error: Invalid JSON file. " + error.message);
-                    }
-                };
+            });
+            if (epoch !== this.loadEpoch) return;
+            if (file.type.startsWith('image/')) {
+                await this.importCard({ scene_data: fileData, filename: file.name }, fileData, null, file.name);
+            } else if (file.type === 'application/json' || file.name.endsWith('.json')) {
+                try {
+                    const jsonData = JSON.parse(await file.text());
+                    if (epoch !== this.loadEpoch) return;
+                    await this.processJsonFile(jsonData, null, fileData, file.name);
+                } catch (error) {
+                    alert('Error: Invalid JSON file. ' + error.message);
+                }
             } else {
                 this.loading = true;
-
-                // Convert the uploaded file to base64
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-
-                reader.onload = () => {
-                    this.$emit("loading", true)
-                    this.getWebsocket().send(JSON.stringify({
-                        type: 'load_scene',
-                        scene_data: reader.result,
-                        filename: file.name,
-                    }));
-                };
+                this.$emit('loading', true);
+                this.getWebsocket().send(JSON.stringify({ type: 'load_scene', scene_data: fileData, filename: file.name }));
             }
         },
 
         async loadFromPath(path) {
-            if (!this.confirmUnsaved()) {
-                return;
-            }
+            if (!this.confirmUnsaved()) return;
+            this.invalidateCreation();
             this.sceneSaved = null;
-
-            // if path ends with .png/jpg/webp, show character card import modal
-            if (path.endsWith(".png") || path.endsWith(".jpg") || path.endsWith(".webp")) {
-                // Show character card import options modal with file path
-                const result = await this.showCharacterCardImportModal(null, path, null);
-                if (!result || !result.confirmed) {
-                    return;
-                }
-
-                this.loading = true;
-                this.$emit("loading", true)
-                this.getWebsocket().send(JSON.stringify({
-                    type: 'load_scene',
-                    file_path: path,
-                    scene_initialization: {
-                        character_card_import_options: result.options,
-                    },
-                }));
-            } else if (path.endsWith(".json")) {
-                // JSON file - check if it's a character card
-                // Store the path for when we get the file data
+            if (/\.(png|jpe?g|webp)$/i.test(path)) {
+                await this.importCard({ file_path: path }, null, path, null);
+            } else if (path.toLowerCase().endsWith('.json')) {
                 this.pendingJsonPath = path;
-                // Request file content to check if it's a character card
+                this.pendingJsonRequestId = uuidv4();
                 this.getWebsocket().send(JSON.stringify({
                     type: 'request_file_image_data',
                     file_path: path,
+                    request_id: this.pendingJsonRequestId,
                 }));
             } else {
                 this.loading = true;
-                this.$emit("loading", true)
+                this.$emit('loading', true);
                 this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: path }));
             }
         },
 
         loadJsonSceneFromPath(path, reset = false) {
+            this.invalidateCreation();
             this.loading = true;
             this.$emit("loading", true)
             this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: path, reset: reset }));
@@ -404,13 +330,23 @@ export default {
         async handleMessage(data) {
             // Scene loaded
             if (data.type === "system") {
-                if (data.id === 'scene.loaded') {
+                if (data.id === 'scene.loading') {
+                    const own = data.request_id && data.request_id === this.pendingCreationId;
+                    const assist = this.pendingAssistWithSetup;
+                    this.invalidateCreation();
+                    if (own) {
+                        this.pendingCreationId = data.request_id;
+                        this.pendingAssistWithSetup = assist;
+                    }
+                } else if (data.id === 'scene.loaded') {
                     this.loading = false;
-                    if (this.pendingAssistWithSetup) {
+                    if (this.pendingAssistWithSetup && data.request_id === this.pendingCreationId) {
                         this.pendingAssistWithSetup = false;
                         this.$emit('open-director');
                     }
-                } else if (data.id === 'scene.load_failure') {
+                    this.pendingCreationId = null;
+                } else if (data.id === 'scene.load_failure' || data.id === 'scene.closed') {
+                    this.invalidateCreation();
                     this.loading = false;
                     this.pendingAssistWithSetup = false;
                 }
@@ -426,7 +362,7 @@ export default {
             // Handle file_image_data - used to inspect JSON files loaded by path
             if (data.type === 'file_image_data') {
                 // Check if this is a pending JSON file check
-                if (this.pendingJsonPath && data.file_path === this.pendingJsonPath) {
+                if (this.pendingJsonPath && data.file_path === this.pendingJsonPath && data.request_id === this.pendingJsonRequestId) {
                     const jsonPath = this.pendingJsonPath;
                     this.pendingJsonPath = null; // Clear pending path
 
@@ -460,6 +396,10 @@ export default {
                 return;
             }
         },
+    },
+    beforeUnmount() {
+        this.invalidateCreation();
+        this.unregisterMessageHandler(this.handleMessage);
     },
     created() {
         this.registerMessageHandler(this.handleMessage);

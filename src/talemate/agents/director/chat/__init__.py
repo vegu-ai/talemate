@@ -2,6 +2,7 @@ from .mixin import DirectorChatMixin
 from .schema import (
     DirectorChat,
     DirectorChatMessage,
+    DirectorChatBatchResultMessage,
     DirectorChatActionResultMessage,
     DirectorChatBudgets,
     DirectorChatFunctionSelected,
@@ -14,6 +15,7 @@ __all__ = [
     "DirectorChatMixin",
     "DirectorChat",
     "DirectorChatMessage",
+    "DirectorChatBatchResultMessage",
     "DirectorChatActionResultMessage",
     "DirectorChatBudgets",
     "DirectorChatFunctionSelected",

@@ -1,0 +1,7 @@
+{% import "decision-visual-selection.jinja2" as visual %}
+{% set threshold = 0.9 %}
+{{ visual.select("background-selection", state, slot="background", kind="background",
+    current=state.current_background.id if state.current_background else none, assets=assets, threshold=threshold,
+    fits_current="Does the current scene background still fit the place, time of day and situation of this moment in the story? Judge the name and tags of current_background in the state. If there is no current background, answer no.",
+    which="Which existing scene background fits the place, time of day and situation of this moment? Choose none if none fits well.",
+    none_fits="None of the existing backgrounds fits well; use the usual selection or generation request.") }}

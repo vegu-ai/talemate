@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, List, Any
 from datetime import date, datetime
 
 __all__ = [
+    "coerce_forced_list",
     "fix_faulty_json",
     "extract_data",
     "extract_data_auto",
@@ -55,6 +56,32 @@ class DataParsingError(Exception):
         self.message = message
         self.data = data
         super().__init__(self.message)
+
+
+def coerce_forced_list(value) -> tuple[list | None, bool]:
+    """Convert a force-mode artifact — an int-keyed dict where a list is
+    expected — back into a list ordered by index.
+
+    Returns ``(converted_list, True)`` when the value was such an artifact,
+    ``(None, False)`` otherwise. Dicts with any non-index key are left alone.
+    """
+    if not isinstance(value, dict):
+        return None, False
+
+    indexed: list[tuple[int, object]] = []
+    for key, item in value.items():
+        if isinstance(key, bool):
+            return None, False
+        if isinstance(key, int):
+            indexed.append((key, item))
+        elif isinstance(key, str) and re.fullmatch(r"-?\d+", key):
+            # int keys become strings when the data round-trips through JSON
+            indexed.append((int(key), item))
+        else:
+            return None, False
+
+    indexed.sort(key=lambda pair: pair[0])
+    return [item for _, item in indexed], True
 
 
 def trim_attributes(

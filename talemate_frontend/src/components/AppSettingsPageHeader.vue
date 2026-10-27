@@ -1,7 +1,7 @@
 <template>
-    <v-alert color="white" variant="text" :icon="icon" density="compact">
+    <v-alert variant="text" :icon="icon" density="compact">
         <v-alert-title>{{ title }}</v-alert-title>
-        <div class="text-grey">
+        <div class="text-medium-emphasis">
             <slot></slot>
         </div>
     </v-alert>

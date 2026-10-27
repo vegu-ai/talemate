@@ -9,7 +9,8 @@ export async function loadFonts () {
 
   webFontLoader.load({
     google: {
-      families: ['Roboto:100,300,400,500,700,900&display=swap'],
+      // the families join into one URL, so display=swap rides on the last
+      families: ['Lora:500', 'Roboto:100,300,400,500,700,900&display=swap'],
     },
   })
 }

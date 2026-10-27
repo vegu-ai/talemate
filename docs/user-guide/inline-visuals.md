@@ -27,7 +27,7 @@ The quickest way to generate inline visuals is through the scene tools visualize
 From this menu you can:
 
 - **Visualize Scene (Card)**: Generate a cover image of the current scene
-- **Visualize Scene (Background)**: Generate a purely environmental image
+- **Visualize Scene (Background)**: Generate a purely environmental image; it becomes the [scene backdrop](#scene-backdrop)
 - **[Character]** submenu (one per character in the scene):
     - **Card**: Generate a cover image portrait of that character
     - **Portrait**: Generate a face-focused portrait of that character
@@ -40,7 +40,7 @@ From this menu you can:
     - Hold **ALT** to generate only the prompt without creating an image
     - Hold **CTRL** to open a dialog where you can provide custom instructions
 
-When you generate an image and the **Auto-attach visuals** option is enabled, the resulting image will automatically appear in your scene feed attached to the most relevant message.
+When you generate an image and the **Auto-attach visuals** option is enabled, the resulting image will automatically appear in your scene feed attached to the most relevant message. A scene background becomes the [scene backdrop](#scene-backdrop) instead.
 
 ### Director Chat
 
@@ -79,10 +79,12 @@ Talemate looks at what the investigation was about and chooses the most fitting 
 
 The text of the investigation message is used to guide the generated image, so the result reflects the specific details described in that message.
 
+A scene background for a place is not attached to the message. It becomes a **Backdrop** entry right after the message instead, see [Scene Backdrop](#scene-backdrop).
+
 !!! note "Query results are not visualizable"
     A plain **Query** (asking the narrator a free-form question) does not show a Visualize action, because there is no single visual subject to match it to.
 
-Once an image has been generated, the **Visualize** action disappears for that message. From that point on you can regenerate, replace, or remove the image using the [inline visual actions](#viewing-and-managing) described below, just like any other attached image.
+Once an image has been generated, the **Visualize** action disappears for that message. From that point on you can regenerate, replace, or remove the image using the [inline visual actions](#viewing-and-managing) described below, just like any other attached image. A place keeps its **Visualize** action, since its background goes to a Backdrop entry rather than onto the message.
 
 ## Interacting with Inline Visuals
 
@@ -92,17 +94,42 @@ Once an image appears in your scene feed, you can interact with it in several wa
 
 Click on any inline visual to open a context menu with options:
 
-![Inline visual context menu](/talemate/img/0.35.0/inline-visual-context-menu.png)
+![Inline visual context menu](/talemate/img/0.40.0/inline-visual-context-menu.png)
 
 - **View Image**: Open a full-size view of the image (also available with Ctrl+click)
 - **Open in Visual Library**: View and manage the image in the Visual Library
-- **Regenerate Illustration**: Create a new version of the image (Shift+click shortcut)
-- **Regenerate and Delete**: Replace the current image with a new one (Alt+click shortcut)
-- **Edit Illustration**: Regenerate with custom editing instructions
+- **Mark as reference**: Prepare the image as a reference for later generations — see [Mark as reference](#mark-as-reference)
+- **Regenerate Illustration** (**Regenerate Portrait** on a portrait): Create a new version of the image for this message (Shift+click shortcut)
+- **Regenerate (replace)**: Generate a new image that takes the original's place (Alt+click shortcut). The original is deleted, unless something else still shows it — see [Replacing an image](#replacing-an-image)
+- **Edit Illustration** (**Edit Portrait** on a portrait): Regenerate with custom editing instructions
+- **Edit (replace)**: Regenerate with custom editing instructions; the new image takes the original's place, as with Regenerate (replace)
 - **Select illustration**: Choose from existing scene illustrations
+- **Select background**: On a Backdrop entry, choose from the scene's existing backgrounds. The entry swaps its image, and if it set the current backdrop, the scene backdrop changes with it without a new Backdrop entry
 - **Set as scene backdrop**: Render this image behind the scene text — see [Scene Backdrop](#scene-backdrop)
 - **Clear Image**: Remove the image from this message (keeps the image in your library)
 - **Delete Image**: Permanently remove the image
+
+### Mark as reference
+
+Most image generation uses only the images marked as references for it: a new background looks for images marked for backgrounds, a new scene illustration for images marked for scene illustrations, and so on. New portraits also fall back to the character's existing portraits, but prefer marked ones. Images the story generated are not marked. **Mark as reference** in an image's menu (and the :material-bookmark-plus-outline: button on a Backdrop entry, shown when you hover over it) prepares the image in one step:
+
+1. If a vision backend is set up for image analysis and the image has no analysis yet, the image is analyzed.
+2. Tags are added from the analysis.
+3. The image is marked as a reference for the kinds of images it can help with, keeping any reference types it already had.
+
+Which kinds those are follows the image's own type. A reference informs character likeness first, then environment, then style, so an image is only marked where what it shows is useful — a portrait never becomes a reference for backgrounds:
+
+| Image type | Marked as a reference for |
+|---|---|
+| Character portrait | character portraits, character cards, scene cards, scene illustrations |
+| Character card | character portraits, character cards, scene cards, scene illustrations |
+| Scene background | scene backgrounds, scene illustrations, character cards |
+| Scene illustration | scene illustrations, scene cards |
+| Scene card | scene cards, scene illustrations |
+| Object illustration | object illustrations, scene illustrations |
+| Unspecified | not offered — give the image a type in the Visual Library first (the Backdrop entry's button stays greyed out and says so) |
+
+An image without an analysis is usually analyzed and tagged in one request; an image that already has one needs one request for its tags. If the response carries no usable keywords, tagging takes one more request, so this can take a moment. While it runs, a Backdrop entry shows each step on its row; an image in a message shows a small spinner in its corner (hover it for the step), or next to the :material-image-area: marker when that image is the current backdrop. When it is done, a Backdrop entry keeps a :material-bookmark-check: marker, an image in a message shows it for a moment, and the menu entry is disabled; to unmark the image, use the Reference tab in the Visual Library. If a step fails, the image is still marked with what already worked, and the marker turns amber and stays: its tooltip, and the menu entry, name the step that failed. If marking itself fails, a :material-alert-circle-outline: button lets you try again. Loading another scene before the action finishes stops it without marking the image. Without a vision backend, an image with no analysis is only marked.
 
 ### Quick Actions
 
@@ -112,12 +139,30 @@ For faster workflow, inline visuals support several keyboard shortcuts when clic
 |--------|----------|
 | View full image | Ctrl+click |
 | Regenerate | Shift+click |
-| Regenerate and delete old | Alt+click |
+| Regenerate (replace) | Alt+click |
+
+The shortcuts work on illustrations, cards, portraits and Backdrop entry images. The new image replaces the one on the message you clicked, even when that message is further back in the story.
+
+### Replacing an image
+
+**Regenerate (replace)** and **Edit (replace)** never leave a gap anywhere else in the scene. Once the new image is ready, the original is deleted only if nothing else uses it. The original stays, and a notification names where it is still used, when any of these still uses it:
+
+- another message, a character's avatar or cover, the scene cover or the scene backdrop
+- the [reference](#mark-as-reference) search, because it is marked as a reference
+- another image that was generated with it as a reference (the new image a replace makes does not count)
+- another save of the same scene, such as a fork or a Save As copy, which shares the scene's images. A locked save's own file counts too, and so does a save that cannot be read
+
+If the generation fails or is cancelled, the original stays where it was.
+
+A portrait is usually shared: by the character's default and current avatar and by many messages. On a portrait, the two (replace) entries are only available when this message is the portrait's only use. Otherwise they are greyed out and say why, for example *Used by other messages* or *Character's current avatar*. Say Edwin's portrait on one reply looks off: if no other message shows it and it is not his avatar, Regenerate (replace) swaps it for a new one and deletes the old. If his other replies show it too, use **Regenerate Portrait**, which puts the new portrait on this message only and keeps the old one for the others. Illustrations and cards are not greyed out: replacing a shared one puts the new image on this message and keeps the original for the others.
+
+Regenerating a scene background that an older story attached to a message does not replace it on the message: the message keeps its image. With **Auto-attach visuals** on, the new background becomes the [scene backdrop](#scene-backdrop) through a new Backdrop entry at the end of the story; with it off, the new background only goes to the Visual Library. For such a background, the two (replace) entries are greyed out, and Alt+click works like Regenerate.
 
 ### Managing Portraits
 
 For character portraits (avatars), you have additional options:
 
+- **Regenerate Portrait** and **Edit Portrait**, with their (replace) variants: see [Replacing an image](#replacing-an-image)
 - **Auto-select portrait**: Let the AI determine the best portrait for this message
 - **Generate new portrait**: Create a new portrait based on the current scene context
 - **Select portrait**: Choose from existing portraits for this character
@@ -128,7 +173,7 @@ Any scene illustration can be promoted to the **scene backdrop** — instead of 
 
 ![Scene backdrop active](/talemate/img/0.39.0/scene-backdrop-active.png)
 
-The backdrop belongs to the scene and is saved with it, so it survives reloads and history edits.
+The backdrop belongs to the scene and is saved with it, so it survives reloads and history edits. Each change is also recorded in the scene as a small **Backdrop** entry; [Replay](replay.md) uses these entries to show each passage with the backdrop it had. While Immersive is off, these entries show their image in the story, sized by the **Scene Background** [display settings](#configuring-display-settings). With its render cadence set to **Never**, the entry shows only its name; click it to preview the image.
 
 ### Setting a backdrop
 
@@ -137,7 +182,24 @@ There are several ways to set the backdrop:
 - **From a message** — click an inline scene illustration and choose **Set as scene backdrop** from its image menu
 - **From the Visual Library** — select an asset in the Scene Assets tab and click **Set backdrop**
 - **From the world editor** — use the per-image actions in the [Scene Visual Manager](world-editor/scene/visuals.md) (World Editor → Scene → Visuals), which is also the place to fully **unset** the backdrop (the image stays in the scene assets)
-- **Automatically** — enable **Auto Backdrop** for Scene Illustrations and/or Scene Backgrounds in the [Appearance Settings](app-settings/appearance.md#visuals); newly generated images of that type then become the backdrop as they arrive
+- **By generating a background** — **Visualize Scene (Background)** in the scene tools, **Visualize** on an Add Detail message about a place, or a Director Chat request for a scene background, while **Auto-attach visuals** is on. A **Generating background…** entry appears right away and becomes the backdrop when the image is ready; if the generation fails or is cancelled, the entry goes away
+- **Automatically** — enable **Auto Backdrop** for Scene Illustrations in the [Appearance Settings](app-settings/appearance.md#visuals); newly generated illustrations then become the backdrop as they arrive
+- **As the story moves** — enable [Scene Backgrounds](agents/world-state/settings.md#scene-backgrounds) in the World State agent settings; the agent picks or generates a background that fits the current place and time of day
+
+### Backdrop entries
+
+Click the image of a Backdrop entry (the preview in Immersive mode, or the image in the story while Immersive is off) to open its image menu. It offers the actions that make sense for a background:
+
+- **View Image** (also Ctrl+click) and **Open in Visual Library**
+- **Regenerate Background** and **Edit Background**: the new image is always made as a scene background, even when the entry shows a scene illustration, and arrives as a new Backdrop entry at the end of the story
+- **Regenerate (replace)** (also Alt+click) and **Edit (replace)**: the new background takes this entry's place. Every other Backdrop entry that showed the same image, for example a return to the harbour you picked with Select background, and the scene backdrop switch to the new image too. The original is then deleted, unless something else, such as the scene cover or an image on a message, still uses it (see [Replacing an image](#replacing-an-image)). If the generation fails or is cancelled, the entry keeps its image
+- **Select background**: choose another of the scene's backgrounds for this entry. The entry shows the chosen image from then on. When it set the current backdrop, the scene backdrop changes too, without a new Backdrop entry. An entry whose image was deleted reads **Image removed**; hover it and click :material-image-multiple: to pick a background for it
+- **Set as scene backdrop**: makes an older entry's image the backdrop again
+- **Mark as reference**: also a :material-bookmark-plus-outline: button on the entry itself — see [Mark as reference](#mark-as-reference)
+- **Clear Image**: removes the backdrop change, the same as the entry's :material-close: button
+- **Delete Image**: permanently removes the image
+
+Removing the entry that set the current backdrop winds the backdrop back. Say the harbour scene changed to a stormy night and you remove that entry: the backdrop returns to the harbour at dusk from the entry before it, or to no backdrop when there was none. If that earlier image was deleted from the Visual Library, the backdrop goes back to the last earlier image that still exists. Removing an older entry leaves the current backdrop alone.
 
 ### The Immersive toggle
 
@@ -160,7 +222,7 @@ Configure settings independently for each type of visual:
 - **Portrait**: Character face images
 - **Card**: Character or scene cards
 - **Scene Illustration**: Images of the current moment ("Visualize Moment")
-- **Scene Background**: Purely environmental images ("Visualize Scene (Background)")
+- **Scene Background**: Purely environmental images ("Visualize Scene (Background)"); also sets how Backdrop entries show their image while Immersive is off
 
 ### Render Cadence
 
@@ -187,11 +249,11 @@ Control how large visuals appear:
 
 ### Auto Backdrop
 
-Scene Illustrations and Scene Backgrounds additionally have an **Auto Backdrop** checkbox. When enabled, newly generated images of that type automatically become the [scene backdrop](#scene-backdrop) instead of only rendering inline.
+Scene Illustrations additionally have an **Auto Backdrop** checkbox. When enabled, newly generated illustrations automatically become the [scene backdrop](#scene-backdrop) instead of only rendering inline. Scene backgrounds generated for the story always become the backdrop, so they have no checkbox.
 
 ### Auto-attach Visuals
 
-The **Auto-attach visuals** toggle controls whether newly generated images are automatically attached to messages. When disabled, images go to the Visual Library but don't appear in the scene feed unless you manually attach them.
+The **Auto-attach visuals** toggle controls whether newly generated images are automatically attached to messages. When disabled, images go to the Visual Library but don't appear in the scene feed unless you manually attach them. This includes scene backgrounds: they do not become the backdrop.
 
 You can also toggle this setting quickly from the scene tools visualizer menu without opening the full settings panel.
 

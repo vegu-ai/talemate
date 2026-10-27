@@ -3,7 +3,7 @@
         <!-- New Scene Section -->
         <v-row>
             <v-col cols="12">
-                <v-card elevation="2" class="mt-4" color="grey-darken-2" variant="tonal">
+                <v-card elevation="2" class="mt-4" color="surface-light" variant="tonal">
                     <v-card-text class="d-flex justify-end align-center flex-wrap">
                         <v-chip 
                             v-if="selectedSharedContext" 
@@ -86,6 +86,8 @@
                 Create New Scene
             </v-card-title>
             <v-card-text>
+                <p class="mb-2">The new scene keeps the current story's character knowledge mode.</p>
+                <CharacterKnowledgeModeComparison :perspectives="perspectives" selected-label="current" compact class="mb-4" />
                 <v-alert v-if="!scene?.data?.saved && !creatingNewScene" color="muted" variant="text" density="compact" class="mb-4">
                     <template v-slot:prepend>
                         <v-icon color="warning">mdi-alert-circle-outline</v-icon>
@@ -124,7 +126,7 @@
                     </template>
                     <div class="text-muted">
                         <strong>Selected Episode:</strong> {{ selectedEpisode.title || 'Untitled Episode' }}
-                        <div v-if="selectedEpisode.description" class="mt-1 text-caption">{{ selectedEpisode.description }}</div>
+                        <div v-if="selectedEpisode.description" class="mt-1 text-body-small">{{ selectedEpisode.description }}</div>
                     </div>
                 </v-alert>
 
@@ -158,8 +160,8 @@
                             class="mt-2"
                         />
                     </div>
-                    <v-card v-else elevation="0" color="grey-darken-3" variant="tonal" class="mt-2">
-                        <v-card-text class="text-grey">
+                    <v-card v-else elevation="0" color="surface-light" variant="tonal" class="mt-2">
+                        <v-card-text class="text-medium-emphasis">
                             <span v-if="selectedSharedContext">There are no shared characters in the shared context.</span>
                             <span v-else>There are no characters in the current scene.</span>
                         </v-card-text>
@@ -178,6 +180,8 @@
 <script>
 import WorldStateManagerSceneEpisodes from './WorldStateManagerSceneEpisodes.vue';
 import WorldStateManagerSceneSharedContext from './WorldStateManagerSceneSharedContext.vue';
+import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
+import { perspectivesEnabled } from '@/utils/sceneSettings';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 export default {
@@ -192,8 +196,10 @@ export default {
         'getWebsocket',
         'registerMessageHandler',
         'unregisterMessageHandler',
+        'stopPlaythrough',
     ],
     components: {
+        CharacterKnowledgeModeComparison,
         WorldStateManagerSceneEpisodes,
         WorldStateManagerSceneSharedContext,
     },
@@ -312,6 +318,7 @@ export default {
             }
             
             const scene_initialization = {
+                character_knowledge: perspectivesEnabled(currentScene),
                 content_classification: currentScene.context || null,
                 agent_persona_templates: currentScene.agent_persona_templates || null,
                 writing_style_template: currentScene.writing_style_template || null,
@@ -324,6 +331,11 @@ export default {
                 assets: currentScene.assets || null,
                 intent_state: currentScene.story_intent ? { intent: currentScene.story_intent } : null,
             };
+
+            // this replaces the loaded scene, so the reader's playthrough
+            // position has to be recorded while that scene is still the one the
+            // backend holds
+            this.stopPlaythrough();
 
             // Create new scene with scene_initialization parameters
             this.getWebsocket().send(JSON.stringify({
@@ -394,6 +406,9 @@ export default {
         }
     },
     computed: {
+        perspectives() {
+            return perspectivesEnabled(this.scene?.data);
+        },
         availableCharacters() {
             // If world sharing is on, show only shared characters
             // If world sharing is off, show all characters
@@ -426,4 +441,3 @@ export default {
     }
 }
 </script>
-

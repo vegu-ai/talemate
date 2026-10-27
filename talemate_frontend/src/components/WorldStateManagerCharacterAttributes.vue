@@ -1,5 +1,5 @@
 <template>
-    <v-row floating color="grey-darken-5">
+    <v-row floating>
         <v-col cols="3">
         </v-col>
         <v-col cols="3"></v-col>
@@ -94,6 +94,14 @@
                             @redo="attributeAutocompleteField.redo()"
                             @undo="attributeAutocompleteField.undo()" />
                     </div>
+                    <EntryVisibilitySelect
+                        class="mt-3"
+                        :model-value="selectedVisibility"
+                        :character-names="otherCharacterNames"
+                        :owner-label="character.name"
+                        :disabled="busy || !selectedHasText"
+                        :disabled-hint="selectedHasText ? null : 'Add text to this entry first, then choose who knows it.'"
+                        @update:model-value="setVisibility(selected, $event)" />
                 </v-card-text>
                 <v-card-actions>
                     <ConfirmActionInline
@@ -119,6 +127,7 @@
 </template>
 <script>
 
+import EntryVisibilitySelect from './EntryVisibilitySelect.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
 import ContextualGenerate from './ContextualGenerate.vue';
 import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
@@ -129,6 +138,7 @@ import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
 export default {
     name: 'WorldStateManagerCharacterAttributes',
     components: {
+        EntryVisibilitySelect,
         ContextualGenerate,
         WorldStateManagerTemplateApplicator,
         SpiceAppliedNotification,
@@ -136,6 +146,10 @@ export default {
         AutocompleteRedoChip,
     },
     props: {
+        characterNames: {
+            type: Array,
+            default: () => [],
+        },
         immutableCharacter: Object,
         templates: Object,
         generationOptions: Object,
@@ -169,6 +183,7 @@ export default {
             setValue: (v) => {
                 if (this.selected && this.character?.base_attributes) {
                     this.character.base_attributes[this.selected] = v;
+                    this.dirty = true;
                 }
             },
             buildParams: () => ({
@@ -224,6 +239,16 @@ export default {
                 ? this.character.base_attributes[this.selected]
                 : null;
         },
+        selectedVisibility() {
+            if (!this.character || !this.selected) return null;
+            return (this.character.visibility || {})[this.selected] || null;
+        },
+        selectedHasText() {
+            return Boolean(this.character?.base_attributes?.[this.selected]);
+        },
+        otherCharacterNames() {
+            return this.characterNames.filter(name => name !== this.character?.name);
+        },
         selectedIsShared() {
             return this.character.shared_attributes.includes(this.selected);
         },
@@ -246,6 +271,17 @@ export default {
         },
     },
     methods: {
+        setVisibility(name, visibility) {
+            // a Ctrl+Enter completion can be pending without a blur; messages are handled in order
+            this.update(name, true);
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'set_character_entry_visibility',
+                name: this.character.name,
+                key: name,
+                visibility: visibility,
+            }));
+        },
         applyTemplates(templateUIDs, callback) {
             this.templateApplicatorCallback = callback;
             

@@ -1,8 +1,12 @@
 <template>
     <RequestInput
     ref="requestForkName"
-    title="Save Forked Scene As"
+    title="Save copy as"
     :instructions="forkInstructions"
+    :close-on-continue="false"
+    :loading="!!pendingForkRequestId"
+    :error="forkError"
+    @cancel="cancelForkScene"
     @continue="(name, params) => { forkScene(params.message_id, name) }" /> 
 
     <RequestInput
@@ -17,6 +21,7 @@
         :style="assetMenuStyle"
         :location="assetMenu.location"
         :target="assetMenu.target"
+        width="500"
         min-width="500"
         max-width="500"
     >
@@ -35,6 +40,14 @@
             >
                 <v-list-item-title>Open in Visual Library</v-list-item-title>
             </v-list-item>
+            <v-list-item
+                :disabled="uxLocked || appBusy || revealCount !== null || ['running', 'marked', 'unavailable'].includes(assetMenuReference.status)"
+                prepend-icon="mdi-bookmark-plus-outline"
+                @click="handleMarkAsReference"
+            >
+                <v-list-item-title>Mark as reference</v-list-item-title>
+                <v-list-item-subtitle class="text-wrap">{{ assetMenuReferenceHint }}</v-list-item-subtitle>
+            </v-list-item>
             <v-divider v-if="assetSupportsRegeneration"></v-divider>
             <v-list-item
                 v-if="assetSupportsRegeneration"
@@ -42,19 +55,19 @@
                 prepend-icon="mdi-image-refresh"
                 @click="handleRegenerateIllustration"
             >
-                <v-list-item-title>Regenerate Illustration</v-list-item-title>
+                <v-list-item-title>Regenerate {{ assetMenuNoun }}</v-list-item-title>
                 <v-list-item-subtitle v-if="visualAgentReady">Shift+click</v-list-item-subtitle>
                 <v-list-item-subtitle v-else>Visual agent not ready</v-list-item-subtitle>
             </v-list-item>
             <v-list-item
                 v-if="assetSupportsRegeneration"
-                :disabled="!visualAgentReady"
+                :disabled="!!assetMenuReplaceBlock"
                 prepend-icon="mdi-image-refresh-outline"
+                class="asset-menu-replace"
                 @click="handleRegenerateAndDeleteIllustration"
             >
-                <v-list-item-title>Regenerate and Delete</v-list-item-title>
-                <v-list-item-subtitle v-if="visualAgentReady">Alt+click</v-list-item-subtitle>
-                <v-list-item-subtitle v-else>Visual agent not ready</v-list-item-subtitle>
+                <v-list-item-title>Regenerate (replace)</v-list-item-title>
+                <v-list-item-subtitle class="text-wrap">{{ assetMenuReplaceBlock || `Alt+click · ${assetMenuReplaceHint}` }}</v-list-item-subtitle>
             </v-list-item>
             <v-list-item
                 v-if="assetSupportsRegeneration"
@@ -62,17 +75,18 @@
                 prepend-icon="mdi-image-edit"
                 @click="handleOpenRegenerateAssetDialog"
             >
-                <v-list-item-title>Edit Illustration</v-list-item-title>
+                <v-list-item-title>Edit {{ assetMenuNoun }}</v-list-item-title>
                 <v-list-item-subtitle v-if="!visualAgentReady">Visual agent not ready</v-list-item-subtitle>
             </v-list-item>
             <v-list-item
                 v-if="assetSupportsRegeneration"
-                :disabled="!visualAgentReady"
+                :disabled="!!assetMenuReplaceBlock"
                 prepend-icon="mdi-image-edit-outline"
+                class="asset-menu-replace"
                 @click="handleOpenRegenerateAndDeleteAssetDialog"
             >
-                <v-list-item-title>Edit and Delete</v-list-item-title>
-                <v-list-item-subtitle v-if="!visualAgentReady">Visual agent not ready</v-list-item-subtitle>
+                <v-list-item-title>Edit (replace)</v-list-item-title>
+                <v-list-item-subtitle class="text-wrap">{{ assetMenuReplaceBlock || assetMenuReplaceHint }}</v-list-item-subtitle>
             </v-list-item>
             <v-divider v-if="assetMenu.context.asset_type === 'avatar'"></v-divider>
             <v-list-item
@@ -106,7 +120,7 @@
             </v-list-item>
             <v-divider v-if="assetMenu.context.asset_type === 'scene_illustration'"></v-divider>
             <v-list-item
-                v-if="assetMenu.context.asset_type === 'scene_illustration'"
+                v-if="assetMenu.context.asset_type === 'scene_illustration' && !assetMenu.context.backdrop"
                 prepend-icon="mdi-image-multiple"
                 @click="handleOpenIllustrationSelect"
             >
@@ -116,13 +130,24 @@
                 </v-list-item-subtitle>
             </v-list-item>
             <v-list-item
+                v-if="assetMenu.context.asset_type === 'scene_illustration' && assetMenu.context.backdrop"
+                prepend-icon="mdi-image-multiple"
+                @click="handleOpenBackgroundSelect"
+            >
+                <v-list-item-title>Select background</v-list-item-title>
+                <v-list-item-subtitle class="text-wrap">
+                    Choose from existing scene backgrounds
+                </v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item
                 v-if="assetMenu.context.asset_type === 'scene_illustration'"
+                :disabled="assetMenuIsSceneBackdrop"
                 prepend-icon="mdi-image-area"
                 @click="handleSetSceneBackdrop"
             >
                 <v-list-item-title>Set as scene backdrop</v-list-item-title>
                 <v-list-item-subtitle class="text-wrap">
-                    Render this image behind the scene text
+                    {{ assetMenuIsSceneBackdrop ? 'This image is the scene backdrop' : 'Render this image behind the scene text' }}
                 </v-list-item-subtitle>
             </v-list-item>
             <v-divider v-if="assetMenu.context.asset_type === 'card'"></v-divider>
@@ -142,7 +167,7 @@
                     <v-icon color="delete">mdi-image-remove</v-icon>
                 </template>
                 <v-list-item-title>Clear Image</v-list-item-title>
-                <v-list-item-subtitle>Remove image from this message</v-list-item-subtitle>
+                <v-list-item-subtitle>{{ assetMenu.context.backdrop ? 'Remove this backdrop change from the history' : 'Remove image from this message' }}</v-list-item-subtitle>
             </v-list-item>
             <v-list-item @click="handleDeleteImage">
                 <template v-slot:prepend>
@@ -160,7 +185,7 @@
             <v-card-title>Select Portrait</v-card-title>
             <v-card-text>
                 <div v-if="avatarSelectDialog.assetIds.length === 0" class="text-center text-medium-emphasis py-8">
-                    <v-icon size="48" color="grey">mdi-image-off-outline</v-icon>
+                    <v-icon size="48" color="muted">mdi-image-off-outline</v-icon>
                     <p class="mt-2">No portraits available for this character</p>
                 </div>
                 <VisualReferenceCarousel
@@ -187,14 +212,14 @@
         </v-card>
     </v-dialog>
 
-    <!-- Scene Illustration Selection Dialog -->
+    <!-- Scene Illustration / Background Selection Dialog -->
     <v-dialog v-model="illustrationSelectDialog.show" max-width="500">
         <v-card>
-            <v-card-title>Select Scene Illustration</v-card-title>
+            <v-card-title>{{ illustrationSelectCopy.title }}</v-card-title>
             <v-card-text>
                 <div v-if="illustrationSelectDialog.assetIds.length === 0" class="text-center text-medium-emphasis py-8">
-                    <v-icon size="48" color="grey">mdi-image-off-outline</v-icon>
-                    <p class="mt-2">No scene illustrations available</p>
+                    <v-icon size="48" color="muted">mdi-image-off-outline</v-icon>
+                    <p class="mt-2">{{ illustrationSelectCopy.empty }}</p>
                 </div>
                 <VisualReferenceCarousel
                     v-else
@@ -203,7 +228,7 @@
                     :assets-map="assetsMap"
                     :base64-by-id="illustrationSelectDialog.base64ById"
                     aspect="wide"
-                    label="Illustration:"
+                    :label="illustrationSelectCopy.label"
                 />
             </v-card-text>
             <v-card-actions>
@@ -226,7 +251,7 @@
             <v-card-title>Select Card</v-card-title>
             <v-card-text>
                 <div v-if="cardSelectDialog.assetIds.length === 0" class="text-center text-medium-emphasis py-8">
-                    <v-icon size="48" color="grey">mdi-image-off-outline</v-icon>
+                    <v-icon size="48" color="muted">mdi-image-off-outline</v-icon>
                     <p class="mt-2">No cards available</p>
                 </div>
                 <VisualReferenceCarousel
@@ -264,12 +289,25 @@
         @confirm="confirmDeleteImage"
     />
 
+    <ConfirmActionPrompt
+        ref="deleteMessageConfirm"
+        :action-label="deleteMessagePrompt.title"
+        :description="deleteMessagePrompt.text"
+        confirm-text="Delete"
+        cancel-text="Cancel"
+        icon="mdi-close-box-outline"
+        color="delete"
+        :max-width="420"
+        @confirm="confirmDeleteMessage"
+        @cancel="cancelDeleteMessage"
+    />
+
     <!-- Insert Time Passage Dialog -->
     <v-dialog v-model="insertTimePassageDialog" max-width="400">
         <v-card>
-            <v-card-title class="text-body-1">Insert Time Passage</v-card-title>
+            <v-card-title class="text-body-large">Insert Time Passage</v-card-title>
             <v-card-text>
-                <p class="text-caption text-medium-emphasis mb-3">
+                <p class="text-body-small text-medium-emphasis mb-3">
                     Will be inserted after the selected message.
                 </p>
                 <div class="d-flex align-center">
@@ -278,6 +316,9 @@
                     <v-select v-model="insertTimePassageUnit" :items="insertTimePassageUnits" label="Unit"
                         style="max-width: 180px" hide-details="auto" class="ml-2" />
                 </div>
+                <v-text-field v-model="insertTimePassageTitle" label="Chapter title (optional)"
+                    hide-details="auto" class="mt-3" density="compact"
+                    hint="Names the chapter this passage opens in a replay." persistent-hint />
             </v-card-text>
             <v-card-actions>
                 <v-spacer />
@@ -290,18 +331,22 @@
     <!-- Fallback image viewer for the shared asset menu (see handleViewImage) -->
     <AssetView v-model="assetViewShow" :image-src="assetViewSrc" />
 
-    <div class="message-container mb-8" ref="messageContainer" :class="{ 'no-text-shadow': !sceneBackdropTextShadow }" :style="{ '--scene-backdrop-panel-opacity': sceneBackdropPanelOpacity }" style="flex-grow: 1; overflow-y: auto;" @click="onMessageContainerClick">
-        <div v-for="(message, index) in messages" :key="message.id != null ? `${message.type}-${message.id}` : `idx-${index}`" class="message-wrapper">
+    <div class="message-container mb-8" ref="messageContainer" :class="{ 'no-text-shadow': !sceneBackdropTextShadow }" :style="{ '--scene-backdrop-panel-opacity': sceneBackdropPanelOpacity }" style="flex-grow: 1; overflow-y: auto;" @click="onSceneAreaClick" @mouseup="onMessageContainerMouseUp">
+        <div v-for="(message, index) in visibleMessages" :key="message.id != null ? `${message.type}-${message.id}` : `idx-${index}`" class="message-wrapper" :class="{ 'message-wrapper--split': perspectiveCharacter }">
+          <div class="message-cell" :class="{ 'message-cell--backdrop': isSceneBackdropMessage(message), 'message-cell--backdrop-status': isSceneBackdropMessage(message) && !!backdropIndicatorReference(message) }">
             <!-- marks the message whose illustration is the active backdrop -->
-            <v-tooltip v-if="sceneBackdrop && message.id != null && message.id === sceneBackdrop.messageId" text="This image is the current scene background" location="left">
+            <v-tooltip v-if="isSceneBackdropMessage(message)" text="This image is the current scene background" location="left">
                 <template v-slot:activator="{ props }">
                     <v-icon v-bind="props" class="backdrop-indicator" size="small" color="primary" @click.stop="openBackdropIndicatorMenu($event, message)">mdi-image-area</v-icon>
                 </template>
             </v-tooltip>
+            <div v-if="isSceneBackdropMessage(message) && backdropIndicatorReference(message)" class="backdrop-indicator-reference" @click.stop>
+                <ReferenceCandidateControl :state="backdropIndicatorReference(message)" compact :disabled="isFeedLocked()" @use="markAsReference(message.asset_id, message.id)" />
+            </div>
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
-                :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
+                :class="`message ${message.type}`" :id="`message-${message.id}`" :data-message-type="message.type" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" :disable_avatar_fallback="message.disable_avatar_fallback || false" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="revisionIsLatestMessage(message)" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :rev="message.rev ?? null" :can-copy-unsaved="!scene?.data?.filename" :immutable-save="!!scene?.data?.immutable_save" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" :disable_avatar_fallback="message.disable_avatar_fallback || false" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="revisionBusyState(message)" :revisionUncommitted="message.revision_uncommitted || false" :revisionRefresh="message.revision_refresh" @keep-revision="commitRevision(message.id)" :entityMentions="getEntityMentionsForMessage(message.id)" :memoryPass="showMemoryPass ? message.memory_pass : null" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -338,27 +383,42 @@
             </div>
             <div v-else-if="message.type === 'status'" :class="`message ${message.type}`">
                 <div class="narrator-message">
-                    <StatusMessage :text="message.text" :status="message.status" :isLastMessage="index === messages.length - 1" />
+                    <StatusMessage :text="message.text" :status="message.status" :isLastMessage="index === visibleMessages.length - 1" />
                 </div>
             </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
-                <div class="narrator-message"  :id="`message-${message.id}`">
-                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
+                <div class="narrator-message"  :id="`message-${message.id}`" :data-message-type="message.type">
+                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="revisionIsLatestMessage(message)" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev ?? null" :can-copy-unsaved="!scene?.data?.filename" :immutable-save="!!scene?.data?.immutable_save" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="revisionBusyState(message)" :revisionUncommitted="message.revision_uncommitted || false" :revisionRefresh="message.revision_refresh" @keep-revision="commitRevision(message.id)" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
             <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
-                <div class="director-message"  :id="`message-${message.id}`">
-                    <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" :direction_mode="message.direction_mode" :action="message.action" :subtype="message.subtype" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1"/>
+                <div class="director-message"  :id="`message-${message.id}`" :data-message-type="message.type">
+                    <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" :direction_mode="message.direction_mode" :action="message.action" :subtype="message.subtype" :uxLocked="uxLocked" :isLastMessage="index === visibleMessages.length - 1"/>
+                </div>
+            </div>
+            <div v-else-if="message.type === 'character_transition'" :class="`message ${message.type}`">
+                <div class="character-transition-message" :id="`message-${message.id}`" :data-message-type="message.type">
+                    <CharacterTransitionMessage :message="message" :locked="uxLocked || appBusy || revealCount !== null" />
+                </div>
+            </div>
+            <div v-else-if="message.type === 'scene_backdrop'" :class="`message ${message.type}`">
+                <div class="scene-backdrop-message" :id="`message-${message.id}`" :data-message-type="message.type">
+                    <SceneBackdropMessage :message="message" :asset="assetsMap[message.backdrop] || null" :immersive="scene?.data?.assets?.backdrop_enabled !== false" :display-size="messageAssetsConfig?.scene_background?.size || 'big'" :show-image="messageAssetsConfig?.scene_background?.cadence !== 'never'" :locked="uxLocked || appBusy || revealCount !== null" />
+                </div>
+            </div>
+            <div v-else-if="message.type === 'reinforcement' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
+                <div class="reinforcement-message" :id="`message-${message.id}`" :data-message-type="message.type">
+                    <ReinforcementMessage :message="message" :latest="latestReinforcementIds.has(message.id)" :locked="uxLocked || appBusy || revealCount !== null" />
                 </div>
             </div>
             <div v-else-if="message.type === 'time'" :class="`message ${message.type}`">
-                <div class="time-message"  :id="`message-${message.id}`">
-                    <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === messages.length - 1" />
+                <div class="time-message"  :id="`message-${message.id}`" :data-message-type="message.type">
+                    <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" :title="message.title" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === visibleMessages.length - 1" />
                 </div>
             </div>
             <div v-else-if="message.type === 'player_choice'" :class="`message ${message.type}`">
                 <div class="player-choice-message"  :id="`message-player-choice`">
-                    <PlayerChoiceMessage :choices="message.data.choices" :character="message.data.character" @close="closePlayerChoice" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" />
+                    <PlayerChoiceMessage :choices="message.data.choices" :character="message.data.character" @close="closePlayerChoice" :uxLocked="uxLocked" :isLastMessage="index === visibleMessages.length - 1" />
                 </div>
             </div>
             <div v-else-if="message.type === 'ux'" :class="`message ${message.type}`">
@@ -367,15 +427,33 @@
                 </div>
             </div>
             <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
-                <div class="context-investigation-message"  :id="`message-${message.id}`">
-                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
+                <div class="context-investigation-message"  :id="`message-${message.id}`" :data-message-type="message.type">
+                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="revisionIsLatestMessage(message)" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="revisionBusyState(message)" :revisionUncommitted="message.revision_uncommitted || false" :revisionRefresh="message.revision_refresh" @keep-revision="commitRevision(message.id)" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
 
             <div v-else-if="!getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 {{ message.text }}
             </div>
+          </div>
+          <MessagePerspective
+            v-if="perspectiveCharacter && messageRowRendered(message)"
+            class="perspective-cell"
+            :view="perspectiveForMessage(message, perspectives)"
+            :character="perspectiveCharacter"
+            :color="scene?.data?.character_colors?.[perspectiveCharacter]"
+            :message-id="message.id"
+            :dependents="perspectives?.dependents?.[message.id] || 0"
+            :appearance-config="appearanceConfig"
+            :locked="uxLocked || appBusy" />
         </div>
+        <EntitySelectionAction
+            :model-value="entitySelection.open"
+            :target="entitySelection.target"
+            :reason="entitySelection.reason"
+            @update:model-value="onEntitySelectionUpdate"
+            @add="triggerAddSnapshotEntity"
+        />
         <EntityTooltip
             :model-value="entityTooltip.open"
             :activator="entityTooltip.activator"
@@ -393,24 +471,40 @@ import CharacterMessage from './CharacterMessage.vue';
 import NarratorMessage from './NarratorMessage.vue';
 import DirectorMessage from './DirectorMessage.vue';
 import TimePassageMessage from './TimePassageMessage.vue';
+import CharacterTransitionMessage from './CharacterTransitionMessage.vue';
+import SceneBackdropMessage from './SceneBackdropMessage.vue';
+import ReinforcementMessage from './ReinforcementMessage.vue';
 import StatusMessage from './StatusMessage.vue';
 import RequestInput from './RequestInput.vue';
 import PlayerChoiceMessage from './PlayerChoiceMessage.vue';
 import UxElementMessage from './UxElementMessage.vue';
 import ContextInvestigationMessage from './ContextInvestigationMessage.vue';
 import SystemMessage from './SystemMessage.vue';
+import MessagePerspective from './MessagePerspective.vue';
+import { perspectiveForMessage } from '@/utils/messagePerspective';
 import VisualReferenceCarousel from './VisualReferenceCarousel.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import AssetView from './AssetView.vue';
+import ReferenceCandidateControl from './ReferenceCandidateControl.vue';
 import EntityHighlightMixin from './EntityHighlightMixin.js';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import RevisionStackMixin from './RevisionStackMixin.js';
 import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { isVisualAgentReady, VIS_TYPE } from '@/constants/visual';
+import { REFERENCE_DONE_MS, referenceState, referenceStatusVisible, referenceTargets } from '@/utils/referenceCandidate';
+import {
+    DELETE_EARLIER_TEXT,
+    DELETE_EARLIER_TITLE,
+    DELETE_FINAL_TEXT,
+    DELETE_FINAL_TITLE,
+} from '@/constants/historyEditWarnings';
 import { isKnownSceneCharacter } from '@/utils/entityActions';
 import { parseCharacterMessage } from '@/utils/characterMessage.js';
 import { primaryModifierLabel } from '@/utils/keyboardModifiers';
 import { base64ToObjectUrl } from '@/utils/objectUrl.js';
+import { chapterBoundaries, playthroughBackdrop, visibleMessages } from '@/utils/playthrough.js';
+import { newUuid } from '@/utils/uuid';
+import { assetTarget, enableSceneBackdropMessage, setAssetMessage } from '@/utils/assetTargets';
 import {
     getMessageColor as resolveMessageColor,
     getMessageStyle as resolveMessageStyle,
@@ -429,14 +523,11 @@ const ASSET_SELECT_TYPES = {
             const avatars = vm.getCharacterAssets(ctx.character, VIS_TYPE.CHARACTER_PORTRAIT);
             return avatars.map(a => a.id);
         },
-        buildUpdateMessage(dialog) {
-            return {
-                type: 'scene_assets',
-                action: 'update_message_asset',
-                asset_id: dialog.selectedAssetId,
-                message_id: dialog.messageId,
-                character_name: dialog.characterName,
-            };
+        targets(dialog) {
+            return [
+                assetTarget.message(dialog.messageId, { overrideCadence: true }),
+                assetTarget.characterAvatar(dialog.characterName, 'current'),
+            ];
         },
         reset(dialog) {
             dialog.show = false;
@@ -458,13 +549,27 @@ const ASSET_SELECT_TYPES = {
                 })
                 .map(([id]) => id);
         },
-        buildUpdateMessage(dialog) {
-            return {
-                type: 'scene_assets',
-                action: 'update_message_asset',
-                asset_id: dialog.selectedAssetId,
-                message_id: dialog.messageId,
-            };
+        targets(dialog) {
+            return [assetTarget.message(dialog.messageId, { overrideCadence: true })];
+        },
+        reset(dialog) {
+            dialog.show = false;
+            dialog.messageId = null;
+            dialog.assetIds = [];
+            dialog.selectedAssetId = null;
+            dialog.base64ById = {};
+        },
+    },
+    scene_background: {
+        dialogKey: 'illustrationSelectDialog',
+        requiresCharacter: false,
+        getAssetIds(vm) {
+            return Object.entries(vm.assetsMap)
+                .filter(([, asset]) => asset?.meta?.vis_type === VIS_TYPE.SCENE_BACKGROUND)
+                .map(([id]) => id);
+        },
+        targets(dialog) {
+            return [assetTarget.backdropEntry(dialog.messageId)];
         },
         reset(dialog) {
             dialog.show = false;
@@ -485,13 +590,8 @@ const ASSET_SELECT_TYPES = {
                 })
                 .map(([id]) => id);
         },
-        buildUpdateMessage(dialog) {
-            return {
-                type: 'scene_assets',
-                action: 'update_message_asset',
-                asset_id: dialog.selectedAssetId,
-                message_id: dialog.messageId,
-            };
+        targets(dialog) {
+            return [assetTarget.message(dialog.messageId, { overrideCadence: true })];
         },
         reset(dialog) {
             dialog.show = false;
@@ -503,7 +603,20 @@ const ASSET_SELECT_TYPES = {
     },
 }
 
-const ASSET_SELECT_DIALOG_KEYS = Object.values(ASSET_SELECT_TYPES).map(t => t.dialogKey)
+const ILLUSTRATION_SELECT_COPY = {
+    scene_illustration: { title: 'Select Scene Illustration', empty: 'No scene illustrations available', label: 'Illustration:' },
+    scene_background: { title: 'Select Scene Background', empty: 'No scene backgrounds available', label: 'Background:' },
+}
+
+const ASSET_SELECT_DIALOG_KEYS = [...new Set(Object.values(ASSET_SELECT_TYPES).map(t => t.dialogKey))]
+
+// history rows that are not story text: Dynamic Actions choices answer the story, not these rows
+const FEED_ROW_TYPES = ['reinforcement', 'scene_backdrop', 'character_transition'];
+const ALWAYS_RENDERED_MESSAGE_TYPES = ['character', 'processing_input', 'request_input', 'system', 'status', 'narrator', 'character_transition', 'scene_backdrop', 'time', 'player_choice', 'ux']
+
+// frames after which a character's views may differ although the rows stay
+// the same; a changed set of rows refreshes through the perspectiveRowIds watcher
+const PERSPECTIVE_REFRESH_TYPES = ['perception_status', 'message_edited']
 
 export default {
     name: 'SceneMessages',
@@ -511,6 +624,10 @@ export default {
     props: {
         appearanceConfig: {
             type: Object,
+        },
+        themeColors: {
+            type: Object,
+            default: null,
         },
         uxLocked: {
             type: Boolean,
@@ -528,13 +645,27 @@ export default {
         },
         scene: {
             type: Object,
-        }
+        },
+        // playthrough reveals the history one message at a time; null renders
+        // the whole list
+        revealCount: {
+            type: Number,
+            default: null,
+        },
+        perspectiveCharacter: {
+            type: String,
+            default: null,
+        },
     },
     components: {
+        MessagePerspective,
         CharacterMessage,
         NarratorMessage,
         DirectorMessage,
         TimePassageMessage,
+        CharacterTransitionMessage,
+        SceneBackdropMessage,
+        ReinforcementMessage,
         StatusMessage,
         RequestInput,
         PlayerChoiceMessage,
@@ -544,13 +675,20 @@ export default {
         VisualReferenceCarousel,
         ConfirmActionPrompt,
         AssetView,
+        ReferenceCandidateControl,
     },
-    emits: ['cancel-audio-queue', 'configure-entity-highlights', 'scene-backdrop', 'scene-backdrop-candidate'],
+    emits: ['cancel-audio-queue', 'configure-entity-highlights', 'scene-backdrop', 'scene-backdrop-candidate', 'messages-changed', 'playthrough-advance'],
     data() {
         return {
             primaryModifierLabel,
             messages: [],
+            pendingDelete: null,
+            deletePromptFinal: false,
+            pendingEditNotice: null,
+            historyPositionSerial: 0,
             selectedForkMessageId: null,
+            pendingForkRequestId: null,
+            forkError: '',
             // Track last effective asset ID per scope for "on_change" cadence
             lastEffectiveAssetIdByScope: {},
             // Debounce timer for reapplyMessageAssetCadence
@@ -571,8 +709,12 @@ export default {
                     message_id: null,
                 },
             },
+            // where the menu's image is used besides its message, from the server
+            assetMenuUses: { asset_id: null, message_id: null, reasons: null },
             // Track which message IDs are currently processing asset operations
             processingAssetMessageIds: new Set(),
+            // asset id -> latest mark_as_reference_progress frame
+            referenceProgress: {},
             // Context-investigation messages awaiting a freshly requested visual.
             // Drives the toolbar "Visualize" spinner until the asset attaches
             // (message_asset_update) or the visual operation finishes.
@@ -580,6 +722,7 @@ export default {
             // Avatar selection dialog state
             avatarSelectDialog: {
                 show: false,
+                assetType: 'avatar',
                 characterName: null,
                 messageId: null,
                 assetIds: [],
@@ -589,6 +732,7 @@ export default {
             // Scene illustration selection dialog state
             illustrationSelectDialog: {
                 show: false,
+                assetType: 'scene_illustration',
                 messageId: null,
                 assetIds: [],
                 selectedAssetId: null,
@@ -597,6 +741,7 @@ export default {
             // Card selection dialog state
             cardSelectDialog: {
                 show: false,
+                assetType: 'card',
                 messageId: null,
                 assetIds: [],
                 selectedAssetId: null,
@@ -607,6 +752,7 @@ export default {
             insertTimePassageMessageId: null,
             insertTimePassageAmount: 1,
             insertTimePassageUnit: 'hours',
+            insertTimePassageTitle: '',
             insertTimePassageUnits: ['minutes', 'hours', 'days', 'weeks', 'months', 'years'],
             // id of the message awaiting an editor revision (its spinner is
             // cleared on the editor `operation_done` envelope, which has no id)
@@ -618,9 +764,38 @@ export default {
             assetViewShow: false,
             assetViewAssetId: null,
             sceneBackdropObjectUrl: null,
+            perspectives: null,
+            // character -> ids of the messages whose view the user edited by
+            // hand; the server counts the later views built on those with
+            // every refresh, so the note and its action cannot disagree
+            perspectiveEdited: {},
+            _perspectivesTimer: null,
         }
     },
     computed: {
+        deleteMessagePrompt() {
+            return this.deletePromptFinal
+                ? { title: DELETE_FINAL_TITLE, text: DELETE_FINAL_TEXT }
+                : { title: DELETE_EARLIER_TITLE, text: DELETE_EARLIER_TEXT };
+        },
+
+        visibleMessages() {
+            return visibleMessages(this.messages, this.revealCount);
+        },
+        latestReinforcementIds() {
+            const latest = new Map();
+            for (const message of this.messages) {
+                if (message.type === 'reinforcement') {
+                    latest.set(JSON.stringify([message.character, message.question]), message.id);
+                }
+            }
+            return new Set(latest.values());
+        },
+        // the rows by identity: a frame that pops one row and pushes another
+        // leaves the length as it was
+        perspectiveRowIds() {
+            return this.messages.map(message => `${message.type}-${message.id}`).join('|');
+        },
         messageAssetsConfig() {
             return this.appearanceConfig?.scene?.message_assets || null;
         },
@@ -630,6 +805,9 @@ export default {
         sceneBackdropTextShadow() {
             return this.appearanceConfig?.scene?.backdrop_text_shadow ?? true;
         },
+        showMemoryPass() {
+            return this.appearanceConfig?.scene?.show_memory_pass ?? true;
+        },
         assetViewSrc() {
             return this.assetDataUrl(this.assetViewAssetId);
         },
@@ -638,10 +816,10 @@ export default {
             // the asset, assets.backdrop_enabled gates rendering. messageId
             // (when the asset is message-attached) drives the indicator icon
             const assets = this.scene?.data?.assets;
-            if (!assets?.backdrop || !assets.backdrop_enabled) {
+            const assetId = playthroughBackdrop(this.messages, this.revealCount, assets?.backdrop);
+            if (!assetId || !assets?.backdrop_enabled) {
                 return null;
             }
-            const assetId = assets.backdrop;
             const message = this.messages.find(
                 (msg) => msg.asset_id === assetId && msg.asset_type === 'scene_illustration'
             );
@@ -696,28 +874,68 @@ export default {
                 position: 'fixed',
             };
         },
+        assetMenuNoun() {
+            if (this.assetMenu.context.backdrop) return 'Background';
+            return this.assetMenu.context.asset_type === 'avatar' ? 'Portrait' : 'Illustration';
+        },
+        assetMenuReplaceHint() {
+            return this.assetMenu.context.backdrop
+                ? 'Replaces this background, also where the story reuses it; the original is deleted unless something else uses it'
+                : 'Replaces this image; the original is deleted unless something else uses it';
+        },
+        assetMenuReplaceBlock() {
+            if (!this.visualAgentReady) return 'Visual agent not ready';
+            const ctx = this.assetMenu.context;
+            if (ctx.backdrop) return null;
+            if (this.assetsMap?.[ctx.asset_id]?.meta?.vis_type === VIS_TYPE.SCENE_BACKGROUND) {
+                return 'A background on a story message is not replaced: Regenerate makes a new background instead';
+            }
+            // only a portrait needs this message to be its only use
+            if (ctx.asset_type !== 'avatar') return null;
+            const uses = this.assetMenuUses;
+            if (uses.asset_id !== ctx.asset_id || uses.message_id !== ctx.message_id || !uses.reasons) {
+                return 'Checking where this image is used…';
+            }
+            return uses.reasons.join(' · ') || null;
+        },
+        illustrationSelectCopy() {
+            return ILLUSTRATION_SELECT_COPY[this.illustrationSelectDialog.assetType];
+        },
+        assetMenuIsSceneBackdrop() {
+            return !!this.assetMenu.context.backdrop && this.assetMenu.context.asset_id === this.sceneBackdropAssetId;
+        },
+        assetMenuReference() {
+            const assetId = this.assetMenu.context.asset_id;
+            const meta = this.assetsMap[assetId]?.meta;
+            return referenceState(meta, this.referenceProgress[assetId], this.referenceTargetsFor(meta?.vis_type));
+        },
+        assetMenuReferenceHint() {
+            const state = this.assetMenuReference;
+            if (state.status === 'running') return state.label;
+            if (state.status === 'marked') return state.warning ? state.tooltip : 'This image is already marked as a reference';
+            if (state.status === 'failed') return state.tooltip;
+            if (state.status === 'unavailable') return state.tooltip;
+            return 'Analyze and tag it for later generations';
+        },
         assetSupportsRegeneration() {
             // Check if the current asset menu context supports regeneration
-            const assetType = this.assetMenu.context.asset_type;
-            return assetType === 'card' || assetType === 'scene_illustration';
+            return ['card', 'scene_illustration', 'avatar'].includes(this.assetMenu.context.asset_type);
         },
         forkInstructions() {
-            // only legacy messages (rev 0, predating the changelog) reach this
-            // dialog — changelog-backed messages fork through the timeline
-            let instructions = "Creating a shallow fork: All progress after the selected message will be removed. This may require manual cleanup of world state and character details in complex scenes.";
-
-            // Add shared context disconnection warning if scene has shared context
+            let instructions = "Copy the scene up to this message. World state and character details use their current values.";
             if (this.scene?.data?.shared_context) {
-                instructions += "\n\n⚠️ Note: The forked scene will be disconnected from its shared context since shared world context cannot be reconstructed to a specific revision.";
+                instructions += "\n\nThe copy keeps its shared world connection at the world's current state.";
             }
 
             return instructions;
         },
     },
-    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets', 'openVisualLibraryWithAsset', 'openSceneTimeline'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets', 'openVisualLibraryWithAsset', 'openSceneRevisions', 'isConnected', 'sceneScroller'],
     provide() {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
+            openBackgroundSelect: this.openBackgroundSelectForEntry,
+            requestEditNotice: this.requestEditNotice,
             requestRegenerateLastMessage: this.requestRegenerateLastMessage,
             createPin: this.createPin,
             forkSceneInitiate: this.forkSceneInitiate,
@@ -742,12 +960,81 @@ export default {
             // Active backdrop asset id — message components hide the inline
             // image for the asset currently rendered as the backdrop
             getSceneBackdropAssetId: () => this.sceneBackdropAssetId,
+            getReferenceProgress: (assetId) => this.referenceProgress[assetId] || null,
+            getReferenceTargets: this.referenceTargetsFor,
+            getAssetMeta: (assetId) => this.assetsMap[assetId]?.meta || null,
+            isFeedLocked: this.isFeedLocked,
+            markAsReference: this.markAsReference,
         }
     },
     methods: {
 
         getMessageColor(typ) {
-            return resolveMessageColor(this.appearanceConfig, typ);
+            return resolveMessageColor(this.appearanceConfig, typ, this.themeColors);
+        },
+
+        perspectiveForMessage,
+
+        // director, context investigation and generic rows render nothing
+        // when their message type is hidden in the appearance settings
+        messageRowRendered(message) {
+            return ALWAYS_RENDERED_MESSAGE_TYPES.includes(message.type) || !this.getMessageTypeHidden(message.type);
+        },
+
+        isSceneBackdropMessage(message) {
+            return !!this.sceneBackdrop && message.id != null && message.id === this.sceneBackdrop.messageId;
+        },
+
+        requestPerspectives() {
+            if (!this.perspectiveCharacter) return;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'scene_message',
+                action: 'get_perspectives',
+                character: this.perspectiveCharacter,
+                edited: this.perspectiveEdited[this.perspectiveCharacter] || [],
+            }));
+        },
+
+        schedulePerspectivesRefresh() {
+            if (!this.perspectiveCharacter) return;
+            clearTimeout(this._perspectivesTimer);
+            this._perspectivesTimer = setTimeout(() => this.requestPerspectives(), 250);
+        },
+
+        setPerspectiveEdited(character, messageId, edited) {
+            const ids = (this.perspectiveEdited[character] || []).filter(id => id !== messageId);
+            this.perspectiveEdited[character] = edited ? [...ids, messageId] : ids;
+        },
+
+        handlePerspectiveMessages(data) {
+            if (data.type === 'message_edited' || data.type === 'remove_message') {
+                // a new message text discards the hand edit with every other view
+                for (const character of Object.keys(this.perspectiveEdited)) {
+                    this.setPerspectiveEdited(character, data.id, false);
+                }
+            }
+            if (data.type === 'scene_message') {
+                // the server applied these whoever is selected now, so the
+                // record follows the reply and only the display follows the selection
+                if (data.action === 'perspective_edited' && data.changed) {
+                    this.setPerspectiveEdited(data.character, data.id, true);
+                } else if (data.action === 'perspective_dependents_invalidated') {
+                    this.setPerspectiveEdited(data.character, data.id, false);
+                }
+                if (!this.perspectiveCharacter || data.character !== this.perspectiveCharacter) return;
+                if (data.action === 'perspectives') {
+                    this.perspectives = { intro: data.intro, views: data.views, dependents: data.dependents };
+                } else if (data.action === 'perspective_edited') {
+                    if (this.perspectives) this.perspectives.views[data.id] = data.view;
+                    if (data.changed) this.requestPerspectives();
+                } else if (data.action === 'perspective_dependents_invalidated') {
+                    this.requestPerspectives();
+                }
+                return;
+            }
+            if (PERSPECTIVE_REFRESH_TYPES.includes(data.type)) {
+                this.schedulePerspectivesRefresh();
+            }
         },
 
         getMessageTypeHidden(typ) {
@@ -764,11 +1051,48 @@ export default {
         },
 
         getMessageStyle(typ) {
-            return resolveMessageStyle(this.appearanceConfig, typ);
+            return resolveMessageStyle(this.appearanceConfig, typ, this.themeColors);
+        },
+
+        onSceneAreaClick(event) {
+            this.onMessageContainerClick(event);
+            if (this.revealCount === null) {
+                return;
+            }
+            if (event.target.closest?.('.scene-entity, button, a, input, textarea, .v-overlay')) {
+                return;
+            }
+            this.$emit('playthrough-advance');
+        },
+
+        scrollRevealIntoView() {
+            const revealed = this.$refs.messageContainer?.lastElementChild;
+            const scroller = this.sceneScroller();
+            if (!revealed) {
+                return;
+            }
+            // scroll the story to its end rather than aligning the message: at
+            // the end the sticky playthrough toolbar sits in its own place below
+            // the message instead of over it
+            scroller.scrollTop = scroller.scrollHeight;
+            const top = revealed.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+            if (top < 0) {
+                // it does not fit above the toolbar, so its opening lines ended
+                // up off the top of the scroller - start reading it at its top
+                // instead. Measured rather than derived from the message's
+                // height: what is left of the screen depends on the toolbar and
+                // the margins around it
+                scroller.scrollTop += top;
+            }
+        },
+
+        messageAt(index) {
+            return this.messages[index] || null;
         },
 
         clear() {
             this.messages = [];
+            this.perspectiveEdited = {};
             this.lastEffectiveAssetIdByScope = {};
             this.assetCache = {};
             this.processingAssetMessageIds.clear();
@@ -814,15 +1138,26 @@ export default {
                 });
             }
             
+            if (data.type === 'asset_uses'
+                && data.asset_id === this.assetMenuUses.asset_id
+                && data.message_id === this.assetMenuUses.message_id) {
+                this.assetMenuUses = { ...this.assetMenuUses, reasons: data.reasons || [] };
+            }
+
             // Handle message_asset_update - update a message's asset_id dynamically
             if (data.type === 'message_asset_update' && data.message_id) {
                 const msg = this.messages.find(m => m.id === data.message_id);
                 if (msg) {
-                    msg.asset_id = data.asset_id || null;
-                    msg.asset_type = data.asset_type || null;
-                    // Update raw fields so reapplyMessageAssetCadence uses the new values
                     msg.raw_asset_id = data.asset_id || null;
                     msg.raw_asset_type = data.asset_type || null;
+                    msg.asset_cadence_override = data.override_cadence === true;
+                    if (msg.type === 'character') {
+                        // A late update can affect the cadence of subsequent messages too.
+                        this.reapplyMessageAssetCadence();
+                    } else {
+                        msg.asset_id = msg.raw_asset_id;
+                        msg.asset_type = msg.raw_asset_type;
+                    }
 
                     // Request the new asset if not already cached
                     if (msg.asset_id && this.requestSceneAssets && !this.assetCache[msg.asset_id]) {
@@ -875,13 +1210,6 @@ export default {
             // Fall back to character's default avatar from scene data
             if (this.scene?.data?.characters) {
                 const char = this.scene.data.characters.find(c => c.name === characterName);
-                if (char?.avatar) {
-                    return char.avatar;
-                }
-            }
-            // Also check inactive characters
-            if (this.scene?.data?.inactive_characters) {
-                const char = Object.values(this.scene.data.inactive_characters).find(c => c.name === characterName);
                 if (char?.avatar) {
                     return char.avatar;
                 }
@@ -1009,6 +1337,11 @@ export default {
                     msg.asset_id = cadenceResult.effectiveAssetId;
                     msg.asset_type = cadenceResult.shouldShow ? 'avatar' : null;
                     msg.disable_avatar_fallback = cadenceResult.disableFallback;
+                    if (msg.asset_cadence_override) {
+                        msg.asset_id = rawAssetId;
+                        msg.asset_type = rawAssetType;
+                        msg.disable_avatar_fallback = !rawAssetId;
+                    }
                 }
             }
 
@@ -1020,8 +1353,59 @@ export default {
             this.getWebsocket().send(JSON.stringify({ type: 'world_state_agent', action: 'summarize_and_pin', message_id }));
         },
 
-        requestDeleteMessage(message_id) {
-            this.getWebsocket().send(JSON.stringify({ type: 'scene_message', action: 'delete', id: message_id }));
+        // the delete and the edit notice share the answer frame; the request id tells them apart
+        requestHistoryPosition(messageId, kind) {
+            this.historyPositionSerial += 1;
+            const requestId = `${kind}:${messageId}:${this.historyPositionSerial}`;
+            this.getWebsocket().send(JSON.stringify({ type: 'scene_message', action: 'get_history_position', id: messageId, request_id: requestId }));
+            return requestId;
+        },
+
+        requestDeleteMessage(messageId, deleteOnConfirm = null) {
+            if (messageId == null) return;
+            this.pendingDelete = { messageId, deleteOnConfirm, requestId: this.requestHistoryPosition(messageId, 'delete') };
+        },
+
+        requestEditNotice(messageId, onEarlier) {
+            if (messageId == null) return;
+            this.pendingEditNotice = { onEarlier, requestId: this.requestHistoryPosition(messageId, 'edit') };
+        },
+
+        resetHistoryPositionRequests() {
+            // message ids restart with the next scene
+            this.pendingDelete = null;
+            this.pendingEditNotice = null;
+            if (this.$refs.deleteMessageConfirm.confirming) this.$refs.deleteMessageConfirm.cancelAction();
+        },
+
+        handleDeleteConfirmMessages(data) {
+            if (data.type !== 'scene_message' || data.action !== 'history_position') return;
+            const pending = this.pendingDelete;
+            if (!pending || pending.requestId !== data.request_id) return;
+            this.deletePromptFinal = data.final;
+            this.$refs.deleteMessageConfirm.initiateAction(pending);
+        },
+
+        handleEditNoticeMessages(data) {
+            if (data.type !== 'scene_message' || data.action !== 'history_position') return;
+            const pending = this.pendingEditNotice;
+            if (!pending || pending.requestId !== data.request_id) return;
+            this.pendingEditNotice = null;
+            if (!data.final) pending.onEarlier();
+        },
+
+        confirmDeleteMessage(pending) {
+            if (pending !== this.pendingDelete) return;
+            this.pendingDelete = null;
+            if (pending.deleteOnConfirm) {
+                pending.deleteOnConfirm();
+                return;
+            }
+            this.getWebsocket().send(JSON.stringify({ type: 'scene_message', action: 'delete', id: pending.messageId }));
+        },
+
+        cancelDeleteMessage() {
+            this.pendingDelete = null;
         },
 
         // Mark the most recent revision-supporting message as
@@ -1190,27 +1574,74 @@ export default {
         forkSceneInitiate(message_id) {
             const message = this.messages.find(m => m.id === message_id);
 
-            // changelog-backed messages fork through the timeline, positioned
-            // at the message's revision; legacy messages (rev 0, predating the
-            // changelog) fall back to the shallow fork flow
-            if (message && message.rev > 0) {
-                this.openSceneTimeline({ initialRev: message.rev });
+            if (!message) return;
+            if (this.scene?.data?.filename) {
+                if (Number.isInteger(message.rev) && message.rev >= 0 && message.rev <= (this.scene.data.rev || 0)) {
+                    this.openSceneRevisions({ initialRev: message.rev, initialMessageId: message.id });
+                }
                 return;
             }
 
             this.selectedForkMessageId = message_id;
+            this.forkError = '';
             this.$refs.requestForkName.openDialog(
                 { message_id: message_id }
             );
         },
 
         forkScene(message_id, save_name) {
-            this.getWebsocket().send(JSON.stringify({ 
-                type: 'assistant',
-                action: 'fork_new_scene',
-                message_id: message_id,
-                save_name: save_name,
-            }));
+            if (this.pendingForkRequestId) {
+                return;
+            }
+            this.forkError = '';
+            if (!this.isConnected()) {
+                this.forkError = 'Not connected';
+                return;
+            }
+            this.pendingForkRequestId = newUuid();
+            try {
+                this.getWebsocket().send(JSON.stringify({
+                    type: 'assistant',
+                    action: 'fork_new_scene',
+                    message_id: message_id,
+                    save_name: save_name,
+                    request_id: this.pendingForkRequestId,
+                }));
+            } catch {
+                this.pendingForkRequestId = null;
+                this.forkError = 'Not connected';
+            }
+        },
+
+        cancelForkScene() {
+            if (this.pendingForkRequestId) {
+                return;
+            }
+            this.selectedForkMessageId = null;
+            this.forkError = '';
+        },
+
+        resetForkScene() {
+            this.pendingForkRequestId = null;
+            this.selectedForkMessageId = null;
+            this.forkError = '';
+            this.$refs.requestForkName.answered = true;
+            this.$refs.requestForkName.open = false;
+        },
+
+        handleForkSceneMessage(data) {
+            if (data.type !== 'assistant' || data.action !== 'operation_done'
+                || !this.pendingForkRequestId
+                || data.request_id !== this.pendingForkRequestId) {
+                return false;
+            }
+            this.pendingForkRequestId = null;
+            if (data.error) {
+                this.forkError = data.error.message;
+                return true;
+            }
+            this.resetForkScene();
+            return true;
         },
 
         reviseMessage(message_id) {
@@ -1326,7 +1757,9 @@ export default {
                 message_id: this.insertTimePassageMessageId,
                 amount: this.insertTimePassageAmount,
                 unit: this.insertTimePassageUnit,
+                title: this.insertTimePassageTitle || null,
             }));
+            this.insertTimePassageTitle = '';
             this.insertTimePassageDialog = false;
         },
 
@@ -1362,12 +1795,25 @@ export default {
         showAssetMenu(event, context) {
             // Store the context (asset_id, asset_type, character, etc.)
             this.assetMenu.context = { ...context };
+            this.requestAssetMenuUses();
             
             // Set the target element for positioning
             this.assetMenu.target = event.currentTarget || event.target;
             
             // Show the menu
             this.assetMenu.show = true;
+        },
+
+        requestAssetMenuUses() {
+            const ctx = this.assetMenu.context;
+            this.assetMenuUses = { asset_id: ctx.asset_id, message_id: ctx.message_id, reasons: null };
+            if (ctx.asset_type !== 'avatar' || ctx.backdrop || !ctx.asset_id || !ctx.message_id) return;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'scene_assets',
+                action: 'asset_uses',
+                asset_id: ctx.asset_id,
+                message_id: ctx.message_id,
+            }));
         },
 
         /**
@@ -1378,12 +1824,15 @@ export default {
         },
 
         /**
-         * Mark a message as processing an asset operation
+         * Mark a message as processing an asset operation. A regenerated
+         * scene background becomes a Backdrop entry (or only goes to the
+         * library), so its message never gets the update that ends the mark.
          */
-        markAssetProcessing(messageId) {
-            if (messageId) {
-                this.processingAssetMessageIds.add(messageId);
-            }
+        markAssetProcessing(messageId, assetId = null, visType = null) {
+            if (!messageId) return;
+            if (visType === VIS_TYPE.SCENE_BACKGROUND) return;
+            if (assetId && this.assetsMap[assetId]?.meta?.vis_type === VIS_TYPE.SCENE_BACKGROUND) return;
+            this.processingAssetMessageIds.add(messageId);
         },
 
         /**
@@ -1432,12 +1881,65 @@ export default {
             if (!assetId) {
                 return;
             }
+            this.getWebsocket().send(JSON.stringify(setAssetMessage(assetId, [assetTarget.sceneBackdrop()])));
+            this.getWebsocket().send(JSON.stringify(enableSceneBackdropMessage()));
+        },
+
+        referenceTargetsFor(visType) {
+            return referenceTargets(this.agentStatus?.visual?.meta, visType);
+        },
+
+        // messageId names the message whose image started it from the menu
+        markAsReference(assetId, messageId = null) {
+            if (!assetId) return;
+            this.referenceProgress = {
+                ...this.referenceProgress,
+                [assetId]: { asset_id: assetId, step: null, finished: false, errors: [], message_id: messageId },
+            };
             this.getWebsocket().send(JSON.stringify({
-                type: 'scene_assets',
-                action: 'set_scene_backdrop',
+                type: 'visual',
+                action: 'mark_as_reference',
                 asset_id: assetId,
-                enabled: true,
             }));
+        },
+
+        applyReferenceFrame(frame) {
+            // a frame from a run started before this scene loaded has no entry
+            const started = this.referenceProgress[frame.asset_id];
+            if (!started) return;
+            this.referenceProgress = {
+                ...this.referenceProgress,
+                [frame.asset_id]: { ...frame, message_id: started.message_id },
+            };
+            if (frame.finished) {
+                setTimeout(() => this.quietReferenceProgress(frame.asset_id), REFERENCE_DONE_MS);
+            }
+        },
+
+        quietReferenceProgress(assetId) {
+            const entry = this.referenceProgress[assetId];
+            if (!entry?.finished) return;
+            this.referenceProgress = { ...this.referenceProgress, [assetId]: { ...entry, quiet: true } };
+        },
+
+        // the status of a run started from the menu of the message whose
+        // illustration is the backdrop, which has no inline image to show it
+        backdropIndicatorReference(message) {
+            const progress = this.referenceProgress[message.asset_id];
+            if (!progress || progress.message_id !== message.id) return null;
+            const meta = this.assetsMap[message.asset_id]?.meta;
+            const state = referenceState(meta, progress, this.referenceTargetsFor(meta?.vis_type));
+            return referenceStatusVisible(state, progress) ? state : null;
+        },
+
+        isFeedLocked() {
+            return this.uxLocked || this.appBusy || this.revealCount !== null;
+        },
+
+        handleMarkAsReference() {
+            this.assetMenu.show = false;
+            const ctx = this.assetMenu.context;
+            this.markAsReference(ctx.asset_id, ctx.backdrop ? null : ctx.message_id);
         },
 
         /**
@@ -1528,13 +2030,12 @@ export default {
             ws.send(JSON.stringify(message));
         },
 
-        openAssetSelectDialog(assetType) {
+        openAssetSelectDialog(assetType, ctx = this.assetMenu.context) {
             const cfg = ASSET_SELECT_TYPES[assetType];
             if (!cfg) {
                 return;
             }
 
-            const ctx = this.assetMenu.context;
             if (!ctx?.message_id) {
                 return;
             }
@@ -1551,11 +2052,12 @@ export default {
 
             // Populate dialog state
             dialog.messageId = ctx.message_id;
+            dialog.assetType = assetType;
             if (cfg.requiresCharacter) {
                 dialog.characterName = ctx.character;
             }
             dialog.assetIds = assetIds;
-            dialog.selectedAssetId = ctx.asset_id || (assetIds.length > 0 ? assetIds[0] : null);
+            dialog.selectedAssetId = assetIds.includes(ctx.asset_id) ? ctx.asset_id : (assetIds[0] || null);
 
             // Load base64 for items already in cache
             const base64ById = {};
@@ -1596,7 +2098,7 @@ export default {
             }
 
             const ws = this.getWebsocket();
-            ws.send(JSON.stringify(cfg.buildUpdateMessage(dialog)));
+            ws.send(JSON.stringify(setAssetMessage(assetId, cfg.targets(dialog))));
 
             this.closeAssetSelectDialog(assetType);
         },
@@ -1613,13 +2115,12 @@ export default {
             cfg.reset(dialog);
         },
 
-        sendRevisualizeAsset({ assetId, messageId, instructions = null, deleteOld = false }) {
+        sendRevisualizeAsset({ assetId, messageId, instructions = null, deleteOld = false, visType = null }) {
             if (!assetId || !messageId) {
                 return;
             }
 
-            // Mark this message as processing
-            this.processingAssetMessageIds.add(messageId);
+            this.markAssetProcessing(messageId, assetId, visType);
 
             const ws = this.getWebsocket();
             const message = {
@@ -1628,6 +2129,7 @@ export default {
                 asset_id: assetId,
                 asset_allow_override: true,
                 asset_allow_auto_attach: true,
+                message_ids: [messageId],
             };
 
             if (deleteOld) {
@@ -1638,7 +2140,15 @@ export default {
                 message.instructions = instructions;
             }
 
+            if (visType) {
+                message.vis_type = visType;
+            }
+
             ws.send(JSON.stringify(message));
+        },
+
+        assetMenuVisType() {
+            return this.assetMenu.context.backdrop ? VIS_TYPE.SCENE_BACKGROUND : null;
         },
 
         openRevisualizeInstructionsDialog({ deleteOld = false } = {}) {
@@ -1656,6 +2166,7 @@ export default {
                     asset_id: ctx.asset_id,
                     message_id: ctx.message_id,
                     deleteOld: deleteOld,
+                    visType: this.assetMenuVisType(),
                 });
             }
         },
@@ -1671,7 +2182,7 @@ export default {
         },
 
         /**
-         * Handle "Regenerate Illustration" menu option for card and scene_illustration
+         * Handle the "Regenerate" menu option (Shift+click)
          */
         handleRegenerateIllustration() {
             // Close the menu
@@ -1685,11 +2196,12 @@ export default {
                 assetId: ctx.asset_id,
                 messageId: ctx.message_id,
                 deleteOld: false,
+                visType: this.assetMenuVisType(),
             });
         },
 
         /**
-         * Handle "Delete and Regenerate" menu option for card and scene_illustration
+         * Handle the "Regenerate (replace)" menu option (Alt+click)
          */
         handleRegenerateAndDeleteIllustration() {
             // Close the menu
@@ -1703,18 +2215,19 @@ export default {
                 assetId: ctx.asset_id,
                 messageId: ctx.message_id,
                 deleteOld: true,
+                visType: this.assetMenuVisType(),
             });
         },
 
         /**
-         * Handle "Regenerate Illustration" with custom instructions (Ctrl+click)
+         * Handle the "Edit" menu option: regenerate with instructions
          */
         handleOpenRegenerateAssetDialog() {
             this.openRevisualizeInstructionsDialog({ deleteOld: false });
         },
 
         /**
-         * Handle "Delete and Regenerate" with custom instructions (Ctrl+click)
+         * Handle the "Edit (replace)" menu option
          */
         handleOpenRegenerateAndDeleteAssetDialog() {
             this.openRevisualizeInstructionsDialog({ deleteOld: true });
@@ -1732,6 +2245,7 @@ export default {
                 messageId: params.message_id,
                 instructions: instructions,
                 deleteOld: !!params.deleteOld,
+                visType: params.visType || null,
             });
         },
 
@@ -1759,18 +2273,30 @@ export default {
             this.openAssetSelectDialog('scene_illustration');
         },
 
-        /**
-         * Confirm illustration selection
-         */
-        confirmIllustrationSelection() {
-            this.confirmAssetSelection('scene_illustration');
+        handleOpenBackgroundSelect() {
+            this.assetMenu.show = false;
+            this.openAssetSelectDialog('scene_background');
+        },
+
+        openBackgroundSelectForEntry(message) {
+            this.openAssetSelectDialog('scene_background', {
+                message_id: message.id,
+                asset_id: message.backdrop,
+            });
         },
 
         /**
-         * Close illustration select dialog
+         * Confirm illustration or background selection
+         */
+        confirmIllustrationSelection() {
+            this.confirmAssetSelection(this.illustrationSelectDialog.assetType);
+        },
+
+        /**
+         * Close illustration or background select dialog
          */
         closeIllustrationSelectDialog() {
-            this.closeAssetSelectDialog('scene_illustration');
+            this.closeAssetSelectDialog(this.illustrationSelectDialog.assetType);
         },
 
         /**
@@ -1806,6 +2332,12 @@ export default {
             
             const ctx = this.assetMenu.context;
             if (!ctx.message_id) {
+                return;
+            }
+
+            // a backdrop entry has no image to clear: the image is the change
+            if (ctx.backdrop) {
+                this.requestDeleteMessage(ctx.message_id);
                 return;
             }
 
@@ -1859,9 +2391,84 @@ export default {
             ws.send(JSON.stringify(message));
         },
 
+        upsertRow(entry) {
+            const existing = this.messages.findIndex(message => message.type === entry.type && message.id === entry.id);
+            if (existing !== -1) {
+                this.messages.splice(existing, 1, entry);
+                return;
+            }
+            // the choices row stays last: it answers the story, not these rows
+            const last = this.messages.length - 1;
+            if (last >= 0 && this.messages[last].type === 'player_choice') this.messages.splice(last, 0, entry);
+            else this.messages.push(entry);
+        },
+
+        reorderRows(ids) {
+            // the rows after a regenerated reply, in history order: they take the
+            // place of the first of them, and rows the server did not list stay put
+            const listed = new Set(ids);
+            const isListed = message => FEED_ROW_TYPES.includes(message.type) && listed.has(message.id);
+            const start = this.messages.findIndex(isListed);
+            if (start === -1) return;
+            const byId = new Map(this.messages.filter(isListed).map(message => [message.id, message]));
+            const rest = this.messages.filter(message => !isListed(message));
+            rest.splice(start, 0, ...ids.filter(id => byId.has(id)).map(id => byId.get(id)));
+            this.messages = rest;
+        },
+
+        upsertReinforcement(data) {
+            if (data.flags & MESSAGE_FLAGS.HIDDEN) {
+                const existing = this.messages.findIndex(message => message.type === 'reinforcement' && message.id === data.id);
+                if (existing !== -1) this.messages.splice(existing, 1);
+                return;
+            }
+            this.upsertRow({
+                id: data.id,
+                type: 'reinforcement',
+                text: data.message || '',
+                question: data.question,
+                character: data.character || null,
+            });
+        },
+
         handleMessage(data) {
+            this.handleDeleteConfirmMessages(data);
+            this.handleEditNoticeMessages(data);
+            if (data.type === 'system'
+                && ['scene.loading', 'scene.closed', 'scene.load_failure'].includes(data.id)) {
+                this.resetForkScene();
+                this.resetHistoryPositionRequests();
+                this.referenceProgress = {};
+            }
+            if (data.type === 'visual' && data.action === 'mark_as_reference_progress') {
+                this.applyReferenceFrame(data);
+                return;
+            }
+            if (this.handleForkSceneMessage(data)) {
+                return;
+            }
+            if (data.type === 'scene_status' && data.data?.character_transitions) {
+                for (const transition of data.data.character_transitions) {
+                    const existing = this.messages.findIndex(message => message.type === 'character_transition' && message.id === transition.id);
+                    if (existing !== -1) this.messages.splice(existing, 1, { ...transition });
+                }
+            }
+            if (data.type === 'reinforcement') {
+                this.upsertReinforcement(data);
+                return;
+            }
+            if (data.type === 'reorder_messages') {
+                this.reorderRows(data.ids || []);
+                return;
+            }
+            if (data.type === 'character_transition' || data.type === 'scene_backdrop') {
+                this.upsertRow({ ...data });
+                return;
+            }
+            this.handleRevisionCommit(data);
             // Handle asset-related messages centrally (scene_asset, message_asset_update)
             this.handleAssetMessages(data);
+            this.handlePerspectiveMessages(data);
 
             var i;
 
@@ -1897,6 +2504,9 @@ export default {
 
             if (data.type == "clear_screen") {
                 this.messages = [];
+                // message ids restart with each scene, so an id kept here
+                // would name another message of the next scene
+                this.perspectiveEdited = {};
                 this.lastEffectiveAssetIdByScope = {};
                 this.assetCache = {};
                 this.processingAssetMessageIds.clear();
@@ -1913,7 +2523,9 @@ export default {
                 // and the second to last message is the message to remove
                 // also remove the player_choice message
 
-                if (this.messages.length > 1 && this.messages[this.messages.length - 1].type === 'player_choice' && this.messages[this.messages.length - 2].id === data.id) {
+                // (a state update, backdrop or transition row is not the story the choices answer)
+                const beforeLast = this.messages[this.messages.length - 2];
+                if (this.messages.length > 1 && this.messages[this.messages.length - 1].type === 'player_choice' && beforeLast.id === data.id && !FEED_ROW_TYPES.includes(beforeLast.type)) {
                     this.messages.pop();
                 }
 
@@ -1979,6 +2591,21 @@ export default {
                 return;
             }
 
+            if (data.type == "message_revs") {
+                // The backend emits message revs when the snapshots
+                // are committed; patch them in by id.
+                const revs = (data.data && data.data.revs) || [];
+                for (const r of revs) {
+                    for (i = 0; i < this.messages.length; i++) {
+                        if (this.messages[i].id == r.id) {
+                            this.messages[i].rev = r.rev;
+                            break;
+                        }
+                    }
+                }
+                return;
+            }
+
             if (data.type == "message_edited") {
 
                 // find the message by id and update the text + mirror
@@ -1995,7 +2622,10 @@ export default {
                             msg,
                             data.versions,
                             data.active_version,
+                            data.revision_refresh,
+                            data.revision_uncommitted,
                         );
+                        msg.memory_pass = data.memory_pass || null;
                         // Any in-flight spinner (manual editor revision or
                         // in-place regenerate) clears on the echo — the
                         // server has now produced the new canonical.
@@ -2079,9 +2709,10 @@ export default {
                         asset_id: finalAssetId,
                         asset_type: finalAssetType,
                         disable_avatar_fallback: disableAvatarFallback,
-                        rev: data.rev || 0
+                        rev: data.rev ?? null,
+                        memory_pass: data.memory_pass || null,
                     };
-                    this.revisionApplyServerState(charMsg, data.versions, data.active_version);
+                    this.revisionApplyServerState(charMsg, data.versions, data.active_version, data.revision_refresh, data.revision_uncommitted);
                     this.messages.push(charMsg);
                 } else if (data.type === 'director') {
                     this.messages.push(
@@ -2093,7 +2724,7 @@ export default {
                             direction_mode: data.direction_mode,
                             action: data.action,
                             subtype: data.subtype,
-                            rev: data.rev || 0
+                            rev: data.rev ?? null
                         }
                     );
                 } else if (data.type === 'context_investigation') {
@@ -2108,7 +2739,7 @@ export default {
                         asset_id: data.asset_id,
                         asset_type: data.asset_type,
                     };
-                    this.revisionApplyServerState(ctxMsg, data.versions, data.active_version);
+                    this.revisionApplyServerState(ctxMsg, data.versions, data.active_version, data.revision_refresh, data.revision_uncommitted);
                     this.messages.push(ctxMsg);
                 } else if (data.type === 'narrator') {
                     const narratorMsg = {
@@ -2117,17 +2748,15 @@ export default {
                         text: data.message,
                         character: data.character,
                         meta: data.meta,
-                        rev: data.rev || 0,
+                        rev: data.rev ?? null,
                         asset_id: data.asset_id || null,
                         asset_type: data.asset_type || null,
                     };
-                    this.revisionApplyServerState(narratorMsg, data.versions, data.active_version);
+                    this.revisionApplyServerState(narratorMsg, data.versions, data.active_version, data.revision_refresh, data.revision_uncommitted);
                     this.messages.push(narratorMsg);
                 } else if (data.type === 'player_choice') {
-                    console.log('player_choice', data);
                     this.messages.push({ id: data.id, type: data.type, data: data.data });
                 } else if (this.messageTypeIsSceneMessage(data.type)) {
-                    console.log('scene message', data);
                     const genericMsg = {
                         id: data.id,
                         type: data.type,
@@ -2136,12 +2765,13 @@ export default {
                         character: data.character,
                         status: data.status,
                         ts: data.ts,
+                        title: data.title || null,
                         meta: data.meta,
-                        rev: data.rev || 0,
+                        rev: data.rev ?? null,
                         asset_id: data.asset_id || null,
                         asset_type: data.asset_type || null,
                     };
-                    this.revisionApplyServerState(genericMsg, data.versions, data.active_version);
+                    this.revisionApplyServerState(genericMsg, data.versions, data.active_version, data.revision_refresh, data.revision_uncommitted);
                     this.messages.push(genericMsg);
                 } else if (data.type === 'status' && data.data && data.data.as_scene_message === true) {
 
@@ -2176,6 +2806,56 @@ export default {
         }
     },
     watch: {
+        // a finished frame stands in for the reference mark until the scene
+        // status carrying the asset meta it wrote arrives
+        assetsMap() {
+            for (const [assetId, progress] of Object.entries(this.referenceProgress)) {
+                if (progress.finished && !progress.settled) {
+                    this.referenceProgress[assetId] = { ...progress, settled: true };
+                }
+            }
+        },
+        perspectiveCharacter() {
+            this.perspectives = null;
+            this.requestPerspectives();
+        },
+        perspectiveRowIds: 'schedulePerspectivesRefresh',
+        'scene.data.revision_refreshes': {
+            immediate: true,
+            deep: true,
+            handler(refreshes) {
+                const statuses = new Map(
+                    (refreshes || []).map((item) => [item.id, item.revision_refresh]),
+                );
+                for (const message of this.messages) {
+                    if (!statuses.has(message.id)) continue;
+                    const refresh = statuses.get(message.id);
+                    message.revision_refresh = refresh ? { ...refresh } : null;
+                    message.revision_uncommitted = !!refresh?.required;
+                    if (!refresh?.required && message.revision_commit) {
+                        message.revision_commit = null;
+                    }
+                }
+            },
+        },
+        revealCount(next, previous) {
+            // Stepping back shrinks the list and the browser clamps the scroll
+            // for us; stepping forward grows it, and the message just revealed
+            // lands below the fold unless we follow it.
+            if (next !== null && previous !== null && next > previous) {
+                this.$nextTick(this.scrollRevealIntoView);
+            }
+        },
+        // playthrough's reveal cursor is driven from here, where the messages live
+        'messages.length': {
+            immediate: true,
+            handler() {
+                this.$emit('messages-changed', {
+                    count: this.messages.length,
+                    chapters: chapterBoundaries(this.messages),
+                });
+            },
+        },
         // Watch for changes to message asset cadence config only (not all appearance changes)
         messageAssetsConfig: {
             handler: function(newVal) {
@@ -2239,6 +2919,7 @@ export default {
             clearTimeout(this._reapplyDebounceTimer);
             this._reapplyDebounceTimer = null;
         }
+        clearTimeout(this._perspectivesTimer);
         this.setSceneBackdropObjectUrl(null);
     },
 }
@@ -2246,6 +2927,21 @@ export default {
 </script>
 
 <style scoped>
+/* a blocked replace entry keeps its reason readable: only the icon and title dim */
+.asset-menu-replace.v-list-item--disabled {
+    opacity: 1;
+}
+.asset-menu-replace.v-list-item--disabled :deep(.v-list-item__prepend),
+.asset-menu-replace.v-list-item--disabled :deep(.v-list-item-title) {
+    opacity: var(--v-disabled-opacity);
+}
+.asset-menu-replace.v-list-item--disabled :deep(.v-list-item-subtitle) {
+    opacity: var(--v-medium-emphasis-opacity);
+}
+.asset-menu-replace :deep(.v-list-item-subtitle) {
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+}
 .message-container {
     overflow-y: auto;
 }
@@ -2258,18 +2954,9 @@ export default {
     backdrop-filter: blur(4px);
     border-radius: 6px;
     margin-bottom: 8px;
-    /* slim right gutter so the backdrop indicator sits beside the panel,
-       not over the message content */
-    margin-right: 28px;
     /* tight, dense shadow so message text of every type stays legible
        over the backdrop */
-    text-shadow: 1px 1px 2px #000000, 0 0 6px rgba(0, 0, 0, 0.85);
-}
-
-/* character messages carry their own always-on shadow — align it with
-   the backdrop shadow so all types match */
-.scene-backdrop-active .message :deep(.character-message) {
-    text-shadow: inherit;
+    text-shadow: 1px 1px 2px rgb(var(--v-theme-surface)), 0 0 6px rgba(var(--v-theme-surface), 0.85);
 }
 
 /* backdrop text shadow disabled via appearance config */
@@ -2285,17 +2972,31 @@ export default {
     background-color: rgb(var(--v-theme-surface));
 }
 
-.message-wrapper {
+.message-wrapper,
+.message-cell {
     position: relative;
 }
 
+/* split view: the message and the selected character's perspective of it
+   share one row, so the two columns cannot drift apart */
+.message-wrapper--split {
+    display: flex;
+    align-items: stretch;
+}
+
+.message-wrapper--split > .message-cell,
+.message-wrapper--split > .perspective-cell {
+    flex: 0 0 50%;
+    min-width: 0;
+}
+
 /* small always-on marker for the message that set the active backdrop;
-   sits in the right gutter beside the message panel (over the backdrop
-   image, hence the shadow) */
+   sits left of the message's close button, in the alert's close column,
+   which is widened for this message so the marker never covers its text */
 .backdrop-indicator {
     position: absolute;
-    top: 6px;
-    right: 0;
+    top: 10px;
+    right: 40px;
     z-index: 2;
     cursor: pointer;
     opacity: 0.8;
@@ -2306,8 +3007,33 @@ export default {
     opacity: 1;
 }
 
+.backdrop-indicator-reference {
+    position: absolute;
+    top: 4px;
+    right: 64px;
+    z-index: 2;
+    display: flex;
+    border-radius: 14px;
+    background: rgba(var(--v-theme-surface), 0.85);
+}
+
+.backdrop-indicator-reference :deep(.reference-control) {
+    margin-left: 0;
+}
+
+.message-cell--backdrop > .message > div > :deep(.v-alert > .v-alert__close) {
+    margin-inline-start: 40px;
+}
+
+.message-cell--backdrop-status > .message > div > :deep(.v-alert > .v-alert__close) {
+    margin-inline-start: 72px;
+}
+
 .message {
     white-space: pre-wrap;
+    /* an unbreakable token - a pasted URL, a base64 blob - would otherwise run
+       past the column and take the page's horizontal scrollbar with it */
+    overflow-wrap: break-word;
 }
 
 .message.system {
@@ -2319,7 +3045,7 @@ export default {
 }
 
 .message.character {
-    color: #E0E0E0;
+    color: rgba(var(--v-theme-on-surface), 0.87);
 }
 
 .character-message {

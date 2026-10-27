@@ -20,6 +20,7 @@ No domain agents/scenes are required — every test instantiates real Node
 subclasses and runs them through real Graph/Loop primitives.
 """
 
+import asyncio
 import json
 from typing import Any, ClassVar
 
@@ -53,6 +54,7 @@ from talemate.game.engine.nodes.core import (
     Stage,
     StageExit,
     StopGraphExecution,
+    StopModule,
     Trigger,
     Watch,
     dynamic_node_import,
@@ -1623,6 +1625,77 @@ async def test_loop_exit_terminates_immediately_without_callbacks_after_break():
 
 
 @pytest.mark.asyncio
+async def test_loop_cancellation_skips_callbacks():
+    """A cancelled loop never completed, so its callbacks must not fire -
+    the node editor registers `test_done` as one of them (issue #270)."""
+
+    class SleepNode(Node):
+        def setup(self):
+            self.add_input("trigger")
+
+        async def run(self, state):
+            await asyncio.sleep(0.05)
+
+    entry = Entry()
+    sleeper = SleepNode(title="sleeper")
+    loop = Loop()
+    loop.add_node(entry)
+    loop.add_node(sleeper)
+    loop.connect(entry.outputs[0], sleeper.inputs[0])
+
+    cb_called = []
+
+    async def cb(state):
+        cb_called.append(True)
+
+    loop.callbacks.append(cb)
+
+    task = asyncio.create_task(loop.execute(GraphState()))
+    await asyncio.sleep(0.1)
+    task.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    await cleanup_pending_tasks()
+    assert task.cancelled() is True
+    assert cb_called == []
+
+
+@pytest.mark.asyncio
+async def test_loop_stop_module_still_runs_callbacks():
+    """Only cancellation skips the callbacks - a loop torn down by a control
+    exception still reports completion."""
+
+    class StopNode(Node):
+        def setup(self):
+            self.add_input("trigger")
+
+        async def run(self, state):
+            raise StopModule()
+
+    entry = Entry()
+    loop = Loop()
+    loop.add_node(entry)
+    stop_node = StopNode(title="stop")
+    loop.add_node(stop_node)
+    loop.connect(entry.outputs[0], stop_node.inputs[0])
+
+    cb_called = []
+
+    async def cb(state):
+        cb_called.append(True)
+
+    loop.callbacks.append(cb)
+
+    with pytest.raises(StopModule):
+        await loop.execute(GraphState())
+
+    await cleanup_pending_tasks()
+    assert cb_called == [True]
+
+
+@pytest.mark.asyncio
 async def test_loop_exit_condition_terminates_loop():
     """exit_condition checked after each node's run."""
 
@@ -1728,14 +1801,40 @@ async def test_listen_execute_from_event_failsafe_skips_recent_failure():
 
 
 @pytest.mark.asyncio
-async def test_listen_execute_from_event_outside_state_returns_silently():
-    """If there's no active graph_state and no active scene, the helper logs
-    and returns instead of raising."""
+async def test_listen_execute_from_event_stop_module_is_not_a_failure():
+    """StopModule from the inner graph ends the run cleanly, so the fail-safe
+    is not armed and the next event still executes the body."""
+
+    executed = []
+
+    class StopModuleNode(Node):
+        def setup(self):
+            self.add_input("trigger", optional=True)
+
+        async def run(self, state):
+            executed.append(state.data.get("event"))
+            raise StopModule()
 
     listen = Listen(title="listen")
     listen.set_property("event_name", "evt")
-    # No GraphContext, no active scene with nodegraph_state — the helper should
-    # log an error and return None.
+    entry = Entry()
+    n = StopModuleNode()
+    listen.add_node(entry)
+    listen.add_node(n)
+    listen.connect(entry.outputs[0], n.inputs[0])
+
+    with GraphContext():
+        await listen.execute_from_event("first")
+        assert listen._failed is None
+        await listen.execute_from_event("second")
+
+    assert executed == ["first", "second"]
+
+
+@pytest.mark.asyncio
+async def test_listen_execute_from_event_outside_state_returns_silently():
+    listen = Listen(title="listen")
+    listen.set_property("event_name", "evt")
     result = await listen.execute_from_event("payload")
     assert result is None
 

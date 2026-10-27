@@ -17,6 +17,19 @@
                 <v-list-item-title>Actor Action</v-list-item-title>
                 <v-list-item-subtitle>Generate Actor Action <v-chip variant="text" color="highlight5" class="ml-1" size="x-small">{{ primaryModifierLabel }}: Provide direction</v-chip></v-list-item-subtitle>
             </v-list-item>
+
+            <SceneToolsShortcutItems
+                section="actor"
+                :catalog="shortcutCatalog"
+                :shortcuts="shortcuts"
+                :templates="shortcutTemplates"
+                :characters="npcCharacters"
+                :disabled="disabled"
+                @run="runShortcut"
+                @edit="(shortcut) => $emit('shortcut-edit', shortcut)"
+                @add="(section) => $emit('shortcut-add', section)"
+                @add-template="(template) => $emit('shortcut-add-template', template)"
+            />
         </v-list>
     </v-menu>
 
@@ -29,18 +42,33 @@
 
 <script>
 import RequestInput from './RequestInput.vue';
+import SceneToolsShortcutItems from './SceneToolsShortcutItems.vue';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
 
 export default {
     name: "SceneToolsActor",
     components: {
         RequestInput,
+        SceneToolsShortcutItems,
     },
     props: {
         npcCharacters: Array,
         disabled: Boolean,
+        shortcutCatalog: {
+            type: Array,
+            default: () => [],
+        },
+        shortcuts: {
+            type: Object,
+            default: () => ({}),
+        },
+        shortcutTemplates: {
+            type: Object,
+            default: () => ({}),
+        },
     },
     inject: ['getWebsocket'],
+    emits: ['shortcut-add', 'shortcut-edit', 'shortcut-add-template'],
     data() {
         return {
             primaryModifierLabel,
@@ -58,6 +86,16 @@ export default {
             let callback = this[`action${params.action}`];
             if(callback){
                 callback({}, input, params);
+            }
+        },
+
+        runShortcut({shortcut, entry, character}) {
+            switch (entry.id) {
+                case 'conversation.request_actor_action':
+                    this.actionGenerateActingAction({}, shortcut.instructions, {character: character || ""});
+                    break;
+                default:
+                    console.warn('unhandled scene tool shortcut action', entry.id);
             }
         },
 

@@ -20,6 +20,13 @@ from talemate.context import active_scene
 from talemate.scene_assets import (
     AssetMeta,
     AssetSelectionContext,
+    AssetTargetError,
+    AssetTargetNotFound,
+    CharacterAvatarTarget,
+    CharacterCoverTarget,
+    MessageTarget,
+    SceneBackdropTarget,
+    SceneCoverTarget,
     TAG_MATCH_MODE,
     AssetAttachmentContext,
 )
@@ -1075,6 +1082,7 @@ class MakeAssetAttachmentContext(Node):
     - current_avatar: whether to set the current avatar image
     - override_default_avatar: whether to override the default avatar image (requires default_avatar=true)
     - override_current_avatar: whether to override the current avatar image (requires current_avatar=true)
+    - scene_backdrop: whether the saved image becomes the scene backdrop; while it is generated, a pending backdrop message waits for it in the history (right after the last of message_ids, or at the end)
 
     Outputs:
     - context: the asset attachment context object
@@ -1092,10 +1100,12 @@ class MakeAssetAttachmentContext(Node):
     - current_avatar: current avatar flag (passed through)
     - override_default_avatar: default avatar override flag (passed through)
     - override_current_avatar: current avatar override flag (passed through)
+    - scene_backdrop: scene backdrop flag (passed through)
 
     Note:
     - When message_ids is empty, assets will be attached to the most recent appropriate message
     - When message_ids is provided, assets will only be attached to those specific messages
+    - A scene background generated with allow_auto_attach becomes the scene backdrop instead of a message asset (only while auto-attach is on in the appearance settings)
     - Use allow_override=true to replace existing message assets, false to skip messages that already have assets
     - Use delete_old=true to delete the old asset when replacing (requires allow_override=true)
     """
@@ -1194,6 +1204,12 @@ class MakeAssetAttachmentContext(Node):
             type="bool",
             default=False,
         )
+        scene_backdrop = PropertyField(
+            name="scene_backdrop",
+            description="Whether the saved image becomes the scene backdrop",
+            type="bool",
+            default=False,
+        )
 
     def __init__(self, title="Make Asset Attachment Context", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -1213,6 +1229,7 @@ class MakeAssetAttachmentContext(Node):
         self.add_input("current_avatar", socket_type="bool", optional=True)
         self.add_input("override_default_avatar", socket_type="bool", optional=True)
         self.add_input("override_current_avatar", socket_type="bool", optional=True)
+        self.add_input("scene_backdrop", socket_type="bool", optional=True)
 
         self.set_property("asset_name", "")
         self.set_property("tags", [])
@@ -1228,6 +1245,7 @@ class MakeAssetAttachmentContext(Node):
         self.set_property("current_avatar", False)
         self.set_property("override_default_avatar", False)
         self.set_property("override_current_avatar", False)
+        self.set_property("scene_backdrop", False)
 
         self.add_output("context", socket_type="asset_attachment_context")
         self.add_output("asset_name", socket_type="str")
@@ -1244,6 +1262,7 @@ class MakeAssetAttachmentContext(Node):
         self.add_output("current_avatar", socket_type="bool")
         self.add_output("override_default_avatar", socket_type="bool")
         self.add_output("override_current_avatar", socket_type="bool")
+        self.add_output("scene_backdrop", socket_type="bool")
 
     async def run(self, state: GraphState):
         tags = self.normalized_input_value("tags")
@@ -1262,6 +1281,7 @@ class MakeAssetAttachmentContext(Node):
         current_avatar = self.normalized_input_value("current_avatar")
         override_default_avatar = self.normalized_input_value("override_default_avatar")
         override_current_avatar = self.normalized_input_value("override_current_avatar")
+        scene_backdrop = bool(self.normalized_input_value("scene_backdrop"))
 
         context = AssetAttachmentContext(
             asset_name=asset_name,
@@ -1278,6 +1298,7 @@ class MakeAssetAttachmentContext(Node):
             current_avatar=current_avatar,
             override_default_avatar=override_default_avatar,
             override_current_avatar=override_current_avatar,
+            scene_backdrop=scene_backdrop,
         )
 
         self.set_output_values(
@@ -1297,6 +1318,7 @@ class MakeAssetAttachmentContext(Node):
                 "current_avatar": current_avatar,
                 "override_default_avatar": override_default_avatar,
                 "override_current_avatar": override_current_avatar,
+                "scene_backdrop": scene_backdrop,
             }
         )
 
@@ -1388,16 +1410,16 @@ class SetCoverImage(Node):
         scene: "Scene" = active_scene.get()
         override_scene = self.normalized_input_value("override_scene")
         override_character = self.normalized_input_value("override_character")
+        targets = []
         if set_on_scene:
-            await scene.assets.set_scene_cover_image(
-                asset_id=asset_id, override=override_scene
-            )
+            targets.append((SceneCoverTarget(), override_scene))
         if character:
-            await scene.assets.set_character_cover_image(
-                character=character,
-                asset_id=asset_id,
-                override=override_character,
-            )
+            targets.append((CharacterCoverTarget.of(character), override_character))
+        for target, override in targets:
+            try:
+                await scene.assets.set_asset(target, asset_id, override=override)
+            except AssetTargetError as e:
+                raise InputValueError(self, "asset_id", str(e))
 
         self.set_output_values(
             {
@@ -1407,6 +1429,64 @@ class SetCoverImage(Node):
                 "override_scene": override_scene,
                 "override_character": override_character,
                 "character": character,
+            }
+        )
+
+
+@register("assets/SetSceneBackdrop")
+class SetSceneBackdrop(Node):
+    """
+    Make an existing scene asset the scene backdrop, the image shown behind
+    the scene text. A changed backdrop is recorded in the scene history, so
+    Replay shows each passage with the backdrop it had. Whether the
+    backdrop is shown at all (Immersive) is left as it is.
+
+    Inputs:
+
+    - state: The graph state
+    - asset_id: The id of the asset to show as the backdrop
+
+    Outputs:
+
+    - state: The state input, passed through
+    - asset_id: The asset id, passed through
+    - changed: True when the backdrop changed (False when it already was the backdrop)
+    """
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            title_color=ASSET_NODE_TITLE_COLOR,
+            node_color=ASSET_NODE_COLOR,
+            icon="F0552",  # upload
+        )
+
+    def __init__(self, title="Set Scene Backdrop", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("asset_id", socket_type="str")
+
+        self.set_property("asset_id", "")
+
+        self.add_output("state")
+        self.add_output("asset_id", socket_type="str")
+        self.add_output("changed", socket_type="bool")
+
+    async def run(self, state: GraphState):
+        asset_id = self.require_input("asset_id")
+        scene: "Scene" = active_scene.get()
+        if not scene.assets.validate_asset_id(asset_id):
+            raise InputValueError(self, "asset_id", f"No asset with id {asset_id}.")
+        result = await scene.assets.set_asset(SceneBackdropTarget(), asset_id)
+
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "asset_id": asset_id,
+                "changed": result.changed,
             }
         )
 
@@ -1482,15 +1562,9 @@ class SetAvatarImage(Node):
                 f"Invalid avatar_type: {avatar_type}. Must be 'default' or 'current'",
             )
 
-        # Set the avatar based on type
-        if avatar_type == "current":
-            await scene.assets.set_character_current_avatar(
-                character=character, asset_id=asset_id, override=True
-            )
-        else:
-            await scene.assets.set_character_avatar(
-                character=character, asset_id=asset_id, override=True
-            )
+        await scene.assets.set_asset(
+            CharacterAvatarTarget.of(character, slot=avatar_type), asset_id
+        )
 
         scene.emit_status()
 
@@ -1516,6 +1590,7 @@ class UpdateMessageAsset(Node):
     - state: graph state (required)
     - message_ids: List of message IDs to update
     - asset_id: The new asset ID
+    - override_cadence: Show an explicit selection regardless of avatar cadence
 
     Outputs:
 
@@ -1524,6 +1599,14 @@ class UpdateMessageAsset(Node):
     - message_ids: List of message IDs (passthrough)
     - asset_id: The asset ID (passthrough)
     """
+
+    class Fields:
+        override_cadence = PropertyField(
+            name="override_cadence",
+            description="Show an explicit selection regardless of avatar cadence",
+            type="bool",
+            default=False,
+        )
 
     @pydantic.computed_field(description="Node style")
     @property
@@ -1541,6 +1624,9 @@ class UpdateMessageAsset(Node):
         self.add_input("state")
         self.add_input("message_ids", socket_type="list", optional=True)
         self.add_input("asset_id", socket_type="str")
+
+        self.add_input("override_cadence", socket_type="bool", optional=True)
+        self.set_property("override_cadence", False)
 
         self.add_output("state")
         self.add_output("messages", socket_type="list")
@@ -1563,15 +1649,18 @@ class UpdateMessageAsset(Node):
         messages = []
         for message_id in message_ids:
             try:
-                message = await scene.assets.update_message_asset(
-                    message_id=message_id,
-                    asset_id=asset_id,
+                await scene.assets.set_asset(
+                    MessageTarget(
+                        message_id=message_id,
+                        override_cadence=bool(self.get_input_value("override_cadence")),
+                    ),
+                    asset_id,
                 )
-                # Skip messages that aren't found
-                if message is not None:
-                    messages.append(message)
-            except ValueError as e:
+            except AssetTargetNotFound:
+                continue
+            except AssetTargetError as e:
                 raise InputValueError(self, "asset_id", str(e))
+            messages.append(scene.get_message(message_id))
 
         self.set_output_values(
             {

@@ -61,6 +61,17 @@ class _ResolverAgent(Agent):
                         value=["a", "b"],
                         scene_overridable=True,
                     ),
+                    "api_key": AgentActionConfig(
+                        type="password",
+                        label="api key",
+                        value="global-key",
+                    ),
+                    "global_only": AgentActionConfig(
+                        type="text",
+                        label="global only",
+                        value="global-only",
+                        scene_overridable=False,
+                    ),
                 },
             ),
             "locked": AgentAction(
@@ -279,6 +290,20 @@ class TestAgentResolveConfig:
         agent = _ResolverAgent(scene=_scene_with_overrides(overrides))
         assert agent.resolve_config("container", "fmt") == "global-fmt"
 
+    def test_override_for_a_secret_field_is_ignored(self, tmp_path: Path):
+        """A hand-edited or imported settings file must not swap a credential
+        per scene — the UI offers no control to clear it again."""
+        overrides = SceneAgentSettings(filepath=tmp_path / "x.json")
+        overrides.set_value("resolver-test", "container", "api_key", "scene-key")
+        agent = _ResolverAgent(scene=_scene_with_overrides(overrides))
+        assert agent.resolve_config("container", "api_key") == "global-key"
+
+    def test_override_for_a_non_overridable_field_is_ignored(self, tmp_path: Path):
+        overrides = SceneAgentSettings(filepath=tmp_path / "x.json")
+        overrides.set_value("resolver-test", "container", "global_only", "scene-value")
+        agent = _ResolverAgent(scene=_scene_with_overrides(overrides))
+        assert agent.resolve_config("container", "global_only") == "global-only"
+
 
 class TestAgentResolveEnabled:
     def test_returns_global_enabled_when_no_override(self):
@@ -305,6 +330,49 @@ class TestAgentResolveEnabled:
         overrides.set_enabled("resolver-test", "locked", False)
         agent = _ResolverAgent(scene=_scene_with_overrides(overrides))
         assert agent.resolve_enabled("locked") is True
+
+
+class TestAgentWriteConfig:
+    """`write_config` obeys the same declaration-wins rule as the resolver, so
+    a write can't persist a value `resolve_config` would then ignore."""
+
+    def test_writes_global_value_when_no_override(self):
+        agent = _ResolverAgent(scene=None)
+        agent.write_config("container", "fmt", "new-fmt")
+        assert agent.actions["container"].config["fmt"].value == "new-fmt"
+
+    def test_writes_active_override_when_overridable(self, tmp_path: Path):
+        overrides = SceneAgentSettings(filepath=tmp_path / "x.json")
+        overrides.set_value("resolver-test", "container", "fmt", "scene-fmt")
+        agent = _ResolverAgent(scene=_scene_with_overrides(overrides))
+        agent.write_config("container", "fmt", "new-fmt")
+        assert overrides.get_value("resolver-test", "container", "fmt") == "new-fmt"
+        # the global value is left alone when an override took the write
+        assert agent.actions["container"].config["fmt"].value == "global-fmt"
+
+    def test_secret_field_write_bypasses_a_legacy_override(self, tmp_path: Path):
+        overrides = SceneAgentSettings(filepath=tmp_path / "x.json")
+        overrides.set_value("resolver-test", "container", "api_key", "scene-key")
+        agent = _ResolverAgent(scene=_scene_with_overrides(overrides))
+        agent.write_config("container", "api_key", "new-key")
+        assert agent.actions["container"].config["api_key"].value == "new-key"
+        assert (
+            overrides.get_value("resolver-test", "container", "api_key") == "scene-key"
+        )
+        assert agent.resolve_config("container", "api_key") == "new-key"
+
+    def test_non_overridable_field_write_bypasses_a_legacy_override(
+        self, tmp_path: Path
+    ):
+        overrides = SceneAgentSettings(filepath=tmp_path / "x.json")
+        overrides.set_value("resolver-test", "container", "global_only", "scene-value")
+        agent = _ResolverAgent(scene=_scene_with_overrides(overrides))
+        agent.write_config("container", "global_only", "new-value")
+        assert agent.actions["container"].config["global_only"].value == "new-value"
+        assert (
+            overrides.get_value("resolver-test", "container", "global_only")
+            == "scene-value"
+        )
 
 
 class TestAgentWriteEnabled:
@@ -399,6 +467,32 @@ class TestSceneOverridesPayload:
     def test_empty_override_returns_empty_payload(self):
         agent = _ResolverAgent(scene=_scene_with_overrides(None))
         assert Agent._scene_overrides_payload(agent) == {}
+
+
+class TestDropUndeclaredFields:
+    def _overlay(self, tmp_path: Path) -> SceneAgentSettings:
+        overrides = SceneAgentSettings(filepath=tmp_path / "x.json")
+        overrides.set_value("resolver-test", "container", "fmt", "scene")
+        overrides.set_value("resolver-test", "container", "gone", "old")
+        overrides.set_value("resolver-test", "child", "key", "kept")
+        return overrides
+
+    def test_drops_only_keys_of_declared_actions(self, tmp_path: Path):
+        overrides = self._overlay(tmp_path)
+        agent = _ResolverAgent()
+
+        dropped = overrides.drop_undeclared_fields("resolver-test", agent.actions)
+
+        assert dropped == ["container.gone"]
+        assert overrides.get_value("resolver-test", "container", "fmt") == "scene"
+        assert overrides.get_value("resolver-test", "container", "gone") is UNSET
+        # an action missing from the agent may be a dynamic child of another config
+        assert overrides.get_value("resolver-test", "child", "key") == "kept"
+
+    def test_other_agents_are_untouched(self, tmp_path: Path):
+        overrides = self._overlay(tmp_path)
+        assert overrides.drop_undeclared_fields("someone-else", {}) == []
+        assert overrides.get_value("resolver-test", "container", "gone") == "old"
 
 
 # ---------------------------------------------------------------------------

@@ -27,6 +27,7 @@ class InsertAfterPayload(pydantic.BaseModel):
     message_id: int
     amount: int
     unit: str
+    title: str | None = None
 
 
 class DeletePayload(pydantic.BaseModel):
@@ -37,6 +38,7 @@ class UpdatePayload(pydantic.BaseModel):
     message_id: int
     amount: int
     unit: str
+    title: str | None = None
 
 
 class TimePassagePlugin(Plugin):
@@ -53,6 +55,7 @@ class TimePassagePlugin(Plugin):
                 payload.message_id,
                 payload.amount,
                 payload.unit,
+                payload.title,
             )
         except (ValueError, IndexError) as e:
             await self.signal_operation_failed(str(e))
@@ -89,6 +92,7 @@ class TimePassagePlugin(Plugin):
                 payload.message_id,
                 payload.amount,
                 payload.unit,
+                payload.title,
             )
         except (ValueError, IndexError) as e:
             await self.signal_operation_failed(str(e))

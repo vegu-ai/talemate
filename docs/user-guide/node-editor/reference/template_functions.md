@@ -456,13 +456,13 @@ Retrieves configuration values from agent actions. Useful for accessing agent-sp
 
 ### time_diff
 
-Converts an ISO8601 timestamp to a human-readable time difference relative to the current scene time.
+Converts a scene timestamp to a human-readable time difference relative to the current scene time.
 
 !!! payload "Arguments"
 
     | Argument | Type | Description |
     |----------|------|-------------|
-    | `iso8601_time` | str | ISO8601 formatted timestamp |
+    | `ts` | int | Timestamp in seconds since the start of the scene |
 
 !!! return "Returns"
 
@@ -481,7 +481,7 @@ Converts an ISO8601 timestamp to a human-readable time difference relative to th
     Alice was last seen 3 hours ago.
     ```
 
-    **Note:** `last_seen_timestamp` is not a real variable, it's just an example of how to use the function. Talemate uses iso8601 timestamps to timestamp messages and keep track of scene time.
+    **Note:** `last_seen_timestamp` is not a real variable, it's just an example of how to use the function. Talemate timestamps messages and tracks scene time as whole seconds elapsed since the start of the scene. The human-readable output uses a 30 day month and a 365 day year.
 
     Historic events entered into long term memory will also have explicit timestamps.
 

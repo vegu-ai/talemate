@@ -8,7 +8,7 @@
                 class="mb-0 editable-list-item"
             >
                 <v-card-text class="pa-1 d-flex align-center">
-                    <div class="editable-list-item-text flex-grow-1 text-caption">
+                    <div class="editable-list-item-text flex-grow-1 text-body-small">
                         {{ item }}
                     </div>
                     <div class="editable-list-item-actions d-flex align-center ml-1">

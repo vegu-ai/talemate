@@ -8,6 +8,13 @@ from talemate.game.engine.context_id.scanner import (
     context_id_scan_state,
 )
 from talemate.game.engine.context_id.base import ContextIDItem
+from _node_test_helpers import run_node
+from conftest import MockScene, bootstrap_scene
+from talemate.character import Character
+from talemate.game.engine.context_id import context_id_item_from_string
+from talemate.game.engine.nodes.context_id import RenderContextIDs, ScanContextIDs
+from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge
+from talemate.world_state import ManualContext
 
 
 @pytest.fixture
@@ -464,3 +471,63 @@ async def test_collector_context_ids_accumulate(mock_scene):
                 "Update `world_entry:item1` again", mock_scene
             )
             assert len(collector.context_ids) == 2  # Still 2, not 3
+
+
+@pytest.fixture
+def knowledge_scene():
+    scene = MockScene()
+    bootstrap_scene(scene)
+    scene.character_data = {
+        "Bob": Character(
+            name="Bob",
+            base_attributes={"secret": "Bob buried the ledger."},
+            visibility={"secret": EntryVisibility(mode="owner")},
+            acting_instructions="Speaks slowly.",
+        ),
+        "Alice": Character(name="Alice"),
+    }
+    scene.world_state.manual_context = {
+        "Hidden Door": ManualContext(
+            id="Hidden Door", text="Behind the cupboard.", meta={"typ": "world_state"}
+        )
+    }
+    scene.world_state.knowledge = [
+        KnowledgeEdge(character="Alice", target="Hidden Door", source="director")
+    ]
+    return scene
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("display_mode", ["compact", "normal", "subsection"])
+async def test_scan_renders_known_by_line(knowledge_scene, display_mode):
+    text = (
+        "Update `character.attribute:Bob.secret`, `world_entry.manual:Hidden Door` "
+        "and `character.acting_instructions:Bob`."
+    )
+    outputs = await run_node(
+        ScanContextIDs(),
+        scene=knowledge_scene,
+        inputs={"text": text, "display_mode": display_mode},
+    )
+    rendered = outputs["rendered"]
+    assert len(outputs["context_id_items"]) == 3
+    assert "Bob buried the ledger.\nKnown by: only Bob (owner)\n---" in rendered
+    assert (
+        "Behind the cupboard.\nKnown by: everyone; grants: Alice (director)\n---"
+        in rendered
+    )
+    assert "Speaks slowly.\n---" in rendered
+    assert rendered.count("Known by:") == 2
+
+
+@pytest.mark.asyncio
+async def test_render_context_ids_known_by_line(knowledge_scene):
+    item = await context_id_item_from_string(
+        "character.attribute:Bob.secret", knowledge_scene
+    )
+    outputs = await run_node(
+        RenderContextIDs(), scene=knowledge_scene, inputs={"items": item}
+    )
+    assert (
+        "Bob buried the ledger.\nKnown by: only Bob (owner)\n---" in outputs["rendered"]
+    )

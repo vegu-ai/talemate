@@ -204,10 +204,11 @@ def patch_rag_build():
     Patch the RAG build action used by memory-context.jinja2.
 
     This is needed because memory-context.jinja2 calls:
-    agent_action(agent.agent_type, "rag_build", prompt=memory_prompt)
+    agent_action(agent.agent_type, "rag_build_for_author", prompt=memory_prompt)
     """
     with patch("talemate.instance.get_agent") as mock_get_agent:
         mock_agent = Mock()
         mock_agent.rag_build = AsyncMock(return_value=[])
+        mock_agent.rag_build_for_author = AsyncMock(return_value=[])
         mock_get_agent.return_value = mock_agent
         yield mock_get_agent

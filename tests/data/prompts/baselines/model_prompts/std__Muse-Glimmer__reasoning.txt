@@ -1,0 +1,5 @@
+<|start|>system<|message|>You are a helpful storytelling assistant.
+
+Reasoning strength: low.
+
+# Valid recipients: "self", "user".<|eot|><|start|>user<|message|>Write the next scene.<|eot|><|start|>assistant

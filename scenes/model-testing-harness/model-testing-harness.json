@@ -419,5 +419,6 @@
   "nodes_filename": "",
   "creative_nodes_filename": "",
   "shared_context": null,
+  "agent_settings_file": "model-testing-harness.json",
   "game_state_watch_paths": []
 }

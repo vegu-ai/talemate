@@ -12,6 +12,7 @@ from talemate.scene_message import (
 )
 from talemate.scene.schema import ScenePhase, SceneType
 from talemate.scene.intent import set_scene_phase
+from talemate.exceptions import GenerationProcessingError
 from talemate.world_state.manager import WorldStateManager
 from talemate.world_state.templates.scene import SceneType as TemplateSceneType
 import talemate.agents.director.auto_direct_nodes  # noqa: F401
@@ -266,7 +267,10 @@ class AutoDirectMixin:
 
     @set_processing
     async def auto_direct_set_scene_intent(
-        self, require: bool = False
+        self,
+        require: bool = False,
+        raise_on_error: bool = False,
+        instructions: str = "",
     ) -> ScenePhase | None:
         async def set_scene_intention(type: str, intention: str) -> ScenePhase:
             await set_scene_phase(self.scene, type, intention)
@@ -304,11 +308,37 @@ class AutoDirectMixin:
             ),
             retries=1,
             require=require,
+            instructions=instructions,
         )
 
         await focal_handler.request(
             "director.direct-determine-scene-intent",
         )
+
+        calls: list[focal.Call] = focal_handler.state.calls
+
+        if raise_on_error:
+            # focal swallows callback errors onto the call, so a failed
+            # set_scene_intention is otherwise indistinguishable from the
+            # director deliberately leaving the intent alone
+            for call in calls:
+                if call.name == "set_scene_intention" and call.error:
+                    raise GenerationProcessingError(
+                        f"set_scene_intention failed: {call.error}"
+                    )
+
+            # neither a scene intention nor an explicit do_nothing means the
+            # response was empty or carried no usable call - no decision was
+            # made, which is a failed evaluation rather than a no-op
+            if not any(call.called for call in calls):
+                raise GenerationProcessingError(
+                    "Scene intent evaluation produced no decision - the response was empty or contained no usable function call"
+                )
+
+        if not any(
+            call.name == "set_scene_intention" and call.called for call in calls
+        ):
+            return None
 
         return self.scene.intent_state.phase
 

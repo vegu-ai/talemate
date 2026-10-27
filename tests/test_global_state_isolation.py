@@ -9,10 +9,12 @@ function) through setup and teardown, and checks the restore directly.
 """
 
 import sys
+from pathlib import Path
 
 import pytest
 
 import talemate.agents.tts.voice_library as voice_library
+import talemate.config.state as config_state
 import talemate.emit.async_signals as async_signals
 import talemate.instance as instance
 import talemate.server.agent_config as agent_config
@@ -36,6 +38,30 @@ def run_fixture(fixture):
             return False
 
     return _Driver()
+
+
+class TestConfigFileIsolation:
+    def test_config_path_is_inside_the_worker_temp_directory(self):
+        assert config_state.CONFIG_FILE.parent == Path(conftest._TEST_CONFIG_DIR.name)
+        assert config_state.CONFIG_FILE != conftest._REAL_CONFIG_FILE
+
+    def test_builtin_open_rejects_the_real_config_path(self, monkeypatch, tmp_path):
+        protected = tmp_path / "config.yaml"
+        monkeypatch.setattr(conftest, "_REAL_CONFIG_FILE", protected)
+
+        with pytest.raises(pytest.fail.Exception, match="real config file"):
+            open(protected, "w")
+
+        assert not protected.exists()
+
+    def test_pathlib_open_rejects_the_real_config_path(self, monkeypatch, tmp_path):
+        protected = tmp_path / "config.yaml"
+        monkeypatch.setattr(conftest, "_REAL_CONFIG_FILE", protected)
+
+        with pytest.raises(pytest.fail.Exception, match="real config file"):
+            protected.write_text("must not be written")
+
+        assert not protected.exists()
 
 
 class TestAgentsRegistryIdentity:
@@ -89,6 +115,17 @@ class TestRestoreGlobalRegistries:
             assert probe.id in voice_library.VOICE_LIBRARY.voices
 
         assert voice_library.VOICE_LIBRARY is before
+
+    def test_pending_apply_marks_are_rolled_back_in_place(self):
+        before = config_state.PENDING_APPLY
+        marked_before = set(before)
+
+        with run_fixture(conftest.restore_global_registries):
+            config_state.mark_apply_pending("clients", "agents")
+            assert config_state.PENDING_APPLY == {"clients", "agents"}
+
+        assert config_state.PENDING_APPLY is before
+        assert config_state.PENDING_APPLY == marked_before
 
 
 class TestSignalSnapshotInvariant:

@@ -1,17 +1,26 @@
 import pydantic
 from openai import AsyncOpenAI
 
-from talemate.client.base import ClientBase, ParameterReroute, CommonDefaults
+from talemate.client.base import (
+    ClientBase,
+    ParameterReroute,
+    CommonDefaults,
+)
+from talemate.client.model_probe import OpenAIModelListProbeMixin
 from talemate.client.registry import register
+
+# LMStudio defers parameter semantics to the OpenAI API reference, which
+# documents up to 4 stop sequences.
+MAX_STOPPING_STRINGS = 4
 
 
 class Defaults(CommonDefaults, pydantic.BaseModel):
     api_url: str = "http://localhost:1234"
-    max_token_length: int = 8192
+    max_token_length: int = 16384
 
 
 @register()
-class LMStudioClient(ClientBase):
+class LMStudioClient(OpenAIModelListProbeMixin, ClientBase):
     auto_determine_prompt_template: bool = True
     client_type = "lmstudio"
     remote_model_locked: bool = True
@@ -35,6 +44,16 @@ class LMStudioClient(ClientBase):
             ),
         ]
 
+    def tune_prompt_parameters(self, parameters: dict, kind: str):
+        super().tune_prompt_parameters(parameters, kind)
+
+        # warn=False: with only 4 slots any scene with a couple of other
+        # characters overflows on every conversation generation, and the user
+        # has nothing to act on
+        parameters["stopping_strings"] = self.build_stopping_strings(
+            parameters, cap=MAX_STOPPING_STRINGS, warn=False
+        )
+
     @property
     def api_key(self):
         # LMStudio doesn't currently support API keys so we'll just use a dummy key
@@ -42,23 +61,7 @@ class LMStudioClient(ClientBase):
         return "sk-1234"
 
     def make_client(self):
-        return AsyncOpenAI(base_url=self.api_url + "/v1", api_key=self.api_key)
-
-    async def get_model_name(self):
-        client = self.make_client()
-        models = await client.models.list(timeout=self.status_request_timeout)
-        try:
-            model_name = models.data[0].id
-        except IndexError:
-            return None
-
-        # model name comes back as a file path, so we need to extract the model name
-        # the path could be windows or linux so it needs to handle both backslash and forward slash
-
-        if model_name:
-            model_name = model_name.replace("\\", "/").split("/")[-1]
-
-        return model_name
+        return AsyncOpenAI(base_url=self.require_api_url_v1(), api_key=self.api_key)
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """

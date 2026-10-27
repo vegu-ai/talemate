@@ -63,7 +63,7 @@ Select the appropriate module type.
 |-------------|-------------|
 | :material-file-multiple: Copy current | Copies the currently open module into a new module |
 | :material-source-fork: Extend current | [Extends](module-inheritance.md) the currently open module into a new module |
-| :material-console-line: Command | Creates a new [command](command-module.md) module |
+| :material-console-line: Command | Creates a new [command](command_module.md) module |
 | :material-alpha-e-circle: Event | Creates a new [event](events.md) module |
 | :material-function: Function | Creates a new [function](functions.md) module |
 | :material-file: Module | Creates a new module |
@@ -124,7 +124,7 @@ The toolbar shows the path of the currently open module and provides:
 
 #### :material-bug: Debug Menu
 
-Allows you to toggle on or off some debug options.
+Allows you to toggle on or off some debug options and holds the module sync utility.
 
 ![Node Editor Debug Menu](../img/user-interface-0009.png)
 
@@ -133,6 +133,10 @@ Allows you to toggle on or off some debug options.
 | Set State | Causes Set State nodes to log their state to the log watcher |
 | Get State | Causes Get State nodes to log their state to the log watcher |
 | Clear Log on Test | Clears the log watcher on test |
+| :material-refresh: Sync Node Modules | Registers [command](command_module.md), director chat action and agent websocket handler modules with the running scene, without reloading it |
+
+!!! note "Syncing happens automatically"
+    Modules of these types are synced as soon as they are added, saved, deleted or promoted, so the menu item is only needed as a manual fallback.
 
 #### :material-movie-play: Start Scene Test
 

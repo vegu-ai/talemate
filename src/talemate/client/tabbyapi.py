@@ -1,15 +1,24 @@
 import random
 import json
+from typing import NoReturn
+
 import httpx
 from talemate.client.api_handles import (
     ApiHandlesPromptTemplateConfig,
     ApiHandlesPromptTemplateMixin,
+    ChatReasoningMixin,
     api_handles_prompt_template_extra_fields,
 )
-from talemate.client.base import ClientBase, ExtraField, CommonDefaults
+from talemate.client.base import (
+    ClientBase,
+    CommonDefaults,
+    ExtraField,
+    ParameterReroute,
+)
 from talemate.client.registry import register
 from talemate.client.utils import urljoin
 from talemate.config.schema import Client as BaseClientConfig
+from talemate.exceptions import GenerationProcessingError
 
 EXPERIMENTAL_DESCRIPTION = """Use this client to use all of TabbyAPI's features. Note on EXL3 models: They seem to be very sensitive to `presence_penalty`, `frequency_penalty` and `repetition_penalty_range`. If you're getting gibberish output, try creating a new inference parameter group and turn those off or way down."""
 
@@ -17,7 +26,7 @@ EXPERIMENTAL_DESCRIPTION = """Use this client to use all of TabbyAPI's features.
 class Defaults(CommonDefaults, ApiHandlesPromptTemplateConfig):
     api_url: str = "http://localhost:5000/v1"
     api_key: str = ""
-    max_token_length: int = 8192
+    max_token_length: int = 16384
     model: str = ""
     double_coercion: str = None
 
@@ -26,8 +35,28 @@ class ClientConfig(ApiHandlesPromptTemplateConfig, BaseClientConfig):
     pass
 
 
+def error_message(body) -> str | None:
+    """TabbyAPI errors arrive as FastAPI `{"detail": ...}` bodies (a string,
+    an `{"error": {"message": ...}}` object or a validation list) or as
+    `{"error": {"message": ...}}` (context overflow, in-stream errors)."""
+    if isinstance(body, str):
+        return body or None
+    if isinstance(body, list):
+        return "; ".join(filter(None, (error_message(item) for item in body))) or None
+    if not isinstance(body, dict):
+        return None
+    for key in ("detail", "error"):
+        if key in body:
+            return error_message(body[key])
+    if "msg" in body:
+        location = ".".join(str(part) for part in body.get("loc", []))
+        return f"{location}: {body['msg']}" if location else body["msg"]
+    return body.get("message")
+
+
 @register()
-class TabbyAPIClient(ApiHandlesPromptTemplateMixin, ClientBase):
+class TabbyAPIClient(ChatReasoningMixin, ApiHandlesPromptTemplateMixin, ClientBase):
+    auto_determine_prompt_template: bool = True
     client_type = "tabbyapi"
     conversation_retries = 0
     config_cls = ClientConfig
@@ -62,9 +91,14 @@ class TabbyAPIClient(ApiHandlesPromptTemplateMixin, ClientBase):
             "max_tokens",
             "presence_penalty",
             "frequency_penalty",
+            "repetition_penalty",
             "repetition_penalty_range",
             "min_p",
             "top_p",
+            "top_k",
+            ParameterReroute(
+                talemate_parameter="stopping_strings", client_parameter="stop"
+            ),
             "xtc_threshold",
             "xtc_probability",
             "dry_multiplier",
@@ -76,6 +110,17 @@ class TabbyAPIClient(ApiHandlesPromptTemplateMixin, ClientBase):
             "temperature_last",
             "temperature",
         ]
+
+    def tune_prompt_parameters(self, parameters: dict, kind: str):
+        super().tune_prompt_parameters(parameters, kind)
+        parameters["stopping_strings"] = self.build_stopping_strings(parameters)
+
+    def raise_api_error(self, error, status_code: int | None = None) -> NoReturn:
+        raise GenerationProcessingError(
+            "TabbyAPI error"
+            + (f" ({status_code})" if status_code else "")
+            + (f" - {message}" if (message := error_message(error)) else "")
+        )
 
     async def get_model_name(self):
         url = urljoin(self.api_url, "model")
@@ -111,10 +156,6 @@ class TabbyAPIClient(ApiHandlesPromptTemplateMixin, ClientBase):
 
             messages, coercion_prompt = self.chat_messages_for_coercion(prompt, kind)
 
-            if coercion_prompt:
-                # TabbyAPI continues the pre-fill via its prefix flag
-                messages[-1]["prefix"] = True
-
             payload = {
                 "model": self.model_name,
                 "messages": messages,
@@ -122,8 +163,12 @@ class TabbyAPIClient(ApiHandlesPromptTemplateMixin, ClientBase):
                 "stream_options": {
                     "include_usage": True,
                 },
+                "enable_thinking": self.reason_enabled,
                 **parameters,
             }
+            if coercion_prompt:
+                payload["continue_final_message"] = True
+                payload["add_generation_prompt"] = False
             endpoint = "chat/completions"
         else:
             # Completions endpoint
@@ -142,6 +187,10 @@ class TabbyAPIClient(ApiHandlesPromptTemplateMixin, ClientBase):
                 },
                 **parameters,
             }
+            if "max_tokens" not in payload:
+                # 0 makes TabbyAPI fill the remaining context with its own
+                # tokenizer; an absent limit crashes its streaming completions
+                payload["max_tokens"] = 0
             endpoint = "completions"
 
         url = urljoin(self.api_url, endpoint)
@@ -152,6 +201,7 @@ class TabbyAPIClient(ApiHandlesPromptTemplateMixin, ClientBase):
         }
 
         response_text = ""
+        reasoning_text = ""
         buffer = ""
         completion_tokens = 0
         prompt_tokens = 0
@@ -160,6 +210,13 @@ class TabbyAPIClient(ApiHandlesPromptTemplateMixin, ClientBase):
             async with client.stream(
                 "POST", url, headers=headers, json=payload, timeout=120.0
             ) as response:
+                if response.status_code >= 400:
+                    await response.aread()
+                    try:
+                        body = response.json()
+                    except ValueError:
+                        body = response.text
+                    self.raise_api_error(body, response.status_code)
                 async for chunk in response.aiter_text():
                     buffer += chunk
 
@@ -181,7 +238,13 @@ class TabbyAPIClient(ApiHandlesPromptTemplateMixin, ClientBase):
 
                             try:
                                 data_obj = json.loads(data)
+                            except json.JSONDecodeError:
+                                continue
 
+                            if data_obj.get("error"):
+                                self.raise_api_error(data_obj)
+
+                            try:
                                 choice = data_obj.get("choices", [{}])[0]
 
                                 # Chat completions use delta -> content.
@@ -191,6 +254,12 @@ class TabbyAPIClient(ApiHandlesPromptTemplateMixin, ClientBase):
                                     or delta.get("text")
                                     or choice.get("text")
                                 )
+
+                                if reasoning_chunk := delta.get("reasoning_content"):
+                                    reasoning_text += reasoning_chunk
+                                    self.update_request_tokens(
+                                        self.count_tokens(reasoning_chunk)
+                                    )
 
                                 if content:
                                     response_text += content
@@ -206,9 +275,11 @@ class TabbyAPIClient(ApiHandlesPromptTemplateMixin, ClientBase):
                                     prompt_tokens = usage.get(
                                         "prompt_tokens", prompt_tokens
                                     )
-                            except (json.JSONDecodeError, IndexError):
-                                # ignore malformed json chunks
+                            except IndexError:
                                 pass
+
+        if reasoning_text:
+            self._reasoning_response = reasoning_text
 
         # Save token stats for logging
         self._returned_prompt_tokens = prompt_tokens

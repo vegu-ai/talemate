@@ -1,9 +1,10 @@
 <template>
-    <v-list-item density="compact" @click="$emit('click', prompt)">
-        <v-list-item-title class="text-caption">
-            <v-row>
-                <v-col cols="2" class="text-info">#{{ prompt.num }}</v-col>
-                <v-col cols="10" class="text-right">
+    <v-list-item density="compact" :data-request-id="prompt.request_id" @click="$emit('click', prompt)">
+        <v-list-item-title class="text-body-small">
+            <div class="d-flex align-center flex-wrap ga-1">
+                <span class="text-info">#{{ prompt.num }}</span>
+                <PromptStatus :status="prompt.status" />
+                <div class="d-flex align-center flex-nowrap ml-auto">
                     <v-chip
                         v-if="prompt.prefix_cache_ratio != null"
                         size="x-small"
@@ -22,7 +23,7 @@
                         variant="text"
                         label
                     >
-                        {{ prompt.prompt_tokens || 0 }}
+                        {{ promptMetric(prompt.prompt_tokens, prompt.status) }}
                         <v-icon size="14" class="ml-1">mdi-arrow-down-bold</v-icon>
                     </v-chip>
                     <v-chip
@@ -32,26 +33,26 @@
                         variant="text"
                         label
                     >
-                        {{ prompt.response_tokens || 0 }}
+                        {{ promptMetric(prompt.response_tokens, prompt.status) }}
                         <v-icon size="14" class="ml-1">mdi-arrow-up-bold</v-icon>
                     </v-chip>
                     <v-chip
                         size="x-small"
                         variant="text"
                         label
-                        color="grey-darken-1"
+                        color="muted"
                     >
-                        {{ prompt.time || 0 }}s
+                        {{ promptMetric(prompt.time == null ? null : Math.floor(prompt.time), prompt.status, 's') }}
                         <v-icon size="14" class="ml-1">mdi-clock</v-icon>
                     </v-chip>
-                </v-col>
-            </v-row>
+                </div>
+            </div>
         </v-list-item-title>
-        <v-list-item-subtitle class="text-caption">
+        <v-list-item-subtitle class="text-body-small">
             <v-chip
                 v-if="prompt.agent_name"
                 size="x-small"
-                color="grey-lighten-1"
+                color="mutedheader"
                 variant="text"
             >
                 {{ prompt.agent_name }}
@@ -59,7 +60,7 @@
             <v-chip
                 v-if="prompt.agent_action"
                 size="x-small"
-                color="grey"
+                color="muted"
                 variant="text"
             >
                 {{ prompt.agent_action }}
@@ -86,8 +87,13 @@
 </template>
 
 <script>
+import PromptStatus from './PromptStatus.vue';
+import { promptMetric } from '@/utils/promptLog';
+
 export default {
     name: 'PromptLogItem',
+    components: { PromptStatus },
+    methods: { promptMetric },
     props: {
         prompt: {
             type: Object,

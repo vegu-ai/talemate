@@ -1,6 +1,7 @@
 {#-
 Extractors:
   - fix: AnchorExtractor("<FIX>", "</FIX>")
+  - no_fix: RegexExtractor for the NO_FIX_REQUIRED self-closing tag
 
 Override example:
   {{ set_anchor_extractor("fix", "<MY_TAG>", "</MY_TAG>") }}
@@ -191,9 +192,9 @@ A figure crossed the far side, hood drawn, footprints filling almost as fast as 
 
 {% include "content-classification.jinja2" %}
 
-{% include "writing-style-instructions.jinja2" %}
+{% if not decision_findings %}{% include "writing-style-instructions.jinja2" %}{% endif %}
 
-{% include "dynamic-instructions.jinja2" %}
+{% include "decision-findings.jinja2" %}{% include "dynamic-instructions.jinja2" %}
 <|SECTION:TASK|>
 Fix bad AI narration by making it simpler, clearer, and more grounded. The REVIEW is a passage of narration — exposition, environment, observed action, atmosphere. It may or may not contain a small amount of dialogue.
 

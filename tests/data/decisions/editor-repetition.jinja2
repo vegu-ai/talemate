@@ -1,0 +1,13 @@
+{% set threshold = decision_checks[0].threshold %}
+{% set answers = ask("editor-repetition",
+    state={"passage": passage, "history": last3},
+    questions={"repeats": yes_no("Does this passage repeat an earlier story beat?", threshold=threshold)}) %}
+{% if answers.repeats.yes %}
+  {{ revise([{
+      "passage_id": "s1", "kind": "repetition", "text": passage,
+      "instructions": "Remove the repeated story beat."
+  }]) }}
+{% else %}
+  {{ note("no_action", "below_threshold", threshold=threshold) }}
+  {{ keep() }}
+{% endif %}

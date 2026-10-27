@@ -26,10 +26,51 @@
                     hide-details
                 ></v-checkbox>
             </v-list-item>
+            <v-list-item
+                v-for="row in generationRows"
+                :key="row.key"
+                density="compact"
+                :class="row.child ? 'pl-10' : null"
+                :data-testid="`auto-generation-${row.key}`"
+            >
+                <div class="d-flex align-center">
+                    <!-- stop: a toggle keeps the menu open -->
+                    <v-checkbox
+                        :model-value="row.on"
+                        @update:model-value="(value) => row.set(!!value)"
+                        :label="row.label"
+                        :disabled="!visualAgentReady"
+                        color="primary"
+                        density="compact"
+                        hide-details
+                        @click.stop
+                    ></v-checkbox>
+                    <v-tooltip v-if="row.overridden" text="Scene override — changes apply to this scene only" density="compact">
+                        <template v-slot:activator="{ props }">
+                            <v-icon v-bind="props" size="x-small" color="primary" class="ml-1">mdi-movie-open-cog-outline</v-icon>
+                        </template>
+                    </v-tooltip>
+                    <v-spacer></v-spacer>
+                    <v-tooltip :text="row.settingsLabel" density="compact">
+                        <template v-slot:activator="{ props }">
+                            <v-btn v-bind="props" icon="mdi-cog" size="x-small" variant="text" color="muted" class="ml-2" :aria-label="row.settingsLabel" @click="openAgentSettings(...row.settings)"></v-btn>
+                        </template>
+                    </v-tooltip>
+                </div>
+                <div v-if="row.warning" class="text-body-small text-warning d-flex align-center ms-7 mb-1">
+                    <v-icon size="x-small" color="warning" class="mr-1">mdi-alert-circle-outline</v-icon>
+                    {{ row.warning.text }}
+                    <v-btn v-if="row.warning.settings" size="x-small" variant="text" color="warning" class="ml-1" @click="openAgentSettings(...row.warning.settings)">Settings</v-btn>
+                </div>
+            </v-list-item>
+            <div v-if="pendingSave || writeError" class="px-4 pb-2" data-testid="auto-generation-feedback" @click.stop>
+                <SceneOverridePendingSave v-if="pendingSave" />
+                <div v-if="writeError" class="text-body-small text-error">{{ writeError }}</div>
+            </div>
             <v-divider></v-divider>
             <!-- visual agent not ready -->
             <div v-if="!visualAgentReady">
-                <v-alert type="warning" density="compact" variant="text" class="mb-3 text-caption">Visual agent is not ready for image generation, will output prompt instead.</v-alert>
+                <v-alert type="warning" density="compact" variant="text" class="mb-3 text-body-small">Visual agent is not ready for image generation, will output prompt instead.</v-alert>
             </div>
             <!-- environment -->
             <v-list-item @click="(event) => handleVisualize(null, event, VIS_TYPE.SCENE_CARD)" prepend-icon="mdi-image-filter-hdr">
@@ -63,6 +104,19 @@
                 <v-list-item-title>Visualize Moment (Illustration)</v-list-item-title>
                 <v-list-item-subtitle>Generate an image of the current moment</v-list-item-subtitle>
             </v-list-item>
+
+            <SceneToolsShortcutItems
+                section="visual"
+                :catalog="shortcutCatalog"
+                :shortcuts="shortcuts"
+                :templates="shortcutTemplates"
+                :characters="characters"
+                :disabled="disabled"
+                @run="runShortcut"
+                @edit="(shortcut) => $emit('shortcut-edit', shortcut)"
+                @add="(section) => $emit('shortcut-add', section)"
+                @add-template="(template) => $emit('shortcut-add-template', template)"
+            />
         </v-list>
     </v-menu>
     
@@ -92,8 +146,21 @@
 <script>
 import { VIS_TYPE, VIS_TYPE_OPTIONS } from '@/constants/visual';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
+import {
+    automaticGenerationState,
+    generationState,
+    generationValues,
+    portraitsNeedGenerateVisuals,
+} from '@/utils/visualAutoGeneration';
+import SceneOverridePendingSave from './SceneOverridePendingSave.vue';
+import SceneToolsShortcutItems from './SceneToolsShortcutItems.vue';
 export default {
     name: 'SceneToolsVisual',
+    components: {
+        SceneOverridePendingSave,
+        SceneToolsShortcutItems,
+    },
+    emits: ['shortcut-add', 'shortcut-edit', 'shortcut-add-template'],
     props: {
         agentStatus: {
             type: Object,
@@ -114,10 +181,25 @@ export default {
         playerCharacter: {
             type: String,
             default: null,
-        }
+        },
+        shortcutCatalog: {
+            type: Array,
+            default: () => [],
+        },
+        shortcuts: {
+            type: Object,
+            default: () => ({}),
+        },
+        shortcutTemplates: {
+            type: Object,
+            default: () => ({}),
+        },
     },
 
     computed: {
+        pendingSave() {
+            return !!this.sceneOverridesState()?.pendingSave;
+        },
         characters() {
             const chars = [];
             if (this.playerCharacter) {
@@ -131,7 +213,49 @@ export default {
                 }
             }
             return chars;
-        }
+        },
+        generationRows() {
+            const automatic = automaticGenerationState(this.drawerAgent('visual'));
+            if (!automatic) return [];
+            const rows = [{
+                key: 'automatic',
+                label: 'Automatic generation',
+                ...automatic,
+                set: (on) => this.applyAgentValues('visual', '_config', { config: { automatic_generation: on } }, automatic.overridden ? this.writeReply() : null, `Automatic generation: ${on ? 'On' : 'Off'}`),
+                settings: ['visual', '_config'],
+                settingsLabel: 'Visualizer settings',
+            }];
+            if (!automatic.on) return rows;
+            const worldState = this.drawerAgent('world_state');
+            const portraits = generationState(worldState, 'avatars');
+            if (portraits) {
+                rows.push({
+                    key: 'portraits',
+                    label: 'Character portraits',
+                    child: true,
+                    ...portraits,
+                    set: (on) => this.setGeneration('avatars', portraits, 'Character portraits', on),
+                    settings: ['world_state', 'avatars'],
+                    settingsLabel: 'Character portrait settings',
+                    warning: portraits.on && portraitsNeedGenerateVisuals(this.drawerAgent('director'))
+                        ? { text: 'Needs Director Generate Visuals', settings: ['director', 'character_management'] }
+                        : null,
+                });
+            }
+            const backgrounds = generationState(worldState, 'backgrounds');
+            if (backgrounds) {
+                rows.push({
+                    key: 'backgrounds',
+                    label: 'Backgrounds',
+                    child: true,
+                    ...backgrounds,
+                    set: (on) => this.setGeneration('backgrounds', backgrounds, 'Backgrounds', on),
+                    settings: ['world_state', 'backgrounds'],
+                    settingsLabel: 'Background settings',
+                });
+            }
+            return rows;
+        },
     },
 
     data() {
@@ -143,13 +267,17 @@ export default {
             dialogVisType: VIS_TYPE.CHARACTER_CARD,
             instructions: '',
             autoAttachAssets: true,
+            writeError: null,
             VIS_TYPE,
         }
     },
 
-    inject: ['getWebsocket', 'appConfig'],
+    inject: ['getWebsocket', 'appConfig', 'applyAgentValues', 'applySceneAgentValues', 'sceneOverridesState', 'openAgentSettings', 'getAgents'],
     
     watch: {
+        pendingSave(pending) {
+            if (!pending) this.writeError = null;
+        },
         appConfig: {
             handler: function(newVal) {
                 if (newVal && newVal.appearance && newVal.appearance.scene) {
@@ -164,6 +292,32 @@ export default {
     },
 
     methods: {
+        // The drawer's copy holds values a save in flight wrote, which a stale
+        // status frame cannot put back; agentStatus is read for reactivity and
+        // as the fallback before the drawer has the agent.
+        drawerAgent(name) {
+            const status = this.agentStatus[name];
+            const agent = this.getAgents().find((candidate) => candidate.name === name);
+            if (!agent) return status;
+            return { actions: agent.actions, scene_overrides: agent.data?.scene_overrides };
+        },
+        // The row's override mark promises a scene-only change, so both fields of
+        // the pair go to the scene, the one not overridden yet included.
+        setGeneration(actionKey, state, label, on) {
+            const values = generationValues(this.drawerAgent('world_state'), actionKey, on);
+            if (state.overridden) {
+                this.applySceneAgentValues([{ agent: 'world_state', action: actionKey, config: values.config }], `${label}: ${on ? 'On' : 'Off'}`, this.writeReply());
+                return;
+            }
+            this.applyAgentValues('world_state', actionKey, values);
+        },
+        writeReply() {
+            this.writeError = null;
+            return {
+                onComplete: () => { this.writeError = null; },
+                onError: (message) => { this.writeError = message; },
+            };
+        },
         toggleAutoAttachAssets() {
             this.getWebsocket().send(JSON.stringify({
                 type: 'quick_settings',
@@ -197,6 +351,24 @@ export default {
                 this.dialogOpen = true;
             } else {
                 this.generateImage(character_name, altPressed, null, vis_type);
+            }
+        },
+        runShortcut({shortcut, entry, character}) {
+            switch (entry.id) {
+                case 'visual.visualize_environment_card':
+                    this.generateImage(null, false, shortcut.instructions, VIS_TYPE.SCENE_CARD);
+                    break;
+                case 'visual.visualize_environment_background':
+                    this.generateImage(null, false, shortcut.instructions, VIS_TYPE.SCENE_BACKGROUND);
+                    break;
+                case 'visual.visualize_character_card':
+                    this.generateImage(character, false, shortcut.instructions, VIS_TYPE.CHARACTER_CARD);
+                    break;
+                case 'visual.visualize_character_portrait':
+                    this.generateImage(character, false, shortcut.instructions, VIS_TYPE.CHARACTER_PORTRAIT);
+                    break;
+                default:
+                    console.warn('unhandled scene tool shortcut action', entry.id);
             }
         },
         submitDialog() {

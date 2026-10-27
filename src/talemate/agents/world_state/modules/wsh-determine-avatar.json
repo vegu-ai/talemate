@@ -253,7 +253,7 @@
       "title": "Update Message Assets",
       "id": "b00d2439-4c94-46a6-b1d4-4993578b5e3c",
       "properties": {
-        "asset_type": "avatar"
+        "override_cadence": true
       },
       "x": 639,
       "y": 1585,

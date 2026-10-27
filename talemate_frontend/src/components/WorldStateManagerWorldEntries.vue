@@ -4,7 +4,7 @@
             <v-card v-if="entry != null">
                 <v-form v-model="formValid" ref="form" @submit.prevent>
                     <v-text-field 
-                        :disabled="!isNewEntry" 
+                        :disabled="!isNewEntry || creating" 
                         v-model="entry.id" label="Entry ID" 
                         :rules="rules"
                         hint="The ID of the entry. This should be a unique identifier for the entry."
@@ -18,6 +18,7 @@
                         :generation-options="generationOptions"
                         :specify-length="true"
                         :length="512"
+                        :disabled="creating"
                         @generate="content => { entry.text=content; queueSave(500); dirty = true; }"
                     />
                     <div class="position-relative">
@@ -27,7 +28,7 @@
                             label="World information"
                             :hint="'Describe the world information here. This could be a description of a location, a historical event, or anything else that is relevant to the world. '+autocompleteInfoMessage(worldInfoBusy)"
                             :color="dirty ? 'dirty' : ''"
-                            :disabled="worldInfoBusy"
+                            :disabled="worldInfoBusy || creating"
                             :loading="worldInfoBusy"
                             @update:model-value="dirty = true"
                             @keyup.ctrl.enter.stop="sendWorldInfoAutocomplete"
@@ -46,12 +47,20 @@
                         <v-col cols="12" md="6">
                             <v-checkbox v-model="entry.meta['pin_only']" 
                             label="Include only when pinned" 
+                            :disabled="creating"
                             :hint="(
                                 entry.meta['pin_only'] ? 
                                 'This entry will only be included when pinned and never be included via automatic relevancy matching.' :
                                 'This entry may be included via automatic relevancy matching.'
                             )"
                             @change="save()"></v-checkbox>
+                            <div v-if="!isNewEntry" class="pl-3">
+                                <EntryVisibilitySelect
+                                    :model-value="entry.visibility"
+                                    :character-names="characterNames"
+                                    owner-label="nobody"
+                                    @update:model-value="setVisibility" />
+                            </div>
                         </v-col>
                         <v-col cols="12" md="6" v-if="!isNewEntry">
                             <v-card class="mt-2" elevation="2" :color="entry.shared ? 'highlight6' : 'muted'" variant="tonal">
@@ -64,15 +73,16 @@
 
                 </v-form>
 
+                <v-alert v-if="error" type="error" variant="tonal" density="compact" closable class="mx-4 mb-2" @click:close="error = null">{{ error }}</v-alert>
                 <v-card-actions v-if="isNewEntry">
                     <v-spacer></v-spacer>
-                    <v-btn @click="save()" color="primary" prepend-icon="mdi-text-box-plus">Create</v-btn>
+                    <v-btn @click="createEntry" color="primary" prepend-icon="mdi-text-box-plus" :loading="creating" :disabled="creating">Create</v-btn>
                 </v-card-actions>
                 <v-card-actions v-else>
                     <ConfirmActionInline @confirm="remove" action-label="Remove Entry" confirm-label="Confirm removal" />
                     <v-spacer></v-spacer>
                     <v-btn v-if="entryHasPin" @click="$emit('load-pin', entry.id)" color="primary" prepend-icon="mdi-pin">View pin</v-btn>
-                    <v-btn v-else @click="$emit('add-pin', entry.id)" color="primary" prepend-icon="mdi-pin">Add pin</v-btn>
+                    <v-btn v-else @click="addPin" color="primary" prepend-icon="mdi-pin" :loading="pinPending" :disabled="pinPending">Add pin</v-btn>
                 </v-card-actions>
             </v-card>
             <v-card v-else>
@@ -81,7 +91,7 @@
                     <br><br>
                     Add a new entry or select an existing one to get started.
                     <br><br>
-                    <v-icon color="orange" class="mr-1">mdi-alert</v-icon> If you want to add details to an acting character do that through the character manager instead.
+                    <v-icon color="warning" class="mr-1">mdi-alert</v-icon> If you want to add details to an acting character do that through the character manager instead.
                 </v-alert>
             </v-card>
 
@@ -95,12 +105,14 @@
 
 import ContextualGenerate from './ContextualGenerate.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
+import EntryVisibilitySelect from './EntryVisibilitySelect.vue';
 import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
 import { createAutocompleteField } from '@/utils/autocompleteField';
 
 export default {
     name: 'WorldStateManagerWorldEntries',
     components: {
+        EntryVisibilitySelect,
         ContextualGenerate,
         ConfirmActionInline,
         AutocompleteRedoChip,
@@ -110,13 +122,23 @@ export default {
         templates: Object,
         generationOptions: Object,
         immutableEntries: Object,
+        characterList: Object,
     },
     computed: {
+        characterNames() {
+            return Object.keys(this.characterList?.characters || {});
+        },
         isNewEntry() {
             return this.entry && this.entry.isNew;
         },
         entryHasPin() {
             return this.entry && this.pins[this.entry.id];
+        },
+        creating() {
+            return this.creatingId !== null;
+        },
+        pinPending() {
+            return !!this.entry && this.pinRequestedFor === this.entry.id;
         },
     },
     data() {
@@ -129,6 +151,10 @@ export default {
             worldInfoBusy: false,
             worldInfoAutocompleteField: null,
             formValid: false,
+            // the id a running Create saved; the card binds to that entry once it arrives
+            creatingId: null,
+            pinRequestedFor: null,
+            error: null,
             rules: [
                 v => !!v || 'Entry ID is required',
                 // make sure id doesn't already exist
@@ -161,13 +187,25 @@ export default {
             immediate: true,
             handler(entries) {
                 this.entries = {...entries}
-                // If an entry is currently selected, re-bind it to the updated entries map
                 this.$nextTick(() => {
+                    if (this.creating && this.entries[this.creatingId]) {
+                        this.select(this.creatingId);
+                        return;
+                    }
+                    // a draft keeps its own fields even when its id matches a saved entry
+                    if (this.isNewEntry) {
+                        return;
+                    }
                     const currentId = (this.entry && this.entry.id) || this.selected;
                     if (currentId && this.entries[currentId]) {
                         this.entry = this.entries[currentId];
                     }
                 });
+            }
+        },
+        pins() {
+            if (this.pinRequestedFor && this.pins[this.pinRequestedFor]) {
+                this.pinRequestedFor = null;
             }
         },
         'entry.text'() {
@@ -193,6 +231,15 @@ export default {
         });
     },
     methods: {
+        setVisibility(visibility) {
+            this.entry.visibility = visibility;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'set_world_entry_visibility',
+                entry_id: this.entry.id,
+                visibility: visibility,
+            }));
+        },
         queueSave(delay = 1500) {
 
             if(this.isNewEntry) {
@@ -210,7 +257,12 @@ export default {
             }, delay);
         },
 
+        // autosave of an existing entry; a draft is only saved by createEntry
         save(only_if_dirty = false) {
+
+            if(this.isNewEntry) {
+                return;
+            }
 
             if(only_if_dirty && !this.dirty) {
                 return;
@@ -220,6 +272,23 @@ export default {
             if(!this.formValid) {
                 return;
             }
+            this.sendSave();
+        },
+
+        async createEntry() {
+            if(!this.isNewEntry || this.creating) {
+                return;
+            }
+            const { valid } = await this.$refs.form.validate();
+            if(!valid) {
+                return;
+            }
+            this.error = null;
+            this.creatingId = this.entry.id;
+            this.sendSave();
+        },
+
+        sendSave() {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'save_world_entry',
@@ -228,12 +297,17 @@ export default {
                 meta: this.entry.meta,
                 shared: this.entry.shared,
             }));
-            if(this.entry.isNew) {
-                this.entry.isNew = false;
-            }
+        },
+
+        addPin() {
+            this.error = null;
+            this.pinRequestedFor = this.entry.id;
+            this.$emit('add-pin', this.entry.id);
         },
 
         create() {
+            this.creatingId = null;
+            this.error = null;
             this.selected = null;
             this.entry = {
                 id: '',
@@ -245,13 +319,14 @@ export default {
         },
 
         select(id) {
-            console.log({id, entries: this.entries})
             if (!this.entries[id]) {
                 console.warn(`Entry "${id}" not found`);
                 return;
             }
             this.entry = this.entries[id];
             this.selected = id;
+            this.creatingId = null;
+            this.error = null;
             this.$nextTick(() => {
                 this.dirty = false;
                 this.$refs.form.validate();
@@ -293,6 +368,16 @@ export default {
             }
         },
 
+        handleFailure(message) {
+            if (message.failed_action === 'save_world_entry' && this.creating) {
+                this.creatingId = null;
+                this.error = `The entry was not created: ${message.error.message}`;
+            } else if (message.failed_action === 'set_pin' && this.pinRequestedFor) {
+                this.pinRequestedFor = null;
+                this.error = `The pin was not added: ${message.error.message}`;
+            }
+        },
+
         sendWorldInfoAutocomplete() {
             this.worldInfoAutocompleteField.request(this.$refs.textInput);
         },
@@ -309,6 +394,9 @@ export default {
                 this.busy = false;
             } else if(message.action === 'operation_done') {
                 this.busy = false;
+                if (message.error) {
+                    this.handleFailure(message);
+                }
             }
         },
     },

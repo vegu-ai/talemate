@@ -1,16 +1,16 @@
 # Groq Client
 
-If you want to add an Groq client, change the `Client Type` to `Groq`.
+If you want to add an Groq client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `Groq` from the client type menu.
 
-![Client Groq](/talemate/img/0.39.0/client-groq.png)
+![Client Groq](/talemate/img/0.40.0/client-groq.png)
 
-Click `Save` to add the client.
+Click `Save` in the toolbar to add the client.
 
 ### Groq API Key
 
 The client should appear in the clients list. If you haven't setup Groq before, you will see a warning that the API key is missing.
 
-![Client groq no api key](/talemate/img/0.26.0/client-groq-no-api-key.png)
+![Client groq no api key](/talemate/img/0.40.0/client-groq-no-api-key.png)
 
 Click the `SET API KEY` button. This will open the application settings on the API Keys page where you can add your Groq API key.
 
@@ -32,7 +32,7 @@ A unique name for the client that makes sense to you.
 
 ##### Model
 
-Which model to use. Currently defaults to `llama3-70b-8192`.
+Which model to use. Currently defaults to `moonshotai/kimi-k2-instruct`.
 
 !!! note "Talemate lags behind Groq"
     When Groq adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.

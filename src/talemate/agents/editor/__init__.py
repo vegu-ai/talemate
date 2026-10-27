@@ -7,6 +7,8 @@ import structlog
 import talemate.emit.async_signals
 import talemate.util as util
 from talemate.client import ClientBase
+from talemate.events import before_generation
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.prompts import Prompt
 
 from talemate.agents.base import (
@@ -23,6 +25,7 @@ import talemate.agents.editor.nodes
 
 from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.agents.editor.revision import RevisionMixin
+from talemate.agents.editor.decision_checks import DecisionChecksMixin
 from talemate.agents.editor.websocket_handler import EditorWebsocketHandler
 
 if TYPE_CHECKING:
@@ -37,6 +40,7 @@ log = structlog.get_logger("talemate.agents.editor")
 class EditorAgent(
     MemoryRAGMixin,
     RevisionMixin,
+    DecisionChecksMixin,
     Agent,
 ):
     """
@@ -305,6 +309,11 @@ class EditorAgent(
         if not self.add_detail_enabled:
             return content
 
+        await before_generation(self.scene, "editor")
+        history_perspective = (
+            character.name if character_knowledge_enabled(self.scene) else None
+        )
+
         response, extracted = await Prompt.request(
             "editor.add-detail",
             self.client,
@@ -312,6 +321,7 @@ class EditorAgent(
             vars={
                 "content": content,
                 "character": character,
+                "history_perspective": history_perspective,
                 "scene": self.scene,
                 "max_length": self.client.max_token_length,
             },

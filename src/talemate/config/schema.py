@@ -9,6 +9,7 @@ import structlog
 from typing_extensions import Annotated
 
 import talemate.emit.async_signals as async_signals
+from talemate.knowledge.revision_scope import hold_for_step
 
 from talemate.client.registry import get_client_class
 from talemate.client.system_prompts import SystemPrompts
@@ -43,7 +44,7 @@ class Client(pydantic.BaseModel):
     api_url: Union[str, None] = None
     api_key: Union[str, None] = None
     # max input tokens to send with a generation request
-    max_token_length: int = 8192
+    max_token_length: int = 16384
 
     # prefill text for ALL requests
     double_coercion: Union[str, None] = None
@@ -71,7 +72,7 @@ class Client(pydantic.BaseModel):
     # add extra allowance for response tokens
     # this is useful for when the model generates visible thinking
     # tokens.
-    reason_tokens: int = 0
+    reason_tokens: int = 1024
 
     # regex to strip from the response if the model is reasoning
     reason_response_pattern: str | None = None
@@ -256,10 +257,33 @@ class WorldState(pydantic.BaseModel):
     templates: WorldStateTemplates = WorldStateTemplates()
 
 
+class SceneHeader(pydantic.BaseModel):
+    model_config = ConfigDict(validate_assignment=True)
+
+    enabled: bool = True
+    # item ids are opaque; preserve unknown values
+    slot_a: list[str] = pydantic.Field(
+        default_factory=lambda: ["history_stats", "active_characters"]
+    )
+    slot_b: list[str] = pydantic.Field(
+        default_factory=lambda: ["summarizer", "writing_style"]
+    )
+
+    def set_item_shown(
+        self, slot: Literal["slot_a", "slot_b"], item: str, shown: bool
+    ) -> None:
+        ids = getattr(self, slot)
+        if shown and item not in ids:
+            setattr(self, slot, [*ids, item])
+        elif not shown and item in ids:
+            setattr(self, slot, [existing for existing in ids if existing != item])
+
+
 class Game(pydantic.BaseModel):
     default_player_character: GamePlayerCharacter = GamePlayerCharacter()
     general: General = General()
     world_state: WorldState = WorldState()
+    scene_header: SceneHeader = SceneHeader()
 
     model_config = ConfigDict(extra="ignore")
 
@@ -378,6 +402,12 @@ def generate_chromadb_presets() -> dict[str, EmbeddingFunctionPreset]:
             distance=1,
             local=False,
         ),
+        "openrouter": EmbeddingFunctionPreset(
+            embeddings="openrouter",
+            model="openai/text-embedding-3-small",
+            distance=1,
+            local=False,
+        ),
     }
 
 
@@ -391,6 +421,7 @@ class InferenceParameters(pydantic.BaseModel):
     frequency_penalty: float | None = 0.05
     repetition_penalty: float | None = 1.0
     repetition_penalty_range: int | None = 1024
+    extra_stopping_strings: list[str] = pydantic.Field(default_factory=list)
 
     xtc_threshold: float | None = 0.1
     xtc_probability: float | None = 0.0
@@ -408,6 +439,15 @@ class InferenceParameters(pydantic.BaseModel):
     # this determines whether or not it should be persisted
     # to the config file
     changed: bool = False
+
+    @pydantic.field_validator("extra_stopping_strings")
+    @classmethod
+    def drop_blank_stopping_strings(cls, value: list[str]) -> list[str]:
+        # a blank entry silently truncates every response at its first match
+        # (an empty separator matches at position 0) - drop instead of raising
+        # so a stray config entry cannot break generation. surviving entries
+        # keep their whitespace, a trailing space as in "Bob: " is meaningful
+        return [entry for entry in value if entry.strip()]
 
 
 class InferencePresets(pydantic.BaseModel):
@@ -449,6 +489,10 @@ class InferencePresetGroup(pydantic.BaseModel):
     presets: InferencePresets
 
 
+class InferenceParamPanel(pydantic.BaseModel):
+    client: str | None = None
+
+
 class Presets(pydantic.BaseModel):
     inference_defaults: InferencePresets = InferencePresets()
     inference: InferencePresets = InferencePresets()
@@ -463,6 +507,8 @@ class Presets(pydantic.BaseModel):
     embeddings: dict[str, EmbeddingFunctionPreset] = pydantic.Field(
         default_factory=generate_chromadb_presets
     )
+
+    inference_param_panel: InferenceParamPanel = InferenceParamPanel()
 
 
 def gnerate_intro_scenes():
@@ -524,6 +570,11 @@ class RecentScenes(pydantic.BaseModel):
         if not scene.full_path:
             return
 
+        # a hidden scene never enters quick load; a save-as clears the flag
+        # first, so a user's own save is not affected
+        if scene.hidden:
+            return
+
         now = datetime.datetime.now()
 
         # remove any existing entries for this scene
@@ -558,6 +609,11 @@ class RecentScenes(pydantic.BaseModel):
         self.scenes = [s for s in self.scenes if os.path.exists(s.path)]
 
 
+def resolve_config_cls(client_cls) -> type[Client]:
+    """The config model a client class saves through - its own, else the base."""
+    return getattr(client_cls, "config_cls", None) or Client
+
+
 def validate_client_type(
     v: Any,
     handler: pydantic.ValidatorFunctionWrapHandler,
@@ -571,8 +627,8 @@ def validate_client_type(
     if isinstance(v, dict):
         client_cls = get_client_class(v.get("type"))
         if client_cls:
-            config_cls = getattr(client_cls, "config_cls", None)
-            if config_cls:
+            config_cls = resolve_config_cls(client_cls)
+            if config_cls is not Client:
                 return config_cls(**v)
             else:
                 return handler(v)
@@ -580,8 +636,8 @@ def validate_client_type(
     elif isinstance(v, Client):
         client_cls = get_client_class(v.type)
         if client_cls:
-            config_cls = getattr(client_cls, "config_cls", None)
-            if config_cls:
+            config_cls = resolve_config_cls(client_cls)
+            if config_cls is not Client:
                 return config_cls(**v.model_dump())
             else:
                 return handler(v)
@@ -609,7 +665,9 @@ class HidableHistoryMessageStyle(HistoryMessageStyle):
 class MarkupMessageStyle(HistoryMessageStyle):
     # When False, use the underlying message default color instead of the markup color
     override_color: bool = True
-    # When False, hide the markup content entirely (including markers)
+    # When False, parentheses and brackets are removed from the message along with
+    # their markers, and entities lose their highlight but keep their text.
+    # Quotes and emphasis render regardless.
     show: bool = True
 
 
@@ -617,7 +675,7 @@ class MessageAssetCadenceConfig(pydantic.BaseModel):
     cadence: Literal["always", "never", "on_change"] = "always"
     size: Literal["small", "medium", "big"] = "medium"
     # automatically promote newly generated assets of this kind to the scene
-    # backdrop (only meaningful for scene_illustration and scene_background)
+    # backdrop (only meaningful for scene_illustration)
     auto_backdrop: bool = False
 
 
@@ -637,6 +695,7 @@ class SceneAppearance(pydantic.BaseModel):
     context_investigation_messages: HidableHistoryMessageStyle = (
         HidableHistoryMessageStyle()
     )
+    reinforcement_messages: HidableHistoryMessageStyle = HidableHistoryMessageStyle()
     information_messages: HistoryMessageStyle = HistoryMessageStyle()
     quotes: MarkupMessageStyle = MarkupMessageStyle()
     parentheses: MarkupMessageStyle = MarkupMessageStyle()
@@ -659,6 +718,9 @@ class SceneAppearance(pydantic.BaseModel):
     # drop shadow on message text over the scene backdrop
     backdrop_text_shadow: bool = True
 
+    # Memories button on character replies refined by the memory pass
+    show_memory_pass: bool = True
+
     @pydantic.field_validator("message_assets", mode="after")
     @classmethod
     def ensure_default_message_asset_entries(cls, value):
@@ -672,6 +734,10 @@ class SceneAppearance(pydantic.BaseModel):
 
 class Appearance(pydantic.BaseModel):
     scene: SceneAppearance = SceneAppearance()
+
+    # world state template id (`<group_uid>__<template_uid>`) of the active
+    # theme, None means the built-in default
+    theme: str | None = None
 
 
 class PromptsConfig(pydantic.BaseModel):
@@ -697,6 +763,75 @@ class AgentActionsConfig(pydantic.BaseModel):
     overrides: Dict[str, AgentActionOverride] = pydantic.Field(default_factory=dict)
 
 
+class SoundConfig(pydantic.BaseModel):
+    volume: float = pydantic.Field(default=1.0, ge=0.0, le=1.0)
+    muted: bool = False
+
+
+class SceneToolShortcut(pydantic.BaseModel):
+    uid: str
+    action_id: str
+    label: str
+    icon: str
+    instructions: str = ""
+
+
+class ShortcutsConfig(pydantic.BaseModel):
+    scene_tools: dict[str, SceneToolShortcut] = pydantic.Field(default_factory=dict)
+
+    @pydantic.model_validator(mode="after")
+    def sync_uids_to_keys(self) -> "ShortcutsConfig":
+        # a hand edited config must not fail to load over a mismatched uid
+        for uid, shortcut in self.scene_tools.items():
+            if shortcut.uid != uid:
+                shortcut.uid = uid
+        return self
+
+
+DecisionProviderName = Literal["openrouter", "systemone"]
+
+
+class DecisionModelConfig(pydantic.BaseModel):
+    enabled: bool = False
+    provider: DecisionProviderName = "openrouter"
+    base_url: str = ""
+    api_key: str | None = None
+    model: str = "typesafe/jev-1.13"
+    timeout_seconds: float = pydantic.Field(default=1.5, gt=0, allow_inf_nan=False)
+    max_input_tokens: int = pydantic.Field(default=64000, ge=0, strict=True)
+    max_question_input_tokens: int = pydantic.Field(default=32000, ge=0, strict=True)
+    input_token_multiplier: float = pydantic.Field(
+        default=1.5, ge=1, allow_inf_nan=False, strict=True
+    )
+
+    @pydantic.field_validator("base_url")
+    @classmethod
+    def http_base_url(cls, value):
+        value = value.strip()
+        if not value:
+            return ""
+        url = pydantic.AnyHttpUrl(value)
+        if (
+            url.username
+            or url.password
+            or url.query is not None
+            or url.fragment is not None
+        ):
+            raise ValueError(
+                "Use an HTTP(S) base URL without credentials, query or fragment"
+            )
+        return str(url).rstrip("/")
+
+    @pydantic.field_validator(
+        "max_input_tokens", "max_question_input_tokens", mode="before"
+    )
+    @classmethod
+    def integer_limits(cls, value):
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+        return value
+
+
 class Config(pydantic.BaseModel):
     clients: Dict[str, AnnotatedClient] = {}
 
@@ -715,6 +850,8 @@ class Config(pydantic.BaseModel):
     anthropic: AnthropicConfig = AnthropicConfig()
 
     openrouter: OpenRouterConfig = OpenRouterConfig()
+
+    decision_model: DecisionModelConfig = DecisionModelConfig()
 
     cohere: CohereConfig = CohereConfig()
 
@@ -756,14 +893,21 @@ class Config(pydantic.BaseModel):
 
     agent_actions: AgentActionsConfig = AgentActionsConfig()
 
+    sound: SoundConfig = SoundConfig()
+
+    shortcuts: ShortcutsConfig = ShortcutsConfig()
+
     dirty: bool = pydantic.Field(default=False, exclude=True)
 
     model_config = ConfigDict(extra="ignore")
 
-    async def set_dirty(self):
+    async def set_dirty(self) -> list[tuple]:
         self.dirty = True
-        await async_signals.get("config.changed").send(self)
-        await async_signals.get("config.changed.follow").send(self)
+        failures = []
+        for name in ("config.changed", "config.changed.follow"):
+            if not hold_for_step(name, self):
+                failures += await async_signals.get(name).send(self)
+        return failures
 
 
 class SceneAssetUpload(pydantic.BaseModel):

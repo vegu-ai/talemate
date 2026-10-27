@@ -135,14 +135,16 @@
       "id": "8f2177e4-c419-447b-a301-4e5a8096417e",
       "properties": {
         "template": null,
-        "max_calls": 1,
+        "max_calls": 5,
         "retries": 0,
-        "response_length": 1024
+        "response_length": 2048,
+        "max_concurrent": 3,
+        "inherit_parent_call": true
       },
       "x": 4209,
       "y": 709,
-      "width": 210,
-      "height": 250,
+      "width": 228,
+      "height": 298,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Focal",
@@ -362,8 +364,8 @@
       "title": "Module Style",
       "id": "9abb3f5f-35e9-49ea-9142-9fc40173ae84",
       "properties": {
-        "node_color": "#392c34",
         "title_color": "#572e44",
+        "node_color": "#392c34",
         "auto_title": null,
         "icon": "F1719"
       },
@@ -488,12 +490,13 @@
             "replace": false,
             "instructions": "Note that this story will contain strong cosmic horror elements and unsettling themes."
           }
-        ]
+        ],
+        "counts_toward_budget": true
       },
       "x": 2189,
       "y": 948,
       "width": 301,
-      "height": 82,
+      "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
@@ -585,12 +588,13 @@
       "id": "6cca1513-49eb-4b19-ad8a-4df3e2411b1d",
       "properties": {
         "name": "update_introduction",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": false,
+        "allow_concurrent": false
       },
       "x": 3616,
       "y": 1249,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Callback",
@@ -616,12 +620,13 @@
       "id": "46d361f0-8874-467e-a095-4958fa268660",
       "properties": {
         "name": "update_introduction",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": false,
+        "allow_concurrent": false
       },
       "x": 3616,
       "y": 1049,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Callback",
@@ -807,7 +812,7 @@
       "x": 1490,
       "y": 1961,
       "width": 210,
-      "height": 122,
+      "height": 142,
       "collapsed": false,
       "inherited": false,
       "registry": "scene/intention/SetScenePhase",
@@ -879,12 +884,13 @@
             "replace": false,
             "scene_type": "roleplay"
           }
-        ]
+        ],
+        "counts_toward_budget": true
       },
       "x": 2175,
       "y": 1614,
       "width": 301,
-      "height": 82,
+      "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
@@ -938,12 +944,13 @@
       "id": "ed7e159b-b5e3-4241-8559-4d2340e8517c",
       "properties": {
         "name": "update_introduction",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": false,
+        "allow_concurrent": false
       },
       "x": 3622,
       "y": 1434,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Callback",
@@ -1069,12 +1076,13 @@
             "instructions": "Add a bit more progress to the current introduction, so it starts with the user having to make a decision immediately.",
             "replace": false
           }
-        ]
+        ],
+        "counts_toward_budget": true
       },
       "x": 2190,
       "y": 321,
       "width": 301,
-      "height": 82,
+      "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
@@ -1086,7 +1094,7 @@
       "properties": {
         "name": "context_id",
         "typ": "str",
-        "instructions": "The exact context ID that you want to pin / unpin. Only world_entry.manual and character.detail context types can be pinned."
+        "instructions": "The exact context ID that you want to pin / unpin. If you do not know the hashed part of it, give the exact world entry title or character detail name instead. Only world_entry.manual and character.detail context types can be pinned."
       },
       "x": 139,
       "y": 2504,
@@ -1219,13 +1227,18 @@
             "context_id": "character.detail:Kaira.bff910fcffe3",
             "active": false,
             "condition": "Is Kaira currently in the medbay performing a procedure?"
+          },
+          {
+            "context_id": "world_entry.manual:Rosetti Family Bakery",
+            "active": true
           }
-        ]
+        ],
+        "counts_toward_budget": true
       },
       "x": 2177,
       "y": 2689,
       "width": 301,
-      "height": 82,
+      "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
@@ -1253,12 +1266,13 @@
       "id": "9a2abc46-6afb-4eef-8d84-6064dd29fb6c",
       "properties": {
         "name": "update_introduction",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
       },
       "x": 3620,
       "y": 1630,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Callback",
@@ -1395,28 +1409,13 @@
       "id": "01735c3e-805a-4b5e-bbeb-67d96ce74fd7",
       "properties": {
         "name": "direct_context_update",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
       },
       "x": 3610,
       "y": 1800,
       "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Callback",
-      "base_type": "core/Node"
-    },
-    "0c3fefde-0cc2-4493-9cf0-8272fcac7cf8": {
-      "title": "AI Function Callback",
-      "id": "0c3fefde-0cc2-4493-9cf0-8272fcac7cf8",
-      "properties": {
-        "name": "report_issue",
-        "allow_multiple_calls": false
-      },
-      "x": 3620,
-      "y": 1980,
-      "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Callback",
@@ -1425,27 +1424,17 @@
     "0b8ae93c-efd0-42b3-b47d-c6a70193c568": {
       "title": "Direct Context Update",
       "id": "0b8ae93c-efd0-42b3-b47d-c6a70193c568",
-      "properties": {},
+      "properties": {
+        "name": "direct_context_update",
+        "allow_multiple_calls": true
+      },
       "x": 3360,
       "y": 1800,
-      "width": 176,
-      "height": 26,
+      "width": 210,
+      "height": 142,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/directContextUpdate",
-      "base_type": "core/functions/Function"
-    },
-    "756b8c82-4e39-4fff-beb8-692aff6c5744": {
-      "title": "Agent Report Issue",
-      "id": "756b8c82-4e39-4fff-beb8-692aff6c5744",
-      "properties": {},
-      "x": 3360,
-      "y": 1970,
-      "width": 151,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/agentReportIssue",
       "base_type": "core/functions/Function"
     },
     "7764663d-e2d6-4a59-af06-bbeb29e22712": {
@@ -1541,6 +1530,39 @@
       "inherited": false,
       "registry": "agents/director/chat/ActionConfirm",
       "base_type": "core/Node"
+    },
+    "0c3fefde-0cc2-4493-9cf0-8272fcac7cf8": {
+      "title": "AI Function Callback",
+      "id": "0c3fefde-0cc2-4493-9cf0-8272fcac7cf8",
+      "properties": {
+        "name": "report_issue",
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
+      },
+      "x": 3620,
+      "y": 2030,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "756b8c82-4e39-4fff-beb8-692aff6c5744": {
+      "title": "Agent Report Issue",
+      "id": "756b8c82-4e39-4fff-beb8-692aff6c5744",
+      "properties": {
+        "name": "report_issue",
+        "allow_multiple_calls": true
+      },
+      "x": 3360,
+      "y": 2030,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/agentReportIssue",
+      "base_type": "core/functions/Function"
     }
   },
   "edges": {
@@ -1713,8 +1735,8 @@
       "ab6d1a0d-b491-4fa8-b445-79cd5590a970.item2"
     ],
     "16fa7113-8fd9-4e0c-9c78-aa0ef84ee3e4.text": [
-      "6c1837bc-f73b-45af-ab4e-caeec7d5a3b5.state",
-      "b7e44b3b-632f-4caf-8328-0574adab8cc7.b"
+      "b7e44b3b-632f-4caf-8328-0574adab8cc7.b",
+      "6c1837bc-f73b-45af-ab4e-caeec7d5a3b5.state"
     ],
     "16fa7113-8fd9-4e0c-9c78-aa0ef84ee3e4.original": [
       "b7e44b3b-632f-4caf-8328-0574adab8cc7.a"
@@ -1809,14 +1831,8 @@
     "01735c3e-805a-4b5e-bbeb-67d96ce74fd7.callback": [
       "ab6d1a0d-b491-4fa8-b445-79cd5590a970.item4"
     ],
-    "0c3fefde-0cc2-4493-9cf0-8272fcac7cf8.callback": [
-      "ab6d1a0d-b491-4fa8-b445-79cd5590a970.item5"
-    ],
     "0b8ae93c-efd0-42b3-b47d-c6a70193c568.fn": [
       "01735c3e-805a-4b5e-bbeb-67d96ce74fd7.fn"
-    ],
-    "756b8c82-4e39-4fff-beb8-692aff6c5744.fn": [
-      "0c3fefde-0cc2-4493-9cf0-8272fcac7cf8.fn"
     ],
     "7764663d-e2d6-4a59-af06-bbeb29e22712.value": [
       "8661e511-47a5-4ee4-a71b-c01c1e20e27b.text",
@@ -1835,6 +1851,12 @@
     "6c1837bc-f73b-45af-ab4e-caeec7d5a3b5.accepted": [
       "cdec356c-7c78-4a50-b50e-f1f9223df835.state",
       "cdec356c-7c78-4a50-b50e-f1f9223df835.intent"
+    ],
+    "0c3fefde-0cc2-4493-9cf0-8272fcac7cf8.callback": [
+      "ab6d1a0d-b491-4fa8-b445-79cd5590a970.item5"
+    ],
+    "756b8c82-4e39-4fff-beb8-692aff6c5744.fn": [
+      "0c3fefde-0cc2-4493-9cf0-8272fcac7cf8.fn"
     ]
   },
   "groups": [

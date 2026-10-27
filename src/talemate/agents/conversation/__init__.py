@@ -10,14 +10,18 @@ import structlog
 import talemate.client as client
 import talemate.emit.async_signals
 import talemate.util as util
+from talemate.events import before_generation
 from talemate.client.context import (
     client_context_attribute,
     set_client_context_attribute,
     set_conversation_context_attribute,
 )
+from talemate.exceptions import ControlFlowException
 from talemate.prompts import Prompt
-from talemate.scene_message import CharacterMessage, DirectorMessage
+from talemate.scene_message import CharacterMessage
+from talemate.scene_assets import MessageTarget
 from talemate.agents.utils import handle_empty_response_limit
+from talemate.ux.schema import Action
 
 from talemate.agents.base import (
     Agent,
@@ -33,6 +37,8 @@ from talemate.agents.base import (
 )
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
+from talemate.knowledge.bucket import KnowledgeIndex
+from talemate.agents.conversation.knowledge import CharacterKnowledgeMixin
 from talemate.agents.context import active_agent
 
 from .websocket_handler import ConversationWebsocketHandler
@@ -52,17 +58,19 @@ class ConversationAgentEmission(AgentEmission):
         default_factory=list
     )
     avatar: str | None = None
+    message_ids: list[int] = pydantic.Field(default_factory=list)
 
 
 talemate.emit.async_signals.register(
     "agent.conversation.before_generate",
     "agent.conversation.inject_instructions",
     "agent.conversation.generated",
+    "agent.conversation.finalized",
 )
 
 
 @register()
-class ConversationAgent(MemoryRAGMixin, Agent):
+class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
     """
     An agent that can be used to have a conversation with the AI
 
@@ -84,35 +92,20 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                 container=True,
                 icon="mdi-atom-variant",
                 label="Generation",
+                note=AgentActionNote(
+                    icon="mdi-information-outline",
+                    color="primary",
+                    text="The scene context format (Screenplay, Chat, Narrative, AI Aware) moved to the Summarizer agent's Scene History section. It applies to the scene context of every agent.",
+                    actions=[
+                        Action(
+                            action_name="openAgentSettings",
+                            arguments=["summarizer", "manage_scene_history"],
+                            label="Open Scene History",
+                            icon="mdi-arrow-split-vertical",
+                        )
+                    ],
+                ),
                 config={
-                    "format": AgentActionConfig(
-                        type="text",
-                        label="Format",
-                        description="The generation format of the scene progression, as seen by the AI. Has no direct effect on your view of the scene, but will affect the way the AI perceives the scene and its characters, leading to changes in the response, for better or worse.",
-                        choices=[
-                            {"label": "Screenplay", "value": "movie_script"},
-                            {"label": "Chat (legacy)", "value": "chat"},
-                            {
-                                "label": "Narrative",
-                                "value": "narrative",
-                            },
-                            {
-                                "label": "AI Aware",
-                                "value": "ai_aware",
-                            },
-                        ],
-                        value="movie_script",
-                        note_on_value={
-                            "narrative": AgentActionNote(
-                                color="primary",
-                                text="Will attempt to generate flowing, novel-like prose with scene intent awareness and character goal consideration. A reasoning model is STRONGLY recommended. Experimental and more prone to generate out of turn character actions and dialogue.",
-                            ),
-                            "ai_aware": AgentActionNote(
-                                color="primary",
-                                text="Characters are aware they are AI personas conversing with the user. Focused on having a conversation rather than progressing a scene.",
-                            ),
-                        },
-                    ),
                     "length": AgentActionConfig(
                         type="number",
                         label="Generation Length (tokens)",
@@ -184,6 +177,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             ),
         }
         MemoryRAGMixin.add_actions(actions)
+        CharacterKnowledgeMixin.add_actions(actions)
         return actions
 
     def __init__(
@@ -207,35 +201,12 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         self.actions = ConversationAgent.init_actions()
 
     @property
-    def conversation_format(self):
-        if self.resolve_enabled("generation_override"):
-            return self.resolve_config("generation_override", "format")
-        return "movie_script"
-
-    @property
-    def conversation_format_label(self):
-        value = self.conversation_format
-
-        choices = self.actions["generation_override"].config["format"].choices
-
-        for choice in choices:
-            if choice["value"] == value:
-                return choice["label"]
-
-        return value
-
-    @property
     def agent_details(self) -> dict:
         details = {
             "client": AgentDetail(
                 icon="mdi-network-outline",
                 value=self.client.name if self.client else None,
                 description="The client to use for prompt generation",
-            ).model_dump(),
-            "format": AgentDetail(
-                icon="mdi-format-float-none",
-                value=self.conversation_format_label,
-                description="Generation format of the scene context, as seen by the AI",
             ).model_dump(),
         }
 
@@ -287,19 +258,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         """
         Builds the prompt that drives the AI's conversational response
         """
-        # the amount of tokens we can use
-        # we subtract 200 to account for the response
-
         scene = character.actor.scene
-
-        total_token_budget = self.client.max_token_length - 200
-        scene_and_dialogue_budget = total_token_budget - 500
-
-        scene_and_dialogue = scene.context_history(
-            budget=scene_and_dialogue_budget,
-            keep_director=True,
-            sections=False,
-        )
 
         main_character = scene.main_character.character
 
@@ -320,11 +279,6 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         else:
             formatted_names = character_names[0] if character_names else ""
 
-        try:
-            director_message = isinstance(scene_and_dialogue[-1], DirectorMessage)
-        except IndexError:
-            director_message = False
-
         inject_instructions_emission = ConversationAgentEmission(
             agent=self,
             response="",
@@ -340,30 +294,31 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             inject_instructions_emission.dynamic_instructions
         )
 
-        conversation_format = self.conversation_format
+        conversation_format = scene.conversation_format
         prompt = Prompt.get(
             f"conversation.dialogue-{conversation_format}",
             vars={
                 "scene": scene,
                 "max_tokens": self.client.max_token_length,
-                "scene_and_dialogue_budget": scene_and_dialogue_budget,
-                "scene_and_dialogue": scene_and_dialogue,
                 "memory": None,  # DEPRECATED VARIABLE
                 "characters": list(scene.get_characters()),
                 "main_character": main_character,
                 "formatted_names": formatted_names,
                 "talking_character": character,
+                "knowledge_index": KnowledgeIndex.from_scene(scene),
+                "knowledge_viewer": self.rag_knowledge_viewer(character),
                 "partial_message": char_message,
-                "director_message": director_message,
                 "extra_instructions": self.generation_settings_task_instructions,  # backward compatibility
                 "task_instructions": self.generation_settings_task_instructions,
                 "actor_instructions": self.generation_settings_actor_instructions,
                 "actor_instructions_offset": self.generation_settings_actor_instructions_offset,
                 "direct_instruction": instruction,
                 "decensor": self.client.decensor_enabled,
-                "response_length": self.generation_settings_response_length
-                if self.generation_settings_override_enabled
-                else None,
+                "response_length": (
+                    self.generation_settings_response_length
+                    if self.generation_settings_override_enabled
+                    else None
+                ),
             },
         )
 
@@ -394,6 +349,10 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         return result
 
     def set_generation_overrides(self):
+        set_conversation_context_attribute(
+            "inject_character_names", self.inject_character_names_into_stop
+        )
+
         if not self.resolve_enabled("generation_override"):
             return
 
@@ -423,6 +382,8 @@ class ConversationAgent(MemoryRAGMixin, Agent):
 
         character = actor.character
 
+        await before_generation(self.scene, "conversation")
+
         emission = ConversationAgentEmission(
             agent=self, response="", actor=actor, character=character
         )
@@ -432,8 +393,10 @@ class ConversationAgent(MemoryRAGMixin, Agent):
 
         self.set_generation_overrides()
 
+        self.clear_memory_pass_record()
         prompt = await self.build_prompt(character, instruction=instruction)
         response, extracted = await prompt.send(self.client, kind="conversation")
+        memory_pass = self.take_memory_pass_record()
         result = extracted["response"]
 
         result = self.clean_result(result, character)
@@ -453,9 +416,8 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         if total_result.startswith(":\n") or total_result.startswith(": "):
             total_result = total_result[2:]
 
-        conversation_format = self.conversation_format
-
         scene = character.actor.scene
+        conversation_format = scene.conversation_format
         other_names = [n for n in scene.character_names if n != character.name]
 
         if conversation_format == "narrative":
@@ -502,6 +464,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         response = total_result
 
         log.debug("conversation agent", response=response)
+
         emission = ConversationAgentEmission(
             agent=self,
             actor=actor,
@@ -521,15 +484,43 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             extra["asset_id"] = character.current_avatar
             extra["asset_type"] = "avatar"
         messages = [CharacterMessage(emission.response, **extra)]
+        messages[0]._avatar_pending = emit_signals
+        messages[0].set_memory_pass(memory_pass)
         return messages
+
+    async def finalize_message_avatar(self, message: CharacterMessage):
+        if not message._avatar_pending:
+            return
+        message._avatar_pending = False
+        scene = self.scene
+        character = scene.get_character(message.character_name)
+        if character is None:
+            return
+        emission = ConversationAgentEmission(
+            agent=self,
+            actor=character.actor,
+            character=character,
+            response=message.message,
+            message_ids=[message.id],
+        )
+        try:
+            await talemate.emit.async_signals.get("agent.conversation.finalized").send(
+                emission
+            )
+            if self.scene is not scene or scene.get_message(message.id) is not message:
+                return
+            if emission.avatar and emission.avatar != message.asset_id:
+                await scene.assets.set_asset(
+                    MessageTarget(message_id=message.id), emission.avatar
+                )
+        except ControlFlowException:
+            raise
+        except Exception:
+            log.exception(
+                "finalize_message_avatar: attachment failed", message_id=message.id
+            )
 
     def allow_repetition_break(
         self, kind: str, agent_function_name: str, auto: bool = False
     ):
         return agent_function_name == "converse"
-
-    def inject_prompt_paramters(
-        self, prompt_param: dict, kind: str, agent_function_name: str
-    ):
-        if not self.inject_character_names_into_stop:
-            prompt_param["extra_stopping_strings"] = []

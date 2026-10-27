@@ -7,6 +7,9 @@ Once Talemate is up and running and you are connected, the Home screen shows a w
 
 Talemate uses client(s) to connect to local or remote AI text generation APIs like koboldcpp, text-generation-webui or OpenAI.
 
+!!! note "Which model?"
+    Talemate expects a current reasoning model with reliable structured output and 16k or more context. See [Model expectations](model-expectations.md) for the bar, known good examples and what still works with an older model.
+
 ## Add a new client
 
 On the right hand side click the **:material-plus-box: ADD CLIENT** button. 
@@ -18,9 +21,11 @@ On the right hand side click the **:material-plus-box: ADD CLIENT** button.
 
     ![open clients](/talemate/img/0.26.0/open-clients.png)
 
-The client configuration window will appear. Here you can choose the type of client you want to add.
+This takes you to **Settings → Connections → Clients** with the **Client type** menu open. Pick the type of client you want to add and it is created right away, with its editor next to the list.
 
-![connect a client add client modal](/talemate/img/0.39.0/connect-a-client-add-client-modal.png)
+![connect a client add client](/talemate/img/0.40.0/connect-a-client-add-client.png)
+
+Fill in the client's settings and click **:material-check-circle-outline: Save** in the toolbar at the top to apply them. Nothing is connected until you save.
 
 ## Choose an API / Client Type
 
@@ -60,7 +65,7 @@ Select the API you want to use and click through to follow the instructions to c
 
 Whenever you add your first client, Talemate will automatically assign it to all agents. Once the client is configured and assigned, all agents should have a green dot next to them. (Or grey if the agent is currently disabled)
 
-![Connect a client assigned](/talemate/img/0.30.0/connect-a-client-ready.png)
+![Connect a client assigned](/talemate/img/0.40.0/connect-a-client-ready.png)
 
 You can tell the client is assigned to the agent by checking the tag beneath the agent name, which will contain the client name if it is assigned.
 
@@ -70,4 +75,6 @@ You can tell the client is assigned to the agent by checking the tag beneath the
 
 If for some reason the client is not assigned to the agent, you can manually assign it to all agents by clicking the **:material-transit-connection-variant: Assign to all agents** button.
 
-![Connect a client assign to all agents](/talemate/img/0.26.0/connect-a-client-assign-to-all-agents.png)
+![Connect a client assign to all agents](/talemate/img/0.40.0/connect-a-client-assign-to-all-agents.png)
+
+The same action is available on the [Clients settings page](/talemate/user-guide/clients/client-configuration/), above the client editor. There it is applied when you save, and it is disabled while the client itself is disabled — enable the client first.

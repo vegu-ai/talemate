@@ -8,8 +8,10 @@ against stored baseline files. Run with --update-baselines to create/update.
 import pytest
 from unittest.mock import AsyncMock
 
+from talemate.agents.tts.chatterbox import TURBO_AUDIO_TAGS, TURBO_STYLE_TAGS
+
 from ..conftest import mock_llm_client  # noqa: F401
-from ..helpers import create_mock_character
+from ..helpers import add_character_knowledge, create_mock_character
 from ..test_summarizer_templates import (  # noqa: F401
     mock_scene,
     mock_conversation_agent,
@@ -147,6 +149,24 @@ class TestSummarizerBaselines:
         )
 
     @pytest.mark.asyncio
+    async def test_analyze_scene_for_conversation__with_character_knowledge(
+        self, active_context, mock_scene, baseline_checker
+    ):
+        summarizer = active_context
+        add_character_knowledge(mock_scene)
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="<ANALYSIS>Scene analysis for conversation.</ANALYSIS>"
+        )
+        await summarizer.analyze_scene_for_next_action(
+            typ="conversation", character=mock_scene.get_character("Elena"), length=512
+        )
+        baseline_checker(
+            capture_prompt(summarizer),
+            AGENT,
+            "analyze_scene_for_conversation__with_character_knowledge",
+        )
+
+    @pytest.mark.asyncio
     async def test_analyze_scene_for_narration(self, active_context, baseline_checker):
         summarizer = active_context
         summarizer.client.send_prompt = AsyncMock(
@@ -168,3 +188,40 @@ class TestSummarizerBaselines:
         text = '"Hello there," said Elena. Marcus nodded.'
         await summarizer.markup_context_for_tts(text)
         baseline_checker(capture_prompt(summarizer), AGENT, "markup_context_for_tts")
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("restricted", [False, True], ids=["free_form", "turbo"])
+    async def test_inject_audio_tags_for_tts(
+        self, active_context, baseline_checker, restricted
+    ):
+        summarizer = active_context
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="<CHUNK_0>[sigh] Hello there.</CHUNK_0>"
+        )
+        entries = [
+            dict(
+                index=0,
+                text="Hello there.",
+                type="dialogue",
+                character_name="Elena",
+                eligible=True,
+                tag_format="[{{ tag }}]",
+                allowed_tags=TURBO_AUDIO_TAGS if restricted else None,
+                style_tags=TURBO_STYLE_TAGS if restricted else None,
+            ),
+            dict(
+                index=1,
+                text="Marcus nodded.",
+                type="exposition",
+                character_name=None,
+                eligible=False,
+                tag_format="[{{ tag }}]",
+                allowed_tags=None,
+            ),
+        ]
+        await summarizer.inject_audio_tags_for_tts(chunk_entries=entries)
+        baseline_checker(
+            capture_prompt(summarizer),
+            AGENT,
+            f"inject_audio_tags_for_tts_{'turbo' if restricted else 'free_form'}",
+        )

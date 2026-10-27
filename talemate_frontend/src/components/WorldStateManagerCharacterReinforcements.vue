@@ -1,5 +1,5 @@
 <template>
-    <v-row floating color="grey-darken-5">
+    <v-row floating>
         <v-col cols="3">
         </v-col>
         <v-col cols="3"></v-col>
@@ -42,7 +42,7 @@
                 <v-list-item
                     v-for="(value, detail) in filteredList"
                     :key="detail"
-                    class="text-caption"
+                    class="text-body-small"
                     :active="selected === detail"
                     @click="selected = detail"
                 >
@@ -63,7 +63,7 @@
                     :disabled="working"
                     v-model="character.reinforcements[selected].answer"
                     @update:modelValue="dirty = true"
-                    @blur="update(selected, false, true)"
+                    @blur="update(selected, false, true, true)"
                     :color="dirty ? 'dirty' : ''">
                 </v-textarea>
 
@@ -352,7 +352,7 @@ export default {
             this.character.reinforcements[name] = {...this.newReinforcment};
         },
 
-        update(name, updateState, only_if_dirty = false) {
+        update(name, updateState, only_if_dirty = false, answerConfirmed = false) {
 
             if(only_if_dirty && !this.dirty) {
                 return;
@@ -373,6 +373,7 @@ export default {
                 interval: interval,
                 instructions: instructions,
                 answer: this.character.reinforcements[name].answer,
+                answer_confirmed: answerConfirmed,
                 update_state: updateState,
                 insert: insert,
                 require_active: require_active,

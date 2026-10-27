@@ -1,0 +1,25 @@
+{% include "character-evidence-context.jinja2" %}
+{% with talking_character=character, memory_context_history=evidence.history %}{% include "memory-context.jinja2" %}{% endwith %}
+{% include "dynamic-instructions.jinja2" %}
+{% if scene.description %}
+<|SECTION:SCENE DESCRIPTION|>{{ scene.description }}<|CLOSE_SECTION|>
+{% endif %}
+{% include "scene-intent.jinja2" %}
+{% include "director-instructions.jinja2" %}
+<|SECTION:AUTHOR ANALYSIS AND GOALS|>
+{{ analysis }}
+{% set character_direction = scene.last_message_of_type("director", character_name=character.name, max_iterations=agent_config("director.direct.direction_stickiness"), stop_on_time_passage=True, count_only_types=["character", "narrator"]) %}
+{{ agent_context_state["conversation__instruction"] or character_direction or "" }}
+{% if regeneration_context %}{{ regeneration_context.direction or "" }}{% endif %}
+{{ character.dialogue_instructions or "" }}
+
+This planning material is not evidence of what {{ character.name }} knows. Do not copy unsupported private facts or plans from it into the advice.
+<|CLOSE_SECTION|>
+{% include "character-evidence-rules.jinja2" %}
+<|SECTION:TASK|>
+Give the writer concise directional guidance for {{ character.name }}'s next action or dialogue, grounded in their evidence above. Preserve their established beliefs and attributed testimony, including unresolved contradictions. State only supported motivations and actions; do not supply exact dialogue. A goal that needs undisclosed information must wait for an established opportunity to learn it. Do not manufacture that opportunity or list hidden facts in your advice.
+Keep the existing narrative tense and perspective. Speech goes inside double quotes.
+{% include "response-length.jinja2" %}
+Return <GUIDANCE>your advice</GUIDANCE>.
+<|CLOSE_SECTION|>
+{{ set_prepared_response("<GUIDANCE>", fallback="") }}

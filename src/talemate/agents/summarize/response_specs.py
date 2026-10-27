@@ -9,6 +9,7 @@ from talemate.prompts.response import (
     ResponseSpec,
     AnchorExtractor,
     AfterAnchorExtractor,
+    CodeBlockExtractor,
     StripPrefixExtractor,
 )
 
@@ -17,6 +18,7 @@ __all__ = [
     "MARKUP_SPEC",
     "AUDIO_TAGS_SPEC",
     "CHUNK_CLEAN_SPEC",
+    "PERCEPTIONS_SPEC",
 ]
 
 # For extracting content after "SUMMARY:" prefix
@@ -50,6 +52,16 @@ AUDIO_TAGS_SPEC = ResponseSpec(
 CHUNK_CLEAN_SPEC = ResponseSpec(
     extractors={
         "cleaned": StripPrefixExtractor(pattern=r"(CHUNK|CHAPTER) \d+:\s+"),
+    },
+    required=[],
+)
+
+# The JSON views object of a perception analysis, fenced or bare; the raw
+# block lets a cut-off or invalid answer report its JSON error
+PERCEPTIONS_SPEC = ResponseSpec(
+    extractors={
+        "perceptions": CodeBlockExtractor(left="<PERCEPTIONS>", right="</PERCEPTIONS>"),
+        "block": AnchorExtractor(left="<PERCEPTIONS>", right="</PERCEPTIONS>"),
     },
     required=[],
 )

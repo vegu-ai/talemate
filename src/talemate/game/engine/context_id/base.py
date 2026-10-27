@@ -6,7 +6,7 @@ Unified way of describing where context information is stored.
 
 from __future__ import annotations
 
-from typing import ClassVar, TYPE_CHECKING, Any, Callable
+from typing import ClassVar, TYPE_CHECKING, Any, Callable, Iterable
 import hashlib
 import pydantic
 import structlog
@@ -29,6 +29,8 @@ __all__ = [
     "ContextIDMetaGroup",
     # functions
     "compress_name",
+    "context_id_item_by_name",
+    "context_id_path_str",
     "register_context_id_type",
     "register_context_id_handler",
     "register_context_id_meta",
@@ -144,12 +146,53 @@ def registered_context_id_types() -> list[str]:
     return list(CONTEXT_ID_TYPES.keys())
 
 
-def _parts(context_id_str: str) -> tuple[str, list[str]]:
+def context_id_path_str(context_id_str: str) -> str:
+    """Return the path portion of a context ID string, dots and colons intact."""
+    return _parts_raw(context_id_str)[1]
+
+
+def context_id_item_by_name(
+    items: Iterable["ContextIDItem"], name: str
+) -> "ContextIDItem | None":
+    """
+    Find an item by its readable name, in order of precedence: the name exactly
+    as stored, then the name ignoring outer whitespace, then ignoring case as
+    well. Every candidate is ranked in one pass, so two names that differ only
+    in outer whitespace do not resolve by iteration order.
+    """
+    stripped = name.strip()
+    stripped_match = None
+    case_insensitive_match = None
+
+    for item in items:
+        if item.name == name:
+            return item
+
+        item_name = item.name.strip()
+        if stripped_match is None and item_name == stripped:
+            stripped_match = item
+        if (
+            case_insensitive_match is None
+            and item_name.casefold() == stripped.casefold()
+        ):
+            case_insensitive_match = item
+
+    if stripped_match is not None:
+        return stripped_match
+    return case_insensitive_match
+
+
+def _parts_raw(context_id_str: str) -> tuple[str, str]:
     try:
         context_type, path_str = context_id_str.split(":", 1)
-        return context_type, path_str.split(".")
+        return context_type, path_str
     except Exception as e:
         raise ContextIDInvalidIDString(context_id_str, str(e))
+
+
+def _parts(context_id_str: str) -> tuple[str, list[str]]:
+    context_type, path_str = _parts_raw(context_id_str)
+    return context_type, path_str.split(".")
 
 
 class ContextIDHandler(pydantic.BaseModel):
@@ -168,6 +211,16 @@ class ContextIDHandler(pydantic.BaseModel):
         self, context_type: str, path: list[str], path_str: str, scene: "Scene"
     ) -> "ContextIDItem | None":
         raise NotImplementedError("Subclasses must implement this method")
+
+    async def context_id_item_from_name(
+        self, context_type: str, path: list[str], path_str: str, scene: "Scene"
+    ) -> "ContextIDItem | None":
+        """
+        Resolve a context ID whose path carries the readable name instead of the
+        compressed identifier. Handlers that compress a name into their path
+        implement this so both forms of the ID work.
+        """
+        return None
 
 
 class ContextIDItem(pydantic.BaseModel):
@@ -190,6 +243,11 @@ class ContextIDItem(pydantic.BaseModel):
     @property
     def memory_id(self) -> str | None:
         return None
+
+    @property
+    def knowledge_id(self) -> str | None:
+        """The id a knowledge edge or a visibility setting addresses."""
+        return self.memory_id
 
     async def get(self, scene: "Scene") -> Any:
         raise NotImplementedError("Subclasses must implement this method")
@@ -275,7 +333,12 @@ async def context_id_item_from_string(
 ) -> "ContextIDItem | None":
     context_type, path = _parts(context_id_str)
     handler = context_id_handler_from_string(context_id_str, scene)
-    return await handler.context_id_item_from_path(
+    item = await handler.context_id_item_from_path(
+        context_type, path, context_id_str, scene
+    )
+    if item is not None:
+        return item
+    return await handler.context_id_item_from_name(
         context_type, path, context_id_str, scene
     )
 

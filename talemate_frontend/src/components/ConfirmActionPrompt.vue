@@ -22,6 +22,8 @@
 </template>
 <script>
 
+import { escapeHtmlText, sanitizeHtml } from '@/utils/htmlSanitizer.js';
+
 export default {
     name: "ConfirmActionPrompt",
     props:{
@@ -65,12 +67,14 @@ export default {
     },
     computed: {
         formattedDescription() {
-            if (!this.description || !this.params) return this.description;
-            
-            return this.description.replace(/{([^}]+)}/g, (match, key) => {
-                const value = this.params && this.params[key] !== undefined ? this.params[key] : '';
-                return `<span class="text-primary">${value}</span>`;
+            if (!this.description) return this.description;
+            if (!this.params) return sanitizeHtml(this.description);
+
+            const filled = this.description.replace(/{([^}]+)}/g, (match, key) => {
+                const value = this.params[key] !== undefined ? this.params[key] : '';
+                return `<span class="text-primary">${escapeHtmlText(value)}</span>`;
             });
+            return sanitizeHtml(filled);
         }
     },
     methods:{

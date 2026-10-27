@@ -571,7 +571,7 @@ def test_fields_default_matches_setup_value(node_cls, prop):
 
 def test_update_message_asset_has_no_asset_type_property():
     """UpdateMessageAsset declared an `asset_type` property that run()
-    never used (update_message_asset takes no such argument)."""
+    never used (set_asset takes no such argument)."""
     node = UpdateMessageAsset()
     assert "asset_type" not in node.field_definitions
 

@@ -8,6 +8,8 @@ from copy import deepcopy
 import structlog
 from pydantic import BaseModel, Field
 
+from talemate.client.effort import EffortLevel
+
 __all__ = [
     "context_data",
     "client_context_attribute",
@@ -49,6 +51,7 @@ class ContextModel(BaseModel):
     requires_active_scene: bool = True
     # Honored unless the client reports reason_locked.
     disable_reasoning: bool = False
+    reasoning_effort: EffortLevel | None = None
 
 
 # Define the context variable as an empty dictionary

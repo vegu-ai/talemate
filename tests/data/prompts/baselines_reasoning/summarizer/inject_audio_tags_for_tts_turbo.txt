@@ -1,0 +1,55 @@
+## Characters
+### Hero
+
+### Elena
+A wandering healer with knowledge of ancient herbs.
+
+## Classification
+Content Classification: Fantasy adventure story
+
+Narrative Perspective: Third person limited, past tense.
+
+## Task
+You are an expert in vocal performance and expressive speech. Your task is to enhance spoken dialogue by inserting audio tags at natural points within the text. Audio tags are inline markers that instruct a text-to-speech engine to add vocal effects, emotional inflections, or non-verbal sounds.
+
+Use the audio-tag format and policy specified for each eligible chunk below.
+
+You will receive a list of text chunks. Chunks marked [ELIGIBLE] should have audio tags injected where appropriate. Chunks marked [CONTEXT] are provided for understanding the emotional context only — do NOT include them in your output.
+
+For each [ELIGIBLE] chunk, output the tagged text wrapped in its corresponding `<CHUNK_N>` tag (where N is the chunk index). Inject audio tags inline at the exact points where the vocal effect should occur.
+
+**Rules:**
+- Only add tags within spoken dialogue (the quoted parts) — never in narration or exposition. If a chunk mixes exposition with quoted dialogue, only the text inside the quotes gets tags.
+
+- CHUNK_0 audio-tag format: [{{ tag }}]
+
+- CHUNK_0 allowed tags: [clear throat], [sigh], [shush], [cough], [groan], [sniff], [gasp], [chuckle], [laugh], [angry], [fear], [surprised], [whispering], [crying], [happy], [sarcastic], [dramatic], [narration], [advertisement]
+  Use only these tags, spelled exactly; do not add free-form emotion or delivery tags.
+  Style tags ([angry], [fear], [surprised], [whispering], [crying], [happy], [sarcastic], [dramatic], [narration], [advertisement]) colour the delivery of the sentence that follows them: put each one at the start of the sentence it colours. A style tag at the end of a sentence has no effect.
+  Sound tags (all other allowed tags) go where the sound happens.
+
+- Do NOT over-tag — be selective and natural. A few well-placed tags are far better than many.
+- Do NOT change, remove, or rephrase any of the original text — only insert tags
+- The `(Name)` marker in front of each chunk is metadata, not chunk text. Never write a speaker name or label (such as `Name:` or `(Name)`) into a `<CHUNK_N>` output.
+- Keep tag descriptions concise (1-3 words)
+- It is perfectly fine to return a chunk unchanged if no tags are appropriate
+- Consider the character's personality and the scene's emotional tone
+
+## Guidelines
+- Read ALL chunks (including [CONTEXT]) to understand the full scene and emotional context
+- Only output [ELIGIBLE] chunks in your response, each wrapped in its `<CHUNK_N>` tag
+- Tone and style tags go at the start of a sentence or clause — they set the delivery for everything after
+- Sound tags go wherever the sound naturally happens — beginning, middle, or end of a line
+- Less is more — prioritize impact over quantity
+- Eligible chunk indices: 0
+
+## Text
+Each line starts with metadata: the chunk index, its eligibility and the speaker in parentheses. The chunk text follows the metadata.
+<TEXT>
+[INDEX:0] [ELIGIBLE] (Elena) Hello there.
+[INDEX:1] [CONTEXT] (Narrator) Marcus nodded.
+</TEXT>
+
+The length of your final answer must fit within 4 paragraphs.
+
+After thinking about it, start your answer with: <CHUNK_0>

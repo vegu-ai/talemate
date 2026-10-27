@@ -9,7 +9,7 @@
   <!-- Dialog for voice library -->
   <v-dialog v-model="dialog" max-width="1920">
     <v-card>
-      <v-toolbar density="comfortable" color="grey-darken-4">
+      <v-toolbar density="comfortable" color="mutedbg">
         <v-toolbar-title class="d-flex align-center">
           <v-icon class="mr-2" size="small" color="primary">mdi-account-voice</v-icon>
           Voice Library
@@ -132,7 +132,7 @@
             <v-window v-model="activeTab" class="mt-2">
               <!-- Details Tab -->
               <v-window-item value="details">
-                <v-card elevation="7" density="compact">
+                <v-card elevation="3" density="compact">
                   <v-card-text>
                     <v-select
                       v-model="editVoice.provider"
@@ -367,7 +367,7 @@
 
 <script>
 
-import { marked } from 'marked';
+import { renderChatMarkdown } from '@/utils/chatMarkdownRenderer.js';
 import VoiceMixer from './VoiceMixer.vue';
 import ConfigWidgetField from './ConfigWidgetField.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
@@ -636,7 +636,7 @@ export default {
   },
   methods: {
     renderMessage(msg) {
-      return marked.parse(msg.text);
+      return renderChatMarkdown(msg.text);
     },
     defaultValueForParam(param) {
       if (param) {
@@ -731,7 +731,6 @@ export default {
     saveVoice() {
       if (!this.selectedVoice || !this.canSubmitVoice) return;
       const payload = { voice_id: this.selectedVoice.id, ...this.editVoice };
-      console.log("Saving voice", payload);
       payload.scope = this.scope;
       this.getWebsocket().send(
         JSON.stringify({ type: 'tts', action: 'edit', ...payload })
@@ -825,7 +824,6 @@ export default {
       }
       if (message.action === 'api_status' && message.api_status) {
         this.apiStatus = message.api_status;
-        console.log({ apiStatus: this.apiStatus });
       }
       if (message.action === 'voice_file_uploaded' && message.provider_id) {
         // Set the provider_id to the returned path and switch to ID tab

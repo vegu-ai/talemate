@@ -12,7 +12,7 @@
         />
         
         <!-- Voice Selection -->
-        <div class="text-h6 mb-2">Select Voices to Mix</div>
+        <div class="text-title-large mb-2">Select Voices to Mix</div>
         <v-alert
           v-if="availableVoices.length === 0"
           type="warning"
@@ -55,7 +55,7 @@
               />
             </v-col>
             <v-col cols="3" class="d-flex align-center justify-end">
-              <v-chip :color="entry.weight > 0 ? 'primary' : 'default'" class="mr-2">
+              <v-chip :color="entry.weight > 0 ? 'primary' : ''" class="mr-2">
                 {{ entry.weight.toFixed(1) }}
               </v-chip>
               <v-btn

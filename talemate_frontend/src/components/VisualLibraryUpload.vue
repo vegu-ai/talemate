@@ -1,10 +1,16 @@
 <template>
-  <v-card class="mb-2" variant="tonal" color="grey-darken-4">
+  <v-card class="mb-2" variant="tonal" color="mutedbg">
     <v-card-text class="text-muted">
-      <div class="dropzone" @dragover.prevent @drop.prevent="onDrop">
+      <div
+        class="dropzone"
+        tabindex="0"
+        aria-label="Drop or paste an image to add it to the scene"
+        @dragover.prevent
+        @drop.prevent="onDrop"
+      >
         <div class="d-flex align-center">
           <v-icon class="mr-2">mdi-tray-arrow-down</v-icon>
-          <span>Drag & drop an image here, or</span>
+          <span>Drag & drop or paste an image here, or</span>
           <v-btn variant="text" class="ml-2" @click="$refs.file.click()">browse</v-btn>
           <input type="file" accept="image/*" ref="file" class="d-none" @change="onFileChange" />
         </div>
@@ -25,8 +31,10 @@
 
 <script>
 import { VIS_TYPE_OPTIONS, isCharacterVisType as isCharacterVisTypeHelper } from '@/constants/visual';
+import ImagePasteTargetMixin from './ImagePasteTargetMixin.js';
 export default {
   name: 'VisualLibraryUpload',
+  mixins: [ImagePasteTargetMixin],
   inject: ['getWebsocket'],
   props: {
     scene: { type: Object, required: false, default: () => ({}) },
@@ -66,6 +74,9 @@ export default {
         this.readFile(file);
       }
     },
+    handlePastedImage(file) {
+      this.readFile(file);
+    },
     onFileChange(e) {
       const file = e.target && e.target.files && e.target.files[0];
       if (file) {
@@ -104,6 +115,12 @@ export default {
   border: 1px dashed rgba(var(--v-theme-primary), 0.4);
   border-radius: 6px;
   padding: 12px;
+}
+
+.dropzone:focus-visible {
+  border-color: rgba(var(--v-theme-primary), 0.8);
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: 2px;
 }
 </style>
 

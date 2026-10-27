@@ -1,12 +1,12 @@
 <template>
-  <v-dialog :model-value="modelValue" max-width="640" @update:model-value="$emit('update:modelValue', $event)">
+  <v-dialog :model-value="modelValue" max-width="900" @update:model-value="$emit('update:modelValue', $event)">
     <v-card>
-      <v-card-title class="text-h6">
+      <v-card-title class="text-title-large">
         <v-icon class="mr-2">mdi-script</v-icon>
         Create New Story
       </v-card-title>
       <v-card-text>
-        <div class="text-body-2 mb-4">
+        <div class="text-body-medium mb-4">
           Name your story and optionally choose a writing style and director persona. You can change these later in the World Editor.
         </div>
 
@@ -34,7 +34,7 @@
               persistent-hint
               clearable
             />
-            <div class="text-caption text-muted mt-1">
+            <div class="text-body-small text-muted mt-1">
               <template v-if="!hasWritingStyles">
                 No writing styles yet. <v-btn size="x-small" variant="text" color="primary" prepend-icon="mdi-cube-scan" @click="openTemplatesManager">Manage templates</v-btn>
               </template>
@@ -55,7 +55,7 @@
               persistent-hint
               clearable
             />
-            <div class="text-caption text-muted mt-1">
+            <div class="text-body-small text-muted mt-1">
               <template v-if="!hasDirectorPersonas">
                 No personas yet. <v-btn size="x-small" variant="text" color="primary" prepend-icon="mdi-cube-scan" @click="openTemplatesManager">Manage templates</v-btn>
               </template>
@@ -66,6 +66,15 @@
           </v-col>
         </v-row>
 
+        <CharacterKnowledgeModeComparison
+          :key="knowledgeUiVersion"
+          :perspectives="characterKnowledge"
+          selectable
+          collapse-details
+          class="mt-4"
+          @update:perspectives="characterKnowledge = $event" />
+        <KnowledgeEffortSlider ref="effortSlider" :mode="effortMode" :agents="effortAgents" :value="effortForMode" class="mt-4" @apply="effort = $event" />
+        <p class="text-body-small mt-2">You can change this in Scene Settings while the scene has no history or archived history. Keep secrets out of the shared scene description and story intention.</p>
         <v-divider class="mt-4 mb-4"></v-divider>
 
         <v-row>
@@ -89,8 +98,13 @@
 </template>
 
 <script>
+import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
+import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
+import { effortMode, globalEffortAgents, stopForMode } from '@/utils/knowledgeEffort';
+
 export default {
   name: 'NewSceneSetupModal',
+  components: { CharacterKnowledgeModeComparison, KnowledgeEffortSlider },
   props: {
     modelValue: {
       type: Boolean,
@@ -102,10 +116,13 @@ export default {
     },
   },
   emits: ['update:modelValue', 'create'],
-  inject: ['openWorldStateManager'],
+  inject: ['openWorldStateManager', 'appConfig'],
   data() {
     return {
       sceneName: '',
+      characterKnowledge: false,
+      effort: null,
+      knowledgeUiVersion: 0,
       assistWithSetup: false,
       selectedWritingStyle: null,
       selectedDirectorPersona: null,
@@ -115,6 +132,9 @@ export default {
     modelValue(val) {
       if (val) {
         this.sceneName = '';
+        this.characterKnowledge = false;
+        this.effort = null;
+        this.knowledgeUiVersion += 1;
         this.assistWithSetup = false;
         this.selectedWritingStyle = null;
         this.selectedDirectorPersona = null;
@@ -122,6 +142,15 @@ export default {
     },
   },
   computed: {
+    effortAgents() {
+      return globalEffortAgents(this.appConfig());
+    },
+    effortMode() {
+      return effortMode(this.characterKnowledge);
+    },
+    effortForMode() {
+      return stopForMode(this.effort, this.effortMode);
+    },
     hasWritingStyles() {
       return !!(this.templates && this.templates.by_type && this.templates.by_type.writing_style && Object.keys(this.templates.by_type.writing_style).length);
     },
@@ -148,11 +177,14 @@ export default {
       this.$emit('update:modelValue', false);
     },
     create() {
+      this.$refs.effortSlider?.send();
       this.$emit('create', {
         sceneName: this.sceneName || null,
         writingStyle: this.selectedWritingStyle || null,
         directorPersona: this.selectedDirectorPersona || null,
         assistWithSetup: this.assistWithSetup,
+        characterKnowledge: this.characterKnowledge,
+        effort: this.effortForMode,
       });
       this.$emit('update:modelValue', false);
     },

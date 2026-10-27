@@ -1,12 +1,13 @@
 <template>
-  <v-sheet density="compact" v-if="hasAnyOverridable">
+  <v-sheet color="transparent" density="compact" v-if="hasAnyOverridable">
     <div v-if="actionSchema.description" class="text-muted mt-2">
       {{ actionSchema.description }}
-      <p v-if="actionSchema.warning" class="text-warning mt-2 text-caption">
+      <p v-if="actionSchema.warning" class="text-warning mt-2 text-body-small">
         <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
         {{ actionSchema.warning }}
       </p>
     </div>
+    <UxNote v-if="actionSchema.note" :note="actionSchema.note" class="mt-2 mb-8" />
 
     <!-- Container-level enabled override — only renders when the action
          opts in via enabled_scene_overridable AND can actually be disabled
@@ -35,7 +36,7 @@
     <div v-for="(action_config, config_key) in actionSchema.config" :key="config_key">
       <div v-if="action_config.scene_overridable && (fieldConditionMet(action_config) || isOverrideActive(config_key))">
         <UxField
-          :field="action_config"
+          :field="displayField(config_key, action_config)"
           :model-value="effectiveValue(config_key)"
           :readonly="!isOverrideActive(config_key)"
           :templates="templates"
@@ -54,28 +55,32 @@
   </v-sheet>
 
   <!-- action's own condition unmet → render nothing -->
-  <v-sheet v-else-if="actionConditionMet" density="compact">
+  <v-sheet color="transparent" v-else-if="actionConditionMet" density="compact">
     <div v-if="actionSchema.description" class="text-muted mt-2 mb-3">
       {{ actionSchema.description }}
-      <p v-if="actionSchema.warning" class="text-warning mt-2 text-caption">
+      <p v-if="actionSchema.warning" class="text-warning mt-2 text-body-small">
         <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
         {{ actionSchema.warning }}
       </p>
     </div>
+    <UxNote v-if="actionSchema.note" :note="actionSchema.note" class="mt-2 mb-8" />
     <v-alert density="compact" variant="text" color="muted">
-      <span class="text-caption">This section has no scene-overridable fields.</span>
+      <span class="text-body-small">This section has no scene-overridable fields.</span>
     </v-alert>
   </v-sheet>
 </template>
 
 <script>
 import { actionHasOverridable, effectiveConditionMet, hasEnabledOverride } from '@/constants/sceneAgentSettings';
+import { worldStatePinField } from '@/utils/worldStatePinWarning';
 import UxField from './UxField.vue';
 import SceneOverrideToggle from './SceneOverrideToggle.vue';
+import UxNote from './UxNote.vue';
 
 export default {
-  components: { UxField, SceneOverrideToggle },
+  components: { UxField, SceneOverrideToggle, UxNote },
   props: {
+    actionKey: { type: String, required: true },
     // Live mutable global action (deep clone owned by the modal). Read for
     // global values; NOT mutated by this component.
     action: { type: Object, required: true },
@@ -128,6 +133,16 @@ export default {
         return this.overrides.config[configKey].value;
       }
       return this.action?.config?.[configKey]?.value;
+    },
+    displayField(configKey, field) {
+      return worldStatePinField({
+        actionKey: this.actionKey,
+        configKey,
+        field,
+        enabled: !!this.effectiveEnabled,
+        pin: this.effectiveValue('inject_as_scene_memory'),
+        turns: this.effectiveValue('turns'),
+      });
     },
     // ------------------------------------------------------------------
     // Mutation helpers — every change emits update:overrides with a fresh

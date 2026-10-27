@@ -10,16 +10,32 @@ Overrides are **sparse**: only the specific fields you choose to override are st
 
 Each overridden field is independent. You can override the conversation length for a scene while leaving its format, client, and every other setting on the global value.
 
+## Knowledge effort during creation
+
+**Create New Story** and **Character Card Import** pin their selected knowledge effort as scene overrides. Selected values stay pinned even if they already match global settings. Each creation gets a separate settings file, so reusing a project name does not change a previous story's overrides. Unrelated inherited settings remain intact.
+
+A blank story keeps its normal unsaved state until you save it; that save stores the settings link. Imported cards save the link during import. Once the story is saved, the knowledge hub marks overrides with :material-movie-open-cog-outline:. Activate the icon beside one setting to restore that setting's global value, the icon beside a group to restore the whole group, or the **Scene override** label and icon above the effort slider to restore every knowledge setting owned by the hub. Each action leaves unrelated scene overrides intact.
+
+## Saving a knowledge-hub change for the first time
+
+Changing a setting in a character's knowledge hub — or in the hub the [scene header's **Knowledge effort** chip](/talemate/user-guide/scene-header/#knowledge-effort) opens — brings up **Save Scene** when the scene has no save file yet. After the save succeeds, Talemate applies the pending knowledge change automatically. Scenes with a save file and project name apply hub changes directly, including read-only stock scenes. The exception is a read-only scene that is opted out of agent-settings overrides: it cannot store the link a hub change needs, so the change is refused with an error. Save the scene as a copy first (**Save As**), then make the change in the copy.
+
+If a save fails, the dialog stays open with the error and entered name so you can correct it and retry. Cancelling keeps the exact change pending. Use **Save and apply** to reopen the dialog, or **Discard change** to drop it. Both are in the hub, including the one the scene header's [Knowledge effort chip](/talemate/user-guide/scene-header/#knowledge-effort) opens, which is there in a story with no characters yet. Loading another scene discards the pending change so it cannot affect a different story. The pending notice is not confirmation that the settings were saved.
+
 ## Editing overrides: the Global / Scene switch
 
-Overrides are edited in the same place as global settings — the **agent modal** (opened by clicking an agent in the agent panel).
+Overrides are edited in the same place as global settings — the **Agents settings page** at **Settings → Connections → Agents**. Clicking an agent in the agent panel opens it there directly.
 
-When a scene is loaded and the agent has at least one setting that supports overrides, a **Global / Scene** switch appears at the top of the modal:
+When a scene is loaded and the agent has at least one setting that supports overrides, a **Global / Scene** switch appears in the header of the agent's detail pane:
 
-- **Global** — the normal view. Changes here affect every scene.
-- **Scene** — the override view. Changes here apply only to the current scene.
+- **:material-earth: Global** — the normal view. Changes here affect every scene.
+- **:material-movie-open-outline: Scene** — the override view. Changes here apply only to the current scene.
 
-A small number next to the **Scene** button shows how many overrides are currently active for that agent.
+A small number next to the **Scene** button shows how many overrides are currently active for that agent. Each section that holds some of them shows its own share on the right of its header, with the :material-movie-open-outline: icon, in both **Global** and **Scene** mode. Hover over it to read, for example, **2 scene overrides**. In **Scene** mode the section numbers add up to the number on the **Scene** button, so you can see which sections to open without expanding each one. In **Global** mode a section that only shows under a condition, such as a Visualizer backend section while another backend is selected globally, stays hidden, so its overrides count only on the **Scene** button there. For example, when the Summarizer shows **Scene 3**, the headers can tell you that two of them are in **Summarization** and one in **Layered history**.
+
+The section numbers follow your edits before you save: clear the last override of a section and its number goes away.
+
+![The Agents settings page in Scene mode, with the number of scene overrides on the Summarization and Layered history sections](/talemate/img/0.40.0/agents-scene-overrides.png)
 
 !!! note
     The switch only appears while a saved scene is loaded. Overrides need a scene (and its project folder) to be stored in, so they aren't available on the placeholder/empty scene.
@@ -37,28 +53,40 @@ Any action that can be switched off globally can also be switched off for the sc
 
 Some sections are always on by design — for example the World State's Character Portraits, the Summarizer's Scene History, and the Conversation and Narrator Generation sections. They have no enable checkbox and cannot be switched off globally or per scene; a `false` left for one in the configuration file (or in a scene's overrides) is ignored.
 
-In Scene mode, the modal only shows the settings (and tabs) that actually support overriding, to keep the view focused. If an agent has no currently overridable settings at all, the Global / Scene switch won't appear.
+API keys and passwords are never scene-overridable. They belong to your installation rather than to any one story — a scene file is something you can share — so they never appear in Scene mode, and a value left for one in a scene's overrides file is ignored.
 
-Some settings only apply while another setting is switched on — for example the Creator agent's Fast-mode fields (Consolidate, One-shot token budget, Fill in misses) only matter while **Fast Character Generation** is on. Those settings appear in Scene mode only while their gating setting allows it, and the gate is read as this scene sees it: the scene's override if there is one, otherwise the global value. So overriding the gate for a scene reveals the settings it gates, and a section (or tab) whose settings are all currently hidden drops out of Scene mode entirely.
+In Scene mode, the page only shows the settings (and sections) that actually support overriding, to keep the view focused. If an agent has no currently overridable settings at all, the Global / Scene switch won't appear.
 
-One exception keeps things recoverable: a setting you have **already** overridden stays visible even when its gate is off, so you can always see it in the count and clear it. Its stored value still applies whenever the gate is on again.
+Some settings only apply while another setting is switched on — for example the Creator agent's Fast-mode fields (Consolidate, One-shot token budget, Fill in misses) only matter while **Fast Character Generation** is on. Those settings appear in Scene mode only while their gating setting allows it, and the gate is read as this scene sees it: the scene's override if there is one, otherwise the global value. So overriding the gate for a scene reveals the settings it gates, and a section whose settings are all currently hidden drops out of Scene mode entirely.
+
+One exception keeps things recoverable: a setting you have **already** overridden stays visible even when its gate is off, so you can always see it in the count and clear it. Its stored value still applies whenever the gate is on again. The same holds for a whole section: in Scene mode, a section that holds an override stays listed even when the setting that normally shows it is off, for example a Visualizer backend section while another backend is selected.
 
 ### Saving
 
-Overrides are saved automatically when you close the agent modal, the same way global settings are. If the scene doesn't yet have an overrides file (see below), you'll be asked to name one the first time you save an override.
+Overrides are treated like every other edit on the settings page: activating one, or changing an overridden value, marks the page as having **Unsaved changes**, and nothing reaches the scene until you press **:material-check-circle-outline: Save** in the settings toolbar. **:material-undo: Discard** drops them again. Switching agents, switching back to **Global**, or leaving the page writes nothing on its own — the pending overrides simply stay pending.
+
+If the scene doesn't yet have an overrides file (see below), the first save that carries an override asks you to name one before it writes; cancelling that prompt cancels the save and leaves your edits untouched.
+
+On the Agents settings page, choosing a name other than `agent-settings.json` for a read-only scene opens **Save As** to create a writable copy. After it succeeds, Talemate attempts to save the pending overrides and link the copy to the named file. Cancelling **Save As** cancels the save too and leaves your edits pending. This Agents-page flow leaves the original scene unchanged.
+
+If that name already exists in the project's `agent-settings/` folder, the naming prompt shows an error before opening Save As or sending any agent edits. If a file appears after the prompt's file list was loaded, the server also refuses the save with the same guidance for every pending agent. Your edits remain pending. Choose a new filename to store those edits separately. To use the existing file's settings, discard the pending edits and select that file in **World Editor → Scene → Settings → Agent settings file**. The naming prompt never replaces an existing file.
 
 ## Quick-toggle chips
 
-Some actions and settings are also exposed as quick-toggle chips directly on the agent in the agent panel, so they can be flipped mid-play without opening the modal.
+Some actions and settings are also exposed as quick-toggle chips directly on the agent in the agent panel, so they can be flipped mid-play without opening the settings page.
 
 A chip always shows the value the loaded scene is actually running on — the scene override when one is active, your global value otherwise — and clicking it changes exactly the value it is showing:
 
 - **No override active** — the chip toggles the global setting, as it always has.
 - **Override active** — the chip carries a small :material-movie-open-cog-outline: marker and toggles the scene's override only. Your global setting is left alone; hover the chip to see what it currently is.
 
-Unlike the modal, a chip writes immediately — there is nothing to close and no save step.
+Unlike the settings page, a chip writes immediately, with no save step. A chip changes only the value it shows, so a scene override you changed a moment earlier somewhere else, for example in the visualizer menu, stays as you set it.
 
-To go back to following the global value, clear the override in the agent modal's **Scene** mode.
+In a story with no save file yet, for example right after restoring a restore point, a marked chip or toggle first brings up **Save Scene**, like the knowledge hub. If you cancel, the change stays pending: the agent panel and the visualizer menu show it with **Save and apply** and **Discard change**. Until you choose one, other scene-override changes are refused, and the place you made them says so.
+
+The automatic generation toggles in the [scene tools visualizer menu](/talemate/user-guide/scenario-tools/#automatic-generation) work the same way. A **Character portraits** or **Backgrounds** toggle with the marker writes every value it changes to this scene only, including the selection frequency it may raise, even if the scene had overridden only the other setting.
+
+To go back to following the global value, clear the override in **Scene** mode on the Agents settings page and save.
 
 ## The overrides file
 
@@ -66,7 +94,7 @@ Per-scene overrides are stored in a JSON file inside an `agent-settings/` folder
 
 A few things worth knowing:
 
-- **Overrides are project-level.** The `agent-settings/` folder lives with the project, so every save file in the same project (including **Save As** copies and restore points) shares the same overrides. Different projects have completely independent overrides.
+- **Overrides are project-scoped.** Every save in a project, including stock scenes, **Save As** copies and restore points, shares its default overrides through automatic linking. Read-only stock scenes can edit these overrides directly; creating another file for them on the Agents settings page takes a **Save As** copy. Explicitly choosing another settings file or opting out changes what that save uses (see below). Different projects have completely independent overrides.
 - **Overrides travel with exports.** When you export a scene, the `agent-settings/` folder is included, so your overrides survive being shared with or imported on another system.
 - **Bad files fall back safely.** If an overrides file is missing or can't be read, the scene simply falls back to your global configuration and the link is cleared.
 
@@ -74,7 +102,7 @@ A few things worth knowing:
 
 Which overrides file a scene uses is controlled from **World Editor → Scene → Settings**, in the **Agent settings file** dropdown. See [Scene Settings](/talemate/user-guide/world-editor/scene/settings#agent-settings-file) for the full description. In short, you can:
 
-- **Auto-link (default)** — the scene automatically uses `agent-settings.json` if one exists in the project. This is the normal behavior. The first override you set in the agent modal creates this file.
+- **Auto-link (default)** — the scene automatically uses `agent-settings.json` if one exists in the project. This is the normal behavior. The first override you save creates this file — you are prompted for its name.
 - **Pick a specific file** — link the scene to a particular file in the project's `agent-settings/` folder. This lets a project hold more than one overrides file and switch between them.
 - **None (opt out)** — disable per-scene overrides entirely for this scene. The scene uses global configuration only and won't auto-link to a default file.
 

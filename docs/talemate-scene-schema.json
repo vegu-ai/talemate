@@ -1,7 +1,24 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
+  "$comment": "Compatibility contract: talemate.scene.format (read_scene_format).",
+  "if": {
+    "properties": {"knowledge_eligibility": {"const": "perception"}},
+    "required": ["knowledge_eligibility"]
+  },
+  "then": {"required": ["format_version"]},
   "properties": {
+    "format_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Saved representation version. Absence means legacy format 0."
+    },
+    "knowledge_eligibility": {
+      "type": "string",
+      "enum": ["legacy", "perception"],
+      "default": "legacy",
+      "description": "Knowledge compatibility, not feature activation. Absence means legacy."
+    },
     "description": {
       "type": "string"
     },
@@ -27,6 +44,13 @@
           },
           "source": {
             "type": "string"
+          },
+          "present": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Names of the characters active in the scene when this was recorded. Absent in scenes saved before presence tracking; absent means unknown, which every character treats as witnessed."
           }
         },
         "required": ["message", "id", "typ", "source"]
@@ -45,6 +69,13 @@
           },
           "ts": {
             "type": "string"
+          },
+          "present": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Names of the characters active in the scene when this was recorded. Absent in scenes saved before presence tracking; absent means unknown, which every character treats as witnessed."
           }
         },
         "required": ["text", "ts"]
@@ -75,6 +106,17 @@
           },
           "details": {
             "type": "object"
+          },
+          "visibility": {
+            "type": "object",
+            "description": "Known-by setting per sheet entry, keyed by the memory storage key (description, <attribute>, detail.<name>). Absent means everyone.",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "mode": {"type": "string", "enum": ["everyone", "owner", "list"]},
+                "characters": {"type": "array", "items": {"type": "string"}}
+              }
+            }
           },
           "gender": {
             "type": "string"
@@ -119,6 +161,23 @@
     "world_state": {
       "type": "object",
       "properties": {
+        "knowledge": {
+          "type": "array",
+          "description": "Grant and revoke access rules for authored entries.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "character": {"type": "string"},
+              "target": {"type": "string", "description": "Memory document id: <name>.<attr>, <name>.detail.<key>, <name>.description, a world entry id or a summarized history entry id."},
+              "kind": {"type": "string", "enum": ["grant", "revoke"]},
+              "source": {"type": "string", "enum": ["told", "granted", "inferred", "manual", "director"]},
+              "message_id": {"type": ["integer", "null"]},
+              "ts": {"type": ["integer", "null"]},
+              "note": {"type": ["string", "null"]}
+            }
+          }
+        },
         "characters": {
           "type": "object",
           "additionalProperties": {

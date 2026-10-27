@@ -1,0 +1,22 @@
+{% include "character-evidence-context.jinja2" %}
+{% if scene.description %}
+<|SECTION:SCENE DESCRIPTION|>{{ scene.description }}<|CLOSE_SECTION|>
+{% endif %}
+{% include "scene-intent.jinja2" %}
+{% include "dynamic-instructions.jinja2" %}
+{% include "character-evidence-rules.jinja2" %}
+<|SECTION:TASK|>
+Analyze the available evidence for {{ character.name }}'s next action in the scene. This analysis goes directly to the writer of their behavior. Explain the immediate situation as they know it, their supported motives and beliefs, relationships supported by the evidence, and plausible next steps. Preserve who claimed what and established uncertainty; do not resolve contradictory testimony or adopt reader truth. Older knowledge remains last-known unless this character has learned an update. Use no reader-only current moment or private plan to explain their behavior.
+Preserve the narrative tense and perspective in the supplied passages. Missing evidence does not establish a new belief or motive.
+{% set character_direction = scene.last_message_of_type("director", character_name=character.name, max_iterations=agent_config("director.direct.direction_stickiness"), stop_on_time_passage=True, count_only_types=["character", "narrator"]) %}
+{% if character_direction or agent_context_state["conversation__instruction"] %}
+Author goal (not evidence): {{ agent_context_state["conversation__instruction"] or character_direction }}
+Only suggest supported steps toward this goal; do not repeat its undisclosed information in your analysis.
+{% endif %}
+Use terse plain text, approximately {{ length }} tokens.
+Return <ANALYSIS>your analysis</ANALYSIS>.
+{% if deep_analysis %}
+Optionally append <INVESTIGATE>specific questions about this character's existing evidence to retrieve</INVESTIGATE>. Questions must preserve attribution and uncertainty, not presume an undisclosed answer.
+{% endif %}
+<|CLOSE_SECTION|>
+{{ set_prepared_response("<ANALYSIS>", fallback="") }}

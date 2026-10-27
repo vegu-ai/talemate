@@ -1,0 +1,7 @@
+{#- xhigh (the model's fourth reasoning strength) is deliberately not mapped: Talemate caps storytelling workloads at high, GPT-OSS bucket convention -#}
+{%- if reasoning_tokens %}{% set _ = spec.set_spec("reasoning_pattern", ".*?to=user<\\|message\\|>") %}{% set _ = spec.set_spec("reasoning_validation_pattern", "to=self<\\|message\\|>|to=user<\\|message\\|>") %}{% endif -%}
+<|start|>system<|message|>{{ system_message }}
+
+Reasoning strength: {% if reasoning_tokens <= 1024 %}low{% elif reasoning_tokens <= 4096 %}medium{% else %}high{% endif %}.
+
+# Valid recipients: "self", "user".<|eot|><|start|>user<|message|>{{ user_message }}<|eot|><|start|>assistant{% if not reasoning_tokens or coercion_message %} to=user<|message|>{{ coercion_message }}{% endif %}

@@ -27,9 +27,9 @@
                 <v-list-item-title>Restore</v-list-item-title>
                 <v-list-item-subtitle>Restore point can be selected in the scene settings</v-list-item-subtitle>
             </v-list-item>
-            <v-list-item @click="openSceneTimeline()" prepend-icon="mdi-history" :disabled="!canUseTimeline">
-                <v-list-item-title>Timeline</v-list-item-title>
-                <v-list-item-subtitle>Browse the scene's history and fork from any point</v-list-item-subtitle>
+            <v-list-item @click="openSceneRevisions()" prepend-icon="mdi-source-branch" :disabled="!canUseRevisions">
+                <v-list-item-title>Scene revisions</v-list-item-title>
+                <v-list-item-subtitle>Browse saved states and fork from a revision</v-list-item-subtitle>
             </v-list-item>
             <v-divider />
             <v-list-item @click="openSceneStateReset" prepend-icon="mdi-refresh">
@@ -39,10 +39,6 @@
         </v-list>
     </v-menu>
 
-    <RequestInput ref="saveAsInput" title="Save As"
-        :instructions="'Enter a name for the new scene'"
-        input-type="text" icon="mdi-content-save-all" :size="750" @continue="saveAs" />
-
     <ConfirmActionPrompt ref="confirmRestoreScene" @confirm="restoreScene" actionLabel="Reset Scene" icon="mdi-restore" description="Are you sure you want to restore  the scene? All unsaved changes will be lost." />
 
     <SceneStateResetDialog ref="sceneStateReset" />
@@ -50,14 +46,12 @@
 
 <script>
 
-import RequestInput from './RequestInput.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import SceneStateResetDialog from './SceneStateResetDialog.vue';
 
 export default {
     name: 'SceneToolsSave',
     components: {
-        RequestInput,
         ConfirmActionPrompt,
         SceneStateResetDialog,
     },
@@ -69,12 +63,12 @@ export default {
         },
         scene: Object,
     },
-    inject: ['getWebsocket', 'openSceneTimeline'],
+    inject: ['getWebsocket', 'openSceneRevisions', 'requestSceneSave'],
     computed: {
         canSaveToCurrentFile() {
             return this.scene?.data?.filename && !this.scene?.data?.immutable_save;
         },
-        canUseTimeline() {
+        canUseRevisions() {
             return !!this.scene?.data?.filename;
         },
         saveRequired() {
@@ -99,18 +93,8 @@ export default {
             }));
         },
 
-        saveAs(saveName=null) {
-            if (saveName === null) {
-                this.$refs.saveAsInput.openDialog();
-                return;
-            }
-
-            this.getWebsocket().send(JSON.stringify({
-                type: "world_state_manager",
-                action: "save_scene",
-                save_as: saveName,
-                project_name: this.scene?.data?.project_name,
-            }));
+        saveAs() {
+            return this.requestSceneSave();
         },
 
         restoreScenePrompt() {

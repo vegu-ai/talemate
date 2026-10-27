@@ -13,12 +13,12 @@
 
     <!-- search results -->
     <v-list v-if="searchActive" density="compact" slim color="primary" selectable>
-        <v-list-subheader color="grey">
+        <v-list-subheader>
             <v-icon color="primary" class="mr-1">mdi-magnify</v-icon>
             Results
         </v-list-subheader>
         <v-list-item v-if="searchResults.length === 0">
-            <v-list-item-subtitle class="text-caption">No settings match "{{ search }}"</v-list-item-subtitle>
+            <v-list-item-subtitle class="text-body-small">No settings match "{{ search }}"</v-list-item-subtitle>
         </v-list-item>
         <v-list-item v-for="(result, index) in searchResults" :key="index"
             :active="false"
@@ -27,14 +27,14 @@
                 <v-icon>{{ result.page.icon }}</v-icon>
             </template>
             <v-list-item-title>{{ result.entry ? result.entry.label : result.page.title }}</v-list-item-title>
-            <v-list-item-subtitle class="text-caption">{{ result.page.group }} · {{ result.page.title }}</v-list-item-subtitle>
+            <v-list-item-subtitle class="text-body-small">{{ result.page.group }} · {{ result.page.title }}</v-list-item-subtitle>
         </v-list-item>
     </v-list>
 
     <!-- navigation -->
     <v-list v-else density="compact" slim color="primary" :selected="[page]" selectable @update:selected="onSelectPage">
         <template v-for="group in groups" :key="group.title">
-            <v-list-subheader color="grey">
+            <v-list-subheader>
                 <v-icon color="primary" class="mr-1">{{ group.icon }}</v-icon>
                 {{ group.title }}
             </v-list-subheader>
@@ -75,10 +75,17 @@ export default {
             if (selection.length === 0) {
                 return;
             }
-            this.$emit('navigate', { page: selection[0], anchor: null });
+            this.$emit('navigate', { page: selection[0], anchor: null, item: null });
         },
         onSelectResult(result) {
-            this.$emit('navigate', { page: result.page.id, anchor: result.entry ? result.entry.anchor : null });
+            // `item` is what the page's setSelection() needs to open the right
+            // row (an agent, a client); entries without one just scroll to
+            // their anchor
+            this.$emit('navigate', {
+                page: result.page.id,
+                anchor: result.entry ? result.entry.anchor : null,
+                item: result.entry ? (result.entry.item || null) : null,
+            });
         },
     },
 }

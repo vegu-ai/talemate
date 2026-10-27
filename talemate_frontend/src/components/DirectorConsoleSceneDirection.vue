@@ -1,6 +1,6 @@
 <template>
     <v-toolbar density="compact" flat color="mutedbg">
-        <v-toolbar-title class="text-subtitle-2 text-muted">
+        <v-toolbar-title class="text-title-small text-muted">
             <v-icon class="mr-1">mdi-bullhorn</v-icon> Scene Direction
         </v-toolbar-title>
         
@@ -20,7 +20,7 @@
                 :items="sceneTypes" 
                 v-model="intent.phase.scene_type" 
                 label="Scene Type" 
-                class="text-caption" 
+                class="text-body-small"
                 density="compact" 
                 @update:model-value="updateSceneIntent()"
             ></v-select>
@@ -37,7 +37,7 @@
             <v-textarea 
                 density="compact" 
                 v-model="intent.phase.intent" 
-                class="text-caption" 
+                class="text-body-small"
                 hide-details 
                 rows="4" 
                 max-rows="15" 
@@ -52,7 +52,7 @@
     <v-divider class="my-2"></v-divider>
 
     <v-toolbar density="compact" flat color="mutedbg">
-        <v-toolbar-title class="text-subtitle-2 text-muted">
+        <v-toolbar-title class="text-title-small text-muted">
             <v-icon class="mr-1">mdi-timeline-text</v-icon> Direction Timeline
         </v-toolbar-title>
         <v-spacer></v-spacer>
@@ -273,4 +273,3 @@ export default {
 
 <style scoped>
 </style>
-

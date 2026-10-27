@@ -3,13 +3,13 @@ Tests for ``talemate.agents.conversation`` (the ConversationAgent class).
 
 Targets:
 - Action registration (``init_actions``) and the property accessors
-  (``conversation_format``, ``conversation_format_label``,
-  ``content_use_*``, ``generation_settings_*``,
+  (``content_use_*``, ``generation_settings_*``,
   ``inject_character_names_into_stop``).
 - ``agent_details`` populated dictionary.
 - ``set_generation_overrides`` writing context attributes when enabled.
 - ``clean_result`` post-processing of LLM output.
-- ``allow_repetition_break`` and ``inject_prompt_paramters``.
+- ``allow_repetition_break`` and the character-name stopping strings the
+  agent/client handshake produces.
 - ``converse`` happy path through ``Prompt.request`` mock for both
   movie_script and narrative formats, including character-name
   prefix handling.
@@ -22,6 +22,7 @@ tests; here we patch ``build_prompt`` so converse can be tested end-to-end.
 import pytest
 
 import talemate.client.context as client_context_module
+import talemate.instance as instance
 from talemate.agents.conversation import (
     ConversationAgent,
 )
@@ -120,39 +121,17 @@ class TestActionRegistration:
         assert "content" in actions
         assert "prompt_caching" in actions
 
-    def test_default_format_is_movie_script(self, conversation_scene):
+    def test_generation_has_no_format(self, conversation_scene):
         _, conversation, _ = conversation_scene
-        assert conversation.conversation_format == "movie_script"
+        assert "format" not in conversation.actions["generation_override"].config
 
-    def test_format_ignores_a_disabled_flag_on_the_override(self, conversation_scene):
-        # `generation_override` is declared can_be_disabled=False, so nothing
-        # in the UI can switch it off and `resolve_enabled` reports it on
-        # regardless of a stored flag (issue #174). The configured format
-        # therefore still applies — the movie_script fallback in
-        # `conversation_format` is unreachable for a healthy config.
+    def test_generation_note_opens_scene_history(self, conversation_scene):
         _, conversation, _ = conversation_scene
-        assert conversation.actions["generation_override"].can_be_disabled is False
-        conversation.actions["generation_override"].config["format"].value = "chat"
-        conversation.actions["generation_override"].enabled = False
-        assert conversation.conversation_format == "chat"
-
-    def test_format_returns_value_when_override_enabled(self, conversation_scene):
-        _, conversation, _ = conversation_scene
-        conversation.actions["generation_override"].enabled = True
-        conversation.actions["generation_override"].config["format"].value = "chat"
-        assert conversation.conversation_format == "chat"
-
-    def test_format_label_resolves_known_value(self, conversation_scene):
-        _, conversation, _ = conversation_scene
-        conversation.actions["generation_override"].config["format"].value = "chat"
-        # The choices contain a label "Chat (legacy)" for value "chat".
-        assert conversation.conversation_format_label == "Chat (legacy)"
-
-    def test_format_label_falls_back_to_value_when_unknown(self, conversation_scene):
-        _, conversation, _ = conversation_scene
-        # Inject an unknown value and confirm the label is the raw value.
-        conversation.actions["generation_override"].config["format"].value = "weird"
-        assert conversation.conversation_format_label == "weird"
+        note = conversation.actions["generation_override"].note
+        assert "Scene History" in note.text
+        [action] = note.actions
+        assert action.action_name == "openAgentSettings"
+        assert action.arguments == ["summarizer", "manage_scene_history"]
 
     def test_generation_setting_properties(self, conversation_scene):
         _, conversation, _ = conversation_scene
@@ -189,20 +168,11 @@ class TestActionRegistration:
 
 
 class TestAgentDetails:
-    def test_includes_client_and_format(self, conversation_scene):
+    def test_includes_client_only(self, conversation_scene):
         _, conversation, _ = conversation_scene
         details = conversation.agent_details
-        assert "client" in details
-        assert "format" in details
         assert details["client"]["value"] == conversation.client.name
-        # Format default is movie_script -> label is "Screenplay".
-        assert details["format"]["value"] == "Screenplay"
-
-    def test_no_client_yields_none_value(self, conversation_scene):
-        _, conversation, _ = conversation_scene
-        conversation.client = None
-        details = conversation.agent_details
-        assert details["client"]["value"] is None
+        assert "format" not in details
 
 
 # ---------------------------------------------------------------------------
@@ -211,11 +181,20 @@ class TestAgentDetails:
 
 
 class TestSetGenerationOverrides:
-    def test_does_nothing_when_disabled(self, conversation_scene):
+    def test_ignores_a_disabled_flag_on_the_override(self, conversation_scene):
+        # `generation_override` is can_be_disabled=False, so `resolve_enabled`
+        # reports it on regardless of a stored flag and the early return in
+        # `set_generation_overrides` is unreachable — every attribute is still
+        # written.
         _, conversation, _ = conversation_scene
         conversation.actions["generation_override"].enabled = False
-        # Should not raise even without a client_context active.
-        conversation.set_generation_overrides()
+        conversation.actions["generation_override"].config["length"].value = 333
+
+        with client_context_module.ClientContext():
+            conversation.set_generation_overrides()
+            data = client_context_module.context_data.get()
+            assert data["conversation"]["length"] == 333
+            assert data["conversation"]["inject_character_names"] is True
 
     def test_writes_length_to_conversation_context(self, conversation_scene):
         _, conversation, _ = conversation_scene
@@ -287,11 +266,11 @@ class TestCleanResult:
 
 
 # ---------------------------------------------------------------------------
-# allow_repetition_break / inject_prompt_paramters
+# allow_repetition_break / character names in stop tokens
 # ---------------------------------------------------------------------------
 
 
-class TestAllowRepetitionBreakAndInject:
+class TestAllowRepetitionBreak:
     def test_allow_repetition_break_only_for_converse(self, conversation_scene):
         _, conversation, _ = conversation_scene
         assert conversation.allow_repetition_break("conversation", "converse") is True
@@ -299,42 +278,48 @@ class TestAllowRepetitionBreakAndInject:
             conversation.allow_repetition_break("conversation", "build_prompt") is False
         )
 
-    def test_inject_prompt_parameters_noop_with_inject_enabled_and_empty(
+
+def _stopping_strings_for_conversation(conversation, preset_strings: list[str]):
+    """Run the agent/client handshake that assembles the stopping strings.
+
+    The agent publishes the toggle to the conversation context and the client
+    decides whether to add the character names on top of whatever the
+    inference preset already contributed.
+    """
+    params = {"extra_stopping_strings": list(preset_strings)}
+    with client_context_module.ClientContext():
+        client_context_module.set_client_context_attribute(
+            "conversation",
+            {"talking_character": "Alice", "other_characters": ["Bob"]},
+        )
+        conversation.set_generation_overrides()
+        conversation.client.tune_prompt_parameters_conversation(params)
+    return params["extra_stopping_strings"]
+
+
+class TestInjectCharacterNamesIntoStop:
+    def test_names_added_alongside_preset_strings_when_enabled(
         self, conversation_scene
     ):
         _, conversation, _ = conversation_scene
-        params = {}
-        conversation.inject_prompt_paramters(params, "conversation", "converse")
-        # When inject_character_names_into_stop is True (default) and no
-        # stopping strings are present, the function leaves params untouched.
-        assert "extra_stopping_strings" not in params
+        conversation.actions["generation_override"].config[
+            "inject_character_names_into_stop"
+        ].value = True
 
-    def test_inject_prompt_parameters_resets_when_inject_disabled(
-        self, conversation_scene
-    ):
+        strings = _stopping_strings_for_conversation(conversation, ["PRESET"])
+        assert "PRESET" in strings
+        assert "Bob:" in strings
+        assert "BOB\n" in strings
+
+    def test_only_names_dropped_when_disabled(self, conversation_scene):
         _, conversation, _ = conversation_scene
         conversation.actions["generation_override"].config[
             "inject_character_names_into_stop"
         ].value = False
-        params = {"extra_stopping_strings": ["EXISTING"]}
-        conversation.inject_prompt_paramters(params, "conversation", "converse")
-        # When inject_character_names_into_stop is False, any stopping
-        # strings already populated (e.g. character names added by the
-        # client) are wiped.
-        assert params["extra_stopping_strings"] == []
 
-    def test_inject_prompt_parameters_preserves_existing_with_inject_enabled(
-        self, conversation_scene
-    ):
-        _, conversation, _ = conversation_scene
-        # When inject_character_names_into_stop is True AND extra_stopping_strings
-        # is already populated, it is left untouched.
-        conversation.actions["generation_override"].config[
-            "inject_character_names_into_stop"
-        ].value = True
-        params = {"extra_stopping_strings": ["EXISTING"]}
-        conversation.inject_prompt_paramters(params, "conversation", "converse")
-        assert params["extra_stopping_strings"] == ["EXISTING"]
+        # The preset's own stopping strings must survive the toggle.
+        strings = _stopping_strings_for_conversation(conversation, ["PRESET"])
+        assert strings == ["PRESET"]
 
 
 # ---------------------------------------------------------------------------
@@ -345,8 +330,7 @@ class TestAllowRepetitionBreakAndInject:
 class TestConverse:
     async def test_converse_movie_script_format(self, conversation_scene, alice):
         scene, conversation, alice_actor = conversation_scene
-        conversation.actions["generation_override"].enabled = True
-        conversation.actions["generation_override"].config[
+        instance.get_agent("summarizer").actions["manage_scene_history"].config[
             "format"
         ].value = "movie_script"
 
@@ -371,8 +355,9 @@ class TestConverse:
 
     async def test_converse_narrative_format(self, conversation_scene, alice):
         scene, conversation, alice_actor = conversation_scene
-        conversation.actions["generation_override"].enabled = True
-        conversation.actions["generation_override"].config["format"].value = "narrative"
+        instance.get_agent("summarizer").actions["manage_scene_history"].config[
+            "format"
+        ].value = "narrative"
 
         async def fake_build_prompt(character, char_message="", instruction=None):
             return _canned_prompt(
@@ -392,8 +377,7 @@ class TestConverse:
         self, conversation_scene, alice
     ):
         scene, conversation, alice_actor = conversation_scene
-        conversation.actions["generation_override"].enabled = True
-        conversation.actions["generation_override"].config[
+        instance.get_agent("summarizer").actions["manage_scene_history"].config[
             "format"
         ].value = "movie_script"
 

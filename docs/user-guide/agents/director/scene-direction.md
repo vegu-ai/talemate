@@ -26,7 +26,7 @@ Scene Direction is disabled by default. To enable it:
 2. Find the **Scene Direction** section
 3. Toggle the feature **On**
 
-![Director Scene Direction Settings](/talemate/img/0.35.0/director-scene-direction-settings.png)
+![Director Scene Direction Settings](/talemate/img/0.40.0/director-scene-direction-settings.png)
 
 !!! tip "Quick Toggle"
     Scene Direction has a quick toggle in the agent settings panel, making it easy to turn on and off during play.
@@ -155,7 +155,7 @@ Controls the maximum tokens the director can use for reasoning and response gene
 
 #### Max Actions Per Turn
 
-The maximum number of actions the director can execute in a single turn. This prevents runaway action chains. Default is 5.
+The maximum number of actions the director can execute in a single turn. This prevents runaway action chains. Default is 10.
 
 #### Retries
 
@@ -196,7 +196,7 @@ Add global instructions that will be included in all scene direction prompts acr
 
 ### Director Persona
 
-The director persona selected in the agent settings applies to scene direction as well as director chat. Choosing a different persona can significantly affect the director's tone, decision-making style, and how it approaches scene progression.
+The director persona assigned in the Director Console applies to scene direction as well as director chat. Choosing a different persona can significantly affect the director's tone, decision-making style, and how it approaches scene progression.
 
 See [Director Personas](/talemate/user-guide/agents/director/chat/#director-personas) for more information on available personas and how to customize them.
 

@@ -5,6 +5,7 @@ import pydantic
 import talemate.game.engine.api.schema as schema
 from talemate.game.engine.api.base import ScopedAPI, run_async
 from talemate.game.engine.api.exceptions import UnknownCharacter
+from talemate.scene_message import TimePassageMessage
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -175,7 +176,14 @@ def create(scene: "Scene") -> "ScopedAPI":
 
             validated = Arguments(typ=typ, all=all, reverse=reverse)
 
-            scene.pop_history(validated.typ, validated.all, validated.reverse)
+            message_typ = (
+                TimePassageMessage.model_fields["typ"].default
+                if validated.typ == schema.MessageTypes.time_passage
+                else validated.typ.value
+            )
+            scene.pop_history(
+                typ=message_typ, all=validated.all, reverse=validated.reverse
+            )
 
         def restore(self):
             """

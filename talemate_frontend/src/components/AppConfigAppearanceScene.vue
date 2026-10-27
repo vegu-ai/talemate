@@ -1,5 +1,14 @@
 <template>
     <div class="ma-3">
+        <div class="d-flex justify-end">
+            <v-tooltip :text="restoreFromThemeDisabledReason || 'Take the message styling, colors and backdrop legibility from the active theme, discarding your own appearance edits.'" max-width="350" location="top">
+                <template v-slot:activator="{ props }">
+                    <span v-bind="props">
+                        <v-btn variant="text" size="small" color="warning" prepend-icon="mdi-refresh" data-setting-anchor="restore-from-theme" :disabled="!!restoreFromThemeDisabledReason" @click="$refs.confirmRestoreFromTheme.initiateAction()">Restore from theme</v-btn>
+                    </span>
+                </template>
+            </v-tooltip>
+        </div>
         <v-table density="compact">
             <thead>
                 <tr>
@@ -13,10 +22,10 @@
             </thead>
             <tbody>
                 <template v-for="(styleConfig, typ) in config" :key="typ">
-                    <tr v-if="typ.endsWith('_messages') || ['quotes', 'parentheses', 'brackets', 'emphasis', 'entities'].includes(typ)" :style="colorPickerTarget === typ ? 'background-color: rgba(128, 128, 128, 0.1);' : ''">
+                    <tr v-if="typ.endsWith('_messages') || ['quotes', 'parentheses', 'brackets', 'emphasis', 'entities'].includes(typ)" :data-setting-anchor="typAnchorMap[typ]" :style="colorPickerTarget === typ ? 'background-color: rgba(128, 128, 128, 0.1);' : ''">
                         <td style="padding: 4px 12px;">
                             <div class="d-flex align-center">
-                                <div class="text-caption font-weight-medium">{{ typLabelMap[typ] || typ }}</div>
+                                <div class="text-body-small font-weight-medium">{{ typLabelMap[typ] || typ }}</div>
                                 <v-chip v-if="typ === 'quotes'" size="x-small" variant="text" class="ml-1">" "</v-chip>
                                 <v-chip v-if="typ === 'parentheses'" size="x-small" variant="text" class="ml-1">( )</v-chip>
                                 <v-chip v-if="typ === 'brackets'" size="x-small" variant="text" class="ml-1">[ ]</v-chip>
@@ -56,11 +65,21 @@
                 </template>
             </tbody>
         </v-table>
+        <div class="mt-4 px-3" data-setting-anchor="show-memory-pass">
+            <v-switch
+                v-model="config.show_memory_pass"
+                color="primary"
+                density="compact"
+                label="Memories button on character replies"
+                hint="When Refine memories with AI shapes a reply, its toolbar offers a Memories button listing what the character drew on. Available for replies generated since the scene was loaded."
+                persistent-hint
+            ></v-switch>
+        </div>
     </div>
     <v-row class="ma-5" no-gutters>
         <v-col cols="8" class="pr-3">
-            <v-card color="black">
-                <v-card-text style="background-color: black;">
+            <v-card color="background">
+                <v-card-text>
                     <div>
                         <div class="mb-2 d-flex align-center">
                             <v-icon class="mr-2" :color="getColor('narrator_messages', config.narrator_messages?.color)">mdi-script-text-outline</v-icon>
@@ -95,6 +114,15 @@
                             <span v-html="renderedContextInvestigationPreview">
                             </span>
                         </div>
+                        <div class="mt-3">
+                            <v-chip :color="getColor('reinforcement_messages', config.reinforcement_messages?.color)">
+                                <v-icon class="mr-2">mdi-image-auto-adjust</v-icon>
+                                <span>State Update · Elmer — How does Elmer feel right now?</span>
+                            </v-chip>
+                            <div class="mt-1 ml-3" :style="buildCssStyles('reinforcement_messages', config.reinforcement_messages)">
+                                Wary but hopeful; the blast door held, and the conduit chamber is still dark.
+                            </div>
+                        </div>
                         <div class="mt-3 d-flex align-center" :style="buildCssStyles('information_messages', config.information_messages)">
                             <v-icon class="mr-2" :color="getColor('information_messages', config.information_messages?.color)">mdi-information-outline</v-icon>
                             <span>
@@ -116,15 +144,21 @@
             </div>
         </v-col>
     </v-row>
+
+    <ConfirmActionPrompt ref="confirmRestoreFromTheme" @confirm="restoreFromTheme" actionLabel="Restore from theme" icon="mdi-refresh" color="warning" confirmText="Restore" cancelText="Cancel" :maxWidth="400" description="Take the message styling, colors and backdrop legibility from the active theme? This discards your own appearance edits." />
 </template>
 
 <script>
+import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
-import { DEFAULT_APPEARANCE_COLORS } from '@/utils/messageColors.js';
+import { getMessageColor } from '@/utils/messageColors.js';
+import { restoreAppearanceFromTheme } from '@/utils/appearanceTheme';
+import { HIDEABLE_APPEARANCE_TYPES, THEME_APPEARANCE_MAP } from '@/utils/templateMappings';
 
 export default {
     name: 'AppConfigAppearanceScene',
     components: {
+        ConfirmActionPrompt,
     },
     props: {
         immutableConfig: Object,
@@ -132,6 +166,7 @@ export default {
     },
     emits: [
         'changed',
+        'restore-from-theme',
     ],
     watch: {
         immutableConfig: {
@@ -153,10 +188,11 @@ export default {
                 }
                 // Ensure new styling fields exist with defaults if missing
                 this.hydrateMarkupStyle(sceneConfig, 'quotes');
-                this.hydrateMarkupStyle(sceneConfig, 'parentheses', { italic: true, withShow: true });
-                this.hydrateMarkupStyle(sceneConfig, 'brackets', { italic: true, withShow: true });
+                this.hydrateMarkupStyle(sceneConfig, 'parentheses', { italic: true });
+                this.hydrateMarkupStyle(sceneConfig, 'brackets', { italic: true });
                 this.hydrateMarkupStyle(sceneConfig, 'emphasis', { italic: true });
-                this.hydrateMarkupStyle(sceneConfig, 'entities', { withShow: true });
+                this.hydrateMarkupStyle(sceneConfig, 'entities');
+                sceneConfig.show_memory_pass ??= true;
                 this.config = sceneConfig;
                 
                 // Re-enable changed events after hydration completes
@@ -179,6 +215,16 @@ export default {
         },
     },
     computed: {
+        themeColors() {
+            return this.immutableConfig?.theme?.colors ?? null;
+        },
+        restoreFromThemeDisabledReason() {
+            const appearance = this.immutableConfig?.theme?.appearance;
+            if (!appearance || !Object.keys(appearance).length) {
+                return 'The active theme has not loaded yet, so there is nothing to restore from.';
+            }
+            return null;
+        },
         renderedNarratorMessagePreview() {
             const sceneConfig = this.config || {};
             const narratorStyles = sceneConfig.narrator_messages || {};
@@ -189,6 +235,7 @@ export default {
                 parentheses: sceneConfig.parentheses || narratorStyles,
                 brackets: sceneConfig.brackets || narratorStyles,
                 default: narratorStyles,
+                messageType: 'narrator',
             });
             
             return parser.parse('The quick brown fox jumps over the lazy dog. "Did you see that?" he wondered (with some surprise). The moment felt [significant] and *unforgettable*.');
@@ -211,6 +258,7 @@ export default {
                 parentheses: sceneConfig.parentheses || narratorStyles,
                 brackets: sceneConfig.brackets || narratorStyles,
                 default: defaultStyles,
+                messageType: 'actor',
             });
             
             return parser.parse('John walked into the room. "Wow, that was a quick brown fox - did you see it?" he exclaimed (still catching his breath). The scene was [dramatic] and *intense*.');
@@ -267,12 +315,17 @@ export default {
                 "director_messages": "Director Messages",
                 "time_messages": "Time Messages",
                 "context_investigation_messages": "Context Investigations",
+                "reinforcement_messages": "State Reinforcements",
                 "information_messages": "Information Messages",
                 "quotes": "Quotes",
                 "parentheses": "Parentheses",
                 "brackets": "Brackets",
                 "emphasis": "Emphasis",
                 "entities": "Entity Highlights",
+            },
+            // rows the settings search links to (appSettingsRegistry.js)
+            typAnchorMap: {
+                "reinforcement_messages": "reinforcement-messages",
             },
             config: {
                 scene: {}
@@ -283,6 +336,7 @@ export default {
                 "actor_messages": true,
                 "director_messages": true,
                 "context_investigation_messages": true,
+                "reinforcement_messages": true,
                 "information_messages": true,
                 "quotes": true,
                 "parentheses": true,
@@ -297,6 +351,7 @@ export default {
                 "director_messages": true,
                 "time_messages": true,
                 "context_investigation_messages": true,
+                "reinforcement_messages": true,
                 "information_messages": true,
                 "quotes": true,
                 "parentheses": true,
@@ -304,13 +359,9 @@ export default {
                 "emphasis": true,
                 "entities": true,
             },
-            canSetShowOn: {
-                "director_messages": true,
-                "context_investigation_messages": true,
-                "parentheses": true,
-                "brackets": true,
-                "entities": true,
-            },
+            canSetShowOn: Object.fromEntries(
+                HIDEABLE_APPEARANCE_TYPES.map((typ) => [THEME_APPEARANCE_MAP[typ], true]),
+            ),
         }
     },
     methods: {
@@ -318,10 +369,12 @@ export default {
         // config. Used by the immutableConfig watcher to migrate older configs
         // that pre-date newer fields (override_color, show) and to seed a
         // fresh entry when the markup type isn't present at all.
-        hydrateMarkupStyle(sceneConfig, key, { italic = false, bold = false, withShow = false } = {}) {
+        hydrateMarkupStyle(sceneConfig, key, { italic = false, bold = false } = {}) {
+            const withShow = HIDEABLE_APPEARANCE_TYPES.includes(key);
             if (!sceneConfig[key]) {
                 const fresh = {
-                    color: DEFAULT_APPEARANCE_COLORS[key],
+                    // no stored color — resolution falls through to the theme
+                    color: null,
                     italic,
                     bold,
                     override_color: true,
@@ -340,6 +393,14 @@ export default {
         reset(typ, config) {
             config.color = null;
             this.color = this.getColor(typ, config.color);
+        },
+        restoreFromTheme() {
+            this.config = restoreAppearanceFromTheme(this.config, this.immutableConfig?.theme?.appearance);
+            // an open picker still holds the discarded override and would write
+            // it straight back onto the restored config on the next touch
+            this.colorPickerTarget = null;
+            this.color = "#000000";
+            this.$emit('restore-from-theme', this.config);
         },
         onColorChange() {
             if (this.colorPickerTarget && this.config[this.colorPickerTarget]) {
@@ -367,15 +428,10 @@ export default {
         },
 
         getColor(typ, color) {
-            // if color is None load the default color
-            if (color === null) {
-                // Message-type keys use the `_messages` suffix in the config UI
-                // (e.g. "narrator_messages") but DEFAULT_APPEARANCE_COLORS is
-                // keyed by bare type name — strip the suffix on lookup.
-                const key = typ.endsWith('_messages') ? typ.slice(0, -'_messages'.length) : typ;
-                return DEFAULT_APPEARANCE_COLORS[key];
-            }
-            return color;
+            // This page keys message types with a `_messages` suffix; the shared
+            // resolver is keyed by bare name and reads the color off a config.
+            const key = typ.endsWith('_messages') ? typ.slice(0, -'_messages'.length) : typ;
+            return getMessageColor({ scene: { [`${key}_messages`]: { color } } }, key, this.themeColors);
         }
     },
 }

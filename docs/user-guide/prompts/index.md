@@ -2,7 +2,7 @@
 
 The Prompt Manager provides a centralized interface for working with the Jinja2 prompt templates that drive all AI interactions in Talemate. It replaces the need to manually locate and edit template files, offering visual tools for template management, override tracking, and prompt inspection.
 
-![Prompt Manager overview](../../img/0.36.0/prompt-manager-overview.png)
+![Prompt Manager overview](../../img/0.40.0/prompt-manager-overview.png)
 
 ## Accessing the Prompt Manager
 
@@ -17,10 +17,10 @@ The Prompt Manager is organized into four main tabs:
 - **LLM Prompt Templates** -- manage the base chat-format templates (ChatML, Llama3, etc.) used for local LLM inference (see [LLM Prompt Templates](llm-prompt-templates.md))
 - **Scene Context** -- review how scene history is rendered into AI context (see [Scene Context History Review](context-history-review.md))
 
-The sidebar also provides quick-access panels for recent prompts and recently rendered templates.
+The sidebar also provides quick-access panels for recent prompts, recent decision requests and recently rendered templates. Its three tabs carry icons only, so hover a tab to read its name. The Decisions panel is the same log the Debug Tools show -- see [Debug Tools](../debug-tools.md#decisions).
 
-!!! tip "Outdated override warning"
-    When one or more of your active template overrides is older than the built-in default it overrides, the top-level **Prompts** tab in the main navigation shows a warning icon. Open the **Active** tab (see below) to see which templates are flagged and review or remove them.
+!!! tip "Override warnings"
+    When one of your active template overrides differs from the built-in default in a way that matters, the top-level **Prompts** tab in the main navigation shows an icon for the worst case: **outdated**, **incomplete** or **incompatible**. Open the **Active** tab (see below) to see which templates are flagged. [Keep overrides current](template-overrides.md#keep-overrides-current) explains the states.
 
 ## Template Groups
 
@@ -67,6 +67,7 @@ The Active tab provides visual indicators to help manage overrides:
 
 - **Override badge** -- directories or templates that have overrides from non-default groups are marked with a visual indicator
 - **Outdated indicator** -- if a default template has been updated more recently than your override, it is flagged as potentially outdated. This is especially important after upgrading Talemate, as default templates may have changed
+- **Incomplete and incompatible indicators** -- an override that lacks a section of the current default is flagged **incomplete**; one that lacks a response marker Talemate reads is flagged **incompatible**. See [Keep overrides current](template-overrides.md#keep-overrides-current)
 
 ### Setting Per-Template Sources
 
@@ -74,20 +75,7 @@ For fine-grained control, you can set the source group for individual templates 
 
 ## Editing Templates
 
-To edit a template, navigate to its group tab (user, scene, or a custom group) and select the template file. The built-in editor opens with the full Jinja2 source.
-
-!!! warning "Default templates are read-only"
-    You cannot edit templates in the `default` group directly. To customize a default template, create a copy in the `user` group or another editable group.
-
-To create a customized version of a default template:
-
-1. Open the **Active** tab and locate the template you want to customize
-2. View the template content in the default group
-3. Switch to the target group tab (e.g., **user**)
-4. Create a new template with the same agent directory and filename
-5. Paste and modify the content
-
-Templates are standard Jinja2 files with access to Talemate's template context variables and functions. For developer-level template documentation, see the [Developer Templates Guide](/talemate/dev/templates/).
+To edit a template, navigate to its group tab (user, scene, or a custom group) and select the template file. The built-in editor opens with the full Jinja2 source. Templates in the `default` group are read-only: to change one, create an override in an editable group. [Template Overrides](template-overrides.md) explains the steps, how to keep overrides current after an update, and the call that world snapshot overrides need.
 
 ## Response Extraction Directives
 
@@ -115,7 +103,11 @@ These extractors are also available as node editor nodes for building extraction
 
 The **Prompts** tab lists all prompts that have been sent to the LLM during the current session. Each entry shows the agent name, action, inference preset, token counts (prompt and response), execution time, cache ratio, and which client was used.
 
-![Prompts tab showing recent activity](../../img/0.36.0/prompt-manager-prompts-tab.png)
+Requests appear as **Active** as soon as they start, including when you open the tab during generation. You can inspect the available prompt details immediately; response and final usage/timing stay pending until known. The entry updates to **Completed**, **Failed** or **Cancelled**, with retries kept together in the same entry. Ignoring a generation error leaves the request marked Failed.
+
+**Clear** removes finished entries while keeping active requests and their eventual results. Both this viewer and Debug Tools share the same list. Open details update as results arrive, preserving local prompt and parameter edits. **Test Changes** becomes available after the request ends.
+
+![Prompts tab showing recent activity](../../img/0.40.0/prompt-manager-prompts-tab.png)
 
 ### Prompt Detail View
 
@@ -139,9 +131,9 @@ The sidebar's **Templates** panel shows templates that were recently rendered by
 After upgrading to 0.36.0:
 
 1. Open the Prompt Manager and go to the **Active** tab
-2. Look for templates marked with the **outdated** indicator
-3. Review each outdated override and compare it with the updated default version
-4. Update your overrides as needed, or delete them to fall back to the improved defaults
+2. Look for templates marked **incompatible**, **incomplete** or **outdated**
+3. Open each one in its group tab and use **Compare with default** to see what changed
+4. Update your overrides as needed, or use **Reset to default** to fall back to the improved defaults
 
 ### Removed Templates
 

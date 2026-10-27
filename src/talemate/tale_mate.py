@@ -1,11 +1,11 @@
 import asyncio
+import json
 import os
 import re
 import traceback
 import uuid
 from typing import Generator, Callable
 
-import isodate
 import structlog
 from blinker import signal
 
@@ -18,7 +18,7 @@ import talemate.save as save
 import talemate.util as util
 import talemate.world_state.templates as world_state_templates
 from talemate.config import Config, get_config
-from talemate.context import interaction
+from talemate.context import interaction, handle_generation_cancelled
 from talemate.emit import Emitter, emit
 from talemate.exceptions import (
     ExitScene,
@@ -34,13 +34,17 @@ from talemate.scene_assets import SceneAssets
 from talemate.scene.episodes import EpisodesManager
 from talemate.scene_message import (
     CharacterMessage,
+    CharacterTransitionMessage,
+    NarratorMessage,
     DirectorMessage,
     VersionSource,
     ReinforcementMessage,
     SceneMessage,
     TimePassageMessage,
     ContextInvestigationMessage,
+    SceneBackdropMessage,
     MESSAGES as MESSAGE_TYPES,
+    NON_STORY_TYPES,
 )
 from talemate.util import count_tokens
 from talemate.util.prompt import condensed
@@ -50,13 +54,38 @@ from talemate.game.engine.nodes.core import GraphState
 from talemate.game.engine.nodes.layout import load_graph
 from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
+from talemate.game.state import GameStatePathSettings
 from talemate.scene.schema import ScenePerspectives
-from talemate.history import emit_archive_add, ArchiveEntry
-from talemate.character import Character
+from talemate.agents.memory import memory_write_scene
+from talemate.history import (
+    emit_archive_add,
+    ArchiveEntry,
+    count_summary_layers,
+    message_inserted,
+    message_removed,
+)
+from talemate.knowledge.presence import presence_metadata
+from talemate.knowledge.perspective_models import SceneKnowledge
+from talemate.knowledge.perspectives import bind_message_source
+from talemate.knowledge.transitions import DEPARTURES_KEY, departures
+from talemate.knowledge.mode import KnowledgeEligibility
+from talemate.scene_signals import (
+    character_added,
+    character_removed,
+    intro_changed,
+    message_removed as message_removed_signal,
+    scene_reset,
+    scene_status_extras,
+)
+from talemate.scene.format import (
+    CURRENT_SCENE_FORMAT_VERSION,
+    SavedSceneFormat,
+)
+from talemate.character import Character, NAME_EXISTS_MESSAGE, name_is_taken
 from talemate.agents.tts.schema import VoiceLibrary
 from talemate.instance import get_agent
 from talemate.regenerate import regeneration_status
-from talemate.changelog import InMemoryChangelog
+from talemate.changelog import SceneChangelog, SaveRevisionOutcome, emit_revision_event
 from talemate.shared_context import SharedContext
 from talemate.scene_agent_settings import SceneAgentSettings
 
@@ -80,6 +109,7 @@ async_signals.register(
     "player_turn_start",
     "push_history",
     "push_history.after",
+    "game_state.changed",
 )
 
 
@@ -129,9 +159,11 @@ class Scene(Emitter):
         return os.path.abspath(relative_path)
 
     def __init__(self):
+        self.knowledge_eligibility: KnowledgeEligibility = "legacy"
         self.actors = []
         self.helpers = []
         self.history = []
+        self.knowledge: SceneKnowledge | None = None
         self.archived_history = []
         self.character_data = {}
         self.active_characters = []
@@ -148,6 +180,8 @@ class Scene(Emitter):
         self.voice_library: VoiceLibrary = VoiceLibrary()
         self.description = ""
         self.intro = ""
+        self.intro_present: list[str] | None = None
+        self.intro_knowledge = None
         self.outline = ""
         self.title = ""
         self.writing_style_template = None
@@ -158,6 +192,9 @@ class Scene(Emitter):
         self.rev = 0
 
         self.experimental = False
+        self.hidden = False
+        self.deprecated = False
+
         self.help = ""
 
         self.name = ""
@@ -166,10 +203,13 @@ class Scene(Emitter):
         self._nodes_filename = ""
         self._creative_nodes_filename = ""
         self.memory_id = str(uuid.uuid4())[:10]
+        self.memory_revision = 0
+        self.memory_writes_in_flight = 0
         self.saved_memory_session_id = None
         self.memory_session_id = str(uuid.uuid4())[:10]
         self.restore_from = None
         self._changelog = None
+        self._save_lock = asyncio.Lock()
 
         # has scene been saved before?
         self.saved = False
@@ -177,6 +217,9 @@ class Scene(Emitter):
         # if immutable_save is True, save will always
         # happen as save-as and not overwrite the original
         self.immutable_save = False
+
+        # id of the message a playthrough of this scene was last left on
+        self.playthrough_progress: int | str | None = None
 
         self.context = ""
         self.perspectives = ScenePerspectives()
@@ -186,7 +229,9 @@ class Scene(Emitter):
         self.game_state = GameState()
         self.agent_state = {}
         self.intent_state = SceneIntent()
-        self.ts = "PT0S"
+        self.ts: int = 0
+        # scene time at the first message; static entries can be older
+        self.start_ts: int = 0
         self.active = False
         self.Actor = Actor
         self.Player = Player
@@ -200,8 +245,9 @@ class Scene(Emitter):
         # Add an attribute to store the most recent AI Actor
         self.most_recent_ai_actor = None
 
-        # List of game state paths to watch in debug tools
         self.game_state_watch_paths: list[str] = []
+        self.game_state_control_paths: list[str] = []
+        self.game_state_path_settings: dict[str, GameStatePathSettings] = {}
 
         # if the user has requested to cancel the current action
         # or series of agent actions this will be true
@@ -211,6 +257,8 @@ class Scene(Emitter):
         # if self.cancel_requested is True self.continue_actions() will raise
         # a GenerationCancelled exception
         self.cancel_requested = False
+        self._cancel_sequence = 0
+        self._interrupt_signal = None
 
         self.signals = {
             "ai_message": signal("ai_message"),
@@ -232,10 +280,36 @@ class Scene(Emitter):
 
         # Debounce tracking for emit_status
         self._emit_status_debounce_task: asyncio.Task | None = None
+        self._emit_status_restored = False
 
     @property
     def config(self) -> Config:
         return get_config()
+
+    @property
+    def pinned_game_state_paths(self) -> set[str]:
+        return set(self.game_state_watch_paths) | set(self.game_state_control_paths)
+
+    @property
+    def serialized_game_state_path_settings(self) -> dict[str, dict]:
+        return {
+            path: settings.model_dump(exclude_defaults=True)
+            for path, settings in self.game_state_path_settings.items()
+        }
+
+    def game_state_path_is_read_only(self, path: str) -> bool:
+        """
+        Whether `path` itself, or a pinned container it expands out of, is
+        marked read-only.
+        """
+        own = self.game_state_path_settings.get(path)
+        if own and own.read_only:
+            return True
+        return any(
+            settings.read_only
+            for ancestor, settings in self.game_state_path_settings.items()
+            if path.startswith(f"{ancestor}/")
+        )
 
     @property
     def main_character(self) -> Actor | None:
@@ -381,10 +455,6 @@ class Scene(Emitter):
         return os.path.join(self.save_dir, "info")
 
     @property
-    def backups_dir(self):
-        return os.path.join(self.save_dir, "backups")
-
-    @property
     def changelog_dir(self):
         return os.path.join(self.save_dir, "changelog")
 
@@ -413,7 +483,7 @@ class Scene(Emitter):
             list_settings_files,
         )
 
-        if not self.filename or not self._project_name:
+        if not self.filename or not self.project_name:
             return []
         save_dir = os.path.join(self.scenes_dir(), self.project_name)
         settings_dir = agent_settings_dir(save_dir)
@@ -455,8 +525,8 @@ class Scene(Emitter):
         return EpisodesManager(self)
 
     @property
-    def conversation_format(self):
-        return get_agent("conversation").conversation_format
+    def conversation_format(self) -> str:
+        return get_agent("summarizer").scene_history_format
 
     @property
     def writing_style(self) -> world_state_templates.WritingStyle | None:
@@ -560,8 +630,22 @@ class Scene(Emitter):
     def active_node_graph(self):
         return getattr(self, "node_graph", getattr(self, "creative_node_graph", None))
 
-    def set_intro(self, intro: str):
+    def set_intro(self, intro: str, present: list[str] | None = None):
+        if intro == self.intro and present is None and self.intro_present is not None:
+            return
         self.intro = intro
+        self.intro_present = list(
+            dict.fromkeys(self.active_characters if present is None else present)
+        )
+
+        intro_changed.send(self)
+
+    async def apply_intro(self, intro: str | None, emit_history: bool = True):
+        # None is licensed but coerced: get_intro cannot take a None intro.
+        self.set_intro(intro or "")
+        self.emit_status()
+        if emit_history:
+            await self.emit_history()
 
     def set_name(self, name: str):
         self.name = name
@@ -608,13 +692,79 @@ class Scene(Emitter):
 
         return recent_history
 
-    async def push_history(self, messages: list[SceneMessage]):
+    async def push_history(
+        self, messages: list[SceneMessage], *, emit_message: bool = False
+    ):
         """
         Adds one or more messages to the scene history
+
+        Messages are not stamped with a revision here: ``message.rev`` must
+        name a revision of this scene's own changelog chain whose
+        reconstruction contains the message, so stamping happens in
+        ``SceneChangelog.record`` when the revision actually exists.
         """
 
         if isinstance(messages, SceneMessage):
             messages = [messages]
+
+        valid_messages = self._append_history(messages)
+        if valid_messages:
+            self.saved = False
+
+        event: events.HistoryEvent = events.HistoryEvent(
+            scene=self,
+            event_type="push_history",
+            messages=valid_messages,
+        )
+
+        try:
+            try:
+                await self.signals["push_history"].send(event)
+            finally:
+                if emit_message:
+                    for message in valid_messages:
+                        self.emit_history_message(message)
+
+            for message in valid_messages:
+                if isinstance(message, CharacterMessage):
+                    await get_agent("conversation").finalize_message_avatar(message)
+
+            for message in valid_messages:
+                await self.signals["game_loop_new_message"].send(
+                    events.GameLoopNewMessageEvent(
+                        scene=self, event_type="game_loop_new_message", message=message
+                    )
+                )
+
+            await self.signals["push_history.after"].send(event)
+        finally:
+            self.emit_status()
+
+    def initialize_intro_present(self) -> None:
+        """
+        Who witnessed the intro: as saved, else whoever witnessed the opening
+        message, else the active characters.
+        """
+        if self.intro_present is None:
+            opening = next(
+                (
+                    message
+                    for message in self.history
+                    if message.typ in ("character", "narrator")
+                ),
+                None,
+            )
+            present = (
+                opening.present
+                if opening is not None and opening.present is not None
+                else self.active_characters
+            )
+            self.intro_present = list(dict.fromkeys(present))
+        intro_changed.send(self)
+
+    def _append_history(self, messages: list[SceneMessage]) -> list[SceneMessage]:
+        if self.intro and self.intro_present is None:
+            self.initialize_intro_present()
 
         # there can only ever be one director message in the history
         # so if there is a new DirectorMessage in messages we remove the old one
@@ -624,9 +774,6 @@ class Scene(Emitter):
         valid_messages = []
 
         for message in messages:
-            if not message.rev and self._changelog:
-                message.rev = self._changelog.next_revision
-
             if isinstance(message, DirectorMessage):
                 # Ignore empty director messages
                 if not message.message or not message.message.strip():
@@ -641,40 +788,55 @@ class Scene(Emitter):
                         isinstance(self.history[idx], DirectorMessage)
                         and self.history[idx].source == message.source
                     ):
-                        self.history.pop(idx)
+                        self.remove_message_at(idx)
                         break
 
             elif isinstance(message, TimePassageMessage):
                 self.advance_time(message.ts)
 
+            # an empty active list means nobody is set up yet, not that
+            # nobody witnessed the message: leave presence unknown
+            if message.present is None and self.active_characters:
+                message.present = list(self.active_characters)
+
             valid_messages.append(message)
 
         self.history.extend(valid_messages)
+        for message in valid_messages:
+            bind_message_source(self, message)
+        return valid_messages
 
-        event: events.HistoryEvent = events.HistoryEvent(
-            scene=self,
-            event_type="push_history",
-            messages=valid_messages,
+    def emit_history_message(self, message: SceneMessage):
+        character_name = getattr(message, "character_name", None)
+        emit(
+            message.typ,
+            message,
+            character=self.get_character(character_name) if character_name else None,
         )
 
-        await self.signals["push_history"].send(event)
+    def remove_message_at(self, index: int) -> SceneMessage:
+        """
+        Removes the message at `index` from the history. Every removal goes
+        through here, so the archive indices and the timeline stay repaired.
+        """
+        if index < 0:
+            raise IndexError(f"history index {index} out of range")
+        message = self.history[index]
+        self.history.pop(index)
+        message_removed_signal.send(self, message=message)
+        message_removed(self, index, message)
+        return message
 
-        loop = asyncio.get_event_loop()
-        for message in valid_messages:
-            loop.run_until_complete(
-                self.signals["game_loop_new_message"].send(
-                    events.GameLoopNewMessageEvent(
-                        scene=self, event_type="game_loop_new_message", message=message
-                    )
-                )
-            )
-
-        await self.signals["push_history.after"].send(event)
-
-        # History changed — refresh scene status so UI affordances that
-        # depend on the tail (e.g. the regenerate buttons) stay in sync.
-        # emit_status is debounced, so bursts of pushes coalesce.
-        self.emit_status()
+    def insert_message_at(self, index: int, message: SceneMessage):
+        """
+        Inserts `message` into the history at `index`, the counterpart of
+        remove_message_at: the archive indices and the timeline stay repaired.
+        """
+        self.history.insert(index, message)
+        bind_message_source(self, message)
+        message_inserted(self, index)
+        if isinstance(message, TimePassageMessage):
+            self.fix_time()
 
     def pop_message(self, message: SceneMessage | int) -> bool:
         """
@@ -682,20 +844,19 @@ class Scene(Emitter):
         """
         if isinstance(message, SceneMessage):
             try:
-                self.history.remove(message)
+                index = self.history.index(message)
             except ValueError:
                 return False
-            self.emit_status()
-            return True
         elif isinstance(message, int):
-            message = self.find_message(message)
-            if message:
-                self.history.remove(message)
-                self.emit_status()
-                return True
-            return False
+            index = self.message_index(message)
+            if index < 0:
+                return False
         else:
             raise ValueError("Invalid message type")
+
+        self.remove_message_at(index)
+        self.emit_status()
+        return True
 
     def pop_history(
         self,
@@ -710,12 +871,12 @@ class Scene(Emitter):
         """
         Removes the last message from the history that matches the given typ and source
         """
-        iterations = 0
-
         if not reverse:
             iter_range = range(len(self.history) - 1, -1, -1)
         else:
             iter_range = range(len(self.history))
+        if max_iterations:
+            iter_range = iter_range[:max_iterations]
 
         to_remove = []
 
@@ -723,15 +884,12 @@ class Scene(Emitter):
             message = self.history[idx]
 
             if message.typ != typ:
-                iterations += 1
                 continue
 
             if source is not None and message.source != source:
-                iterations += 1
                 continue
 
             if meta_hash is not None and message.meta_hash != meta_hash:
-                iterations += 1
                 continue
 
             # Apply additional filters
@@ -746,12 +904,9 @@ class Scene(Emitter):
                 if not all:
                     break
 
-            iterations += 1
-            if max_iterations and iterations >= max_iterations:
-                break
-
         for message in to_remove:
-            self.history.remove(message)
+            self.remove_message_at(self.history.index(message))
+            emit("remove_message", "", id=message.id)
 
         # History changed — keep tail-dependent UI affordances (e.g. the
         # regenerate buttons) in sync. emit_status is debounced.
@@ -773,11 +928,23 @@ class Scene(Emitter):
             if message.typ != typ:
                 continue
 
-            for filter_name, filter_value in filters.items():
-                if getattr(message, filter_name, None) != filter_value:
-                    continue
+            if not all(
+                getattr(message, filter_name, None) == filter_value
+                for filter_name, filter_value in filters.items()
+            ):
+                continue
 
             return self.history[idx]
+
+    def last_story_message_index(self) -> int:
+        """
+        Index of the newest history entry that is part of the story text, or
+        -1 when there is none.
+        """
+        for idx in range(len(self.history) - 1, -1, -1):
+            if self.history[idx].typ not in NON_STORY_TYPES:
+                return idx
+        return -1
 
     def message_index(self, message_id: int) -> int:
         """
@@ -968,6 +1135,7 @@ class Scene(Emitter):
                 ReinforcementMessage,
                 DirectorMessage,
                 ContextInvestigationMessage,
+                SceneBackdropMessage,
             ]
         else:
             # ignore me also be a list of message type strings (e.g. 'director')
@@ -992,6 +1160,11 @@ class Scene(Emitter):
 
         for idx in range(len(segment) - 1, -1, -1):
             if isinstance(segment[idx], tuple(ignore)):
+                continue
+            if (
+                isinstance(segment[idx], CharacterTransitionMessage)
+                and not segment[idx].in_context
+            ):
                 continue
             collected.insert(0, segment[idx])
             if len(collected) >= lines:
@@ -1078,9 +1251,26 @@ class Scene(Emitter):
     async def add_actor(self, actor: Actor, commit_to_memory: bool = True):
         """
         Add an actor to the scene
+
+        An actor in the scene is what makes its character active, so this is
+        also where `active_characters` gains the name. Callers that want an
+        inactive character take the actor back out again.
+
+        One name is one character object: an actor that would add a second
+        `Character` under a name the scene already holds — compared without
+        case, the way `get_character` resolves it — is refused with a
+        `ValueError`. An actor around a character the scene already holds
+        replaces that character's actor, which is how a character is swapped
+        between `Actor` and `Player`, and how the load path attaches actors to
+        records it read from the scene file.
         """
 
-        # if actor with character already exists, remove it
+        registered = self.character_data.get(actor.character.name)
+        if registered is not actor.character and name_is_taken(
+            self, actor.character.name, actor.character
+        ):
+            raise ValueError(NAME_EXISTS_MESSAGE.format(name=actor.character.name))
+
         for _actor in list(self.actors):
             if _actor.character == actor.character:
                 self.actors.remove(_actor)
@@ -1088,11 +1278,15 @@ class Scene(Emitter):
         self.actors.append(actor)
         actor.scene = self
 
+        if actor.character.name not in self.active_characters:
+            self.active_characters.append(actor.character.name)
+
         if isinstance(actor, Player):
             actor.character.is_player = True
 
         if actor.character.name not in self.character_data:
             self.character_data[actor.character.name] = actor.character
+            character_added.send(self, name=actor.character.name)
 
         for actor in self.actors:
             if (
@@ -1127,15 +1321,22 @@ class Scene(Emitter):
         Remove a character from the scene
         """
 
-        for actor in self.actors:
+        for actor in list(self.actors):
             if actor.character == character:
                 await self.remove_actor(actor)
 
         if character.name in self.character_data:
             del self.character_data[character.name]
 
-        if character.name in self.active_characters:
-            self.active_characters.remove(character.name)
+        departures(self).pop(character.name, None)
+        for message in list(self.history):
+            if (
+                message.typ == "character_transition"
+                and message.character_name == character.name
+            ):
+                self.delete_message(message.id)
+
+        character_removed.send(self, name=character.name)
 
         if purge_from_memory:
             await character.purge_from_memory()
@@ -1145,9 +1346,12 @@ class Scene(Emitter):
         Remove an actor from the scene
         """
 
-        for _actor in self.actors:
+        for _actor in list(self.actors):
             if _actor == actor:
                 self.actors.remove(_actor)
+
+        if actor.character and actor.character.name in self.active_characters:
+            self.active_characters.remove(actor.character.name)
 
         actor.character = None
 
@@ -1274,10 +1478,17 @@ class Scene(Emitter):
             return ""
         return value.replace("{player_name}", character.name)
 
-    def get_intro(self, intro: str = None) -> str:
+    def get_intro(self, intro: str = None, *, perspective: str | None = None) -> str:
         """
         Returns the intro text of the scene
         """
+
+        if (
+            perspective is not None
+            and self.intro_present is not None
+            and perspective not in self.intro_present
+        ):
+            return ""
 
         if not intro:
             intro = self.intro
@@ -1336,13 +1547,14 @@ class Scene(Emitter):
         log.debug(f"Deleting message {message_id}")
         for i, message in enumerate(self.history):
             if message.id == message_id:
-                self.history.pop(i)
+                self.remove_message_at(i)
                 log.info(f"Deleted message {message_id}")
                 emit("remove_message", "", id=message_id)
 
-                if isinstance(message, TimePassageMessage):
-                    self.sync_time()
-                    self.emit_status()
+                # the frontend drops the message on remove_message; the status
+                # frame is what carries the new history counts, and an auto
+                # save on a never-saved scene emits none of its own
+                self.emit_status()
 
                 break
 
@@ -1352,6 +1564,18 @@ class Scene(Emitter):
         """
 
         return self.filename and not self.immutable_save
+
+    def history_stats(self) -> dict:
+        return {
+            "message_count": len(self.history),
+            "character_narrator_messages": sum(
+                1
+                for message in self.history
+                if isinstance(message, (CharacterMessage, NarratorMessage))
+            ),
+            "summary_layers": count_summary_layers(self),
+            "summarization": get_agent("summarizer").archive_status(),
+        }
 
     def _do_emit_status(self, restored: bool = False):
         """Internal method that performs the actual emission"""
@@ -1389,10 +1613,11 @@ class Scene(Emitter):
                     for character in self.get_characters()
                 },
                 "scene_time": (
-                    util.iso8601_duration_to_human(self.ts, suffix="")
-                    if self.ts
+                    util.duration_to_human(self.ts, suffix="")
+                    if self.ts is not None
                     else None
                 ),
+                "scene_ts": self.ts,
                 "saved": self.saved,
                 "auto_save": self.auto_save,
                 "auto_progress": self.auto_progress,
@@ -1403,6 +1628,8 @@ class Scene(Emitter):
                 "agent_state": self.agent_state,
                 "active_pins": [pin.model_dump() for pin in self.active_pins],
                 "experimental": self.experimental,
+                "knowledge_eligibility": self.knowledge_eligibility,
+                "can_change_knowledge_eligibility": self.can_change_knowledge_eligibility,
                 "immutable_save": self.immutable_save,
                 "description": self.description,
                 "intro": self.intro,
@@ -1427,6 +1654,11 @@ class Scene(Emitter):
                 "agent_settings_opted_out": self._agent_settings_opted_out,
                 "agent_settings_files": self.agent_settings_files,
                 "game_state_watch_paths": self.game_state_watch_paths,
+                "game_state_control_paths": self.game_state_control_paths,
+                "game_state_path_settings": self.serialized_game_state_path_settings,
+                "playthrough_progress": self.playthrough_progress,
+                "history_stats": self.history_stats(),
+                **scene_status_extras(self),
             },
         )
 
@@ -1434,14 +1666,15 @@ class Scene(Emitter):
         """Internal method for debounced emission"""
         await asyncio.sleep(0.025)  # 25ms debounce
         self._emit_status_debounce_task = None
+        self._emit_status_restored = False
         self._do_emit_status(restored)
 
         self.log.debug(
             "scene_status",
             scene=self.name,
             scene_time=self.ts,
-            human_ts=util.iso8601_duration_to_human(self.ts, suffix="")
-            if self.ts
+            human_ts=util.duration_to_human(self.ts, suffix="")
+            if self.ts is not None
             else None,
             saved=self.saved,
         )
@@ -1449,6 +1682,9 @@ class Scene(Emitter):
     def emit_status(self, restored: bool = False):
         """Emit scene status with debouncing"""
         loop = asyncio.get_running_loop()
+
+        # a cancelled debounce must not drop a restore flag set before it
+        self._emit_status_restored = self._emit_status_restored or restored
 
         # Cancel and replace any existing debounce task
         if (
@@ -1458,7 +1694,7 @@ class Scene(Emitter):
             self._emit_status_debounce_task.cancel()
 
         self._emit_status_debounce_task = loop.create_task(
-            self._debounced_emit_status(restored)
+            self._debounced_emit_status(self._emit_status_restored)
         )
 
         log.debug("emit_status", debounce_task=self._emit_status_debounce_task)
@@ -1503,58 +1739,35 @@ class Scene(Emitter):
         self.context = context
         self.emit_status()
 
-    def advance_time(self, ts: str):
+    def advance_time(self, ts: int):
         """
-        Accepts an iso6801 duration string and advances the scene's world state by that amount
+        Accepts a number of seconds and advances the scene's world state by that amount
         """
         log.debug(
             "advance_time",
             ts=ts,
             scene_ts=self.ts,
-            duration=isodate.parse_duration(ts),
-            scene_duration=isodate.parse_duration(self.ts),
         )
 
-        self.ts = isodate.duration_isoformat(
-            isodate.parse_duration(self.ts) + isodate.parse_duration(ts)
-        )
+        self.ts += ts
 
     def sync_time(self):
         """
-        Loops through self.history looking for TimePassageMessage and will
-        advance the world state by the amount of time passed for each
+        Sets the scene time to the time at the newest message: the scene
+        start plus every time passage in the history.
         """
-        # reset time
-        self.ts = "PT0S"
-
-        # archived history (if "ts" is set) should provide the base line
-        # find the first archived_history entry from the back that has a ts
-        # and set that as the base line
-
-        if self.archived_history:
-            for i in range(len(self.archived_history) - 1, -1, -1):
-                if self.archived_history[i].get("ts"):
-                    self.ts = self.archived_history[i]["ts"]
-                    break
-
-            end = self.archived_history[-1].get("end", 0)
-        else:
-            end = 0
-
-        for message in self.history[end:]:
-            if isinstance(message, TimePassageMessage):
-                self.advance_time(message.ts)
+        self.ts = self.start_ts + sum(
+            message.ts
+            for message in self.history
+            if isinstance(message, TimePassageMessage)
+        )
 
         self.log.debug("sync_time", ts=self.ts)
-
-        # TODO: need to adjust archived_history ts as well
-        # but removal also probably means the history needs to be regenerated
-        # anyway.
 
     def fix_time(self):
         """
         New implementation of sync_time that will fix time across the board
-        using the base history as the sole source of truth.
+        using the scene start and the base history as the sole source of truth.
 
         This means first identifying the time jumps in the base history by
         looking for TimePassageMessages and then applying those time jumps
@@ -1570,13 +1783,7 @@ class Scene(Emitter):
             self.ts = ts
 
     def _fix_time(self):
-        starting_time = "PT0S"
-
-        for archived_entry in self.archived_history:
-            if "ts" in archived_entry and "end" not in archived_entry:
-                starting_time = archived_entry["ts"]
-            elif "end" in archived_entry:
-                break
+        starting_time = self.start_ts
 
         # store time jumps by index
         time_jumps = []
@@ -1590,16 +1797,12 @@ class Scene(Emitter):
         cumulative_time_jumps = []
         ts = starting_time
         for idx, ts_jump in time_jumps:
-            ts = util.iso8601_add(ts, ts_jump)
+            ts += ts_jump
             cumulative_time_jumps.append((idx, ts))
 
-        try:
-            ending_time = cumulative_time_jumps[-1][1]
-        except IndexError:
-            # no time jumps found
-            ending_time = starting_time
-            self.ts = ending_time
-            return
+        ending_time = (
+            cumulative_time_jumps[-1][1] if cumulative_time_jumps else starting_time
+        )
 
         # apply time jumps to the archived history
         ts = starting_time
@@ -1618,7 +1821,7 @@ class Scene(Emitter):
                 else:
                     break
 
-            if best_ts:
+            if best_ts is not None:
                 entry["ts"] = best_ts
                 ts = entry["ts"]
             else:
@@ -1656,20 +1859,20 @@ class Scene(Emitter):
         log.debug("fix_time", ending_time=ending_time)
         self.ts = ending_time
 
-    def calc_time(self, start_idx: int = 0, end_idx: int = None):
+    def calc_time(self, start_idx: int = 0, end_idx: int = None) -> int | None:
         """
         Loops through self.history looking for TimePassageMessage and will
-        return the sum iso8601 duration string
+        return the sum of the durations in seconds
 
         Defines start and end indexes
         """
 
-        ts = "PT0S"
+        ts = 0
         found = False
 
         for message in self.history[start_idx:end_idx]:
             if isinstance(message, TimePassageMessage):
-                ts = util.iso8601_add(ts, message.ts)
+                ts += message.ts
                 found = True
 
         if not found:
@@ -1683,14 +1886,16 @@ class Scene(Emitter):
         """
 
         _active_pins = await self.world_state_manager.get_pins(active=True)
-        self.active_pins = list(_active_pins.pins.values())
+        self.active_pins = [pin for pin in _active_pins.pins.values() if pin.text]
 
     async def ensure_memory_db(self):
         memory = get_agent("memory")
         if not memory.db:
             await memory.set_db()
 
-    async def emit_history(self):
+    async def emit_history(self, uncapped: bool = False):
+        if self.intro and self.intro_present is None:
+            self.initialize_intro_present()
         emit("clear_screen", "")
         # this is mostly to support character cards
         # we introduce the main character to all such characters, replacing
@@ -1704,14 +1909,15 @@ class Scene(Emitter):
         self.narrator_message(intro)
 
         # emit history
-        for message in self.history[-self.max_backscroll :]:
+        history = self.history if uncapped else self.history[-self.max_backscroll :]
+        for message in history:
             if isinstance(message, CharacterMessage):
                 character = self.get_character(message.character_name)
             else:
                 character = None
             emit(message.typ, message, character=character)
 
-    async def start(self):
+    async def start(self, *, history_visible: bool = False):
         """
         Start the scene
         """
@@ -1727,20 +1933,24 @@ class Scene(Emitter):
                 log.debug(f"Starting scene loop: {self.environment}")
 
                 self.world_state.emit()
-                async with InMemoryChangelog(self) as changelog:
+                async with SceneChangelog(self) as changelog:
                     self._changelog = changelog
                     if self.environment == "creative":
                         self.creative_node_graph, _ = load_graph(
                             self.creative_nodes_filename, [self.save_dir]
                         )
                         await initialize_packages(self, self.creative_node_graph)
-                        await self._run_creative_loop(init=first_loop)
+                        await self._run_creative_loop(
+                            init=first_loop, history_visible=history_visible
+                        )
                     else:
                         self.node_graph, _ = load_graph(
                             self.nodes_filename, [self.save_dir]
                         )
                         await initialize_packages(self, self.node_graph)
-                        await self._run_game_loop(init=first_loop)
+                        await self._run_game_loop(
+                            init=first_loop, history_visible=history_visible
+                        )
             except ExitScene:
                 break
             except RestartSceneLoop:
@@ -1759,10 +1969,30 @@ class Scene(Emitter):
             events.SceneStateEvent(scene=self, event_type="scene_init")
         )
 
-    async def _run_game_loop(self, init: bool = True, node_graph=None):
+    def history_display_state(self):
+        """Snapshot the capped replay's visible content and revision controls."""
+        return self.get_intro(), [
+            (
+                message.id,
+                message.typ,
+                message.message,
+                message.source,
+                int(message.flags),
+                getattr(message, "asset_id", None),
+                getattr(message, "asset_type", None),
+                message.versions_payload(),
+            )
+            for message in self.history[-self.max_backscroll :]
+        ]
+
+    async def _run_game_loop(
+        self, init: bool = True, node_graph=None, *, history_visible: bool = False
+    ):
         if init:
+            initial_history = self.history_display_state() if history_visible else None
             await self._game_startup()
-            await self.emit_history()
+            if not history_visible or initial_history != self.history_display_state():
+                await self.emit_history()
 
         self.nodegraph_state = state = GraphState()
         state.data["continue_scene"] = True
@@ -1770,11 +2000,10 @@ class Scene(Emitter):
         while state.data["continue_scene"] and self.active:
             try:
                 await self.node_graph.execute(state)
-            except GenerationCancelled:
+            except GenerationCancelled as exc:
                 state.shared["signal_game_loop"] = False
                 state.shared["skip_to_player"] = True
-                self.cancel_requested = False
-                self.log.warning("Generation cancelled, skipping to player")
+                handle_generation_cancelled(exc, scene=self)
             except TalemateInterrupt:
                 raise
             except LLMAccuracyError as e:
@@ -1804,8 +2033,11 @@ class Scene(Emitter):
                 )
                 emit("system", status="error", message=f"Unhandled Error: {e}")
 
-    async def _run_creative_loop(self, init: bool = True):
-        await self.emit_history()
+    async def _run_creative_loop(
+        self, init: bool = True, *, history_visible: bool = False
+    ):
+        if not init or not history_visible:
+            await self.emit_history()
 
         self.nodegraph_state = state = GraphState()
         state.data["continue_scene"] = True
@@ -1813,8 +2045,8 @@ class Scene(Emitter):
         while state.data["continue_scene"] and self.active:
             try:
                 await self.creative_node_graph.execute(state)
-            except GenerationCancelled:
-                self.cancel_requested = False
+            except GenerationCancelled as exc:
+                handle_generation_cancelled(exc, scene=self)
                 continue
             except TalemateInterrupt:
                 raise
@@ -1848,6 +2080,38 @@ class Scene(Emitter):
         )
         self.emit_status()
 
+    def write_playthrough_progress(self, message_id: int | str | None):
+        """
+        Record where a playthrough was left off, in the scene's own file.
+
+        Deliberately not a save: it patches the one field into the file on
+        disk and leaves everything else — the rest of the file, the changelog,
+        the scene's saved flag — exactly as it was, so walking through a scene
+        never writes out whatever the session happens to hold in memory.
+        """
+        if self.immutable_save:
+            raise TalemateError(
+                "This scene is read-only, replay progress cannot be saved to it"
+            )
+
+        self.playthrough_progress = message_id
+
+        path = self.full_path
+        if not path or not os.path.exists(path):
+            raise TalemateError("Scene has not been saved yet")
+
+        with open(path, "r") as f:
+            scene_data = json.load(f)
+
+        scene_data["playthrough_progress"] = message_id
+
+        with open(path, "w") as f:
+            f.write(save.scene_data_dumps(scene_data))
+
+    def _mark_scene_unsaved(self):
+        self.saved = False
+        self.emit_status()
+
     async def attempt_auto_save(self):
         """
         Attempts to auto save the scene if auto save is enabled.
@@ -1856,8 +2120,7 @@ class Scene(Emitter):
         if self.auto_save:
             await self.save(auto=True)
         else:
-            self.saved = False
-            self.emit_status()
+            self._mark_scene_unsaved()
 
     async def save(
         self,
@@ -1866,10 +2129,64 @@ class Scene(Emitter):
         force: bool = False,
         copy_name: str = None,
     ):
+        outcome = SaveRevisionOutcome()
+        error = None
+        try:
+            async with self._save_lock:
+                await self._save(
+                    save_as=save_as,
+                    auto=auto,
+                    force=force,
+                    copy_name=copy_name,
+                    outcome=outcome,
+                )
+        except Exception as exc:
+            error = str(exc)
+            raise
+        finally:
+            # Report committed SQLite state even if writing the JSON later failed.
+            # Listeners run outside the save lock and may initiate another save.
+            if outcome.forked:
+                await emit_revision_event(
+                    "scene.revision_forked",
+                    self,
+                    "fork",
+                    revision=outcome.forked,
+                    filename=outcome.filename,
+                    source_filename=outcome.source_filename,
+                    error=error,
+                )
+            if outcome.revision:
+                await emit_revision_event(
+                    "scene.revision_saved",
+                    self,
+                    "save",
+                    revision=outcome.revision,
+                    filename=outcome.filename,
+                    error=error,
+                )
+            elif outcome.stage == "revision" and error:
+                await emit_revision_event(
+                    "scene.revision_failed",
+                    self,
+                    "save",
+                    filename=outcome.filename,
+                    error=error,
+                )
+
+    async def _save(
+        self,
+        save_as: bool = False,
+        auto: bool = False,
+        force: bool = False,
+        copy_name: str = None,
+        outcome: SaveRevisionOutcome | None = None,
+    ):
         """
         Saves the scene data, conversation history, archived history, and characters to a json file.
         """
 
+        outcome = outcome if outcome is not None else SaveRevisionOutcome()
         if self.immutable_save and not save_as and not force:
             save_as = True
 
@@ -1877,24 +2194,38 @@ class Scene(Emitter):
             save_as = True
 
         if save_as:
-            self.filename = copy_name
+            # an autosave has no copy name to write to: leave the scene's
+            # identity alone rather than drop its filename
+            if auto and not copy_name:
+                self._mark_scene_unsaved()
+                return
+        filename = copy_name if save_as else self.filename
 
         if not self.name and not auto:
             raise TalemateError("Scene has no name, cannot save")
 
-        elif not self.filename and not auto:
-            self.filename = str(uuid.uuid4())[:10]
-            self.filename = self.filename.replace(" ", "-").lower() + ".json"
+        elif not filename and not auto:
+            filename = str(uuid.uuid4())[:10] + ".json"
 
-        if self.filename and not self.filename.endswith(".json"):
-            self.filename = f"{self.filename}.json"
-
-        elif not self.filename or not self.name and auto:
+        if not filename or not self.name and auto:
             # scene has never been saved, don't auto save
             return
 
+        filename = save.scene_save_filename(filename)
+        outcome.filename = filename
+        source, source_head = None, None
+        save_identity = self.filename, self.immutable_save, self.hidden, self.deprecated
+        if self._changelog is None:
+            self._changelog = SceneChangelog(self)
+        if save_as and self.filename:
+            await self._changelog._initialize()
+            source, source_head = self._changelog.ref, self._changelog.head
+        self.filename = filename
+
         if save_as:
             self.immutable_save = False
+            self.hidden = False
+            self.deprecated = False
             memory_agent = get_agent("memory")
             memory_agent.close_db(self)
             self.memory_id = str(uuid.uuid4())[:10]
@@ -1909,31 +2240,50 @@ class Scene(Emitter):
         # Generate filename with date and normalized character name
         filepath = os.path.join(saves_dir, self.filename)
 
-        # Create a dictionary to store the scene data
-        scene_data = self.serialize
+        if self.shared_context:
+            await self.shared_context.commit_changes(self)
+        outcome.stage = "revision"
+        if save_as:
+            outcome.source_filename = source.filename if source else None
+
+        async def persist():
+            try:
+                scene_data = await self._changelog.record(
+                    outcome, save_as=save_as, source=source, source_head=source_head
+                )
+            except BaseException:
+                if save_as:
+                    self.filename, self.immutable_save, self.hidden, self.deprecated = (
+                        save_identity
+                    )
+                raise
+            outcome.stage = "file"
+
+            with open(filepath, "w") as f:
+                f.write(save.scene_data_dumps(scene_data))
+
+            self.saved = True
+            if hasattr(self, "_save_files"):
+                delattr(self, "_save_files")
+
+        if save_as:
+            # A disconnect must not separate a committed replacement from its JSON.
+            saving = asyncio.create_task(persist())
+            try:
+                await asyncio.shield(saving)
+            except asyncio.CancelledError:
+                await saving
+                raise
+        else:
+            await persist()
 
         if not auto:
             emit("status", status="success", message="Saved scene")
-
-        with open(filepath, "w") as f:
-            f.write(save.scene_data_dumps(scene_data))
-
-        self.saved = True
-
-        if hasattr(self, "_save_files"):
-            delattr(self, "_save_files")
 
         self.emit_status()
 
         # add this scene to recent scenes in config
         await self.add_to_recent_scenes()
-
-        # update changelog
-        if self._changelog:
-            await self._changelog.append_delta()
-            if self.shared_context:
-                await self.shared_context.commit_changes(self)
-            await self._changelog.commit()
 
     async def save_restore(self, filename: str):
         """
@@ -1958,6 +2308,32 @@ class Scene(Emitter):
         config.recent_scenes.push(self)
         await config.set_dirty()
 
+    def _archive_memory_documents(self) -> list[dict]:
+        documents = []
+
+        for ah in self.archived_history:
+            if ah.get("ts") is None:
+                ah["ts"] = 0
+
+            if not ah.get("text"):
+                continue
+
+            entry = ArchiveEntry(**ah)
+
+            documents.append(
+                {
+                    "id": entry.id,
+                    "text": entry.text,
+                    "meta": {
+                        "ts": entry.ts,
+                        "typ": "history",
+                        **presence_metadata(entry.present),
+                    },
+                }
+            )
+
+        return documents
+
     async def commit_to_memory(self):
         # will recommit scene to long term memory
 
@@ -1965,42 +2341,34 @@ class Scene(Emitter):
         memory.drop_db()
         await memory.set_db()
 
-        archive_entries = []
+        archive_entries = self._archive_memory_documents()
 
-        for ah in self.archived_history:
-            ts = ah.get("ts", "PT1S")
-
-            if not ah.get("ts"):
-                ah["ts"] = ts
-
-            if not ah.get("text"):
-                continue
-
-            entry = ArchiveEntry(**ah)
-
-            # await emit_archive_add(self, entry)
-            archive_entries.append(
-                {
-                    "id": entry.id,
-                    "text": entry.text,
-                    "meta": {
-                        "ts": entry.ts,
-                        "typ": "history",
-                    },
-                }
-            )
-
-        if archive_entries:
-            await memory.add_many(archive_entries)
+        if archive_entries and await memory.add_many(archive_entries):
+            # A Known by change during the bulk write writes its own document,
+            # and the bulk write can land after it with this snapshot. No await
+            # separates this read from the update, so the current state wins.
+            written = {document["id"]: document["meta"] for document in archive_entries}
+            with memory_write_scene(self):
+                memory.update_metadata(
+                    [
+                        document
+                        for document in self._archive_memory_documents()
+                        if document["id"] in written
+                        and document["meta"] != written[document["id"]]
+                    ]
+                )
 
         for character in self.characters:
             await character.commit_to_memory(memory)
 
         await self.world_state.commit_to_memory(memory)
+        await memory.rebuild_audience_index()
 
     def reset(self):
         # remove messages
         self.history = []
+        self.agent_state.get("conversation", {}).pop(DEPARTURES_KEY, None)
+        scene_reset.send(self)
 
         # clear out archived history, but keep pre-established history
         self.archived_history = [
@@ -2008,6 +2376,7 @@ class Scene(Emitter):
         ]
 
         self.layered_history = []
+        self.sync_time()
 
         self.world_state.reset()
 
@@ -2018,6 +2387,7 @@ class Scene(Emitter):
             actor.character = None
 
         self.actors = []
+        self.active_characters = []
 
     async def reset_memory(self):
         memory_agent = get_agent("memory")
@@ -2027,64 +2397,27 @@ class Scene(Emitter):
 
         self.set_new_memory_session_id()
 
-    async def restore(
-        self,
-        save_as: str | None = None,
-        from_rev: int | None = None,
-        from_date: str | None = None,
-        to_date: str | None = None,
-    ):
+    async def restore(self, save_as: str | None = None):
         try:
-            self.log.info(
-                "Restoring",
-                source=self.restore_from,
-                from_rev=from_rev,
-                from_date=from_date,
-                to_date=to_date,
-            )
+            self.log.info("Restoring", source=self.restore_from)
 
             restore_from = self.restore_from
-            use_changelog = (
-                from_rev is not None or from_date is not None or to_date is not None
-            )
 
-            if not self.restore_from and not use_changelog:
+            if not self.restore_from:
                 self.log.warning("restore: no save file specified to restore from")
                 return
 
             from talemate.load import load_scene
 
-            # If a changelog rev/date-range is provided, reconstruct first.
-            # Reconstruction must happen before reset() since reset() clears
-            # `filename`, which the changelog paths are resolved from.
-            temp_path = None
-            if use_changelog:
-                from talemate.changelog import reconstruct_scene_data
-
-                target_rev = from_rev
-                # For now, date range selection is not implemented; default to latest if not provided
-                reconstructed = await reconstruct_scene_data(self, to_rev=target_rev)
-                temp_name = f"{os.path.splitext(self.filename or 'scene.json')[0]}-restored.json"
-                temp_path = os.path.join(self.save_dir, temp_name)
-                with open(temp_path, "w") as f:
-                    f.write(save.scene_data_dumps(reconstructed))
-
             self.reset()
-            self.active_characters = []
             await self.remove_all_actors()
 
-            if use_changelog:
-                try:
-                    await load_scene(self, temp_path, add_to_recent=False)
-                finally:
-                    os.remove(temp_path)
-            else:
-                await load_scene(
-                    self,
-                    os.path.join(self.save_dir, self.restore_from),
-                )
-                if not self.restore_from:
-                    self.restore_from = restore_from
+            await load_scene(
+                self,
+                os.path.join(self.save_dir, self.restore_from),
+            )
+            if not self.restore_from:
+                self.restore_from = restore_from
 
             await self.reset_memory()
 
@@ -2110,12 +2443,39 @@ class Scene(Emitter):
         loop.run_until_complete(self.restore())
 
     @property
+    def can_change_knowledge_eligibility(self) -> bool:
+        return not self.history and not self.archived_history
+
+    @property
+    def saved_format(self) -> SavedSceneFormat:
+        return SavedSceneFormat(
+            format_version=CURRENT_SCENE_FORMAT_VERSION,
+            knowledge_eligibility=self.knowledge_eligibility,
+        )
+
+    @property
     def serialize(self) -> dict:
         scene = self
         return {
+            **self.saved_format.model_dump(),
+            **(
+                {"knowledge": self.knowledge.model_dump(mode="json")}
+                if self.knowledge is not None
+                else {}
+            ),
             "id": scene.id,
             "description": scene.description,
             "intro": scene.intro,
+            **(
+                {"intro_present": list(scene.intro_present)}
+                if scene.intro_present is not None
+                else {}
+            ),
+            **(
+                {"intro_knowledge": scene.intro_knowledge.model_dump(mode="json")}
+                if scene.intro_knowledge is not None
+                else {}
+            ),
             "name": scene.name,
             "project_name": scene.project_name,
             "title": scene.title,
@@ -2138,7 +2498,10 @@ class Scene(Emitter):
             "memory_session_id": scene.memory_session_id,
             "saved_memory_session_id": scene.saved_memory_session_id,
             "immutable_save": scene.immutable_save,
+            "hidden": scene.hidden,
+            "deprecated": scene.deprecated,
             "ts": scene.ts,
+            "start_ts": scene.start_ts,
             "help": scene.help,
             "experimental": scene.experimental,
             "writing_style_template": scene.writing_style_template,
@@ -2153,16 +2516,35 @@ class Scene(Emitter):
             "agent_settings_file": scene.agent_settings_link,
             "agent_settings_opted_out": scene._agent_settings_opted_out,
             "game_state_watch_paths": scene.game_state_watch_paths,
+            "game_state_control_paths": scene.game_state_control_paths,
+            "game_state_path_settings": scene.serialized_game_state_path_settings,
+            "playthrough_progress": scene.playthrough_progress,
         }
 
     @property
     def json(self):
         return save.scene_data_dumps(self.serialize)
 
+    @property
+    def cancel_sequence(self) -> int:
+        """User interruption marker that survives consuming ``cancel_requested``."""
+        return self._cancel_sequence
+
+    @property
+    def interrupt_signal(self) -> asyncio.Future:
+        """Shared signal for the next interruption; observers must not cancel it."""
+        if self._interrupt_signal is None:
+            self._interrupt_signal = asyncio.get_running_loop().create_future()
+        return self._interrupt_signal
+
     def interrupt(self):
+        self._cancel_sequence += 1
         self.cancel_requested = True
+        if self._interrupt_signal is not None:
+            self._interrupt_signal.set_result(None)
+            self._interrupt_signal = None
 
     def continue_actions(self):
         if self.cancel_requested:
             self.cancel_requested = False
-            raise GenerationCancelled("action cancelled")
+            raise GenerationCancelled("action cancelled", by_user=True)

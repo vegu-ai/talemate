@@ -9,16 +9,44 @@ Routes frontend-initiated changes to a SceneMessage:
   makes it the active canonical. Used by the "continue" flow (and any
   future flow that wants to grow the stack from the client side).
 - ``swap_revision``: moves the active-version pointer to a different
-  index on the stack. The canonical text follows automatically.
+  index on the stack, deferring derived work until keep/catch-up.
+- ``commit_revision``: updates derived evidence for the kept canonical text.
+- ``get_history_position``: whether a message is the final entry of scene history.
 - ``delete``: removes the message from scene history.
+- ``get_perspectives``: one character's view of each message and of the intro.
+- ``edit_perspective``: replaces one character's view of a message by hand.
+- ``reanalyze_perspective_dependents``: sets the later views built on a
+  hand-edited view to pending, so the next turn analyzes them again.
 """
 
 import pydantic
 import structlog
 
 import talemate.instance as instance
-from talemate.scene_message import VersionSource
+from talemate.scene_message import (
+    VersionSource,
+    CharacterTransitionMessage,
+    ReinforcementMessage,
+    SceneBackdropMessage,
+)
+from talemate.knowledge.message_views import (
+    character_message_views,
+    edit_character_view,
+    edited_view_dependents,
+    intro_view,
+)
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.perspectives import invalidate_message_view_dependents
+from talemate.knowledge.revision_browsing import defer_revision_work
+from talemate.knowledge.revision_refresh import (
+    restore_revision_baseline,
+    revision_refresh_payload,
+    revision_requires_refresh,
+)
+from talemate.knowledge.step import repair_passage
 from talemate.server.websocket_plugin import Plugin
+from talemate.status import background_task
+from talemate.knowledge.transitions import set_arrival_note
 
 log = structlog.get_logger("talemate.server.scene_message")
 
@@ -40,21 +68,177 @@ class AppendVersionPayload(pydantic.BaseModel):
 class SwapRevisionPayload(pydantic.BaseModel):
     id: int
     index: int
+    request_id: str | None = None
+    scene_id: str | None = None
+    selection_digest: str | None = None
+    selection_serial: int | None = None
 
 
-class DeletePayload(pydantic.BaseModel):
+class MessageIdPayload(pydantic.BaseModel):
     id: int
+
+
+class HistoryPositionPayload(MessageIdPayload):
+    request_id: str | None = None
+
+
+class PerspectivesPayload(pydantic.BaseModel):
+    character: str
+    # messages whose view the user edited by hand in this session
+    edited: list[int] = pydantic.Field(default_factory=list)
+
+
+class PerspectivePayload(pydantic.BaseModel):
+    id: int
+    character: str
+
+
+class EditPerspectivePayload(PerspectivePayload):
+    text: str
 
 
 class SceneMessagePlugin(Plugin):
     router = "scene_message"
 
+    async def handle_get_perspectives(self, data: dict):
+        payload = PerspectivesPayload(**data)
+        if not character_knowledge_enabled(self.scene):
+            await self.signal_operation_failed(
+                "Character perspectives are off in this scene",
+                failed_action="get_perspectives",
+            )
+            return
+        try:
+            views = character_message_views(self.scene, payload.character)
+            intro = intro_view(self.scene, payload.character)
+            dependents = edited_view_dependents(
+                self.scene, payload.character, payload.edited
+            )
+        except ValueError as exc:
+            await self.signal_operation_failed(
+                str(exc), failed_action="get_perspectives"
+            )
+            return
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "perspectives",
+                "character": payload.character,
+                "intro": intro.model_dump(),
+                "dependents": dependents,
+                "views": {
+                    message_id: view.model_dump() for message_id, view in views.items()
+                },
+            }
+        )
+
+    async def handle_edit_perspective(self, data: dict):
+        """
+        Replace one character's view of a message with hand-written text.
+        Starts no analysis: `get_perspectives` reports how many later views are
+        built on a hand-edited view, and the user decides whether to invalidate them.
+        """
+        payload = EditPerspectivePayload(**data)
+        message = self.scene.get_message(payload.id)
+        if message is None:
+            await self.signal_operation_failed(
+                f"Message {payload.id} not found", failed_action="edit_perspective"
+            )
+            return
+        try:
+            edit = await edit_character_view(
+                self.scene, message, payload.character, payload.text
+            )
+        except ValueError as exc:
+            await self.signal_operation_failed(
+                str(exc), failed_action="edit_perspective"
+            )
+            return
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "perspective_edited",
+                "id": payload.id,
+                "character": payload.character,
+                "view": edit.view.model_dump(),
+                "changed": edit.changed,
+            }
+        )
+        if edit.changed:
+            await self.scene.attempt_auto_save()
+            self.scene.emit_status()
+        await self.signal_operation_done(signal_only=True)
+
+    async def handle_reanalyze_perspective_dependents(self, data: dict):
+        payload = PerspectivePayload(**data)
+        try:
+            count = invalidate_message_view_dependents(
+                self.scene, payload.id, payload.character
+            )
+        except ValueError as exc:
+            await self.signal_operation_failed(
+                str(exc), failed_action="reanalyze_perspective_dependents"
+            )
+            return
+        self.scene.saved = False
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "perspective_dependents_invalidated",
+                "id": payload.id,
+                "character": payload.character,
+                "count": count,
+            }
+        )
+        await self.scene.attempt_auto_save()
+        self.scene.emit_status()
+        await self.signal_operation_done(signal_only=True)
+
+    async def handle_transition_note(self, data: dict):
+        payload = EditPayload(**data)
+        try:
+            set_arrival_note(
+                self.scene, self.scene.get_message(payload.id), payload.text
+            )
+        except ValueError as exc:
+            await self.signal_operation_failed(str(exc))
+            return
+        await self.signal_operation_done()
+
+    async def handle_get_history_position(self, data: dict):
+        payload = HistoryPositionPayload(**data)
+        index = self.scene.message_index(payload.id)
+        if index < 0:
+            await self.signal_operation_failed(
+                f"Message {payload.id} not found in scene history",
+                request_id=payload.request_id,
+                failed_action="get_history_position",
+            )
+            return
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "history_position",
+                "id": payload.id,
+                # a backdrop change recorded after the message is not later story
+                "final": all(
+                    entry.typ == "scene_backdrop"
+                    for entry in self.scene.history[index + 1 :]
+                ),
+                "request_id": payload.request_id,
+            }
+        )
+
     async def handle_delete(self, data: dict):
         """
         Remove a scene message from history.
         """
-        payload = DeletePayload(**data)
-        self.scene.delete_message(payload.id)
+        payload = MessageIdPayload(**data)
+        message = self.scene.get_message(payload.id)
+        if isinstance(message, SceneBackdropMessage):
+            await self.scene.assets.delete_backdrop_message(message)
+        else:
+            self.scene.delete_message(payload.id)
         await self.scene.attempt_auto_save()
 
     async def handle_edit(self, data: dict):
@@ -76,6 +260,12 @@ class SceneMessagePlugin(Plugin):
             await self.signal_operation_failed(f"Message {payload.id} not found")
             return
 
+        if isinstance(message, CharacterTransitionMessage):
+            await self.signal_operation_failed(
+                "A character transition entry cannot be edited; use its Arrival Note"
+            )
+            return
+
         new_text = payload.text
         editor = instance.get_agent("editor")
 
@@ -92,8 +282,12 @@ class SceneMessagePlugin(Plugin):
                 strip_partial=not editor.allow_incomplete_sentences,
             )
 
-        self.scene.edit_message(payload.id, new_text)
+        with defer_revision_work():
+            self.scene.edit_message(payload.id, new_text)
+        if isinstance(message, ReinforcementMessage):
+            await self.scene.world_state.reinforcement_message_edited(message)
         await self.scene.attempt_auto_save()
+        self.scene.emit_status()
         await self.signal_operation_done(signal_only=True)
 
     async def handle_append_version(self, data: dict):
@@ -132,14 +326,111 @@ class SceneMessagePlugin(Plugin):
         """
         payload = SwapRevisionPayload(**data)
         if self.scene.get_message(payload.id) is None:
-            await self.signal_operation_failed(f"Message {payload.id} not found")
-            return
-        try:
-            self.scene.set_message_active_version(payload.id, payload.index)
-        except IndexError:
             await self.signal_operation_failed(
-                f"Revision index {payload.index} out of range"
+                f"Message {payload.id} not found",
+                request_id=payload.request_id,
+                failed_action="swap_revision",
             )
             return
-        await self.scene.attempt_auto_save()
+        try:
+            with defer_revision_work():
+                self.scene.set_message_active_version(payload.id, payload.index)
+        except IndexError:
+            await self.signal_operation_failed(
+                f"Revision index {payload.index} out of range",
+                request_id=payload.request_id,
+                failed_action="swap_revision",
+            )
+            return
+        with defer_revision_work():
+            restore_revision_baseline(self.scene, self.scene.get_message(payload.id))
+        self.scene.saved = False
+        self.scene.emit_status()
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "revision_swapped",
+                "request_id": payload.request_id,
+            }
+        )
         await self.signal_operation_done(signal_only=True)
+
+    @background_task("Updating kept version")
+    async def handle_commit_revision(self, data: dict):
+        """Repair the perspectives of the selected canonical text (one passage)."""
+        payload = SwapRevisionPayload(**data)
+        scene = self.scene
+        message = scene.get_message(payload.id)
+        if (
+            message is None
+            or message.active_version != payload.index
+            or (payload.scene_id is not None and payload.scene_id != scene.id)
+            or (
+                payload.selection_digest is not None
+                and payload.selection_digest != message.revision_digest()
+            )
+            or (
+                payload.selection_serial is not None
+                and (
+                    message.revision_state is None
+                    or payload.selection_serial != message.revision_state.serial
+                )
+            )
+        ):
+            await self.signal_operation_failed(
+                "The selected version changed; choose a version to keep again.",
+                request_id=payload.request_id,
+                failed_action="commit_revision",
+            )
+            return
+        try:
+            selection_digest = message.revision_digest()
+            selection_serial = message.revision_state.serial
+            selection_active = scene.active
+            needs_refresh = revision_requires_refresh(scene, message)
+            await repair_passage(scene, message)
+            refresh = revision_refresh_payload(scene, message)
+            if not needs_refresh:
+                await scene.attempt_auto_save()
+            if (
+                self.scene is not scene
+                or scene.active != selection_active
+                or scene.get_message(payload.id) is not message
+                or message.active_version != payload.index
+                or message.revision_digest() != selection_digest
+                or message.revision_state.serial != selection_serial
+            ):
+                return
+            refresh_state = refresh["revision_refresh"]
+            if refresh_state["required"] and refresh_state["operations"] == [
+                "index_repair"
+            ]:
+                await self.signal_operation_failed(
+                    "Knowledge could not be updated. You can retry or continue the story.",
+                    request_id=payload.request_id,
+                    failed_action="commit_revision",
+                )
+                return
+            self.websocket_handler.queue_put(
+                {
+                    "type": self.router,
+                    "action": "revision_committed",
+                    "id": payload.id,
+                    "index": payload.index,
+                    "request_id": payload.request_id,
+                    **refresh,
+                }
+            )
+            await self.signal_operation_done(signal_only=True)
+        except Exception as exc:
+            if self.scene is scene:
+                await self.signal_operation_failed(
+                    str(exc),
+                    emit_status=False,
+                    request_id=payload.request_id,
+                    failed_action="commit_revision",
+                )
+            raise
+        finally:
+            if self.scene is scene:
+                scene.emit_status()

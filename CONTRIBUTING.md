@@ -69,6 +69,25 @@ Plain `uv sync` does not just skip the extra, it *removes* it: run against a
 working environment it uninstalls `pytest`, `pytest-xdist` and `pytest-asyncio`,
 breaking the command above.
 
+Some tests tokenize text with NLTK and fail with `LookupError: Resource punkt_tab
+not found` until its data is downloaded once (CI runs the same step):
+```bash
+uv run python -c "import nltk; nltk.download('punkt_tab')"
+```
+
+Tests run against `config.example.yaml`: the root fixture loads it as the
+runtime configuration and redirects configuration writes to a temporary
+directory. A test must not read, write or delete your active `config.yaml`,
+local scenes or user templates.
+
+Six Compose configuration tests call `docker compose config`, so they need the
+`docker compose` CLI (check with `docker compose version`), but no running Docker
+daemon. Without the CLI they fail with setup guidance. To leave them out on
+purpose, deselect them; pytest reports the deselected count:
+```bash
+uv run pytest tests/ -m "not requires_compose"
+```
+
 The suite runs distributed across your CPU cores by default (via `pytest-xdist`).
 If your environment predates that — pytest installed, `pytest-xdist` not — pytest
 exits with `error: unrecognized arguments: -n --dist worksteal`; install the `dev`
@@ -80,6 +99,19 @@ Pass `-n0` to run serially while debugging a specific test:
 ```bash
 uv run pytest tests/ -n0 -s -x
 ```
+
+After you add or change a node (its class, docstring, sockets or properties),
+regenerate the node reference pages under
+`docs/user-guide/node-editor/reference/nodes/`; `--check` reports pages that
+no longer match the code:
+```bash
+uv run python -m talemate.game.engine.nodes.tools glossary --write
+uv run python -m talemate.game.engine.nodes.tools glossary --check
+```
+
+The frontend has its own suite — run `pnpm test` from `talemate_frontend/` (see
+`talemate_frontend/README.md` for the pnpm setup), and `pnpm lint` for the
+frontend lint rules. CI runs both suites and the lint on every pull request.
 
 ## Questions?
 

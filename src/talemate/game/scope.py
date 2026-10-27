@@ -94,9 +94,9 @@ class GameInstructionScope:
         try:
             return self.module_function(self)
         except GenerationCancelled as exc:
+            handle_generation_cancelled(exc)
             if callable(self.on_generation_cancelled):
                 self.on_generation_cancelled(self, exc)
-            handle_generation_cancelled(exc)
 
     def emit_status(self, status: str, message: str, **kwargs):
         if kwargs:

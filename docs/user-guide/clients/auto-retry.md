@@ -6,9 +6,9 @@ You can instead configure a client to quietly retry a number of times on its own
 
 - **Empty Response** — the model returned an empty response. Retries fire immediately.
 - **Rate Limited** — the API responded with HTTP 429. Retries wait progressively longer between attempts (2s, 4s, 8s, 16s, capped at 30s). Other API errors are not affected and still notify you immediately.
-- **Missing Reasoning** (labeled **Auto Retry** on the Reasoning tab) — a reasoning model's response did not contain the expected reasoning pattern. Retries fire immediately. See [Reasoning](reasoning.md).
+- **Missing Reasoning** (labeled **Auto Retry** in the Reasoning section) — a reasoning model's response did not contain the expected reasoning pattern. Retries fire immediately. See [Reasoning](reasoning.md).
 
-The **Empty Response** and **Rate Limited** sliders are on the **Advanced** tab of the [client configuration](client-configuration.md) dialog. The **Missing Reasoning** slider is on the **Reasoning** tab, next to the **Pattern Not Found Behavior** setting (it only appears when that setting is **Fail** — with **Ignore**, a missing pattern is never treated as an error).
+The **Empty Response** and **Rate Limited** sliders are in the **Advanced** section of the [client editor](client-configuration.md). The **Missing Reasoning** slider is in the **Reasoning** section, next to the **Pattern Not Found Behavior** setting (it only appears when that setting is **Fail** — with **Ignore**, a missing pattern is never treated as an error).
 
 While automatic retries are running, a notification at the top of the screen shows which client is retrying, why, and the attempt count. You can abort the generation from there at any time. If all automatic retries are exhausted, the usual generation error dialog appears.
 

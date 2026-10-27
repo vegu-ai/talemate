@@ -1,5 +1,5 @@
 <template>
-    <v-chip v-if="newImages" color="info" class="text-caption" label transition="scroll-x-reverse-transition">New Images</v-chip>
+    <v-chip v-if="newImages" color="info" class="text-body-small" label transition="scroll-x-reverse-transition">New Images</v-chip>
     <v-app-bar-nav-icon  v-if="images.length > 0" @click="open">
         <v-icon>mdi-image-multiple-outline</v-icon>
         <v-icon v-if="newImages" class="btn-notification" color="info">mdi-alert-circle</v-icon>
@@ -12,10 +12,10 @@
                 <span v-if="generating">
                     <v-progress-circular class="ml-1 mr-3" size="14" indeterminate="disable-shrink" color="primary">
                     </v-progress-circular>
-                    <span class="text-caption text-primary">Generating...</span>
+                    <span class="text-body-small text-primary">Generating...</span>
                 </span>
             </v-card-title>
-            <v-toolbar density="compact" color="grey-darken-4">
+            <v-toolbar density="compact" color="mutedbg">
                 <v-btn rounded="sm" @click="deleteAll()" prepend-icon="mdi-close-box-outline">Discard All</v-btn>
                 <v-spacer></v-spacer>
                 <span v-if="selectedImage != null">
@@ -27,7 +27,7 @@
             <v-card-text>
                 <v-row>
                     <v-col cols="2" class="overflow-content">
-                        <v-img v-for="(image, idx) in images" elevation="7" :src="imageSource(image.base64)" :key="idx" @click.stop="selectImage(idx)" class="img-thumb"></v-img>
+                        <v-img v-for="(image, idx) in images" :src="imageSource(image.base64)" :key="idx" @click.stop="selectImage(idx)" class="img-thumb"></v-img>
                     </v-col>
                     <v-col cols="10" class="overflow-content">
                         <v-row v-if="selectedImage != null">
@@ -35,12 +35,12 @@
                                 <v-img max-height="800" :src="imageSource(selectedImage.base64)" :class="imagePreviewClass()"></v-img>
                             </v-col>
                             <v-col :cols="selectedImage.context.format === 'portrait' ? 5 : 12">
-                                <v-card elevation="7" density="compact">
+                                <v-card elevation="3" density="compact">
                                     <v-card-text>
-                                        <v-alert density="compact" v-if="selectedImage.context.vis_type" icon="mdi-panorama-variant-outline" variant="text" color="grey">
+                                        <v-alert density="compact" v-if="selectedImage.context.vis_type" icon="mdi-panorama-variant-outline" variant="text" class="text-medium-emphasis">
                                             {{ selectedImage.context.vis_type }}
                                         </v-alert>
-                                        <v-alert density="compact" v-if="selectedImage.context.prepared_prompt" icon="mdi-script-text-outline" variant="text" color="grey">
+                                        <v-alert density="compact" v-if="selectedImage.context.prepared_prompt" icon="mdi-script-text-outline" variant="text" class="text-medium-emphasis">
                                             <v-row>
                                                 <v-col :cols="selectedImage.context.format === 'portrait' ? 12 : 4">
                                                     <v-tooltip :text="selectedImage.context.prompt" class="pre-wrap" max-width="400">
@@ -58,10 +58,10 @@
                                                 </v-col>
                                             </v-row>
                                         </v-alert>
-                                        <v-alert density="compact" v-if="selectedImage.context.character_name" icon="mdi-account" variant="text" color="grey">
+                                        <v-alert density="compact" v-if="selectedImage.context.character_name" icon="mdi-account" variant="text" class="text-medium-emphasis">
                                             {{ selectedImage.context.character_name }}    
                                         </v-alert>
-                                        <v-alert density="compact" v-if="selectedImage.context.instructions" icon="mdi-comment-text" variant="text" color="grey">
+                                        <v-alert density="compact" v-if="selectedImage.context.instructions" icon="mdi-comment-text" variant="text" class="text-medium-emphasis">
                                             {{ selectedImage.context.instructions }}
                                         </v-alert>
 

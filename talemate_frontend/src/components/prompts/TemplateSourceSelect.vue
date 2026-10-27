@@ -5,7 +5,7 @@
                 v-bind="props"
                 size="x-small"
                 variant="text"
-                color="grey"
+                color="muted"
                 :disabled="disabled"
             >
                 <v-icon size="small">mdi-source-branch</v-icon>

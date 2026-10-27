@@ -1,6 +1,7 @@
 {#-
 Extractors:
   - fix: AnchorExtractor("<FIX>", "</FIX>")
+  - no_fix: RegexExtractor for the NO_FIX_REQUIRED self-closing tag
 
 Override example:
   {{ set_anchor_extractor("fix", "<MY_TAG>", "</MY_TAG>") }}
@@ -168,9 +169,9 @@ Marcus split his forces for the rescue. Half his men created a distraction by bu
 
 {% include "content-classification.jinja2" %}
 
-{% include "writing-style-instructions.jinja2" %}
+{% if not decision_findings %}{% include "writing-style-instructions.jinja2" %}{% endif %}
 
-{% include "dynamic-instructions.jinja2" %}
+{% include "decision-findings.jinja2" %}{% include "dynamic-instructions.jinja2" %}
 <|SECTION:TASK|>
 
 Fix overwritten narrative summaries by making them clear and direct while preserving key plot information.

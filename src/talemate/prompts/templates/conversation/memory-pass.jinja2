@@ -1,0 +1,52 @@
+{#-
+Extractors (agents/conversation/response_specs.py):
+  - items: BlockListExtractor: the <ITEM n="..."></ITEM> blocks inside the
+    <ITEMS> container only; a final block cut off before its closing tag is dropped
+  - none: RegexExtractor("<NONE/>"): only when <NONE/> is the whole <ITEMS>
+    content
+-#}
+{% if character_retrieval -%}
+{% if memory_character_context -%}
+<|SECTION:{{ character.name.upper() }}|>
+{{ memory_character_context }}
+<|CLOSE_SECTION|>
+{% endif -%}
+{% elif viewer -%}
+<|SECTION:{{ character.name.upper() }}|>
+{{ knowledge_index.sheet(scene, character, viewer, "description") }}
+
+{{ knowledge_index.description(scene, character, viewer) }}
+<|CLOSE_SECTION|>
+{% endif -%}
+{% if scene_history -%}
+<|SECTION:SCENE|>
+{% for line in scene_history -%}
+{{ line }}
+
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endif -%}
+<|SECTION:CANDIDATES|>
+{% for item in candidates %}
+{{ loop.index }}. {{ item|condensed }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+{{ character.name }} speaks next. The candidates above were retrieved for that line. Story context: {{ scene.context }}
+
+{% if viewer -%}
+Rewrite each candidate as what {{ character.name }} knows of it, from their own point of view: what they witnessed, were told, or is common knowledge in this world. Leave out any part {{ character.name }} could only know by reading the story from the outside. Drop a candidate {{ character.name }} knows nothing of.
+{% else -%}
+Rewrite each candidate to the part that matters for {{ character.name }}'s next line, keeping its meaning.
+{% endif %}
+Drop candidates that add nothing to the next line. Order the rest by how useful each one is for writing the line: what it should react to, recall or build on. The most useful candidate comes first.
+
+Answer inside <ITEMS> tags, one kept candidate per block as <ITEM n="number">rewritten text</ITEM>, in that order, nothing outside the blocks. Answer <ITEMS><NONE/></ITEMS> when none of the candidates should reach the line.
+
+Example:
+<ITEMS>
+<ITEM n="3">The third candidate, rewritten.</ITEM>
+<ITEM n="1">The first candidate, rewritten.</ITEM>
+</ITEMS>
+<|CLOSE_SECTION|>
+{{ set_prepared_response("<ITEMS>") }}

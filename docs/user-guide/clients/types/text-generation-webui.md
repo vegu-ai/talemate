@@ -4,14 +4,14 @@
     If you do not have a Text-Generation-WebUI instance running, you can follow their setup instructions 
     in their [GitHub repository](https://github.com/oobabooga/text-generation-webui).
 
-If you want to add an Text-Generation-WebUI client, change the `Client Type` to `Text-Generation-WebUI (ooba)`.
+If you want to add a Text-Generation-WebUI client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `Text-Generation-WebUI (ooba)` from the client type menu.
 
-![Client Text-Generation-WebUI](/talemate/img/0.26.0/client-ooba.png)
+![Client Text-Generation-WebUI](/talemate/img/0.40.0/client-ooba.png)
 
 !!! note "Should work out of the box with a local Text-Generation-WebUI instance"
     The default values should work with a local Text-Generation-WebUI instance if you have followed their setup instructions and are running the server on the default port.
 
-Click `Save` to add the client.
+Click `Save` in the toolbar to add the client.
 
 ### Ready to use
 
@@ -39,11 +39,11 @@ This will cause requests to go to the `chat/completions` API instead and Text-Ge
 
 This is **off by default**. It is a trade-off: keep it disabled for full control of the prompt template in Talemate, or enable it to trust that the template configured on the remote end is correct — useful when you don't know which prompt template to pick. While it is enabled, Talemate's own prompt template selection for the client has no effect.
 
-With reasoning models, Text-Generation-WebUI separates the thinking from the response on its end, so no reasoning pattern is needed in this mode — the reasoning is captured automatically. Note that the model spends tokens on thinking either way, so make sure response budgets account for it.
+With reasoning models, Text-Generation-WebUI separates the thinking from the response on its end, so no reasoning pattern is needed in this mode — the reasoning is captured automatically. Talemate also tells the model's template whether to think, following the client's **Reasoning** setting, so models with switchable thinking (such as Qwen3 and Qwen3.5) answer directly while reasoning is off.
 
 ##### Context Length
 
-The number of tokens to use as context when generating text. Defaults to `8192`.
+The number of tokens to use as context when generating text. Defaults to `16384`.
 
 ### Common issues
 
@@ -59,7 +59,7 @@ If your client displays a `No model loaded` message, it means that you haven't l
 
 #### Could not connect
 
-![Client ooba could not connect](/talemate/img/0.26.0/client-ooba-could-not-connect.png)
+![Client ooba could not connect](/talemate/img/0.40.0/client-ooba-could-not-connect.png)
 
 This means that either your Text-Generation-WebUI instance is not running, the url is incorrect, or the connection is somehow blocked. (For example, by a firewall)
 --8<-- "docs/snippets/common.md:client-response-length"

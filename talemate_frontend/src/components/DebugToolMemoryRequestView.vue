@@ -10,7 +10,7 @@
                     <v-icon size="14" class="ml-1">mdi-flag-checkered</v-icon>
                 </v-chip>
                 <!-- duration -->
-                <v-chip size="x-small" class="mr-1" color="grey-darken-1" variant="text" label>{{ memory_request.duration }}s<v-icon size="14" class="ml-1">mdi-clock</v-icon></v-chip>
+                <v-chip size="x-small" class="mr-1" color="muted" variant="text" label>{{ memory_request.duration }}s<v-icon size="14" class="ml-1">mdi-clock</v-icon></v-chip>
 
                 <!-- toggle truncateLongText -->
                 <v-chip size="x-small" class="mr-1" color="primary" variant="text" @click="truncateLongText = !truncateLongText" label>
@@ -35,7 +35,7 @@
                     <tbody>
                         <tr v-for="(result, index) in memory_request.results" :key="index">
                             <td>
-                                <div :class="result.distance <= memory_request.max_distance ? '' : 'text-grey'">
+                                <div :class="result.distance <= memory_request.max_distance ? '' : 'text-medium-emphasis'">
                                     {{ truncateText(result.doc) }}
                                 </div>
                                 <div>

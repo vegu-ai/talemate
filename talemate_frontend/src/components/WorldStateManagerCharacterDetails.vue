@@ -1,5 +1,5 @@
 <template>
-    <v-row floating color="grey-darken-5">
+    <v-row floating>
         <v-col cols="3">
 
         </v-col>
@@ -47,7 +47,7 @@
                     :active="selected === detail"
                     @click="selected = detail"
                 >
-                    <v-list-item-title class="text-caption">{{ detail }}
+                    <v-list-item-title class="text-body-small">{{ detail }}
                         <v-icon v-if="character.shared_details.includes(detail)" color="highlight6" class="ml-1">mdi-earth</v-icon>
                     </v-list-item-title>
                 </v-list-item>
@@ -97,6 +97,14 @@
                             @redo="detailAutocompleteField.redo()"
                             @undo="detailAutocompleteField.undo()" />
                     </div>
+                    <EntryVisibilitySelect
+                        class="mt-3"
+                        :model-value="selectedVisibility"
+                        :character-names="otherCharacterNames"
+                        :owner-label="character.name"
+                        :disabled="busy || !selectedHasText"
+                        :disabled-hint="selectedHasText ? null : 'Add text to this entry first, then choose who knows it.'"
+                        @update:model-value="setVisibility(selected, $event)" />
 
                 </v-card-text>
 
@@ -117,7 +125,6 @@
                     
                     <v-btn v-if="entryHasPin" @click="$emit('load-pin', selectedPinId)" color="primary" prepend-icon="mdi-pin">View pin</v-btn>
                     <v-btn v-else @click="$emit('add-pin', selectedPinId)" color="primary" prepend-icon="mdi-pin">Add pin</v-btn>
-
                     <v-spacer></v-spacer>
                     <v-btn v-if="character.reinforcements[selected]" @click.stop="viewCharacterStateReinforcer(selected)" color="primary" prepend-icon="mdi-image-auto-adjust">Manage auto state</v-btn>
                     <v-btn v-else @click.stop="viewCharacterStateReinforcer(selected)" color="primary" prepend-icon="mdi-image-auto-adjust">Setup auto state</v-btn>
@@ -130,6 +137,7 @@
 </template>
 
 <script>
+import EntryVisibilitySelect from './EntryVisibilitySelect.vue';
 import ContextualGenerate from './ContextualGenerate.vue';
 import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
 import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
@@ -145,8 +153,13 @@ export default {
         SpiceAppliedNotification,
         ConfirmActionInline,
         AutocompleteRedoChip,
+        EntryVisibilitySelect,
     },
     props: {
+        characterNames: {
+            type: Array,
+            default: () => [],
+        },
         immutableCharacter: Object,
         templates: Object,
         generationOptions: Object,
@@ -179,6 +192,7 @@ export default {
             setValue: (v) => {
                 if (this.selected && this.character?.details) {
                     this.character.details[this.selected] = v;
+                    this.dirty = true;
                 }
             },
             buildParams: () => ({
@@ -235,6 +249,16 @@ export default {
                 ? this.character.details[this.selected]
                 : null;
         },
+        selectedVisibility() {
+            if (!this.character || !this.selected) return null;
+            return (this.character.visibility || {})[`detail.${this.selected}`] || null;
+        },
+        selectedHasText() {
+            return Boolean(this.character?.details?.[this.selected]);
+        },
+        otherCharacterNames() {
+            return this.characterNames.filter(name => name !== this.character?.name);
+        },
         selectedIsShared() {
             return this.character.shared_details.includes(this.selected);
         },
@@ -264,6 +288,17 @@ export default {
         },
     },
     methods: {
+        setVisibility(name, visibility) {
+            // a Ctrl+Enter completion can be pending without a blur; messages are handled in order
+            this.update(name, true);
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'set_character_entry_visibility',
+                name: this.character.name,
+                key: `detail.${name}`,
+                visibility: visibility,
+            }));
+        },
         applyTemplates(templateUIDs, callback) {
             this.templateApplicatorCallback = callback;
 

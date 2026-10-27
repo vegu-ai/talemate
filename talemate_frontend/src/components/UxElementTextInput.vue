@@ -1,5 +1,5 @@
 <template>
-  <div class="text-grey-lighten-1">
+  <div>
     <div v-if="!isMultiline">
       <v-text-field
         v-model="text"

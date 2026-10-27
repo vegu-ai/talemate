@@ -261,7 +261,7 @@ Make a character
 | Output | Type | Description |
 | --- | --- | --- |
 | `character` | `character` | The character object |
-| `actor` | `actor` | The actor object |
+| `actor` | `actor` | The actor object, or None when the character is not active in the scene |
 
 **Properties**
 

@@ -21,6 +21,12 @@ class AvatarMixin:
             icon="mdi-image-auto-adjust",
             description="Portrait-related features for world state management.",
             config={
+                "decision_model": AgentActionConfig(
+                    type="bool",
+                    label="Use Decision Model",
+                    description="Keep the portrait or pick another existing one with the decision model when it is sure, without the usual request. A wrong answer can miss a portrait change.",
+                    value=True,
+                ),
                 "selection_frequency": AgentActionConfig(
                     type="number",
                     label="Selection Frequency",

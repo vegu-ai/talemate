@@ -11,7 +11,7 @@ They are created like any other node module, through the **:material-plus: Creat
 
 In the event module itself you can get access to the `event` emission object via the `Event` node.
 
-There currently are no typed event emission nodes, so you will need to use the `Get` and `Set` nodes to get and set properties on the event object.
+Some agents provide typed convenience nodes for their emissions — the voice agent's `Unpack Generation Emission` and `Set Chunk Text` nodes, for example, read and rewrite the text of a TTS chunk (see [Text Manipulation](../../agents/voice/text-manipulation.md)). For every other event you will need to use the `Get` and `Set` nodes to get and set properties on the event object.
 
 You can find the various event payloads in the [reference](../reference/events.md).
 

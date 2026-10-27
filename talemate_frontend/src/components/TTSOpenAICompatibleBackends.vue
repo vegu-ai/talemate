@@ -15,8 +15,9 @@
         variant="tonal"
         color="secondary"
         class="mr-2"
+        :disabled="actionsDisabled"
         @click="$emit('refresh-voices', child.slug)"
-        title="Pull the voice list from the backend"
+        :title="actionsDisabled ? actionsDisabledReason : 'Pull the voice list from the backend'"
       >Refresh voices</v-btn>
     </template>
   </DynamicAgentRegistry>
@@ -31,6 +32,11 @@ export default {
   props: {
     children: { type: Array, required: true },
     description: { type: String, default: '' },
+    // Refresh voices asks the RUNNING agent for the backend's voice list, so
+    // it resolves the API base URL from the applied config - not from an
+    // unsaved edit sitting in the settings working copy.
+    actionsDisabled: { type: Boolean, default: false },
+    actionsDisabledReason: { type: String, default: '' },
   },
   emits: ['add', 'remove', 'rename', 'refresh-voices'],
 };

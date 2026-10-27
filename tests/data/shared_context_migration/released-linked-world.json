@@ -1,0 +1,27 @@
+{
+  "character_data": {},
+  "world_state": {
+    "manual_context": {
+      "harbor": {
+        "id": "harbor",
+        "text": "The harbor was quiet.",
+        "meta": {
+          "source": "manual",
+          "typ": "world_state"
+        },
+        "shared": true
+      },
+      "tavern": {
+        "id": "tavern",
+        "text": "The tavern stays open all night.",
+        "meta": {
+          "source": "manual",
+          "typ": "world_state"
+        },
+        "shared": true
+      }
+    }
+  },
+  "share_static_history": false,
+  "static_history": []
+}

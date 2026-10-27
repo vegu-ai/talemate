@@ -7,14 +7,22 @@ Content Context: This is a specific scene from {{ scene.context }}
 {# GENERAL REINFORCEMENTS #}
 {% set general_reinforcements = scene.world_state.filter_reinforcements(insert=['all-context']) %}
 {%- for reinforce in general_reinforcements %}
-{{ reinforce.as_context_line|condensed }}
+{%- set reinforce_text = reinforce.context_for(scene, knowledge_viewer|default(none)) -%}
+{% if reinforce_text %}{{ reinforce_text|condensed }}
 
-{% endfor %}
+{% endif %}{% endfor %}
 {# END GENERAL REINFORCEMENTS #}
 {# ACTIVE PINS #}
 {%- for pin in scene.active_pins %}
+{% set pin_reinforcement = scene.world_state.reinforcement_entry_context(pin.pin.entry_id, knowledge_viewer) if character_knowledge_enabled(scene) and knowledge_viewer|default(none) else none %}
+{% if pin_reinforcement is not none %}
+{% if pin_reinforcement %}{{ pin_reinforcement|condensed }}
+---
+{% endif %}
+{% else %}
 {{ pin.title }}: {{ pin.time_aware_text|condensed }}
 ---
+{% endif %}
 {% endfor %}
 {# END ACTIVE PINS #}
 {% endset %}

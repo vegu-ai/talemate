@@ -1,6 +1,6 @@
 {# MEMORY QUERY #}
 {%- if memory_query %}
-{% set memory_results = query_memory(memory_query, as_question_answer=False, max_tokens=max_tokens|default(500), iterate=iterate|default(10), exclude_history=exclude_history|default(False)) -%}
+{% set memory_results = query_memory(memory_query, as_question_answer=False, max_tokens=max_tokens|default(500), iterate=iterate|default(10), exclude_history=exclude_history|default(False), filter=memory_filter|default(none)) -%}
 {% if memory_results and memory_results|length > 0 %}
 {% set has_content = namespace(value=false) %}
 {%- for memory in memory_results -%}

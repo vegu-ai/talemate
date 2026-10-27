@@ -79,13 +79,12 @@ class ElevenLabsMixin:
             container=True,
             icon="mdi-server-outline",
             label="ElevenLabs",
-            description="ElevenLabs is a cloud-based text to speech API. (API key required and must be set in the Talemate Settings -> Application -> ElevenLabs)",
+            description="ElevenLabs is a cloud-based text to speech API. (API key required and must be set in the Talemate Settings -> Connections -> API Keys -> ElevenLabs)",
             config={
                 "api_key": AgentActionConfig(
                     type="unified_api_key",
                     value="elevenlabs.api_key",
                     label="ElevenLabs API Key",
-                    scene_overridable=False,
                 ),
                 "model": AgentActionConfig(
                     type="text",
@@ -201,7 +200,7 @@ class ElevenLabsMixin:
             details["elevenlabs_api_key"] = AgentDetail(
                 icon="mdi-key",
                 value="ElevenLabs API key not set",
-                description="ElevenLabs API key not set. You can set it in the Talemate Settings -> Application -> ElevenLabs",
+                description="ElevenLabs API key not set. You can set it in the Talemate Settings -> Connections -> API Keys -> ElevenLabs",
                 color="error",
             ).model_dump()
         else:

@@ -4,7 +4,7 @@
             <!-- System message (non-character message) -->
             <div v-if="!message.character" class="system-message">
                 <v-chip 
-                    :color="message.subtype === 'function_call' ? 'orange' : 'info'" 
+                    :color="message.subtype === 'function_call' ? 'warning' : 'info'" 
                     size="small" 
                     class="mr-2 mb-1"
                 >
@@ -13,17 +13,17 @@
                 
                 <!-- Function call display -->
                 <span v-if="message.subtype === 'function_call'" class="function-call">
-                    <span class="text-body-2">{{ message.message }}</span>
+                    <span class="text-body-medium">{{ message.message }}</span>
                     <div v-if="message.data && message.data.function_call && message.data.function_call.arguments" class="mt-1">
-                        <div v-for="(value, key) in message.data.function_call.arguments" :key="key" class="text-caption text-muted">
+                        <div v-for="(value, key) in message.data.function_call.arguments" :key="key" class="text-body-small text-muted">
                             <strong>{{ key }}:</strong> {{ typeof value === 'object' ? JSON.stringify(value) : value }}
                         </div>
                     </div>
                 </span>
                 
                 <!-- Regular system message -->
-                <span v-else class="text-body-2">{{ message.message }}</span>
-                <div v-if="message.action && message.action !== 'actor_instruction' && message.subtype !== 'function_call'" class="text-caption text-muted mt-1">
+                <span v-else class="text-body-medium">{{ message.message }}</span>
+                <div v-if="message.action && message.action !== 'actor_instruction' && message.subtype !== 'function_call'" class="text-body-small text-muted mt-1">
                     {{ message.action }}
                 </div>
             </div>
@@ -32,9 +32,9 @@
             <div v-else class="character-instruction">
                 <v-chip color="secondary" size="small" class="mr-2 mb-1"><v-icon>mdi-bullhorn</v-icon></v-chip>
                 <span v-if="message.message">
-                    <span class="text-body-2">Instruct {{ message.character }}</span>
+                    <span class="text-body-medium">Instruct {{ message.character }}</span>
                     <div>
-                        <span class="text-caption text-muted">{{ message.message }}</span>
+                        <span class="text-body-small text-muted">{{ message.message }}</span>
                     </div>
                 </span>
             </div>

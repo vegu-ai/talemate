@@ -1,16 +1,16 @@
 # Cohere Client
 
-If you want to add an Cohere client, change the `Client Type` to `Cohere`.
+If you want to add an Cohere client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `Cohere` from the client type menu.
 
-![Client Cohere](/talemate/img/0.39.0/client-cohere.png)
+![Client Cohere](/talemate/img/0.40.0/client-cohere.png)
 
-Click `Save` to add the client.
+Click `Save` in the toolbar to add the client.
 
 ### Cohere API Key
 
 The client should appear in the clients list. If you haven't setup Cohere before, you will see a warning that the API key is missing.
 
-![Client cohere no api key](/talemate/img/0.26.0/client-cohere-no-api-key.png)
+![Client cohere no api key](/talemate/img/0.40.0/client-cohere-no-api-key.png)
 
 Click the `SET API KEY` button. This will open the application settings on the API Keys page where you can add your Cohere API key.
 

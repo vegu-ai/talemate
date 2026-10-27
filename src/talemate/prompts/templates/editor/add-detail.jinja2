@@ -20,7 +20,7 @@ Override example:
 <|SECTION:SCENE|>
 Content Context: {{ scene.context }}
 
-{% for scene_context in scene.context_history(budget=1000, min_dialogue=25, sections=False, keep_director=True) -%}
+{% for scene_context in scene.context_history(stored_views=True,budget=1000, min_dialogue=25, sections=False, keep_director=True, perspective=history_perspective|default(none)) -%}
 {{ scene_context }}
 {% endfor %}
 <|CLOSE_SECTION|>

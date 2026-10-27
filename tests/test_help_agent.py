@@ -4,6 +4,9 @@ call-block stripping and the focal-backed generation loop.
 """
 
 import json
+import re
+from collections import Counter
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -15,9 +18,15 @@ from talemate.agents.help import settings as help_settings
 from talemate.config import get_config
 from talemate.config.schema import Client, Config
 from talemate.agents.help import HelpAgent, docs
-from talemate.agents.help.chat import INITIAL_MESSAGE
-from talemate.agents.help.schema import HelpChatStore
+from talemate.agents.help.chat import INITIAL_MESSAGE, WRITE_TOOL_NAMES
+from talemate.agents.help.schema import (
+    HelpChatDocResultMessage,
+    HelpChatMessage,
+    HelpChatStore,
+)
 from talemate.game.focal.util import strip_call_blocks
+import talemate.util as util
+from talemate.scene_agent_settings import SceneAgentSettings
 
 from conftest import MockClient, MockClientContext, bootstrap_engine, client_responses
 
@@ -237,6 +246,66 @@ def test_find_docs_real_index_smoke():
 @pytest.mark.parametrize(
     "query,expected",
     [
+        (
+            "how do I change my OpenRouter image model?",
+            "user-guide/agents/help/index.md",
+        ),
+        (
+            "Help said my setting was saved but not applied",
+            "user-guide/agents/help/index.md",
+        ),
+        (
+            "validate_openrouter_model omitted choice lists",
+            "user-guide/agents/help/settings.md",
+        ),
+    ],
+)
+def test_find_docs_help_model_selection_and_apply_retries(query, expected):
+    results = docs.find_docs(query)
+    assert isinstance(results, list)
+    assert expected in [entry["path"] for entry in results]
+
+
+@pytest.mark.parametrize(
+    "query,expected",
+    [
+        ("summarization settings", "user-guide/agents/summarizer/settings.md"),
+        (
+            "configure summarization thresholds",
+            "user-guide/agents/summarizer/settings.md",
+        ),
+        ("scene analysis caching", "user-guide/agents/summarizer/settings.md"),
+        ("flow diagrams", "user-guide/world-editor/knowledge-how-it-works.md"),
+        ("reply inputs", "user-guide/world-editor/knowledge-how-it-works.md"),
+        (
+            "character knowledge flow reference",
+            "user-guide/world-editor/knowledge-how-it-works.md",
+        ),
+        (
+            "character re-entry bridge",
+            "user-guide/world-editor/knowledge-how-it-works.md",
+        ),
+        (
+            "arrival notes automatic timing",
+            "user-guide/world-editor/knowledge-how-it-works.md",
+        ),
+        (
+            "retry regeneration return bridge",
+            "user-guide/world-editor/knowledge-how-it-works.md",
+        ),
+        (
+            "activation deactivation chips",
+            "user-guide/world-editor/knowledge-how-it-works.md",
+        ),
+    ],
+)
+def test_find_docs_preserves_parent_knowledge_routes(query, expected):
+    assert expected in [entry["path"] for entry in docs.find_docs(query)]
+
+
+@pytest.mark.parametrize(
+    "query,expected",
+    [
         ("koboldcpp client setup", "user-guide/clients/types/koboldcpp.md"),
         ("openrouter api key", "user-guide/apis/openrouter.md"),
         ("context db", "user-guide/world-editor/context-db.md"),
@@ -246,6 +315,15 @@ def test_find_docs_real_index_smoke():
             "user-guide/node-editor/core-concepts/collector_nodes.md",
         ),
         ("character card import", "user-guide/character-card-import.md"),
+        ("template overrides", "user-guide/prompts/template-overrides.md"),
+        (
+            "State Counter",
+            "user-guide/node-editor/reference/nodes/state-counters.md",
+        ),
+        (
+            "resettable",
+            "user-guide/node-editor/reference/nodes/state-counters.md",
+        ),
         # a thorough summary must keep its phrase bonus: this page is the only
         # one about the pi coding agent, and competes with node-reference
         # pages that match nothing but the token "agent"
@@ -291,10 +369,9 @@ BLOATED_PATH = "user-guide/character-card-import.md"
 )
 def test_find_docs_long_summary_cannot_displace_better_matches(query, monkeypatch):
     # #169: padding a summary with topics the page only mentions in passing
-    # must not buy it rank. It may still reach the last slot - the words are
-    # genuinely there, and a page whose token score plus its diluted phrase
-    # bonus still earns that slot keeps it - but it may never take a slot
-    # above the one it enters at.
+    # must not buy it a slot above the last result. The corpus-wide IDF and
+    # average summary length also change, so unrelated relevant pages may
+    # reorder; that is not promotion of the padded page.
     index = docs.load_docs_index()
     assert any(entry["path"] == BLOATED_PATH for entry in index)
     bloated_index = [
@@ -309,11 +386,7 @@ def test_find_docs_long_summary_cannot_displace_better_matches(query, monkeypatc
     bloated = [entry["path"] for entry in docs.find_docs(query)]
 
     assert BLOATED_PATH not in trimmed
-    if BLOATED_PATH in bloated:
-        assert bloated[-1] == BLOATED_PATH
-        assert bloated[:-1] == trimmed[:-1]
-    else:
-        assert bloated == trimmed
+    assert BLOATED_PATH not in bloated[:-1]
 
 
 def test_find_docs_summary_phrase_bonus_is_diluted(monkeypatch):
@@ -327,13 +400,15 @@ def test_find_docs_summary_phrase_bonus_is_diluted(monkeypatch):
         else entry
         for entry in index
     ]
+    trimmed = [entry["path"] for entry in docs.find_docs("dialogue instructions")]
     monkeypatch.setattr(docs, "load_docs_index", lambda: bloated_index)
 
     # "dialogue instructions" is in BLOAT verbatim, so the padded entry takes
-    # the summary-phrase branch - and must still stay out of the results
+    # the summary-phrase branch - and must still stay out of the results,
+    # displacing nothing
     paths = [entry["path"] for entry in docs.find_docs("dialogue instructions")]
     assert BLOATED_PATH not in paths
-    assert "user-guide/agents/summarizer/settings.md" in paths
+    assert paths == trimmed
 
 
 def test_find_docs_phrase_dilution_bites_past_typical_length(monkeypatch):
@@ -669,6 +744,192 @@ def test_agent_registered():
     instance.AGENTS.pop("help", None)
 
 
+@pytest.mark.parametrize("budget", [-800, 0, 300, 100000])
+def test_help_trimming_keeps_request_with_bounded_results(budget):
+    history = [
+        HelpChatMessage(source="user", message="old request"),
+        HelpChatMessage(source="help", message="old answer"),
+        HelpChatMessage(
+            source="user", message="Set the Visualizer model to user/model"
+        ),
+        HelpChatDocResultMessage(
+            name="validate_openrouter_model", result={"exists": True}
+        ),
+        HelpChatDocResultMessage(
+            name="read_agent_settings", result={"details": "setting " * 1000}
+        ),
+    ]
+    selected = HelpAgent._chat_trim_history(history, budget)
+    assert history[2] in selected
+    if budget <= 0:
+        assert selected[0] == history[2]
+        assert "2 tool results of this turn omitted" in selected[-1].message
+        assert "validate_openrouter_model, read_agent_settings" in selected[-1].message
+        assert (
+            "Do not repeat these calls or claim their outcomes" in selected[-1].message
+        )
+    else:
+        assert util.count_tokens(HelpAgent._chat_render_history(selected)) <= budget
+    if budget == 100000:
+        assert selected == history
+    if budget == 300:
+        previews = [message for message in selected if message.type == "doc_result"]
+        assert "Result truncated" in previews[-1].result
+        assert history[-1].result == {"details": "setting " * 1000}
+
+
+def test_help_trimming_discards_older_tool_results_of_an_oversized_turn():
+    request = HelpChatMessage(source="user", message="How do these settings work?")
+    results = [
+        HelpChatDocResultMessage(
+            name="read_doc",
+            arguments={"path": f"page-{index}.md"},
+            result="documentation " * 1500,
+        )
+        for index in range(15)
+    ]
+    budget = 4000
+    selected = HelpAgent._chat_trim_history([request, *results], budget)
+    assert selected[0] == request
+    assert results[-1] in selected
+    assert results[0] not in selected
+    assert "tool results of this turn omitted" in selected[-1].message
+    assert util.count_tokens(HelpAgent._chat_render_history(selected)) <= budget
+
+
+@pytest.mark.parametrize("result_count", [1, 16])
+def test_help_trimming_keeps_all_results_at_exact_current_turn_budget(result_count):
+    old_history = [
+        HelpChatMessage(source="user", message="Earlier question"),
+        HelpChatMessage(source="help", message="Earlier answer"),
+    ]
+    current_turn = [
+        HelpChatMessage(source="user", message="What do these settings mean?"),
+        *[
+            HelpChatDocResultMessage(
+                name="read_doc",
+                arguments={"path": f"page-{index}.md"},
+                result={"content": "A small result."},
+            )
+            for index in range(result_count)
+        ],
+    ]
+    budget = util.count_tokens(HelpAgent._chat_render_history(current_turn))
+    selected = HelpAgent._chat_trim_history([*old_history, *current_turn], budget)
+    assert selected == current_turn
+    rendered = HelpAgent._chat_render_history(selected)
+    assert "omitted to fit context" not in rendered
+    assert util.count_tokens(rendered) == budget
+
+
+@pytest.mark.parametrize("budget", [-800, 0, 20, 180])
+def test_help_trimming_prioritizes_latest_write_over_newer_reads(budget):
+    request = HelpChatMessage(
+        source="user", message="Change this setting, then look it up"
+    )
+    write = HelpChatDocResultMessage(
+        name="update_agent_setting", result={"applied": True}
+    )
+    read = HelpChatDocResultMessage(name="read_doc", result="documentation " * 1000)
+    selected = HelpAgent._chat_trim_history([request, write, read], budget)
+    assert request in selected
+    assert read not in selected
+    if budget == 180:
+        assert write in selected
+        assert (
+            "1 tool result of this turn omitted to fit context: read_doc"
+            in selected[-1].message
+        )
+        assert util.count_tokens(HelpAgent._chat_render_history(selected)) <= budget
+    else:
+        assert (
+            "2 tool results of this turn omitted to fit context: update_agent_setting, read_doc"
+            in selected[-1].message
+        )
+        assert (
+            "Do not repeat these calls or claim their outcomes" in selected[-1].message
+        )
+
+
+def test_help_write_priority_covers_all_mutating_callbacks(help_agent):
+    for setting in help_agent.actions["permissions"].config.values():
+        setting.value = True
+    callbacks = (
+        help_agent._chat_doc_callbacks()
+        + help_agent._chat_settings_callbacks()
+        + help_agent._chat_theme_callbacks()
+        + help_agent._chat_template_callbacks()
+    )
+    assert WRITE_TOOL_NAMES == {
+        callback.name for callback in callbacks if not callback.concurrent
+    }
+
+
+@pytest.mark.parametrize("with_docs,count", [(False, 1600), (True, 200)])
+def test_help_trimming_tokenizes_each_message_a_fixed_number_of_times(
+    monkeypatch, with_docs, count
+):
+    history = []
+    for index in range(count):
+        history.append(
+            HelpChatMessage(source="user", message=f"marker-{index * 2} question")
+        )
+        if with_docs:
+            history.append(
+                HelpChatDocResultMessage(
+                    name="read_doc",
+                    result=f"marker-{index * 2 + 1} " + "documentation " * 900,
+                )
+            )
+        else:
+            history.append(
+                HelpChatMessage(source="help", message=f"marker-{index * 2 + 1} answer")
+            )
+    original_count = util.count_tokens
+    seen = Counter()
+    calls = []
+
+    def counted(text):
+        calls.append(len(text))
+        seen.update(re.findall(r"marker-\d+", text))
+        return original_count(text)
+
+    monkeypatch.setattr(util, "count_tokens", counted)
+    selected = HelpAgent._chat_trim_history(history, 120000)
+    assert history[-2] in selected
+    assert history[-1] in selected
+    assert max(seen.values()) <= 2
+    assert len(calls) <= len(history) + 2
+    assert original_count(HelpAgent._chat_render_history(selected)) <= 120000
+
+
+@pytest.mark.asyncio
+async def test_help_continuation_prompt_keeps_request_after_large_read(
+    help_agent, monkeypatch
+):
+    bootstrap_engine()
+    request = "Please set the Visualizer model to user/chosen-model"
+    monkeypatch.setattr(help_agent, "_chat_has_enough_for_title", lambda chat: False)
+    monkeypatch.setattr(
+        help_settings,
+        "read_agent_settings",
+        lambda agent: {"settings": "large setting " * 12000},
+    )
+    chat = help_agent.chat_create()
+    async with MockClientContext():
+        client_responses.get().extend(
+            [
+                '```json\n{"function": "read_agent_settings", "arguments": {"agent": "visual"}}\n```',
+                "The requested settings are available.",
+            ]
+        )
+        await help_agent.chat_send(chat.id, request)
+    assert len(help_agent.client.prompt_history) == 2
+    prompt = str(help_agent.client.prompt_history[-1]["prompt"])
+    assert request in prompt
+    assert "large setting" in prompt
+
+
 @pytest.mark.asyncio
 async def test_chat_send_fires_signals(help_agent, isolate_signals):
     """agent.help.chat.before / .after fire around the generation loop."""
@@ -759,7 +1020,12 @@ def test_read_agent_settings(settings_env):
     assert length["min"] == 32
     assert length["max"] == 4096
 
-    fmt = action["settings"]["format"]
+    assert "format" not in action["settings"]
+
+    scene_history = help_settings.read_agent_settings("summarizer")["actions"][
+        "manage_scene_history"
+    ]
+    fmt = scene_history["settings"]["format"]
     assert {"label": "Narrative", "value": "narrative"} in fmt["choices"]
 
     # other agents read fine too
@@ -771,6 +1037,99 @@ def test_read_agent_settings_unknown_agent(settings_env):
     result = help_settings.read_agent_settings("nope")
     assert isinstance(result, str)
     assert "conversation" in result
+
+
+@pytest.mark.parametrize("choice_count", [0, 2, 1000])
+def test_model_and_provider_choices_never_reach_help(settings_env, choice_count):
+    agent = instance.get_agent("visual")
+    choices = [
+        {"label": f"Catalogue entry {i}", "value": f"catalogue/id-{i}"}
+        for i in range(choice_count)
+    ]
+    for action_key in (
+        "openrouter_image_create",
+        "openrouter_image_edit",
+        "openrouter_image_analyzation",
+    ):
+        for key in ("model", "provider_only", "provider_ignore"):
+            agent.actions[action_key].config[key].choices = choices
+
+    payload = help_settings.read_agent_settings("visual")
+
+    for action_key in (
+        "openrouter_image_create",
+        "openrouter_image_edit",
+        "openrouter_image_analyzation",
+    ):
+        for key in ("model", "provider_only", "provider_ignore"):
+            field = payload["actions"][action_key]["settings"][key]
+            assert "choices" not in field
+            assert field["choices_omitted"] is True
+            assert "chosen by the user" in field["value_guidance"]
+            assert field["value"] == agent.actions[action_key].config[key].value
+    assert "catalogue/id-" not in json.dumps(payload)
+
+
+@pytest.mark.parametrize("count,label_size", [(21, 5), (2, 1100)])
+@pytest.mark.asyncio
+async def test_large_choices_are_omitted_from_reads_and_errors(
+    settings_env, count, label_size
+):
+    field = (
+        instance.get_agent("summarizer")
+        .actions["manage_scene_history"]
+        .config["format"]
+    )
+    field.choices = [
+        {"label": "x" * label_size, "value": f"catalogue-choice-{i}"}
+        for i in range(count)
+    ]
+    payload = help_settings.read_agent_settings("summarizer")
+    result = await help_settings.update_agent_setting(
+        "summarizer", "manage_scene_history", "format", "invalid"
+    )
+
+    assert payload["actions"]["manage_scene_history"]["settings"]["format"][
+        "choices_omitted"
+    ]
+    assert "catalogue-choice-" not in json.dumps(payload)
+    assert "catalogue-choice-" not in result
+    assert "settings dropdown" in result
+
+
+@pytest.mark.asyncio
+async def test_hidden_provider_choices_still_validate(settings_env):
+    field = (
+        instance.get_agent("visual")
+        .actions["openrouter_image_create"]
+        .config["provider_only"]
+    )
+    field.choices = [{"label": "Provider label", "value": "provider-id"}]
+    rejected = await help_settings.update_agent_setting(
+        "visual", "openrouter_image_create", "provider_only", ["invalid"]
+    )
+    assert "provider-id" not in rejected
+    assert "provider ids chosen by the user" in rejected
+
+    accepted = await help_settings.update_agent_setting(
+        "visual", "openrouter_image_create", "provider_only", ["provider-id"]
+    )
+    assert accepted["applied"] is True
+    assert field.value == ["provider-id"]
+
+
+@pytest.mark.asyncio
+async def test_hidden_model_choices_never_return_in_validation_errors(settings_env):
+    field = (
+        instance.get_agent("visual").actions["openrouter_image_create"].config["model"]
+    )
+    field.type = "autocomplete"
+    field.choices = [{"label": "Catalogue model", "value": "catalogue/model"}]
+    result = await help_settings.update_agent_setting(
+        "visual", "openrouter_image_create", "model", "unknown/model"
+    )
+    assert "catalogue/model" not in result
+    assert "model id chosen by the user" in result
 
 
 def test_read_agent_settings_redacts_secret_fields(settings_env):
@@ -825,13 +1184,13 @@ async def test_update_agent_setting_validation(settings_env):
 
     # invalid choice
     result = await help_settings.update_agent_setting(
-        "conversation", "generation_override", "format", "banana"
+        "summarizer", "manage_scene_history", "format", "banana"
     )
     assert "Invalid choice" in result
 
     # choice by label (case-insensitive) resolves to the value
     result = await help_settings.update_agent_setting(
-        "conversation", "generation_override", "format", "narrative"
+        "summarizer", "manage_scene_history", "format", "narrative"
     )
     assert result["new_value"] == "narrative"
 
@@ -843,6 +1202,27 @@ async def test_update_agent_setting_validation(settings_env):
 
 
 @pytest.mark.asyncio
+async def test_update_agent_setting_combobox_keeps_a_value_outside_the_choices(
+    settings_env,
+):
+    agent = instance.get_agent("summarizer")
+    agent.actions["manage_scene_history"].config["format"].type = "combobox"
+
+    payload = help_settings.read_agent_settings("summarizer")
+    fmt = payload["actions"]["manage_scene_history"]["settings"]["format"]
+    assert fmt["other_values"] == "accepted, the choices are suggestions"
+    assert "read_only" not in fmt
+
+    result = await help_settings.update_agent_setting(
+        "summarizer", "manage_scene_history", "format", "my-own-format"
+    )
+    assert result["new_value"] == "my-own-format"
+    assert (
+        agent.actions["manage_scene_history"].config["format"].value == "my-own-format"
+    )
+
+
+@pytest.mark.asyncio
 async def test_update_agent_setting_refuses_secret_fields(settings_env):
     agent = instance.get_agent("conversation")
     agent.actions["generation_override"].config["instructions"].type = "password"
@@ -850,7 +1230,7 @@ async def test_update_agent_setting_refuses_secret_fields(settings_env):
     result = await help_settings.update_agent_setting(
         "conversation", "generation_override", "instructions", "x"
     )
-    assert "settings dialog" in result
+    assert "agent settings page" in result
 
 
 @pytest.mark.asyncio
@@ -866,6 +1246,115 @@ async def test_update_agent_setting_enabled_toggle(settings_env):
     # help.chat cannot
     result = await help_settings.update_agent_setting("help", "chat", "enabled", False)
     assert "always enabled" in result
+
+
+async def _visualizer_with_backend(backend_name: str):
+    """The Visualizer with its text-to-image backend built, as a load builds it."""
+    agent = instance.get_agent("visual")
+    await agent.apply_config(
+        actions={"_config": {"config": {"backend": {"value": backend_name}}}},
+        enabled=True,
+    )
+    return agent
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_reaches_the_visualizer_backend(settings_env):
+    agent = await _visualizer_with_backend("openrouter")
+    assert agent.backend.model != "meta/muse-image"
+
+    result = await help_settings.update_agent_setting(
+        "visual", "openrouter_image_create", "model", "meta/muse-image"
+    )
+
+    assert result["applied"] is True
+    assert agent.backend.model == "meta/muse-image"
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_rebuilds_the_comfyui_backend_on_a_new_url(
+    settings_env,
+):
+    agent = await _visualizer_with_backend("comfyui")
+    old_backend = agent.backend
+
+    await help_settings.update_agent_setting(
+        "visual", "comfyui_image_create", "api_url", "http://comfy.local:8188"
+    )
+
+    # the backend is rebuilt only when it sees the old and the new URL differ
+    assert agent.backend is not old_backend
+    assert agent.backend.api_url == "http://comfy.local:8188"
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_reloads_the_embeddings_on_a_device_change(
+    settings_env, monkeypatch
+):
+    agent = instance.get_agent("memory")
+    embeddings_change = AsyncMock()
+    monkeypatch.setattr(agent, "handle_embeddings_change", embeddings_change)
+
+    result = await help_settings.update_agent_setting(
+        "memory", "_config", "device", "cuda"
+    )
+
+    assert result["new_value"] == "cuda"
+    embeddings_change.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_keeps_a_change_whose_apply_fails(
+    settings_env, monkeypatch
+):
+    agent = instance.get_agent("conversation")
+
+    async def failing_apply(*args, **kwargs):
+        raise RuntimeError("the backend is gone")
+
+    monkeypatch.setattr(agent, "apply_config", failing_apply)
+
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "length", 256
+    )
+
+    assert result == (
+        "Saved generation_override.length = 256, but applying it to the running "
+        "agent failed: the backend is gone. Open Settings and press Save to retry "
+        "(Apply pending keeps Save available without edits), or ask me to set "
+        "this setting again. If the error persists, correct its cause before retrying."
+    )
+    saved = get_config().agents["conversation"]
+    assert saved.actions["generation_override"].config["length"].value == 256
+    assert config_state.PENDING_APPLY == {"agents"}
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_enabled_toggle_reaches_apply_config(
+    settings_env, monkeypatch
+):
+    agent = instance.get_agent("editor")
+    real_apply = agent.apply_config
+    seen = []
+
+    async def recording_apply(*args, **kwargs):
+        # the flag the agent holds, and the flag the config hands it
+        seen.append(
+            (
+                agent.actions["fix_exposition"].enabled,
+                kwargs["actions"]["fix_exposition"]["enabled"],
+            )
+        )
+        await real_apply(*args, **kwargs)
+
+    monkeypatch.setattr(agent, "apply_config", recording_apply)
+
+    await help_settings.update_agent_setting(
+        "editor", "fix_exposition", "enabled", False
+    )
+
+    assert seen == [(True, False)]
+    assert agent.actions["fix_exposition"].enabled is False
 
 
 @pytest.mark.asyncio
@@ -909,6 +1398,138 @@ async def test_update_agent_setting_scene_override(settings_env, tmp_path):
         "conversation", "generation_override", "length"
     )
     assert "No scene override" in result
+
+
+def test_read_agent_settings_omits_inert_scene_overrides(settings_env, tmp_path):
+    """`resolve_config` ignores an overlay value for a non-overridable field, so
+    reporting it would name an effective value that is not in effect."""
+    agent = instance.get_agent("conversation")
+    scene = _SceneStub(tmp_path)
+    overrides = SceneAgentSettings(filepath=tmp_path / "agent-settings.json")
+    overrides.set_value("conversation", "generation_override", "length", 384)
+    overrides.set_value(
+        "conversation", "prompt_caching", "optimize_prompt_caching", "on"
+    )
+    scene.agent_overrides = overrides
+    agent.scene = scene
+
+    try:
+        payload = help_settings.read_agent_settings("conversation")
+    finally:
+        agent.scene = None
+
+    length = payload["actions"]["generation_override"]["settings"]["length"]
+    assert length["scene_override"] == 384
+
+    caching = payload["actions"]["prompt_caching"]["settings"][
+        "optimize_prompt_caching"
+    ]
+    assert caching["scene_overridable"] is False
+    assert "scene_override" not in caching
+
+
+@pytest.mark.asyncio
+async def test_clear_scene_override_redacts_a_secret_value(settings_env, tmp_path):
+    """The clear tool must not hand the removed credential back to the LLM."""
+    agent = instance.get_agent("conversation")
+    field = agent.actions["generation_override"].config["instructions"]
+    original_type = field.type
+    field.type = "password"
+
+    scene = _SceneStub(tmp_path)
+    overrides = SceneAgentSettings(filepath=tmp_path / "agent-settings.json")
+    overrides.set_value(
+        "conversation", "generation_override", "instructions", "super-secret"
+    )
+    scene.agent_overrides = overrides
+    agent.scene = scene
+
+    try:
+        result = await help_settings.clear_agent_setting_scene_override(
+            "conversation", "generation_override", "instructions"
+        )
+    finally:
+        field.type = original_type
+        agent.scene = None
+
+    assert result["cleared"] is True
+    assert result["removed_override_value"] == help_settings.REDACTED
+    assert "super-secret" not in json.dumps(result)
+    assert (
+        overrides.get_value("conversation", "generation_override", "instructions")
+        is help_settings.UNSET
+    )
+
+
+@pytest.mark.asyncio
+async def test_clear_scene_override_returns_real_value_for_normal_fields(
+    settings_env, tmp_path
+):
+    agent = instance.get_agent("conversation")
+    scene = _SceneStub(tmp_path)
+    overrides = SceneAgentSettings(filepath=tmp_path / "agent-settings.json")
+    overrides.set_value("conversation", "generation_override", "length", 384)
+    scene.agent_overrides = overrides
+    agent.scene = scene
+
+    try:
+        result = await help_settings.clear_agent_setting_scene_override(
+            "conversation", "generation_override", "length"
+        )
+    finally:
+        agent.scene = None
+
+    assert result["removed_override_value"] == 384
+
+
+@pytest.mark.asyncio
+async def test_global_write_does_not_warn_about_an_inert_override(
+    settings_env, tmp_path
+):
+    """`resolve_config` ignores the stored value, so the global write IS in
+    effect — a masking warning would be wrong."""
+    agent = instance.get_agent("conversation")
+    scene = _SceneStub(tmp_path)
+    overrides = SceneAgentSettings(filepath=tmp_path / "agent-settings.json")
+    overrides.set_value(
+        "conversation", "prompt_caching", "optimize_prompt_caching", "on"
+    )
+    overrides.set_value("conversation", "generation_override", "length", 384)
+    scene.agent_overrides = overrides
+    agent.scene = scene
+
+    try:
+        inert = await help_settings.update_agent_setting(
+            "conversation", "prompt_caching", "optimize_prompt_caching", "off", "global"
+        )
+        masked = await help_settings.update_agent_setting(
+            "conversation", "generation_override", "length", 256, "global"
+        )
+    finally:
+        agent.scene = None
+
+    assert "warning" not in inert
+    # an override that really does mask the global value still warns
+    assert "scene override" in masked["warning"]
+
+
+def test_action_payload_omits_inert_enabled_override(settings_env, tmp_path):
+    agent = instance.get_agent("conversation")
+    scene = _SceneStub(tmp_path)
+    overrides = SceneAgentSettings(filepath=tmp_path / "agent-settings.json")
+    # `generation_override` has no Enable control; `use_long_term_memory` does
+    overrides.set_enabled("conversation", "generation_override", False)
+    overrides.set_enabled("conversation", "use_long_term_memory", False)
+    scene.agent_overrides = overrides
+    agent.scene = scene
+
+    try:
+        payload = help_settings.read_agent_settings("conversation")
+    finally:
+        agent.scene = None
+
+    assert "enabled_scene_override" not in payload["actions"]["generation_override"]
+    assert payload["actions"]["use_long_term_memory"]["enabled_scene_override"] is False
 
 
 @pytest.mark.asyncio
@@ -961,8 +1582,14 @@ def test_read_app_config(settings_env):
 
     presets = help_settings.read_app_config("presets")
     assert presets["writable"] is False
-    assert "inference_defaults" not in presets["values"]
-    assert "embeddings_defaults" not in presets["values"]
+    assert presets["mode"] == "index"
+    assert {"inference_defaults", "embeddings_defaults"} <= {
+        entry["key"] for entry in presets["entries"]
+    }
+    defaults = help_settings.read_app_config(
+        "presets", ["inference_defaults", "analytical"]
+    )
+    assert defaults["values"]["temperature"] == 0.7
 
     result = help_settings.read_app_config("clients")
     assert isinstance(result, str)
@@ -1057,6 +1684,7 @@ def test_read_clients_empty(settings_env):
 async def test_chat_send_with_setting_update(help_agent, settings_env):
     """A settings write requested through the chat loop is applied and
     recorded as a tool-result message."""
+    allow_settings_changes(help_agent)
     chat = help_agent.chat_create()
 
     call_block = json.dumps(
@@ -1092,30 +1720,33 @@ async def test_chat_send_with_setting_update(help_agent, settings_env):
 
 
 @pytest.mark.asyncio
-async def test_update_agent_setting_refused_while_modal_open(settings_env, tmp_path):
-    # write targeting the agent whose settings dialog is open is refused
+async def test_update_agent_setting_refused_while_app_settings_dirty(
+    settings_env, tmp_path
+):
+    # the settings view saves its whole working copy from whatever page is
+    # showing, so ANY unsaved edit there would push the pre-change values back
     result = await help_settings.update_agent_setting(
         "conversation",
         "generation_override",
         "length",
         256,
         "global",
-        open_agent_modal="conversation",
+        app_settings_dirty=True,
     )
     assert isinstance(result, str)
-    assert "settings dialog" in result
+    assert "unsaved edits" in result
 
     agent = instance.get_agent("conversation")
     assert agent.actions["generation_override"].config["length"].value == 192
 
-    # a different agent's open dialog does not block the write
+    # an open but clean settings view is not a conflict
     result = await help_settings.update_agent_setting(
         "conversation",
         "generation_override",
         "length",
         256,
         "global",
-        open_agent_modal="summarizer",
+        app_settings_dirty=False,
     )
     assert result["applied"] is True
 
@@ -1128,18 +1759,24 @@ async def test_update_agent_setting_refused_while_modal_open(settings_env, tmp_p
         "conversation",
         "generation_override",
         "length",
-        open_agent_modal="conversation",
+        app_settings_dirty=True,
     )
     assert isinstance(result, str)
-    assert "settings dialog" in result
+    assert "unsaved edits" in result
     assert agent.resolve_config("generation_override", "length") == 384
 
 
 @pytest.mark.asyncio
-async def test_chat_send_setting_update_refused_while_modal_open(
+def allow_settings_changes(agent):
+    """The permission is off by default; these two drive the write tools."""
+    agent.actions["permissions"].config["allow_settings_changes"].value = True
+
+
+async def test_chat_send_setting_update_refused_while_app_settings_dirty(
     help_agent, settings_env
 ):
-    """The ux snapshot's open agent modal reaches the settings tools."""
+    """The ux snapshot's dirty settings view reaches the settings tools."""
+    allow_settings_changes(help_agent)
     chat = help_agent.chat_create()
 
     call_block = json.dumps(
@@ -1158,20 +1795,26 @@ async def test_chat_send_setting_update_refused_while_modal_open(
     async with MockClientContext():
         responses = client_responses.get()
         responses.append(f"```json\n{call_block}\n```")
-        responses.append("The conversation settings dialog is open - close it first.")
+        responses.append("The settings view has unsaved edits - save them first.")
 
         await help_agent.chat_send(
             chat.id,
             "Set the conversation generation length to 256",
             ux_snapshot={
-                "agent_settings_modal": {"agent": "conversation", "tab": "general"}
+                # the user is on an unrelated page - the dirty flag covers the
+                # whole working copy (including page-owned extra changes)
+                "app_settings_modal": {
+                    "tab": "settings",
+                    "page": "gameplay",
+                    "dirty": True,
+                }
             },
         )
 
     messages = help_agent.chat_get(chat.id).messages
     tool_results = [m for m in messages if m.type == "doc_result"]
     assert len(tool_results) == 1
-    assert "settings dialog" in tool_results[0].result
+    assert "unsaved edits" in tool_results[0].result
 
     agent = instance.get_agent("conversation")
     assert agent.actions["generation_override"].config["length"].value == 192
@@ -1255,3 +1898,26 @@ def test_read_clients_unified_api_key(settings_env):
         "set (unified API key from application settings: openrouter.api_key)"
     )
     assert "sk-or-unified-secret" not in json.dumps(payload)
+
+
+@pytest.mark.parametrize(
+    "query,page",
+    [
+        ("learn never learn rules", "knowledge.md"),
+        ("first save continuation retry discard", "knowledge.md"),
+        ("intro audiences", "knowledge-how-it-works.md"),
+        ("browse revisions before keeping a version", "knowledge-how-it-works.md"),
+        ("reply inputs and memory ranking", "knowledge-how-it-works.md"),
+        (
+            "mode decision tree model secrets cast size cost",
+            "knowledge-how-it-works.md",
+        ),
+        ("revision browsing", "knowledge-how-it-works.md"),
+        ("collapsed return entries automatic timing arrival notes", "knowledge.md"),
+        ("character activation arrival note", "knowledge.md"),
+    ],
+)
+def test_find_docs_preserves_knowledge_routes_after_return_updates(query, page):
+    assert "user-guide/world-editor/" + page in [
+        entry["path"] for entry in docs.find_docs(query, limit=3)
+    ]

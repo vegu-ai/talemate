@@ -7,6 +7,7 @@ import pydantic
 import structlog
 
 import talemate.client as client
+from talemate.events import before_generation
 from talemate.client.context import (
     client_context_attribute,
     set_client_context_attribute,
@@ -27,7 +28,6 @@ from talemate.agents.context import active_agent
 from talemate.agents.world_state import TimePassageEmission
 from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.agents.narrator.auto_narration import AutoNarrationMixin
-from talemate.emit import emit
 from talemate.prompts import Prompt
 from talemate.scene_message import NarratorMessage
 
@@ -60,6 +60,49 @@ talemate.emit.async_signals.register(
 )
 
 
+async def _narration(
+    self,
+    fn,
+    args,
+    kwargs,
+):
+    """
+    The narrator's generation context: the narrator speaker role, the
+    writing style, the injected instructions, and (for scene narration) the
+    generated signal with the response.
+    """
+    await before_generation(self.scene, "narrator")
+    agent_context = active_agent.get()
+    # ActiveAgent.__enter__ shares state by reference with the parent context,
+    # so we save/restore the prior value rather than mutating in place.
+    _UNSET = object()
+    previous_speaker_role = agent_context.state.get("speaker_role", _UNSET)
+    agent_context.state["speaker_role"] = "narrator"
+    try:
+        emission: NarratorAgentEmission = NarratorAgentEmission(agent=self)
+
+        if self.content_use_writing_style:
+            self.set_context_states(writing_style=self.scene.writing_style)
+
+        await talemate.emit.async_signals.get("agent.narrator.before_generate").send(
+            emission
+        )
+        await talemate.emit.async_signals.get(
+            "agent.narrator.inject_instructions"
+        ).send(emission)
+        agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
+
+        response = await fn(self, *args, **kwargs)
+        emission.response = response
+        await talemate.emit.async_signals.get("agent.narrator.generated").send(emission)
+        return emission.response
+    finally:
+        if previous_speaker_role is _UNSET:
+            agent_context.state.pop("speaker_role", None)
+        else:
+            agent_context.state["speaker_role"] = previous_speaker_role
+
+
 def set_processing(fn):
     """
     Custom decorator that emits the agent status as processing while the function
@@ -69,38 +112,7 @@ def set_processing(fn):
     @_set_processing
     @wraps(fn)
     async def narration_wrapper(self, *args, **kwargs):
-        agent_context = active_agent.get()
-        # ActiveAgent.__enter__ shares state by reference with the parent context,
-        # so we save/restore the prior value rather than mutating in place.
-        _UNSET = object()
-        previous_speaker_role = agent_context.state.get("speaker_role", _UNSET)
-        agent_context.state["speaker_role"] = "narrator"
-        try:
-            emission: NarratorAgentEmission = NarratorAgentEmission(agent=self)
-
-            if self.content_use_writing_style:
-                self.set_context_states(writing_style=self.scene.writing_style)
-
-            await talemate.emit.async_signals.get(
-                "agent.narrator.before_generate"
-            ).send(emission)
-            await talemate.emit.async_signals.get(
-                "agent.narrator.inject_instructions"
-            ).send(emission)
-
-            agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
-
-            response = await fn(self, *args, **kwargs)
-            emission.response = response
-            await talemate.emit.async_signals.get("agent.narrator.generated").send(
-                emission
-            )
-            return emission.response
-        finally:
-            if previous_speaker_role is _UNSET:
-                agent_context.state.pop("speaker_role", None)
-            else:
-                agent_context.state["speaker_role"] = previous_speaker_role
+        return await _narration(self, fn, args, kwargs)
 
     return narration_wrapper
 
@@ -400,8 +412,7 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, Agent):
                 },
             },
         )
-        await self.scene.push_history(narrator_message)
-        emit("narrator", narrator_message)
+        await self.scene.push_history(narrator_message, emit_message=True)
 
     @set_processing
     @store_context_state(
@@ -570,7 +581,7 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, Agent):
     @store_context_state("narrative_direction", "response_length", time_narration=True)
     async def narrate_time_passage(
         self,
-        duration: str,
+        duration: int,
         time_passed: str,
         narrative_direction: str,
         response_length: int | None = None,
@@ -797,10 +808,7 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, Agent):
         narrator_message = NarratorMessage(
             narration, meta=self.action_to_meta(action_name, kwargs)
         )
-        await self.scene.push_history(narrator_message)
-
-        if emit_message:
-            emit("narrator", narrator_message)
+        await self.scene.push_history(narrator_message, emit_message=emit_message)
 
         return narrator_message
 
@@ -818,9 +826,7 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, Agent):
 
         # depending on conversation format in the context, stopping strings
         # for character names may change format
-        conversation_agent = get_agent("conversation")
-
-        if conversation_agent.conversation_format == "movie_script":
+        if self.scene.conversation_format == "movie_script":
             character_names = [
                 f"\n{c.name.upper()}\n" for c in self.scene.get_characters()
             ]

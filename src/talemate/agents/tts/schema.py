@@ -87,6 +87,10 @@ class Voice(pydantic.BaseModel):
 
     is_scene_asset: bool = False
 
+    # "refresh": added by Refresh voices and not edited since; None on voices
+    # saved before this was recorded
+    managed_by: Literal["refresh", "user"] | None = None
+
     @pydantic.field_validator("tags")
     @classmethod
     def _validate_tags(cls, v: list[str]):

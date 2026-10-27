@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="open" :max-width="size" :contained="contained">
+    <v-dialog v-model="open" :max-width="size" :contained="contained" :persistent="loading">
         <v-card>
             <v-card-title>
                 <v-icon v-if="icon" size="small" class="mr-2" color="primary">{{ icon }}</v-icon>
@@ -10,6 +10,8 @@
                 <v-alert v-if="instructions" color="muted" variant="text">
                     <div class="instructions">{{ instructions }}</div>
                 </v-alert>
+
+                <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
 
                 <v-form @submit.prevent="proceed" ref="form" v-model="valid">
                     <v-row v-if="inputType === 'multiline'">
@@ -40,14 +42,24 @@
                             ></v-text-field>
                         </v-col>
                     </v-row>
+                    <v-row v-if="checkboxLabel">
+                        <v-col cols="12">
+                            <v-checkbox
+                                v-model="checked"
+                                :label="checkboxLabel"
+                                :messages="checkboxHint"
+                                density="compact"
+                            ></v-checkbox>
+                        </v-col>
+                    </v-row>
                 </v-form>
             </v-card-text>
             <v-card-actions>
-                <v-btn @click="cancel" color="muted" prepend-icon="mdi-cancel">
+                <v-btn @click="cancel" color="muted" prepend-icon="mdi-cancel" :disabled="loading">
                     Cancel
                 </v-btn>
                 <v-spacer></v-spacer>
-                <v-btn @click="proceed" color="primary" prepend-icon="mdi-check-circle-outline" :disabled="!valid">
+                <v-btn @click="proceed" color="primary" prepend-icon="mdi-check-circle-outline" :disabled="!valid || loading" :loading="loading">
                     Continue
                 </v-btn>
             </v-card-actions>
@@ -63,6 +75,12 @@ export default {
     props: {
         title: String,
         instructions: String,
+        error: String,
+        loading: Boolean,
+        closeOnContinue: {
+            type: Boolean,
+            default: true,
+        },
         icon: String,
         placeholder: {
             type: String,
@@ -88,9 +106,31 @@ export default {
             type: Array,
             default: () => [],
         },
+        // Whether the input has to be filled in before Continue is enabled.
+        required: {
+            type: Boolean,
+            default: true,
+        },
+        // When set, an optional checkbox is rendered below the input and its
+        // state is handed to the `continue` handler as `checked` on the params.
+        checkboxLabel: {
+            type: String,
+            default: null,
+        },
+        checkboxHint: {
+            type: String,
+            default: '',
+        },
+        checkboxDefault: {
+            type: Boolean,
+            default: false,
+        },
     },
     computed: {
         combinedRules() {
+            if (!this.required) {
+                return this.rules;
+            }
             return [this.builtInRules.required, ...this.rules];
         },
     },
@@ -101,6 +141,10 @@ export default {
             valid: false,
             extra_params: {},
             input: '',
+            checked: false,
+            // whether the dialog's outcome has already been reported — set by
+            // proceed / cancel before they close it
+            answered: false,
             builtInRules: {
                 required: value => !!value || 'Required.',
             }
@@ -108,17 +152,38 @@ export default {
     },
     emits: ['continue', 'cancel'],
 
+    watch: {
+        open(isOpen) {
+            if (isOpen) {
+                this.answered = false;
+                return;
+            }
+            if (this.answered) {
+                return;
+            }
+            // Esc / click-outside closes the v-dialog on its own. Callers that
+            // keep pending state for the dialog (or await its outcome) would
+            // wait forever, so a dismissal reports as a cancel.
+            this.$emit('cancel');
+        },
+    },
+
     methods: {
         proceed() {
+            if (this.loading) return;
             this.$refs.form.validate()
             if(!this.valid) {
                 return;
             }
 
-            this.$emit('continue', this.input, this.extra_params);
-            this.open = false;
+            this.answered = this.closeOnContinue;
+            const params = this.checkboxLabel ? { ...this.extra_params, checked: this.checked } : this.extra_params;
+            this.$emit('continue', this.input, params);
+            if (this.closeOnContinue) this.open = false;
         },
         cancel() {
+            if (this.loading) return;
+            this.answered = true;
             this.$emit('cancel');
             this.open = false;
         },
@@ -126,6 +191,7 @@ export default {
             this.open = true;
             this.extra_params = extra_params || {};
             this.input = extra_params?.input || '';
+            this.checked = extra_params?.checked ?? this.checkboxDefault;
             // auto focus on input next tick
             this.$nextTick(() => {
                 if(this.inputType === 'multiline') {

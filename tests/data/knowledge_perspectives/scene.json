@@ -1,0 +1,199 @@
+{
+  "format_version": 1,
+  "knowledge_eligibility": "perception",
+  "name": "Perspective Records Fixture",
+  "project_name": "perspective-records-fixture",
+  "description": "A quiet room.",
+  "environment": "creative",
+  "history": [
+    {
+      "id": 101,
+      "typ": "character",
+      "message": "Alice hides the ledger beneath the bed. Bob sees her kneel. Cara and Dan hear footsteps.",
+      "source": "ai",
+      "rev": 9,
+      "knowledge": {
+        "revision": 1,
+        "content_digest": "8b64e58963802fcae4bfe6859940f6d8e23a9ee4776a406679f0e1db5e21901d",
+        "acquired": {
+          "order": 1,
+          "ts": 10
+        },
+        "views": [
+          {
+            "id": "alice-view",
+            "audience": [
+              "Alice"
+            ],
+            "status": "ready",
+            "text": "Alice hides the ledger beneath the bed.",
+            "sources": [],
+            "revision": 1
+          },
+          {
+            "id": "bob-view",
+            "audience": [
+              "Bob"
+            ],
+            "status": "ready",
+            "text": "Bob sees Alice kneel beside the bed.",
+            "sources": [],
+            "revision": 1
+          },
+          {
+            "id": "shared-view",
+            "audience": [
+              "Cara",
+              "Dan"
+            ],
+            "status": "ready",
+            "text": "Footsteps sound in the room.",
+            "sources": [],
+            "revision": 1
+          },
+          {
+            "id": "omitted-view",
+            "audience": [
+              "Erin"
+            ],
+            "status": "omitted",
+            "text": null,
+            "sources": [],
+            "revision": 1
+          },
+          {
+            "id": "pending-view",
+            "audience": [
+              "Finn"
+            ],
+            "status": "pending",
+            "text": null,
+            "sources": [],
+            "revision": 1
+          },
+          {
+            "id": "failed-view",
+            "audience": [
+              "Grace"
+            ],
+            "status": "failed",
+            "text": null,
+            "sources": [],
+            "revision": 1
+          }
+        ]
+      }
+    }
+  ],
+  "archived_history": [
+    {
+      "id": "summary-1",
+      "text": "Alice concealed the ledger under the bed.",
+      "ts": 20,
+      "start": 0,
+      "end": 0,
+      "knowledge": {
+        "revision": 1,
+        "content_digest": "6308ce47e5df0e58068495c876eb05b0ae3a834295719d05cf44885ac77e9a48",
+        "acquired": {
+          "order": 2,
+          "ts": 20
+        },
+        "views": [
+          {
+            "id": "summary-alice",
+            "audience": [
+              "Alice"
+            ],
+            "status": "ready",
+            "text": "Alice concealed the ledger under the bed.",
+            "sources": [
+              {
+                "kind": "message",
+                "id": 101,
+                "revision": 1,
+                "layer": 0,
+                "view_id": "alice-view",
+                "view_revision": 1
+              }
+            ],
+            "revision": 1
+          }
+        ]
+      }
+    }
+  ],
+  "layered_history": [],
+  "character_data": {
+    "Alice": {
+      "name": "Alice",
+      "description": "Alice is visiting.",
+      "is_player": true
+    },
+    "Bob": {
+      "name": "Bob",
+      "description": "Bob is visiting.",
+      "is_player": false
+    },
+    "Cara": {
+      "name": "Cara",
+      "description": "Cara is visiting.",
+      "is_player": false
+    },
+    "Dan": {
+      "name": "Dan",
+      "description": "Dan is visiting.",
+      "is_player": false
+    },
+    "Erin": {
+      "name": "Erin",
+      "description": "Erin is visiting.",
+      "is_player": false
+    },
+    "Finn": {
+      "name": "Finn",
+      "description": "Finn is visiting.",
+      "is_player": false
+    },
+    "Grace": {
+      "name": "Grace",
+      "description": "Grace is visiting.",
+      "is_player": false
+    },
+    "Hazel": {
+      "name": "Hazel",
+      "description": "Hazel is visiting.",
+      "is_player": false
+    }
+  },
+  "active_characters": [],
+  "knowledge": {
+    "last_order": 3,
+    "disclosures": [
+      {
+        "id": "disclosure-1",
+        "revision": 1,
+        "text": "The ledger is under the bed.",
+        "audience": [
+          "Bob"
+        ],
+        "acquired": {
+          "order": 3,
+          "ts": 30
+        },
+        "provenance": [
+          {
+            "kind": "message",
+            "id": 101,
+            "revision": 1,
+            "layer": 0,
+            "view_id": "alice-view",
+            "view_revision": 1
+          }
+        ],
+        "origin": null,
+        "message_id_boundary": 101
+      }
+    ]
+  }
+}

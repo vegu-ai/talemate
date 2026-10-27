@@ -4,6 +4,8 @@ import structlog
 from typing import Literal, TYPE_CHECKING
 
 from talemate.instance import get_agent
+from talemate.context import handle_generation_cancelled
+from talemate.exceptions import GenerationCancelled
 from talemate.agents.director.plan.util import get_plan
 from .context import create_task_with_chat_context
 from .settings import ChatModeSettings, GenerateArcSettings
@@ -55,10 +57,23 @@ class ChatRegeneratePayload(pydantic.BaseModel):
     chat_id: str
 
 
+from talemate.game.focal.schema import ConfirmationDecision
+
+
 class ConfirmActionPayload(pydantic.BaseModel):
     chat_id: str
     id: str
-    decision: Literal["confirm", "reject"]
+    decision: ConfirmationDecision
+    instructions: str = ""
+
+    @pydantic.model_validator(mode="after")
+    def validate_instructions(self):
+        self.instructions = self.instructions.strip()
+        if self.decision == "reject_with_instructions" and not self.instructions:
+            raise ValueError(
+                "Instructions are required when rejecting with instructions"
+            )
+        return self
 
 
 class ChatUpdateModePayload(pydantic.BaseModel):
@@ -212,7 +227,10 @@ class DirectorChatWebsocketMixin:
         async def handle_task_done(task):
             if task.exception():
                 exc = task.exception()
-                log.error("director.chat.websocket.task.error", error=exc)
+                if isinstance(exc, GenerationCancelled):
+                    handle_generation_cancelled(exc, scene=self.scene)
+                else:
+                    log.error("director.chat.websocket.task.error", error=exc)
                 try:
                     self.websocket_handler.queue_put(
                         {
@@ -397,7 +415,10 @@ class DirectorChatWebsocketMixin:
             )
             return
 
-        scene.nodegraph_state.shared[key] = payload.decision
+        pending = scene.nodegraph_state.shared[key]
+        if pending["chat_id"] != payload.chat_id or pending["decision"] != "waiting":
+            return
+        pending.update(decision=payload.decision, instructions=payload.instructions)
 
         self.websocket_handler.queue_put(
             {

@@ -42,7 +42,7 @@ The dialog shows counts of current history entries:
 When wiping history, you can choose whether to include or preserve **static history entries**. Static entries are pre-established backstory that is not tied to scene progression. By default, static entries are preserved.
 
 !!! warning "This action cannot be undone"
-    Wiping history permanently removes all conversation and narrative progression. Save your scene before performing this operation if you want to be able to revert.
+    Wiping history permanently removes all conversation and narrative progression. Including static entries removes the predefined backstory too. Save your scene before performing this operation if you want to be able to revert.
 
 ### Intent State
 

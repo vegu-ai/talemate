@@ -9,15 +9,22 @@
         />
 
         <v-alert
-            v-if="outdatedCount > 0"
-            type="warning"
+            v-if="attentionState"
+            :color="stateConfig(attentionState).color"
+            :icon="stateConfig(attentionState).icon"
             variant="tonal"
             density="compact"
             class="my-2"
         >
-            <strong>{{ outdatedCount }}</strong> template override{{ outdatedCount > 1 ? 's are' : ' is' }} outdated.
-            The default template has been updated since the override was created and may contain improvements or fixes.
-            Review outdated overrides in their respective group tabs.
+            <div class="d-flex align-center flex-wrap ga-2">
+                <span>Some template overrides differ from the current defaults.</span>
+                <template v-for="(count, state) in stateCounts" :key="state">
+                    <TemplateStateChip v-if="count > 0" :state="state" :count="count" size="small" />
+                </template>
+            </div>
+            <div class="text-body-small text-medium-emphasis mt-1">
+                Open an override in its group tab to compare it with the default or reset it.
+            </div>
         </v-alert>
 
         <v-divider class="my-2"></v-divider>
@@ -26,7 +33,7 @@
         <v-row no-gutters class="content-split">
             <!-- Tree Panel -->
             <v-col cols="auto" class="tree-panel pa-2">
-                <div class="text-subtitle-2 text-grey mb-2">
+                <div class="text-title-small text-medium-emphasis mb-2">
                     <v-icon size="small" class="mr-1">mdi-file-tree</v-icon>
                     Resolved Templates
                     <v-progress-circular
@@ -40,10 +47,10 @@
                 </div>
                 <div class="tree-container">
                     <!-- Empty state when no templates exist -->
-                    <div v-if="resolvedTemplates.length === 0 && !loading" class="text-center text-grey pa-4">
-                        <v-icon size="48" color="grey-darken-1">mdi-file-outline</v-icon>
-                        <div class="mt-2 text-body-2">No templates available</div>
-                        <div class="text-caption">Templates will appear here once loaded</div>
+                    <div v-if="resolvedTemplates.length === 0 && !loading" class="text-center text-medium-emphasis pa-4">
+                        <v-icon size="48" color="muted">mdi-file-outline</v-icon>
+                        <div class="mt-2 text-body-medium">No templates available</div>
+                        <div class="text-body-small">Templates will appear here once loaded</div>
                     </div>
                     <TemplateTree
                         v-else
@@ -78,7 +85,7 @@
 
             <!-- Preview Panel -->
             <v-col class="editor-panel pa-2">
-                <div class="text-subtitle-2 text-grey mb-2">
+                <div class="text-title-small text-medium-emphasis mb-2">
                     <v-icon size="small" class="mr-1">mdi-eye</v-icon>
                     Preview
                     <v-chip
@@ -86,7 +93,7 @@
                         size="x-small"
                         label
                         class="ml-2"
-                        color="grey"
+                        color="muted"
                     >
                         read-only
                         <v-tooltip activator="parent" location="bottom">
@@ -103,6 +110,12 @@
                         <v-chip size="small" label class="ml-1" :color="getSourceColor(selectedTemplate.sourceGroup)" variant="tonal">
                             from: {{ selectedTemplate.sourceGroup }}
                         </v-chip>
+                        <TemplateStateChip
+                            :state="selectedTemplate.state"
+                            :markers="selectedTemplate.missingMarkers"
+                            size="small"
+                            class="ml-1"
+                        />
                         <v-spacer></v-spacer>
                         <v-btn
                             v-if="canGoToSource"
@@ -168,8 +181,8 @@
                 </v-card>
 
                 <v-card v-else flat color="transparent" class="d-flex align-center justify-center" style="min-height: 300px;">
-                    <v-card-text class="text-center text-grey">
-                        <v-icon size="64" color="grey-darken-1">mdi-file-document-outline</v-icon>
+                    <v-card-text class="text-center text-medium-emphasis">
+                        <v-icon size="64" color="muted">mdi-file-document-outline</v-icon>
                         <div class="mt-2">Select a template to preview</div>
                     </v-card-text>
                 </v-card>
@@ -182,11 +195,13 @@
 import { Codemirror } from 'vue-codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
-import { oneDark } from '@codemirror/theme-one-dark';
+import { codeEditorExtensions } from '@/utils/codeEditorTheme.js';
 import { EditorView } from '@codemirror/view';
 import GroupManagement from './GroupManagement.vue';
 import TemplateTree from './TemplateTree.vue';
 import TemplateSourceSelect from './TemplateSourceSelect.vue';
+import TemplateStateChip from './TemplateStateChip.vue';
+import { OVERRIDE_STATES, stateCounts, worstState } from '@/utils/templateCompatibility.js';
 
 export default {
     name: 'ActiveTab',
@@ -194,7 +209,8 @@ export default {
         Codemirror,
         GroupManagement,
         TemplateTree,
-        TemplateSourceSelect
+        TemplateSourceSelect,
+        TemplateStateChip
     },
     props: {
         groups: {
@@ -235,19 +251,11 @@ export default {
         resolvedTemplates() {
             return this.templates;
         },
-        outdatedCount() {
-            return this.templates.filter(t => t.is_outdated).length;
+        stateCounts() {
+            return stateCounts(this.templates);
         },
-        extensions() {
-            return [
-                markdown({
-                    base: markdownLanguage,
-                    codeLanguages: languages,
-                }),
-                oneDark,
-                EditorView.lineWrapping,
-                EditorView.editable.of(false)
-            ];
+        attentionState() {
+            return worstState(Object.keys(this.stateCounts).filter(state => this.stateCounts[state] > 0));
         },
         overrideTargets() {
             if (!this.selectedTemplate) return [];
@@ -293,6 +301,9 @@ export default {
         }
     },
     methods: {
+        stateConfig(state) {
+            return OVERRIDE_STATES[state];
+        },
         overrideInGroup(group) {
             if (!this.selectedTemplate) return;
             this.$emit('override-in-group', { uid: this.selectedTemplate.uid, group });
@@ -335,7 +346,7 @@ export default {
                 case 'user':
                     return 'success';
                 case 'default':
-                    return 'grey';
+                    return 'muted';
                 default:
                     return 'primary';
             }
@@ -344,6 +355,19 @@ export default {
             this.templateContent = content;
             this.loadingContent = false;
         }
+    },
+    setup() {
+        const extensions = codeEditorExtensions(
+            markdown({
+                base: markdownLanguage,
+                codeLanguages: languages,
+            }),
+            EditorView.editable.of(false),
+        );
+
+        return {
+            extensions,
+        };
     }
 };
 </script>
@@ -359,7 +383,7 @@ export default {
 }
 
 .tree-panel {
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
     overflow-y: auto;
     max-width: 750px;
     flex: 0 0 auto;

@@ -1,3 +1,6 @@
+import asyncio
+import contextlib
+import pydantic
 import structlog
 from typing import TYPE_CHECKING
 from talemate.instance import get_agent
@@ -7,13 +10,17 @@ import talemate.emit.async_signals as async_signals
 from talemate.agents.editor.revision import RevisionContext
 from talemate.context import regeneration_context
 from talemate.exceptions import GenerationCancelled
+from talemate.memory_pass import MemoryPassResult
+from talemate.world_state.snapshot_revision import regeneration_snapshot
 from talemate.scene_message import (
     SceneMessage,
     CharacterMessage,
+    CharacterTransitionMessage,
     VersionSource,
     NarratorMessage,
     ReinforcementMessage,
     ContextInvestigationMessage,
+    SceneBackdropMessage,
 )
 
 if TYPE_CHECKING:
@@ -36,7 +43,7 @@ def regenerate_target_message(scene: "Scene") -> SceneMessage | None:
     """
     Return the message that ``regenerate(scene)`` would attempt to
     regenerate, without mutating history (skips trailing reinforcement
-    messages).
+    and return messages).
     """
     cur_idx = -1
     try:
@@ -44,8 +51,11 @@ def regenerate_target_message(scene: "Scene") -> SceneMessage | None:
     except Exception:
         return None
 
-    # mirror regenerate() behavior: skip trailing reinforcement messages
-    while isinstance(message, ReinforcementMessage):
+    # Match the non-story tail removed by regenerate().
+    while isinstance(
+        message,
+        (ReinforcementMessage, CharacterTransitionMessage, SceneBackdropMessage),
+    ):
         try:
             cur_idx -= 1
             message = scene.history[cur_idx]
@@ -162,8 +172,7 @@ async def regenerate_character_message(
     character, messages = result
 
     for message in messages:
-        await scene.push_history(message)
-        emit("character", message=message, character=character)
+        await scene.push_history(message, emit_message=True)
 
     return messages
 
@@ -270,8 +279,7 @@ async def regenerate_message(
         messages = new_messages
         for new_message in messages:
             if not isinstance(new_message, (ReinforcementMessage,)):
-                await scene.push_history(new_message)
-                emit(new_message.typ, message=new_message)
+                await scene.push_history(new_message, emit_message=True)
 
     for message in messages:
         await async_signals.get(f"regenerate.msg.{message.typ}").send(
@@ -288,12 +296,19 @@ async def regenerate_message(
     return messages
 
 
+class InplaceRegeneration(pydantic.BaseModel):
+    versions: list[tuple[str, VersionSource]]
+    # the regenerated reply's memory pass, for the versions once appended
+    memory_pass: MemoryPassResult | None = None
+
+
 async def _regenerate_inplace(
     message: SceneMessage, scene: "Scene"
-) -> list[tuple[str, VersionSource]] | None:
+) -> InplaceRegeneration | None:
     """
     Run the agent path for ``message`` and return the version(s) the
-    caller should append onto the existing message's revision stack.
+    caller should append onto the existing message's revision stack,
+    with the regenerated reply's memory pass.
 
     This does NOT push the new message to history nor emit any
     ``character``/``narrator`` message — the caller is expected to
@@ -301,7 +316,7 @@ async def _regenerate_inplace(
     calling ``scene.append_message_version`` for each entry so the slot
     keeps its id and grows its stack with the regen output.
 
-    Returned shape, in append order:
+    ``versions``, in append order:
     - ``[(raw_regen, "regenerate")]`` — auto-revision did not rewrite the
       regen output, so the canonical is the raw regenerate text.
     - ``[(raw_regen, "regenerate"), (polished, "revision")]`` —
@@ -333,11 +348,12 @@ async def _regenerate_inplace(
 
     # Auto-revision normally runs at push_history time, but in-place
     # regenerate skips push_history. Invoke the editor's in-place hook
-    # directly so the same gating + behavior applies. Scope the revision
-    # context to the original message slot (still in history) so the
-    # repetition range excludes it — new_message isn't in history yet.
+    # directly so the same gating + behavior applies. The original slot
+    # was already popped: remaining history is exactly the revision prefix.
+    # A removed message id would cancel perspective history and truncate
+    # the repetition range.
     editor = get_agent("editor")
-    with RevisionContext(message.id):
+    with RevisionContext():
         canonical_was_revised = await editor.maybe_revise_inplace(new_message)
 
     versions_to_append: list[tuple[str, VersionSource]] = []
@@ -349,6 +365,9 @@ async def _regenerate_inplace(
     # No-op: raw regen matched prior canonical and revision didn't fire.
     if not versions_to_append:
         return None
+
+    if isinstance(message, CharacterMessage):
+        message._avatar_pending = new_message._avatar_pending
 
     # Fire the regenerate.msg.* signals for downstream consumers (e.g.
     # avatar/asset hooks) — matches the previous push-emit flow.
@@ -364,7 +383,12 @@ async def _regenerate_inplace(
             )
         )
 
-    return versions_to_append
+    return InplaceRegeneration(
+        versions=versions_to_append,
+        memory_pass=new_message.memory_pass
+        if isinstance(new_message, CharacterMessage)
+        else None,
+    )
 
 
 async def _restore_history_after_failed_regenerate(
@@ -384,11 +408,71 @@ async def _restore_history_after_failed_regenerate(
         websocket_passthrough=True,
         kwargs={"id": message.id},
     )
-    for reinforcement_message in reversed(popped_reinforcement_messages):
-        await scene.push_history(reinforcement_message)
+    # The messages were in history a moment ago: put them back as they were,
+    # without the push work that could ask about the backlog or be cancelled.
+    scene.history.extend(reversed(popped_reinforcement_messages))
 
 
 async def regenerate(scene: "Scene") -> list[SceneMessage]:
+    message = regenerate_target_message(scene)
+    if message is None or not can_regenerate(scene):
+        return []
+    boundary = next(i for i, item in enumerate(scene.history) if item is message)
+    shown_tail = [item.id for item in scene.history[boundary + 1 :]]
+    transitions = [
+        (i, item)
+        for i, item in enumerate(scene.history)
+        if i > boundary
+        and isinstance(item, (CharacterTransitionMessage, SceneBackdropMessage))
+    ]
+    async with scene.assets.backdrops_lifted():
+        for _, transition in reversed(transitions):
+            scene.history.remove(transition)
+        try:
+            with regeneration_snapshot(scene, message):
+                return await _regenerate(scene)
+        finally:
+            for index, transition in transitions:
+                # an abandoned generation's pending backdrop message is not restored
+                if (
+                    isinstance(transition, SceneBackdropMessage)
+                    and transition.pending
+                    and not scene.assets.keeps_pending_backdrop(transition)
+                ):
+                    emit("remove_message", "", id=transition.id)
+                    continue
+                scene.history.insert(min(index, len(scene.history)), transition)
+                scene.emit_history_message(transition)
+            _sync_tail_order(scene, message, shown_tail)
+
+
+def _sync_tail_order(scene: "Scene", message: SceneMessage, shown: list[int]) -> None:
+    """
+    The feed keeps the rows after ``message`` it already showed in place and
+    appends a re-run answer at its end, so the answer can land below a
+    restored transition. When that differs from the history, send the
+    history order of those rows.
+    """
+    start = next(
+        (i + 1 for i, item in enumerate(scene.history) if item is message), None
+    )
+    if start is None:
+        return
+    tail = [item.id for item in scene.history[start:]]
+    kept, known = set(tail), set(shown)
+    feed = [row for row in shown if row in kept] + [
+        row for row in tail if row not in known
+    ]
+    if feed != tail:
+        emit(
+            "reorder_messages",
+            "",
+            websocket_passthrough=True,
+            kwargs={"ids": tail},
+        )
+
+
+async def _regenerate(scene: "Scene") -> list[SceneMessage]:
     """
     In-place regenerate the most recent AI response (the tail of
     ``scene.history``, skipping trailing reinforcement messages): keep
@@ -438,8 +522,9 @@ async def regenerate(scene: "Scene") -> list[SceneMessage]:
     scene.history.pop()
 
     try:
+        await events.before_generation(scene, "regenerate")
         outcome = await _regenerate_inplace(message, scene)
-    except GenerationCancelled:
+    except (GenerationCancelled, asyncio.CancelledError):
         # User-initiated interrupt — not a failure. Restore history, report
         # the cancellation as a normal (non-error) status, then re-raise so
         # the task done-callback posts the regenerate_failed envelope and
@@ -466,16 +551,32 @@ async def regenerate(scene: "Scene") -> list[SceneMessage]:
         )
         return regenerated_messages
 
-    versions_to_append = outcome
-
     # Re-append with the same id so the slot keeps its frontend
     # revision stack; each call below pushes one entry onto the stack,
     # with the last one becoming the active canonical.
     scene.history.append(message)
-    for text, source in versions_to_append:
-        scene.append_message_version(message.id, text, source=source)
+    with (
+        message.regenerated_memory_pass(outcome.memory_pass)
+        if isinstance(message, CharacterMessage)
+        else contextlib.nullcontext()
+    ):
+        for text, source in outcome.versions:
+            scene.append_message_version(message.id, text, source=source)
+
+    try:
+        if isinstance(message, CharacterMessage):
+            conversation = get_agent("conversation")
+            await conversation.finalize_message_avatar(message)
+    except BaseException:
+        if any(entry is message for entry in scene.history):
+            scene.history.extend(reversed(popped_reinforcement_messages))
+        raise
 
     regenerated_messages.append(message)
+
+    # every popped answer is out of history now, also when a re-run below raises
+    for reinforcement_message in popped_reinforcement_messages:
+        emit("remove_message", "", id=reinforcement_message.id)
 
     for reinforcement_message in popped_reinforcement_messages:
         new_messages = await regenerate_message(reinforcement_message, scene)

@@ -73,7 +73,7 @@
 
                 <v-row>
                     <v-col cols="5">
-                        <div class="text-caption text-uppercase text-muted"><v-icon>mdi-cube-scan</v-icon> Templates ({{ introduceCharacterTemplateCount }})</div>
+                        <div class="text-body-small text-uppercase text-muted"><v-icon>mdi-cube-scan</v-icon> Templates ({{ introduceCharacterTemplateCount }})</div>
                         <WorldStateManagerTemplateApplicator
                             ref="templateApplicator"
                             :validateTemplate="validateTemplate"
@@ -81,11 +81,11 @@
                             source="scene_tools_creative"
                             :select-only="true"
                             :template-types="['character_attribute', 'character_detail', 'state_reinforcement']"
-                            @selected="(templates) => { newIntroduction.templates = templates; console.log('TEMPLATES', templates) }"/>
+                            @selected="(templates) => { newIntroduction.templates = templates }"/>
 
                     </v-col>
                     <v-col cols="7">
-                        <div class="text-caption text-uppercase text-muted"><v-icon>mdi-cog</v-icon> Options</div>
+                        <div class="text-body-small text-uppercase text-muted"><v-icon>mdi-cog</v-icon> Options</div>
                         <v-row>
                             <v-col cols="4">
                                 <v-checkbox v-model="newIntroduction.determine_name" label="Determine name" color="primary" hint="Try to determine an explicit name for the character."></v-checkbox>
@@ -141,6 +141,7 @@
 
 import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
+import { dispatchActivateCharacter, dispatchDeactivateCharacter } from '@/utils/entityActions';
 export default {
     name: 'SceneToolsCreative',
     components: {
@@ -256,13 +257,17 @@ export default {
         },
         
         activateCharacter(ev, name) {
-            let modifyNoNarration = isPrimaryModifier(ev);
-            this.getWebsocket().send(JSON.stringify({ type: 'director', action: 'activate_character', character_name: name, never_narrate: modifyNoNarration }));
+            dispatchActivateCharacter(this.getWebsocket(), {
+                name,
+                neverNarrate: isPrimaryModifier(ev),
+            });
         },
 
         deactivateCharacter(ev, name) {
-            let modifyNoNarration = isPrimaryModifier(ev);
-            this.getWebsocket().send(JSON.stringify({ type: 'director', action: 'deactivate_character', character_name: name, never_narrate: modifyNoNarration }));
+            dispatchDeactivateCharacter(this.getWebsocket(), {
+                name,
+                neverNarrate: isPrimaryModifier(ev),
+            });
         },
 
         validateTemplate(template) {
@@ -310,7 +315,6 @@ export default {
                 return;
             }
 
-            console.log('PAYLOAD', payload);
 
             this.dialogIntroduceCharacter = false;
 

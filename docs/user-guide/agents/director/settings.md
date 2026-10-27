@@ -2,29 +2,17 @@
 
 ## General
 
-![Director agent settings](/talemate/img/0.29.0/director-general-settings.png)
+![Director agent settings](/talemate/img/0.40.0/director-general-settings.png)
 
-##### Direct
+##### Client
 
-If enabled the director will attempt to direct the scene.
+The text-generation client to use for director generations.
 
-This is currently only relevant if the scene loaded comes with a script file. For the scenes that are currently included that is only true for the **Simulation Suite**.
+##### Optimize for Prompt Caching
 
-###### Turns
+Places volatile context (long term memory, dynamic notes) after the scene history so that the stable part of the prompt can be cached by API backends. May confuse weaker models. `Auto` defers to the client setting.
 
-How many turns to wait before the director makes a decision.
-
-##### Direct Scene
-
-If enabled the director will attempt to direct the scene through narration.
-
-##### Direct Actors
-
-Enables the director to direct the actors in the scene.
-
-Right now this is only triggered manually by the player when the players uses the `Direct actor` toolset from the [Scenario tools](/talemate/user-guide/scenario-tools).
-
-###### Actor Direction Mode
+##### Character Direction Style
 
 When an actor is given a direction, how is it to be injected into the context
 
@@ -35,7 +23,7 @@ If `Direction` is selected, the actor will be given the direction as a direct in
 
 If `Inner Monologue` is selected, the actor will be given the direction as a thought.
 
-###### Direction Stickiness
+##### Direction Stickiness
 
 Controls how many scene messages the system looks back when retrieving character directions. This determines how long directions "stick" and continue to influence character behavior.
 
@@ -55,7 +43,7 @@ When you direct an actor, that direction doesn't just apply to their next respon
 
 Dynamic actions are introduced in `0.28.0` and allow the director to generate a set of clickable choices for the player to choose from.
 
-![Director agent dynamic actions settings](/talemate/img/0.29.0/director-dynamic-actions-settings.png)
+![Director agent dynamic actions settings](/talemate/img/0.40.0/director-dynamic-actions-settings.png)
 
 ##### Enable Dynamic Actions
 
@@ -83,7 +71,7 @@ For example you could provide a list of actions to choose from, or a list of act
 
 ## Guide Scene
 
-![Director agent guide scene settings](/talemate/img/0.29.0/director-guide-scene-settings.png)
+![Director agent guide scene settings](/talemate/img/0.40.0/director-guide-scene-settings.png)
 
 The director can use the summarizer agent's scene analysis to guide characters and the narrator for the next generation, hopefully improving the quality of the generated content.
 
@@ -102,13 +90,17 @@ If enabled the director will guide the narrator in the scene.
 
 The maximum number of tokens for the guidance. (e.g., how long should the guidance be).
 
+##### Cache guidance
+
+If enabled the guidance is not regenerated until the scene moves forward or the scene analysis changes.
+
 ## Scene Direction
 
 Autonomous Scene Direction allows the director to progress scenes automatically using the same actions available in Director Chat.
 
 For detailed information, see the dedicated [Autonomous Scene Direction](/talemate/user-guide/agents/director/scene-direction) documentation page.
 
-![Director Scene Direction Settings](/talemate/img/0.35.0/director-scene-direction-settings.png)
+![Director Scene Direction Settings](/talemate/img/0.40.0/director-scene-direction-settings.png)
 
 ##### Enable Scene Direction
 
@@ -127,7 +119,7 @@ Maximum tokens for director reasoning and response generation. Default is 2048.
 
 ##### Max Actions Per Turn
 
-Maximum number of actions the director can execute per turn. Default is 5.
+Maximum number of actions the director can execute per turn. Default is 10.
 
 ##### Retries
 
@@ -153,7 +145,7 @@ Custom instructions included in all scene direction prompts to guide the directo
 
 The Character Management settings control how the director handles character creation and related tasks.
 
-![Director Character Management Settings](/talemate/img/0.35.0/director-character-management-settings.png)
+![Director Character Management Settings](/talemate/img/0.40.0/director-character-management-settings.png)
 
 ### Character Creation
 
@@ -182,6 +174,8 @@ If enabled, the director will automatically assign a text-to-speech voice when c
 
 If enabled, the director is allowed to generate visual assets (portraits, cover images) for characters when requested.
 
+The cover image the director generates for a character it persists is an automatic generation: it also needs the Visualizer's [Automatic Generation](/talemate/user-guide/agents/visualizer/settings/#automatic-generation) setting.
+
 ## Director Chat
 
 !!! example "Experimental"
@@ -189,7 +183,7 @@ If enabled, the director is allowed to generate visual assets (portraits, cover 
 
 The [Director Chat](/talemate/user-guide/agents/director/chat) feature allows you to interact with the director through a conversational interface where you can ask questions, make changes to your scene, and direct story progression.
 
-![Director Chat Settings](/talemate/img/0.33.0/director-agent-chat-settings.png)
+![Director Chat Settings](/talemate/img/0.40.0/director-agent-chat-settings.png)
 
 ##### Enable Analysis Step
 
@@ -236,7 +230,7 @@ How long the chat will wait for you to confirm or reject a write action before i
 
 - **Range**: 0 to 60 minutes
 - **Default**: 3 minutes
-- **0**: Wait indefinitely — the confirmation card stays open until you click Confirm or Reject
+- **0**: Wait indefinitely — the confirmation card stays open until you confirm, choose a rejection method, or cancel the operation
 
 The countdown is shown in the top-right corner of each confirmation card and turns red when less than 30 seconds remain.
 
@@ -245,3 +239,29 @@ The countdown is shown in the top-right corner of each confirmation card and tur
 Add custom instructions that will be included in all director chat prompts. Use this to customize the director's behavior for your specific scene or storytelling style.
 
 For example, you might add instructions to maintain a particular tone, follow specific genre conventions, or handle certain types of requests in a particular way.
+
+##### Arc generation iteration limit
+
+The maximum number of iterations autonomous arc generation is allowed to run for. This needs to be high enough for all beats of the arc to be completed. Default is 200.
+
+## Arc Generation
+
+Settings for the arc generation pipeline.
+
+##### Dialogue beat ratio
+
+The target fraction of beats that should be dialogue during arc generation. `0.4` = 40% dialogue beats.
+
+##### Expand chunk size
+
+The maximum number of beats per expansion chunk in expand mode. Larger chunks produce more cohesive prose, but use more context.
+
+##### Outline critique
+
+If enabled a critique pass is run on the generated outline to improve beat quality before expansion.
+
+##### Expansion critique
+
+If enabled a post-expansion critique pass is run to fix cross-beat redundancy and intensity monotony. This adds roughly 10 seconds per generation.
+
+--8<-- "docs/snippets/tips.md:character_evidence_guidance"

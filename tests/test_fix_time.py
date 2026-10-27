@@ -18,15 +18,15 @@ def _msg(text: str) -> CharacterMessage:
     return CharacterMessage(message=text, source="ai")
 
 
-def _time(ts: str) -> TimePassageMessage:
-    return TimePassageMessage(ts=ts, message=f"{ts} later")
+def _time(ts: int) -> TimePassageMessage:
+    return TimePassageMessage(ts=ts, message=f"{ts} seconds later")
 
 
 def make_scene(
     history: list,
     archived_history: list,
     layered_history: list | None = None,
-    ts: str = "PT0S",
+    ts: int = 0,
 ):
     """Build a real `Scene` populated with the requested timeline state.
 
@@ -60,122 +60,166 @@ class TestFixTimeArchivedHistory:
             history=[
                 _msg("Hello"),  # 0
                 _msg("Hi"),  # 1
-                _time("PT2H"),  # 2 — 2 hours
+                _time(7200),  # 2 — 2 hours
                 _msg("After time"),  # 3
                 _msg("More"),  # 4
             ],
             archived_history=[
                 # static entry (no start/end) — should be left alone
-                {"text": "Background", "ts": "PT0S"},
+                {"text": "Background", "ts": 0},
                 # summary of messages 0-1 (before time jump at idx 2)
-                {"text": "Summary A", "start": 0, "end": 1, "ts": "WRONG"},
+                {"text": "Summary A", "start": 0, "end": 1, "ts": -1},
                 # summary of messages 3-4 (after time jump at idx 2)
-                {"text": "Summary B", "start": 3, "end": 4, "ts": "WRONG"},
+                {"text": "Summary B", "start": 3, "end": 4, "ts": -1},
             ],
         )
 
         fix_time(scene)
 
         # Static entry unchanged
-        assert scene.archived_history[0]["ts"] == "PT0S"
+        assert scene.archived_history[0]["ts"] == 0
         # Entry ending at idx 1: no time jump before idx 1, so inherits starting_time
-        assert scene.archived_history[1]["ts"] == "PT0S"
-        # Entry ending at idx 4: time jump at idx 2 (PT2H) is before idx 4
-        assert scene.archived_history[2]["ts"] == "PT2H"
+        assert scene.archived_history[1]["ts"] == 0
+        # Entry ending at idx 4: time jump at idx 2 (2h) is before idx 4
+        assert scene.archived_history[2]["ts"] == 7200
         # scene.ts should be the last cumulative time
-        assert scene.ts == "PT2H"
+        assert scene.ts == 7200
 
     def test_multiple_time_jumps_cumulative(self):
         """Multiple time passages should accumulate correctly."""
         scene = make_scene(
             history=[
                 _msg("A"),  # 0
-                _time("PT2H"),  # 1 — 2 hours
+                _time(7200),  # 1 — 2 hours
                 _msg("B"),  # 2
-                _time("PT1H"),  # 3 — +1 hour = 3 hours total
+                _time(3600),  # 3 — +1 hour = 3 hours total
                 _msg("C"),  # 4
-                _time("P1D"),  # 5 — +1 day = 1 day 3 hours total
+                _time(86400),  # 5 — +1 day = 1 day 3 hours total
                 _msg("D"),  # 6
             ],
             archived_history=[
-                {"text": "Before jumps", "start": 0, "end": 0, "ts": "WRONG"},
-                {"text": "After 2h", "start": 2, "end": 2, "ts": "WRONG"},
-                {"text": "After 3h", "start": 4, "end": 4, "ts": "WRONG"},
-                {"text": "After 1d3h", "start": 6, "end": 6, "ts": "WRONG"},
+                {"text": "Before jumps", "start": 0, "end": 0, "ts": -1},
+                {"text": "After 2h", "start": 2, "end": 2, "ts": -1},
+                {"text": "After 3h", "start": 4, "end": 4, "ts": -1},
+                {"text": "After 1d3h", "start": 6, "end": 6, "ts": -1},
             ],
         )
 
         fix_time(scene)
 
         # end=0: no jump before idx 0
-        assert scene.archived_history[0]["ts"] == "PT0S"
-        # end=2: jump at idx 1 (PT2H) is before idx 2
-        assert scene.archived_history[1]["ts"] == "PT2H"
-        # end=4: jumps at idx 1+3 cumulative = PT3H, both before idx 4
-        assert scene.archived_history[2]["ts"] == "PT3H"
-        # end=6: all jumps cumulative = P1DT3H
-        assert scene.archived_history[3]["ts"] == "P1DT3H"
-        assert scene.ts == "P1DT3H"
+        assert scene.archived_history[0]["ts"] == 0
+        # end=2: jump at idx 1 (2h) is before idx 2
+        assert scene.archived_history[1]["ts"] == 7200
+        # end=4: jumps at idx 1+3 cumulative = 3h, both before idx 4
+        assert scene.archived_history[2]["ts"] == 10800
+        # end=6: all jumps cumulative = 1d 3h
+        assert scene.archived_history[3]["ts"] == 97200
+        assert scene.ts == 97200
 
-    def test_static_entries_used_as_starting_time(self):
-        """Static entries with ts should set the starting baseline."""
+    def test_scene_start_is_the_starting_time(self):
+        """The scene start sets the baseline of the time passages."""
         scene = make_scene(
             history=[
                 _msg("A"),  # 0
-                _time("PT1H"),  # 1 — +1h from baseline
+                _time(3600),  # 1 — +1h from baseline
                 _msg("B"),  # 2
             ],
             archived_history=[
-                # static entry sets baseline to P1D
-                {"text": "Background", "ts": "P1D"},
-                {"text": "After 1h", "start": 0, "end": 2, "ts": "WRONG"},
+                {"text": "Background", "ts": 0},
+                {"text": "After 1h", "start": 0, "end": 2, "ts": -1},
             ],
         )
+        scene.start_ts = 86400
 
         fix_time(scene)
 
-        # Baseline is P1D from static entry, +1h = P1DT1H
-        assert scene.archived_history[1]["ts"] == "P1DT1H"
-        assert scene.ts == "P1DT1H"
+        # Baseline is the 1 day scene start, +1h = 1d 1h
+        assert scene.archived_history[0]["ts"] == 0
+        assert scene.archived_history[1]["ts"] == 90000
+        assert scene.ts == 90000
+
+    def test_static_entry_does_not_set_the_starting_time(self):
+        """A second static entry added in a session is not the scene start."""
+        scene = make_scene(
+            history=[
+                _msg("A"),  # 0
+                _time(3600),  # 1
+                _msg("B"),  # 2
+            ],
+            archived_history=[
+                {"text": "Background", "ts": 0},
+                {"text": "Later background", "ts": 43200},
+                {"text": "After 1h", "start": 0, "end": 2, "ts": -1},
+            ],
+        )
+        scene.start_ts = 86400
+
+        fix_time(scene)
+
+        assert scene.archived_history[1]["ts"] == 43200
+        assert scene.archived_history[2]["ts"] == 90000
+        assert scene.ts == 90000
 
     def test_no_time_jumps(self):
-        """No TimePassageMessages should leave ts at starting_time."""
+        """With no TimePassageMessage every summary is at the scene start."""
         scene = make_scene(
             history=[_msg("A"), _msg("B")],
             archived_history=[
-                {"text": "Summary", "start": 0, "end": 1, "ts": "PT5H"},
+                {"text": "Summary", "start": 0, "end": 1, "ts": 18000},
             ],
         )
 
         fix_time(scene)
 
-        # No time jumps, so ts stays at starting_time (PT0S default)
-        assert scene.ts == "PT0S"
+        assert scene.archived_history[0]["ts"] == 0
+        assert scene.ts == 0
+
+    def test_last_passage_deleted_recomputes_the_entries(self):
+        """Entries do not keep the time of a passage that no longer exists."""
+        scene = make_scene(
+            history=[_msg("A"), _msg("B"), _msg("C")],
+            archived_history=[
+                {"text": "Background", "ts": 0},
+                {"text": "Summary A", "start": 0, "end": 0, "ts": 3600},
+                {"text": "Summary B", "start": 1, "end": 2, "ts": 90000},
+            ],
+            layered_history=[
+                [{"text": "Layer", "start": 1, "end": 2, "ts": 3600}],
+            ],
+        )
+        scene.start_ts = 3600
+
+        fix_time(scene)
+
+        assert [e["ts"] for e in scene.archived_history] == [0, 3600, 3600]
+        assert scene.layered_history[0][0]["ts_end"] == 3600
+        assert scene.ts == 3600
 
     def test_zero_duration_time_passage(self):
         """A zero-duration time passage should not change timestamps."""
         scene = make_scene(
             history=[
                 _msg("A"),  # 0
-                _time("PT0S"),  # 1 — zero
+                _time(0),  # 1 — zero
                 _msg("B"),  # 2
-                _time("PT3H"),  # 3 — 3 hours
+                _time(10800),  # 3 — 3 hours
                 _msg("C"),  # 4
             ],
             archived_history=[
-                {"text": "Before", "start": 0, "end": 0, "ts": "WRONG"},
-                {"text": "Middle", "start": 2, "end": 2, "ts": "WRONG"},
-                {"text": "After", "start": 4, "end": 4, "ts": "WRONG"},
+                {"text": "Before", "start": 0, "end": 0, "ts": -1},
+                {"text": "Middle", "start": 2, "end": 2, "ts": -1},
+                {"text": "After", "start": 4, "end": 4, "ts": -1},
             ],
         )
 
         fix_time(scene)
 
-        assert scene.archived_history[0]["ts"] == "PT0S"
-        # PT0S added = still PT0S (but as isodate normalises it may vary)
-        assert scene.archived_history[1]["ts"] in ("PT0S", "P0D")
-        assert scene.archived_history[2]["ts"] == "PT3H"
-        assert scene.ts == "PT3H"
+        assert scene.archived_history[0]["ts"] == 0
+        # zero added = still zero
+        assert scene.archived_history[1]["ts"] == 0
+        assert scene.archived_history[2]["ts"] == 10800
+        assert scene.ts == 10800
 
 
 # ---------------------------------------------------------------------------
@@ -195,10 +239,10 @@ class TestFixTimeLayeredHistoryBasic:
             history=[
                 _msg("A"),  # 0
                 _msg("B"),  # 1
-                _time("PT2H"),  # 2
+                _time(7200),  # 2
                 _msg("C"),  # 3
                 _msg("D"),  # 4
-                _time("P1D"),  # 5
+                _time(86400),  # 5
                 _msg("E"),  # 6
                 _msg("F"),  # 7
             ],
@@ -207,21 +251,21 @@ class TestFixTimeLayeredHistoryBasic:
                     "text": "Summary 0-1",
                     "start": 0,
                     "end": 1,
-                    "ts": "STALE",
+                    "ts": -1,
                     "id": "a1",
                 },
                 {
                     "text": "Summary 3-4",
                     "start": 3,
                     "end": 4,
-                    "ts": "STALE",
+                    "ts": -1,
                     "id": "a2",
                 },
                 {
                     "text": "Summary 6-7",
                     "start": 6,
                     "end": 7,
-                    "ts": "STALE",
+                    "ts": -1,
                     "id": "a3",
                 },
             ],
@@ -232,18 +276,18 @@ class TestFixTimeLayeredHistoryBasic:
                         "text": "Layer0 entry A",
                         "start": 0,
                         "end": 1,
-                        "ts": "STALE",
-                        "ts_start": "STALE",
-                        "ts_end": "STALE",
+                        "ts": -1,
+                        "ts_start": -1,
+                        "ts_end": -1,
                         "id": "l0a",
                     },
                     {
                         "text": "Layer0 entry B",
                         "start": 2,
                         "end": 2,
-                        "ts": "STALE",
-                        "ts_start": "STALE",
-                        "ts_end": "STALE",
+                        "ts": -1,
+                        "ts_start": -1,
+                        "ts_end": -1,
                         "id": "l0b",
                     },
                 ],
@@ -253,21 +297,21 @@ class TestFixTimeLayeredHistoryBasic:
         fix_time(scene)
 
         # Archived history IS fixed
-        assert scene.archived_history[0]["ts"] == "PT0S"
-        assert scene.archived_history[1]["ts"] == "PT2H"
-        assert scene.archived_history[2]["ts"] == "P1DT2H"
+        assert scene.archived_history[0]["ts"] == 0
+        assert scene.archived_history[1]["ts"] == 7200
+        assert scene.archived_history[2]["ts"] == 93600
 
         # Layered history IS fixed — timestamps derived from archived_history
         # Layer 0 entry [0]: covers archived[0..1]
-        #   ts = archived[0]["ts"] = PT0S
-        #   ts_end = archived[1]["ts"] = PT2H
-        assert scene.layered_history[0][0]["ts"] == "PT0S"
-        assert scene.layered_history[0][0]["ts_start"] == "PT0S"
-        assert scene.layered_history[0][0]["ts_end"] == "PT2H"
+        #   ts = archived[0]["ts"] = 0
+        #   ts_end = archived[1]["ts"] = 2h
+        assert scene.layered_history[0][0]["ts"] == 0
+        assert scene.layered_history[0][0]["ts_start"] == 0
+        assert scene.layered_history[0][0]["ts_end"] == 7200
         # Layer 0 entry [1]: covers archived[2..2]
-        assert scene.layered_history[0][1]["ts"] == "P1DT2H"
-        assert scene.layered_history[0][1]["ts_start"] == "P1DT2H"
-        assert scene.layered_history[0][1]["ts_end"] == "P1DT2H"
+        assert scene.layered_history[0][1]["ts"] == 93600
+        assert scene.layered_history[0][1]["ts_start"] == 93600
+        assert scene.layered_history[0][1]["ts_end"] == 93600
 
 
 # ---------------------------------------------------------------------------
@@ -288,10 +332,10 @@ class TestFixTimeLayeredHistory:
             history=[
                 _msg("A"),  # 0
                 _msg("B"),  # 1
-                _time("PT2H"),  # 2
+                _time(7200),  # 2
                 _msg("C"),  # 3
                 _msg("D"),  # 4
-                _time("P1D"),  # 5
+                _time(86400),  # 5
                 _msg("E"),  # 6
                 _msg("F"),  # 7
             ],
@@ -300,21 +344,21 @@ class TestFixTimeLayeredHistory:
                     "text": "Summary 0-1",
                     "start": 0,
                     "end": 1,
-                    "ts": "STALE",
+                    "ts": -1,
                     "id": "a1",
                 },
                 {
                     "text": "Summary 3-4",
                     "start": 3,
                     "end": 4,
-                    "ts": "STALE",
+                    "ts": -1,
                     "id": "a2",
                 },
                 {
                     "text": "Summary 6-7",
                     "start": 6,
                     "end": 7,
-                    "ts": "STALE",
+                    "ts": -1,
                     "id": "a3",
                 },
             ],
@@ -325,18 +369,18 @@ class TestFixTimeLayeredHistory:
                         "text": "Layer0 summary of archived 0-1",
                         "start": 0,
                         "end": 1,
-                        "ts": "STALE",
-                        "ts_start": "STALE",
-                        "ts_end": "STALE",
+                        "ts": -1,
+                        "ts_start": -1,
+                        "ts_end": -1,
                         "id": "l0a",
                     },
                     {
                         "text": "Layer0 summary of archived 2",
                         "start": 2,
                         "end": 2,
-                        "ts": "STALE",
-                        "ts_start": "STALE",
-                        "ts_end": "STALE",
+                        "ts": -1,
+                        "ts_start": -1,
+                        "ts_end": -1,
                         "id": "l0b",
                     },
                 ],
@@ -346,28 +390,28 @@ class TestFixTimeLayeredHistory:
         fix_time(scene)
 
         # Archived history is fixed:
-        # a1 end=1: no jump before idx 1 → PT0S
-        # a2 end=4: jump at idx 2 (PT2H) before idx 4 → PT2H
-        # a3 end=7: jumps cumulative P1DT2H before idx 7 → P1DT2H
-        assert scene.archived_history[0]["ts"] == "PT0S"
-        assert scene.archived_history[1]["ts"] == "PT2H"
-        assert scene.archived_history[2]["ts"] == "P1DT2H"
+        # a1 end=1: no jump before idx 1 → 0
+        # a2 end=4: jump at idx 2 (2h) before idx 4 → 2h
+        # a3 end=7: jumps cumulative 1d 2h before idx 7 → 1d 2h
+        assert scene.archived_history[0]["ts"] == 0
+        assert scene.archived_history[1]["ts"] == 7200
+        assert scene.archived_history[2]["ts"] == 93600
 
         # Layer 0 entry [0]: covers archived[0..1]
-        #   ts = archived[0]["ts"] = PT0S
-        #   ts_start = archived[0]["ts"] = PT0S (archived has no ts_start)
-        #   ts_end = archived[1]["ts"] = PT2H
-        assert scene.layered_history[0][0]["ts"] == "PT0S"
-        assert scene.layered_history[0][0]["ts_start"] == "PT0S"
-        assert scene.layered_history[0][0]["ts_end"] == "PT2H"
+        #   ts = archived[0]["ts"] = 0
+        #   ts_start = archived[0]["ts"] = 0 (archived has no ts_start)
+        #   ts_end = archived[1]["ts"] = 2h
+        assert scene.layered_history[0][0]["ts"] == 0
+        assert scene.layered_history[0][0]["ts_start"] == 0
+        assert scene.layered_history[0][0]["ts_end"] == 7200
 
         # Layer 0 entry [1]: covers archived[2..2]
-        #   ts = archived[2]["ts"] = P1DT2H
-        #   ts_start = P1DT2H
-        #   ts_end = P1DT2H
-        assert scene.layered_history[0][1]["ts"] == "P1DT2H"
-        assert scene.layered_history[0][1]["ts_start"] == "P1DT2H"
-        assert scene.layered_history[0][1]["ts_end"] == "P1DT2H"
+        #   ts = archived[2]["ts"] = 1d 2h
+        #   ts_start = 1d 2h
+        #   ts_end = 1d 2h
+        assert scene.layered_history[0][1]["ts"] == 93600
+        assert scene.layered_history[0][1]["ts_start"] == 93600
+        assert scene.layered_history[0][1]["ts_end"] == 93600
 
     def test_multi_layer_timestamps_cascade(self):
         """
@@ -377,18 +421,18 @@ class TestFixTimeLayeredHistory:
         scene = make_scene(
             history=[
                 _msg("A"),  # 0
-                _time("PT1H"),  # 1
+                _time(3600),  # 1
                 _msg("B"),  # 2
-                _time("PT1H"),  # 3
+                _time(3600),  # 3
                 _msg("C"),  # 4
-                _time("PT1H"),  # 5
+                _time(3600),  # 5
                 _msg("D"),  # 6
             ],
             archived_history=[
-                {"text": "Sum 0", "start": 0, "end": 0, "ts": "STALE", "id": "a1"},
-                {"text": "Sum 2", "start": 2, "end": 2, "ts": "STALE", "id": "a2"},
-                {"text": "Sum 4", "start": 4, "end": 4, "ts": "STALE", "id": "a3"},
-                {"text": "Sum 6", "start": 6, "end": 6, "ts": "STALE", "id": "a4"},
+                {"text": "Sum 0", "start": 0, "end": 0, "ts": -1, "id": "a1"},
+                {"text": "Sum 2", "start": 2, "end": 2, "ts": -1, "id": "a2"},
+                {"text": "Sum 4", "start": 4, "end": 4, "ts": -1, "id": "a3"},
+                {"text": "Sum 6", "start": 6, "end": 6, "ts": -1, "id": "a4"},
             ],
             layered_history=[
                 # Layer 0: references archived_history
@@ -397,18 +441,18 @@ class TestFixTimeLayeredHistory:
                         "text": "L0 A",
                         "start": 0,
                         "end": 1,
-                        "ts": "STALE",
-                        "ts_start": "STALE",
-                        "ts_end": "STALE",
+                        "ts": -1,
+                        "ts_start": -1,
+                        "ts_end": -1,
                         "id": "l0a",
                     },
                     {
                         "text": "L0 B",
                         "start": 2,
                         "end": 3,
-                        "ts": "STALE",
-                        "ts_start": "STALE",
-                        "ts_end": "STALE",
+                        "ts": -1,
+                        "ts_start": -1,
+                        "ts_end": -1,
                         "id": "l0b",
                     },
                 ],
@@ -418,9 +462,9 @@ class TestFixTimeLayeredHistory:
                         "text": "L1 A",
                         "start": 0,
                         "end": 1,
-                        "ts": "STALE",
-                        "ts_start": "STALE",
-                        "ts_end": "STALE",
+                        "ts": -1,
+                        "ts_start": -1,
+                        "ts_end": -1,
                         "id": "l1a",
                     },
                 ],
@@ -429,27 +473,27 @@ class TestFixTimeLayeredHistory:
 
         fix_time(scene)
 
-        # Archived: jumps at idx 1,3,5 → cumulative PT1H, PT2H, PT3H
-        assert scene.archived_history[0]["ts"] == "PT0S"  # end=0, no jump before
-        assert scene.archived_history[1]["ts"] == "PT1H"  # end=2, jump at 1
-        assert scene.archived_history[2]["ts"] == "PT2H"  # end=4, jumps at 1,3
-        assert scene.archived_history[3]["ts"] == "PT3H"  # end=6, jumps at 1,3,5
+        # Archived: jumps at idx 1,3,5 → cumulative 1h, 2h, 3h
+        assert scene.archived_history[0]["ts"] == 0  # end=0, no jump before
+        assert scene.archived_history[1]["ts"] == 3600  # end=2, jump at 1
+        assert scene.archived_history[2]["ts"] == 7200  # end=4, jumps at 1,3
+        assert scene.archived_history[3]["ts"] == 10800  # end=6, jumps at 1,3,5
 
         # Layer 0 entry [0]: covers archived[0..1]
-        assert scene.layered_history[0][0]["ts"] == "PT0S"
-        assert scene.layered_history[0][0]["ts_start"] == "PT0S"
-        assert scene.layered_history[0][0]["ts_end"] == "PT1H"
+        assert scene.layered_history[0][0]["ts"] == 0
+        assert scene.layered_history[0][0]["ts_start"] == 0
+        assert scene.layered_history[0][0]["ts_end"] == 3600
 
         # Layer 0 entry [1]: covers archived[2..3]
-        assert scene.layered_history[0][1]["ts"] == "PT2H"
-        assert scene.layered_history[0][1]["ts_start"] == "PT2H"
-        assert scene.layered_history[0][1]["ts_end"] == "PT3H"
+        assert scene.layered_history[0][1]["ts"] == 7200
+        assert scene.layered_history[0][1]["ts_start"] == 7200
+        assert scene.layered_history[0][1]["ts_end"] == 10800
 
         # Layer 1 entry [0]: covers layered_history[0][0..1]
-        #   ts_end = l0[1].ts_end = PT3H (l0[1] covers archived[2..3])
-        assert scene.layered_history[1][0]["ts"] == "PT0S"
-        assert scene.layered_history[1][0]["ts_start"] == "PT0S"
-        assert scene.layered_history[1][0]["ts_end"] == "PT3H"
+        #   ts_end = l0[1].ts_end = 3h (l0[1] covers archived[2..3])
+        assert scene.layered_history[1][0]["ts"] == 0
+        assert scene.layered_history[1][0]["ts_start"] == 0
+        assert scene.layered_history[1][0]["ts_end"] == 10800
 
     def test_layered_entry_without_ts_start_ts_end(self):
         """
@@ -459,12 +503,12 @@ class TestFixTimeLayeredHistory:
         scene = make_scene(
             history=[
                 _msg("A"),  # 0
-                _time("PT5H"),  # 1
+                _time(18000),  # 1
                 _msg("B"),  # 2
             ],
             archived_history=[
-                {"text": "Sum 0", "start": 0, "end": 0, "ts": "STALE", "id": "a1"},
-                {"text": "Sum 2", "start": 2, "end": 2, "ts": "STALE", "id": "a2"},
+                {"text": "Sum 0", "start": 0, "end": 0, "ts": -1, "id": "a1"},
+                {"text": "Sum 2", "start": 2, "end": 2, "ts": -1, "id": "a2"},
             ],
             layered_history=[
                 [
@@ -472,7 +516,7 @@ class TestFixTimeLayeredHistory:
                         "text": "L0 covers both",
                         "start": 0,
                         "end": 1,
-                        "ts": "STALE",
+                        "ts": -1,
                         "id": "l0a",
                         # no ts_start or ts_end
                     },
@@ -482,21 +526,21 @@ class TestFixTimeLayeredHistory:
 
         fix_time(scene)
 
-        assert scene.layered_history[0][0]["ts"] == "PT0S"
-        assert scene.layered_history[0][0]["ts_start"] == "PT0S"
-        assert scene.layered_history[0][0]["ts_end"] == "PT5H"
+        assert scene.layered_history[0][0]["ts"] == 0
+        assert scene.layered_history[0][0]["ts_start"] == 0
+        assert scene.layered_history[0][0]["ts_end"] == 18000
 
     def test_empty_layered_history(self):
         """fix_time should not crash when layered_history is empty."""
         scene = make_scene(
-            history=[_msg("A"), _time("PT1H"), _msg("B")],
+            history=[_msg("A"), _time(3600), _msg("B")],
             archived_history=[
-                {"text": "Sum", "start": 0, "end": 2, "ts": "STALE"},
+                {"text": "Sum", "start": 0, "end": 2, "ts": -1},
             ],
             layered_history=[],
         )
 
         fix_time(scene)
 
-        assert scene.archived_history[0]["ts"] == "PT1H"
-        assert scene.ts == "PT1H"
+        assert scene.archived_history[0]["ts"] == 3600
+        assert scene.ts == 3600

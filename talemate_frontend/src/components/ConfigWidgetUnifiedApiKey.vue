@@ -1,11 +1,11 @@
 <template>
-  <div v-if="configPath" class="mb-4">
+  <div v-if="configPath && appConfig" class="mb-4">
     <v-card variant="outlined" color="primary">
-      <v-card-title class="text-subtitle-1 d-flex align-center">
+      <v-card-title class="text-body-large d-flex align-center">
         <v-icon class="mr-2">mdi-key-variant</v-icon>
         {{ title }}
         <v-chip v-if="apiKey" color="success" size="small" class="ml-2">Configured</v-chip>
-        <v-chip v-else color="error" size="small" class="ml-2">Required</v-chip>
+        <v-chip v-else :color="required ? 'error' : undefined" size="small" class="ml-2">{{ required ? 'Required' : 'Optional' }}</v-chip>
         <v-spacer></v-spacer>
         <v-btn
           icon
@@ -18,14 +18,13 @@
       </v-card-title>
       <v-expand-transition>
         <v-card-text v-show="expanded || !apiKey" class="text-muted">
-          <v-text-field 
-            type="password" 
+          <v-text-field
+            type="password"
             color="muted"
-            v-model="apiKey" 
-            @blur="save"
+            v-model="apiKey"
             density="comfortable"
           ></v-text-field>
-          <div class="text-caption text-medium-emphasis mt-2">
+          <div class="text-body-small text-medium-emphasis mt-2">
             {{ description }}
           </div>
         </v-card-text>
@@ -35,6 +34,8 @@
 </template>
 
 <script>
+import { getProperty, setProperty } from 'dot-prop';
+
 export default {
   name: 'ConfigWidgetUnifiedApiKey',
   props: {
@@ -48,59 +49,59 @@ export default {
     },
     description: {
       type: String,
-      default: 'This API key is stored in application settings and shared across all clients of this type. You can also edit it from the Application settings.',
+      default: 'This API key is stored in application settings and shared across all clients of this type. You can also edit it on the API Keys page.',
     },
+    required: {
+      type: Boolean,
+      default: true,
+    },
+    // The host's unsaved working copy of the config — the key is written into
+    // it and the host's Save persists it, so Discard drops the key too.
+    // Required: without a working copy the field would render but every
+    // keystroke would go nowhere, so the widget refuses to render instead.
     appConfig: {
       type: Object,
-      default: null,
+      required: true,
     },
   },
-  inject: ['getWebsocket'],
   data() {
     return {
-      apiKey: '',
       expanded: false,
     };
+  },
+  computed: {
+    apiKey: {
+      get() {
+        return this.configPath ? getProperty(this.appConfig || {}, this.configPath) || '' : '';
+      },
+      set(value) {
+        if (this.appConfig && this.configPath) {
+          setProperty(this.appConfig, this.configPath, value || null);
+        }
+      },
+    },
   },
   watch: {
     appConfig: {
       immediate: true,
-      handler(newVal) {
-        this.updateApiKey();
+      handler() {
+        this.syncExpanded();
       },
     },
     configPath: {
       immediate: true,
       handler() {
-        this.updateApiKey();
+        this.syncExpanded();
       },
     },
   },
   methods: {
-    updateApiKey() {
+    syncExpanded() {
       if (!this.appConfig || !this.configPath) {
         return;
       }
-      const [section, key] = this.configPath.split('.');
-      const keyValue = this.appConfig[section]?.[key] || '';
-      this.apiKey = keyValue;
-      // Auto-collapse if key is set, expand if not set
-      this.expanded = !keyValue;
-    },
-    save() {
-      if (!this.configPath) {
-        return;
-      }
-      this.getWebsocket().send(JSON.stringify({
-        type: 'config',
-        action: 'save_unified_api_key',
-        data: {
-          config_path: this.configPath,
-          api_key: this.apiKey || null,
-        }
-      }));
+      this.expanded = !this.apiKey;
     },
   },
 };
 </script>
-

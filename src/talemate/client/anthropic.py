@@ -38,6 +38,14 @@ SUPPORTED_MODELS = [
     "claude-opus-4-5",
     "claude-opus-4-6",
     "claude-opus-4-7",
+    "claude-opus-4-8",
+    "claude-haiku-5-5",
+    "claude-sonnet-5",
+    "claude-sonnet-5-5",
+    "claude-opus-5",
+    "claude-opus-5-5",
+    "claude-fable-5",
+    "claude-fable-5-1",
 ]
 
 DEFAULT_MODEL = "claude-haiku-4-5"
@@ -47,27 +55,99 @@ LIMITED_PARAM_MODELS = [
     "claude-haiku-4-5",
     "claude-sonnet-4-5",
     "claude-opus-4-1",
-    # Opus 4.7 rejects any non-default temperature/top_p/top_k with a 400.
+    # These reject any non-default temperature/top_p/top_k with a 400.
     "claude-opus-4-7",
+    "claude-opus-4-8",
+    "claude-haiku-5-5",
+    "claude-sonnet-5",
+    "claude-sonnet-5-5",
+    "claude-opus-5",
+    "claude-opus-5-5",
+    "claude-fable-5",
+    "claude-fable-5-1",
 ]
 
-# Models that support adaptive thinking + effort control (Opus 4.6+)
+# Models that support adaptive thinking + effort control (Opus 4.6+, Claude 5)
 ADAPTIVE_THINKING_MODELS = [
+    "claude-sonnet-4-6",
     "claude-opus-4-6",
     "claude-opus-4-7",
+    "claude-opus-4-8",
+    "claude-haiku-5-5",
+    "claude-sonnet-5",
+    "claude-sonnet-5-5",
+    "claude-opus-5",
+    "claude-opus-5-5",
+    "claude-fable-5",
+    "claude-fable-5-1",
 ]
 
 # Models that ONLY accept adaptive thinking. Sending thinking.type="enabled"
-# (budget_tokens) returns a 400 — Opus 4.7 dropped budget-mode support.
+# (budget_tokens) returns a 400 on these models.
 ADAPTIVE_ONLY_THINKING_MODELS = [
     "claude-opus-4-7",
+    "claude-opus-4-8",
+    "claude-haiku-5-5",
+    "claude-sonnet-5",
+    "claude-sonnet-5-5",
+    "claude-opus-5",
+    "claude-opus-5-5",
+    "claude-fable-5",
+    "claude-fable-5-1",
 ]
 
-# Maximum output tokens per model family, matching Anthropic API limits.
+# Models whose adaptive thinking refuses the "xhigh" effort level.
+NO_XHIGH_EFFORT_MODELS = [
+    "claude-opus-4-6",
+    "claude-sonnet-4-6",
+]
+
+EFFORT_LEVELS = ["low", "medium", "high", "xhigh", "max"]
+
+# Models with no way to turn thinking off: "disabled" is a 400 and a request
+# without a thinking field still thinks.
+ALWAYS_REASONING_MODELS = [
+    "claude-opus-5-5",
+    "claude-fable-5",
+]
+
+# Models with a thinking off switch, and the thinking type that selects it.
+THINKING_OFF_TYPES = {
+    "claude-sonnet-5-5": "between_tools",
+    "claude-opus-5": "disabled",
+}
+
+# Models that answer a request ending in an assistant message with HTTP 400
+# ("This model does not support assistant message prefill").
+NO_PREFILL_MODELS = [
+    "claude-sonnet-4-6",
+    "claude-opus-4-6",
+    "claude-opus-4-7",
+    "claude-opus-4-8",
+    "claude-haiku-5-5",
+    "claude-sonnet-5",
+    "claude-sonnet-5-5",
+    "claude-opus-5",
+    "claude-opus-5-5",
+    "claude-fable-5",
+    "claude-fable-5-1",
+]
+
+SAMPLING_PARAMETERS = ("temperature", "top_p", "top_k")
+
+# Default max_tokens per model family, at most the Anthropic API limit.
 # Used as the max_tokens value when response length capping is disabled.
 MAX_OUTPUT_TOKENS = {
-    "claude-opus-4-7": 128000,
-    "claude-opus-4-6": 128000,
+    "claude-fable-5-1": 64000,
+    "claude-fable-5": 64000,
+    "claude-opus-5-5": 64000,
+    "claude-opus-5": 64000,
+    "claude-sonnet-5-5": 64000,
+    "claude-sonnet-5": 64000,
+    "claude-haiku-5-5": 64000,
+    "claude-opus-4-8": 64000,
+    "claude-opus-4-7": 64000,
+    "claude-opus-4-6": 64000,
     "claude-sonnet-4-6": 64000,
     "claude-opus-4-5": 64000,
     "claude-sonnet-4-5": 64000,
@@ -90,6 +170,7 @@ class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
 
 
 class ClientConfig(ConcurrentInference, EndpointOverride, BaseClientConfig):
+    concurrent_inference_enabled: bool = True
     effort_level: Literal["low", "medium", "high", "xhigh", "max"] = "high"
     thinking_mode: Literal["budget", "adaptive"] = "budget"
 
@@ -118,8 +199,19 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
                 name="thinking_mode",
                 type="text",
                 label="Thinking Mode",
-                choices=["budget", "adaptive"],
-                description="'budget' uses fixed token budget (legacy), 'adaptive' lets the model decide when to think. Adaptive is recommended for Opus 4.6+ and required for Opus 4.7+ (budget mode is ignored on those models).",
+                choices=[
+                    {
+                        "label": "budget",
+                        "value": "budget",
+                        "description": "A fixed token budget (legacy).",
+                    },
+                    {
+                        "label": "adaptive",
+                        "value": "adaptive",
+                        "description": "The model decides when to think; required on Opus 4.7+ and the Claude 5 models.",
+                    },
+                ],
+                description="'budget' uses fixed token budget (legacy), 'adaptive' lets the model decide when to think. Adaptive is recommended for Opus 4.6+ and required for Opus 4.7+ and the Claude 5 models (budget mode is ignored on those models).",
                 group=FieldGroup(
                     name="reasoning",
                     label="Reasoning",
@@ -133,7 +225,7 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
                 type="text",
                 label="Effort Level",
                 choices=["low", "medium", "high", "xhigh", "max"],
-                description="Controls thinking depth and cost trade-off. Higher effort = better quality but more cost/latency. Only applies with adaptive thinking mode. The 'xhigh' option (between high and max) is supported on Opus 4.7+.",
+                description="Controls thinking depth and cost trade-off. Higher effort = better quality but more cost/latency. Only applies with adaptive thinking mode. The 'xhigh' option (between high and max) is supported on Opus 4.7+ and the Claude 5 models.",
                 group=FieldGroup(
                     name="reasoning",
                     label="Reasoning",
@@ -148,8 +240,16 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
         unified_api_key_config_path: str = "anthropic.api_key"
 
     @property
+    def reason_locked(self) -> bool:
+        return self.model_name in ALWAYS_REASONING_MODELS
+
+    @property
+    def reason_enabled_configured(self) -> bool:
+        return self.reason_locked or super().reason_enabled_configured
+
+    @property
     def can_be_coerced(self) -> bool:
-        return not self.reason_enabled
+        return not self.reason_enabled and self.model_name not in NO_PREFILL_MODELS
 
     @property
     def anthropic_api_key(self):
@@ -182,8 +282,15 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
         return False
 
     @property
+    def effort_choices(self) -> list[str]:
+        if self.model_name in NO_XHIGH_EFFORT_MODELS:
+            return [level for level in EFFORT_LEVELS if level != "xhigh"]
+        return EFFORT_LEVELS
+
+    @property
     def effort_level(self) -> str:
-        return self.client_config.effort_level
+        level = self.client_config.effort_level
+        return level if level in self.effort_choices else "high"
 
     @property
     def thinking_mode(self) -> str:
@@ -212,12 +319,8 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
         )
         if adaptive_active:
             return ReasoningDisplay(
-                indicator_value=self.effort_level,
-                indicator_tooltip="Effort level",
-                show_token_slider=False,
-                show_effort_selector=True,
-                effort_level=self.effort_level,
-                effort_choices=["low", "medium", "high", "xhigh", "max"],
+                control="effort",
+                effort_choices=self.effort_choices,
             )
 
         # Fallback to budget display (even if adaptive is configured but model doesn't support it)
@@ -328,6 +431,19 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
             parameters.pop("temperature", None)
             parameters.pop("top_p", None)
             parameters.pop("top_k", None)
+
+        if not self.reason_enabled and self.model_name in THINKING_OFF_TYPES:
+            parameters["thinking"] = {"type": THINKING_OFF_TYPES[self.model_name]}
+
+        sampling = {
+            k: parameters.pop(k) for k in SAMPLING_PARAMETERS if k in parameters
+        }
+        if "temperature" in sampling:
+            # The API refuses temperature and top_p together on the models that still take both
+            sampling.pop("top_p", None)
+        if sampling:
+            # The SDK's create() has no sampling keywords
+            parameters["extra_body"] = sampling
 
         # Anthropic API always requires max_tokens, even when response length
         # capping is disabled. Use the model's API limit as the default.

@@ -95,9 +95,10 @@ class Backend(backends.Backend):
             await client.models.list(timeout=timeout)
             return backends.BackendStatus(type=backends.BackendStatusType.OK)
         except Exception as e:
-            log.error("openai.test_connection.error", error=str(e))
+            message = backends.describe_error(e)
+            log.error("openai.test_connection.error", error=message)
             return backends.BackendStatus(
-                type=backends.BackendStatusType.ERROR, message=str(e)
+                type=backends.BackendStatusType.ERROR, message=message
             )
 
     def _size_string(self, resolution: Resolution) -> str:
@@ -246,7 +247,6 @@ class OpenAIMixin:
                 type="unified_api_key",
                 value="openai.api_key",
                 label="OpenAI API Key",
-                scene_overridable=False,
             ),
             "model": AgentActionConfig(
                 type="text",
@@ -258,7 +258,6 @@ class OpenAIMixin:
                 ],
                 label="Model",
                 description="OpenAI image model",
-                save_on_change=True,
                 note_on_value={
                     "gpt-image-1": AgentActionNote(
                         color="warning",

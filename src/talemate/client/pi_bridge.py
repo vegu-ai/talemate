@@ -416,7 +416,7 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
                         "authentication (environment API keys, pi's auth.json, "
                         "subscription auth) and model resolution, including custom "
                         "providers defined in pi's models.json. Variables from "
-                        "Settings → Application → Environment Variables are passed "
+                        "Settings → Connections → Environment Variables are passed "
                         "to pi, so models.json can reference them as $NAME."
                     ),
                     required=False,
@@ -475,14 +475,7 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
     def reasoning_display(self) -> ReasoningDisplay | None:
         if not self.reason_enabled_configured:
             return None
-        return ReasoningDisplay(
-            indicator_value=self.effort_level,
-            indicator_tooltip="Thinking level",
-            show_token_slider=False,
-            show_effort_selector=True,
-            effort_level=self.effort_level,
-            effort_choices=THINKING_LEVELS,
-        )
+        return ReasoningDisplay(control="effort", effort_choices=THINKING_LEVELS)
 
     def emit_status(self, processing: bool = None):
         error_message = None

@@ -4,36 +4,50 @@ import uuid
 import os
 import traceback
 
+from talemate.knowledge.transitions import transition_payload
+
 import structlog
 
 import talemate.instance as instance
 from talemate import Scene
-from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
 from talemate.config.schema import SceneAssetUpload
 from talemate.config import get_config, Config
 from talemate.context import ActiveScene
+from talemate.decisions import decision_service
+from talemate.decisions.slot import emit_decision_model_status
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 import talemate.emit.async_signals as async_signals
+from talemate.exceptions import ControlFlowException
 from talemate.files import list_scenes_directory, list_scenes_tree
+from talemate.game.engine.nodes.run import stop_test_module
 from talemate.load import load_scene, SceneInitialization
-from talemate.scene_assets import Asset, get_media_type_from_file_path, VIS_TYPE
+from talemate.scene_assets import (
+    Asset,
+    CharacterCoverTarget,
+    SceneCoverTarget,
+    get_media_type_from_file_path,
+    VIS_TYPE,
+)
 from talemate.scene_message import versions_payload_for
 from talemate.server import (
     agent_config,
     assistant,
     character_importer,
     config,
+    decisions,
     devtools,
     quick_settings,
     scene_message as scene_message_plugin,
     time_passage,
-    timeline,
+    scene_revisions,
     ux,
     world_state_manager,
     node_editor,
     package_manager,
+    playthrough,
     prompts,
     scene_assets as scene_assets_plugin,
+    scene_commands,
 )
 from talemate.server.scene_assets_batching import SceneAssetsBatchingMixin
 
@@ -70,6 +84,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             quick_settings.QuickSettingsPlugin.router: quick_settings.QuickSettingsPlugin(
                 self
             ),
+            decisions.DecisionsPlugin.router: decisions.DecisionsPlugin(self),
             devtools.DevToolsPlugin.router: devtools.DevToolsPlugin(self),
             node_editor.NodeEditorPlugin.router: node_editor.NodeEditorPlugin(self),
             package_manager.PackageManagerPlugin.router: package_manager.PackageManagerPlugin(
@@ -79,12 +94,18 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             scene_assets_plugin.SceneAssetsPlugin.router: scene_assets_plugin.SceneAssetsPlugin(
                 self
             ),
+            scene_commands.SceneCommandsPlugin.router: scene_commands.SceneCommandsPlugin(
+                self
+            ),
             ux.UxPlugin.router: ux.UxPlugin(self),
             time_passage.TimePassagePlugin.router: time_passage.TimePassagePlugin(self),
             scene_message_plugin.SceneMessagePlugin.router: scene_message_plugin.SceneMessagePlugin(
                 self
             ),
-            timeline.TimelinePlugin.router: timeline.TimelinePlugin(self),
+            scene_revisions.SceneRevisionsPlugin.router: scene_revisions.SceneRevisionsPlugin(
+                self
+            ),
+            playthrough.PlaythroughPlugin.router: playthrough.PlaythroughPlugin(self),
         }
 
         # unconveniently named function, this `connect` method is called
@@ -94,6 +115,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         self.set_agent_routers()
 
         instance.emit_agents_status()
+        emit_decision_model_status()
 
     @property
     def config(self) -> Config:
@@ -111,29 +133,52 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             self.routes[handler_cls.router] = handler_cls(self)
 
     def disconnect(self):
-        super().disconnect()
-        abort_wait_for_input()
+        try:
+            super().disconnect()
+            async_signals.get("config.changed").disconnect(self.on_config_changed)
 
-        # Cleanup scene assets batching
-        self._cleanup_scene_assets_batching()
+            for route, plugin in self.routes.items():
+                if not hasattr(plugin, "disconnect"):
+                    continue
+                try:
+                    plugin.disconnect()
+                except ControlFlowException:
+                    raise
+                except Exception:
+                    # one plugin's teardown must not skip the others
+                    log.error(
+                        "disconnect: plugin teardown failed",
+                        plugin=route,
+                        error=traceback.format_exc(),
+                    )
 
-        memory_agent = instance.get_agent("memory")
-        if memory_agent and self.scene:
-            memory_agent.close_db(self.scene)
+            abort_wait_for_input()
 
-        for plugin in self.routes.values():
-            if hasattr(plugin, "disconnect"):
-                plugin.disconnect()
+            # Cleanup scene assets batching
+            self._cleanup_scene_assets_batching()
+        finally:
+            # a failure above must not leave the agents bound to the scene of
+            # this connection
+            self.release_scene()
 
     def connect(self):
         super().connect()
+        self.bind_agents(self.scene)
         async_signals.get("config.changed").connect(self.on_config_changed)
 
     def init_scene(self):
-        # Setup scene
         scene = Scene()
+        self.bind_agents(scene)
+        return scene
 
-        # Init helper agents
+    def bind_agents(self, scene: Scene):
+        """Point the global agents at `scene`.
+
+        A scene is otherwise only handed to them when one is loaded or
+        released, which leaves them without one until the first scene load of
+        the process - and scene-free flows (the help chat's template tools)
+        have nothing to read the world state templates from.
+        """
         for agent_typ in instance.agent_types():
             agent = instance.get_agent(agent_typ)
             agent.connect(scene)
@@ -142,7 +187,51 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 continue
             log.debug("init agent", agent_typ=agent_typ)
 
-        return scene
+    def release_scene(self) -> Scene:
+        """Tear down the current scene and detach it from the global agents.
+
+        Rebinds to a fresh (inactive) placeholder rather than dropping the
+        scene, so scene-free generation keeps working and the next connection
+        does not inherit the released scene's per-scene overrides.
+        """
+        if self.scene:
+            self.scene.interrupt()
+            # before the fallible close: `active` is the abort gate in-flight
+            # work polls, so it must drop even when the teardown fails
+            self.scene.active = False
+            self._stop_scene_test_module(self.scene)
+            try:
+                instance.get_agent("memory").close_db(self.scene)
+                self.scene.disconnect()
+            except Exception:
+                # the rebind is the invariant - a failed teardown must not
+                # leave the agents on the released scene
+                log.error(
+                    "release_scene: outgoing scene teardown failed",
+                    error=traceback.format_exc(),
+                )
+
+        self.scene = self.init_scene()
+        return self.scene
+
+    def _stop_scene_test_module(self, scene: Scene) -> None:
+        """Cancel a node-editor test module still tracked on the outgoing scene
+        and tell the frontend, which never learns about it otherwise.
+        """
+        graph_state = scene.nodegraph_state
+        if graph_state is None:
+            return
+
+        if not stop_test_module(graph_state):
+            return
+
+        self.queue_put(
+            {
+                "type": "node_editor",
+                "action": "test_stopped",
+                "data": {},
+            }
+        )
 
     async def load_scene(
         self,
@@ -151,22 +240,30 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         callback=None,
         file_name=None,
         scene_initialization: dict | None = None,
+        request_id: str | None = None,
     ):
+        owned_scene = None
         try:
-            if self.scene:
-                instance.get_agent("memory").close_db(self.scene)
-                self.scene.disconnect()
-                self.scene.active = False
-
-            scene = self.init_scene()
-
-            if not scene:
-                await asyncio.sleep(0.1)
-                return
-
-            self.scene = scene
+            scene = owned_scene = self.release_scene()
 
             scene.active = True
+
+            def is_current():
+                task = asyncio.current_task()
+                return self.scene is owned_scene and not task.cancelling()
+
+            async def show_loaded_history(loaded_scene):
+                if not is_current():
+                    raise asyncio.CancelledError()
+                loaded_scene.emit_status()
+                self.queue_put(
+                    {
+                        "type": "system",
+                        "id": "scene.history_ready",
+                        "data": {"hidden": True},
+                    }
+                )
+                await loaded_scene.emit_history()
 
             with ActiveScene(scene):
                 try:
@@ -179,35 +276,59 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                         scene_initialization=SceneInitialization(**scene_initialization)
                         if scene_initialization
                         else None,
+                        before_memory=show_loaded_history,
+                        is_current=is_current,
                     )
                 except Exception as e:
-                    self.scene = self.init_scene()
-                    return await self.load_scene_failure(e)
+                    if not is_current():
+                        return
+                    self.release_scene()
+                    return await self.load_scene_failure(e, request_id)
+
+            if not is_current():
+                return
 
             if not scene:
                 # if scene is None at this point then load scene failed, likely with
                 # a warning. This usually happens when generation cancel was triggered.
                 # TODO: more explicit handling
+                self.release_scene()
                 return await self.load_scene_failure(
-                    Exception("Scene loading interrupted")
+                    Exception("Scene loading interrupted"), request_id
                 )
+
+            # the log belongs to the scene that made it; anything still running
+            # was cancelled with the outgoing scene and is kept until it ends
+            decision_service.log.clear_finished()
 
             if callback:
                 await callback()
+            if not is_current():
+                return
 
             with ActiveScene(scene):
-                await scene.start()
+                await scene.start(history_visible=True)
         except Exception:
             log.error("load_scene", error=traceback.format_exc())
         finally:
-            self.scene.active = False
+            # a newer load_scene frame may already own `self.scene` by the time
+            # a cancelled frame unwinds here - only deactivate this frame's scene
+            if owned_scene is not None and self.scene is owned_scene:
+                if (
+                    owned_scene.agent_overrides is not None
+                    and owned_scene.agent_overrides.pending
+                ):
+                    self.release_scene()
+                else:
+                    owned_scene.active = False
 
-    async def load_scene_failure(self, error: Exception):
+    async def load_scene_failure(self, error: Exception, request_id: str | None = None):
         emit("status", message=str(error), status="error")
         await self.out_queue.put(
             {
                 "type": "system",
                 "id": "scene.load_failure",
+                "request_id": request_id,
                 "data": {
                     "hidden": True,
                 },
@@ -375,9 +496,39 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 "message": emission.message,
                 "id": emission.id,
                 "ts": emission.message_object.ts,
+                "title": emission.message_object.title,
                 "flags": (
                     int(emission.message_object.flags) if emission.message_object else 0
                 ),
+            }
+        )
+
+    def handle_character_transition(self, emission: Emission):
+        self.queue_put(transition_payload(self.scene, emission.message_object))
+
+    def handle_scene_backdrop(self, emission: Emission):
+        message = emission.message_object
+        self.queue_put(
+            {
+                "type": "scene_backdrop",
+                "id": message.id,
+                "backdrop": message.backdrop,
+                "previous_backdrop": message.previous_backdrop,
+                "pending": message.pending,
+                "flags": int(message.flags),
+            }
+        )
+
+    def handle_reinforcement(self, emission: Emission):
+        message = emission.message_object
+        self.queue_put(
+            {
+                "type": "reinforcement",
+                "id": message.id,
+                "message": message.message,
+                "question": message.question,
+                "character": message.source_arguments.get("character"),
+                "flags": int(message.flags),
             }
         )
 
@@ -415,6 +566,24 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             }
         )
 
+    def handle_agent_actions_observed(self, emission: Emission):
+        self.queue_put(
+            {
+                "type": "config",
+                "action": "agent_actions",
+                "data": emission.data,
+            }
+        )
+
+    def handle_decision_models_changed(self, emission: Emission):
+        self.queue_put(
+            {
+                "type": "config",
+                "action": "decision_models",
+                "data": emission.data,
+            }
+        )
+
     def handle_clear_screen(self, emission: Emission):
         self.queue_put(
             {
@@ -433,12 +602,21 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         self.queue_put(payload)
 
     def handle_scene_status(self, emission: Emission):
+        transitions = (
+            [
+                transition_payload(self.scene, message)
+                for message in self.scene.history
+                if message.typ == "character_transition"
+            ]
+            if self.scene
+            else []
+        )
         self.queue_put(
             {
                 "type": "scene_status",
                 "name": emission.message,
                 "status": emission.status,
-                "data": emission.data,
+                "data": {**(emission.data or {}), "character_transitions": transitions},
             }
         )
 
@@ -451,17 +629,8 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             }
         )
 
-    async def on_config_changed(self, config: Config):
-        data = config.model_dump()
-
-        data.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
-
-        self.queue_put(
-            {
-                "type": "app_config",
-                "data": data,
-            }
-        )
+    async def on_config_changed(self, app_config: Config):
+        self.queue_put(config.app_config_message(app_config))
 
     def handle_archived_history(self, emission: Emission):
         self.queue_put(
@@ -496,13 +665,16 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 "name": emission.id,
                 "status": emission.status,
                 "data": emission.data,
-                "max_token_length": client.max_token_length if client else 8192,
+                "max_token_length": client.max_token_length if client else 16384,
                 "api_url": getattr(client, "api_url", None) if client else None,
                 "api_key": getattr(client, "api_key", None)
                 if enable_api_auth
                 else None,
             }
         )
+
+    def handle_decision_model_status(self, emission: Emission):
+        self.queue_put({"type": "decision_model_status", "data": emission.data})
 
     def handle_agent_status(self, emission: Emission):
         self.queue_put(
@@ -649,7 +821,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
     async def request_client_status(self):
         await instance.emit_clients_status()
 
-    def request_file_image_data(self, file_path: str):
+    def request_file_image_data(self, file_path: str, request_id: str | None = None):
         """
         Read an image file from the given path and return it as a base64 data URL.
         Used for displaying image previews when loading character cards from file paths.
@@ -659,6 +831,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 self.queue_put(
                     {
                         "type": "file_image_data",
+                        "request_id": request_id,
                         "file_path": file_path,
                         "error": f"File not found: {file_path}",
                     }
@@ -671,6 +844,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 self.queue_put(
                     {
                         "type": "file_image_data",
+                        "request_id": request_id,
                         "file_path": file_path,
                         "error": str(e),
                     }
@@ -686,6 +860,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             self.queue_put(
                 {
                     "type": "file_image_data",
+                    "request_id": request_id,
                     "file_path": file_path,
                     "image_data": data_url,
                     "media_type": media_type,
@@ -696,6 +871,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             self.queue_put(
                 {
                     "type": "file_image_data",
+                    "request_id": request_id,
                     "file_path": file_path,
                     "error": traceback.format_exc(),
                 }
@@ -751,30 +927,21 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         asset.meta.vis_type = asset_upload.vis_type or VIS_TYPE.UNSPECIFIED
         asset.meta.character_name = asset_upload.character_name
 
+        targets = []
         if asset_upload.scene_cover_image:
-            self.scene.assets.cover_image = asset.id
-            self.scene.saved = False
-            self.scene.emit_status()
+            targets.append(SceneCoverTarget())
         if asset_upload.character_cover_image:
             character = self.scene.get_character(asset_upload.character_cover_image)
-            old_cover_image = character.cover_image
-            character.cover_image = asset.id
-            if (
-                not self.scene.assets.cover_image
-                or old_cover_image == self.scene.assets.cover_image
-            ):
-                self.scene.assets.cover_image = asset.id
+            targets.append(CharacterCoverTarget.of(character))
+            # the scene cover follows the character cover it still shows
+            if self.scene.assets.cover_image in (None, character.cover_image):
+                targets.append(SceneCoverTarget())
+        for target in targets:
+            await self.scene.assets.set_asset(target, asset.id)
+        if targets:
             self.scene.saved = False
             self.scene.emit_status()
-            self.request_scene_assets([character.cover_image])
-            self.queue_put(
-                {
-                    "type": "scene_asset_character_cover_image",
-                    "asset_id": asset.id,
-                    "media_type": asset.media_type,
-                    "character": character.name,
-                }
-            )
+            self.request_scene_assets([asset.id])
 
     def handle_character_card_upload(self, image_data_url: str, filename: str) -> str:
         image_data = base64.b64decode(image_data_url.split(",")[1])

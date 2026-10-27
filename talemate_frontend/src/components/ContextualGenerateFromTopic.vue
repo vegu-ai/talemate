@@ -6,11 +6,11 @@
                 <span v-if="busy">
                     <v-progress-circular class="ml-1 mr-3" size="14" indeterminate="disable-shrink" color="primary">
                     </v-progress-circular>
-                    <span class="text-caption text-primary">Generating...</span>
+                    <span class="text-body-small text-primary">Generating...</span>
                 </span>
             </v-card-title>
             <v-card-text>
-                <v-alert v-if="description" density="compact" variant="text" color="grey" icon="mdi-information-outline" class="mb-2">
+                <v-alert v-if="description" density="compact" variant="text" icon="mdi-information-outline" class="mb-2 text-medium-emphasis">
                     {{ description }}
                 </v-alert>
                 <v-text-field
@@ -51,7 +51,7 @@
 </template>
 
 <script>
-import { v4 as uuidv4 } from 'uuid';
+import { newUuid } from '@/utils/uuid';
 
 export default {
     name: 'ContextualGenerateFromTopic',
@@ -112,7 +112,7 @@ export default {
             this.topic = '';
             this.instructions = '';
             this.busy = false;
-            this.uid = uuidv4();
+            this.uid = newUuid();
             this.$nextTick(() => {
                 if (this.$refs.topicInput && this.$refs.topicInput.focus) {
                     this.$refs.topicInput.focus();

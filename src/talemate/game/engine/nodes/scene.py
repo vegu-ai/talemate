@@ -1,9 +1,11 @@
 import structlog
 import asyncio
-from typing import TYPE_CHECKING, ClassVar
+import pydantic
+from typing import TYPE_CHECKING, ClassVar, Literal
 from .core import (
     Loop,
     Node,
+    NodeBase,
     GraphState,
     UNRESOLVED,
     LoopBreak,
@@ -13,7 +15,13 @@ from .core import (
     PropertyField,
     Trigger,
 )
-from .registry import register, get_nodes_by_base_type, get_node
+from .registry import (
+    register,
+    get_nodes_by_base_type,
+    get_node,
+    register_module_sync_base_type,
+)
+from .run import FunctionArgument
 from .event import (
     connect_listeners,
     disconnect_listeners,
@@ -22,9 +30,9 @@ from .event import (
     disconnect_auto_register_listeners,
 )
 import talemate.events as events
-from talemate.emit import emit, wait_for_input
+from talemate.emit import wait_for_input
 from talemate.exceptions import ActedAsCharacter, AbortWaitForInput, GenerationCancelled
-from talemate.context import active_scene, InteractionState
+from talemate.context import active_scene, InteractionState, handle_generation_cancelled
 from talemate.instance import get_agent, AGENTS
 from talemate.character import (
     activate_character,
@@ -39,6 +47,7 @@ from talemate.util.colors import random_color
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
+    from .command import Command
 
 log = structlog.get_logger("talemate.game.engine.nodes.scene")
 
@@ -48,11 +57,109 @@ async_signals.register(
     "scene_loop_error",
     "scene_loop_init",
     "scene_loop_init_after",
+    "scene_commands_catalog",
 )
 
 
 class SceneLoopEvent(events.Event):
     pass
+
+
+class SceneCommandsCatalogEvent(events.Event):
+    catalog: list[dict]
+
+
+COMMAND_ARGUMENT_TYPES = ("str", "int", "float", "bool", "list", "any")
+
+COMMAND_BASE_TYPE = register_module_sync_base_type("command/Command")
+
+
+class CommandArgument(pydantic.BaseModel):
+    name: str
+    typ: Literal["str", "int", "float", "bool", "list", "any"] = "any"
+
+    @pydantic.field_validator("typ", mode="before")
+    @classmethod
+    def coerce_typ(cls, value):
+        return value if value in COMMAND_ARGUMENT_TYPES else "any"
+
+
+class CommandCatalogEntry(pydantic.BaseModel):
+    """
+    A command as it is offered to the scene tools menu. Metadata comes from
+    user-authored module JSON, so it is coerced rather than validated.
+    """
+
+    name: str
+    label: str
+    icon: str
+    menu: str = ""
+    args: list[CommandArgument] = pydantic.Field(default_factory=list)
+
+    @pydantic.field_validator("label", "icon", "menu", mode="before")
+    @classmethod
+    def coerce_to_str(cls, value) -> str:
+        return str(value)
+
+    @pydantic.field_validator("menu")
+    @classmethod
+    def strip_menu(cls, value: str) -> str:
+        return value.strip()
+
+
+def resolve_node_command(state: GraphState, command_name: str) -> type[NodeBase] | None:
+    """
+    Resolve a registered command node by its command name.
+
+    Returns None if no command is registered under the given name.
+    """
+
+    registry_name: str | None = (state.data.get("_commands") or {}).get(command_name)
+
+    if not registry_name:
+        return None
+
+    command_node = get_node(registry_name)
+    if not command_node:
+        log.error(
+            "Command node not found",
+            command_name=command_name,
+            registry_name=registry_name,
+        )
+        return None
+
+    return command_node
+
+
+async def run_node_command(
+    state: GraphState, command_name: str, command_kwargs: dict
+) -> bool:
+    """
+    Run a registered command node by its command name.
+
+    Returns False if no command is registered under the given name.
+    """
+
+    command_node = resolve_node_command(state, command_name)
+
+    if not command_node:
+        return False
+
+    task = asyncio.create_task(command_node().execute_command(state, **command_kwargs))
+    task.add_done_callback(_log_command_task_error)
+
+    return True
+
+
+def _log_command_task_error(task: asyncio.Task):
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if isinstance(exc, GenerationCancelled):
+        log.debug("Command execution cancelled")
+        return
+    if exc:
+        log.error("Command execution failed", error=str(exc), exc_info=exc)
 
 
 @register("scene/GetSceneState")
@@ -123,7 +230,7 @@ class MakeCharacter(Node):
     Outputs:
 
     - character: The character object
-    - actor: The actor object
+    - actor: The actor object, or None when the character is not active in the scene
     """
 
     class Fields:
@@ -230,18 +337,19 @@ class MakeCharacter(Node):
         else:
             ActorCls = scene.Actor
 
-        actor = ActorCls(character, get_agent("conversation"))
-
         log.warning(
             "Make character",
             character=character,
             add_to_scene=add_to_scene,
             is_active=is_active,
         )
+        actor = None
         if add_to_scene:
+            actor = ActorCls(character, get_agent("conversation"))
             await scene.add_actor(actor)
-            if is_active:
-                await activate_character(scene, character)
+            if not is_active:
+                await deactivate_character(scene, character, record_transition=False)
+                actor = None
         self.set_output_values({"actor": actor, "character": character})
 
 
@@ -483,6 +591,10 @@ class UpdateCharacterData(Node):
         details = self.get_input_value("details")
         description = self.get_input_value("description")
         name = self.get_input_value("name")
+
+        scene = active_scene.get()
+        if self.is_set(name) and scene is not None:
+            character.validate_rename(name, scene)
 
         if self.is_set(base_attributes):
             character.update(base_attributes=base_attributes)
@@ -990,6 +1102,7 @@ class WaitForInput(Node):
             await self._handle_director_input(scene, state, text_message)
 
         if allow_commands and text_message.startswith("!"):
+            await events.before_generation(scene, "command")
             command_state = {}
             node_cmd_executed = False
             await scene.commands.execute(
@@ -1042,29 +1155,10 @@ class WaitForInput(Node):
         # remove ! from the command name
         command_name = command_name.lstrip("!")
 
-        # get the command node from the scene
-        registry_name: str | None = state.data["_commands"].get(command_name)
-
-        if not registry_name:
-            return False
-
         # turn args into dict with arg_{N} keys
         args_dict = {f"arg_{i}": arg for i, arg in enumerate(args)}
 
-        command_node = get_node(registry_name)
-        if not command_node:
-            log.error(
-                "Command node not found",
-                command_name=command_name,
-                registry_name=registry_name,
-            )
-            return False
-
-        # create task
-        asyncio.create_task(command_node().execute_command(state, **args_dict))
-
-        # wait command_node().execute_command(state, **args_dict)
-        return True
+        return await run_node_command(state, command_name, args_dict)
 
     async def _handle_director_input(
         self, scene: "Scene", state: GraphState, raw_text: str
@@ -1113,8 +1207,7 @@ class WaitForInput(Node):
             action="user_direction",
             subtype="user_direction",
         )
-        await scene.push_history(message)
-        emit("director", message)
+        await scene.push_history(message, emit_message=True)
 
         await director.direction_append_message(
             UserInteractionMessage(user_input=text, is_direction=True)
@@ -1691,11 +1784,7 @@ class SetIntroduction(Node):
         introduction = self.require_input("introduction")
         emit_history = self.get_input_value("emit_history")
 
-        scene.set_intro(introduction)
-        scene.emit_status()
-
-        if emit_history:
-            await scene.emit_history()
+        await scene.apply_intro(introduction, emit_history=emit_history)
 
         self.set_output_values({"state": self.get_input_value("state")})
 
@@ -1801,9 +1890,6 @@ class SceneLoop(Loop):
         if scene.auto_save:
             await scene.save(auto=True)
 
-        if scene._changelog:
-            await scene._changelog.append_delta()
-
         scene.emit_status()
 
         await async_signals.get("scene_loop_end_cycle").send(self.scene_loop_event)
@@ -1831,6 +1917,7 @@ class SceneLoop(Loop):
         elif isinstance(exc, GenerationCancelled):
             state.shared["skip_to_player"] = True
             state.shared["signal_game_loop"] = False
+            handle_generation_cancelled(exc, scene=scene)
             raise LoopBreak()
 
         await async_signals.get("scene_loop_error").send(self.scene_loop_event)
@@ -1843,15 +1930,67 @@ class SceneLoop(Loop):
         This is used to register commands that are defined in the scene
         nodes directory.
         """
-        state.data["_commands"] = {}
+        commands = {}
+        catalog_by_name = {}
 
-        for node_cls in get_nodes_by_base_type("command/Command"):
+        for node_cls in get_nodes_by_base_type(COMMAND_BASE_TYPE):
             _node = node_cls()
             command_name = _node.get_property("name")
-            state.data["_commands"][command_name] = _node.registry
+            commands[command_name] = _node.registry
+            # a module without a name yields UNRESOLVED (a class) here — it can
+            # never be invoked and would break the catalog's JSON/sort contract
+            if isinstance(command_name, str) and command_name:
+                if command_name in catalog_by_name:
+                    log.warning(
+                        "Duplicate command name",
+                        command=f"!{command_name}",
+                        module=_node.registry,
+                    )
+                catalog_by_name[command_name] = CommandCatalogEntry(
+                    name=command_name,
+                    label=_node.title,
+                    icon=_node.get_property("icon"),
+                    menu=_node.get_property("menu"),
+                    args=await self.collect_command_args(_node),
+                )
             log.info(
                 "Registered command", command=f"!{command_name}", module=_node.registry
             )
+
+        catalog = [
+            entry.model_dump()
+            for entry in sorted(catalog_by_name.values(), key=lambda entry: entry.name)
+        ]
+        state.data["_commands"] = commands
+        state.data["_command_catalog"] = catalog
+
+        await async_signals.get("scene_commands_catalog").send(
+            SceneCommandsCatalogEvent(
+                scene=scene, event_type="scene_commands_catalog", catalog=catalog
+            )
+        )
+
+    async def collect_command_args(
+        self, command_node: "Command"
+    ) -> list[CommandArgument]:
+        """
+        Collects the argument definitions of a command module from its
+        FunctionArgument nodes.
+        """
+
+        args = []
+
+        for arg_node in await command_node.get_nodes(
+            fn_filter=lambda node: isinstance(node, FunctionArgument)
+        ):
+            arg_name = arg_node.get_property("name")
+            if not isinstance(arg_name, str) or not arg_name:
+                continue
+            args.append(
+                CommandArgument(name=arg_name, typ=arg_node.get_property("typ"))
+            )
+
+        return args
 
     async def init_agent_nodes(self, scene: "Scene", state: GraphState):
         """

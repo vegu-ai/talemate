@@ -41,11 +41,11 @@
       <template v-slot:[`item.name`]="{ item }">
         <div class="d-flex align-center">
           <v-avatar
-            :color="item.color || 'grey'"
+            :color="item.color || 'muted'"
             size="24"
             class="mr-2"
           >
-            <span class="text-caption white--text">{{ item.name.charAt(0).toUpperCase() }}</span>
+            <span class="text-body-small white--text">{{ item.name.charAt(0).toUpperCase() }}</span>
           </v-avatar>
           <span :class="item.active ? 'font-weight-medium' : 'text-medium-emphasis'">
             {{ item.name }}

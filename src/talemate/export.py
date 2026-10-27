@@ -15,6 +15,7 @@ import pydantic
 import structlog
 
 import talemate.save as save
+from talemate.changelog import export_scene_revisions
 from talemate.scene_agent_settings import AGENT_SETTINGS_DIRNAME
 from talemate.tale_mate import Scene
 
@@ -60,11 +61,19 @@ def scene_export_json(scene: Scene, options: ExportOptions) -> str:
     """
     data = scene.serialize
 
+    # the browser flags belong to the exported file, not to the recipient's copy
+    data["hidden"] = False
+    data["deprecated"] = False
+
     if options.reset_progress:
         data["history"] = []
         data["archived_history"] = [
-            ah for ah in data["archived_history"] if ah.get("end") is None
+            {key: value for key, value in ah.items() if key != "knowledge"}
+            for ah in data["archived_history"]
+            if ah.get("end") is None
         ]
+        if data.get("knowledge") is not None:
+            data["knowledge"] = {**data["knowledge"], "disclosures": []}
         data["layered_history"] = []
         data["world_state"].update(
             characters={},
@@ -72,7 +81,10 @@ def scene_export_json(scene: Scene, options: ExportOptions) -> str:
             places={},
             location=None,
             anchor_message_ids=[],
+            snapshot_provenance=None,
+            previous_snapshot=None,
         )
+        data["world_state"].pop("location_perspectives", None)
 
     return save.scene_data_dumps(data)
 
@@ -239,6 +251,9 @@ async def export_talemate_complete(scene: Scene, options: ExportOptions) -> byte
                     error=str(e),
                     filename=scene.restore_from,
                 )
+
+        if not options.reset_progress and scene.filename:
+            await export_scene_revisions(scene, temp_path / "data.db")
 
         # Create ZIP file
         with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as temp_zip:

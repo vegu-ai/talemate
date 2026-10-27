@@ -115,6 +115,55 @@ class TestEditorBaselines:
         )
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("repetition_handling", ["remove", "rewrite"])
+    async def test_revision_rewrite__decision_findings(
+        self,
+        active_context,
+        baseline_checker,
+        repetition_handling,
+    ):
+        editor = active_context
+        editor.actions["revision"].enabled = True
+        editor.actions["revision"].config["revision_method"].value = "rewrite"
+        editor.actions["revision"].config[
+            "repetition_handling"
+        ].value = repetition_handling
+
+        editor.client.send_prompt = AsyncMock(
+            return_value="<REVISION>The forest was silent.</REVISION>"
+        )
+
+        from talemate.agents.editor.revision import RevisionInformation
+
+        info = RevisionInformation(
+            text="The forest was dark and mysterious.",
+            character=None,
+        )
+        await editor.revision_rewrite(
+            info,
+            decision_findings=[
+                {
+                    "passage_id": "s1",
+                    "kind": "repetition",
+                    "text": "The forest was dark and mysterious.",
+                    "instructions": "Remove the repeated story beat.",
+                },
+                {
+                    "passage_id": "s1",
+                    "kind": "style",
+                    "text": "The forest was dark and mysterious.",
+                    "instructions": "Avoid stock adjectives.",
+                },
+            ],
+        )
+
+        baseline_checker(
+            capture_prompt(editor),
+            AGENT,
+            f"revision_rewrite__decision_findings__{repetition_handling}",
+        )
+
+    @pytest.mark.asyncio
     async def test_revision_unslop(
         self,
         active_context,

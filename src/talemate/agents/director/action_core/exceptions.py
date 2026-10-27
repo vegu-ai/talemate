@@ -1,3 +1,5 @@
+from talemate.game.focal.schema import CallRejected, CallOutcome
+
 __all__ = [
     "ActionFailed",
     "ActionRejected",
@@ -25,12 +27,23 @@ class UnknownAction(ValueError):
         super().__init__(f"Unknown action: {action_name}")
 
 
-class ActionRejected(IOError):
+class ActionRejected(CallRejected):
     """Raised when a user rejects an action."""
 
     focal_reraise: bool = True
 
-    def __init__(self, action_name: str, action_description: str):
+    def __init__(
+        self,
+        action_name: str,
+        action_description: str,
+        *,
+        reason: CallOutcome = "reject",
+        instructions: str = "",
+    ):
         self.action_name = action_name
         self.action_description = action_description
-        super().__init__(f"User REJECTED action: {action_name} -> {action_description}")
+        super().__init__(
+            f"Action {reason}: {action_name} -> {action_description}",
+            reason,
+            instructions,
+        )

@@ -1,6 +1,14 @@
 # :material-connection: Connections
 
-The **Connections** group of the application settings holds credentials for third party services and the environment variable store. Open it from the **:material-cog: Settings** tab in the top navigation.
+The **Connections** group of the application settings holds everything Talemate talks to: the LLM clients it generates with, the agents that use them, the optional decision model, credentials for third party services, and the environment variable store. It leads the sidebar — open it from the **:material-cog: Settings** tab in the top navigation.
+
+Its first three pages have their own documentation:
+
+- **:material-network-outline: Clients** — add, configure and remove the LLM backends Talemate generates with. See [Client configuration](../clients/client-configuration.md).
+- **:material-scale-balance: Decision Model** — the one optional model Talemate asks typed questions, off until you turn it on. See [Decision Model](decision-model.md).
+- **:material-transit-connection-variant: Agents** — choose which client each agent generates with and how it behaves, globally or [per scene](../agents/scene-overrides.md).
+
+The remaining two pages are described below.
 
 ## :material-key-variant: API Keys
 

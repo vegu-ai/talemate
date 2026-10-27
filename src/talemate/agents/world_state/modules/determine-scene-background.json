@@ -1,0 +1,1987 @@
+{
+  "title": "Determine Scene Background",
+  "id": "2ad76f9e-4a25-48da-a697-f825b70a6b17",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/world_state/determineSceneBackground",
+  "nodes": {
+    "aca9380b-142b-42ba-ab38-ffb0e53b4118": {
+      "title": "IN state",
+      "id": "aca9380b-142b-42ba-ab38-ffb0e53b4118",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": false,
+        "input_group": "",
+        "num": 0
+      },
+      "x": 20,
+      "y": 60,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node",
+      "height": 154
+    },
+    "0da89eae-6251-4c6a-9f0b-4d5b7ce29781": {
+      "title": "IN content",
+      "id": "0da89eae-6251-4c6a-9f0b-4d5b7ce29781",
+      "properties": {
+        "input_type": "str",
+        "input_name": "content",
+        "input_optional": false,
+        "input_group": "",
+        "num": 1
+      },
+      "x": 20,
+      "y": 240,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node",
+      "height": 154
+    },
+    "68cc656b-526b-46d8-b5b1-cb46f5f8c973": {
+      "title": "SET local.state",
+      "id": "68cc656b-526b-46d8-b5b1-cb46f5f8c973",
+      "properties": {
+        "name": "state",
+        "scope": "local"
+      },
+      "x": 290,
+      "y": 70,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "f7d15f2c-e903-4c93-9dbb-da79c1b991a6": {
+      "title": "SET local.content",
+      "id": "f7d15f2c-e903-4c93-9dbb-da79c1b991a6",
+      "properties": {
+        "name": "content",
+        "scope": "local"
+      },
+      "x": 290,
+      "y": 250,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "4e40caaf-d01d-4c67-82a0-41cad0e9d663": {
+      "title": "Stage -30",
+      "id": "4e40caaf-d01d-4c67-82a0-41cad0e9d663",
+      "properties": {
+        "stage": -30
+      },
+      "x": 560,
+      "y": 150,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node",
+      "height": 118
+    },
+    "1d158a5c-0f4e-4134-9ad9-fbe44bee361a": {
+      "title": "OUT state",
+      "id": "1d158a5c-0f4e-4134-9ad9-fbe44bee361a",
+      "properties": {
+        "output_type": "any",
+        "output_name": "state",
+        "num": 0
+      },
+      "x": 830,
+      "y": 70,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node",
+      "height": 106
+    },
+    "7662fd33-5e3a-4bbc-a2e7-053ffdd0e036": {
+      "title": "OUT content",
+      "id": "7662fd33-5e3a-4bbc-a2e7-053ffdd0e036",
+      "properties": {
+        "output_type": "str",
+        "output_name": "content",
+        "num": 1
+      },
+      "x": 830,
+      "y": 250,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node",
+      "height": 106
+    },
+    "293f449a-113b-4766-8bb3-4de131511a77": {
+      "title": "Module Style",
+      "id": "293f449a-113b-4766-8bb3-4de131511a77",
+      "properties": {
+        "title_color": "#3d315b",
+        "node_color": "#27233a",
+        "auto_title": null,
+        "icon": "F0974"
+      },
+      "x": 1120,
+      "y": 70,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node",
+      "height": 110
+    },
+    "e62b306e-f7df-4a4d-bbc0-dacebdeb98ac": {
+      "title": "Generation Running",
+      "id": "e62b306e-f7df-4a4d-bbc0-dacebdeb98ac",
+      "properties": {
+        "purpose": "world_state.scene_background"
+      },
+      "x": 350,
+      "y": 520,
+      "width": 230,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/GenerationRunning",
+      "base_type": "core/Node",
+      "height": 78
+    },
+    "c9430f73-aeb9-4eb1-970e-14bf01b56366": {
+      "title": "Background generating",
+      "id": "c9430f73-aeb9-4eb1-970e-14bf01b56366",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 620,
+      "y": 520,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node",
+      "height": 78
+    },
+    "672faa1c-23a3-4979-a9ab-b18308af694b": {
+      "title": "Stop",
+      "id": "672faa1c-23a3-4979-a9ab-b18308af694b",
+      "properties": {
+        "exception": "StopGraphExecution"
+      },
+      "x": 880,
+      "y": 520,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/Stop",
+      "base_type": "core/Node",
+      "height": 78
+    },
+    "8a3218a1-a181-4f03-8db9-5117fac21036": {
+      "title": "Stage -20",
+      "id": "8a3218a1-a181-4f03-8db9-5117fac21036",
+      "properties": {
+        "stage": -20
+      },
+      "x": 1140,
+      "y": 500,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node",
+      "height": 118
+    },
+    "a472e330-fb81-48e2-b792-fc86370212b5": {
+      "title": "Worldstate Settings",
+      "id": "a472e330-fb81-48e2-b792-fc86370212b5",
+      "properties": {},
+      "x": 350,
+      "y": 800,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/world_state/Settings",
+      "base_type": "core/Node",
+      "height": 30
+    },
+    "37a2642d-0b43-43c5-9c76-5fcb5cf8aa24": {
+      "title": "true",
+      "id": "37a2642d-0b43-43c5-9c76-5fcb5cf8aa24",
+      "properties": {
+        "value": true
+      },
+      "x": 350,
+      "y": 870,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node",
+      "height": 58
+    },
+    "326c2b7b-283a-4f5a-8d04-e0d8842fbbac": {
+      "title": "Count background checks",
+      "id": "326c2b7b-283a-4f5a-8d04-e0d8842fbbac",
+      "properties": {
+        "name": "scene_background_check_cnt",
+        "scope": "scene",
+        "increment": 1,
+        "reset": null,
+        "reset_cap": "0",
+        "agent": "world_state"
+      },
+      "x": 620,
+      "y": 770,
+      "width": 288,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/CounterAgentState",
+      "base_type": "core/Node",
+      "height": 318
+    },
+    "105ad5e9-b4c2-4565-a1c0-8e4cb1745af3": {
+      "title": "Due",
+      "id": "105ad5e9-b4c2-4565-a1c0-8e4cb1745af3",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 960,
+      "y": 800,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node",
+      "height": 78
+    },
+    "56a9a581-613f-48b0-80d7-f14447c0dd66": {
+      "title": "Stop",
+      "id": "56a9a581-613f-48b0-80d7-f14447c0dd66",
+      "properties": {
+        "exception": "StopGraphExecution"
+      },
+      "x": 1220,
+      "y": 800,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/Stop",
+      "base_type": "core/Node",
+      "height": 78
+    },
+    "c50b336a-c832-4193-af46-5cabf20eb34c": {
+      "title": "Stage -10",
+      "id": "c50b336a-c832-4193-af46-5cabf20eb34c",
+      "properties": {
+        "stage": -10
+      },
+      "x": 1480,
+      "y": 780,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node",
+      "height": 118
+    },
+    "bd1619cc-af3e-409f-b85b-b205207c6d7d": {
+      "title": "Search Assets",
+      "id": "bd1619cc-af3e-409f-b85b-b205207c6d7d",
+      "properties": {
+        "vis_type": "SCENE_BACKGROUND",
+        "character_name": "",
+        "tags": [],
+        "reference_vis_types": [],
+        "tag_match_mode": "all"
+      },
+      "x": 350,
+      "y": 1210,
+      "width": 329,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SearchAssets",
+      "base_type": "core/Node",
+      "height": 274
+    },
+    "2f019631-cff6-4ec7-920d-fe6b9bad9d43": {
+      "title": "Get Assets",
+      "id": "2f019631-cff6-4ec7-920d-fe6b9bad9d43",
+      "properties": {
+        "asset_ids": []
+      },
+      "x": 720,
+      "y": 1210,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/GetAssets",
+      "base_type": "core/Node",
+      "height": 98
+    },
+    "e2da7334-afcd-4b67-ac06-2f5684d90c89": {
+      "title": "SET local.assets",
+      "id": "e2da7334-afcd-4b67-ac06-2f5684d90c89",
+      "properties": {
+        "name": "assets",
+        "scope": "local"
+      },
+      "x": 980,
+      "y": 1210,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "3b46e7e8-7bed-4271-a58c-78e577aa20df": {
+      "title": "Get Scene State",
+      "id": "3b46e7e8-7bed-4271-a58c-78e577aa20df",
+      "properties": {},
+      "x": 350,
+      "y": 1520,
+      "width": 140,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetSceneState",
+      "base_type": "core/Node",
+      "height": 106
+    },
+    "3f437d1e-90e2-487a-9e83-3e49379fbeec": {
+      "title": "GET obj.assets",
+      "id": "3f437d1e-90e2-487a-9e83-3e49379fbeec",
+      "properties": {
+        "attribute": "assets"
+      },
+      "x": 530,
+      "y": 1520,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node",
+      "height": 98
+    },
+    "f38fe75e-714f-42ee-b7fe-c317b22626bf": {
+      "title": "GET obj.backdrop",
+      "id": "f38fe75e-714f-42ee-b7fe-c317b22626bf",
+      "properties": {
+        "attribute": "backdrop"
+      },
+      "x": 780,
+      "y": 1520,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node",
+      "height": 98
+    },
+    "4e06206e-b882-43e7-a787-12f559a79e65": {
+      "title": "SET local.current",
+      "id": "4e06206e-b882-43e7-a787-12f559a79e65",
+      "properties": {
+        "name": "current",
+        "scope": "local"
+      },
+      "x": 1030,
+      "y": 1520,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "0926ce5a-44c8-4e67-8143-5a4494cf4489": {
+      "title": "Worldstate Settings",
+      "id": "0926ce5a-44c8-4e67-8143-5a4494cf4489",
+      "properties": {},
+      "x": 350,
+      "y": 1780,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/world_state/Settings",
+      "base_type": "core/Node",
+      "height": 30
+    },
+    "615ce0de-c891-4d23-a746-23e77cde3316": {
+      "title": "Backend Status",
+      "id": "615ce0de-c891-4d23-a746-23e77cde3316",
+      "properties": {},
+      "x": 350,
+      "y": 1850,
+      "width": 170,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/BackendStatus",
+      "base_type": "core/Node",
+      "height": 66
+    },
+    "44d8fbd7-39bd-4005-8f6a-04c9e2e15c73": {
+      "title": "Image backend ready",
+      "id": "44d8fbd7-39bd-4005-8f6a-04c9e2e15c73",
+      "properties": {},
+      "x": 560,
+      "y": 1850,
+      "width": 140,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ORRouter",
+      "base_type": "core/Node",
+      "height": 106
+    },
+    "d0cd57ac-44fe-4221-bb4b-d3f3cecb7261": {
+      "title": "Generation allowed",
+      "id": "d0cd57ac-44fe-4221-bb4b-d3f3cecb7261",
+      "properties": {},
+      "x": 760,
+      "y": 1780,
+      "width": 140,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ANDRouter",
+      "base_type": "core/Node",
+      "height": 106
+    },
+    "d13e0862-9572-4527-bd7f-2c1b5a1ee18d": {
+      "title": "SET local.generation_allowed",
+      "id": "d13e0862-9572-4527-bd7f-2c1b5a1ee18d",
+      "properties": {
+        "name": "generation_allowed",
+        "scope": "local"
+      },
+      "x": 960,
+      "y": 1780,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "3eeecdc4-e279-4360-a196-4479efa38acf": {
+      "title": "Stage 0",
+      "id": "3eeecdc4-e279-4360-a196-4479efa38acf",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1320,
+      "y": 1500,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node",
+      "height": 118
+    },
+    "52435a42-0d70-4f58-85b0-9b196d07a199": {
+      "title": "world_state",
+      "id": "52435a42-0d70-4f58-85b0-9b196d07a199",
+      "properties": {
+        "agent_name": "world_state"
+      },
+      "x": 25,
+      "y": 2130,
+      "width": 220,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node",
+      "height": 58
+    },
+    "8127fcc1-d9f5-472f-b4b6-e59865ddb058": {
+      "title": "GET local.state",
+      "id": "8127fcc1-d9f5-472f-b4b6-e59865ddb058",
+      "properties": {
+        "name": "state",
+        "scope": "local"
+      },
+      "x": 25,
+      "y": 2210,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "042c2574-4cee-47e7-8ddd-8d98daa7c864": {
+      "title": "Load Template",
+      "id": "042c2574-4cee-47e7-8ddd-8d98daa7c864",
+      "properties": {
+        "scope": "world_state",
+        "name": "determine-background"
+      },
+      "x": 25,
+      "y": 2270,
+      "width": 224,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/LoadTemplate",
+      "base_type": "core/Node",
+      "height": 102
+    },
+    "447ac2a0-e45a-443a-9f03-fa4f13778018": {
+      "title": "GET local.content",
+      "id": "447ac2a0-e45a-443a-9f03-fa4f13778018",
+      "properties": {
+        "name": "content",
+        "scope": "local"
+      },
+      "x": 25,
+      "y": 2410,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "abcd588e-53a0-4eef-a76d-7c6beff31055": {
+      "title": "GET local.assets",
+      "id": "abcd588e-53a0-4eef-a76d-7c6beff31055",
+      "properties": {
+        "name": "assets",
+        "scope": "local"
+      },
+      "x": 25,
+      "y": 2450,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "151c3dcb-4e75-4100-b429-d9004029490d": {
+      "title": "GET local.current",
+      "id": "151c3dcb-4e75-4100-b429-d9004029490d",
+      "properties": {
+        "name": "current",
+        "scope": "local"
+      },
+      "x": 25,
+      "y": 2490,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "a5e6bb1c-74fa-4715-b546-f52a1da19f9a": {
+      "title": "false",
+      "id": "a5e6bb1c-74fa-4715-b546-f52a1da19f9a",
+      "properties": {
+        "value": false
+      },
+      "x": 25,
+      "y": 2540,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node",
+      "height": 58
+    },
+    "c74f6e8b-c8f0-4c00-b832-9b39612024ab": {
+      "title": "GET local.generation_allowed",
+      "id": "c74f6e8b-c8f0-4c00-b832-9b39612024ab",
+      "properties": {
+        "name": "generation_allowed",
+        "scope": "local"
+      },
+      "x": 25,
+      "y": 2580,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "99460322-d4c6-4524-a21a-efd543e21f8d": {
+      "title": "Jinja2 Format",
+      "id": "99460322-d4c6-4524-a21a-efd543e21f8d",
+      "properties": {
+        "template": ""
+      },
+      "x": 295,
+      "y": 2330,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "base_type": "core/DynamicSocketNodeBase",
+      "height": 240,
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ]
+    },
+    "7f3a8c97-1f03-46b7-a148-bb34601b843e": {
+      "title": "Build Prompt",
+      "id": "7f3a8c97-1f03-46b7-a148-bb34601b843e",
+      "properties": {
+        "template_file": "base",
+        "scope": "common",
+        "instructions": "",
+        "reserved_tokens": 312,
+        "limit_max_tokens": 4096,
+        "include_scene_intent": true,
+        "include_extra_context": false,
+        "include_memory_context": false,
+        "include_scene_context": true,
+        "include_character_context": false,
+        "include_gamestate_context": false,
+        "memory_prompt": "",
+        "prefill_prompt": "<ASSET_ID>",
+        "return_prefill_prompt": true,
+        "dedupe_enabled": true,
+        "response_length": 512,
+        "technical": false
+      },
+      "x": 565,
+      "y": 2130,
+      "width": 304,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/BuildPrompt",
+      "base_type": "core/Node",
+      "height": 542
+    },
+    "ea773e0e-8b3f-478d-ba6b-f0f73f0380fe": {
+      "title": "Anchor: asset_id",
+      "id": "ea773e0e-8b3f-478d-ba6b-f0f73f0380fe",
+      "properties": {
+        "name": "asset_id",
+        "left": "<ASSET_ID>",
+        "right": "</ASSET_ID>",
+        "fallback_to_full": false,
+        "trim": true
+      },
+      "x": 920,
+      "y": 2300,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "response/AnchorExtractor",
+      "base_type": "core/Node",
+      "height": 194
+    },
+    "95d61555-cfbd-4030-9aa9-01b6cbc4731a": {
+      "title": "Anchor: name",
+      "id": "95d61555-cfbd-4030-9aa9-01b6cbc4731a",
+      "properties": {
+        "name": "name",
+        "left": "<NAME>",
+        "right": "</NAME>",
+        "fallback_to_full": false,
+        "trim": true
+      },
+      "x": 920,
+      "y": 2338,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "response/AnchorExtractor",
+      "base_type": "core/Node",
+      "height": 194
+    },
+    "bcee0eb4-745d-4d44-a85d-91374c004b85": {
+      "title": "Anchor: instructions",
+      "id": "bcee0eb4-745d-4d44-a85d-91374c004b85",
+      "properties": {
+        "name": "instructions",
+        "left": "<INSTRUCTIONS>",
+        "right": "</INSTRUCTIONS>",
+        "fallback_to_full": false,
+        "trim": true
+      },
+      "x": 920,
+      "y": 2378,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "response/AnchorExtractor",
+      "base_type": "core/Node",
+      "height": 194
+    },
+    "ba53068f-4b09-4186-86ed-143001b47840": {
+      "title": "Anchor list: references",
+      "id": "ba53068f-4b09-4186-86ed-143001b47840",
+      "properties": {
+        "name": "references",
+        "left": "<REFERENCES>",
+        "right": "</REFERENCES>",
+        "separator": "[\\s,;]+",
+        "fallback_to_full": false
+      },
+      "x": 920,
+      "y": 2418,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "response/AnchorListExtractor",
+      "base_type": "core/Node",
+      "height": 194
+    },
+    "dd9ea004-6f34-4cdb-bcea-44139558a63b": {
+      "title": "Dict Collector",
+      "id": "dd9ea004-6f34-4cdb-bcea-44139558a63b",
+      "properties": {},
+      "x": 1185,
+      "y": 2290,
+      "width": 140,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictCollector",
+      "base_type": "core/DynamicSocketNodeBase",
+      "height": 140,
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ]
+    },
+    "cdc2d884-d28e-4df1-8ffc-40d6411fb91e": {
+      "title": "Response Spec",
+      "id": "cdc2d884-d28e-4df1-8ffc-40d6411fb91e",
+      "properties": {
+        "required": []
+      },
+      "x": 1375,
+      "y": 2310,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "response/ResponseSpec",
+      "base_type": "core/Node",
+      "height": 78
+    },
+    "9b2d29e6-2d62-4ab9-af66-de3f44b70726": {
+      "title": "Determine Background",
+      "id": "9b2d29e6-2d62-4ab9-af66-de3f44b70726",
+      "properties": {
+        "data_output": false,
+        "data_multiple": false,
+        "response_length": 512,
+        "action_type": "world_state",
+        "attempts": 1,
+        "kind": "background",
+        "reasoning_effort": "",
+        "disable_reasoning": false
+      },
+      "x": 1625,
+      "y": 2130,
+      "width": 270,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/world_state/DetermineVisual",
+      "base_type": "core/Node",
+      "height": 450
+    },
+    "8ab93181-72b8-486c-891b-dc28c6846aae": {
+      "title": "GET obj.asset_id",
+      "id": "8ab93181-72b8-486c-891b-dc28c6846aae",
+      "properties": {
+        "attribute": "asset_id"
+      },
+      "x": 1945,
+      "y": 2130,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node",
+      "height": 98
+    },
+    "74710ce5-2401-42db-a385-1e5664179f33": {
+      "title": "No asset id",
+      "id": "74710ce5-2401-42db-a385-1e5664179f33",
+      "properties": {
+        "value": ""
+      },
+      "x": 1945,
+      "y": 2250,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node",
+      "height": 58
+    },
+    "0d62805f-cfd8-47e2-abb5-3cf0d05e34a1": {
+      "title": "Asset id or empty",
+      "id": "0d62805f-cfd8-47e2-abb5-3cf0d05e34a1",
+      "properties": {},
+      "x": 2195,
+      "y": 2130,
+      "width": 140,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node",
+      "height": 86
+    },
+    "e57cc20d-6929-4b9c-8731-637179ac726d": {
+      "title": "Trim",
+      "id": "e57cc20d-6929-4b9c-8731-637179ac726d",
+      "properties": {
+        "mode": "both",
+        "chars": "`\" "
+      },
+      "x": 2375,
+      "y": 2130,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Trim",
+      "base_type": "core/Node",
+      "height": 102
+    },
+    "be1be993-3c92-42b8-929f-901d7c2826fa": {
+      "title": "SET local.asset_id",
+      "id": "be1be993-3c92-42b8-929f-901d7c2826fa",
+      "properties": {
+        "name": "asset_id",
+        "scope": "local"
+      },
+      "x": 2625,
+      "y": 2130,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "411b58f3-6702-4fe4-b331-9d4cb3a02c43": {
+      "title": "GET obj.name",
+      "id": "411b58f3-6702-4fe4-b331-9d4cb3a02c43",
+      "properties": {
+        "attribute": "name"
+      },
+      "x": 1945,
+      "y": 2310,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node",
+      "height": 98
+    },
+    "76fd8964-c386-4be8-878c-f89e47d16a35": {
+      "title": "SET local.name",
+      "id": "76fd8964-c386-4be8-878c-f89e47d16a35",
+      "properties": {
+        "name": "name",
+        "scope": "local"
+      },
+      "x": 2195,
+      "y": 2310,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "3fec78cb-96dd-4948-b7b9-679ebde1c466": {
+      "title": "GET obj.instructions",
+      "id": "3fec78cb-96dd-4948-b7b9-679ebde1c466",
+      "properties": {
+        "attribute": "instructions"
+      },
+      "x": 1945,
+      "y": 2450,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node",
+      "height": 98
+    },
+    "516db043-257c-4131-b577-f678ff37e721": {
+      "title": "SET local.instructions",
+      "id": "516db043-257c-4131-b577-f678ff37e721",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 2195,
+      "y": 2450,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "eee36977-6b19-4663-bd90-960553113694": {
+      "title": "GET obj.references",
+      "id": "eee36977-6b19-4663-bd90-960553113694",
+      "properties": {
+        "attribute": "references"
+      },
+      "x": 1945,
+      "y": 2590,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node",
+      "height": 98
+    },
+    "8ca51acb-44c5-4763-9939-6efb1cf30ed5": {
+      "title": "SET local.references",
+      "id": "8ca51acb-44c5-4763-9939-6efb1cf30ed5",
+      "properties": {
+        "name": "references",
+        "scope": "local"
+      },
+      "x": 2195,
+      "y": 2590,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "7efac9a5-ebe3-46d8-8a5f-76d2cc3cf33b": {
+      "title": "Stage 1",
+      "id": "7efac9a5-ebe3-46d8-8a5f-76d2cc3cf33b",
+      "properties": {
+        "stage": 1
+      },
+      "x": 2895,
+      "y": 2350,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node",
+      "height": 118
+    },
+    "0c71ddef-2622-4a0d-ab65-10c7c4a3578c": {
+      "title": "GET local.content",
+      "id": "0c71ddef-2622-4a0d-ab65-10c7c4a3578c",
+      "properties": {
+        "name": "content",
+        "scope": "local"
+      },
+      "x": 1625,
+      "y": 2610,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "f1640f4d-140c-4b45-aee1-6827ca85e4b7": {
+      "title": "GET local.assets",
+      "id": "f1640f4d-140c-4b45-aee1-6827ca85e4b7",
+      "properties": {
+        "name": "assets",
+        "scope": "local"
+      },
+      "x": 1625,
+      "y": 2650,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "75503518-f7df-4883-ba5d-83f4014004d5": {
+      "title": "GET local.asset_id",
+      "id": "75503518-f7df-4883-ba5d-83f4014004d5",
+      "properties": {
+        "name": "asset_id",
+        "scope": "local"
+      },
+      "x": 20,
+      "y": 2840,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "07addc54-e0d1-4742-80be-2c9a1a5c130b": {
+      "title": "Has asset id",
+      "id": "07addc54-e0d1-4742-80be-2c9a1a5c130b",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 290,
+      "y": 2830,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node",
+      "height": 78
+    },
+    "6eeac7cc-6574-4d2f-8d35-58bda29d914b": {
+      "title": "Asset Exists",
+      "id": "6eeac7cc-6574-4d2f-8d35-58bda29d914b",
+      "properties": {
+        "asset_id": "",
+        "return_bool": false,
+        "allow_partial": false
+      },
+      "x": 550,
+      "y": 2830,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/AssetExists",
+      "base_type": "core/Node",
+      "height": 126
+    },
+    "aea16265-1cfe-43c8-8d22-ec096d08e9f4": {
+      "title": "Set Scene Backdrop",
+      "id": "aea16265-1cfe-43c8-8d22-ec096d08e9f4",
+      "properties": {},
+      "x": 810,
+      "y": 2830,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SetSceneBackdrop",
+      "base_type": "core/Node",
+      "height": 120
+    },
+    "cd1e2f10-97b0-40e9-9d20-1949134637b2": {
+      "title": "Stop",
+      "id": "cd1e2f10-97b0-40e9-9d20-1949134637b2",
+      "properties": {
+        "exception": "StopGraphExecution"
+      },
+      "x": 1080,
+      "y": 2830,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/Stop",
+      "base_type": "core/Node",
+      "height": 78
+    },
+    "bc54f3dd-89b3-4b2a-90ed-f54e660833c5": {
+      "title": "Stage 2",
+      "id": "bc54f3dd-89b3-4b2a-90ed-f54e660833c5",
+      "properties": {
+        "stage": 2
+      },
+      "x": 1340,
+      "y": 2820,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node",
+      "height": 118
+    },
+    "62071982-5e0c-4e97-89af-ae62af3b08de": {
+      "title": "false",
+      "id": "62071982-5e0c-4e97-89af-ae62af3b08de",
+      "properties": {
+        "value": false
+      },
+      "x": 20,
+      "y": 3140,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node",
+      "height": 58
+    },
+    "4ae2ceb6-3962-43d7-9a65-00fce4c79359": {
+      "title": "GET local.generation_allowed",
+      "id": "4ae2ceb6-3962-43d7-9a65-00fce4c79359",
+      "properties": {
+        "name": "generation_allowed",
+        "scope": "local"
+      },
+      "x": 20,
+      "y": 3100,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "c545ea6d-2108-44f5-8591-b50c31586b7c": {
+      "title": "Generation allowed",
+      "id": "c545ea6d-2108-44f5-8591-b50c31586b7c",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 290,
+      "y": 3090,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node",
+      "height": 78
+    },
+    "45290b4b-be41-433e-bafe-a3001a65fd1a": {
+      "title": "Stop",
+      "id": "45290b4b-be41-433e-bafe-a3001a65fd1a",
+      "properties": {
+        "exception": "StopGraphExecution"
+      },
+      "x": 550,
+      "y": 3090,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/Stop",
+      "base_type": "core/Node",
+      "height": 78
+    },
+    "1a9b409d-4ae8-48e1-9161-96666bd1954e": {
+      "title": "Stage 3",
+      "id": "1a9b409d-4ae8-48e1-9161-96666bd1954e",
+      "properties": {
+        "stage": 3
+      },
+      "x": 810,
+      "y": 3070,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node",
+      "height": 118
+    },
+    "7a5df145-1dcd-497d-868a-09f2e25f8013": {
+      "title": "GET local.state",
+      "id": "7a5df145-1dcd-497d-868a-09f2e25f8013",
+      "properties": {
+        "name": "state",
+        "scope": "local"
+      },
+      "x": 20,
+      "y": 3280,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "62c30f2e-f941-4a62-9d28-c218dbf5f517": {
+      "title": "GET local.name",
+      "id": "62c30f2e-f941-4a62-9d28-c218dbf5f517",
+      "properties": {
+        "name": "name",
+        "scope": "local"
+      },
+      "x": 20,
+      "y": 3320,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "cf85e5d9-7e5b-4fb5-8c1e-50653bbbc5fb": {
+      "title": "true",
+      "id": "cf85e5d9-7e5b-4fb5-8c1e-50653bbbc5fb",
+      "properties": {
+        "value": true
+      },
+      "x": 20,
+      "y": 3370,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node",
+      "height": 58
+    },
+    "bf0f58ec-8a61-4b9f-9d47-dd1f5af70821": {
+      "title": "Make Asset Attachment Context",
+      "id": "bf0f58ec-8a61-4b9f-9d47-dd1f5af70821",
+      "properties": {
+        "asset_name": "",
+        "tags": [],
+        "allow_auto_attach": false,
+        "allow_override": false,
+        "delete_old": false,
+        "message_ids": [],
+        "scene_cover": false,
+        "character_cover": false,
+        "override_scene_cover": false,
+        "override_character_cover": false,
+        "default_avatar": false,
+        "current_avatar": false,
+        "override_default_avatar": false,
+        "override_current_avatar": false,
+        "scene_backdrop": true
+      },
+      "x": 290,
+      "y": 3260,
+      "width": 413,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/MakeAssetAttachmentContext",
+      "base_type": "core/Node",
+      "height": 690
+    },
+    "dc27477f-0be2-4672-b557-580bdeaa47fc": {
+      "title": "SCENE_BACKGROUND",
+      "id": "dc27477f-0be2-4672-b557-580bdeaa47fc",
+      "properties": {
+        "value": "SCENE_BACKGROUND"
+      },
+      "x": 760,
+      "y": 3260,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node",
+      "height": 58
+    },
+    "3f4cdfc3-16f0-43b3-8797-bdb863ca3191": {
+      "title": "Purpose",
+      "id": "3f4cdfc3-16f0-43b3-8797-bdb863ca3191",
+      "properties": {
+        "value": "world_state.scene_background"
+      },
+      "x": 760,
+      "y": 3300,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node",
+      "height": 58
+    },
+    "bffcb37f-3271-4f0d-83fd-06bd089adcdc": {
+      "title": "GET local.instructions",
+      "id": "bffcb37f-3271-4f0d-83fd-06bd089adcdc",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 760,
+      "y": 3340,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "db5b2313-a31d-49cd-ba62-921eace92d76": {
+      "title": "GET local.references",
+      "id": "db5b2313-a31d-49cd-ba62-921eace92d76",
+      "properties": {
+        "name": "references",
+        "scope": "local"
+      },
+      "x": 760,
+      "y": 3380,
+      "width": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node",
+      "height": 122
+    },
+    "a5f0ddb8-dc44-40f6-bd42-391217919f50": {
+      "title": "Generate Visual Asset",
+      "id": "a5f0ddb8-dc44-40f6-bd42-391217919f50",
+      "properties": {},
+      "x": 1020,
+      "y": 3260,
+      "width": 262,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/generateVisualAsset",
+      "base_type": "core/Graph",
+      "height": 280
+    },
+    "529d61b4-aee0-414c-b274-3ad3b3db0588": {
+      "title": "Stage 4",
+      "id": "529d61b4-aee0-414c-b274-3ad3b3db0588",
+      "properties": {
+        "stage": 4
+      },
+      "x": 1340,
+      "y": 3260,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node",
+      "height": 118
+    },
+    "8d6e5496-11a4-44c2-83d7-651a6e1ea66c": {
+      "title": "IN automatic_source",
+      "id": "8d6e5496-11a4-44c2-83d7-651a6e1ea66c",
+      "properties": {
+        "input_type": "str",
+        "input_name": "automatic_source",
+        "input_optional": true,
+        "input_group": "",
+        "num": 2
+      },
+      "x": 1420,
+      "y": 73,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "748859ef-fc14-4232-b827-2ad84eac5edd": {
+      "title": "SET local.automatic_source",
+      "id": "748859ef-fc14-4232-b827-2ad84eac5edd",
+      "properties": {
+        "name": "automatic_source",
+        "scope": "local"
+      },
+      "x": 1670,
+      "y": 83,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3ffce961-ddcf-475f-bf38-f75f4e37b683": {
+      "title": "Stage -30",
+      "id": "3ffce961-ddcf-475f-bf38-f75f4e37b683",
+      "properties": {
+        "stage": -30
+      },
+      "x": 1930,
+      "y": 83,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "5eaa0851-69ac-4f35-8cf0-d1d2280f9586": {
+      "title": "OUT automatic_source",
+      "id": "5eaa0851-69ac-4f35-8cf0-d1d2280f9586",
+      "properties": {
+        "output_type": "str",
+        "output_name": "automatic_source",
+        "num": 2
+      },
+      "x": 2200,
+      "y": 83,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "622bd091-eec3-46c4-a033-f68b1849db8f": {
+      "title": "Visual Settings",
+      "id": "622bd091-eec3-46c4-a033-f68b1849db8f",
+      "properties": {},
+      "x": 1780,
+      "y": 520,
+      "width": 405,
+      "height": 2406,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/visual/Settings",
+      "base_type": "core/Node"
+    },
+    "fd26d373-a980-434b-a560-a74a6589fff7": {
+      "title": "GET local.automatic_source",
+      "id": "fd26d373-a980-434b-a560-a74a6589fff7",
+      "properties": {
+        "name": "automatic_source",
+        "scope": "local"
+      },
+      "x": 1780,
+      "y": 600,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "24642799-5e8c-4202-8e14-3ca4183bcdb8": {
+      "title": "As Bool",
+      "id": "24642799-5e8c-4202-8e14-3ca4183bcdb8",
+      "properties": {
+        "default": false
+      },
+      "x": 2030,
+      "y": 610,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "d9fa59c6-34f4-4e68-be34-adfe38754fa8": {
+      "title": "true",
+      "id": "d9fa59c6-34f4-4e68-be34-adfe38754fa8",
+      "properties": {
+        "value": true
+      },
+      "x": 2030,
+      "y": 520,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "c60a8d3d-8b5b-41b4-9e5d-79aa41a32413": {
+      "title": "Automatic request allowed",
+      "id": "c60a8d3d-8b5b-41b4-9e5d-79aa41a32413",
+      "properties": {},
+      "x": 2290,
+      "y": 520,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitch",
+      "base_type": "core/Node"
+    },
+    "fa297e1b-9fc5-4ab7-b9fc-ee04bf077046": {
+      "title": "SET local.automatic_generation_allowed",
+      "id": "fa297e1b-9fc5-4ab7-b9fc-ee04bf077046",
+      "properties": {
+        "name": "automatic_generation_allowed",
+        "scope": "local"
+      },
+      "x": 2550,
+      "y": 520,
+      "width": 280,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "f535c09a-4868-49f1-ab85-f93b9214d8c2": {
+      "title": "Stage -5",
+      "id": "f535c09a-4868-49f1-ab85-f93b9214d8c2",
+      "properties": {
+        "stage": -5
+      },
+      "x": 2860,
+      "y": 520,
+      "width": 170,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "e63d2a9e-7078-491f-92cb-028a18c643ae": {
+      "title": "GET local.automatic_generation_allowed",
+      "id": "e63d2a9e-7078-491f-92cb-028a18c643ae",
+      "properties": {
+        "name": "automatic_generation_allowed",
+        "scope": "local"
+      },
+      "x": 590,
+      "y": 1740,
+      "width": 280,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "6d36a64f-8c96-4397-9902-df4b50667d20": {
+      "title": "GET local.automatic_source",
+      "id": "6d36a64f-8c96-4397-9902-df4b50667d20",
+      "properties": {
+        "name": "automatic_source",
+        "scope": "local"
+      },
+      "x": 760,
+      "y": 3420,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "aca9380b-142b-42ba-ab38-ffb0e53b4118.value": [
+      "68cc656b-526b-46d8-b5b1-cb46f5f8c973.value"
+    ],
+    "0da89eae-6251-4c6a-9f0b-4d5b7ce29781.value": [
+      "f7d15f2c-e903-4c93-9dbb-da79c1b991a6.value"
+    ],
+    "68cc656b-526b-46d8-b5b1-cb46f5f8c973.value": [
+      "4e40caaf-d01d-4c67-82a0-41cad0e9d663.state"
+    ],
+    "f7d15f2c-e903-4c93-9dbb-da79c1b991a6.value": [
+      "4e40caaf-d01d-4c67-82a0-41cad0e9d663.state_b"
+    ],
+    "4e40caaf-d01d-4c67-82a0-41cad0e9d663.state": [
+      "1d158a5c-0f4e-4134-9ad9-fbe44bee361a.value"
+    ],
+    "4e40caaf-d01d-4c67-82a0-41cad0e9d663.state_b": [
+      "7662fd33-5e3a-4bbc-a2e7-053ffdd0e036.value"
+    ],
+    "e62b306e-f7df-4a4d-bbc0-dacebdeb98ac.running": [
+      "c9430f73-aeb9-4eb1-970e-14bf01b56366.value"
+    ],
+    "c9430f73-aeb9-4eb1-970e-14bf01b56366.yes": [
+      "672faa1c-23a3-4979-a9ab-b18308af694b.state"
+    ],
+    "672faa1c-23a3-4979-a9ab-b18308af694b.state": [
+      "8a3218a1-a181-4f03-8db9-5117fac21036.state"
+    ],
+    "a472e330-fb81-48e2-b792-fc86370212b5.backgrounds_selection_frequency": [
+      "326c2b7b-283a-4f5a-8d04-e0d8842fbbac.reset_cap"
+    ],
+    "37a2642d-0b43-43c5-9c76-5fcb5cf8aa24.value": [
+      "326c2b7b-283a-4f5a-8d04-e0d8842fbbac.state"
+    ],
+    "326c2b7b-283a-4f5a-8d04-e0d8842fbbac.new_cycle": [
+      "105ad5e9-b4c2-4565-a1c0-8e4cb1745af3.value"
+    ],
+    "105ad5e9-b4c2-4565-a1c0-8e4cb1745af3.no": [
+      "56a9a581-613f-48b0-80d7-f14447c0dd66.state"
+    ],
+    "56a9a581-613f-48b0-80d7-f14447c0dd66.state": [
+      "c50b336a-c832-4193-af46-5cabf20eb34c.state"
+    ],
+    "bd1619cc-af3e-409f-b85b-b205207c6d7d.asset_ids": [
+      "2f019631-cff6-4ec7-920d-fe6b9bad9d43.asset_ids"
+    ],
+    "2f019631-cff6-4ec7-920d-fe6b9bad9d43.assets": [
+      "e2da7334-afcd-4b67-ac06-2f5684d90c89.value"
+    ],
+    "3b46e7e8-7bed-4271-a58c-78e577aa20df.scene": [
+      "3f437d1e-90e2-487a-9e83-3e49379fbeec.object"
+    ],
+    "3f437d1e-90e2-487a-9e83-3e49379fbeec.value": [
+      "f38fe75e-714f-42ee-b7fe-c317b22626bf.object"
+    ],
+    "f38fe75e-714f-42ee-b7fe-c317b22626bf.value": [
+      "4e06206e-b882-43e7-a787-12f559a79e65.value"
+    ],
+    "0926ce5a-44c8-4e67-8143-5a4494cf4489.backgrounds_generate_new": [
+      "d0cd57ac-44fe-4221-bb4b-d3f3cecb7261.a"
+    ],
+    "615ce0de-c891-4d23-a746-23e77cde3316.can_generate_images": [
+      "44d8fbd7-39bd-4005-8f6a-04c9e2e15c73.a"
+    ],
+    "615ce0de-c891-4d23-a746-23e77cde3316.can_edit_images": [
+      "44d8fbd7-39bd-4005-8f6a-04c9e2e15c73.b"
+    ],
+    "44d8fbd7-39bd-4005-8f6a-04c9e2e15c73.yes": [
+      "d0cd57ac-44fe-4221-bb4b-d3f3cecb7261.b"
+    ],
+    "d0cd57ac-44fe-4221-bb4b-d3f3cecb7261.yes": [
+      "d13e0862-9572-4527-bd7f-2c1b5a1ee18d.value"
+    ],
+    "e2da7334-afcd-4b67-ac06-2f5684d90c89.value": [
+      "3eeecdc4-e279-4360-a196-4479efa38acf.state"
+    ],
+    "4e06206e-b882-43e7-a787-12f559a79e65.name": [
+      "3eeecdc4-e279-4360-a196-4479efa38acf.state_b"
+    ],
+    "d13e0862-9572-4527-bd7f-2c1b5a1ee18d.name": [
+      "3eeecdc4-e279-4360-a196-4479efa38acf.state_c"
+    ],
+    "a5e6bb1c-74fa-4715-b546-f52a1da19f9a.value": [
+      "c74f6e8b-c8f0-4c00-b832-9b39612024ab.default"
+    ],
+    "042c2574-4cee-47e7-8ddd-8d98daa7c864.template_content": [
+      "99460322-d4c6-4524-a21a-efd543e21f8d.template"
+    ],
+    "447ac2a0-e45a-443a-9f03-fa4f13778018.value": [
+      "99460322-d4c6-4524-a21a-efd543e21f8d.item0"
+    ],
+    "abcd588e-53a0-4eef-a76d-7c6beff31055.value": [
+      "99460322-d4c6-4524-a21a-efd543e21f8d.item1"
+    ],
+    "151c3dcb-4e75-4100-b429-d9004029490d.value": [
+      "99460322-d4c6-4524-a21a-efd543e21f8d.item2"
+    ],
+    "c74f6e8b-c8f0-4c00-b832-9b39612024ab.value": [
+      "99460322-d4c6-4524-a21a-efd543e21f8d.item3"
+    ],
+    "99460322-d4c6-4524-a21a-efd543e21f8d.result": [
+      "7f3a8c97-1f03-46b7-a148-bb34601b843e.instructions"
+    ],
+    "8127fcc1-d9f5-472f-b4b6-e59865ddb058.value": [
+      "7f3a8c97-1f03-46b7-a148-bb34601b843e.state"
+    ],
+    "52435a42-0d70-4f58-85b0-9b196d07a199.agent": [
+      "7f3a8c97-1f03-46b7-a148-bb34601b843e.agent"
+    ],
+    "ea773e0e-8b3f-478d-ba6b-f0f73f0380fe.value": [
+      "dd9ea004-6f34-4cdb-bcea-44139558a63b.item0"
+    ],
+    "95d61555-cfbd-4030-9aa9-01b6cbc4731a.value": [
+      "dd9ea004-6f34-4cdb-bcea-44139558a63b.item1"
+    ],
+    "bcee0eb4-745d-4d44-a85d-91374c004b85.value": [
+      "dd9ea004-6f34-4cdb-bcea-44139558a63b.item2"
+    ],
+    "ba53068f-4b09-4186-86ed-143001b47840.value": [
+      "dd9ea004-6f34-4cdb-bcea-44139558a63b.item3"
+    ],
+    "dd9ea004-6f34-4cdb-bcea-44139558a63b.dict": [
+      "cdc2d884-d28e-4df1-8ffc-40d6411fb91e.extractors"
+    ],
+    "cdc2d884-d28e-4df1-8ffc-40d6411fb91e.spec": [
+      "9b2d29e6-2d62-4ab9-af66-de3f44b70726.response_spec"
+    ],
+    "7f3a8c97-1f03-46b7-a148-bb34601b843e.state": [
+      "9b2d29e6-2d62-4ab9-af66-de3f44b70726.state"
+    ],
+    "7f3a8c97-1f03-46b7-a148-bb34601b843e.agent": [
+      "9b2d29e6-2d62-4ab9-af66-de3f44b70726.agent"
+    ],
+    "7f3a8c97-1f03-46b7-a148-bb34601b843e.prompt": [
+      "9b2d29e6-2d62-4ab9-af66-de3f44b70726.prompt"
+    ],
+    "7f3a8c97-1f03-46b7-a148-bb34601b843e.response_length": [
+      "9b2d29e6-2d62-4ab9-af66-de3f44b70726.response_length"
+    ],
+    "0c71ddef-2622-4a0d-ab65-10c7c4a3578c.value": [
+      "9b2d29e6-2d62-4ab9-af66-de3f44b70726.content"
+    ],
+    "f1640f4d-140c-4b45-aee1-6827ca85e4b7.value": [
+      "9b2d29e6-2d62-4ab9-af66-de3f44b70726.assets"
+    ],
+    "9b2d29e6-2d62-4ab9-af66-de3f44b70726.extracted": [
+      "8ab93181-72b8-486c-891b-dc28c6846aae.object",
+      "411b58f3-6702-4fe4-b331-9d4cb3a02c43.object",
+      "3fec78cb-96dd-4948-b7b9-679ebde1c466.object",
+      "eee36977-6b19-4663-bd90-960553113694.object"
+    ],
+    "8ab93181-72b8-486c-891b-dc28c6846aae.value": [
+      "0d62805f-cfd8-47e2-abb5-3cf0d05e34a1.a"
+    ],
+    "74710ce5-2401-42db-a385-1e5664179f33.value": [
+      "0d62805f-cfd8-47e2-abb5-3cf0d05e34a1.b"
+    ],
+    "0d62805f-cfd8-47e2-abb5-3cf0d05e34a1.value": [
+      "e57cc20d-6929-4b9c-8731-637179ac726d.string"
+    ],
+    "e57cc20d-6929-4b9c-8731-637179ac726d.result": [
+      "be1be993-3c92-42b8-929f-901d7c2826fa.value"
+    ],
+    "411b58f3-6702-4fe4-b331-9d4cb3a02c43.value": [
+      "76fd8964-c386-4be8-878c-f89e47d16a35.value"
+    ],
+    "3fec78cb-96dd-4948-b7b9-679ebde1c466.value": [
+      "516db043-257c-4131-b577-f678ff37e721.value"
+    ],
+    "eee36977-6b19-4663-bd90-960553113694.value": [
+      "8ca51acb-44c5-4763-9939-6efb1cf30ed5.value"
+    ],
+    "be1be993-3c92-42b8-929f-901d7c2826fa.value": [
+      "7efac9a5-ebe3-46d8-8a5f-76d2cc3cf33b.state"
+    ],
+    "76fd8964-c386-4be8-878c-f89e47d16a35.name": [
+      "7efac9a5-ebe3-46d8-8a5f-76d2cc3cf33b.state_b"
+    ],
+    "516db043-257c-4131-b577-f678ff37e721.name": [
+      "7efac9a5-ebe3-46d8-8a5f-76d2cc3cf33b.state_c"
+    ],
+    "8ca51acb-44c5-4763-9939-6efb1cf30ed5.name": [
+      "7efac9a5-ebe3-46d8-8a5f-76d2cc3cf33b.state_d"
+    ],
+    "75503518-f7df-4883-ba5d-83f4014004d5.value": [
+      "07addc54-e0d1-4742-80be-2c9a1a5c130b.value"
+    ],
+    "07addc54-e0d1-4742-80be-2c9a1a5c130b.yes": [
+      "6eeac7cc-6574-4d2f-8d35-58bda29d914b.asset_id"
+    ],
+    "6eeac7cc-6574-4d2f-8d35-58bda29d914b.yes": [
+      "aea16265-1cfe-43c8-8d22-ec096d08e9f4.state",
+      "aea16265-1cfe-43c8-8d22-ec096d08e9f4.asset_id"
+    ],
+    "aea16265-1cfe-43c8-8d22-ec096d08e9f4.state": [
+      "cd1e2f10-97b0-40e9-9d20-1949134637b2.state"
+    ],
+    "cd1e2f10-97b0-40e9-9d20-1949134637b2.state": [
+      "bc54f3dd-89b3-4b2a-90ed-f54e660833c5.state"
+    ],
+    "62071982-5e0c-4e97-89af-ae62af3b08de.value": [
+      "4ae2ceb6-3962-43d7-9a65-00fce4c79359.default"
+    ],
+    "4ae2ceb6-3962-43d7-9a65-00fce4c79359.value": [
+      "c545ea6d-2108-44f5-8591-b50c31586b7c.value"
+    ],
+    "c545ea6d-2108-44f5-8591-b50c31586b7c.no": [
+      "45290b4b-be41-433e-bafe-a3001a65fd1a.state"
+    ],
+    "45290b4b-be41-433e-bafe-a3001a65fd1a.state": [
+      "1a9b409d-4ae8-48e1-9161-96666bd1954e.state"
+    ],
+    "62c30f2e-f941-4a62-9d28-c218dbf5f517.value": [
+      "bf0f58ec-8a61-4b9f-9d47-dd1f5af70821.asset_name"
+    ],
+    "cf85e5d9-7e5b-4fb5-8c1e-50653bbbc5fb.value": [
+      "bf0f58ec-8a61-4b9f-9d47-dd1f5af70821.scene_backdrop"
+    ],
+    "7a5df145-1dcd-497d-868a-09f2e25f8013.value": [
+      "a5f0ddb8-dc44-40f6-bd42-391217919f50.state"
+    ],
+    "dc27477f-0be2-4672-b557-580bdeaa47fc.value": [
+      "a5f0ddb8-dc44-40f6-bd42-391217919f50.vis_type"
+    ],
+    "bffcb37f-3271-4f0d-83fd-06bd089adcdc.value": [
+      "a5f0ddb8-dc44-40f6-bd42-391217919f50.instructions"
+    ],
+    "db5b2313-a31d-49cd-ba62-921eace92d76.value": [
+      "a5f0ddb8-dc44-40f6-bd42-391217919f50.references"
+    ],
+    "3f4cdfc3-16f0-43b3-8797-bdb863ca3191.value": [
+      "a5f0ddb8-dc44-40f6-bd42-391217919f50.purpose"
+    ],
+    "bf0f58ec-8a61-4b9f-9d47-dd1f5af70821.context": [
+      "a5f0ddb8-dc44-40f6-bd42-391217919f50.asset_ctx"
+    ],
+    "a5f0ddb8-dc44-40f6-bd42-391217919f50.state": [
+      "529d61b4-aee0-414c-b274-3ad3b3db0588.state"
+    ],
+    "8d6e5496-11a4-44c2-83d7-651a6e1ea66c.value": [
+      "748859ef-fc14-4232-b827-2ad84eac5edd.value"
+    ],
+    "748859ef-fc14-4232-b827-2ad84eac5edd.value": [
+      "3ffce961-ddcf-475f-bf38-f75f4e37b683.state"
+    ],
+    "3ffce961-ddcf-475f-bf38-f75f4e37b683.state": [
+      "5eaa0851-69ac-4f35-8cf0-d1d2280f9586.value"
+    ],
+    "fd26d373-a980-434b-a560-a74a6589fff7.value": [
+      "24642799-5e8c-4202-8e14-3ca4183bcdb8.value"
+    ],
+    "24642799-5e8c-4202-8e14-3ca4183bcdb8.value": [
+      "c60a8d3d-8b5b-41b4-9e5d-79aa41a32413.check"
+    ],
+    "622bd091-eec3-46c4-a033-f68b1849db8f._config_automatic_generation": [
+      "c60a8d3d-8b5b-41b4-9e5d-79aa41a32413.yes"
+    ],
+    "d9fa59c6-34f4-4e68-be34-adfe38754fa8.value": [
+      "c60a8d3d-8b5b-41b4-9e5d-79aa41a32413.no"
+    ],
+    "c60a8d3d-8b5b-41b4-9e5d-79aa41a32413.value": [
+      "fa297e1b-9fc5-4ab7-b9fc-ee04bf077046.value"
+    ],
+    "fa297e1b-9fc5-4ab7-b9fc-ee04bf077046.value": [
+      "f535c09a-4868-49f1-ab85-f93b9214d8c2.state"
+    ],
+    "e63d2a9e-7078-491f-92cb-028a18c643ae.value": [
+      "d0cd57ac-44fe-4221-bb4b-d3f3cecb7261.c"
+    ],
+    "6d36a64f-8c96-4397-9902-df4b50667d20.value": [
+      "a5f0ddb8-dc44-40f6-bd42-391217919f50.automatic_source"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Input",
+      "x": 0,
+      "y": 0,
+      "width": 1060,
+      "height": 420,
+      "color": "#88A",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Busy",
+      "x": 0,
+      "y": 440,
+      "width": 1380,
+      "height": 220,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Frequency",
+      "x": 0,
+      "y": 680,
+      "width": 1720,
+      "height": 440,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Prepare",
+      "x": 0,
+      "y": 1140,
+      "width": 1580,
+      "height": 840,
+      "color": "#8AA",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Selection",
+      "x": 0,
+      "y": 2000,
+      "width": 3140,
+      "height": 737,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Existing background",
+      "x": 0,
+      "y": 2760,
+      "width": 1600,
+      "height": 260,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Generate new background",
+      "x": 0,
+      "y": 3040,
+      "width": 1600,
+      "height": 960,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Input - automatic source",
+      "x": 1400,
+      "y": 0,
+      "width": 1060,
+      "height": 260,
+      "color": "#88A",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Automatic generation",
+      "x": 1760,
+      "y": 440,
+      "width": 1290,
+      "height": 300,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [
+    {
+      "text": "Skip while a background for this scene is still being generated. Skipped messages do not count toward the frequency.",
+      "x": 20,
+      "y": 470,
+      "width": 300,
+      "inherited": false
+    },
+    {
+      "text": "With a frequency above 1, only every Nth story message is checked. The count is kept in the world state agent's scene state as scene_background_check_cnt.",
+      "x": 20,
+      "y": 760,
+      "width": 300,
+      "inherited": false
+    },
+    {
+      "text": "Generation needs Generate New Backgrounds and a Visualizer image backend.",
+      "x": 20,
+      "y": 1720,
+      "width": 300,
+      "inherited": false
+    },
+    {
+      "text": "The decision model keeps or picks an existing background when it is sure; otherwise the selection request runs.",
+      "x": 1110,
+      "y": 2040,
+      "width": 300,
+      "inherited": false
+    }
+  ],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {},
+  "style": {
+    "title_color": "#3d315b",
+    "node_color": "#27233a",
+    "icon": "F0974",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

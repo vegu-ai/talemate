@@ -102,13 +102,12 @@ class OpenAIMixin:
             container=True,
             icon="mdi-server-outline",
             label="OpenAI",
-            description="OpenAI TTS is a cloud-based text to speech API. (API key required and must be set in the Talemate Settings -> Application -> OpenAI)",
+            description="OpenAI TTS is a cloud-based text to speech API. (API key required and must be set in the Talemate Settings -> Connections -> API Keys -> OpenAI)",
             config={
                 "api_key": AgentActionConfig(
                     type="unified_api_key",
                     value="openai.api_key",
                     label="OpenAI API Key",
-                    scene_overridable=False,
                 ),
                 "model": AgentActionConfig(
                     type="text",
@@ -206,7 +205,7 @@ class OpenAIMixin:
             details["openai_api_key"] = AgentDetail(
                 icon="mdi-key",
                 value="OpenAI API key not set",
-                description="OpenAI API key not set. You can set it in the Talemate Settings -> Application -> OpenAI",
+                description="OpenAI API key not set. You can set it in the Talemate Settings -> Connections -> API Keys -> OpenAI",
                 color="error",
             ).model_dump()
         else:

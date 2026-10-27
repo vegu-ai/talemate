@@ -1,11 +1,9 @@
 <template>
   <v-alert variant="text" :color="color" elevation="0" density="compact" :style="{ opacity: revisionBusy ? 0.65 : 1, transition: 'opacity 0.2s ease' }" @mouseover="hovered=true" @mouseleave="hovered=false">
     <template v-slot:close>
-      <v-btn size="small" icon variant="text" class="close-button" @click="deleteMessage" :disabled="uxLocked">
-        <v-icon>mdi-close</v-icon>
-      </v-btn>
+      <MessageCloseButton :disabled="uxLocked" @click="deleteMessage" />
     </template>
-    <RevisionNav v-if="isLastMessage && (revisionsCount > 1 || revisionBusy)" :count="revisionsCount" :index="revisionIndex" :source="revisionSource" :reason="revisionReason" :disabled="uxLocked" :busy="revisionBusy" @navigate="(dir) => $emit('navigate-revision', dir)" />
+    <RevisionNav v-if="isLastMessage && (revisionsCount > 1 || revisionBusy || revisionRefresh?.required)" :count="revisionsCount" :index="revisionIndex" :source="revisionSource" :reason="revisionReason" :disabled="uxLocked" :busy="revisionBusy" :uncommitted="revisionUncommitted" :refresh="revisionRefresh" @keep="$emit('keep-revision')" @navigate="(dir) => $emit('navigate-revision', dir)" />
     <!-- Scene illustration (big) renders above message -->
     <MessageAssetImage
       v-if="messageAsset && isSceneIllustrationAbove"
@@ -31,31 +29,32 @@
         {{ character }}
       </span>
       <div class="character-content" :class="{ 'position-relative': editing, 'character-content--editing': editing }">
-        <v-textarea
-          ref="textarea"
-          v-if="editing"
-          v-model="editing_text"
-          variant="outlined"
-          class="text-normal"
-          :color="color"
+        <div v-if="editing" class="character-editor">
+          <v-textarea
+            ref="textarea"
+            v-model="editing_text"
+            variant="outlined"
+            class="text-normal"
+            :color="color"
 
-          auto-grow
+            auto-grow
 
-          :hint="autocompleteInfoMessage(autocompleting) + ', Shift+Enter for newline'"
-          :loading="autocompleting"
-          :disabled="autocompleting"
+            :hint="autocompleteInfoMessage(autocompleting) + ', Shift+Enter for newline'"
+            :loading="autocompleting"
+            :disabled="autocompleting"
 
-          @keydown.enter.prevent="handleEnter"
-          @blur="autocompleting ? null : cancelEdit()"
-          @keydown.escape.prevent="cancelEdit()"
-          >
-        </v-textarea>
-        <AutocompleteRedoChip
-          v-if="editing"
-          :applied="autocompleteField?.state.applied || false"
-          :disabled="autocompleting"
-          @redo="autocompleteField.redo()"
-          @undo="autocompleteField.undo()" />
+            @keydown.enter.prevent="handleEnter"
+            @blur="autocompleting ? null : cancelEdit()"
+            @keydown.escape.prevent="cancelEdit()"
+            >
+          </v-textarea>
+          <AutocompleteRedoChip
+            :applied="autocompleteField?.state.applied || false"
+            :disabled="autocompleting"
+            @redo="autocompleteField.redo()"
+            @undo="autocompleteField.undo()" />
+          <HistoryEditNotice :message-id="message_id" />
+        </div>
         <div v-if="!editing" class="character-text-wrapper" @dblclick="startEdit()">
           <div class="character-text" v-html="renderedText"></div>
         </div>
@@ -74,8 +73,13 @@
         :tts-busy="ttsBusy"
         :rev="rev"
         :scene-rev="sceneRev"
+          :can-copy-unsaved="canCopyUnsaved"
+          :immutable-save="immutableSave"
         :show-illustration-menu="illustrationMenuAvailable"
+        :memory-pass="memoryPass"
+        :memory-pass-character="character"
         @open-illustration-menu="openIllustrationMenu"
+        @open-memory-pass="memoryPassOpen = true"
       >
         <template #extra-actions>
           <v-chip size="x-small" class="ml-2" label color="primary" v-if="!continuing && isLastMessage" variant="tonal" @click="continueConversation" :disabled="uxLocked || appBusy">
@@ -92,6 +96,15 @@
     <div v-else style="height:24px">
 
     </div>
+    <MessageMemoryPass
+      v-if="memoryPass"
+      v-model="memoryPassOpen"
+      :result="memoryPass"
+      :character="character"
+      :text="text"
+      :color="color"
+      :appearance-config="appearanceConfig"
+    />
   </v-alert>
 </template>
   
@@ -106,12 +119,18 @@ import MessageAssetMixin from './MessageAssetMixin.js';
 import RevisionNav from './RevisionNav.vue';
 import MessageToolbar from './MessageToolbar.vue';
 import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
+import HistoryEditNotice from './HistoryEditNotice.vue';
+import MessageCloseButton from './MessageCloseButton.vue';
+import MessageMemoryPass from './MessageMemoryPass.vue';
 export default {
   components: {
+    MessageCloseButton,
     MessageAssetImage,
     RevisionNav,
     MessageToolbar,
     AutocompleteRedoChip,
+    HistoryEditNotice,
+    MessageMemoryPass,
   },
   mixins: [MessageAssetMixin],
   props: {
@@ -161,8 +180,10 @@ export default {
     },
     rev: {
       type: Number,
-      default: 0,
+      default: null,
     },
+    canCopyUnsaved: Boolean,
+    immutableSave: Boolean,
     sceneRev: {
       type: Number,
       default: 0,
@@ -203,6 +224,8 @@ export default {
       type: String,
       default: null,
     },
+    revisionUncommitted: { type: Boolean, default: false },
+    revisionRefresh: { type: Object, default: null },
     revisionBusy: {
       type: [Boolean, String],
       default: false,
@@ -211,8 +234,12 @@ export default {
       type: Array,
       default: () => [],
     },
+    memoryPass: {
+      type: Object,
+      default: null,
+    },
   },
-  emits: ['navigate-revision'],
+  emits: ['navigate-revision', 'keep-revision'],
   inject: [
     'requestDeleteMessage',
     'getWebsocket',
@@ -239,6 +266,7 @@ export default {
         brackets: sceneConfig.brackets,
         entities: sceneConfig.entities,
         default: defaultStyles,
+        messageType: 'actor',
       });
     },
     renderedText() {
@@ -248,16 +276,7 @@ export default {
       if (!this.scene || !this.scene.data || !this.scene.data.characters) {
         return null;
       }
-      // Find character in active characters
-      const char = this.scene.data.characters.find(c => c.name === this.character);
-      if (char) {
-        return char;
-      }
-      // Also check inactive characters
-      if (this.scene.data.inactive_characters) {
-        return Object.values(this.scene.data.inactive_characters).find(c => c.name === this.character) || null;
-      }
-      return null;
+      return this.scene.data.characters.find(c => c.name === this.character) || null;
     },
     // Asset mixin expects these
     assetId() {
@@ -294,6 +313,7 @@ export default {
       continuing: false,
       editing_text: "",
       hovered: false,
+      memoryPassOpen: false,
       autocompleteField: null,
     }
   },
@@ -409,10 +429,6 @@ export default {
   --content: "*";
 }
 
-.character-message {
-  text-shadow: 2px 2px 4px #000000;
-}
-
 .character-name-chip {
   float: left;
   margin-right: 10px;
@@ -425,7 +441,7 @@ export default {
 }
 
 .character-text {
-  color: #E0E0E0;
+  color: rgba(var(--v-theme-on-surface), 0.87);
 }
 
 .character-text :deep(.scene-paragraph) {
@@ -437,6 +453,11 @@ export default {
    position-relative utility) so the non-editing layout stays unchanged. */
 .character-content--editing {
   --autocomplete-redo-chip-top: 4px;
+}
+
+/* keeps the edit notice beside the floated avatar, under the field */
+.character-editor {
+  display: flow-root;
 }
 
 .character-text :deep(.scene-paragraph:last-child) {
@@ -468,14 +489,4 @@ export default {
   color: rgb(var(--v-theme-muted));
   background-color: transparent;
 }
-
-.close-button {
-  opacity: 0.4;
-  color: rgba(255, 255, 255, 0.6) !important;
-  transition: opacity 0.2s ease;
-}
-
-.close-button:hover {
-  opacity: 1;
-  color: rgba(255, 255, 255, 0.9) !important;
-}</style>
+</style>

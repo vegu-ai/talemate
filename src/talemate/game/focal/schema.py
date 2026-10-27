@@ -36,8 +36,33 @@ class ExampleCallbackArguments(InvalidCallbackArguments):
     pass
 
 
+ConfirmationDecision = Literal["confirm", "reject", "reject_with_instructions"]
+CallOutcome = Literal[
+    ConfirmationDecision,
+    "waiting",
+    "over_budget",
+    "unknown_callback",
+    "timed_out",
+    "interrupted",
+    "failed",
+    "aborted",
+]
+
+
+class CallRejected(Exception):
+    focal_reraise = True
+
+    def __init__(
+        self, message: str, reason: CallOutcome = "reject", instructions: str = ""
+    ):
+        super().__init__(message)
+        self.reason = reason
+        self.instructions = instructions
+
+
 class State(pydantic.BaseModel):
     calls: list["Call"] = pydantic.Field(default_factory=list)
+    batch: list["Call"] = pydantic.Field(default_factory=list)
     schema_format: Literal["json", "yaml"] = "json"
 
 
@@ -61,6 +86,9 @@ class Call(pydantic.BaseModel):
     uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
     called: bool = False
     error: str | None = None
+    skipped_reason: CallOutcome | None = None
+    rejection_instructions: str = ""
+    subcalls: list["Call"] = pydantic.Field(default_factory=list)
 
     @pydantic.field_validator("arguments")
     def check_for_schema_examples(cls, v: dict[str, Any]) -> dict[str, str]:
@@ -106,6 +134,8 @@ class Callback(pydantic.BaseModel):
     state: State = State()
     multiple: bool = True
     concurrent: bool = False
+    counts_toward_budget: bool = True
+    pass_call: bool = False
 
     examples: list[dict] = pydantic.Field(default_factory=list)
     argument_instructions: dict[str, str | None] = pydantic.Field(default_factory=dict)

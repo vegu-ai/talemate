@@ -1,23 +1,38 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, get_args
 
 import pydantic
+import structlog
 
 from talemate.instance import get_agent
 from talemate.world_state import InsertionMode, Reinforcement
-from talemate.world_state.templates.base import Template, register
+from talemate.world_state.templates.base import (
+    Template,
+    register,
+    repairs_unknown_choices,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
 __all__ = [
     "StateReinforcement",
+    "StateType",
+    "STATE_TYPES",
 ]
+
+log = structlog.get_logger("world-state.templates.state_reinforcement")
+
+StateType = Literal["character", "npc", "player", "world"]
+
+STATE_TYPES = get_args(StateType)
+
+DEFAULT_STATE_TYPE = "npc"
 
 
 class GeneratedStateReinforcement(pydantic.BaseModel):
     query: str
     reinforcement: "Reinforcement"
-    character: str
+    character: str | None
     template: "StateReinforcement"
 
 
@@ -25,7 +40,7 @@ class GeneratedStateReinforcement(pydantic.BaseModel):
 class StateReinforcement(Template):
     name: str
     query: str
-    state_type: str = "npc"
+    state_type: StateType = DEFAULT_STATE_TYPE
     insert: InsertionMode = InsertionMode.sequential
     instructions: str | None = None
     description: str | None = None
@@ -33,6 +48,32 @@ class StateReinforcement(Template):
     auto_create: bool = False
     require_active: bool = True
     template_type: str = "state_reinforcement"
+
+    @pydantic.field_validator("state_type", mode="before")
+    @classmethod
+    def _coerce_state_type(cls, v, info: pydantic.ValidationInfo) -> str:
+        if isinstance(v, str):
+            v = v.strip()
+
+        if v in STATE_TYPES:
+            return v
+
+        # only a template read off disk falls back: `Group.sanitize_data` drops
+        # one that fails to validate, so raising there would take the rest of
+        # the template with it. Everywhere else an unknown state type is an
+        # error.
+        if not repairs_unknown_choices(info):
+            raise ValueError(
+                f"Unknown state type: {v}. Valid state types: {', '.join(STATE_TYPES)}"
+            )
+
+        log.warning(
+            "unknown state type, falling back",
+            state_type=v,
+            template=info.data.get("name"),
+            fallback=DEFAULT_STATE_TYPE,
+        )
+        return DEFAULT_STATE_TYPE
 
     @pydantic.field_serializer("insert")
     def serialize_insert(self, value: InsertionMode, _info) -> str:

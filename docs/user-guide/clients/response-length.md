@@ -34,10 +34,10 @@ The instruction is derived from the configured max token count for the current g
 
 ## Configuration
 
-The setting is found on the **Advanced** tab of the [client configuration](client-configuration.md) dialog.
+The setting is found in the **Advanced** section of the [client editor](client-configuration.md).
 
-1. Click the cogwheels on a client in the sidebar to open its configuration
-2. Open the **Advanced** tab
+1. Click the cogwheels on a client in the sidebar to go to its editor on the Clients settings page
+2. Open the **Advanced** section
 3. Find the **Response Length Enforcement** dropdown and select the desired mode
 4. Click **Save**
 

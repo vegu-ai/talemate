@@ -1,6 +1,6 @@
 <template>
 
-    <v-card  class="ma-0 sticky-right" :width="expanded ? 400 : 76" ref="container" elevation="7">
+    <v-card  class="ma-0 sticky-right" :width="expanded ? 400 : 76" ref="container" elevation="3">
         <v-list max-height="720" style="overflow-y: auto;" density="compact">
             <v-row no-gutters>
                 <v-col :cols="expanded ? 6 : 12">
@@ -14,8 +14,8 @@
             <div v-if="expanded === true">
                 <v-list-item v-for="entry in log" :key="entry.entryId" @click="inspectNode = entry; inspect = true;">
                     <v-list-item-title :class="'d-flex justify-space-between align-center text-' + entry.color">
-                        <span>{{ entry.title }} <span class="text-caption text-muted">{{ entry.nodeId.slice(0,4) }}</span></span>
-                        <span class="text-caption text-muted">{{ formatTime(entry.startTime) }}</span>
+                        <span>{{ entry.title }} <span class="text-body-small text-muted">{{ entry.nodeId.slice(0,4) }}</span></span>
+                        <span class="text-body-small text-muted">{{ formatTime(entry.startTime) }}</span>
                     </v-list-item-title>
                     <v-list-item-subtitle>{{ entry.value }}</v-list-item-subtitle>
                 </v-list-item>
@@ -28,10 +28,10 @@
         <v-card>
             <v-card-title>
                 {{ inspectNode.title }}
-                <v-chip color="grey-lighten-1" variant="text">{{ inspectNode.nodeId.slice(0,8) }}</v-chip>
+                <v-chip color="mutedheader" variant="text">{{ inspectNode.nodeId.slice(0,8) }}</v-chip>
                 <v-chip size="small" label class="mr-1" color="primary" variant="tonal"><strong class="mr-1">type</strong>{{ inspectNode.nodeType }}</v-chip>
             </v-card-title>
-            <v-card-text class="text-caption">
+            <v-card-text class="text-body-small">
                 <div max-height="600" style="overflow-y: auto;" class="value-display text-muted">
                 {{ inspectNode.value }}
                 </div>

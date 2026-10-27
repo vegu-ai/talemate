@@ -1,5 +1,5 @@
 <template>
-  <v-card elevation="7" class="mt-2" color="grey" variant="tonal" v-if="editable || hasReferences">
+  <v-card elevation="3" class="mt-2" color="muted" variant="tonal" v-if="editable || hasReferences">
     <v-card-title class="d-flex align-center">
       <span>{{ title }}</span>
       <v-spacer></v-spacer>
@@ -37,13 +37,13 @@
           </v-slide-group-item>
         </v-slide-group>
       </div>
-      <div v-else-if="!editable" class="text-medium-emphasis text-caption">No references</div>
-      <div v-else class="text-medium-emphasis text-caption">No references selected</div>
+      <div v-else-if="!editable" class="text-medium-emphasis text-body-small">No references</div>
+      <div v-else class="text-medium-emphasis text-body-small">No references selected</div>
     </v-card-text>
 
     <v-dialog v-model="pickerOpen" max-width="1280">
       <v-card>
-        <v-toolbar density="comfortable" color="grey-darken-4">
+        <v-toolbar density="comfortable" color="mutedbg">
           <v-toolbar-title>Select Reference Images</v-toolbar-title>
         </v-toolbar>
         <v-divider></v-divider>
@@ -71,9 +71,9 @@
             <v-col cols="8">
               <v-row>
                 <v-col v-for="id in filteredIds" :key="id" cols="6">
-                  <v-card :elevation="isSelected(id) ? 8 : 2" :color="isSelected(id) ? 'primary' : undefined" variant="tonal" class="pa-1" @click="toggleSelect(id)">
+                  <v-card :elevation="isSelected(id) ? 3 : 2" :color="isSelected(id) ? 'primary' : undefined" variant="tonal" class="pa-1" @click="toggleSelect(id)">
                   <v-img :src="referenceImages[id]" height="200" cover @click.stop="toggleSelect(id)"></v-img>
-                    <div class="text-caption mt-1">{{ availableAssetsMap?.[id]?.meta?.name?.trim() || id.slice(0,10) }}</div>
+                    <div class="text-body-small mt-1">{{ availableAssetsMap?.[id]?.meta?.name?.trim() || id.slice(0,10) }}</div>
                   </v-card>
                 </v-col>
               </v-row>

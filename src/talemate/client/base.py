@@ -4,6 +4,7 @@ A unified client base, based on the openai API
 
 import ipaddress
 import logging
+import math
 import os
 import re
 import random
@@ -11,6 +12,8 @@ import time
 import traceback
 import asyncio
 import uuid
+from contextvars import ContextVar
+from copy import deepcopy
 from typing import Callable, Union, Literal, TYPE_CHECKING
 
 import pydantic
@@ -22,6 +25,7 @@ import json
 import talemate.client.presets as presets
 import talemate.instance as instance
 import talemate.util as util
+from talemate.agents import observed_actions
 from talemate.agents.context import active_agent
 from talemate.client.context import client_context_attribute
 from talemate.client.model_prompts import model_prompt, DEFAULT_TEMPLATE, PromptSpec
@@ -31,7 +35,11 @@ from talemate.prompts.base import Prompt, active_template_uid
 from talemate.emit import emit
 from talemate.path import LOGS_DIR
 from talemate.config import get_config, Config
-from talemate.config.schema import EmbeddingFunctionPreset, Client as ClientConfig
+from talemate.config.schema import (
+    EmbeddingFunctionPreset,
+    Client as ClientConfig,
+    resolve_config_cls,
+)
 import talemate.emit.async_signals as async_signals
 from talemate.exceptions import (
     SceneInactiveError,
@@ -51,10 +59,21 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 log = structlog.get_logger("client.base")
 
+ClientStatusValue = Literal["disabled", "error", "idle", "busy", "warning"]
+
 STOPPING_STRINGS = ["<|im_end|>", "</s>"]
 
 # disable smart quotes until text rendering is refactored
 REPLACE_SMART_QUOTES = True
+
+# count_tokens is an estimate (tiktoken, GPT-4 encoding); over-count the prompt
+# so a request that fills the remaining context stays inside the server's limit.
+# Measured on real Talemate prompts (conversation, narrator, world state,
+# director, summarizer, creator; 0.1k-11k tokens) rendered with each model's
+# own template, the real/estimate ratio peaked at 1.018 for Qwen3.5, 1.023 for
+# Gemma 4 and 1.122 for Mistral v0.3 (32k vocabulary); 1.15 covers the
+# worst case with a small margin.
+PROMPT_TOKEN_SAFETY_FACTOR = 1.15
 
 
 INDIRECT_COERCION_PROMPT = "\nStart your response with: "
@@ -73,22 +92,59 @@ class ClientDisabledError(OSError):
 
 
 class PromptData(pydantic.BaseModel):
+    request_id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
+    status: Literal["active", "completed", "failed", "cancelled"] = "completed"
+    started_at: float = pydantic.Field(default_factory=time.time)
+    attempts: int = 0
+    error: str | None = None
     kind: str
     prompt: str
-    response: str
-    prompt_tokens: int
-    response_tokens: int
+    response: str | None = None
+    prompt_tokens: int | None = None
+    response_tokens: int | None = None
     client_name: str
     client_type: str
-    time: Union[float, int]
+    time: float | None = None
     agent_stack: list[str] = pydantic.Field(default_factory=list)
     agent_type: str | None = None
     agent_action: str | None = None
     generation_parameters: dict = pydantic.Field(default_factory=dict)
-    inference_preset: str = None
+    inference_preset: str | None = None
     preset_group: str | None = None
     reasoning: str | None = None
     template_uid: str | None = None
+
+
+class PromptRequest(pydantic.BaseModel):
+    data: PromptData | None = None
+    parameters: dict | None = None
+    values: dict = pydantic.Field(default_factory=dict)
+    started: float = pydantic.Field(default_factory=time.monotonic)
+    failed: bool = False
+    reasoning_patterns: tuple[str, str | None] | None = None
+
+
+class RequestValue:
+    """Share provider-task writes with its caller without crossing logical requests."""
+
+    def __set_name__(self, owner, name):
+        self.name = name
+
+    def __get__(self, client, owner=None):
+        if client is None:
+            return self
+        context = getattr(client, "_prompt_request", None)
+        request = context.get() if context else None
+        if request is not None:
+            return request.values.get(self.name)
+        return client.__dict__.get(self.name)
+
+    def __set__(self, client, value):
+        context = getattr(client, "_prompt_request", None)
+        request = context.get() if context else None
+        if request is not None:
+            request.values[self.name] = value
+        client.__dict__[self.name] = value
 
 
 class ErrorAction(pydantic.BaseModel):
@@ -114,15 +170,36 @@ EMPTY_RESPONSE_MESSAGE = "The model returned an empty response. This can happen 
 AUTO_RETRY_MAX_BACKOFF = 30
 
 
-def get_error_message(status_code: int | None) -> str:
+def get_error_message(status_code: int) -> str:
     """Get a human-friendly error message for an HTTP status code."""
-    if status_code is None:
-        return EMPTY_RESPONSE_MESSAGE
     if status_code in HTTP_ERROR_MESSAGES:
         return HTTP_ERROR_MESSAGES[status_code]
     if 500 <= status_code < 600:
         return "The API server is experiencing issues. This is usually temporary."
     return f"The API returned an unexpected error (HTTP {status_code})."
+
+
+def describe_exception(exc: BaseException, status_code: int | None = None) -> str:
+    """The text a generation error dialog shows for an exception.
+
+    A message the exception carries for the user wins, then the text for its
+    HTTP status, then the exception's own message and the cause beneath it.
+    """
+    user_message = getattr(exc, "user_message", None)
+    if user_message:
+        return user_message
+    if status_code == 404:
+        request = getattr(getattr(exc, "response", None), "request", None)
+        if request is not None:
+            return f"{get_error_message(404)} ({request.method} {request.url.path})"
+    if status_code is not None:
+        return get_error_message(status_code)
+    message = str(exc).strip() or type(exc).__name__
+    cause = exc.__cause__
+    cause_message = str(cause).strip() if cause else ""
+    if cause_message and cause_message not in message:
+        message = f"{message} ({cause_message})"
+    return message
 
 
 # Registry of pending generation error resolutions.
@@ -176,7 +253,7 @@ class CommonDefaults(pydantic.BaseModel):
 
 class Defaults(CommonDefaults, pydantic.BaseModel):
     api_url: str = "http://localhost:5000"
-    max_token_length: int = 8192
+    max_token_length: int = 16384
     double_coercion: str = None
     lock_template: bool = False
 
@@ -202,12 +279,8 @@ class ReasoningDisplay(pydantic.BaseModel):
     what's actually being used at runtime (e.g., budget vs adaptive thinking).
     """
 
-    indicator_value: str  # What to show in the chip (e.g., "8192", "high")
-    indicator_tooltip: str  # Tooltip text for the chip
-    show_token_slider: bool  # Whether to show the token budget slider
-    show_effort_selector: bool = False  # Whether to show effort level selector
-    effort_level: str | None = None  # Current effort level if applicable
-    effort_choices: list[str] | None = None  # Available effort choices
+    control: Literal["tokens", "effort"]
+    effort_choices: list[str] | None = None
 
 
 class ParameterReroute(pydantic.BaseModel):
@@ -260,8 +333,6 @@ class RequestInformation(pydantic.BaseModel):
         if self.end_time:
             return "stopped" if self.cancelled else "completed"
         elif self.start_time:
-            if self.duration > 1 and self.rate == 0:
-                return "stopped"
             return "in progress"
         else:
             return "pending"
@@ -316,8 +387,16 @@ class ClientBase:
     auto_determine_prompt_template: bool = False
     finalizers: list[str] = []
     client_type = "base"
-    request_information: RequestInformation | None = None
+    request_information = RequestValue()
+    _returned_prompt_tokens = RequestValue()
+    _returned_response_tokens = RequestValue()
+    _reasoning_response = RequestValue()
     status_request_timeout: int = 2
+    # last resort bound on one status probe, applied by the status sweep in
+    # talemate.instance and set well above every client's own request timeout:
+    # a probe that hangs outside the HTTP client's control would otherwise
+    # wedge this client's status slot for good
+    status_probe_timeout: int = 30
     status_failure_threshold: int = 2
     rate_limit_counter: CounterRateLimiter = None
 
@@ -328,6 +407,7 @@ class ClientBase:
         name_prefix: str = "Client"
         enable_api_auth: bool = False
         requires_prompt_template: bool = True
+        reason_tokens_as_allowance: bool = False
         unified_api_key_config_path: str | None = None
         # Whether this client is typically self-hosted (you run/control the service)
         # versus a hosted API (3rd-party provider).
@@ -349,6 +429,9 @@ class ClientBase:
         self._status_failures = 0
         self._auto_retry_aborts: set[str] = set()
         self._auto_retry_live_ids: set[str] = set()
+        self._prompt_request: ContextVar[PromptRequest | None] = ContextVar(
+            "prompt_request", default=None
+        )
         self.log = structlog.get_logger(f"client.{self.client_type}")
 
     def __str__(self):
@@ -367,7 +450,7 @@ class ClientBase:
         try:
             return get_config().clients[self.name]
         except KeyError:
-            config_cls = getattr(self, "config_cls", ClientConfig)
+            config_cls = resolve_config_cls(type(self))
             return config_cls(type=self.client_type, name=self.name)
 
     @property
@@ -387,6 +470,18 @@ class ClientBase:
     @property
     def api_url(self) -> str | None:
         return self.client_config.api_url
+
+    def require_api_url(self) -> str:
+        # a blank url must never reach the OpenAI SDK: it falls back to
+        # https://api.openai.com/v1/ and sends the payload to OpenAI
+        url = (self.api_url or "").strip()
+        if not url:
+            raise ValueError(f"Client '{self.name}' has no API URL configured")
+        return url
+
+    def require_api_url_v1(self) -> str:
+        base = self.require_api_url().rstrip("/")
+        return base if base.endswith("/v1") else base + "/v1"
 
     @property
     def max_token_length(self) -> int:
@@ -434,14 +529,24 @@ class ClientBase:
 
     @property
     def reason_enabled_configured(self) -> bool:
-        """Stable configured value. Subclasses override for client-specific
-        forcing (Gemini 2.5+, OpenAI o-series). `reason_enabled` is the
-        runtime value after per-action context overrides."""
+        """Stable configured value, including a client-specific reasoning lock.
+        `reason_enabled` is the runtime value after per-action context overrides."""
         return self.client_config.reason_enabled
 
     @property
+    def reasoning_disabled_for_action(self) -> bool:
+        return (
+            bool(client_context_attribute("disable_reasoning"))
+            and not self.reason_locked
+        )
+
+    @property
+    def reasoning_override_applies(self) -> bool:
+        return self.reason_enabled_configured and not self.reason_locked
+
+    @property
     def reason_enabled(self) -> bool:
-        if client_context_attribute("disable_reasoning") and not self.reason_locked:
+        if self.reasoning_disabled_for_action:
             return False
         return self.reason_enabled_configured
 
@@ -451,13 +556,33 @@ class ClientBase:
 
     @property
     def reason_response_pattern(self) -> str:
-        return self.client_config.reason_response_pattern or DEFAULT_REASONING_PATTERN
+        return self.effective_reasoning_patterns()[0]
 
     @property
     def reason_validation_pattern(self) -> str | None:
-        # No default - validation is opt-in. When unset, reasoning is never
-        # treated as "did not happen" based on a start pattern.
-        return self.client_config.reason_validation_pattern
+        return self.effective_reasoning_patterns()[1]
+
+    def effective_reasoning_patterns(self) -> tuple[str, str | None]:
+        context = getattr(self, "_prompt_request", None)
+        request = context.get() if context else None
+        if request is not None and request.reasoning_patterns is not None:
+            return request.reasoning_patterns
+        spec = PromptSpec()
+        if self.Meta().requires_prompt_template and not getattr(
+            self, "api_handles_prompt_template", False
+        ):
+            spec = self.prompt_template_example()[2]
+        return self._resolve_reasoning_patterns(spec)
+
+    def _resolve_reasoning_patterns(self, spec: PromptSpec) -> tuple[str, str | None]:
+        return (
+            self.client_config.reason_response_pattern
+            or spec.reasoning_pattern
+            or DEFAULT_REASONING_PATTERN,
+            self.client_config.reason_validation_pattern
+            or spec.reasoning_validation_pattern
+            or None,
+        )
 
     @property
     def reason_prefill(self) -> str:
@@ -658,11 +783,7 @@ class ClientBase:
         """
         if not self.reason_enabled_configured:
             return None
-        return ReasoningDisplay(
-            indicator_value=str(self.validated_reason_tokens),
-            indicator_tooltip="Reasoning token budget",
-            show_token_slider=True,
-        )
+        return ReasoningDisplay(control="tokens")
 
     @property
     def default_prompt_template(self) -> str:
@@ -677,7 +798,9 @@ class ClientBase:
         self.emit_status()
 
         await self.config.set_dirty()
-        await self.status()
+        # bounded: the websocket handler awaits this toggle inline, so a probe
+        # that hangs here would stop every later message on that connection
+        await instance.bounded_client_status(self)
         await async_signals.get("client.enabled").send(
             ClientStatus(client=self, enabled=True)
         )
@@ -765,9 +888,34 @@ class ClientBase:
             self.log.warning("prompt template not applied", reason="no model loaded")
             return f"{sys_msg}\n{prompt}"
 
-        # is JSON coercion active?
-        # Check for <|BOT|>{ in the prompt
-        json_coercion = "<|BOT|>{" in prompt
+        spec = PromptSpec()
+
+        model_name = self.model_name
+        if self.lock_template:
+            model_name = locked_model_template(self.name, self.model_name)
+
+        prompt = model_prompt(
+            model_name,
+            sys_msg,
+            prompt,
+            self.template_double_coercion(json_coercion="<|BOT|>{" in prompt),
+            default_template=self.default_prompt_template,
+            reasoning_tokens=self.validated_reason_tokens if self.reason_enabled else 0,
+            spec=spec,
+        )[0]
+
+        request = self._prompt_request.get()
+        if request is not None:
+            request.reasoning_patterns = self._resolve_reasoning_patterns(spec)
+
+        return prompt
+
+    def template_double_coercion(self, json_coercion: bool) -> str | None:
+        """
+        Text the prompt template puts at the start of the response, ahead of
+        the prompt's own coercion: the configured coercion (not ahead of a
+        JSON coercion) and the reason prefill.
+        """
 
         if self.can_be_coerced and self.double_coercion and not json_coercion:
             double_coercion = self.double_coercion
@@ -783,64 +931,52 @@ class ClientBase:
             else:
                 double_coercion = f"{self.reason_prefill}{double_coercion}"
 
-        spec = PromptSpec()
+        return double_coercion
 
-        model_name = self.model_name
-        if self.lock_template:
-            model_name = locked_model_template(self.name, self.model_name)
-
-        prompt = model_prompt(
-            model_name,
-            sys_msg,
-            prompt,
-            double_coercion,
-            default_template=self.default_prompt_template,
-            reasoning_tokens=self.validated_reason_tokens if self.reason_enabled else 0,
-            spec=spec,
-        )[0]
-
-        self._apply_spec_pattern(
-            spec.reasoning_pattern, "reason_response_pattern", spec
-        )
-        self._apply_spec_pattern(
-            spec.reasoning_validation_pattern, "reason_validation_pattern", spec
-        )
-
-        return prompt
-
-    def _apply_spec_pattern(
-        self, spec_value: str | None, config_attr: str, spec: PromptSpec
-    ):
+    def apply_indirect_coercion(self, prompt: str) -> tuple[str, str | None]:
         """
-        Applies a reasoning pattern determined by the prompt template to the
-        client config, overriding the configured value when the template
-        provides a different one.
+        A client that cannot pre-fill the response gets the coercion as an
+        instruction at the end of the prompt instead. Returns the prompt and
+        that coercion, or None when the prompt is sent as it is.
         """
-        if spec_value and spec_value != getattr(self.client_config, config_attr):
-            log.info(
-                "reasoning pattern determined from prompt template",
-                attr=config_attr,
-                value=spec_value,
-                spec=spec,
+        if self.can_be_coerced:
+            return prompt, None
+
+        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        if coercion_prompt:
+            coercion_instruction = (
+                INDIRECT_COERCION_PROMPT_REASONING
+                if self.reason_enabled
+                else INDIRECT_COERCION_PROMPT
             )
-            setattr(self.client_config, config_attr, spec_value)
+            prompt += f"{coercion_instruction}{coercion_prompt}"
+        return prompt, coercion_prompt
 
-    def prompt_template_example(self) -> tuple[str | None, str | None, PromptSpec]:
-        if not getattr(self, "model_name", None):
-            return None, None, PromptSpec()
+    def prompt_template_example(
+        self, model_name: str | None = None
+    ) -> tuple[str | None, str | None, PromptSpec]:
+        """
+        Renders an example request as this client sends it, with the template
+        of `model_name` (default: the client's own model, locked or not).
+        """
+        if model_name is None:
+            if not getattr(self, "model_name", None):
+                return None, None, PromptSpec()
+            model_name = self.model_name
+            if self.lock_template:
+                model_name = locked_model_template(self.name, self.model_name)
 
         if not self.enabled:
             return None, None, PromptSpec()
 
-        model_name = self.model_name
-        if self.lock_template:
-            model_name = locked_model_template(self.name, self.model_name)
+        prompt, _ = self.apply_indirect_coercion("{prompt}<|BOT|>{LLM coercion}")
 
         spec = PromptSpec()
         rendered, template_file = model_prompt(
             model_name,
             "{sysmsg}",
-            "{prompt}<|BOT|>{LLM coercion}",
+            prompt,
+            self.template_double_coercion(json_coercion=False),
             default_template=self.default_prompt_template,
             reasoning_tokens=self.validated_reason_tokens if self.reason_enabled else 0,
             spec=spec,
@@ -993,26 +1129,23 @@ class ClientBase:
         )
         ClientBase._prompt_log_file.flush()
 
+    def status_details(self) -> tuple[ClientStatusValue, str | None]:
+        if not self.enabled:
+            return "disabled", "Disabled"
+        if not self.connected:
+            return "error", "Could not connect"
+        if self.model_name:
+            return ("busy" if self.processing else "idle"), None
+        return "warning", "No model loaded"
+
     def emit_status(self, processing: bool = None):
         """
         Sets and emits the client status.
         """
-        error_message: str | None = None
-
         if processing is not None:
             self.processing = processing
 
-        if not self.enabled:
-            status = "disabled"
-            error_message = "Disabled"
-        elif not self.connected:
-            status = "error"
-            error_message = "Could not connect"
-        elif self.model_name:
-            status = "busy" if self.processing else "idle"
-        else:
-            error_message = "No model loaded"
-            status = "warning"
+        status, error_message = self.status_details()
 
         status_change = status != self.current_status
         self.current_status = status
@@ -1128,6 +1261,7 @@ class ClientBase:
             "reason_failure_behavior": self.reason_failure_behavior,
             "requires_reasoning_pattern": self.requires_reasoning_pattern,
             "reason_locked": self.reason_locked,
+            "reasoning_override_applies": self.reasoning_override_applies,
             "reasoning_display": self.reasoning_display.model_dump()
             if self.reasoning_display
             else None,
@@ -1263,6 +1397,9 @@ class ClientBase:
         conversation_context = client_context_attribute("conversation")
         parameters["max_tokens"] = conversation_context.get("length", 96)
 
+        if not conversation_context.get("inject_character_names", True):
+            return
+
         dialog_stopping_strings = [
             f"{character}:" for character in conversation_context["other_characters"]
         ]
@@ -1276,6 +1413,34 @@ class ClientBase:
             parameters["extra_stopping_strings"] += dialog_stopping_strings
         else:
             parameters["extra_stopping_strings"] = dialog_stopping_strings
+
+    def build_stopping_strings(
+        self, parameters: dict, cap: int | None = None, warn: bool = True
+    ) -> list[str]:
+        """
+        Merges the global stopping strings with the ones collected for this
+        generation (presets, conversation agent, ...).
+
+        `cap` is the maximum number of stop sequences the api accepts - any
+        strings past it are dropped and logged. Clients whose cap is hit as a
+        matter of routine pass `warn=False` to log at debug instead.
+        """
+
+        stopping_strings = STOPPING_STRINGS + parameters.get(
+            "extra_stopping_strings", []
+        )
+
+        if cap is not None and len(stopping_strings) > cap:
+            log_fn = self.log.warning if warn else self.log.debug
+            log_fn(
+                "too many stopping strings, truncating",
+                client_type=self.client_type,
+                max_stopping_strings=cap,
+                dropped=stopping_strings[cap:],
+            )
+            stopping_strings = stopping_strings[:cap]
+
+        return stopping_strings
 
     def clean_prompt_parameters(self, parameters: dict):
         """
@@ -1317,16 +1482,30 @@ class ClientBase:
         """
 
         requires_active_scene = client_context_attribute("requires_active_scene")
+        initial_scene = active_scene.get()
+        cancel_sequence = initial_scene.cancel_sequence if initial_scene else None
 
         async def poll():
             while True:
                 scene = active_scene.get()
                 if requires_active_scene and (
-                    not scene or not scene.active or scene.cancel_requested
+                    not scene
+                    or not scene.active
+                    or scene.cancel_requested
+                    or scene.cancel_sequence != cancel_sequence
                 ):
                     break
                 await asyncio.sleep(0.3)
-            return GenerationCancelled("Generation cancelled")
+            return GenerationCancelled(
+                "Generation cancelled",
+                by_user=bool(
+                    scene
+                    and (
+                        scene.cancel_requested
+                        or scene.cancel_sequence != cancel_sequence
+                    )
+                ),
+            )
 
         return asyncio.create_task(poll())
 
@@ -1346,16 +1525,18 @@ class ClientBase:
         task_poll = self._poll_interrupt()
         task_generate = self._generate_task(prompt, parameters, kind)
 
-        done, pending = await asyncio.wait(
-            [task_poll, task_generate], return_when=asyncio.FIRST_COMPLETED
-        )
-
-        # cancel the remaining task
-        for task in pending:
-            task.cancel()
-
-        # return the result of the completed task
-        return done.pop().result()
+        try:
+            done, pending = await asyncio.wait(
+                [task_poll, task_generate], return_when=asyncio.FIRST_COMPLETED
+            )
+            if task_poll in done:
+                return task_poll.result()
+            return task_generate.result()
+        finally:
+            for task in (task_poll, task_generate):
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(task_poll, task_generate, return_exceptions=True)
 
     async def abort_generation(self):
         """
@@ -1522,9 +1703,14 @@ class ClientBase:
         Returns "retry" or "ignore". Raises GenerationCancelled when the
         generation was aborted or the user cancelled.
         """
+        request = self._prompt_request.get()
+        if request and request.data:
+            request.data.error = error_message
+            self._emit_prompt_request()
+
         if auto_retries[issue] < limit:
             if self._auto_retry_cancelled(generation_id):
-                raise GenerationCancelled("Generation cancelled")
+                raise GenerationCancelled("Generation cancelled", by_user=True)
             auto_retries[issue] += 1
             wait = (
                 min(2 ** auto_retries[issue], AUTO_RETRY_MAX_BACKOFF)
@@ -1534,15 +1720,24 @@ class ClientBase:
             self._emit_auto_retry(
                 issue, auto_retries[issue], limit, generation_id, wait=wait
             )
+            scene = active_scene.get()
+            scene_was_active = bool(scene and scene.active)
+            cancel_sequence = scene.cancel_sequence if scene else None
             if wait and not await self._auto_retry_backoff_wait(wait, generation_id):
-                raise GenerationCancelled("Generation cancelled")
+                raise GenerationCancelled(
+                    "Generation cancelled",
+                    by_user=bool(scene and scene.cancel_sequence != cancel_sequence)
+                    or not (scene_was_active and not scene.active),
+                )
             return "retry"
 
         action = await self._prompt_generation_error(
             error_message, status_code=status_code, generation_id=generation_id
         )
         if action == "cancel":
-            raise GenerationCancelled("Generation cancelled by user")
+            raise GenerationCancelled("Generation cancelled by user", by_user=True)
+        if action == "ignore" and request:
+            request.failed = True
         return action
 
     async def _generate_with_error_handling(
@@ -1561,6 +1756,15 @@ class ClientBase:
         try:
             while True:
                 self.new_request()
+                self._returned_prompt_tokens = None
+                self._returned_response_tokens = None
+                self._reasoning_response = None
+                request = self._prompt_request.get()
+                if request and request.data:
+                    request.failed = False
+                    request.data.attempts += 1
+                    request.data.error = None
+                    self._emit_prompt_request()
 
                 try:
                     response = await self._cancelable_generate(
@@ -1571,12 +1775,7 @@ class ClientBase:
                 except Exception as e:
                     self.log.error("generation error", e=traceback.format_exc())
                     status_code = self._extract_status_code(e)
-                    # exceptions may carry a user-presentable message that is more
-                    # accurate than the generic per-status text (e.g. clients whose
-                    # transport reports errors without HTTP status codes)
-                    error_message = getattr(
-                        e, "user_message", None
-                    ) or get_error_message(status_code)
+                    error_message = describe_exception(e, status_code)
                     action = await self._auto_retry_or_prompt(
                         "rate_limit",
                         error_message,
@@ -1703,6 +1902,16 @@ class ClientBase:
             ):
                 self.request_information.first_token_time = time.time()
 
+    def record_whole_response(
+        self, response: str | None, reasoning: str | None = None
+    ) -> str:
+        response = response or ""
+        if self.request_information:
+            for text in (response, reasoning):
+                if text:
+                    self.request_information.tokens += self.count_tokens(text)
+        return response
+
     def strip_coercion_prompt(self, response: str, coercion_prompt: str = None) -> str:
         """
         Strips the coercion prompt from the response if it is present.
@@ -1807,13 +2016,59 @@ class ClientBase:
         :return: The AI's response text.
         """
 
+        request = PromptRequest()
+        token = self._prompt_request.set(request)
         try:
-            return await self._send_prompt(
+            response = await self._send_prompt(
                 prompt, kind, finalize, retries, data_expected
             )
-        except GenerationCancelled:
+            if request.data:
+                request.data.response = response
+                request.data.status = "failed" if request.failed else "completed"
+                if not request.failed:
+                    request.data.response_tokens = (
+                        self._returned_response_tokens
+                        if self._returned_response_tokens is not None
+                        else self.count_tokens(response)
+                    )
+            return response
+        except (GenerationCancelled, asyncio.CancelledError):
+            if request.data:
+                request.data.status = "cancelled"
+                request.data.error = "Generation cancelled"
+            if self.request_information and self.request_information.end_time is None:
+                self.request_information.cancelled = True
+                self.end_request()
             await self.abort_generation()
             raise
+        except Exception as exc:
+            if request.data:
+                request.data.status = "failed"
+                request.data.error = describe_exception(
+                    exc, self._extract_status_code(exc)
+                )
+            raise
+        finally:
+            try:
+                if request.data:
+                    request.data.time = time.monotonic() - request.started
+                    if self._returned_prompt_tokens is not None:
+                        request.data.prompt_tokens = self._returned_prompt_tokens
+                    if self._returned_response_tokens is not None:
+                        request.data.response_tokens = self._returned_response_tokens
+                    request.data.reasoning = self._reasoning_response
+                    self._emit_prompt_request()
+                    if os.environ.get("TALEMATE_LOG_PROMPTS"):
+                        self._log_prompt_to_file(request.data)
+            finally:
+                self._prompt_request.reset(token)
+
+    def _emit_prompt_request(self):
+        request = self._prompt_request.get()
+        if request and request.data:
+            if request.parameters is not None:
+                request.data.generation_parameters = deepcopy(request.parameters)
+            emit("prompt_sent", data=request.data.model_dump())
 
     async def _send_prompt(
         self,
@@ -1833,6 +2088,24 @@ class ClientBase:
         has_response_length = getattr(prompt, "response_length_instructions", False)
         response_length_mod = getattr(prompt, "response_length_mod", 0)
         prompt = str(prompt)
+
+        request = self._prompt_request.get()
+        agent_context = active_agent.get()
+        if request:
+            request.data = PromptData(
+                status="active",
+                kind=kind,
+                prompt=prompt,
+                agent_stack=agent_context.agent_stack if agent_context else [],
+                agent_type=agent_context.agent.agent_type if agent_context else None,
+                agent_action=agent_context.action if agent_context else None,
+                client_name=self.name,
+                client_type=self.client_type,
+                inference_preset=client_context_attribute("inference_preset"),
+                preset_group=self.preset_group,
+                template_uid=active_template_uid.get(),
+            )
+            self._emit_prompt_request()
 
         try:
             self.rate_limit_update()
@@ -1933,21 +2206,16 @@ class ClientBase:
             if not self.enforce_response_length_cap_tokens:
                 prompt_param.pop(self.max_tokens_param_name, None)
 
-            if not self.can_be_coerced:
-                prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
-                if coercion_prompt:
-                    coercion_instruction = (
-                        INDIRECT_COERCION_PROMPT_REASONING
-                        if self.reason_enabled
-                        else INDIRECT_COERCION_PROMPT
-                    )
-                    prompt += f"{coercion_instruction}{coercion_prompt}"
-            else:
-                coercion_prompt = None
+            prompt, coercion_prompt = self.apply_indirect_coercion(prompt)
 
             finalized_prompt = self.prompt_template(
                 self.get_system_message(kind), prompt
             ).strip(" ")
+
+            if request is not None and request.reasoning_patterns is None:
+                request.reasoning_patterns = self._resolve_reasoning_patterns(
+                    PromptSpec()
+                )
 
             finalized_prompt = self.finalize(prompt_param, finalized_prompt)
 
@@ -1955,7 +2223,6 @@ class ClientBase:
 
             token_length = self.count_tokens(finalized_prompt)
 
-            time_start = time.time()
             extra_stopping_strings = prompt_param.pop("extra_stopping_strings", [])
 
             self.clean_prompt_parameters(prompt_param)
@@ -1972,6 +2239,23 @@ class ClientBase:
                     "\n<|RESPONSE_LENGTH_INSTRUCTIONS|>", ""
                 )
 
+            try:
+                observed_actions.record_context(active_agent.get(), self.name)
+            except Exception:
+                self.log.warning(
+                    "observed_actions.record_context failed",
+                    error=traceback.format_exc(),
+                )
+
+            if request and request.data:
+                request.data.prompt = finalized_prompt
+                request.data.prompt_tokens = token_length
+                request.parameters = prompt_param
+                request.data.inference_preset = client_context_attribute(
+                    "inference_preset"
+                )
+                self._emit_prompt_request()
+
             response = await self._generate_with_reasoning_handling(
                 finalized_prompt, prompt_param, kind
             )
@@ -1986,43 +2270,17 @@ class ClientBase:
             if REPLACE_SMART_QUOTES:
                 response = util.replace_smart_quotes(response)
 
-            time_end = time.time()
-
             # stopping strings sometimes get appended to the end of the response anyways
-            # split the response by the first stopping string and take the first part
+            # cut the response at the earliest occurrence of any stopping string
 
-            for stopping_string in STOPPING_STRINGS + extra_stopping_strings:
-                if stopping_string in response:
-                    response = response.split(stopping_string)[0]
-                    break
+            cut_indices = [
+                response.find(stopping_string)
+                for stopping_string in STOPPING_STRINGS + extra_stopping_strings
+                if stopping_string in response
+            ]
 
-            agent_context = active_agent.get()
-
-            prompt_data = PromptData(
-                kind=kind,
-                prompt=finalized_prompt,
-                response=response,
-                prompt_tokens=self._returned_prompt_tokens or token_length,
-                response_tokens=self._returned_response_tokens
-                or self.count_tokens(response),
-                agent_stack=agent_context.agent_stack if agent_context else [],
-                agent_type=agent_context.agent.agent_type if agent_context else None,
-                agent_action=agent_context.action if agent_context else None,
-                client_name=self.name,
-                client_type=self.client_type,
-                time=time_end - time_start,
-                generation_parameters=prompt_param,
-                inference_preset=client_context_attribute("inference_preset"),
-                preset_group=self.preset_group,
-                reasoning=self._reasoning_response,
-                template_uid=active_template_uid.get(),
-            )
-
-            emit("prompt_sent", data=prompt_data.model_dump())
-
-            # File-based prompt logging for test scripts
-            if os.environ.get("TALEMATE_LOG_PROMPTS"):
-                self._log_prompt_to_file(prompt_data)
+            if cut_indices:
+                response = response[: min(cut_indices)]
 
             return response
         except GenerationCancelled:
@@ -2033,20 +2291,58 @@ class ClientBase:
                 self.end_request()
             raise
         except GenerationProcessingError as e:
+            if request:
+                request.failed = True
+                request.data.error = str(e)
             self.log.error("send_prompt error", e=e)
             emit("status", message=str(e), status="error")
             return ""
 
         finally:
             self.emit_status(processing=False)
-            self._returned_prompt_tokens = None
-            self._returned_response_tokens = None
-
             if self.rate_limit_counter:
                 self.rate_limit_counter.increment()
 
     def count_tokens(self, content: str):
         return util.count_tokens(content)
+
+    async def server_prompt_tokens(self, prompt: str) -> int | None:
+        """The prompt's token count from the server's own tokenizer, or None
+        when the server offers no way to count."""
+        return None
+
+    async def uncapped_completion_tokens(self, prompt: str) -> int | None:
+        """Completion limit for an uncapped request to an endpoint that needs
+        one: the room left in the configured context after the prompt.
+
+        None means send no limit: the padded estimate leaves no room, but only
+        a count from the server proves the prompt does not fit.
+        """
+        measured = await self.server_prompt_tokens(prompt)
+        if measured is not None:
+            remaining = self.max_token_length - measured
+            if remaining <= 0:
+                raise GenerationProcessingError(
+                    f"The prompt ({measured} tokens) leaves no room for a response "
+                    f"within the client's Context Length ({self.max_token_length}). "
+                    "Raise Context Length if the server allows more, or choose a "
+                    "response length setting that caps tokens."
+                )
+            return remaining
+
+        estimate = self.count_tokens(prompt)
+        remaining = self.max_token_length - math.ceil(
+            estimate * PROMPT_TOKEN_SAFETY_FACTOR
+        )
+        if remaining <= 0:
+            self.log.warning(
+                "uncapped request sent without a limit, the estimated prompt "
+                "leaves no room and the server cannot count it",
+                estimated_prompt_tokens=estimate,
+                max_token_length=self.max_token_length,
+            )
+            return None
+        return remaining
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """

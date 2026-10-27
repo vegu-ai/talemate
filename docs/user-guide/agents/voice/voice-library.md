@@ -53,7 +53,7 @@ To add a new voice:
 2. Select the TTS provider
 3. Configure the voice parameters:
    - **Label** - Display name for the voice
-   - **Provider ID** - Provider-specific identifier
+   - **Voice ID** - Provider-specific identifier
    - **Tags** - Free-form descriptive tags you define (gender, age, style, etc.)
    - **Parameters** - Provider-specific settings
 
@@ -94,7 +94,7 @@ Check the provider specific documentation for more information on how to configu
 **OpenAI Compatible:**
 
 - Manually add voices using the voice identifiers supported by your server
-- Voices are not auto-discovered (see the [OpenAI Compatible backend docs](openai-compatible.md))
+- Voices are not auto-discovered (see the [OpenAI Compatible backend docs](/talemate/user-guide/agents/voice/openai-compatible/))
 
 **Google Gemini-TTS:**
 

@@ -24,6 +24,8 @@ Scene-specific instructions that are available to the director during both autom
 
 These instructions are stored with the scene, so different stories can have different director behaviors.
 
+**Instruction template** adds a template file from the scene's templates to these instructions, which helps when the same text is shared between several instructions. To create one, open **Prompts** → **Template Files** → **scene**, click **New File**, choose the **scene** category and name the file. It appears in the dropdown as soon as it is saved. Categories named after an agent, such as **director**, create an override of that agent's prompt instead, and are not listed here.
+
 !!! tip "Global vs Scene-Specific Instructions"
     The Director agent settings also has a **Custom Instructions** field. That field applies globally to all scenes. Use **Director Instructions** here for story-specific guidance that should only apply to this scene.
 

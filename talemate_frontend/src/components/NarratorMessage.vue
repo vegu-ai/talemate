@@ -1,9 +1,7 @@
 <template>
   <v-alert variant="text" color="narrator" elevation="0" density="compact" :style="{ opacity: revisionBusy ? 0.65 : 1, transition: 'opacity 0.2s ease' }" @mouseover="hovered=true" @mouseleave="hovered=false">
     <template v-slot:close>
-      <v-btn size="small" icon variant="text" class="close-button" @click="deleteMessage" :disabled="uxLocked">
-        <v-icon>mdi-close</v-icon>
-      </v-btn>
+      <MessageCloseButton :placeholder="message_id == null" :disabled="uxLocked" @click="deleteMessage" />
     </template>
     <!-- Scene illustration (big) renders above message -->
     <MessageAssetImage 
@@ -26,13 +24,13 @@
         :message_content="text"
         :message_id="message_id"
       />
-      <RevisionNav v-if="isLastMessage" :count="revisionsCount" :index="revisionIndex" :source="revisionSource" :reason="revisionReason" :disabled="uxLocked" :busy="revisionBusy" @navigate="(dir) => $emit('navigate-revision', dir)" />
+      <RevisionNav v-if="isLastMessage" :count="revisionsCount" :index="revisionIndex" :source="revisionSource" :reason="revisionReason" :disabled="uxLocked" :busy="revisionBusy" :uncommitted="revisionUncommitted" :refresh="revisionRefresh" @keep="$emit('keep-revision')" @navigate="(dir) => $emit('navigate-revision', dir)" />
       <div v-if="editing" class="position-relative narrator-editor">
         <v-textarea
           ref="textarea"
           v-model="editing_text"
           color="narrator"
-          bg-color="black"
+          bg-color="surface"
 
           auto-grow
 
@@ -49,6 +47,7 @@
           :disabled="autocompleting"
           @redo="autocompleteField.redo()"
           @undo="autocompleteField.undo()" />
+        <HistoryEditNotice :message-id="message_id" />
       </div>
       <div v-if="!editing" class="narrator-text" @dblclick="startEdit()" v-html="renderedText">
       </div>
@@ -67,6 +66,8 @@
           :tts-busy="ttsBusy"
           :rev="rev"
           :scene-rev="sceneRev"
+          :can-copy-unsaved="canCopyUnsaved"
+          :immutable-save="immutableSave"
           :show-illustration-menu="illustrationMenuAvailable"
           @open-illustration-menu="openIllustrationMenu"
         >
@@ -83,7 +84,7 @@
         </MessageToolbar>
       </div>
       <div v-else>
-        <span class="text-muted text-caption">To edit the intro message open the <v-btn size="x-small" variant="text" color="primary" @click="openWorldStateManager('scene')"><v-icon>mdi-script</v-icon>Scene Editor</v-btn></span>
+        <span class="text-muted text-body-small">To edit the intro message open the <v-btn size="x-small" variant="text" color="primary" @click="openWorldStateManager('scene')"><v-icon>mdi-script</v-icon>Scene Editor</v-btn></span>
         <!-- generate tts -->
         <v-chip size="x-small" class="ml-2" label color="secondary" v-if="!editing && hovered && ttsAvailable" variant="tonal" @click="generateTTS('intro')" :disabled="uxLocked || appBusy || ttsBusy">
           <v-icon class="mr-1">mdi-account-voice</v-icon>
@@ -110,12 +111,16 @@ import MessageAssetMixin from './MessageAssetMixin.js';
 import RevisionNav from './RevisionNav.vue';
 import MessageToolbar from './MessageToolbar.vue';
 import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
+import HistoryEditNotice from './HistoryEditNotice.vue';
+import MessageCloseButton from './MessageCloseButton.vue';
 export default {
   components: {
+    MessageCloseButton,
     MessageAssetImage,
     RevisionNav,
     MessageToolbar,
     AutocompleteRedoChip,
+    HistoryEditNotice,
   },
   mixins: [MessageAssetMixin],
 
@@ -157,8 +162,10 @@ export default {
     },
     rev: {
       type: Number,
-      default: 0,
+      default: null,
     },
+    canCopyUnsaved: Boolean,
+    immutableSave: Boolean,
     sceneRev: {
       type: Number,
       default: 0,
@@ -191,6 +198,8 @@ export default {
       type: String,
       default: null,
     },
+    revisionUncommitted: { type: Boolean, default: false },
+    revisionRefresh: { type: Object, default: null },
     revisionBusy: {
       type: [Boolean, String],
       default: false,
@@ -200,7 +209,7 @@ export default {
       default: () => [],
     },
   },
-  emits: ['navigate-revision'],
+  emits: ['navigate-revision', 'keep-revision'],
   inject: [
     'requestDeleteMessage',
     'getWebsocket',
@@ -223,6 +232,7 @@ export default {
         brackets: sceneConfig.brackets || narratorStyles,
         entities: sceneConfig.entities,
         default: narratorStyles,
+        messageType: 'narrator',
       });
     },
     renderedText() {
@@ -366,7 +376,7 @@ export default {
 }
 
 .narrator-text {
-  color: #E0E0E0;
+  color: rgba(var(--v-theme-on-surface), 0.87);
 }
 
 .narrator-text :deep(.scene-paragraph) {
@@ -412,14 +422,4 @@ export default {
   color: rgb(var(--v-theme-muted));
   background-color: transparent;
 }
-
-.close-button {
-  opacity: 0.4;
-  color: rgba(255, 255, 255, 0.6) !important;
-  transition: opacity 0.2s ease;
-}
-
-.close-button:hover {
-  opacity: 1;
-  color: rgba(255, 255, 255, 0.9) !important;
-}</style>
+</style>

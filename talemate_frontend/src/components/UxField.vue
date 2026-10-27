@@ -5,7 +5,7 @@
     :model-value="modelValue"
     @update:modelValue="onValue"
     @keyup="$emit('change')"
-    @blur="$emit('change', field.save_on_change)"
+    @blur="$emit('change')"
     :readonly="readonly"
     :label="field.label"
     :hint="field.description"
@@ -23,7 +23,7 @@
     :model-value="modelValue"
     @update:modelValue="onValue"
     @keyup="$emit('change')"
-    @blur="$emit('change', field.save_on_change)"
+    @blur="$emit('change')"
     :readonly="readonly"
     :label="field.label"
     :hint="field.description"
@@ -66,8 +66,30 @@
     density="compact"
     class="mt-3"
   >
+    <template v-slot:item="{ props: itemProps, internalItem: item }">
+      <v-list-item v-bind="itemProps" :title="item.raw.label" :subtitle="item.raw.description" :lines="item.raw.description ? 'two' : 'one'"></v-list-item>
+    </template>
     <template v-if="$slots.prepend" v-slot:prepend><slot name="prepend" /></template>
   </v-autocomplete>
+
+  <!-- combobox (the choices are suggestions, any typed value is kept) -->
+  <v-combobox
+    v-else-if="field.type === 'combobox'"
+    :model-value="modelValue"
+    @update:modelValue="onValueAndChange"
+    :items="field.choices || []"
+    :return-object="false"
+    :readonly="readonly"
+    :label="field.label"
+    :hint="field.description"
+    :rules="requiredRules"
+    item-title="label"
+    item-value="value"
+    density="compact"
+    class="mt-3"
+  >
+    <template v-if="$slots.prepend" v-slot:prepend><slot name="prepend" /></template>
+  </v-combobox>
 
   <!-- wstemplate (world-state template selector) -->
   <v-autocomplete
@@ -83,7 +105,7 @@
     density="compact"
     class="mt-3"
   >
-    <template v-slot:item="{ props: itemProps, item }">
+    <template v-slot:item="{ props: itemProps, internalItem: item }">
       <v-list-item v-bind="itemProps" :title="item.raw.label" :subtitle="item.raw.subtitle"></v-list-item>
     </template>
     <template v-if="$slots.prepend" v-slot:prepend><slot name="prepend" /></template>
@@ -105,6 +127,9 @@
     density="compact"
     class="mt-3"
   >
+    <template v-slot:item="{ props: itemProps, internalItem: item }">
+      <v-list-item v-bind="itemProps" :title="item.raw.label" :subtitle="item.raw.description" :lines="item.raw.description ? 'two' : 'one'"></v-list-item>
+    </template>
     <template v-if="$slots.prepend" v-slot:prepend><slot name="prepend" /></template>
   </v-select>
 
@@ -133,7 +158,7 @@
        branch below for the rationale on align-start. -->
   <div
     v-else-if="field.type === 'number' && field.graduations"
-    :class="$slots.prepend ? 'd-flex align-start mt-3' : 'mt-3'"
+    :class="$slots.prepend ? 'd-flex align-start mt-6' : 'mt-6'"
   >
     <div v-if="$slots.prepend" class="ux-field__outer-prepend">
       <slot name="prepend" />
@@ -161,7 +186,7 @@
        slider) rather than with the vertical center of the slider track. -->
   <div
     v-else-if="field.type === 'number'"
-    :class="$slots.prepend ? 'd-flex align-start mt-3' : 'mt-3'"
+    :class="$slots.prepend ? 'd-flex align-start mt-6' : 'mt-6'"
   >
     <div v-if="$slots.prepend" class="ux-field__outer-prepend">
       <slot name="prepend" />
@@ -192,12 +217,12 @@
     :messages="field.description"
     density="compact"
     color="primary"
-    class="mt-3"
+    class="mt-3 described-setting"
   >
     <template v-if="$slots.prepend" v-slot:prepend><slot name="prepend" /></template>
     <template v-slot:message="{ message }">
-      <span class="text-caption text-grey">{{ message }}</span>
-      <span v-if="field.expensive" class="text-warning mt-2 text-caption">
+      <span class="text-body-small text-medium-emphasis">{{ message }}</span>
+      <span v-if="field.expensive" class="text-warning mt-2 text-body-small">
         <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
         Potential for many additional prompts.
       </span>
@@ -208,7 +233,7 @@
   <v-row v-else-if="field.type === 'vector2'" class="mt-3">
     <v-col cols="12" class="d-flex align-center">
       <slot v-if="$slots.prepend" name="prepend" />
-      <div class="text-caption text-muted text-uppercase">{{ field.label }}</div>
+      <div class="text-body-small text-muted text-uppercase">{{ field.label }}</div>
     </v-col>
     <v-col :cols="field.choices ? 5 : 6">
       <v-number-input
@@ -284,7 +309,7 @@
     />
   </div>
 
-  <!-- unified_api_key — bound to global app config; no per-field value. -->
+  <!-- unified_api_key — bound to the host's app-config working copy; no per-field value. -->
   <ConfigWidgetUnifiedApiKey
     v-else-if="field.type === 'unified_api_key'"
     :config-path="field.value"
@@ -295,7 +320,7 @@
 
   <!-- fallback -->
   <v-alert v-else density="compact" variant="text" color="muted" class="mt-3">
-    <span class="text-caption">Widget type "{{ field.type }}" ({{ field.label }}) is not supported.</span>
+    <span class="text-body-small">Widget type "{{ field.type }}" ({{ field.label }}) is not supported.</span>
   </v-alert>
 
   <!-- Field notes — `note_on_value` matches against the current modelValue,
@@ -303,18 +328,15 @@
   <template v-if="field.note != null">
     <!-- mb-4: the next field's slider renders its thumb label always, which
          would otherwise overlap the note -->
-    <v-alert variant="outlined" density="compact" :color="field.note.color || 'muted'" class="mb-4" :icon="field.note.icon">
-      <div class="text-caption text-mutedheader">{{ field.note.title || field.label }}</div>
-      <span class="text-muted text-caption">{{ field.note.text }}</span>
-    </v-alert>
+    <UxNote :note="{ ...field.note, title: field.note.title || field.label }" class="mb-4" />
   </template>
   <template v-else-if="field.note_on_value != null">
     <template v-for="(note, noteKey) in field.note_on_value" :key="noteKey">
       <v-alert v-if="modelValue == noteKey || String(modelValue) == noteKey" variant="outlined" density="compact" :color="note.color || 'muted'" class="mt-2 mb-4" :icon="note.icon">
-        <span class="text-caption text-uppercase mr-2">
+        <span class="text-body-small text-uppercase mr-2">
           {{ noteKey.toLowerCase() === 'true' ? 'ENABLED' : noteKey.replace(/_/g, ' ') }}
         </span>
-        <span class="text-muted text-caption">{{ note.text }}</span>
+        <span class="text-muted text-body-small">{{ note.text }}</span>
       </v-alert>
     </template>
   </template>
@@ -326,16 +348,17 @@ import ConfigWidgetTable from './ConfigWidgetTable.vue';
 import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
 import ConfigWidgetWeights from './ConfigWidgetWeights.vue';
 import GraduatedSlider from './GraduatedSlider.vue';
+import UxNote from './UxNote.vue';
 import { rowsFieldForTemplateType } from '@/utils/templateMappings';
 
 // Renders a single uniform UX field definition (talemate.ux.schema.Field)
 // across all supported widget types. Shared by the agent settings renderers
-// ([[AgentGlobalSettings.vue]] and [[AgentSceneSettings.vue]] — the latter
+// ([[AgentConfigSection.vue]] and [[AgentSceneSettings.vue]] — the latter
 // passes a `prepend` slot for the override toggle and `readonly` when the
 // override is inactive) and the client extra-field renderer
-// ([[ClientModal.vue]]).
+// ([[ClientConfigEditor.vue]]).
 export default {
-  components: { ConfigWidgetTable, ConfigWidgetUnifiedApiKey, ConfigWidgetWeights, GraduatedSlider },
+  components: { ConfigWidgetTable, ConfigWidgetUnifiedApiKey, ConfigWidgetWeights, GraduatedSlider, UxNote },
   props: {
     field: { type: Object, required: true },
     modelValue: { type: null, default: null },
@@ -410,7 +433,7 @@ export default {
     },
     onValueAndCommit(value) {
       this.$emit('update:modelValue', value);
-      this.$emit('change', this.field.save_on_change);
+      this.$emit('change');
     },
     onVector2Update(index, value) {
       const next = [...(this.modelValue || [0, 0])];
@@ -422,6 +445,12 @@ export default {
 </script>
 
 <style scoped>
+/* v-messages already mutes at --v-medium-emphasis-opacity, so the emphasis
+   class on the description multiplies with it and lands at 2.5:1 on light */
+.described-setting :deep(.v-messages) {
+  opacity: 1;
+}
+
 /* Vuetify applies pointer-events: none on disabled/readonly v-inputs, which
    also blocks the override toggle in the prepend slot. Re-enable so the
    toggle stays clickable. */

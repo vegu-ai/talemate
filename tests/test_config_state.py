@@ -6,9 +6,11 @@ Covers:
 - `get_config` (lazy initialization).
 - `update_config` (partial via dict).
 - `save_config` (round-trip + cleanup of inference defaults / unchanged
-  presets / unified_api_key configs / dangling preset_groups).
+  presets / unified_api_key configs / dangling preset_groups / a dangling
+  inference param panel client).
 - `cleanup_removed_clients`, `cleanup_removed_agents`,
-  `cleanup_removed_recent_scenes`, `cleanup_instructor_embeddings`.
+  `cleanup_removed_recent_scenes`, `cleanup_instructor_embeddings`,
+  `restore_missing_embedding_presets`.
 - `commit_config` (no-op when not dirty, otherwise saves and clears flag).
 
 We isolate filesystem and signal side-effects so the test never writes to
@@ -29,10 +31,12 @@ from talemate.config.schema import (
     Client,
     Config,
     EmbeddingFunctionPreset,
+    InferenceParameters,
     InferencePresetGroup,
     InferencePresets,
     RecentScene,
     SceneAppearance,
+    generate_chromadb_presets,
 )
 
 
@@ -109,6 +113,24 @@ class TestLoadConfig:
         assert isinstance(cfg, Config)
         assert cfg.dirty is False
 
+    def test_missing_file_returns_defaults(self, monkeypatch, tmp_path):
+        path = tmp_path / "does_not_exist.yaml"
+        monkeypatch.setattr(config_state, "CONFIG_FILE", path)
+
+        cfg = config_state._load_config()
+        defaults = Config()
+        assert isinstance(cfg, Config)
+        assert cfg.clients == defaults.clients
+        assert cfg.agents == defaults.agents
+        assert cfg.dirty is defaults.dirty
+
+    def test_missing_file_is_not_created_on_load(self, monkeypatch, tmp_path):
+        path = tmp_path / "does_not_exist.yaml"
+        monkeypatch.setattr(config_state, "CONFIG_FILE", path)
+
+        config_state._load_config()
+        assert not path.exists()
+
     def test_decrypts_api_keys_during_load(self, monkeypatch, tmp_path):
         # Write an unencrypted (plaintext-passthrough) value; decrypt_value
         # returns input unchanged when ENC_PREFIX is absent.
@@ -180,6 +202,47 @@ def _read_back(path: Path) -> dict:
 
 
 class TestSaveConfig:
+    @pytest.mark.parametrize(
+        "limits",
+        [
+            {"max_input_tokens": 0},
+            {"max_question_input_tokens": 0},
+            {"max_input_tokens": 0, "max_question_input_tokens": 0},
+        ],
+    )
+    def test_undeclared_decision_limits_survive_repeated_disk_round_trips(
+        self, isolated_config, tmp_path, monkeypatch, limits
+    ):
+        from talemate.config.schema import DecisionModelConfig
+
+        isolated_config.decision_model = DecisionModelConfig(**limits)
+        for _ in range(2):
+            config_state.save_config()
+            saved = yaml.safe_load((tmp_path / "config.yaml").read_text())
+            for field, value in limits.items():
+                assert saved["decision_model"][field] == value
+            reloaded = config_state._load_config()
+            for field, value in limits.items():
+                assert getattr(reloaded.decision_model, field) == value
+            monkeypatch.setattr(config_state, "CONFIG", reloaded)
+
+    @pytest.mark.parametrize("field", ["max_input_tokens", "max_question_input_tokens"])
+    @pytest.mark.parametrize(
+        "literal,expected", [("64000.0", 64000), ("6.4e+4", 64000), ("0.0", 0)]
+    )
+    def test_integral_float_limit_survives_load_save_load(
+        self, isolated_config, tmp_path, monkeypatch, field, literal, expected
+    ):
+        path = tmp_path / "config.yaml"
+        path.write_text(f"decision_model:\n  {field}: {literal}\n")
+        loaded = config_state._load_config()
+        assert getattr(loaded.decision_model, field) == expected
+        assert type(getattr(loaded.decision_model, field)) is int
+        monkeypatch.setattr(config_state, "CONFIG", loaded)
+        config_state.save_config()
+        reloaded = config_state._load_config()
+        assert getattr(reloaded.decision_model, field) == expected
+
     def test_writes_yaml_to_config_file_path(self, isolated_config, tmp_path):
         config_state.save_config()
         target = tmp_path / "config.yaml"
@@ -210,6 +273,26 @@ class TestSaveConfig:
             assert "analytical" in preserved
             assert "conversation" not in preserved
 
+    def test_round_trips_extra_stopping_strings_on_a_changed_preset(
+        self, isolated_config, tmp_path
+    ):
+        isolated_config.presets.inference.analytical.changed = True
+        isolated_config.presets.inference.analytical.extra_stopping_strings = [
+            "<<END>>"
+        ]
+
+        config_state.save_config()
+        data = _read_back(tmp_path / "config.yaml")
+        assert data["presets"]["inference"]["analytical"]["extra_stopping_strings"] == [
+            "<<END>>"
+        ]
+
+        # CONFIG_FILE points at the file just written, so the load path sees it.
+        reloaded = config_state._load_config()
+        assert reloaded.presets.inference.analytical.extra_stopping_strings == [
+            "<<END>>"
+        ]
+
     def test_drops_inference_section_when_no_presets_changed(
         self, isolated_config, tmp_path
     ):
@@ -229,6 +312,26 @@ class TestSaveConfig:
         config_state.save_config()
         data = _read_back(tmp_path / "config.yaml")
         assert data["clients"]["c1"]["preset_group"] == ""
+
+    def test_clears_dangling_inference_param_panel_client(
+        self, isolated_config, tmp_path
+    ):
+        isolated_config.clients = {"c1": Client(type="openai", name="c1")}
+        isolated_config.presets.inference_param_panel.client = "gone"
+
+        config_state.save_config()
+        data = _read_back(tmp_path / "config.yaml")
+        assert data["presets"]["inference_param_panel"]["client"] is None
+        # the broadcasts are built from the live model, not from the file
+        assert config_state.get_config().presets.inference_param_panel.client is None
+
+    def test_keeps_valid_inference_param_panel_client(self, isolated_config, tmp_path):
+        isolated_config.clients = {"c1": Client(type="openai", name="c1")}
+        isolated_config.presets.inference_param_panel.client = "c1"
+
+        config_state.save_config()
+        data = _read_back(tmp_path / "config.yaml")
+        assert data["presets"]["inference_param_panel"]["client"] == "c1"
 
     def test_keeps_valid_preset_group_reference(self, isolated_config, tmp_path):
         # Group exists, with a changed preset to keep it alive on save
@@ -258,6 +361,27 @@ class TestSaveConfig:
         group = data["presets"]["inference_groups"]["g1"]
         assert "analytical" in group["presets"]
         assert "creative" not in group["presets"]
+
+    def test_round_trips_extra_stopping_strings_on_a_changed_group_preset(
+        self, isolated_config, tmp_path
+    ):
+        presets = InferencePresets()
+        presets.analytical.changed = True
+        presets.analytical.extra_stopping_strings = ["<<END>>"]
+        isolated_config.presets.inference_groups = {
+            "g1": InferencePresetGroup(name="g1", presets=presets),
+        }
+
+        config_state.save_config()
+        data = _read_back(tmp_path / "config.yaml")
+        group = data["presets"]["inference_groups"]["g1"]
+        assert group["presets"]["analytical"]["extra_stopping_strings"] == ["<<END>>"]
+
+        # CONFIG_FILE points at the file just written, so the load path sees it.
+        reloaded = config_state._load_config()
+        assert reloaded.presets.inference_groups[
+            "g1"
+        ].presets.analytical.extra_stopping_strings == ["<<END>>"]
 
     def test_strip_unified_api_key_configs_removes_unified_keys(
         self, isolated_config, tmp_path, monkeypatch
@@ -453,6 +577,76 @@ class TestCleanupInstructorEmbeddings:
 
 
 # ---------------------------------------------------------------------------
+# restore_missing_embedding_presets
+# ---------------------------------------------------------------------------
+
+
+class TestRestoreMissingEmbeddingPresets:
+    """`save_config` writes `presets.embeddings` in full and `_load_config`
+    replaces the dict, so a config saved before a preset shipped never sees
+    it - which is how the config that reaches this function is built."""
+
+    @staticmethod
+    def _saved_config(omit: str | None = None, **edits) -> Config:
+        embeddings = {
+            key: preset.model_dump()
+            for key, preset in generate_chromadb_presets().items()
+            if key != omit
+        }
+        for key, fields in edits.items():
+            embeddings[key].update(fields)
+        return Config.model_validate({"presets": {"embeddings": embeddings}})
+
+    def test_restores_a_preset_the_saved_config_predates(self):
+        config = self._saved_config(omit="openrouter")
+        assert "openrouter" not in config.presets.embeddings
+
+        config_state.restore_missing_embedding_presets(config)
+
+        assert config.presets.embeddings["openrouter"].embeddings == "openrouter"
+        assert (
+            config.presets.embeddings["openrouter"].model
+            == "openai/text-embedding-3-small"
+        )
+
+    def test_leaves_an_edited_shipped_preset_alone(self):
+        config = self._saved_config(openrouter={"model": "qwen/qwen3-embedding-8b"})
+
+        config_state.restore_missing_embedding_presets(config)
+
+        assert (
+            config.presets.embeddings["openrouter"].model == "qwen/qwen3-embedding-8b"
+        )
+
+    def test_leaves_a_custom_preset_alone(self):
+        """A preset must be missing, or the restore branch never runs and the
+        assertion holds for a body that does nothing."""
+        config = self._saved_config(omit="openrouter")
+        config.presets.embeddings["mine"] = EmbeddingFunctionPreset(
+            embeddings="sentence-transformer", model="my/model", custom=True
+        )
+
+        config_state.restore_missing_embedding_presets(config)
+
+        assert "openrouter" in config.presets.embeddings
+        assert config.presets.embeddings["mine"].model == "my/model"
+        assert config.presets.embeddings["mine"].custom is True
+
+    def test_does_not_mark_the_config_dirty(self):
+        """`cleanup()` saves on the line after this one, so a dirty flag here
+        would only buy a second write from the next `commit_config` pass."""
+        config = self._saved_config(omit="openrouter")
+        config.dirty = False
+
+        config_state.restore_missing_embedding_presets(config)
+
+        assert config.dirty is False
+
+    def test_none_config_is_noop(self):
+        config_state.restore_missing_embedding_presets(None)
+
+
+# ---------------------------------------------------------------------------
 # commit_config
 # ---------------------------------------------------------------------------
 
@@ -523,3 +717,11 @@ class TestEnvVariableNameValidation:
             }
         )
         assert config.env == {"GOOD_NAME": "v1", "_ALSO_GOOD": "v2"}
+
+
+class TestExtraStoppingStringValidation:
+    def test_blank_entries_dropped_and_whitespace_preserved(self):
+        # blank entries would truncate every response at its first match;
+        # a trailing space is meaningful though
+        params = InferenceParameters(extra_stopping_strings=["", "  ", "Bob: "])
+        assert params.extra_stopping_strings == ["Bob: "]

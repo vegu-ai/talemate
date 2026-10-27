@@ -11,6 +11,7 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 
 import talemate.emit.async_signals
+import talemate.instance as instance
 from talemate.agents.base import DynamicInstruction
 
 from talemate.agents.director.chat.schema import DirectorChatMessage
@@ -36,6 +37,7 @@ from ..test_director_templates import (  # noqa: F401
     setup_agents,
     active_context,
 )
+from ..helpers import add_character_knowledge
 from .conftest import capture_prompt
 
 AGENT = "director"
@@ -160,6 +162,86 @@ class TestDirectorBaselines:
             mock_meta.return_value = []
             await director.direction_execute_turn(always_on=True)
         baseline_checker(capture_prompt(director), AGENT, "direction_execute_turn")
+
+    @pytest.mark.asyncio
+    async def test_guide_actor_off_of_scene_analysis__with_character_knowledge(
+        self, active_context, baseline_checker
+    ):
+        director = active_context
+        add_character_knowledge(director.scene)
+        # The guidance freshness key reads the audience index revision.
+        instance.get_agent("memory")._audience_state = Mock(
+            return_value=Mock(revision=0)
+        )
+        director.client.send_prompt = AsyncMock(
+            return_value="<ANALYSIS>Analysis.</ANALYSIS><GUIDANCE>Guidance text.</GUIDANCE>"
+        )
+        await director.guide_actor_off_of_scene_analysis(
+            analysis="The scene is tense and dramatic.",
+            character=director.scene.get_character("Elena"),
+            response_length=256,
+        )
+        baseline_checker(
+            capture_prompt(director),
+            AGENT,
+            "guide_actor_off_of_scene_analysis__with_character_knowledge",
+        )
+
+    @pytest.mark.asyncio
+    async def test_chat_send__with_character_knowledge(
+        self, active_context, baseline_checker
+    ):
+        director = active_context
+        add_character_knowledge(director.scene)
+        chat = director.chat_create()
+        director.client.send_prompt = AsyncMock(
+            return_value="<ANALYSIS>Analysis.</ANALYSIS><MESSAGE>Response message.</MESSAGE>"
+        )
+        with (
+            patch(
+                "talemate.agents.director.action_core.utils.get_available_actions"
+            ) as mock_actions,
+            patch(
+                "talemate.agents.director.action_core.utils.get_meta_groups"
+            ) as mock_meta,
+            patch.object(director, "_chat_has_enough_for_title", return_value=False),
+        ):
+            mock_actions.return_value = []
+            mock_meta.return_value = []
+            await director.chat_send(
+                chat_id=chat.id,
+                message="What should happen next in the scene?",
+            )
+        baseline_checker(
+            capture_prompt(director), AGENT, "chat_send__with_character_knowledge"
+        )
+
+    @pytest.mark.asyncio
+    async def test_direction_execute_turn__with_character_knowledge(
+        self, active_context, baseline_checker
+    ):
+        director = active_context
+        add_character_knowledge(director.scene)
+        director.actions["scene_direction"].enabled = True
+        director.client.send_prompt = AsyncMock(
+            return_value="<ANALYSIS>Analysis.</ANALYSIS><DECISION>Decision text.</DECISION>"
+        )
+        with (
+            patch(
+                "talemate.agents.director.action_core.utils.get_available_actions"
+            ) as mock_actions,
+            patch(
+                "talemate.agents.director.action_core.utils.get_meta_groups"
+            ) as mock_meta,
+        ):
+            mock_actions.return_value = []
+            mock_meta.return_value = []
+            await director.direction_execute_turn(always_on=True)
+        baseline_checker(
+            capture_prompt(director),
+            AGENT,
+            "direction_execute_turn__with_character_knowledge",
+        )
 
     @pytest.mark.asyncio
     async def test_direction_execute_turn__with_instruction_template(

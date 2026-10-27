@@ -15,6 +15,7 @@ from enum import IntEnum
 from talemate.game.engine.nodes.base_types import base_node_type, BASE_TYPES
 from talemate.game.engine.nodes.registry import get_node, register
 from talemate.exceptions import (
+    ControlFlowException,
     ExitScene,
     ResetScene,
     RestartSceneLoop,
@@ -90,15 +91,15 @@ def get_type_class(type_str: str) -> Any:
     raise ValueError(f"Could not find class for type {type_str}")
 
 
-class LoopContinue(Exception):
+class LoopContinue(ControlFlowException):
     pass
 
 
-class LoopBreak(Exception):
+class LoopBreak(ControlFlowException):
     pass
 
 
-class LoopExit(Exception):
+class LoopExit(ControlFlowException):
     pass
 
 
@@ -959,9 +960,6 @@ class Router(Node):
             if idx != route_to:
                 socket.deactivated = True
             else:
-                print(
-                    f"Setting output {socket.name} to {self.get_input_value('input')}"
-                )
                 self.set_output_values({socket.name: self.get_input_value("input")})
 
 
@@ -1391,7 +1389,6 @@ def validate_node(
     # If it's a dict, check registry and instantiate appropriate class
     if isinstance(v, dict):
         registry_name = v.get("registry")
-        # print(f"Validating node with registry: {registry_name}")
         if registry_name:
             node_cls = get_node(registry_name)
             if node_cls:
@@ -2243,6 +2240,8 @@ class Loop(Graph):
             if state_values:
                 state.data.update(state_values)
 
+            cancelled = False
+
             try:
                 # Separate into weakly connected components (isolated chains)
                 chains = list(nx.weakly_connected_components(graph))
@@ -2395,12 +2394,15 @@ class Loop(Graph):
                     # LOOP END
 
                     await self.on_loop_end(state)
-            # except Exception as e:
-            #    log.error("Error in loop", exc=e, traceback=traceback.format_exc())
-            #    raise
+            except asyncio.CancelledError:
+                # the callbacks signal completion - a cancelled loop never
+                # completed and must not fire them
+                cancelled = True
+                raise
             finally:
-                for callback in self.callbacks:
-                    await callback(state)
+                if not cancelled:
+                    for callback in self.callbacks:
+                        await callback(state)
 
 
 @base_node_type("core/Event")
@@ -2476,7 +2478,12 @@ class Listen(Graph):
 
         node_state = await self.node_state_push(self, state)
         try:
-            await self.execute(state, state_values={"event": event})
+            await self.execute(
+                state, state_values={"event": event, "__focal_call": None}
+            )
+        except StopModule:
+            await self.node_state_pop(node_state, self, state)
+            return
         except Exception as exc:
             await self.node_state_pop(
                 node_state, self, state, error=traceback.format_exc()

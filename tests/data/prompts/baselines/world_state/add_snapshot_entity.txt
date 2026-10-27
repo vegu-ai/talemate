@@ -1,0 +1,64 @@
+## Classification
+Content Classification: Fantasy adventure story
+
+Narrative Perspective: Third person limited, past tense.
+
+Scenario Premise:
+A peaceful clearing in the heart of an ancient forest.
+
+## Cast
+Player character: Hero
+Other major characters:
+- Elena
+
+## Story so far
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+## Selected in
+The clearing opens onto a moss-covered shrine.
+
+## Selection
+moss-covered shrine
+
+## Already tracked
+
+items: Waystone
+
+## Example
+```json
+{
+    "entity": {
+        "kind": "item",
+        "mentions": [
+            "verbatim noun phrase from SELECTED IN"
+        ],
+        "name": "Auxiliary maintenance locker",
+        "resolved": true,
+        "snapshot": "What inspecting this entity reveals right now \u2014 one to three sentences of concrete fact."
+    }
+}
+```
+A refusal is the same shape with `resolved: false` and no other fields.
+
+## Task
+The reader selected the SELECTION inside the message shown in SELECTED IN, asking for it to become a tracked entity in the world state. Resolve that span into exactly one entry.
+
+Decide first whether the selection names a thing at all:
+- A person, an object, or a place the selection refers to — resolve it, even when the snapshot pass skipped it and even when the prose barely dwells on it. The reader asked for this one, so the "would a reader learn something new" bar the refresh pass applies does not decide it here.
+- Prose that names no distinct entity — a verb phrase, a fragment of dialogue, a mood, a sentence about several things at once — is a refusal. Answer `resolved: false` and nothing else. Do not invent an entity to fill the response.
+
+When you resolve it:
+- **`kind`** is exactly one of `character`, `item` or `place`. A person is a character whether or not they act in the scene. A location the scene refers to is a place.
+- **`name`** is the reader-friendly title-case name of the entity ("Auxiliary maintenance locker", not "auxiliary_maintenance_locker"). If ALREADY TRACKED lists this same entity, reuse its exact name — your entry replaces it rather than adding a second one.
+- **`snapshot`** is one to three sentences of concrete fact about the entity itself — function, history, condition, mechanism, peril, sensory detail. Draw on established context and invent grounded specifics beyond it, but never contradict STORY SO FAR or the message. Metaphor and thematic reading are not facts; describe the thing, not what it means to somebody.
+- **`emotion`** is a single word, characters only, and only when the moment supports one. Omit it for items and places.
+- **`mentions`** are verbatim noun phrases copied literally from SELECTED IN that refer to this entity, including the selected span when it is one. No pronouns, no possessive bindings ("Elmer's boots" belongs to the boots), no paraphrasing or recasing. These phrases are what the reader's client marks in the message, so a phrase that is not literally in SELECTED IN is dropped.
+- **Possessive constructions ("X's Y")** belong to Y. A selection of "Elmer's boots" resolves to the boots.
+
+Required response: valid json matching the example shape — one `entity`, nothing else.
+
+## Selected entity
+<|BOT|>```json
+{ "entity": {

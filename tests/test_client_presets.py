@@ -2,10 +2,24 @@
 
 import pytest
 
+import talemate.config.state as config_state
 from talemate.client.presets import (
+    get_inference_parameters,
     max_tokens_for_kind,
     preset_name_for_kind,
 )
+from talemate.config.schema import InferencePresetGroup, InferencePresets
+
+
+@pytest.fixture
+def preset_isolation():
+    """Snapshot/restore the inference presets and preset groups."""
+    saved_inference = config_state.CONFIG.presets.inference.model_copy(deep=True)
+    saved_groups = dict(config_state.CONFIG.presets.inference_groups)
+    yield config_state.CONFIG.presets
+    config_state.CONFIG.presets.inference = saved_inference
+    config_state.CONFIG.presets.inference_groups.clear()
+    config_state.CONFIG.presets.inference_groups.update(saved_groups)
 
 
 class TestPresetNameForKind:
@@ -46,3 +60,19 @@ class TestMaxTokensForKind:
         # "create" caps at min(1024, budget * 0.35)
         assert max_tokens_for_kind("create", 1000) == 350
         assert max_tokens_for_kind("create", 100000) == 1024
+
+
+class TestGetInferenceParametersExtraStoppingStrings:
+    def test_group_preset_overrides_ungrouped(self, preset_isolation):
+        preset_isolation.inference.creative.extra_stopping_strings = ["<<UNGROUPED>>"]
+        group_presets = InferencePresets()
+        group_presets.creative.extra_stopping_strings = ["<<GROUPED>>"]
+        preset_isolation.inference_groups["g1"] = InferencePresetGroup(
+            name="g1", presets=group_presets
+        )
+
+        grouped = get_inference_parameters("creative", "g1")
+        assert grouped["extra_stopping_strings"] == ["<<GROUPED>>"]
+
+        ungrouped = get_inference_parameters("creative")
+        assert ungrouped["extra_stopping_strings"] == ["<<UNGROUPED>>"]

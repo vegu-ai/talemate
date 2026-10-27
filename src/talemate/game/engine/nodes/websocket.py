@@ -68,7 +68,7 @@ class OperationDone(WebsocketBase):
     Sends an `operation_done` message through the websocket router, optionally
     emits a status message and - unless `signal_only` is set - triggers an auto
     save of the scene (or marks the scene as unsaved when auto save is off or
-    disallowed).
+    disallowed, or the scene is read-only).
 
     Inputs:
 

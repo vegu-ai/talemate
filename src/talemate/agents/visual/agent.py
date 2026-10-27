@@ -25,6 +25,7 @@ from .style import StyleMixin
 from .finalize import PromptFinalizationMixin
 from .generation import GenerationMixin
 from .analyze import AnalysisMixin
+from .reference import REFERENCE_TARGETS, ReferenceMixin
 from .backends.comfyui import ComfyUIMixin
 from .backends.automatic1111 import Automatic1111Mixin
 from .backends.google_image import GoogleImageMixin
@@ -57,6 +58,7 @@ class VisualAgent(
     PromptFinalizationMixin,
     GenerationMixin,
     AnalysisMixin,
+    ReferenceMixin,
     ComfyUIMixin,
     Automatic1111Mixin,
     SDNextMixin,
@@ -95,7 +97,6 @@ class VisualAgent(
                         value="",
                         label="Backend (text to image)",
                         description="The backend to use for basic text to image generation",
-                        save_on_change=True,
                         scene_overridable=False,
                     ),
                     "backend_image_edit": AgentActionConfig(
@@ -109,7 +110,6 @@ class VisualAgent(
                         value="",
                         label="Backend (image editing)",
                         description="The backend to use for contextual image editing",
-                        save_on_change=True,
                         scene_overridable=False,
                     ),
                     "backend_image_analyzation": AgentActionConfig(
@@ -123,7 +123,6 @@ class VisualAgent(
                         value="",
                         label="Backend (image analysis)",
                         description="The backend to use for image analysis",
-                        save_on_change=True,
                         scene_overridable=False,
                     ),
                     "timeout": AgentActionConfig(
@@ -147,7 +146,9 @@ class VisualAgent(
                         type="bool",
                         value=False,
                         label="Automatic Generation",
-                        description="Allow automatic generation of visual content",
+                        quick_toggle_root=True,
+                        icon="mdi-creation",
+                        description="Allow images that are generated without your request: new portraits and backgrounds (World State), a cover image for a character the Director persists, and images the Director creates during scene direction. Images you ask for are not affected.",
                     ),
                 },
             ),
@@ -160,7 +161,7 @@ class VisualAgent(
                 config={
                     "fallback_prompt_type": AgentActionConfig(
                         type="text",
-                        value=PROMPT_TYPE.KEYWORDS,
+                        value=PROMPT_TYPE.DESCRIPTIVE,
                         label="Fallback Prompt Type",
                         description="The prompt type to use for prompt only generation (if backends are not configured)",
                         note="This will be used for `prompt only` generation if no backends are configured",
@@ -179,11 +180,11 @@ class VisualAgent(
                         type="bool",
                         value=False,
                         label="Automatic analysis of references",
-                        description="When enabled, reference images lacking analysis data will be automatically analyzed before being used in prompt generation.",
+                        description="When enabled, reference images lacking analysis data will be automatically analyzed before being used in prompt generation. Only runs when the image backend that makes the image uses the Descriptive prompting type.",
                         note_on_value={
                             True: AgentActionNote(
                                 color="warning",
-                                text="Reference images will be analyzed on-the-fly when missing analysis data, adding one AI query per unanalyzed reference. Requires image analysis backend to be configured.",
+                                text="Reference images will be analyzed on-the-fly when missing analysis data, adding one AI query per unanalyzed reference when the image backend that makes the image uses the Descriptive prompting type. Requires image analysis backend to be configured.",
                             ),
                         },
                     ),
@@ -191,12 +192,12 @@ class VisualAgent(
                         type="bool",
                         value=True,
                         label="Perform extra revision of editing prompts",
-                        description="Uses AI to refine and simplify image editing prompts based on provided references, potentially improving generation results.",
+                        description="Uses AI to refine and simplify image editing prompts based on provided references, potentially improving generation results. Only runs when the image backend that makes the image uses the Descriptive prompting type.",
                         note_on_value={
                             True: AgentActionNote(
                                 color="warning",
                                 title="Additional AI Query Required",
-                                text="This will add an extra AI query to the prompt generation process when references are provided, but may improve results by better aligning the prompt with the provided references.",
+                                text="This will add an extra AI query to the prompt generation process when references are provided and the image backend that makes the image uses the Descriptive prompting type, but may improve results by better aligning the prompt with the provided references.",
                             ),
                         },
                     ),
@@ -313,6 +314,11 @@ class VisualAgent(
         # character-level finalizers are edited while the feature is off
         meta["prompt_finalization_enabled"] = self.prompt_finalization_enabled
 
+        meta["reference_targets"] = {
+            str(vis_type): [str(target) for target in targets]
+            for vis_type, targets in REFERENCE_TARGETS.items()
+        }
+
         return meta
 
     @property
@@ -382,7 +388,7 @@ class VisualAgent(
     @property
     def fallback_prompt_type(self) -> PROMPT_TYPE:
         value = self.resolve_config("prompt_generation", "fallback_prompt_type")
-        return PROMPT_TYPE(value) if value else PROMPT_TYPE.KEYWORDS
+        return PROMPT_TYPE(value) if value else PROMPT_TYPE.DESCRIPTIVE
 
     @property
     def prompt_generation_length(self) -> int:
@@ -436,7 +442,11 @@ class VisualAgent(
         return False
 
     async def apply_config(
-        self, actions: dict | None = None, enabled: bool | None = None, **kwargs
+        self,
+        actions: dict | None = None,
+        enabled: bool | None = None,
+        force: bool = False,
+        **kwargs,
     ):
         # track relevant states before applying config
         _old_action_config = {
@@ -465,19 +475,19 @@ class VisualAgent(
         await self.evaluate_backend(
             backend_type="backend",
             backend_name=self.backend_name,
-            force=(_backend_changed or _handle_enable),
+            force=(force or _backend_changed or _handle_enable),
             old_config=_old_action_config,
         )
         await self.evaluate_backend(
             backend_type="backend_image_edit",
             backend_name=self.backend_image_edit_name,
-            force=(_backend_image_edit_changed or _handle_enable),
+            force=(force or _backend_image_edit_changed or _handle_enable),
             old_config=_old_action_config,
         )
         await self.evaluate_backend(
             backend_type="backend_image_analyzation",
             backend_name=self.backend_image_analyzation_name,
-            force=(_backend_image_analyzation_changed or _handle_enable),
+            force=(force or _backend_image_analyzation_changed or _handle_enable),
             old_config=_old_action_config,
         )
 
@@ -561,8 +571,17 @@ class VisualAgent(
 
     ## Status
 
+    def refresh_choices(self):
+        for backend_name in BACKENDS:
+            update_choices = getattr(self, f"{backend_name}_update_choices", None)
+            if update_choices:
+                update_choices()
+
     async def emit_status(self, processing: bool = None):
         if self.enabled:
+            # the per backend emits below are gated on the saved selection,
+            # so fill the choices that need no backend here
+            self.refresh_choices()
             if self.backend_name:
                 fn = getattr(self, f"{self.backend_name}_emit_status", None)
                 if fn:

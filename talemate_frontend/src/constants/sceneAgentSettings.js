@@ -3,7 +3,7 @@ import { conditionMet } from '@/utils/uxConditions';
 
 /**
  * Validation rules for the scene agent-settings filename input
- * (used by the RequestInput dialog in AgentModal).
+ * (used by the RequestInput dialog on the Agents settings page).
  *
  * Mirrors the server-side `is_safe_settings_filename` guard so the user
  * gets inline feedback in the dialog instead of round-tripping a doomed
@@ -20,6 +20,10 @@ export const SCENE_AGENT_SETTINGS_FILENAME_RULES = [
   v => !(v || '').includes('/') || 'No path separators allowed',
   v => !(v || '').includes('\\') || 'No path separators allowed',
   v => !(v || '').includes('\0') || 'Invalid characters in filename',
+  // `is_safe_relative_filename` rejects leading-dot traversal outright — the
+  // separator rules above already cover the rest of its checks (its
+  // `Path(name).name == name` guard only ever fails on a separator).
+  v => !(v || '').startsWith('..') || 'Filename cannot start with ".."',
 ];
 
 export const DEFAULT_SCENE_AGENT_SETTINGS_FILENAME = 'agent-settings.json';
@@ -36,11 +40,65 @@ export function countSceneOverrides(overlay) {
   const actions = overlay?.actions || {};
   let n = 0;
   for (const k in actions) {
-    const a = actions[k];
-    if (hasEnabledOverride(a)) n += 1;
-    if (a.config) n += Object.keys(a.config).length;
+    n += countSliceOverrides(actions[k]);
   }
   return n;
+}
+
+function countSliceOverrides(slice) {
+  return (hasEnabledOverride(slice) ? 1 : 0) + Object.keys(slice?.config || {}).length;
+}
+
+/**
+ * The active scene overrides of an overlay per section of the Agents settings
+ * page: a container action is its own section, every other action sits in
+ * General (`_config`). The counts add up to `countSceneOverrides`.
+ */
+export function sectionOverrideCounts(overlay, schemaActions) {
+  const counts = {};
+  const actions = overlay?.actions || {};
+  for (const actionKey in actions) {
+    const n = countSliceOverrides(actions[actionKey]);
+    if (!n) continue;
+    const section = schemaActions?.[actionKey]?.container ? actionKey : '_config';
+    counts[section] = (counts[section] || 0) + n;
+  }
+  return counts;
+}
+
+/**
+ * A private, always-shaped copy of an overlay (`{actions: {...}}`). Used when
+ * an overlay that arrived over the wire becomes local editing state, so later
+ * edits can't reach back into the payload every message handler shares.
+ */
+export function normalizeSceneOverlay(overlay) {
+  return { actions: overlay?.actions ? JSON.parse(JSON.stringify(overlay.actions)) : {} };
+}
+
+/**
+ * Canonical string form of an overlay, for comparing two of them.
+ *
+ * Key order is not meaningful in an overlay but survives a plain
+ * JSON.stringify: toggling an override off and back on re-adds its key at the
+ * end, which would otherwise read as a change. Sorting keys and dropping
+ * empty slices makes "same overrides" compare equal.
+ */
+export function serializeSceneOverlay(overlay) {
+  const actions = overlay?.actions || {};
+  const canonical = {};
+  for (const actionKey of Object.keys(actions).sort()) {
+    const slice = actions[actionKey] || {};
+    const entry = {};
+    if (hasEnabledOverride(slice)) entry.enabled = !!slice.enabled;
+    const config = slice.config || {};
+    const configKeys = Object.keys(config).sort();
+    if (configKeys.length) {
+      entry.config = {};
+      for (const configKey of configKeys) entry.config[configKey] = { value: config[configKey]?.value ?? null };
+    }
+    if (Object.keys(entry).length) canonical[actionKey] = entry;
+  }
+  return JSON.stringify(canonical);
 }
 
 /**
@@ -59,6 +117,33 @@ export function setActionOverrideSlice(actions, actionKey, perActionOverride) {
     next[actionKey] = perActionOverride;
   }
   return next;
+}
+
+/**
+ * The sparse patch that turns one action's override slice `before` into
+ * `after`, as scene-only writer entries: `{ set: [...], clear: [...] }`.
+ * Keys equal in both are left out, so a concurrent write to them survives.
+ */
+export function actionOverridePatch(agent, actionKey, before, after) {
+  const set = { agent, action: actionKey, config: {} };
+  const clear = [];
+  if (hasEnabledOverride(after)) {
+    if (!hasEnabledOverride(before) || !!before.enabled !== !!after.enabled) set.enabled = !!after.enabled;
+  } else if (hasEnabledOverride(before)) {
+    clear.push({ agent, action: actionKey });
+  }
+  const beforeConfig = before?.config || {};
+  const afterConfig = after?.config || {};
+  for (const [key, entry] of Object.entries(afterConfig)) {
+    if (!(key in beforeConfig) || JSON.stringify(beforeConfig[key]?.value) !== JSON.stringify(entry?.value)) {
+      set.config[key] = entry?.value;
+    }
+  }
+  for (const key of Object.keys(beforeConfig)) {
+    if (!(key in afterConfig)) clear.push({ agent, action: actionKey, config: key });
+  }
+  const changed = 'enabled' in set || Object.keys(set.config).length > 0;
+  return { set: changed ? [set] : [], clear };
 }
 
 /**
@@ -121,7 +206,7 @@ export function effectiveActionEnabled(actions, overlay, actionKey) {
 }
 
 /** True if a per-action override slice holds anything at all. */
-function actionHasActiveOverride(overrides) {
+export function actionHasActiveOverride(overrides) {
   if (!overrides) return false;
   if (hasEnabledOverride(overrides)) return true;
   return Object.keys(overrides.config || {}).length > 0;
@@ -130,7 +215,8 @@ function actionHasActiveOverride(overrides) {
 /**
  * True if an action schema has at least one scene-overridable surface —
  * either its container-level `enabled` flag or any config field. Used by
- * AgentModal (with the extra container guard) and AgentSceneSettings to
+ * the Agents settings page (with the extra container guard) and
+ * AgentSceneSettings to
  * decide whether the scene tab / panel should render.
  *
  * @param conditionContext {actions, overlay, overrides} — the effective values

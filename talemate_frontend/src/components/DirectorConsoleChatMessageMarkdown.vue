@@ -4,8 +4,7 @@
 </template>
 
 <script>
-import { marked } from 'marked';
-import { parseSceneText } from '../utils/sceneMessageRenderer.js';
+import { renderChatMarkdown } from '../utils/chatMarkdownRenderer.js';
 
 export default {
     name: 'DirectorConsoleChatMessageMarkdown',
@@ -22,19 +21,7 @@ export default {
     },
     computed: {
         safeHtml() {
-            try {
-                let html = marked.parse(this.text || '');
-                // Process diff code blocks
-                html = this.processDiffCodeBlocks(html);
-                // Process scene code blocks
-                html = this.processSceneCodeBlocks(html);
-                // Open links in a new tab so they don't navigate the app away
-                // (talemate:// links are handled in-app by onLinkClick instead)
-                html = html.replace(/<a href="(?!talemate:\/\/)/g, '<a target="_blank" rel="noopener" href="');
-                return html;
-            } catch (e) {
-                return this.text || '';
-            }
+            return renderChatMarkdown(this.text);
         }
     },
     methods: {
@@ -60,35 +47,6 @@ export default {
             } catch (err) {
                 console.warn('talemate:// link navigation failed', href, err);
             }
-        },
-        processDiffCodeBlocks(html) {
-            // Find code blocks with language="diff"
-            return html.replace(
-                /<pre><code class="language-diff">([\s\S]*?)<\/code><\/pre>/g,
-                (match, content) => {
-                    // Process the diff content to add colored spans
-                    const processedContent = content
-                        .replace(/\[--([^\]]*?)--\]/g, '<span class="diff-delete">$1</span>')
-                        .replace(/\[\+\+([^\]]*?)\+\+\]/g, '<span class="diff-insert">$1</span>')
-                        .replace(/\[-([^\]]*?)-\]/g, '<span class="diff-delete">$1</span>')
-                        .replace(/\[\+([^\]]*?)\+\]/g, '<span class="diff-insert">$1</span>');
-                    
-                    return `<pre class="diff-block"><code>${processedContent}</code></pre>`;
-                }
-            );
-        },
-        processSceneCodeBlocks(html) {
-            // Find code blocks with language="scene"
-            return html.replace(
-                /<pre><code class="language-scene">([\s\S]*?)<\/code><\/pre>/g,
-                (match, content) => {
-                    const textarea = document.createElement('textarea');
-                    textarea.innerHTML = content;
-                    const decoded = textarea.value;
-                    const rendered = parseSceneText(decoded);
-                    return `<pre class="scene-block"><code>${rendered}</code></pre>`;
-                }
-            );
         }
     }
 }
@@ -96,9 +54,8 @@ export default {
 
 <style scoped>
 
-/* Vuetify's reset zeroes padding and margin on every element, so all block
-   spacing below has to be restated - including the list padding the markers
-   live in. */
+/* The compatibility reset zeroes the block margins and list padding used here,
+   so this renderer restates its own spacing, including the marker gutter. */
 
 .markdown-body :deep(p),
 .markdown-body :deep(ul),
@@ -208,12 +165,12 @@ export default {
     padding: 1px 4px;
     border-radius: 4px;
     color: rgba(var(--v-theme-mutedheader), 1);
-    background-color: rgba(0,0,0, 1);
+    background-color: rgb(var(--v-theme-mutedbg));
 }
 
 /* Block code styling */
 .markdown-body :deep(pre) {
-    background-color: rgba(0,0,0, 1);
+    background-color: rgb(var(--v-theme-mutedbg));
     color: rgba(var(--v-theme-mutedheader), 1);
     border-left: 4px solid rgba(var(--v-theme-director), 0.6);
     padding: 10px 12px;
@@ -232,14 +189,14 @@ export default {
 
 /* Diff block styling */
 .markdown-body :deep(pre.diff-block) {
-    background-color: rgba(0,0,0, 1);
+    background-color: rgb(var(--v-theme-mutedbg));
     color: rgba(var(--v-theme-mutedheader), 1);
     border-left: 4px solid rgba(var(--v-theme-director), 0.6);
 }
 
 /* Scene block styling */
 .markdown-body :deep(pre.scene-block) {
-    background-color: rgba(0,0,0, 1);
+    background-color: rgb(var(--v-theme-mutedbg));
     color: rgba(var(--v-theme-mutedheader), 1);
     border-left: 4px solid rgba(var(--v-theme-director), 0.6);
 }
@@ -259,11 +216,11 @@ export default {
 }
 
 .markdown-body :deep(th) {
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: rgb(var(--v-theme-mutedbg));
 }
 
 .markdown-body :deep(tbody tr:nth-child(even)) {
-    background-color: rgba(0, 0, 0, 0.12);
+    background-color: rgba(var(--v-theme-on-surface), 0.05);
 }
 
 /* Diff markers styling */
@@ -281,5 +238,3 @@ export default {
     border-radius: 2px;
 }
 </style>
-
-

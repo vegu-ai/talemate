@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="internalModel" max-width="720">
     <v-card>
-      <v-toolbar density="comfortable" color="grey-darken-4">
+      <v-toolbar density="comfortable" color="mutedbg">
         <v-toolbar-title>
           <v-icon class="mr-2" size="small" color="primary">mdi-image-plus</v-icon>
           Generate Image
@@ -84,7 +84,7 @@
               :available-assets-map="availableAssetsMap"
               @update:reference-assets="(v) => referenceAssets = v"
             />
-            <v-alert v-if="!editAvailable" type="warning" density="compact" variant="text" class="mt-1 text-caption">
+            <v-alert v-if="!editAvailable" type="warning" density="compact" variant="text" class="mt-1 text-body-small">
               <div class="text-muted">
                 Image references are unavailable. Configure the image edit backend in the visual agent or check its connection.
               </div>
@@ -100,7 +100,7 @@
                     <v-chip
                       v-bind="Object.assign({}, menuProps, tooltipProps)"
                       size="small"
-                      :color="currentArtStyleSource === 'scene' ? 'primary' : 'default'"
+                      :color="currentArtStyleSource === 'scene' ? 'primary' : ''"
                       label
                       clickable
                       class="mb-2"
@@ -108,7 +108,7 @@
                     >
                       <v-icon start>mdi-palette</v-icon>
                       {{ currentArtStyle }}
-                      <span class="text-caption ml-1" style="opacity: 0.7;">
+                      <span class="text-body-small ml-1" style="opacity: 0.7;">
                         ({{ currentArtStyleSource === 'scene' ? 'Scene' : 'Agent' }})
                       </span>
                       <v-icon end>mdi-chevron-down</v-icon>

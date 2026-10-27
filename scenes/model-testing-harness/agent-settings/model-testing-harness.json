@@ -1,0 +1,12 @@
+{
+  "agents": {
+    "conversation": {
+      "actions": {
+        "character_knowledge": {
+          "enabled": false,
+          "config": {}
+        }
+      }
+    }
+  }
+}

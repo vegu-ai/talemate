@@ -49,7 +49,7 @@ A perspective usually combines three things:
     - **Limited** — the narrator is tethered to one character's head and only knows what *they* know. Other characters' thoughts and off-screen events are off-limits. Usually anchored to a named character (often the player).
     - **Omniscient** — the narrator floats above the scene and can dip into anyone's thoughts, describe off-screen events, or foreshadow what's coming.
 
-![Scene outline perspective fields with the override panel expanded](/talemate/img/0.38.0/scene-outline-perspective-overrides.png)
+![Scene outline perspective fields with the override panel expanded](/talemate/img/0.40.0/scene-outline-perspective-overrides.png)
 
 Talemate exposes the perspective configuration as four separate fields:
 
@@ -69,6 +69,11 @@ Each of the four fields is a combobox. You can:
 - **Pick a preset** from the dropdown.
 - **Type a custom value** — the field accepts any free-form text and your custom entry is saved with the scene whether or not it matches a preset.
 
+!!! info "New in 0.40.0"
+    Each preset that ships with Talemate carries a two-line subtitle in the dropdown: what it means in plain English, and a sample of the prose it produces, with the player character's name filled in. A preset you added or renamed yourself has no subtitle. The subtitle is shown on the dropdown only — the field and the saved value keep the bare preset string.
+
+![The perspective preset dropdown with its subtitles](/talemate/img/0.40.0/scene-outline-perspective-presets.png)
+
 The dropdown list is shared by all four fields and is managed in **Settings → Storytelling → Perspective Presets**. See [Storytelling settings](../../app-settings/creator.md#perspective-presets) for how to add, remove, or rename presets.
 
 #### The `{player_name}` placeholder
@@ -80,6 +85,16 @@ Any field that contains the literal string `{player_name}` will have that substr
 work for every scene without you having to edit them, and they survive renaming the player character.
 
 If the scene has no explicit player character, perspectives that reference `{player_name}` are **suppressed** rather than substituted — the placeholder has no anchor to point at, so injecting it would produce broken prose like *"Talking to the player."*. Pick a non-placeholder preset for scenes without a player character.
+
+#### Ask the director to set it up
+
+!!! info "New in 0.40.0"
+
+Below the **Perspective and tense** field is an :material-bullhorn: **Ask director to set up perspectives** action. It opens the director console, starts a new chat and asks the director to set the perspectives up for you, based on the prose the scene has so far.
+
+The director reads what is already written and writes the fields itself. When the scene carries too little prose to tell, it asks you what you are looking for instead, and suggests something that suits most readers. The presets configured in **Settings → Storytelling → Perspective Presets** travel with the request, so what it picks is normally one you recognise in the dropdown.
+
+The action needs a loaded scene and a working director agent. Everything it writes is an ordinary scene change: you can edit the fields afterwards, and the change is saved with the scene.
 
 #### Fallback semantics
 

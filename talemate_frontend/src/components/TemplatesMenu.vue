@@ -1,16 +1,16 @@
 <template>
     <v-list density="compact" slim>
-        <v-list-subheader color="grey">
+        <v-list-subheader>
             <v-icon color="primary" class="mr-1">mdi-plus</v-icon>
             Create
         </v-list-subheader>
         <v-list-item prepend-icon="mdi-plus" @click.stop="$emit('navigate-template', '$CREATE_GROUP')">
             <v-list-item-title>Create Group</v-list-item-title>
-            <v-list-item-subtitle class="text-caption">Create a new template group.</v-list-item-subtitle>
+            <v-list-item-subtitle class="text-body-small">Create a new template group.</v-list-item-subtitle>
         </v-list-item>
     </v-list>
     <v-list v-for="(group, index) in safeGroups" :key="index" density="compact" slim color="primary" selectable  @update:selected="onSelectGroup" :selected="selectedGroups">
-        <v-list-subheader color="grey" v-if="index === 0">
+        <v-list-subheader v-if="index === 0">
             <v-icon color="primary" class="mr-1">mdi-cube-scan</v-icon>
             Templates
         </v-list-subheader>
@@ -19,8 +19,8 @@
             {{ toLabel(group.name) }}
         </v-list-item>
         <v-card v-if="groupIsOpen(index)">
-            <v-card-text class="text-grey text-caption">
-                <p><span class="text-white">Author</span> <span>{{ group.author }}</span></p>
+            <v-card-text class="text-medium-emphasis text-body-small">
+                <p><span class="text-high-emphasis">Author</span> <span>{{ group.author }}</span></p>
                 {{ group.description }}
             </v-card-text>
         </v-card>
@@ -30,7 +30,7 @@
             <!-- create template -->
             <v-list-item prepend-icon="mdi-plus" color="primary" :value="`${group.uid}__$CREATE`">
                 <v-list-item-title>Create Template</v-list-item-title>
-                <v-list-item-subtitle class="text-caption">Create a new template in this group.</v-list-item-subtitle>
+                <v-list-item-subtitle class="text-body-small">Create a new template in this group.</v-list-item-subtitle>
             </v-list-item>
 
             <!-- templates -->
@@ -39,14 +39,18 @@
                     <v-icon :color="colorForTemplate(template)">{{ iconForTemplate(template) }}</v-icon>
                 </template>
                 <v-list-item-title>{{ template.name }}</v-list-item-title>
-                <v-list-item-subtitle class="text-caption">
-                    {{ toLabel(template.template_type) }}
+                <v-list-item-subtitle class="text-body-small">
+                    {{ templateTypeTitle(template.template_type) }}
                 </v-list-item-subtitle>
                 <v-list-item-subtitle>
                     <v-chip label size="x-small" variant="outlined" class="mr-1" v-if="template.state_type">{{ template.state_type
                     }}</v-chip>
-                    <v-chip v-if="template.favorite" label size="x-small" color="orange" variant="outlined"
+                    <v-chip v-if="template.favorite" label size="x-small" color="warning" variant="outlined"
                         class="mr-1">Favorite</v-chip>
+                    <v-chip v-if="template.locked" label size="x-small" color="muted" variant="outlined"
+                        class="mr-1" prepend-icon="mdi-lock">Locked
+                        <v-tooltip activator="parent" location="top">Locked in the template file — it cannot be edited or deleted.</v-tooltip>
+                    </v-chip>
                 </v-list-item-subtitle>
             </v-list-item>
         </v-list>
@@ -56,6 +60,7 @@
 
 <script>
 import { iconForTemplate, colorForTemplate } from '../utils/templateMappings.js';
+import { templateTypeTitle } from '../utils/templateTypes.js';
 
 export default {
     name: "TemplatesMenu",
@@ -128,6 +133,7 @@ export default {
     methods: {
         iconForTemplate,
         colorForTemplate,
+        templateTypeTitle,
         groupIsOpen(index) {
             return this.selectedGroups && this.selectedGroups.includes(index);
         },

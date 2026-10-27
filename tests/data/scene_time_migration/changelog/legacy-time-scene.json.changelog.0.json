@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "base": "legacy-time-scene.json.base.json",
+  "start_rev": 0,
+  "deltas": [
+    {
+      "rev": 1,
+      "ts": 1750000000,
+      "delta": {
+        "values_changed": {
+          "root['ts']": {
+            "new_value": "P3MT25H"
+          }
+        },
+        "iterable_item_added": {
+          "root['history'][2]": {
+            "typ": "character",
+            "message": "Kaira: We are clear of the station.",
+            "source": "ai",
+            "flags": 0,
+            "id": 3
+          },
+          "root['history'][3]": {
+            "typ": "time",
+            "message": "A day passes.",
+            "ts": "P1D",
+            "source": "manual",
+            "flags": 0,
+            "id": 4
+          },
+          "root['archived_history'][2]": {
+            "text": "The survey ship broke orbit and set course for the rift.",
+            "ts": "P3MT1H",
+            "start": 0,
+            "end": 2,
+            "id": "arch0003"
+          },
+          "root['layered_history'][0]": [
+            {
+              "text": "Transit, departure and the first day out.",
+              "ts": "P1M",
+              "ts_start": "P1M",
+              "ts_end": "P3MT1H",
+              "start": 0,
+              "end": 2,
+              "id": "layer001"
+            }
+          ]
+        }
+      },
+      "meta": {
+        "action": "scene_saved"
+      }
+    }
+  ],
+  "latest_rev": 1
+}

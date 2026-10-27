@@ -39,6 +39,12 @@ The harness runs a sequence of six tests. Each test calls into one of the regula
 
 Because each test targets a specific agent, the harness effectively covers every client in your current setup — if two agents share a client, that client is tested through both of them.
 
+## Character knowledge effort
+
+The harness always runs with the **Character knowledge effort** set to **Off**, whatever your own setting is. The scene ships with this choice as a [scene override](/talemate/user-guide/agents/scene-overrides/) in its settings file `model-testing-harness.json`, and restoring the scene keeps it. With Off, the Conversation test does not limit the history to what the character knows and makes no extra request to refine memories.
+
+So if you use **Thorough** for your stories and a friend uses **Minimal**, you both get the same harness run, and a failure points at the model, not at your knowledge settings. To see how a model copes with character knowledge work, use one of your own stories with a higher effort; see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets).
+
 ## Watching the tests run
 
 While the suite is running, a **Tests Running** status banner is shown above the chat. Each test emits its own system message in the scene log as it finishes:
@@ -60,7 +66,7 @@ When all six tests are finished, the status banner changes to **Tests Finished**
 A failure tells you that the model under test could not satisfy a specific minimum-viability requirement:
 
 - **Basic Instruction Following fails** — the model is not reliably following literal formatting instructions. Expect downstream problems with almost any structured Talemate feature.
-- **Data Response Instruction Following fails** — the model struggles to return JSON/YAML in the format Talemate requests. Check the client's **Structured Data Format** setting on the [Advanced tab](client-configuration.md) and confirm the chosen format is one the model can actually produce.
+- **Data Response Instruction Following fails** — the model struggles to return JSON/YAML in the format Talemate requests. Check the client's **Structured Data Format** setting in the [Advanced section](client-configuration.md) and confirm the chosen format is one the model can actually produce.
 - **Conversation Generation fails** — the conversation agent's client is producing output Talemate cannot parse as a single character's dialogue.
 - **Narrative Generation fails** — the narrator's output contains dialogue markers like `VERA-7:` or `NIKO-12:`, meaning the model is slipping into actor-style output instead of continuous prose.
 - **Function Calling fails** — the model cannot reliably produce function calls in the format required by [FOCAL](../node-editor/core-concepts/functions.md). This will disable most of the director's advanced tooling.

@@ -19,7 +19,7 @@ Only consider turning dedupe on when **all** of these hold:
 
 ## How to enable it
 
-The primary control is the per-client **Deduplicate Prompts** toggle on the **Advanced** tab of each client's settings. Flipping this on enables dedupe for every prompt that does not explicitly override it.
+The primary control is the per-client **Deduplicate Prompts** toggle in the **Advanced** section of each client's editor. Flipping this on enables dedupe for every prompt that does not explicitly override it.
 
 Templates and node graphs can still opt out individually after that:
 

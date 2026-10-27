@@ -1,0 +1,10 @@
+{% set threshold = 0.9 %}
+{% set questions = {} %}
+{% for id, pin in pins.items() %}
+    {% set _ = questions.update({id: yes_no("At the end of the scene, is this condition true? " ~ pin.condition, threshold=threshold)}) %}
+{% endfor %}
+{% set answers = ask("pin-conditions", state=state, questions=questions) %}
+{% for id, answer in answers.items() %}
+    {{ note("fallback" if answer.uncertain else "answer", "uncertain" if answer.uncertain else "confident", answer, pin=id) }}
+{% endfor %}
+{{ resolve(answers) }}

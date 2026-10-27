@@ -12,7 +12,7 @@ scenes/
     ├── my-adventure.json
     ├── my-adventure-chapter-2.json
     ├── assets/
-    ├── changelog/
+    ├── data.db
     ├── nodes/
     ├── templates/
     ├── shared-context/
@@ -31,21 +31,15 @@ See [Saving](/talemate/user-guide/saving) for more on how saves work.
 
 Stores media assets associated with the scene, such as generated images and TTS audio files. Assets are managed automatically by Talemate and linked from the scene save files.
 
-### `changelog/`
+### `data.db`
 
-Contains the automatic version history that powers the [Timeline](/talemate/user-guide/restoring-scenes) feature. Every time you save, Talemate records the changes as a delta, allowing you to preview any previous revision and fork it into a new save.
+Created when a save in the project first records revisions. Loading bundled read-only scenes or restore points does not create it.
 
-This directory includes:
+Stores the [Scene revisions](/talemate/user-guide/restoring-scenes) for every save in this project. Revisions share unchanged content, and forks keep their earlier revisions without copying that content. Deleting a save removes only revisions and content no remaining save uses.
 
-- **Base snapshot** — the initial scene state (revision 0)
-- **Latest snapshot** — a cached copy of the most recent state for fast access
-- **Delta logs** — incremental change records between revisions
+Talemate may create `data.db-wal` and `data.db-shm` alongside the database while it is running. For a manual backup, stop Talemate and copy the whole project directory. Complete ZIP exports with **Reset Progress** off include the selected save's revisions while Talemate is running.
 
-You generally don't need to interact with these files directly.
-
-### `backups/`
-
-Holds automatic safety copies of the scene file. Each backup is a timestamped copy of the scene file as it was before the operation that created it.
+An old `changelog/` directory from 0.39.0 is ignored and left untouched. You may delete it by hand after upgrading; new revisions start from each current save.
 
 ### `nodes/`
 

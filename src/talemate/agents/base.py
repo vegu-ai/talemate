@@ -24,7 +24,8 @@ from talemate.agents.context import ActiveAgent, active_agent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
-from talemate.ux.schema import Action, Condition, Note
+from talemate.exceptions import GenerationCancelled
+from talemate.ux.schema import SECRET_FIELD_TYPES, Action, Condition, Note
 from talemate.ux.schema import Field as UxField
 from talemate.config import get_config, Config
 import talemate.config.schema as config_schema
@@ -33,7 +34,11 @@ from talemate.client.context import (
 )
 from talemate.scene_agent_settings import UNSET
 from talemate.game.engine.nodes.core import GraphState
-from talemate.game.engine.nodes.registry import get_nodes_by_base_type, get_node
+from talemate.game.engine.nodes.registry import (
+    get_nodes_by_base_type,
+    get_node,
+    register_module_sync_base_type,
+)
 from talemate.game.engine.nodes.run import FunctionWrapper
 
 if TYPE_CHECKING:
@@ -53,10 +58,34 @@ __all__ = [
 
 log = structlog.get_logger("talemate.agents.base")
 
+AGENT_WEBSOCKET_HANDLER_BASE_TYPE = register_module_sync_base_type(
+    "agents/AgentWebsocketHandler"
+)
+
 
 # Backwards-compat aliases — the shared UX schema now owns these shapes.
 AgentActionConditional = Condition
 AgentActionNote = Note
+
+# Reads and writes both run on hot paths, so a stale overlay entry for a field
+# that cannot be overridden is reported once per field rather than per access.
+# One shared key per field on purpose: it is the same anomaly either way.
+_NON_OVERRIDABLE_WARNED: set[tuple[str, str, str]] = set()
+
+
+def _warn_once_non_overridable(
+    agent_type: str, action_key: str, config_key: str
+) -> None:
+    key = (agent_type, action_key, config_key)
+    if key in _NON_OVERRIDABLE_WARNED:
+        return
+    _NON_OVERRIDABLE_WARNED.add(key)
+    log.warning(
+        "scene override inert: field is not scene-overridable",
+        agent_type=agent_type,
+        action_key=action_key,
+        config_key=config_key,
+    )
 
 
 class AgentActionConfig(UxField):
@@ -67,6 +96,8 @@ class AgentActionConfig(UxField):
 
     scope: Literal["global", "scene"] = "global"
     quick_toggle: bool = False
+    quick_toggle_root: bool = False
+    icon: str | None = None
     title: str | None = None
     value_migration: Callable | None = pydantic.Field(default=None, exclude=True)
     scene_overridable: bool = True
@@ -89,12 +120,33 @@ class AgentActionConfig(UxField):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    @pydantic.model_validator(mode="after")
+    def _secret_fields_are_never_scene_overridable(self):
+        # Secret values belong to the installation, not to a scene: a scene
+        # file is shareable, and an override would leak the credential with it.
+        # The unified-key widget additionally writes into an app-config working
+        # copy the scene-override renderer has no access to, so an overridable
+        # declaration would render a dead field.
+        if self.type in SECRET_FIELD_TYPES:
+            self.scene_overridable = False
+        return self
+
+    @pydantic.model_validator(mode="after")
+    def _one_quick_toggle_placement(self):
+        if self.quick_toggle and self.quick_toggle_root:
+            raise ValueError(
+                f"AgentActionConfig {self.label!r}: quick_toggle and "
+                "quick_toggle_root are exclusive — the field would render as two chips"
+            )
+        return self
+
 
 class AgentAction(pydantic.BaseModel):
     enabled: bool = True
     label: str
     description: str = ""
     warning: str = ""
+    note: AgentActionNote | None = None
     config: dict[str, AgentActionConfig] | None = None
     condition: AgentActionConditional | None = None
     container: bool = False
@@ -192,16 +244,16 @@ def optimize_prompt_caching_action() -> AgentAction:
     )
 
 
-AgentDetailColor = Literal[
-    "grey", "primary", "muted", "orange", "success", "warning", "error"
-]
+# theme slots only - a material palette name here paints a fixed color that no
+# theme can reach
+AgentDetailColor = Literal["primary", "muted", "success", "warning", "error"]
 
 
 class AgentDetail(pydantic.BaseModel):
     value: str | None = None
     description: str | None = None
     icon: str | None = None
-    color: AgentDetailColor = "grey"
+    color: AgentDetailColor = "muted"
     hidden: bool = False
     # surface this detail even when the subsystem emitting it is not in use
     # (e.g. a TTS api no voice currently points at)
@@ -295,6 +347,27 @@ background_processing: contextvars.ContextVar[bool] = contextvars.ContextVar(
 )
 
 
+@contextlib.contextmanager
+def suppress_agent_busy_status():
+    """
+    Silence the @set_processing work awaited inside this block. Nothing reports
+    "busy_bg" in place of the suppressed emit — that status belongs to
+    set_background_processing(), which owns a task.
+    """
+    token = background_processing.set(True)
+    try:
+        yield
+    finally:
+        background_processing.reset(token)
+
+
+def _processing_action_name(actions):
+    for name, background in reversed(actions.values()):
+        if not background:
+            return name
+    return next(reversed(actions.values()))[0] if actions else None
+
+
 def set_processing(fn):
     """
     decorator that emits the agent status as processing while the function
@@ -314,14 +387,18 @@ def set_processing(fn):
 
             if scene:
                 scene.continue_actions()
+            cancel_sequence = scene.cancel_sequence if scene else None
 
             with ActiveAgent(self, fn, args, kwargs) as active_agent_context:
+                actions = self.__dict__.setdefault("_processing_actions", {})
+                action_token = object()
                 try:
                     action_name = fn.__name__
                     if action_name == "delegate":
                         action_name = args[0].__name__
 
-                    self._current_action = action_name
+                    actions[action_token] = (action_name, is_background)
+                    self._current_action = _processing_action_name(actions)
                     if not is_background:
                         await self.emit_status(processing=True)
 
@@ -354,9 +431,15 @@ def set_processing(fn):
                     )
                     with override_ctx:
                         return await fn(self, *args, **kwargs)
+                except GenerationCancelled as exc:
+                    exc.by_user = exc.by_user or bool(
+                        scene and scene.cancel_sequence != cancel_sequence
+                    )
+                    raise
                 finally:
                     try:
-                        self._current_action = None
+                        actions.pop(action_token, None)
+                        self._current_action = _processing_action_name(actions)
                         if not is_background:
                             await self.emit_status(processing=False)
                     except RuntimeError as exc:
@@ -379,6 +462,7 @@ class Agent(ABC):
     websocket_handler = None
     essential = True
     ready_check_error = None
+    config_apply_failed: bool = False
 
     # Debounce tracking for emit_status
     _emit_status_debounce_task: asyncio.Task | None = None
@@ -406,12 +490,7 @@ class Agent(ABC):
             "requires_llm_client": cls.requires_llm_client,
             "scene_overrides": cls._scene_overrides_payload(agent),
         }
-        actions = getattr(agent, "actions", None)
-
-        if actions:
-            config_options["actions"] = {k: v.model_dump() for k, v in actions.items()}
-        else:
-            config_options["actions"] = {}
+        config_options["actions"] = agent.sanitized_action_config if agent else {}
 
         return config_options
 
@@ -420,8 +499,14 @@ class Agent(ABC):
         """Sparse override dict for THIS agent from the active scene, if any.
 
         Empty dict means: no scene loaded, or no overrides set for this
-        agent. The frontend uses this to populate the Scene tab in the
-        AgentModal.
+        agent. The frontend renders it as the Agents page's Scene mode.
+
+        Entries the resolvers ignore are filtered out: shipping them would make
+        the frontend seed its override buffer with values the following save
+        strips, so the echo would come back smaller than what was sent and read
+        as a conflicting edit from elsewhere. That includes a config key its
+        declared action no longer has (a field removed since the file was
+        written): no control renders it, so it could never be cleared.
         """
         if not agent:
             return {}
@@ -431,7 +516,26 @@ class Agent(ABC):
         agent_override = overrides.agents.get(agent.agent_type)
         if not agent_override:
             return {}
-        return agent_override.model_dump(exclude_none=True)
+
+        payload = agent_override.model_dump(exclude_none=True)
+        actions = getattr(agent, "actions", None) or {}
+
+        for action_key, action_override in (payload.get("actions") or {}).items():
+            # undeclared keys pass through — a missing action is not proof the
+            # field is gone (dynamic children are installed per config)
+            action = actions.get(action_key)
+            if action is None:
+                continue
+            if "enabled" in action_override and not action.can_be_disabled:
+                action_override.pop("enabled")
+            declared = action.config or {}
+            config_override = action_override.get("config") or {}
+            for config_key in list(config_override.keys()):
+                field = declared.get(config_key)
+                if field is None or not field.scene_overridable:
+                    config_override.pop(config_key)
+
+        return payload
 
     @classmethod
     async def init_nodes(cls, scene: "Scene", state: GraphState):
@@ -442,7 +546,7 @@ class Agent(ABC):
 
         cls.websocket_handler.clear_sub_handlers()
 
-        for node_cls in get_nodes_by_base_type("agents/AgentWebsocketHandler"):
+        for node_cls in get_nodes_by_base_type(AGENT_WEBSOCKET_HANDLER_BASE_TYPE):
             _node = node_cls()
             handler_name = _node.get_property("name")
             agent_type = _node.get_property("agent")
@@ -885,8 +989,39 @@ class Agent(ABC):
                 return value
         return fallback()
 
+    def _non_overridable_guard(
+        self, action_key: str, config_key: str
+    ) -> AgentActionConfig | None:
+        """The declared field when it forbids scene overrides, else None.
+
+        Warns once when the overlay holds an entry for such a field. An
+        undeclared key returns None — there is no declaration to obey.
+        """
+        action = self.actions.get(action_key)
+        field = action.config.get(config_key) if action and action.config else None
+        if field is None or field.scene_overridable:
+            return None
+
+        overrides = self.scene_overrides()
+        if (
+            overrides is not None
+            and overrides.get_value(self.agent_type, action_key, config_key)
+            is not UNSET
+        ):
+            _warn_once_non_overridable(self.agent_type, action_key, config_key)
+        return field
+
     def resolve_config(self, action_key: str, config_key: str):
-        """Return the effective value for an action config field — scene override if any, else global."""
+        """Return the effective value for an action config field.
+
+        Scene override if one applies, else the global value. A field declared
+        non-overridable always resolves global, whatever the overlay holds.
+        """
+        # the declaration wins — the UI offers no control to clear a stored value
+        field = self._non_overridable_guard(action_key, config_key)
+        if field is not None:
+            return field.value
+
         return self._resolve(
             lambda o: o.get_value(self.agent_type, action_key, config_key),
             lambda: self.actions[action_key].config[config_key].value,
@@ -921,9 +1056,16 @@ class Agent(ABC):
         """Update an action config field — scene override if one is active for this field, else global.
 
         Note: this updates an *existing* override; it does not create a new one.
-        New overrides are installed via the AgentModal save flow
+        New overrides are installed through ``agent_config/save_scene_overrides``
         (see ``server.agent_config.replace_agent_overrides``).
         """
+        # the declaration wins — routing to the overlay would persist a value
+        # `resolve_config` ignores
+        field = self._non_overridable_guard(action_key, config_key)
+        if field is not None:
+            field.value = value
+            return
+
         self._route_write(
             lambda o: o.get_value(self.agent_type, action_key, config_key) is not UNSET,
             lambda o: o.set_value(self.agent_type, action_key, config_key, value),
@@ -1097,6 +1239,14 @@ class Agent(ABC):
         await asyncio.sleep(0.05)  # 50ms debounce
         self._emit_status_debounce_task = None
         await self._do_emit_status()
+
+    def refresh_choices(self):
+        """Refill the config choices that are read from outside the agent."""
+
+    async def emit_choices_status(self):
+        """Publish the agent's config schema without a subclass's backend
+        status hooks, which can reach external servers."""
+        await Agent.emit_status(self)
 
     async def emit_status(self, processing: bool = None):
         # should keep a count of processing requests, and when the

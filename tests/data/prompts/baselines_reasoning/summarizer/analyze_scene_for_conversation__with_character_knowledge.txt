@@ -1,0 +1,75 @@
+## Character evidence for elena
+This is Elena's available evidence, including last-known context. It is not an omniscient account of the world. Labelled items start with their label in brackets.
+
+### Authored knowledge
+Hero's description: A traveler searching for the old forest shrine.
+---
+Hero's gender: male
+---
+Hero's age: early 30s
+---
+Hero's occupation: Adventurer
+---
+Hero - background: Trained by forest hermits from a young age.
+---
+Elena's description: A wandering healer with knowledge of ancient herbs.
+---
+Elena's gender: female
+---
+Elena's age: early 30s
+---
+Elena's occupation: Healer
+---
+Elena - background: Trained by forest hermits from a young age.
+---
+Elena - herb cache: Elena hid a pouch of moonpetal under the roots of the old oak.
+---
+# Internal note for Elena - What is Elena hiding from Hero?
+She is hiding the moonpetal pouch until she trusts him.
+---
+[World entry: forest-shrine]
+An overgrown shrine stands at the north edge of the clearing.
+---
+[Static history]
+Long ago, the forest folk sealed the shrine against travelers.
+---
+### Elena's history, oldest first
+Mist rolls across the clearing.
+---
+Elena: "You walked a long way, traveler."
+---
+Hero: "I am looking for the old shrine."
+---
+Elena glances toward the old oak and says nothing.
+---
+### Last-known snapshot
+{
+  "location": "A misty forest clearing at dusk.",
+  "characters": [],
+  "items": [],
+  "places": []
+}
+
+## Scene description
+
+## Character evidence rules
+Character behavior must follow the supplied character evidence and established beliefs. A statement someone made remains that person's claim; preserve who said it, contradictions, uncertainty and last-known information. Do not silently replace a belief with newer reader knowledge.
+
+Author plans, scene analysis, directions and editorial instructions are goals, not evidence that a character learned something. Never turn an undisclosed fact or someone else's private plan into a character's knowledge, motive, suspicion or destination. If a direction requires missing knowledge, limit the next action to a supported step such as asking or observing; do not invent a clue, discovery, suspicion or prior disclosure to justify it. Do not mention excluded secrets, even as warnings about what a character must not know.
+
+Scene description and story intention are shared authoring inputs. Keep advice within the supplied evidence; missing context is not proof of ignorance or certainty.
+
+## Task
+Analyze the available evidence for Elena's next action in the scene. This analysis goes directly to the writer of their behavior. Explain the immediate situation as they know it, their supported motives and beliefs, relationships supported by the evidence, and plausible next steps. Preserve who claimed what and established uncertainty; do not resolve contradictory testimony or adopt reader truth. Older knowledge remains last-known unless this character has learned an update. Use no reader-only current moment or private plan to explain their behavior.
+Preserve the narrative tense and perspective in the supplied passages. Missing evidence does not establish a new belief or motive.
+
+Author goal (not evidence): Elena: Hello there, traveler.
+Only suggest supported steps toward this goal; do not repeat its undisclosed information in your analysis.
+
+Use terse plain text, approximately 512 tokens.
+Return <ANALYSIS>your analysis</ANALYSIS>.
+
+
+The length of your final answer must fit within 4 paragraphs.
+
+After thinking about it, start your answer with: <ANALYSIS>

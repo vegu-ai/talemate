@@ -1,12 +1,18 @@
 import asyncio
 import structlog
-from typing import Callable
+from typing import Awaitable, Callable
 
 from talemate.agents.base import (
     set_processing,
 )
 from talemate.emit import emit
 from talemate.context import active_scene
+from talemate.prompts import Prompt
+from talemate.prompts.response import (
+    ExtractionError,
+    ResponseSpec,
+    StrictAnchorExtractor,
+)
 from .schema import (
     AnalysisResponse,
     BackendStatusType,
@@ -15,6 +21,39 @@ from .schema import (
 from .exceptions import ImageAnalysisNotAvailableError
 
 log = structlog.get_logger("talemate.agents.visual.analyze")
+
+DEFAULT_ANALYSIS_PROMPT = "Describe this image in detail. (3 paragraphs max.)"
+
+ANALYSIS_TAGS_SPEC = ResponseSpec(
+    extractors={
+        "analysis": StrictAnchorExtractor(left="<ANALYSIS>", right="</ANALYSIS>"),
+        "tags": StrictAnchorExtractor(left="<TAGS>", right="</TAGS>"),
+    },
+    required=["analysis"],
+)
+
+
+def split_analysis_tags(text: str) -> tuple[str, list[str]]:
+    """
+    Reads a combined analysis response (visual/analysis-tags.jinja2) into
+    the analysis and its tags. Raises ExtractionError when the analysis
+    block is missing or empty. A tags block that is missing, unclosed, empty
+    or not a comma separated list yields no tags.
+    """
+    fields = ANALYSIS_TAGS_SPEC.extract_all(text)
+    if not fields["analysis"]:
+        raise ExtractionError("The analysis block is empty")
+    if not fields["tags"]:
+        return fields["analysis"], []
+    keywords = [tag.strip() for tag in fields["tags"].split(",")]
+    if any("\n" in tag for tag in keywords):
+        return fields["analysis"], []
+    tags, seen = [], set()
+    for tag in keywords:
+        if tag and tag.lower() not in seen:
+            tags.append(tag)
+            seen.add(tag.lower())
+    return fields["analysis"], tags
 
 
 class AnalysisMixin:
@@ -38,7 +77,9 @@ class AnalysisMixin:
         emit("status", "Image analysis failed.", status="error")
 
     @set_processing
-    async def analyze(self, request: AnalysisRequest) -> AnalysisResponse:
+    async def analyze(
+        self, request: AnalysisRequest, await_completion: bool = False
+    ) -> AnalysisResponse:
         response = AnalysisResponse(
             request=request,
             id=request.id,
@@ -60,6 +101,8 @@ class AnalysisMixin:
                     if response.request.save:
                         asset = scene.assets.get_asset(response.request.asset_id)
                         asset.meta.analysis = response.analysis
+                        if response.tags:
+                            asset.meta.add_tags(response.tags)
                         scene.assets.update_asset_meta(
                             response.request.asset_id, asset.meta
                         )
@@ -72,8 +115,21 @@ class AnalysisMixin:
                 data=response.model_dump(),
             )
 
-        await self.analyze_image(request, response, on_done)
+        await self.analyze_image(request, response, on_done, await_completion)
 
+        return response
+
+    async def _run_analysis(
+        self, backend, request: AnalysisRequest, response: AnalysisResponse
+    ) -> AnalysisResponse:
+        if not request.generate_tags:
+            return await backend.analyze(request, response)
+        prompt = Prompt.get(
+            "visual.analysis-tags", vars={"prompt": request.prompt}
+        ).render()
+        await backend.analyze(request.model_copy(update={"prompt": prompt}), response)
+        if response.analysis:
+            response.analysis, response.tags = split_analysis_tags(response.analysis)
         return response
 
     def _track_analysis_task(self, task: asyncio.Task, backend: object):
@@ -102,8 +158,17 @@ class AnalysisMixin:
         self,
         request: AnalysisRequest,
         response: AnalysisResponse,
-        on_done: Callable[[AnalysisResponse], None],
+        on_done: Callable[["asyncio.Future[AnalysisResponse]"], Awaitable[None]],
+        await_completion: bool = False,
     ):
+        """
+        Runs the analysis as a tracked background task. With
+        `await_completion=True` the task and its `on_done` handling are
+        awaited before returning, and the caller owns failures entirely:
+        exceptions propagate instead of reaching the background error
+        handler, so no `image_analysis_failed` emission or error status is
+        raised. Otherwise the call returns once the task is launched.
+        """
         if not self.can_analyze_images:
             raise ImageAnalysisNotAvailableError("Image analysis is not available")
 
@@ -117,13 +182,17 @@ class AnalysisMixin:
 
         response.backend_name = backend.name
 
-        task = asyncio.create_task(backend.analyze(request, response))
-        task.add_done_callback(lambda fut: asyncio.create_task(on_done(fut)))
+        task = asyncio.create_task(self._run_analysis(backend, request, response))
 
         # Track task for cancellation support
         self._track_analysis_task(task, backend)
 
-        await self.set_background_processing(task, self.on_image_analysis_error)
+        if await_completion:
+            await task
+            await on_done(task)
+        else:
+            task.add_done_callback(lambda fut: asyncio.create_task(on_done(fut)))
+            await self.set_background_processing(task, self.on_image_analysis_error)
 
     async def cancel_analysis(self):
         """

@@ -44,6 +44,7 @@ def mock_creator_agent_for_registry():
     creator = Mock()
     # rag_build is called by templates - needs to be an async function
     creator.rag_build = AsyncMock(return_value=[])
+    creator.rag_build_for_author = AsyncMock(return_value=[])
     return creator
 
 

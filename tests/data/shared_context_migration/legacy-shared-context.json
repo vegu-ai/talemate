@@ -1,0 +1,27 @@
+{
+  "character_data": {
+    "Kaira": {
+      "name": "Kaira",
+      "description": "A survey pilot who signed on for the rift expedition.",
+      "color": "#7ad4ff",
+      "is_player": false,
+      "shared": true,
+      "shared_attributes": [],
+      "shared_details": []
+    }
+  },
+  "world_state": {},
+  "share_static_history": true,
+  "static_history": [
+    {
+      "text": "The survey fleet was assembled a month before launch.",
+      "ts": "P1M",
+      "id": "shared01"
+    },
+    {
+      "text": "Three months of transit left every crew restless.",
+      "ts": "P3MT1H",
+      "id": "shared02"
+    }
+  ]
+}

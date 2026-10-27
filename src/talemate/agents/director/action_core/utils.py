@@ -11,7 +11,10 @@ import traceback
 from typing import Any, TYPE_CHECKING, Callable, Awaitable, Literal
 
 from talemate.prompts.base import Prompt
-from talemate.game.engine.nodes.registry import get_nodes_by_base_type, get_node
+from talemate.game.engine.nodes.registry import (
+    get_nodes_by_base_type,
+    get_node,
+)
 from talemate.game.engine.nodes.core import GraphState, UNRESOLVED
 import talemate.game.focal as focal
 from talemate.game.engine.nodes.run import FunctionWrapper
@@ -24,6 +27,12 @@ from talemate.util.prompt import (
     auto_close_tags,
 )
 from talemate.instance import get_agent
+from talemate.knowledge.advice import (
+    advice_fingerprint,
+    require_advice_scene,
+    warn_stale_advice,
+)
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.agents.director.response_specs import (
     MESSAGE_SPEC,
     DECISION_SPEC,
@@ -39,6 +48,7 @@ from .exceptions import ActionRejected, UnknownAction
 from .gating import (
     ActionMode,
     CallbackDescriptor,
+    DIRECTOR_CHAT_ACTION_BASE_TYPE,
     is_action_id_enabled,
     extract_all_callback_descriptors,
 )
@@ -71,7 +81,7 @@ async def init_action_nodes(scene: "Scene", state: GraphState) -> None:
 
     director_chat_actions = {}
 
-    for node_cls in get_nodes_by_base_type("agents/director/DirectorChatAction"):
+    for node_cls in get_nodes_by_base_type(DIRECTOR_CHAT_ACTION_BASE_TYPE):
         _node = node_cls()
         action_name = _node.get_property("name")
         director_chat_actions[action_name] = _node.registry
@@ -582,6 +592,7 @@ async def execute_actions(
     history_for_prompt: list[Any],
     create_result: Callable[..., Any],
     on_action_complete: Callable[[Any], Awaitable[None]] | None = None,
+    on_batch_complete: Callable[[list[focal.Call]], Awaitable[None]] | None = None,
 ) -> list[Any]:
     """
     Execute selected actions via FOCAL and return result messages.
@@ -599,6 +610,7 @@ async def execute_actions(
     """
     # Import here to avoid circular imports
     from talemate.agents.director.chat.nodes import DirectorChatActionArgument
+    from talemate.agents.director.chat.context import director_chat_context
 
     state: GraphState = scene.nodegraph_state
     director_chat_actions = state.shared.get("_director_chat_actions", {})
@@ -650,9 +662,18 @@ async def execute_actions(
         )
 
         async def _make_fn(wrapper, action_name: str):
-            async def _call(**kwargs):
+            async def _call(_focal_call=None, **kwargs):
+                nonlocal batch_checked
+                if check_evidence:
+                    require_advice_scene(get_agent("director"), scene)
+                    if not batch_checked:
+                        warn_stale_advice(
+                            get_agent("director"), scene, None, fingerprint
+                        )
+                        # later calls of the batch change the evidence themselves
+                        batch_checked = True
                 try:
-                    return await wrapper(**kwargs)
+                    return await wrapper(_focal_call=_focal_call, **kwargs)
                 except ActionRejected:
                     raise
                 except InputValueError as e:
@@ -672,6 +693,7 @@ async def execute_actions(
             name=name,
             arguments=arguments,
             fn=cb_fn,
+            pass_call=True,
             multiple=True,
             concurrent=allow_concurrent,
         )
@@ -712,6 +734,21 @@ async def execute_actions(
     if not ordered_callbacks:
         return []
 
+    if director_chat_context.get() is not None:
+        report_node = get_node("agents/director/chat/agentReportIssue")()
+        report_wrapper = FunctionWrapper(report_node, report_node, state)
+        report_callback = await report_wrapper.ai_callback(
+            "report_issue", allow_multiple_calls=True
+        )
+        callbacks.append(report_callback)
+        ordered_callbacks.append(report_callback)
+        ordered_instructions[report_callback.name] = report_callback.instructions
+        ordered_argument_usage[report_callback.name] = (
+            report_callback.argument_instructions
+        )
+        ordered_examples[report_callback.name] = report_callback.examples
+        selection_instructions[report_callback.name] = ""
+
     log.debug(
         "action_core.actions.execute.start",
         selections=actions_selected,
@@ -723,7 +760,7 @@ async def execute_actions(
     focal_handler = focal.Focal(
         client,
         callbacks=callbacks,
-        max_calls=len(ordered_callbacks) + 2,
+        max_calls=len(actions_selected) + 2,
         retries=0,
         response_length=2048,
         scene=scene,
@@ -736,10 +773,11 @@ async def execute_actions(
         ordered_reasons=selection_instructions,
         ordered_argument_usage=ordered_argument_usage,
         has_character_callback=has_character_callback,
+        trim_action_history=reverse_trim_history,
     )
 
     async def on_call_complete(call: focal.Call):
-        if call.name not in ordered_instructions:
+        if not any(call is own for own in focal_handler.state.batch):
             return
         action_msg = create_result(
             name=call.name,
@@ -751,8 +789,15 @@ async def execute_actions(
         if on_action_complete:
             await on_action_complete(action_msg)
 
+    fingerprint = advice_fingerprint(scene)
+
+    check_evidence = character_knowledge_enabled(scene)
+    batch_checked = False
+
     with focal.FocalContext() as focal_context:
         focal_context.hooks_after_call.append(on_call_complete)
+        if on_batch_complete:
+            focal_context.hooks_after_batch.append(on_batch_complete)
         await focal_handler.request("director.chat-execute-actions")
 
     log.debug(

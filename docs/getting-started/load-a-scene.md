@@ -4,7 +4,7 @@ Once you've set up a client and assigned it to all the agents, you will be prese
 
 To load the introductory `Infinity Quest` scenario, simply click on its entry in the `Quick load` section.
 
-![Load infinity quest](/talemate/img/0.39.0/getting-started-load-screen.png)
+![Load infinity quest](/talemate/img/0.40.0/getting-started-load-screen.png)
 
 !!! info "First time may take a moment"
     When you load the a scenario for the first time, Talemate will need to initialize the long term memory model. Which likely means a download. Just be patient and it will be ready soon.

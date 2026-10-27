@@ -31,13 +31,19 @@ Character card import is initiated from the **Import** dropzone on the [home scr
 
 Cards already stored in your `scenes/characters/` directory can also be imported by clicking them in the **Character Cards** section of the [Scene Library](/talemate/user-guide/scene-browser#character-cards).
 
-![Character Card Import Dialog](/talemate/img/0.34.0/character-card-1.png)
+![Character Card Import Dialog](/talemate/img/0.40.0/character-card-1.png)
 
 The import dialog will automatically analyze the character card and display detected information.
 
 ## Import Dialog Overview
 
 The character card import dialog is divided into several sections:
+
+### Character perspectives
+
+**Standard** is selected by default. Click either mode card to select it; the selected card is marked, and the cards can also be selected from the keyboard. Each card keeps its short guidance visible while **Show pros and cons** expands its details independently. [Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode) has the complete comparison. Select **Character perspectives** to give characters audience-specific context in the imported story. It adds Summarizer analyses and pauses dependent character generation if an analysis fails. Cancelling or reopening the import restores Standard and collapses both details panes. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for costs and retry behavior.
+
+The **Character knowledge effort** slider below the mode cards starts at **Minimal** with **Standard** selected; **Character perspectives** defaults to **Balanced**. It offers the same [mode-specific choices](/talemate/user-guide/world-editor/knowledge/#effort-presets) as Create New Story. Its settings are pinned to the imported scene, even when they match global defaults, and apply before the scene's knowledge work begins. Your global agent settings do not change. The **AI Generation** options below independently control the import itself; lowering ongoing effort does not disable those import options. Canceling or reopening the dialog resets the effort choice.
 
 ### Analysis Information
 
@@ -82,6 +88,9 @@ If Talemate missed a character that exists in the card, you can add it manually:
 !!! note "Manual Addition"
     Only add character names manually if you know they exist in the card but were missed by detection. The detection system analyzes greeting texts to find characters, so it may occasionally miss characters that don't appear in dialogue.
 
+!!! warning "No two selected names may match"
+    A scene holds one character per name, and the comparison ignores case, so `Bob` and `bob` are the same name here. The list refuses an exact repeat, but it accepts a name that differs only in case. Selecting both stops the import with `Name "X" already exists.` Deselect one of the two, or add the second under a different name.
+
 ## Import Options
 
 The right panel contains various import configuration options:
@@ -124,8 +133,8 @@ By default, importing a character card runs several AI generation steps that enr
 !!! info "Failed generations keep the card's data"
     If the description rewrite, attribute extraction or example dialogue generation
     fails or comes back empty, the card's own version is kept and the import carries on
-    with the remaining steps. With the Creator agent's [**Fast Character Generation**](/talemate/user-guide/agents/creator/settings)
-    enabled, a consolidated response that cannot be parsed at all still aborts the import.
+    with the remaining steps. The Creator agent's [**Fast Character Generation**](/talemate/user-guide/agents/creator/settings)
+    is on by default. With it on, a consolidated response that cannot be parsed at all still aborts the import, and the error tells you to disable Fast Character Generation. Turn it off for models that cannot follow the consolidated format; the import then keeps the card's data as described above.
 
 Use the **Full** / **Minimal** preset buttons to toggle all AI generation steps at once. **Minimal** also disables episode title generation, reducing the import to the bare card data (name, description, greetings, example dialogue) — the fastest possible import.
 
@@ -148,6 +157,9 @@ Create a new player character using the default template configured in [App Sett
 - Optionally provide a **Description**
 
 If this is your first time using this option and no default player character is configured, Talemate will save your entered values as the new default.
+
+!!! warning "Pick a name no imported character uses"
+    A scene holds one character per name, and the comparison ignores case. If the name you enter matches a character you selected for import, the import stops with `Name "X" already exists. Choose a different player character name for this import.` No scene is created — but the name and description above may already have been saved as your default player character, as the line above describes, so check them before you import again.
 
 ### Use Detected Character
 

@@ -7,6 +7,29 @@ from talemate.prompts.base import Prompt
 
 log = structlog.get_logger("talemate.game.engine.nodes.string")
 
+DELIMITER_ESCAPE_SEQUENCES = {
+    "n": "\n",
+    "t": "\t",
+    "\\": "\\",
+}
+
+
+def unescape_delimiter(delimiter: str) -> str:
+    """Decode ``\\n``, ``\\t``, and ``\\\\``; keep other sequences as typed."""
+    result = []
+    index = 0
+    while index < len(delimiter):
+        character = delimiter[index]
+        if character == "\\" and index + 1 < len(delimiter):
+            escaped = DELIMITER_ESCAPE_SEQUENCES.get(delimiter[index + 1])
+            if escaped is not None:
+                result.append(escaped)
+                index += 2
+                continue
+        result.append(character)
+        index += 1
+    return "".join(result)
+
 
 @register("data/string/AsString")
 class AsString(Node):
@@ -96,7 +119,7 @@ class Split(Node):
     Inputs:
 
     - string: The string to split
-    - delimiter: Character(s) to use as the split point (optional; a literal "\\n" is treated as a newline)
+    - delimiter: Character(s) to use as the split point (optional; decodes `\\n`, `\\t`, and `\\\\`; any other backslash sequence stays as typed)
 
     Properties:
 
@@ -111,7 +134,7 @@ class Split(Node):
     class Fields:
         delimiter = PropertyField(
             name="delimiter",
-            description="Character(s) to use as the split point",
+            description="Character(s) to use as the split point; decodes `\\n`, `\\t`, and `\\\\`; any other backslash sequence stays as typed",
             type="str",
             default=" ",
         )
@@ -135,9 +158,8 @@ class Split(Node):
         delimiter = self.get_input_value("delimiter")
         max_splits = self.get_property("max_splits")
 
-        # handle escaped newline delimiter
-        if delimiter == "\\n":
-            delimiter = "\n"
+        if isinstance(delimiter, str):
+            delimiter = unescape_delimiter(delimiter)
 
         parts = string.split(delimiter, maxsplit=max_splits)
         self.set_output_values({"parts": parts})
@@ -152,7 +174,7 @@ class Join(Node):
     Inputs:
 
     - strings: List of strings to join
-    - delimiter: Character(s) to insert between each string (optional; a literal "\\n" is treated as a newline)
+    - delimiter: Character(s) to insert between each string (optional; decodes `\\n`, `\\t`, and `\\\\`; any other backslash sequence stays as typed)
 
     Properties:
 
@@ -166,7 +188,7 @@ class Join(Node):
     class Fields:
         delimiter = PropertyField(
             name="delimiter",
-            description="Character(s) to insert between each string",
+            description="Character(s) to insert between each string; decodes `\\n`, `\\t`, and `\\\\`; any other backslash sequence stays as typed",
             type="str",
             default=" ",
         )
@@ -182,9 +204,7 @@ class Join(Node):
         strings = self.get_input_value("strings")
         delimiter = self.get_input_value("delimiter")
 
-        # handle escaped newline delimiter
-        if delimiter == "\\n":
-            delimiter = "\n"
+        delimiter = unescape_delimiter(delimiter)
 
         if not all(isinstance(s, str) for s in strings):
             raise InputValueError(self, "strings", "All items must be strings")

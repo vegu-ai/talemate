@@ -30,7 +30,9 @@ from talemate.game.engine.nodes.validation import (
 # Importing the context_id package wires up CONTEXT_ID_PATH_HANDLERS for the
 # Validate* nodes that walk that registry.
 import talemate.game.engine.context_id  # noqa: F401
+from talemate.game.engine.context_id import compress_name
 from talemate.tale_mate import Scene
+from talemate.world_state import ManualContext
 
 
 # ---------------------------------------------------------------------------
@@ -208,6 +210,44 @@ class TestValidateContextIDItem:
                 ValidateContextIDItem(),
                 scene=fs_scene,
                 inputs={"value": "no_handler_for_this:foo"},
+            )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "value",
+        [
+            f"world_entry.manual:{compress_name('Apartment: Living Room')}",
+            "world_entry.manual:Apartment: Living Room",
+            "`world_entry.manual:Apartment: Living Room`",
+        ],
+    )
+    async def test_world_entry_resolves_by_id_or_title(self, fs_scene, value):
+        fs_scene.world_state.manual_context["Apartment: Living Room"] = ManualContext(
+            id="Apartment: Living Room",
+            text="A cramped living room.",
+            meta={"typ": "world_state"},
+        )
+
+        out = await run_node(
+            ValidateContextIDItem(), scene=fs_scene, inputs={"value": value}
+        )
+
+        assert out["name"] == "Apartment: Living Room"
+        assert out["context_value"] == "A cramped living room."
+        assert str(out["context_id"]) == (
+            f"world_entry.manual:{compress_name('Apartment: Living Room')}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_unknown_world_entry_names_the_context_id(self, fs_scene):
+        with pytest.raises(
+            InputValueError,
+            match="Context ID item not found: world_entry.manual:Basement Workshop",
+        ):
+            await run_node(
+                ValidateContextIDItem(),
+                scene=fs_scene,
+                inputs={"value": "world_entry.manual:Basement Workshop"},
             )
 
 

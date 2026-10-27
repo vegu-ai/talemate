@@ -10,7 +10,7 @@
                 </template>
             </v-tooltip>
         </template>
-        <v-tooltip v-else :text="refreshTooltip">
+        <v-tooltip v-else-if="!isPlaythroughActive()" :text="refreshTooltip">
             <template v-slot:activator="{ props }">
                 <v-btn :disabled="busy"  size="x-small" icon="mdi-refresh" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="refresh($event)"></v-btn>
             </template>
@@ -21,7 +21,7 @@
 
         <!-- empty (no characters or objects) -->
 
-        <v-card elevation="7" v-if="Object.keys(characters).length === 0 && Object.keys(items).length === 0" class="text-center text-caption mx-3" density="compact" variant="tonal" color="grey">
+        <v-card elevation="3" v-if="characterRoster.length === 0 && !showInactiveCharacters && Object.keys(items).length === 0" class="text-center text-body-small mx-3" density="compact" variant="tonal" color="muted">
             World state has not been updated yet.
         </v-card>
 
@@ -29,59 +29,93 @@
 
             <!-- CHARACTERS -->
 
-            <v-expansion-panels density="compact" v-for="(character,name) in characters" :key="name">
-                <v-expansion-panel rounded="0" density="compact">
+            <v-expansion-panels density="compact" v-for="row in characterRoster" :key="row.name">
+                <v-expansion-panel rounded="0" density="compact" class="character-row" :class="{ 'character-row-active': row.active, 'character-row-background': !row.active }">
 
                     <!-- TITLE: CHARACTER NAME -->
 
-                    <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
-                        {{ name }}
-                        <!-- <v-chip v-if="character.emotion !== null && character.emotion !== ''" label size="x-small" variant="outlined" class="ml-1">{{ character.emotion }}</v-chip> -->
-                        <span class="text-caption ml-1 text-muted">{{ character.emotion }}</span>
+                    <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
+                        <div class="character-title">
+                            <div>
+                                {{ row.name }}
+                                <v-tooltip v-if="row.manual" :text="manualEntryTooltip">
+                                    <template v-slot:activator="{ props }">
+                                        <v-icon v-bind="props" size="x-small" class="ml-1" color="muted">mdi-pin</v-icon>
+                                    </template>
+                                </v-tooltip>
+                                <span class="text-body-small ml-1 text-muted">{{ row.emotion }}</span>
+                            </div>
+                            <v-tooltip v-if="!row.active" :text="characterKindTooltip(row)">
+                                <template v-slot:activator="{ props }">
+                                    <v-chip v-bind="props" class="character-kind" size="x-small" variant="tonal" color="secondary" label tabindex="0">
+                                        background
+                                    </v-chip>
+                                </template>
+                            </v-tooltip>
+                        </div>
                         <template v-slot:actions>
-                            <v-icon v-if="characterSuggestions(name)" color="highlight5" class="mr-1">mdi-lightbulb-on</v-icon>
-                            <div v-else-if="getCharacterAvatar(name)" class="character-avatar-square mr-1">
-                                <v-img :src="getCharacterAvatarSrc(name)" cover />
+                            <span v-if="row.active" class="knowledge-marker-space"></span>
+                            <v-icon v-if="characterSuggestions(row.name)" color="highlight5" class="mr-1">mdi-lightbulb-on</v-icon>
+                            <div v-else-if="getCharacterAvatar(row.name)" class="character-avatar-square mr-1">
+                                <v-img :src="getCharacterAvatarSrc(row.name)" cover />
                             </div>
                             <v-icon v-else icon="mdi-account"></v-icon>
                         </template>
                     </v-expansion-panel-title>
 
+                    <Transition name="knowledge-marker">
+                        <KnowledgeChangeMarker
+                            v-if="row.active && !playthroughActive && knowledgeChanges.has(row.name)"
+                            class="active-knowledge-marker"
+                            :name="row.name"
+                            :changes="knowledgeChanges.get(row.name)"
+                            @pause="(reason, paused) => knowledgeNotifications.pause(row.name, reason, paused)"
+                            @open="openWorldStateManager('characters', row.name, 'knowledge')"
+                        />
+                    </Transition>
+
                     <!-- SNAPSHOT: CHARACTER -->
                             
-                    <v-expansion-panel-text class="text-body-2">
-                        {{ character.snapshot }}
+                    <v-expansion-panel-text class="text-body-medium">
+                        {{ row.snapshot }}
 
-                        <!-- ACTIONS: LOOK AT, PERSIST, MANAGE -->
+                        <!-- ACTIONS: LOOK AT, PERSIST, MANAGE, TAKE OUT OF SCENE -->
 
                         <div class="text-center mt-1">
-                            <v-tooltip :text="'Look at '+name">
+                            <v-tooltip v-if="!isPlaythroughActive()" :text="'Look at '+row.name">
                                 <template v-slot:activator="{ props }">
-                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="lookAtCharacter(name)" icon="mdi-eye"></v-btn>
+                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="lookAtCharacter(row.name)" icon="mdi-eye"></v-btn>
 
                                 </template>
                             </v-tooltip>
-                            <v-tooltip v-if="character.snapshot && !characterIsKnown(name)" :text="'Add detail to '+name">
+                            <v-tooltip v-if="row.snapshot && !characterIsKnown(row.name) && !isPlaythroughActive()" :text="'Add detail to '+row.name">
                                 <template v-slot:activator="{ props }">
-                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="examineCharacter(name, character.snapshot)" icon="mdi-plus"></v-btn>
+                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="examineCharacter(row.name, row.snapshot)" icon="mdi-plus"></v-btn>
 
                                 </template>
                             </v-tooltip>
-                            <v-tooltip v-if="!characterExists(name)" text="Make this character real, adding it to the scene as an actor.">
+                            <v-tooltip v-if="canMakeReal(row)" text="Make this character real, adding it to the scene as an actor.">
                                 <template v-slot:activator="{ props }">
-                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="persistCharacter(name)" icon="mdi-human-greeting"></v-btn>
+                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="persistCharacter(row.name)" icon="mdi-human-greeting"></v-btn>
 
                                 </template>
                             </v-tooltip>
-                            <v-tooltip v-if="characterExists(name)" text="Manage character">
+                            <v-tooltip v-if="row.active" text="Manage character">
                                 <template v-slot:activator="{ props }">
-                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="openWorldStateManager('characters', name, 'description')" icon="mdi-book-open-page-variant"></v-btn>
+                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="openWorldStateManager('characters', row.name, 'description')" icon="mdi-book-open-page-variant"></v-btn>
 
                                 </template>
                             </v-tooltip>
-                            <v-tooltip v-if="characterSuggestions(name)" text="Review proposed changes for this character">
+                            <CharacterKnowledgeHub v-if="row.active && !isPlaythroughActive()" :name="row.name" @open-knowledge="openWorldStateManager('characters', row.name, 'knowledge')" />
+                            <v-tooltip v-if="row.active && !isPlaythroughActive()" :text="deactivateTooltip(row.name)">
                                 <template v-slot:activator="{ props }">
-                                    <v-btn size="x-small" color="highlight5" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="openWorldStateManager('suggestions', 'character-'+name)" icon="mdi-lightbulb-on"></v-btn>
+                                    <v-btn :disabled="busy" :aria-label="deactivateLabel(row.name)" size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="deactivateCharacter($event, row.name)" icon="mdi-exit-run"></v-btn>
+
+                                </template>
+                            </v-tooltip>
+                            <v-tooltip v-if="characterSuggestions(row.name)" text="Review proposed changes for this character">
+                                <template v-slot:activator="{ props }">
+                                    <v-btn size="x-small" color="highlight5" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="openWorldStateManager('suggestions', 'character-'+row.name)" icon="mdi-lightbulb-on"></v-btn>
 
                                 </template>
                             </v-tooltip>
@@ -91,7 +125,7 @@
                         <!-- TRACKED STATES -->
 
                         <div>
-                            <v-tooltip v-for="(state,index) in trackedCharacterStates(name)"
+                            <v-tooltip v-for="(state,index) in trackedCharacterStates(row.name)"
                             :key="index"
                             max-width="500px"
                             class="pre-wrap"
@@ -102,9 +136,9 @@
                                     v-bind="props"
                                     size="x-small"
                                     variant="outlined"
-                                    color="grey-lighten-1"
+                                    color="mutedheader"
                                     prepend-icon="mdi-image-auto-adjust"
-                                    @click="openWorldStateManager('characters', name, 'reinforce', state.question)"
+                                    @click="openWorldStateManager('characters', row.name, 'reinforce', state.question)"
                                     class="mt-1">
                                         {{ state.question }}
                                     </v-chip>
@@ -117,28 +151,84 @@
                 </v-expansion-panel>
             </v-expansion-panels>
 
+            <!-- INACTIVE CHARACTERS -->
+
+            <v-expansion-panels density="compact" v-if="showInactiveCharacters" v-model="inactivePanel">
+                <v-expansion-panel rounded="0" density="compact" class="character-section-inactive">
+                    <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
+                        Inactive ({{ inactiveCharacters.length }})
+                        <template v-slot:actions>
+                            <span class="knowledge-marker-space"></span>
+                            <v-icon icon="mdi-account-off"></v-icon>
+                        </template>
+                    </v-expansion-panel-title>
+                    <Transition name="knowledge-marker">
+                        <KnowledgeChangeMarker
+                            v-if="inactivePanel !== 0 && inactiveKnowledgeChanges.length"
+                            class="active-knowledge-marker"
+                            name="inactive characters"
+                            action-label="Knowledge changed for inactive characters. Expand Inactive section"
+                            :changes="inactiveKnowledgeChanges"
+                            @pause="pauseInactiveKnowledge"
+                            @open="inactivePanel = 0"
+                        />
+                    </Transition>
+                    <v-expansion-panel-text>
+                        <div class="d-flex align-center" v-for="name in inactiveCharacters" :key="name">
+                            <span class="text-body-small text-muted">{{ name }}</span>
+                            <Transition name="knowledge-marker">
+                                <KnowledgeChangeMarker
+                                    v-if="knowledgeChanges.has(name)"
+                                    :name="name"
+                                    :changes="knowledgeChanges.get(name)"
+                                    @pause="(reason, paused) => knowledgeNotifications.pause(name, reason, paused)"
+                                    @open="openWorldStateManager('characters', name, 'knowledge')"
+                                />
+                            </Transition>
+                            <v-spacer></v-spacer>
+                            <v-tooltip text="Manage character">
+                                <template v-slot:activator="{ props }">
+                                    <v-btn :aria-label="`Manage ${name}`" size="x-small" color="secondary" v-bind="props" variant="text" density="comfortable" rounded="sm" @click.stop="openWorldStateManager('characters', name, 'description')" icon="mdi-book-open-page-variant"></v-btn>
+                                </template>
+                            </v-tooltip>
+                            <CharacterKnowledgeHub :name="name" variant="text" color="secondary" @open-knowledge="openWorldStateManager('characters', name, 'knowledge')" />
+                            <v-tooltip :text="activateTooltip(name)">
+                                <template v-slot:activator="{ props }">
+                                    <v-btn :disabled="busy" :aria-label="activateLabel(name)" size="x-small" color="secondary" v-bind="props" variant="text" density="comfortable" rounded="sm" @click.stop="activateCharacter($event, name)" icon="mdi-human-greeting"></v-btn>
+                                </template>
+                            </v-tooltip>
+                        </div>
+                    </v-expansion-panel-text>
+                </v-expansion-panel>
+            </v-expansion-panels>
+
         </div>
         <div ref="objectsContainer">   
 
             <v-expansion-panels density="compact" v-for="(obj,name) in items" :key="name">
                 <v-expansion-panel rounded="0" density="compact">
-                    <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
+                    <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
                         {{ name}}
+                        <v-tooltip v-if="obj.manual" :text="manualEntryTooltip">
+                            <template v-slot:activator="{ props }">
+                                <v-icon v-bind="props" size="x-small" class="ml-1" color="muted">mdi-pin</v-icon>
+                            </template>
+                        </v-tooltip>
                         <template v-slot:actions>
                             <v-icon icon="mdi-cube"></v-icon>
                         </template>
                     </v-expansion-panel-title>
                             
-                    <v-expansion-panel-text class="text-body-2">
+                    <v-expansion-panel-text class="text-body-medium">
                         {{ obj.snapshot }}
                         <div class="text-center mt-1">
-                            <v-tooltip text="Look at">
+                            <v-tooltip v-if="!isPlaythroughActive()" text="Look at">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="lookAtItem(name)" icon="mdi-eye"></v-btn>
 
                                 </template>
                             </v-tooltip>
-                            <v-tooltip v-if="obj.snapshot" :text="'Add detail to '+name">
+                            <v-tooltip v-if="obj.snapshot && !isPlaythroughActive()" :text="'Add detail to '+name">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="examineItem(name, obj.snapshot)" icon="mdi-plus"></v-btn>
 
@@ -157,14 +247,14 @@
             <v-expansion-panels density="compact">
                 <!-- active pin container-->
                 <v-expansion-panel rounded="0" density="compact"  v-if="activePins.length > 0">
-                    <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
+                    <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
                         Active Pins ({{ activePins.length }})
                         <template v-slot:actions>
                             <v-icon icon="mdi-pin"></v-icon>
                         </template>
                     </v-expansion-panel-title>
                     <v-expansion-panel-text>
-                        <div class="mt-1 text-caption" v-for="(pin,index) in activePins" :key="index">
+                        <div class="mt-1 text-body-small" v-for="(pin,index) in activePins" :key="index">
                             {{ truncatedPinText(pin) }}
                             <v-btn rounded="sm" variant="text" size="x-small" class="ml-1"  @click.stop="openWorldStateManager('pins', pin.pin.entry_id)" icon="mdi-book-open-page-variant"></v-btn>
                             <v-divider></v-divider>
@@ -182,7 +272,7 @@
                 
                 <!-- tracked states -->
                 <v-expansion-panel rounded="0" density="compact" v-if="hasAnyWorldState">
-                    <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
+                    <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
                         World
                         <template v-slot:actions>
                             <v-icon icon="mdi-earth"></v-icon>
@@ -205,7 +295,7 @@
                                     v-bind="props"
                                     size="x-small"
                                     variant="outlined"
-                                    color="grey-lighten-1"
+                                    color="mutedheader"
                                     prepend-icon="mdi-image-auto-adjust"
                                     @click="openWorldStateManager('world', 'states', state.question)"
                                     class="mt-1">
@@ -222,20 +312,57 @@
         </div>
     </v-sheet>
 </v-list>
+
+<WorldStateRefreshDialog ref="refreshDialog" />
 </template>
 
 <script>
 
+import WorldStateRefreshDialog from './WorldStateRefreshDialog.vue';
+import KnowledgeChangeMarker from './KnowledgeChangeMarker.vue';
+import CharacterKnowledgeHub from './CharacterKnowledgeHub.vue';
+import { createKnowledgeChanges } from '@/utils/knowledgeChanges';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import {
+    dispatchActivateCharacter,
+    dispatchDeactivateCharacter,
     dispatchExamineEntity,
     dispatchLookAtEntity,
     isKnownSceneCharacter,
 } from '@/utils/entityActions';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
 
+const MANUAL_ENTRY_TOOLTIP =
+    'Added by hand from a scene message. While the snapshot is durable it never ages out as a '
+    + 'stale entry and the item limit never drops it — though it keeps its slot in that limit — '
+    + 'until the story drops it, a time jump cuts the scene, or the snapshot is wiped.';
+
+// snapshot.py canonicalizes a key against the actors of the pass that wrote
+// it, so most keys arrive canonical - but one written while a character was
+// inactive, or before that loop existed, stays raw for good. Claiming is exact
+// anyway: a loose claim swallows a real background character's row along with
+// its snapshot text and its actions. `mayBeExistingCharacter` carries the
+// uncertainty instead, where being wrong only hides a button.
+function claimSnapshotKeys(rosterNames, snapshotKeys) {
+    const unclaimed = new Map(snapshotKeys.map((key) => [key.toLowerCase(), key]));
+    const claimed = new Map();
+    for (const rosterName of rosterNames) {
+        const lower = rosterName.toLowerCase();
+        const key = unclaimed.get(lower);
+        if (key === undefined) continue;
+        claimed.set(rosterName, key);
+        unclaimed.delete(lower);
+    }
+    return claimed;
+}
+
 export default {
     name: 'WorldState',
+    components: {
+        WorldStateRefreshDialog,
+        KnowledgeChangeMarker,
+        CharacterKnowledgeHub,
+    },
     mixins: [VisualAssetsMixin],
     data() {
         return {
@@ -245,10 +372,13 @@ export default {
             location: null,
             requesting: false,
             sceneTime: null,
-            reinforce: {},
+            reinforce: [],
             activePins: [],
             worldStateMaxHeight: null,
             hasAnyWorldState: false,
+            knowledgeChanges: new Map(),
+            inactivePanel: null,
+            inactiveKnowledgePauses: new Map(),
         }
     },
 
@@ -259,11 +389,13 @@ export default {
     inject: [
         'getWebsocket',
         'registerMessageHandler',
+        'unregisterMessageHandler',
         'setWaitingForInput',
         'isInputDisabled',
         'formatWorldStateTemplateString',
         'scene',
         'requestSceneAssets',
+        'isPlaythroughActive',
     ],
 
     emits: [
@@ -272,6 +404,20 @@ export default {
     ],
 
     computed: {
+        inactiveKnowledgeChanges() {
+            return this.inactiveCharacters.flatMap(name =>
+                (this.knowledgeChanges.get(name) || []).map(change => ({
+                    ...change,
+                    target: JSON.stringify([name, change.target]),
+                    label: `${name}: ${change.label}`,
+                })));
+        },
+        knowledgeSceneId() {
+            return this.sceneData?.data?.id;
+        },
+        playthroughActive() {
+            return this.isPlaythroughActive();
+        },
         sceneData() {
             return this.scene ? this.scene() : null;
         },
@@ -279,11 +425,100 @@ export default {
             return (this.sceneData?.data?.assets?.assets) || {};
         },
         refreshTooltip() {
-            return `Update world snapshot (${primaryModifierLabel}+click to wipe and start fresh)`;
+            return `Update world snapshot (${primaryModifierLabel}+click to add instructions or wipe and start fresh)`;
+        },
+        inactiveCharacters() {
+            return this.sceneData?.data?.inactive_characters || [];
+        },
+        showInactiveCharacters() {
+            return this.inactiveCharacters.length > 0 && !this.isPlaythroughActive();
+        },
+        rosterNames() {
+            return [
+                ...(this.sceneData?.data?.characters || []).map((character) => character.name),
+                ...this.inactiveCharacters,
+            ];
+        },
+        manualEntryTooltip() {
+            return MANUAL_ENTRY_TOOLTIP;
+        },
+        characterRoster() {
+            const snapshot = this.characters || {};
+            const keys = Object.keys(snapshot);
+            const claimed = claimSnapshotKeys(this.rosterNames, keys);
+            const rows = [];
+            for (const character of (this.sceneData?.data?.characters || [])) {
+                const entry = snapshot[claimed.get(character.name)];
+                rows.push({
+                    name: character.name,
+                    emotion: entry?.emotion || '',
+                    snapshot: entry?.snapshot || '',
+                    manual: entry?.manual || false,
+                    active: true,
+                });
+            }
+            const taken = new Set(claimed.values());
+            for (const key of keys) {
+                if (taken.has(key)) continue;
+                rows.push({
+                    name: key,
+                    emotion: snapshot[key].emotion,
+                    snapshot: snapshot[key].snapshot,
+                    manual: snapshot[key].manual || false,
+                    active: false,
+                });
+            }
+            return rows;
+        },
+        // The rows the creative tools menu may offer to introduce. A row whose
+        // name overlaps somebody on the roster is not one of them: persist
+        // refuses an exact duplicate alone, so introducing "Jason" beside the
+        // actor "Jason Smith" adds a second actor for one person. The rows
+        // themselves keep their place in the panel either way.
+        persistableCharacters() {
+            return this.characterRoster
+                .filter((row) => !row.active && !this.mayBeExistingCharacter(row.name))
+                .map((row) => row.name);
+        },
+    },
+
+    watch: {
+        knowledgeSceneId() {
+            this.knowledgeNotifications.clear();
+        },
+        playthroughActive() {
+            this.knowledgeNotifications.clear();
+        },
+        persistableCharacters: {
+            handler(names) {
+                this.$emit('passive-characters', names);
+            },
+            immediate: true,
         },
     },
 
     methods: {
+        canMakeReal(row) {
+            return !row.active && !this.mayBeExistingCharacter(row.name) && !this.isPlaythroughActive();
+        },
+        characterKindTooltip(row) {
+            const description = 'Picked up by the world state snapshot, not yet a character.';
+            return this.canMakeReal(row) ? `${description} Use Make real to promote.` : description;
+        },
+        pauseInactiveKnowledge(reason, paused) {
+            const names = this.inactiveKnowledgePauses.get(reason) || new Set();
+            if (paused) {
+                this.inactiveKnowledgePauses.set(reason, names);
+                for (const name of this.inactiveCharacters) {
+                    if (this.knowledgeChanges.has(name)) names.add(name);
+                }
+            } else {
+                this.inactiveKnowledgePauses.delete(reason);
+            }
+            for (const name of names) {
+                this.knowledgeNotifications.pause(name, `inactive:${reason}`, paused);
+            }
+        },
         onResize() {
             this.worldStateMaxHeight = this.availableHeight();
         },
@@ -312,14 +547,29 @@ export default {
         openWorldStateManager(tab, sub1, sub2, sub3) {
             this.$emit('open-world-state-manager', tab, sub1, sub2, sub3);
         },
-        passiveCharacters() {
-            let characters = [];
-            for(let character in this.characters) {
-                if(!this.characterExists(character)) {
-                    characters.push(character);
-                }
-            }
-            this.$emit('passive-characters', characters);
+        activateLabel(name) {
+            return `Call ${name} into the scene`;
+        },
+        deactivateLabel(name) {
+            return `Take ${name} out of the scene`;
+        },
+        activateTooltip(name) {
+            return `${this.activateLabel(name)} (${primaryModifierLabel}+click: no narration)`;
+        },
+        deactivateTooltip(name) {
+            return `${this.deactivateLabel(name)} (${primaryModifierLabel}+click: no narration)`;
+        },
+        activateCharacter(ev, name) {
+            dispatchActivateCharacter(this.getWebsocket(), {
+                name,
+                neverNarrate: isPrimaryModifier(ev),
+            });
+        },
+        deactivateCharacter(ev, name) {
+            dispatchDeactivateCharacter(this.getWebsocket(), {
+                name,
+                neverNarrate: isPrimaryModifier(ev),
+            });
         },
         lookAtCharacter(name) {
             dispatchLookAtEntity(this.getWebsocket(), {
@@ -361,12 +611,7 @@ export default {
             });
         },
         refresh(event) {
-            const reset = !!event && isPrimaryModifier(event);
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_agent',
-                action: 'request_update',
-                reset,
-            }));
+            this.$refs.refreshDialog.handleClick(event);
         },
         cancelRequest() {
             this.getWebsocket().send(JSON.stringify({
@@ -402,83 +647,70 @@ export default {
             return states;
         },
         trackedWorldState(question) {
-            // cycle through reinforce and return true if the world has a tracked state for this question
-            // by checking the `character` property of the reinforce object
+            // a null state wins over a 0.39.0 "" state, as in the backend lookup
             question = this.formatWorldStateTemplateString(question, "the characters");
+            let alias = null;
             for(let state of this.reinforce) {
-                if(state.character === null && state.question === question) {
+                if(state.question !== question) {
+                    continue;
+                }
+                if(state.character === null) {
                     return state;
                 }
+                if(!state.character && alias === null) {
+                    alias = state;
+                }
             }
-            return null;
+            return alias;
         },
 
         trackedWorldStates() {
-            // cycle through reinforce and return the states that are tracked for the world
-            // by checking the `character` property of the reinforce object
-            let states = [];
+            // one per question; a 0.39.0 "" state yields to a null state
+            let byQuestion = new Map();
 
             for(let state of this.reinforce) {
-                if(state.character === null) {
-                    states.push(state);
+                if(state.character) {
+                    continue;
+                }
+                const listed = byQuestion.get(state.question);
+                if(listed === undefined || (state.character === null && listed.character !== null)) {
+                    byQuestion.set(state.question, state);
                 }
             }
-            
-            return states;
+
+            return [...byQuestion.values()];
         },
 
         characterSuggestions(name) {
             for(let suggestion of this.suggestions) {
-                if(suggestion.name === name && suggestion.type === 'character') {
+                if(suggestion.name === name && suggestion.type === 'character' && suggestion.proposals.length > 0) {
                     return true;
                 }
             }
             return false;
         },
-        characterExists(name) {
-            if (!this.sceneData || !this.sceneData.data || !this.sceneData.data.characters) {
-                return false;
-            }
-            for (let character of this.sceneData.data.characters) {
-                if (name.toLowerCase().indexOf(character.name.toLowerCase()) !== -1 || character.name.toLowerCase().indexOf(name.toLowerCase()) !== -1) {
-                    return true;
-                }
-            }
-            return false;
-        },
-        // Exact-match roster check (active + inactive) for the Add Detail gate.
-        // Distinct from characterExists (fuzzy/active-only), which the
-        // persist/manage buttons rely on; the Add Detail gate needs the precise
-        // "is this the same character that already has a sheet" answer.
         characterIsKnown(name) {
             return isKnownSceneCharacter(this.sceneData?.data, name);
         },
-        getCharacterData(name) {
-            if (!this.sceneData || !this.sceneData.data || !this.sceneData.data.characters) {
-                return null;
-            }
-            // Find character in active characters
-            const char = this.sceneData.data.characters.find(c => c.name === name);
-            if (char) {
-                return char;
-            }
-            // Also check inactive characters
-            if (this.sceneData.data.inactive_characters) {
-                return Object.values(this.sceneData.data.inactive_characters).find(c => c.name === name) || null;
-            }
-            return null;
+        // Same two-way substring test snapshot.py uses to canonicalize a key,
+        // asked of the whole roster. Only Make real reads it: persist_character
+        // refuses an exact duplicate alone, so offering it for a stale key like
+        // "Jason" while "Jason Smith" is on the roster adds a second actor for
+        // the same person.
+        mayBeExistingCharacter(name) {
+            const key = name.toLowerCase();
+            return this.rosterNames.some((rosterName) => {
+                const roster = rosterName.toLowerCase();
+                return roster.includes(key) || key.includes(roster);
+            });
         },
         getCharacterAvatar(name) {
-            // Only show avatar if character exists in scene
-            if (!this.characterExists(name)) {
+            const character = (this.sceneData?.data?.characters || [])
+                .find((candidate) => candidate.name === name);
+            if (!character) {
                 return null;
             }
-            const characterData = this.getCharacterData(name);
-            if (!characterData) {
-                return null;
-            }
-            // Use current_avatar if available, otherwise fall back to avatar
-            return characterData.current_avatar || characterData.avatar || null;
+            return character.current_avatar || character.avatar || null;
         },
         getCharacterAvatarSrc(name) {
             const avatarId = this.getCharacterAvatar(name);
@@ -495,8 +727,8 @@ export default {
         },
         loadCharacterAvatars() {
             const avatarIds = [];
-            for (const name in this.characters) {
-                const avatarId = this.getCharacterAvatar(name);
+            for (const row of this.characterRoster) {
+                const avatarId = this.getCharacterAvatar(row.name);
                 if (avatarId) {
                     avatarIds.push(avatarId);
                 }
@@ -507,6 +739,16 @@ export default {
         },
 
         handleMessage(data) {
+            if (data.type === 'knowledge_changed') {
+                if (data.data.scene_id === this.knowledgeSceneId && !this.playthroughActive) {
+                    this.knowledgeNotifications.add(data.data.changes, this.rosterNames);
+                }
+                return;
+            }
+            if ((data.type === 'system' && data.id === 'scene.loaded') ||
+                (data.type === 'scene_status' && data.data.restored)) {
+                this.knowledgeNotifications.clear();
+            }
             // Handle scene_asset messages using mixin method
             this.handleSceneAssetMessage(data);
             
@@ -516,7 +758,6 @@ export default {
                 this.items = data.data.items;
                 this.location = data.data.location;
                 this.requesting = (data.status==="requested")
-                console.log("WorldState.vue: world_state", data.data);
                 this.reinforce = data.data.reinforce;
 
                 // check if there is any entry in reinforce that doesnt have
@@ -524,14 +765,12 @@ export default {
 
                 this.hasAnyWorldState = false;
                 for(let state of this.reinforce) {
-                    if(state.character === null) {
+                    if(!state.character) {
                         this.hasAnyWorldState = true;
                         break;
                     }
                 }
 
-                this.passiveCharacters();
-                
                 // Load avatars for characters that exist in scene
                 this.$nextTick(() => {
                     this.loadCharacterAvatars();
@@ -556,12 +795,69 @@ export default {
     },
 
     created() {
+        this.knowledgeNotifications = createKnowledgeChanges((changes) => {
+            this.knowledgeChanges = changes;
+            if (!changes.size) this.inactiveKnowledgePauses.clear();
+            for (const reason of this.inactiveKnowledgePauses.keys()) {
+                this.pauseInactiveKnowledge(reason, true);
+            }
+        });
         this.registerMessageHandler(this.handleMessage);
+    },
+    beforeUnmount() {
+        this.unregisterMessageHandler(this.handleMessage);
+        this.knowledgeNotifications.clear();
     },
 }
 </script>
 
 <style scoped>
+.character-row, .character-section-inactive {
+    position: relative;
+}
+.character-row-active > .v-expansion-panel-title {
+    border-inline-start: 2px solid rgba(var(--v-theme-primary), 0.65);
+    background-color: rgba(var(--v-theme-primary), 0.06);
+}
+.character-row-background > .v-expansion-panel-title {
+    border-inline-start: 2px solid rgba(var(--v-theme-secondary), 0.65);
+    background-color: rgba(var(--v-theme-secondary), 0.06);
+}
+.character-section-inactive > .v-expansion-panel-title {
+    border-inline-start: 2px solid rgba(var(--v-theme-mutedheader), 0.45);
+    background-color: rgba(var(--v-theme-mutedheader), 0.04);
+}
+.character-title {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+}
+.character-kind {
+    margin-top: 1px;
+    cursor: default;
+}
+.knowledge-marker-space {
+    flex: 0 0 28px;
+}
+.active-knowledge-marker {
+    position: absolute;
+    inset-inline-end: 64px;
+    top: 12px;
+    z-index: 1;
+}
+.knowledge-marker-leave-active {
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.knowledge-marker-leave-to {
+    opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+    .knowledge-marker-leave-active {
+        transition: none;
+    }
+}
 .pre-wrap {
     white-space: pre-wrap;
 }
@@ -574,6 +870,6 @@ export default {
     display: inline-flex;
     transform: translateX(8px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-    border: 2px solid rgb(var(--v-theme-avatar_border));
+    border: 2px solid rgb(var(--v-theme-border));
 }
 </style>

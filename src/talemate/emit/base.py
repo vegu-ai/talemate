@@ -162,9 +162,10 @@ async def wait_for_input(
             message=input_received["message"],
             character=character,
         )
-        await async_signals.get("user_interaction").send(emission)
     except Exception as e:
         log.error("emit.user_interaction.error", error=e)
+    else:
+        await async_signals.get("user_interaction").send(emission)
 
     if return_struct:
         return input_received

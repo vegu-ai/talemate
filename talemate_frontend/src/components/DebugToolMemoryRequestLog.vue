@@ -1,7 +1,7 @@
 <template>
 
     <v-card class="ma-4">
-        <v-card-text class="text-muted text-caption">
+        <v-card-text class="text-muted text-body-small">
             Inspect the requests for memory retrieval.
         </v-card-text>
     </v-card>
@@ -16,7 +16,7 @@
 
     <v-list-item v-for="(memory_request, index) in memory_requests" :key="index" @click="openMemoryRequestView(index)">
 
-        <div class="ml-2 mr-2 text-muted text-caption font-italic">
+        <div class="ml-2 mr-2 text-muted text-body-small font-italic">
         {{ memory_request.query }}
         </div>
         <v-list-item-subtitle>
@@ -27,7 +27,7 @@
                 <v-icon size="14" class="ml-1">mdi-flag-checkered</v-icon>
             </v-chip>
             <!-- duration -->
-            <v-chip size="x-small" class="mr-1" color="grey-darken-1" variant="text" label>{{ memory_request.duration }}s<v-icon size="14" class="ml-1">mdi-clock</v-icon></v-chip>
+            <v-chip size="x-small" class="mr-1" color="muted" variant="text" label>{{ memory_request.duration }}s<v-icon size="14" class="ml-1">mdi-clock</v-icon></v-chip>
         </v-list-item-subtitle>
         <v-divider class="mt-1" v-if="memory_request.new_agent_activity"></v-divider>
     </v-list-item>

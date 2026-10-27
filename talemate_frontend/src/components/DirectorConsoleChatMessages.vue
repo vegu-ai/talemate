@@ -19,8 +19,9 @@
                     @decide="onDecide"
                 />
                 <DirectorConsoleChatMessageActionResult
-                    v-else-if="m.type === 'action_result'"
-                    :name="m.name"
+                    v-else-if="m.type === 'action_result' || m.type === 'batch_result'"
+                    :name="m.type === 'batch_result' ? `Batch: ${m.applied_count} applied · ${m.not_applied_count} not applied` : m.name"
+                    :details="m.type === 'batch_result' ? m.message : undefined"
                     :args="m.arguments"
                     :result="m.result"
                 />
@@ -29,7 +30,7 @@
                     :asset-id="m.asset_id"
                     :message="m.message"
                 />
-                <div v-else-if="m.type === 'user_interaction'" class="text-body-2">
+                <div v-else-if="m.type === 'user_interaction'" class="text-body-medium">
                     <v-chip size="x-small" label color="primary" class="mr-2">{{ m.is_direction ? 'instruction' : 'user' }}</v-chip>
                     <span v-if="m.is_direction">{{ m.user_input }}</span>
                     <span v-else-if="m.user_input && m.user_input.trim()">User interacted: {{ m.preview || m.user_input }}</span>
@@ -68,7 +69,7 @@
                 </v-btn>
             </div>
         </div>
-        <div v-if="messages.length === 0" class="text-caption text-muted pa-2">
+        <div v-if="messages.length === 0" class="text-body-small text-muted pa-2">
             <slot name="empty">No messages yet</slot>
         </div>
     </div>
@@ -118,8 +119,8 @@ export default {
     emits: ['confirm-action', 'remove-message', 'regenerate-last'],
     methods: {
         getMessageColor(m) {
-            if(m && (m.source === 'user' || m.type === 'user_interaction')) return 'dchat_msg_user';
-            if(m && m.type === 'action_result') return 'dchat_msg_action_result';
+            if(m && (m.source === 'user' || m.type === 'user_interaction')) return 'actor';
+            if(m && (m.type === 'action_result' || m.type === 'batch_result')) return 'dchat_msg_action_result';
             if(m && m.type === 'compaction_notice') return 'dchat_msg_compaction';
             if(m && m.type === 'asset_view') return 'dchat_msg_director';
             return 'dchat_msg_director';
@@ -178,5 +179,4 @@ export default {
     align-items: center;
 }
 </style>
-
 

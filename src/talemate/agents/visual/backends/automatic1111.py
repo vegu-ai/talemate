@@ -209,7 +209,6 @@ class Automatic1111Mixin:
                     value="http://localhost:7860",
                     label="API URL",
                     description="The URL of the AUTOMATIC1111 API",
-                    save_on_change=True,
                     scene_overridable=False,
                 ),
                 "steps": AgentActionConfig(
@@ -317,6 +316,7 @@ class Automatic1111Mixin:
             return Backend(api_url=api_url, gen_type=gen_type, prompt_type=prompt_type)
 
         backend.api_url = api_url
+        backend.prompt_type = prompt_type
         return backend
 
     async def automatic1111_prepare_generation(

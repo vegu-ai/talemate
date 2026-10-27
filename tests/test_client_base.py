@@ -17,8 +17,12 @@ from __future__ import annotations
 
 import asyncio
 import time
+from types import SimpleNamespace
 
+import httpx
+import pydantic
 import pytest
+from structlog.testing import capture_logs
 
 import talemate.config.state as config_state
 from talemate.agents.context import ActiveAgent, active_agent
@@ -26,6 +30,7 @@ from talemate.client import base as base_module
 from talemate.client.base import (
     EMPTY_RESPONSE_MESSAGE,
     HTTP_ERROR_MESSAGES,
+    STOPPING_STRINGS,
     ClientBase,
     ClientDisabledError,
     CommonDefaults,
@@ -37,6 +42,7 @@ from talemate.client.base import (
     RequestInformation,
     _generation_error_futures,
     clean_client_name,
+    describe_exception,
     get_error_message,
     locked_model_template,
     resolve_generation_error,
@@ -50,6 +56,9 @@ from talemate.exceptions import ReasoningResponseError
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
 # ---------------------------------------------------------------------------
+
+
+TRUNCATION_EVENT = "too many stopping strings, truncating"
 
 
 class _StubClient(ClientBase):
@@ -95,6 +104,14 @@ def cfg_isolation():
 
 
 @pytest.fixture
+def preset_isolation():
+    """Snapshot/restore the inference presets, yielding the live ones."""
+    saved = config_state.CONFIG.presets.inference.model_copy(deep=True)
+    yield config_state.CONFIG.presets.inference
+    config_state.CONFIG.presets.inference = saved
+
+
+@pytest.fixture
 def stub_client(cfg_isolation):
     """A stub client with a registered config entry under its name."""
     _register_client_config("stub_test")
@@ -113,8 +130,44 @@ class TestErrorMessages:
         for code, msg in HTTP_ERROR_MESSAGES.items():
             assert get_error_message(code) == msg
 
-    def test_none_status_yields_empty_response_message(self):
-        assert get_error_message(None) == EMPTY_RESPONSE_MESSAGE
+    def test_exception_without_status_describes_itself(self):
+        assert describe_exception(RuntimeError("Missing credentials")) == (
+            "Missing credentials"
+        )
+
+    def test_exception_without_message_falls_back_to_its_type(self):
+        assert describe_exception(RuntimeError()) == "RuntimeError"
+
+    def test_exception_cause_follows_the_message(self):
+        try:
+            try:
+                raise OSError("All connection attempts failed")
+            except OSError as cause:
+                raise RuntimeError("Connection error.") from cause
+        except RuntimeError as exc:
+            assert describe_exception(exc) == (
+                "Connection error. (All connection attempts failed)"
+            )
+
+    def test_user_message_wins_over_status_and_text(self):
+        exc = RuntimeError("raw")
+        exc.user_message = "shown to the user"
+        assert describe_exception(exc, 429) == "shown to the user"
+
+    def test_not_found_names_the_failed_request(self):
+        exc = RuntimeError("raw")
+        exc.response = SimpleNamespace(
+            request=httpx.Request("POST", "http://server.test:8081/v1/completions")
+        )
+        assert describe_exception(exc, 404) == (
+            f"{HTTP_ERROR_MESSAGES[404]} (POST /v1/completions)"
+        )
+
+    def test_not_found_without_a_request_uses_status_text(self):
+        assert describe_exception(RuntimeError("raw"), 404) == HTTP_ERROR_MESSAGES[404]
+
+    def test_status_text_wins_over_exception_text(self):
+        assert describe_exception(RuntimeError("raw"), 429) == HTTP_ERROR_MESSAGES[429]
 
     def test_unmapped_5xx_falls_through_to_generic_5xx_message(self):
         assert (
@@ -184,8 +237,12 @@ class TestResolveGenerationError:
 class TestRequestInformation:
     def test_pending_status_when_only_started(self):
         info = RequestInformation(start_time=time.time())
-        # in-progress / pending until duration > 1 with rate==0
-        assert info.status in ("in progress", "pending")
+        assert info.status == "in progress"
+
+    def test_waiting_for_the_first_token_is_not_stopped(self):
+        info = RequestInformation(start_time=time.time() - 30)
+        assert info.tokens == 0
+        assert info.status == "in progress"
 
     def test_completed_status_after_end(self):
         now = time.time()
@@ -302,7 +359,7 @@ class TestDefaults:
     def test_defaults_extends_common(self):
         d = Defaults()
         assert d.api_url == "http://localhost:5000"
-        assert d.max_token_length == 8192
+        assert d.max_token_length == 16384
         assert d.lock_template is False
         # inherits CommonDefaults
         assert d.reason_enabled is False
@@ -329,7 +386,7 @@ class TestClientBaseConfigGetters:
         assert client.model is None
         assert client.api_key is None
         assert client.api_url is None
-        assert client.max_token_length == 8192
+        assert client.max_token_length == 16384
         assert client.enabled is True
         assert client.rate_limit is None
         assert client.lock_template is False
@@ -441,6 +498,26 @@ class TestCanBeCoerced:
         assert client.can_be_coerced is False
 
 
+@pytest.mark.parametrize("enabled", [False, True])
+@pytest.mark.parametrize("locked", [False, True])
+def test_reasoning_override_state_is_stable_and_honors_lock(
+    cfg_isolation, monkeypatch, enabled, locked
+):
+    _register_client_config("reasoning_override", reason_enabled=enabled)
+    client = _StubClient(name="reasoning_override")
+    monkeypatch.setattr(_StubClient, "reason_locked", property(lambda self: locked))
+    assert not client.reasoning_disabled_for_action
+    assert client.reason_enabled == enabled
+    assert client.reasoning_override_applies == (enabled and not locked)
+    with ClientContext(disable_reasoning=True):
+        assert client.reasoning_disabled_for_action == (not locked)
+        assert client.reason_enabled == (enabled and locked)
+        assert client._common_status_data()["reasoning_override_applies"] == (
+            enabled and not locked
+        )
+    assert client.reason_enabled == enabled
+
+
 class TestReasoningDisplay:
     def test_returns_none_when_disabled(self, stub_client):
         assert stub_client.reasoning_display is None
@@ -450,8 +527,11 @@ class TestReasoningDisplay:
         client = _StubClient(name="rd")
         rd = client.reasoning_display
         assert isinstance(rd, ReasoningDisplay)
-        assert rd.indicator_value == "2048"
-        assert rd.show_token_slider is True
+        assert rd.model_dump() == {"control": "tokens", "effort_choices": None}
+
+    def test_rejects_unknown_control(self):
+        with pytest.raises(pydantic.ValidationError):
+            ReasoningDisplay(control="slider")
 
 
 # ---------------------------------------------------------------------------
@@ -534,6 +614,18 @@ class TestPromptTemplate:
         assert "SYS" in out
 
 
+@pytest.fixture
+def gemma4_template(monkeypatch):
+    from talemate.client.model_prompts import model_prompt
+
+    template = model_prompt.env.from_string(
+        model_prompt.get_std_template_content("Gemma4.jinja2")
+    )
+    monkeypatch.setattr(
+        model_prompt, "get_template", lambda name: (template, "std/Gemma4.jinja2")
+    )
+
+
 class TestPromptTemplateExample:
     def test_returns_none_when_no_model(self, stub_client):
         rendered, tname, spec = stub_client.prompt_template_example()
@@ -557,6 +649,93 @@ class TestPromptTemplateExample:
         # Includes the placeholders unmodified
         assert "{sysmsg}" in rendered
         assert "{prompt}" in rendered
+
+    @pytest.mark.parametrize(
+        "config, expected_user, expected_model",
+        [
+            ({}, "{prompt}", "<|channel>thought\n<channel|>{LLM coercion}"),
+            (
+                {"double_coercion": "Stay in character."},
+                "{prompt}",
+                "<|channel>thought\n<channel|>Stay in character.\n\n{LLM coercion}",
+            ),
+            (
+                {"reason_enabled": True},
+                "{prompt}\nAfter thinking about it, start your answer with: {LLM coercion}",
+                "",
+            ),
+            (
+                {"reason_enabled": True, "double_coercion": "Stay in character."},
+                "{prompt}\nAfter thinking about it, start your answer with: "
+                "Stay in character.\n\n{LLM coercion}",
+                "",
+            ),
+            (
+                {"reason_enabled": True, "reason_prefill": "<|channel>thought\n"},
+                "{prompt}\nAfter thinking about it, start your answer with: {LLM coercion}",
+                "<|channel>thought\n",
+            ),
+        ],
+    )
+    def test_shows_coercion_as_the_client_sends_it(
+        self, cfg_isolation, gemma4_template, config, expected_user, expected_model
+    ):
+        _register_client_config("ex", model="some-model", enabled=True, **config)
+        client = _StubClient(name="ex")
+        rendered, _, _ = client.prompt_template_example()
+        think = "<|think|>\n" if config.get("reason_enabled") else ""
+        assert rendered == (
+            f"<|turn>system\n{think}{{sysmsg}}<turn|>\n"
+            f"<|turn>user\n{expected_user}<turn|>\n"
+            f"<|turn>model\n{expected_model}"
+        )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "config",
+        [
+            {},
+            {"double_coercion": "Stay in character."},
+            {"reason_enabled": True},
+            {"reason_enabled": True, "reason_prefill": "<|channel>thought\n"},
+        ],
+    )
+    async def test_example_matches_the_sent_prompt(
+        self, cfg_isolation, gemma4_template, monkeypatch, config
+    ):
+        _register_client_config("sent", model="some-model", enabled=True, **config)
+        client = _OfflineClient(
+            name="sent", response="<|channel>thought\nR<channel|>answer"
+        )
+        client.connected = True
+        client.remote_model_name = "some-model"
+        monkeypatch.setattr(client, "get_system_message", lambda kind: "SYS")
+        monkeypatch.setattr(
+            type(client),
+            "enforce_response_length_instructions",
+            property(lambda self: False),
+        )
+        sent = []
+        generate = client.generate
+
+        async def capture(prompt, parameters, kind):
+            sent.append(prompt)
+            return await generate(prompt, parameters, kind)
+
+        client.generate = capture
+
+        with _make_active_agent_context():
+            with ClientContext(requires_active_scene=False):
+                set_client_context_attribute("requires_active_scene", False)
+                await client.send_prompt("USER<|BOT|>START", kind="conversation")
+
+        rendered, _, _ = client.prompt_template_example()
+        expected = (
+            rendered.replace("{sysmsg}", "SYS")
+            .replace("{prompt}", "USER")
+            .replace("{LLM coercion}", "START")
+        )
+        assert sent == [expected]
 
 
 # ---------------------------------------------------------------------------
@@ -805,6 +984,94 @@ class TestCleanPromptParameters:
         assert params["extra_stopping_strings"] == ["END"]
 
 
+class TestPresetExtraStoppingStrings:
+    def test_preset_extra_stopping_strings_reach_the_client(
+        self, stub_client, preset_isolation
+    ):
+        preset_isolation.creative.extra_stopping_strings = ["<<STOP>>"]
+        with _make_active_agent_context():
+            with ClientContext():
+                params = stub_client.generate_prompt_parameters("narrate")
+        assert params["extra_stopping_strings"] == ["<<STOP>>"]
+
+    def test_preset_extra_stopping_strings_are_copied(
+        self, stub_client, preset_isolation
+    ):
+        # Agents and the client append to this list in place, so a shared
+        # reference would grow the stored preset with every generation.
+        preset_isolation.creative.extra_stopping_strings = ["<<STOP>>"]
+        with _make_active_agent_context():
+            with ClientContext():
+                params = stub_client.generate_prompt_parameters("narrate")
+        params["extra_stopping_strings"].append("<<MORE>>")
+        assert preset_isolation.creative.extra_stopping_strings == ["<<STOP>>"]
+
+    def test_conversation_kind_keeps_preset_and_character_strings(
+        self, stub_client, preset_isolation
+    ):
+        preset_isolation.conversation.extra_stopping_strings = ["<<STOP>>"]
+        with _make_active_agent_context():
+            with ClientContext():
+                set_client_context_attribute(
+                    "conversation",
+                    {"talking_character": "Alice", "other_characters": ["Bob"]},
+                )
+                params = stub_client.generate_prompt_parameters("conversation")
+        assert params["extra_stopping_strings"] == ["<<STOP>>", "Bob:", "BOB\n"]
+
+
+class TestBuildStoppingStrings:
+    def test_merges_extra_stopping_strings_without_cap(self, stub_client):
+        params = {"extra_stopping_strings": ["Bob: ", "Eve: "]}
+        with capture_logs() as logs:
+            stopping_strings = stub_client.build_stopping_strings(params)
+        assert stopping_strings == STOPPING_STRINGS + ["Bob: ", "Eve: "]
+        # nothing to truncate, so nothing is logged
+        assert not [entry for entry in logs if entry["event"] == TRUNCATION_EVENT]
+
+    def test_cap_truncates_and_warns(self, stub_client):
+        extra = [f"Char{i}: " for i in range(5)]
+        params = {"extra_stopping_strings": list(extra)}
+        with capture_logs() as logs:
+            stopping_strings = stub_client.build_stopping_strings(params, cap=3)
+
+        assert stopping_strings == (STOPPING_STRINGS + extra)[:3]
+
+        truncations = [entry for entry in logs if entry["event"] == TRUNCATION_EVENT]
+        assert len(truncations) == 1
+        assert truncations[0]["log_level"] == "warning"
+        assert truncations[0]["client_type"] == "stub"
+        assert truncations[0]["max_stopping_strings"] == 3
+        assert truncations[0]["dropped"] == (STOPPING_STRINGS + extra)[3:]
+
+    def test_warn_false_logs_at_debug(self, stub_client):
+        extra = [f"Char{i}: " for i in range(5)]
+        params = {"extra_stopping_strings": list(extra)}
+        with capture_logs() as logs:
+            stopping_strings = stub_client.build_stopping_strings(
+                params, cap=3, warn=False
+            )
+
+        assert stopping_strings == (STOPPING_STRINGS + extra)[:3]
+
+        truncations = [entry for entry in logs if entry["event"] == TRUNCATION_EVENT]
+        assert len(truncations) == 1
+        assert truncations[0]["log_level"] == "debug"
+
+    def test_no_truncation_when_within_cap(self, stub_client):
+        params = {"extra_stopping_strings": ["Bob: "]}
+        with capture_logs() as logs:
+            stopping_strings = stub_client.build_stopping_strings(params, cap=16)
+        assert stopping_strings == STOPPING_STRINGS + ["Bob: "]
+        assert not [entry for entry in logs if entry["event"] == TRUNCATION_EVENT]
+
+    def test_does_not_mutate_the_global_list(self, stub_client):
+        before = list(STOPPING_STRINGS)
+        params = {"extra_stopping_strings": ["Bob: "]}
+        stub_client.build_stopping_strings(params)
+        assert STOPPING_STRINGS == before
+
+
 class TestTunePromptParametersConversation:
     def test_sets_max_tokens_and_stopping_strings(self, stub_client):
         params = {}
@@ -842,6 +1109,22 @@ class TestTunePromptParametersConversation:
             stub_client.tune_prompt_parameters_conversation(params)
         assert "PRESET" in params["extra_stopping_strings"]
         assert "Bob:" in params["extra_stopping_strings"]
+
+    def test_skips_character_names_when_injection_turned_off(self, stub_client):
+        params = {"extra_stopping_strings": ["PRESET"]}
+        with ClientContext():
+            set_client_context_attribute(
+                "conversation",
+                {
+                    "talking_character": "Alice",
+                    "other_characters": ["Bob"],
+                    "length": 300,
+                    "inject_character_names": False,
+                },
+            )
+            stub_client.tune_prompt_parameters_conversation(params)
+        assert params["extra_stopping_strings"] == ["PRESET"]
+        assert params["max_tokens"] == 300
 
     def test_default_max_tokens_when_length_missing(self, stub_client):
         params = {}
@@ -1661,6 +1944,44 @@ class TestSendPromptEndToEnd:
                 set_client_context_attribute("requires_active_scene", False)
                 out = await client.send_prompt("hi", kind="conversation")
         assert out == "useful answer"
+
+    @pytest.mark.asyncio
+    async def test_splits_at_preset_stopping_string(
+        self, cfg_isolation, preset_isolation
+    ):
+        _register_client_config("preset_stop", model="some-model", enabled=True)
+        preset_isolation.conversation.extra_stopping_strings = ["<<CUT>>"]
+        client = _OfflineClient(
+            name="preset_stop", response="useful answer<<CUT>> garbage tail"
+        )
+        client.connected = True
+        client.remote_model_name = "some-model"
+
+        with _make_active_agent_context():
+            with ClientContext(requires_active_scene=False):
+                set_client_context_attribute("requires_active_scene", False)
+                out = await client.send_prompt("hi", kind="conversation")
+        assert out == "useful answer"
+
+    @pytest.mark.asyncio
+    async def test_cuts_at_earliest_stopping_string_occurrence(
+        self, cfg_isolation, preset_isolation
+    ):
+        # The earliest occurrence in the response wins, even when it belongs
+        # to a later entry in the stopping string list.
+        _register_client_config("earliest_stop", model="some-model", enabled=True)
+        preset_isolation.conversation.extra_stopping_strings = ["<<LATE>>", "<<EARLY>>"]
+        client = _OfflineClient(
+            name="earliest_stop", response="safe<<EARLY>>leak<<LATE>>tail"
+        )
+        client.connected = True
+        client.remote_model_name = "some-model"
+
+        with _make_active_agent_context():
+            with ClientContext(requires_active_scene=False):
+                set_client_context_attribute("requires_active_scene", False)
+                out = await client.send_prompt("hi", kind="conversation")
+        assert out == "safe"
 
     @pytest.mark.asyncio
     async def test_strips_reasoning_when_enabled(self, cfg_isolation):

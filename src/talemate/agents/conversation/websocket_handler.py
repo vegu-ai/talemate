@@ -3,10 +3,9 @@ import structlog
 import random
 from typing import TYPE_CHECKING
 
-from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
-from talemate.status import set_loading
+from talemate.status import LoadingLabel, set_loading, set_loading_label
 from talemate.scene_message import DirectorMessage
 
 if TYPE_CHECKING:
@@ -43,20 +42,24 @@ class ConversationWebsocketHandler(Plugin):
         Generate an actor action
         """
         payload = RequestActorActionPayload(**data)
-        character = None
-        actor = None
 
         if payload.character:
             character = self.scene.get_character(payload.character)
             actor = character.actor
         else:
-            actor = random.choice(list(self.scene.get_npc_characters())).actor
+            npcs = list(self.scene.get_npc_characters())
 
-            if not actor:
-                log.error("handle_request_actor_action: No actor found")
+            if not npcs:
+                log.error("handle_request_actor_action: No NPCs in the scene")
+                await self.signal_operation_failed(
+                    "No NPCs in the scene — nothing to direct"
+                )
                 return
 
+            actor = random.choice(npcs).actor
             character = actor.character
+
+        set_loading_label(LoadingLabel("Generating {}'s next action", character.name))
 
         if payload.instructions_through_director:
             director_message = DirectorMessage(
@@ -64,8 +67,7 @@ class ConversationWebsocketHandler(Plugin):
                 source="player",
                 meta={"character": character.name},
             )
-            emit("director", message=director_message, character=character)
-            await self.scene.push_history(director_message)
+            await self.scene.push_history(director_message, emit_message=True)
             generated_messages = await self.agent.converse(
                 actor, emit_signals=payload.emit_signals
             )
@@ -77,5 +79,4 @@ class ConversationWebsocketHandler(Plugin):
             )
 
         for message in generated_messages:
-            await self.scene.push_history(message)
-            emit("character", message=message, character=character)
+            await self.scene.push_history(message, emit_message=True)

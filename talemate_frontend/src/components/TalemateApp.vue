@@ -1,5 +1,7 @@
 <template>
   <v-app>
+    <SceneSaveDialog ref="sceneSaveDialog" :scene="scene" />
+    <SceneLeaveWarning :active="connected && sceneActive && !loading" :saved="scene.saved" />
 
     <!-- system bar -->
     <v-system-bar>
@@ -40,9 +42,9 @@
 
       <v-divider class="mr-1" vertical></v-divider>
       <v-spacer></v-spacer>
-      <AudioQueue ref="audioQueue" @message-audio-played="onMessageAudioPlayed" />
+      <AudioQueue ref="audioQueue" :stale-message-ids="playthroughStaleMessageIds" @message-audio-played="onMessageAudioPlayed" @message-audio-finished="onPlaythroughMessageSpoken" />
       <v-divider class="ml-2 mr-2" vertical></v-divider>
-      <span v-if="version !== null" class="text-grey text-caption">v{{ version }}</span>
+      <span v-if="version !== null" class="text-medium-emphasis text-body-small">v{{ version }}</span>
       <span v-if="!ready">
         <v-icon icon="mdi-application-cog"></v-icon>
         <span class="ml-1">Configuration required</span>
@@ -58,7 +60,7 @@
         <v-icon v-else>mdi-arrow-collapse-right</v-icon>
       </v-app-bar-nav-icon>
 
-      <v-app-bar-nav-icon v-if="sceneActive && scene.environment === 'scene'" @click="setEnvCreative(); tab = 'main'" color="highlight6" icon>
+      <v-app-bar-nav-icon v-if="sceneActive && scene.environment === 'scene' && !playthroughActive" @click="setEnvCreative(); tab = 'main'" color="highlight6" icon>
         <v-tooltip activator="parent" location="top">Change to node editor</v-tooltip>
         <v-icon>mdi-chart-timeline-variant-shimmer</v-icon>
       </v-app-bar-nav-icon>
@@ -73,21 +75,21 @@
           {{ tab.title() }}
           <span v-if="tab.alert && tab.alert()" class="ml-1 d-inline-flex">
             <v-tooltip v-if="tab.alertTooltip" activator="parent" location="top">{{ tab.alertTooltip() }}</v-tooltip>
-            <v-icon size="x-small" color="warning">mdi-alert</v-icon>
+            <v-icon size="x-small" :color="tab.alertColor ? tab.alertColor() : 'warning'">{{ tab.alertIcon ? tab.alertIcon() : 'mdi-alert' }}</v-icon>
           </span>
         </v-tab>
       </v-tabs>
   
       <v-spacer></v-spacer>
 
-      <DirectorConsoleWidget :scene-active="sceneActive" @open-director-console="toggleNavigation('directorConsole')" />
+      <DirectorConsoleWidget v-if="!playthroughActive" :scene-active="sceneActive" @open-director-console="toggleNavigation('directorConsole')" />
 
       <VoiceLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" v-if="agentStatus.tts?.available"/>
 
       <VisualLibrary ref="visualLibrary" :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" :agent-status="agentStatus" :world-state-templates="worldStateTemplates"/>
 
 
-      <v-tooltip text="Help" location="top">
+      <v-tooltip text="Help" location="top" v-if="helpAvailable">
         <template v-slot:activator="{ props }">
           <v-app-bar-nav-icon @click="toggleNavigation('help')" v-bind="props"><v-icon>mdi-help-circle-outline</v-icon></v-app-bar-nav-icon>
         </template>
@@ -99,6 +101,8 @@
         </template>
       </v-tooltip>
 
+      <ThemeSwitcher :immutable-config="appConfig" :world-state-templates="worldStateTemplates" />
+
       <v-tooltip text="Settings" location="top">
         <template v-slot:activator="{ props }">
           <v-app-bar-nav-icon @click="openAppConfig()" v-bind="props"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
@@ -107,7 +111,7 @@
 
       <v-tooltip text="Clients / Agents" location="top">
         <template v-slot:activator="{ props }">
-          <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="!ready" v-bind="props" color="red-darken-1"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
+          <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="!ready" v-bind="props" color="delete"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
           <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-else v-bind="props"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
         </template>
       </v-tooltip>
@@ -119,10 +123,10 @@
     <v-main style="height: 100%; display: flex; flex-direction: column;">
 
       <!-- left side navigation drawer -->
-      <v-navigation-drawer :model-value="sceneDrawer && tab !== 'home'" @update:model-value="sceneDrawer = $event" app :width="leftDrawerWidth">
+      <v-navigation-drawer :model-value="sceneDrawer && tab !== 'home'" @update:model-value="sceneDrawer = $event" app :width="leftDrawerWidth" :class="{ 'stable-scrollbar-gutter': tab === 'prompts' }">
         <v-alert v-if="!connected" type="error" variant="tonal">
           Not connected to Talemate backend
-          <p class="text-body-2" color="white">
+          <p class="text-body-medium">
             Make sure the backend process is running.
           </p>
         </v-alert>
@@ -182,7 +186,7 @@
       <v-navigation-drawer v-model="drawer" app location="right" width="350" disable-resize-watcher>
         <v-alert v-if="!connected" type="error" variant="tonal">
           Not connected to Talemate backend
-          <p class="text-body-2" color="white">
+          <p class="text-body-medium">
             Make sure the backend process is running.
           </p>
         </v-alert>
@@ -191,11 +195,20 @@
         </v-alert>
 
         <v-list>
-          <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig" :immutable-config="appConfig" :app-config="appConfig"></AIClient>
+          <AIClient ref="aiClient" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig" @pin-inference-params="pinInferenceParams" :immutable-config="appConfig" :app-config="appConfig"></AIClient>
           <v-divider></v-divider>
-          <AIAgent ref="aiAgent" @agents-updated="saveAgents" :agentState="agentState" :templates="worldStateTemplates" :app-config="appConfig" :scene="scene"></AIAgent>
+          <template v-if="decisionModelStatus">
+            <DecisionModelSlot :status="decisionModelStatus"></DecisionModelSlot>
+            <v-divider></v-divider>
+          </template>
+          <AIAgent ref="aiAgent" @agents-updated="saveAgents" :agentState="agentState" :app-config="appConfig" :scene="scene"></AIAgent>
           <!-- More sections can be added here -->
         </v-list>
+      </v-navigation-drawer>
+
+      <!-- inference parameter panel, beside the clients drawer -->
+      <v-navigation-drawer v-if="inferenceParamsClient" :model-value="drawer" app location="right" width="360" disable-resize-watcher>
+        <ClientInferenceParamsPanel :immutable-config="appConfig" :client-name="inferenceParamsClient" @unpin="pinInferenceParams(null)" />
       </v-navigation-drawer>
 
       <!-- director console navigation drawer -->
@@ -209,16 +222,16 @@
       </v-navigation-drawer>
 
       <!-- debug tools navigation drawer -->
-      <v-navigation-drawer v-model="debugDrawer" app location="right" width="400" disable-resize-watcher>
+      <v-navigation-drawer v-model="debugDrawer" app location="right" width="450" disable-resize-watcher class="stable-scrollbar-gutter">
         <v-list>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
           <DebugTools ref="debugTools" :scene="scene" :prompts="promptsViewPrompts" :app-config="appConfig" @clear-prompts="clearPrompts"></DebugTools>
         </v-list>
       </v-navigation-drawer>
 
-      <v-container :class="(sceneActive ? '' : 'backdrop')" fluid style="height: 100%;">
+      <v-container fluid style="height: 100%;">
 
-        <v-tabs-window v-model="tab" style="height: 100%;">
+        <v-tabs-window v-model="tab" style="height: 100%;" :class="{ 'settings-pinned-window': tab === 'settings' }">
           <!-- HOME -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
             <SceneLanding
@@ -234,103 +247,148 @@
             :config="appConfig" />
           </v-tabs-window-item>
           <!-- SCENE -->
-          <v-tabs-window-item :transition="false" :reverse-transition="false" value="main" style="height: 100%;">
-            <v-row no-gutters class="position-relative">
-              <v-col ref="nodeEditorContainer" v-resize="onNodeEditorContainerResize" :xl="creativeMode ? (showSceneView ? 8 : 12) : 0" :cols="creativeMode ? (showSceneView ? 6 : 12) : 0" :class="{ 'd-none': !creativeMode }" class="position-relative">
-                  <NodeEditor
-                    :scene="scene"
-                    :busy="busy"
-                    :app-config="appConfig"
-                    :templates="worldStateTemplates"
-                    :is-visible="creativeMode"
-                    :scene-view-visible="showSceneView"
-                    @toggle-scene-view="toggleSceneView"
-                    ref="nodeEditor"
-                    v-if="sceneActive && scene.environment === 'creative'"
-                  >
-                  </NodeEditor>  
-              </v-col>
-              <v-col :cols="creativeMode ? (showSceneView ? 6 : 0) : 12"  :xl="creativeMode ? (showSceneView ? 4 : 12) : 12" :class="{ 'pl-2': true, 'd-none': creativeMode && !showSceneView, 'scene-backdrop-active': !!sceneBackdropSrc }" :style="sceneBackdropStyle">
-                <div class="scene-column" style="display: flex; flex-direction: column; height: 100%">
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="main" style="height: 100%;" eager>
+            <!-- hidden with the tab change itself: the window item stays laid out
+                 for the frames its leave transition takes -->
+            <div v-show="tab === 'main'" ref="sceneScroller" class="scene-scroller">
+              <v-row no-gutters class="position-relative">
+                <v-col ref="nodeEditorContainer" v-resize="onNodeEditorContainerResize" :xl="creativeMode ? (showSceneView ? 8 : 12) : 0" :cols="creativeMode ? (showSceneView ? 6 : 12) : 0" :class="{ 'd-none': !creativeMode }" class="position-relative">
+                    <NodeEditor
+                      :scene="scene"
+                      :busy="busy"
+                      :app-config="appConfig"
+                      :templates="worldStateTemplates"
+                      :is-visible="creativeMode"
+                      :scene-view-visible="showSceneView"
+                      @toggle-scene-view="toggleSceneView"
+                      ref="nodeEditor"
+                      v-if="sceneActive && scene.environment === 'creative'"
+                    >
+                    </NodeEditor>  
+                </v-col>
+                <v-col :cols="creativeMode ? (showSceneView ? 6 : 0) : 12"  :xl="creativeMode ? (showSceneView ? 4 : 12) : 12" :class="{ 'pl-2': creativeMode && showSceneView, 'd-none': creativeMode && !showSceneView, 'scene-backdrop-active': !!sceneBackdropSrc, 'playthrough-active': playthroughActive }" :style="sceneBackdropStyle">
+                  <div class="scene-column" style="display: flex; flex-direction: column; height: 100%">
 
-                  <div class="scene-container">
+                    <SceneHeader
+                      v-if="sceneHeaderVisible"
+                      :scene="scene"
+                      :agent-status="agentStatus"
+                      :templates="worldStateTemplates"
+                      :settings="appConfig.game.scene_header"
+                      :over-backdrop="!!sceneBackdropSrc"
+                      :title-only="playthroughActive"
+                      :perspective-character="playthroughActive ? null : perspectiveCharacter"
+                      @close-perspective="perspectiveCharacter = null"
+                    />
 
-                    <div v-if="sceneActive && scene.environment === 'creative' && !scene.data.intro">
-                      <v-alert color="muted" class="mb-2" variant="text">
-                        <v-alert-title>New Scene</v-alert-title>
-                        You're editing a new scene. Select the <v-btn @click="onOpenWorldStateManager('scene')" variant="text" size="small" color="primary" prepend-icon="mdi-earth-box">World Editor</v-btn> to add characters and scene details. You are currently operating in the creative environment. Once you have added at least one player character you may switch back and forth between creative and gameplay mode at any point using the <v-icon color="primary" size="small">mdi-gamepad-square</v-icon> button at the bottom.
-                        <p class="mt-4">
-                          You can still use the world editor while in gameplay mode as well.
-                        </p>
-                      </v-alert>
+                    <div class="scene-container">
+
+                      <div v-if="sceneActive && scene.environment === 'creative' && !scene.data.intro">
+                        <v-alert color="muted" class="mb-2" variant="text">
+                          <v-alert-title>New Scene</v-alert-title>
+                          You're editing a new scene. Select the <v-btn @click="onOpenWorldStateManager('scene')" variant="text" size="small" color="primary" prepend-icon="mdi-earth-box">World Editor</v-btn> to add characters and scene details. You are currently operating in the creative environment. Once you have added at least one player character you may switch back and forth between creative and gameplay mode at any point using the <v-icon color="primary" size="small">mdi-gamepad-square</v-icon> button at the bottom.
+                          <p class="mt-4">
+                            You can still use the world editor while in gameplay mode as well.
+                          </p>
+                        </v-alert>
+                      </div>
+
+                      <div v-show="showSceneView" class="scene-view">
+                        <SceneMessages
+                          ref="sceneMessages"
+                          :appearance-config="effectiveAppearanceConfig"
+                          :theme-colors="effectiveThemeColors"
+                          :ux-locked="uxLocked"
+                          :app-busy="busy"
+                          :agent-status="agentStatus"
+                          :audio-played-for-message-id="audioPlayedForMessageId"
+                          :scene="scene"
+                          :reveal-count="playthroughActive ? playthroughRevealCount : null"
+                          :perspective-character="playthroughActive ? null : perspectiveCharacter"
+                          @messages-changed="onSceneMessagesChanged"
+                          @playthrough-advance="advancePlaythrough"
+                          @cancel-audio-queue="onCancelAudioQueue"
+                          @configure-entity-highlights="onConfigureEntityHighlights"
+                          @scene-backdrop="sceneBackdropSrc = $event"
+                          @scene-backdrop-candidate="sceneBackdropCandidate = $event"
+                        />
+                      </div>
+
+                      <div ref="sceneToolsContainer" class="scene-controls" :class="{ 'scene-controls--locked': uxInteractionActive }">
+                        <AgentActivityBar v-if="appConfig?.game?.general?.show_agent_activity_bar !== false" :agent-status="agentStatus" />
+                        <PlaythroughTools
+                          v-if="playthroughActive"
+                          :message-count="playthroughMessageCount"
+                          :reveal-count="playthroughRevealCount"
+                          :chapters="playthroughChapters"
+                          :auto-advance="playthroughAutoAdvance"
+                          :narration="playthroughNarration"
+                          :tts-available="playthroughTtsReady"
+                          :busy="busy"
+                          :fork-target="playthroughForkTarget()"
+                          :scene-rev="scene.data?.rev || 0"
+                          :shared-context="!!scene.data?.shared_context"
+                          :immutable-save="!!scene.data?.immutable_save"
+                          :fork-pending="!!playthroughForkRequestId"
+                          :fork-error="playthroughForkError"
+                          @advance="advancePlaythrough"
+                          @toggle-narration="togglePlaythroughNarration"
+                          @jump="jumpPlaythrough"
+                          @fork="forkPlaythrough"
+                          @fork-prompt="promptPlaythroughFork"
+                          @fork-cancelled="cancelPlaythroughFork"
+                          @restart="restartPlaythrough"
+                          @toggle-auto-advance="togglePlaythroughAutoAdvance"
+                          @exit="stopPlaythrough" />
+                        <template v-else>
+                        <GameStateControls :scene="scene" :disabled="busy || !ready" />
+                        <SceneTools 
+                          @open-world-state-manager="onOpenWorldStateManager"
+                          @open-agent-messages="onOpenAgentMessages"
+                          @cancel-audio-queue="onCancelAudioQueue"
+                          :messageInput="messageInput"
+                          :agent-status="agentStatus"
+                          :app-busy="busy"
+                          :app-ready="ready"
+                          :worldStateTemplates="worldStateTemplates"
+                          :playerCharacterName="getPlayerCharacterName()"
+                          :passiveCharacters="passiveCharacters"
+                          :inactiveCharacters="inactiveCharacters"
+                          :scene="scene"
+                          :activeCharacters="activeCharacters"
+                          :visual-agent-ready="visualAgentReady"
+                          :scene-backdrop-candidate="sceneBackdropCandidate"
+                          :audioPlayedForMessageId="audioPlayedForMessageId"
+                          v-model:perspective-character="perspectiveCharacter" />
+                        <SceneMessageInput
+                          ref="sceneMessageInput"
+                          v-model="messageInput"
+                          v-model:act-as="actAs"
+                          :busy="busy"
+                          :ready="ready"
+                          :ux-interaction-active="uxInteractionActive"
+                          :input-disabled="isInputDisabled()"
+                          :waiting-for-input="waitingForInput"
+                          :input-request-info="inputRequestInfo"
+                          :scene-active="sceneActive"
+                          :scene-environment="scene.environment"
+                          :character-colors="scene.data?.character_colors"
+                          :player-character-name="getPlayerCharacterName()"
+                          :active-characters="activeCharacters"
+                          :direction-available="directionAvailable"
+                          @send="onInputSend"
+                          @autocomplete-start="onAutocompleteStart"
+                          @autocomplete-end="onAutocompleteEnd" />
+                        </template>
+                      </div>
                     </div>
 
-                    <div v-show="showSceneView" class="scene-view">
-                      <SceneMessages
-                        ref="sceneMessages"
-                        :appearance-config="effectiveAppearanceConfig"
-                        :ux-locked="uxLocked"
-                        :app-busy="busy"
-                        :agent-status="agentStatus"
-                        :audio-played-for-message-id="audioPlayedForMessageId"
-                        :scene="scene"
-                        @cancel-audio-queue="onCancelAudioQueue"
-                        @configure-entity-highlights="onConfigureEntityHighlights"
-                        @scene-backdrop="sceneBackdropSrc = $event"
-                        @scene-backdrop-candidate="sceneBackdropCandidate = $event"
-                      />
-                    </div>
-
-                    <div ref="sceneToolsContainer" class="scene-controls" :class="{ 'scene-controls--locked': uxInteractionActive }">
-                      <AgentActivityBar v-if="appConfig?.game?.general?.show_agent_activity_bar !== false" :agent-status="agentStatus" />
-                      <SceneTools 
-                        @open-world-state-manager="onOpenWorldStateManager"
-                        @open-agent-messages="onOpenAgentMessages"
-                        @cancel-audio-queue="onCancelAudioQueue"
-                        :messageInput="messageInput"
-                        :agent-status="agentStatus"
-                        :app-busy="busy"
-                        :app-ready="ready"
-                        :worldStateTemplates="worldStateTemplates"
-                        :playerCharacterName="getPlayerCharacterName()"
-                        :passiveCharacters="passiveCharacters"
-                        :inactiveCharacters="inactiveCharacters"
-                        :scene="scene"
-                        :activeCharacters="activeCharacters"
-                        :visual-agent-ready="visualAgentReady"
-                        :scene-backdrop-candidate="sceneBackdropCandidate"
-                        :audioPlayedForMessageId="audioPlayedForMessageId" />
-                      <SceneMessageInput
-                        ref="sceneMessageInput"
-                        v-model="messageInput"
-                        v-model:act-as="actAs"
-                        :busy="busy"
-                        :ready="ready"
-                        :ux-interaction-active="uxInteractionActive"
-                        :input-disabled="isInputDisabled()"
-                        :waiting-for-input="waitingForInput"
-                        :input-request-info="inputRequestInfo"
-                        :scene-active="sceneActive"
-                        :scene-environment="scene.environment"
-                        :character-colors="scene.data?.character_colors"
-                        :player-character-name="getPlayerCharacterName()"
-                        :active-characters="activeCharacters"
-                        :direction-available="directionAvailable"
-                        @send="onInputSend"
-                        @autocomplete-start="onAutocompleteStart"
-                        @autocomplete-end="onAutocompleteEnd" />
-                    </div>
                   </div>
-
-                </div>
     
                 
-              </v-col>
-            </v-row>
-
-
-
-
+                </v-col>
+              </v-row>
+            </div>
           </v-tabs-window-item>
           <!-- WORLD -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
@@ -363,7 +421,7 @@
           </v-tabs-window-item>
           <!-- PROMPTS -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
-            <PromptsView :visible="tab === 'prompts'" :prompts="prompts" :agent-status="agentStatus" :app-config="appConfig" ref="promptsView" v-model:main-tab="promptsMainTab" @clear-prompts="onClearPrompts" />
+            <PromptsView :visible="tab === 'prompts'" :prompts="prompts" :agent-status="agentStatus" :app-config="appConfig" :connected="connected" ref="promptsView" v-model:main-tab="promptsMainTab" @clear-prompts="onClearPrompts" />
           </v-tabs-window-item>
           <!-- SETTINGS -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="settings">
@@ -372,7 +430,9 @@
             :agent-status="agentStatus"
             :scene-active="sceneActive"
             :client-status="clientStatus"
+            :decision-model-status="decisionModelStatus"
             :visible="tab === 'settings'"
+            :world-state-templates="worldStateTemplates"
             @appearance-preview="onAppearancePreview"
             @appearance-preview-clear="onAppearancePreviewClear"
             @page-changed="(page) => appSettingsPage = page"
@@ -385,7 +445,7 @@
       </v-container>
     </v-main>
 
-    <AgentActionOverrides ref="agentActionOverrides" :app-config="appConfig" :agent-status="agentStatus" />
+    <AgentActionOverrides ref="agentActionOverrides" :app-config="appConfig" :agent-status="agentStatus" :agent-actions="agentActions" :settings-dirty="appSettingsDirty" />
 
     <v-dialog v-model="worldEditorUnavailable" max-width="420">
       <v-card>
@@ -410,7 +470,7 @@
         </v-card-title>
         <v-card-text>
           You have unsaved changes in Settings. Save them, discard them, or leave them pending and return to Settings later.
-          <p v-if="appSettingsSaveState.externalChange" class="text-warning mt-2 text-caption">
+          <p v-if="appSettingsSaveState.externalChange" class="text-warning mt-2 text-body-small">
             The configuration was changed outside this view while you have unsaved edits — saving overwrites it.
           </p>
         </v-card-text>
@@ -422,7 +482,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-    <v-snackbar v-model="errorNotification" color="red-darken-1" :timeout="3000">
+    <v-snackbar v-model="errorNotification" color="delete" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
   </v-app>
@@ -430,29 +490,36 @@
   <RateLimitAlert ref="rateLimitAlert" />
   <AutoRetryAlert ref="autoRetryAlert" />
   <GenerationErrorDialog ref="generationErrorDialog" />
-  <SceneTimeline
-    ref="sceneTimeline"
+  <SceneRevisions
+    ref="sceneRevisions"
     :scene="scene"
     :appearance-config="effectiveAppearanceConfig"
+    :theme-colors="effectiveThemeColors"
   />
   <VersionMismatchAlert ref="versionMismatchAlert" />
   <OnboardingWizard
-    v-if="connected && appConfig && appConfig.clients"
+    v-if="connected && configReceivedThisConnection && appConfig && appConfig.clients"
     :clients="Object.values(appConfig.clients || {})"
     :agents="Object.values(agentStatus || {})"
-    @open-client-modal="(preset) => $refs.aiClient.openModal(preset)"
   />
 </template>
   
 <script>
 import AIClient from './AIClient.vue';
+import DecisionModelSlot from './DecisionModelSlot.vue';
+import ClientInferenceParamsPanel from './ClientInferenceParamsPanel.vue';
 import AIAgent from './AIAgent.vue';
 import AgentActivityBar from './AgentActivityBar.vue';
 import AgentActionOverrides from './AgentActionOverrides.vue';
 import SceneLanding from './SceneLanding.vue';
+import GameStateControls from './GameStateControls.vue';
+import SceneHeader from './SceneHeader.vue';
 import SceneTools from './SceneTools.vue';
+import SceneSaveDialog from './SceneSaveDialog.vue';
+import SceneLeaveWarning from './SceneLeaveWarning.vue';
 import SceneMessages from './SceneMessages.vue';
 import SceneMessageInput from './SceneMessageInput.vue';
+import PlaythroughTools from './PlaythroughTools.vue';
 import WorldState from './WorldState.vue';
 import CoverImage from './CoverImage.vue';
 import AppSettings from './AppSettings.vue';
@@ -463,7 +530,7 @@ import StatusNotification from './StatusNotification.vue';
 import RateLimitAlert from './RateLimitAlert.vue';
 import AutoRetryAlert from './AutoRetryAlert.vue';
 import GenerationErrorDialog from './GenerationErrorDialog.vue';
-import SceneTimeline from './SceneTimeline.vue';
+import SceneRevisions from './SceneRevisions.vue';
 import VersionMismatchAlert from './VersionMismatchAlert.vue';
 import { versionsMatch } from '@/constants/version';
 import VisualLibrary from './VisualLibrary.vue';
@@ -480,24 +547,44 @@ import Templates from './Templates.vue';
 import TemplatesMenu from './TemplatesMenu.vue';
 import OnboardingWizard from './OnboardingWizard.vue';
 import PromptsView from './prompts/PromptsView.vue';
+import { capturePrompt, clearFinishedPrompts } from '@/utils/promptLog';
+import { applyDecisionFrame, decisionLog } from '@/utils/decisionLog';
+import { perspectiveCharacterValid } from '@/utils/messagePerspective';
+import { OVERRIDE_STATES, overrideState, worstState } from '@/utils/templateCompatibility';
 import PromptsMenu from './prompts/PromptsMenu.vue';
+import ThemeSwitcher from './ThemeSwitcher.vue';
 // import debounce
 import { debounce } from 'lodash';
 import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from '@/constants/visual';
 import { createSceneAssetsRequester } from './VisualAssetsMixin.js';
 import AutocompleteMixin from './AutocompleteMixin.js';
+import PlaythroughMixin from './PlaythroughMixin.js';
+import { playthroughBlocksNavigation } from '../utils/playthrough.js';
+import { SETTINGS_PAGES } from '../utils/appSettingsRegistry.js';
+import { createConfigSaveQueue } from '../utils/configSaveQueue.js';
+import { applyAppConfigTheme } from '../utils/appTheme.js';
+import { buildNameKeyedPayload, hasOwnName } from '../utils/nameKeyedMap.js';
+import { pinnedPanelClient } from '../utils/inferencePresets.js';
+import { forwardsScrollKey, forwardsWheel, offsetAtBottom, scrollByKey, scrollByWheel, setBottomOffset } from '../utils/sceneScroll.js';
 
 export default {
   components: {
     AIClient,
+    DecisionModelSlot,
+    ClientInferenceParamsPanel,
     AIAgent,
     AgentActivityBar,
     AgentActionOverrides,
     SceneLanding,
+    GameStateControls,
+    SceneHeader,
     SceneTools,
+    SceneSaveDialog,
+    SceneLeaveWarning,
     SceneMessages,
     SceneMessageInput,
+    PlaythroughTools,
     WorldState,
     CoverImage,
     AppSettings,
@@ -513,7 +600,7 @@ export default {
     RateLimitAlert,
     AutoRetryAlert,
     GenerationErrorDialog,
-    SceneTimeline,
+    SceneRevisions,
     VersionMismatchAlert,
     DirectorConsoleWidget,
     HelpChat,
@@ -525,9 +612,10 @@ export default {
     OnboardingWizard,
     PromptsView,
     PromptsMenu,
+    ThemeSwitcher,
   },
   name: 'TalemateApp',
-  mixins: [AutocompleteMixin],
+  mixins: [AutocompleteMixin, PlaythroughMixin],
   data() {
     return {
       appearancePreview: null, // Preview config while editing settings (null = use saved config)
@@ -541,17 +629,10 @@ export default {
       tab: 'home',
       tabs: [
         {
-          title: () => {
-            return this.scene.title || 'Untitled Scenario';
-          }, 
+          title: () => { return 'Story' },
           condition: () => { return this.sceneActive },
           icon: () => { return 'mdi-script' },
-          click: () => {
-            // on next tick, scroll to the bottom of the message list
-            this.$nextTick(() => {
-              this.$refs.sceneMessageInput?.scrollIntoView(false);
-            });
-          },
+          click: () => this.onStoryTabClick(),
           value: 'main'
         },
         { 
@@ -567,7 +648,7 @@ export default {
         },
         {
           title: () => { return 'Mods' },
-          condition: () => { return this.sceneActive },
+          condition: () => { return this.sceneActive && !this.playthroughActive },
           icon: () => { return 'mdi-package-variant' },
           click: () => {
             this.$nextTick(() => {
@@ -589,7 +670,10 @@ export default {
           title: () => { return 'Prompts' },
           condition: () => { return true },
           icon: () => { return 'mdi-file-code-outline' },
-          alert: () => { return this.promptsOutdatedCount > 0 },
+          alert: () => { return !!this.promptsOverrideState },
+          alertColor: () => { return OVERRIDE_STATES[this.promptsOverrideState].color },
+          alertIcon: () => { return OVERRIDE_STATES[this.promptsOverrideState].icon },
+          alertTooltip: () => { return `Template overrides ${this.promptsOverrideState === 'outdated' ? 'are older than' : 'are missing parts of'} the current defaults` },
           click: () => {
             // Prompts tab clicked
           },
@@ -624,6 +708,8 @@ export default {
       favicon: null,
       sceneActive: false,
       drawer: false,
+      // the scene-only writer's state, shared by every host that writes through it
+      sceneOverrideWriterState: { busy: false, error: null },
       sceneDrawer: true,
       debugDrawer: false,
       directorConsoleDrawer: false,
@@ -635,6 +721,8 @@ export default {
       inputRequestInfo: null,
       connectTimeout: null,
       connected: false,
+      // appConfig survives disconnects; this marks the CURRENT connection's config
+      configReceivedThisConnection: false,
       connecting: false,
       reconnect: true,
       errorMessage: null,
@@ -646,6 +734,8 @@ export default {
       passiveCharacters: [],
       inactiveCharacters: [],
       activeCharacters: [],
+      // split view of the scene messages; a temporary mode, never persisted
+      perspectiveCharacter: null,
       messageHandlers: [],
       scene: {},
       actAs: null,
@@ -653,9 +743,13 @@ export default {
       worldStateTemplates: {},
       // busy status of agents
       agentStatus: {},
+      agentActions: [],
       // scene state of agents
       agentState: {},
-      clientStatus: {},
+      // null prototype — keyed by user-chosen client names, see
+      // utils/nameKeyedMap.js
+      clientStatus: Object.create(null),
+      decisionModelStatus: null,
       // timestamps for last agent and client updates
       // received from the backend
       lastAgentUpdate: null,
@@ -666,7 +760,10 @@ export default {
       showSceneView: true,
       templatesSelectedGroups: [],
       templatesSelected: null,
-      mainTabScrollPosition: null,
+      pendingTemplateSelection: null,
+      // distance from the bottom of the story when it was left at the bottom,
+      // null when it was left anywhere else
+      sceneBottomOffset: null,
       // Scene assets requester (initialized when websocket is available)
       _sceneAssetsRequester: null,
       // Track active UX interaction IDs (for disabling scene controls during UX interactions)
@@ -679,8 +776,10 @@ export default {
       recentTemplates: [],
       // Synced tab state between PromptsMenu and PromptsView
       promptsMainTab: 'prompts',
-      // Synced page state between AppSettingsMenu and AppSettings
-      appSettingsPage: 'gameplay',
+      // Synced page state between AppSettingsMenu and AppSettings — AppSettings
+      // opens on the registry's first page and only emits page-changed on a
+      // change, so the initial value has to come from the same source
+      appSettingsPage: SETTINGS_PAGES[0].id,
       appSettingsDirty: false,
       // Whether AppSettings would accept a save right now, and whether the
       // configuration changed elsewhere while it holds unsaved edits
@@ -694,13 +793,27 @@ export default {
       // The tab the view is actually on — `tab` transiently holds a target
       // the unsaved settings guard vetoes
       committedTab: 'home',
-      // Count of outdated prompt template overrides
-      promptsOutdatedCount: 0,
+      // Worst state among active prompt template overrides
+      promptsOverrideState: null,
       // Flag to ensure new-scene navigation only happens once per scene load
       newSceneNavigationPending: false,
     }
   },
   watch:{
+    helpAvailable(available) {
+      // disabling the agent while its drawer is open leaves an open chat with
+      // no way to close it once the toggle is gone
+      if(!available) {
+        this.helpDrawer = false;
+      }
+    },
+    playthroughActive(active) {
+      // the console's own toggle goes away with the mode, so a drawer left open
+      // would have nothing to close it
+      if(active) {
+        this.directorConsoleDrawer = false;
+      }
+    },
     availableTabs(tabs) {
       // check if tab still exists
       // in tabs
@@ -718,26 +831,24 @@ export default {
         }
         this.committedTab = newTab;
 
-        // Save scroll position when leaving main tab
-        if(oldTab === 'main' && this.sceneActive) {
-          this.mainTabScrollPosition = window.scrollY;
+        // a template navigation that was stashed while the guard held the view
+        // on settings flushes once the templates tab has actually rendered
+        if(newTab === 'templates') {
+          this.$nextTick(() => {
+            this.flushPendingTemplateSelection();
+          });
         }
-        
-        // Restore scroll position when entering main tab
+
+        if(oldTab === 'main') {
+          this.rememberSceneBottom();
+        }
+
+        document.documentElement.classList.toggle('story-shown', newTab === 'main');
+
         if(newTab === 'main') {
           this.$nextTick(() => {
             debounce(this.onNodeEditorContainerResize, 250)();
-            if(this.sceneActive) {
-              setTimeout(() => {
-                if(this.mainTabScrollPosition !== null) {
-                  // Restore saved scroll position
-                  window.scrollTo({ top: this.mainTabScrollPosition, behavior: 'smooth' });
-                } else if(this.$refs.sceneMessageInput) {
-                  // No saved position, scroll input field into view
-                  this.$refs.sceneMessageInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-              }, 100);
-            }
+            this.followSceneBottom();
           });
         }
       }
@@ -809,6 +920,26 @@ export default {
     },
   },
   computed: {
+    sceneHeaderVisible() {
+      return this.sceneActive && this.showSceneView
+        && this.appConfig?.game?.scene_header?.enabled === true;
+    },
+    inferenceParamsClient() {
+      const pinned = pinnedPanelClient(this.appConfig?.presets);
+      if (!pinned) {
+        return null;
+      }
+      // a removed client keeps its name in the config until the next save, and
+      // a client name may be any string, `toString` included
+      return hasOwnName(this.appConfig?.clients, pinned) ? pinned : null;
+    },
+    // The help chat is the help agent's only surface, so a disabled agent
+    // takes its app bar toggle with it. Only an explicit `disabled` status
+    // hides it — an agent that is merely uninitialized still opens, since the
+    // chat is where the user finds out why.
+    helpAvailable() {
+      return this.agentStatus.help?.status !== 'disabled';
+    },
     sceneBackdropStyle() {
       if (!this.sceneBackdropSrc) {
         return {};
@@ -816,7 +947,11 @@ export default {
       return { '--scene-backdrop-image': `url(${this.sceneBackdropSrc})` };
     },
     creativeMode() {
-      return this.tab === 'main' && this.sceneActive && this.scene.environment === 'creative';
+      // a replay is read, not authored: the graph column collapses and the
+      // scene column takes the full width, whichever environment the
+      // playthrough was started from
+      return this.tab === 'main' && this.sceneActive
+        && this.scene.environment === 'creative' && !this.playthroughActive;
     },
     leftDrawerWidth() {
       // Wider drawer for the prompts tab's denser listing
@@ -847,6 +982,12 @@ export default {
         return false;
       }
 
+      // a replay is read along, not acted on: the message surfaces carry no
+      // actions while it runs
+      if(this.playthroughActive) {
+        return true;
+      }
+
       // if loading, ux is locked
       if(this.loading) {
         return true;
@@ -863,6 +1004,9 @@ export default {
     effectiveAppearanceConfig() {
       // Use preview if available, otherwise fall back to saved config
       return this.appearancePreview ?? (this.appConfig ? this.appConfig.appearance : {});
+    },
+    effectiveThemeColors() {
+      return this.appConfig?.theme?.colors ?? null;
     },
     rightToolsDrawerWidth() {
       // based on the current (reactive) window width, set the width of the right hand drawers
@@ -901,11 +1045,31 @@ export default {
       return agentEnabled || sceneForced;
     },
   },
+  created() {
+    // The queue outlives individual websockets — its callbacks read
+    // `this.websocket` when they run, so reconnects need no re-wiring.
+    this.configSaveQueue = createConfigSaveQueue({
+      send: (message) => this.websocket.send(JSON.stringify(message)),
+      getConfig: () => this.appConfig,
+      notifyError: (error) => this.uxErrorHandler(error),
+      resetPendingSaves: () => this.$refs.aiClient?.resetPendingSaves(),
+      // `connected` still reads true while a socket is closing, and a
+      // reconnect hands out a CONNECTING one — only OPEN can carry a save.
+      isConnected: () => this.connected && this.websocket?.readyState === WebSocket.OPEN,
+    });
+  },
   mounted() {
     this.connect();
     this.favicon = document.querySelector('link[rel="icon"]');
+    document.addEventListener('keydown', this.onDocumentKeydown);
+    document.addEventListener('mousedown', this.onDocumentMousedown, true);
+    document.addEventListener('wheel', this.onDocumentWheel, { passive: true });
   },
   beforeUnmount() {
+    document.documentElement.classList.remove('story-shown');
+    document.removeEventListener('keydown', this.onDocumentKeydown);
+    document.removeEventListener('mousedown', this.onDocumentMousedown, true);
+    document.removeEventListener('wheel', this.onDocumentWheel, { passive: true });
     // Cleanup scene assets requester (flushes any pending requests)
     if (this._sceneAssetsRequester) {
       this._sceneAssetsRequester.cleanup({ flush: true });
@@ -932,10 +1096,26 @@ export default {
       isWaitingForInput: () => this.waitingForInput,
       setWaitingForInput: (waiting) => this.waitingForInput = waiting,
       isConnected: () => this.connected,
+      sceneScroller: () => this.$refs.sceneScroller,
+      isPlaythroughActive: () => this.playthroughActive,
+      startPlaythrough: () => this.startPlaythrough(),
+      stopPlaythrough: () => this.stopPlaythrough(),
       scene: () => this.scene,
       getClients: () => this.getClients(),
       getAgents: () => this.getAgents(),
+      toggleAgentAction: (agentName, actionName) => this.toggleAgentAction(agentName, actionName),
+      toggleAgentConfig: (agentName, actionName, configName) => this.toggleAgentConfig(agentName, actionName, configName),
+      applyAgentValues: (agentName, actionName, values, reply, label) => this.applyAgentValues(agentName, actionName, values, reply, label),
+      applySceneAgentValues: (entries, label, reply) => this.applySceneAgentValues(entries, label, reply),
+      clearSceneAgentValues: (entries, reply) => this.clearSceneAgentValues(entries, reply),
+      patchSceneAgentValues: (patch, label, reply) => this.patchSceneAgentValues(patch, label, reply),
+      sceneOverridesState: () => this.sceneOverrideWriterState,
+      requestSceneSave: () => this.$refs.sceneSaveDialog.open(),
+      retrySceneOverrides: () => this.$refs.aiAgent?.overrides?.retrySave(),
+      discardSceneOverrides: () => this.$refs.aiAgent?.overrides?.discardPendingSave(),
+      queueKnowledgeEffort: (stop, mode, options) => this.$refs.aiAgent.queueEffort(stop, mode, options),
       openAgentSettings: this.openAgentSettings,
+      openClientSettings: this.openClientSettings,
       requestSceneAssets: (asset_ids) => this.requestSceneAssets(asset_ids),
       requestAssets: (assets) => this.requestAssets(assets),
       creativeEditor: () => this.$refs.creativeEditor,
@@ -943,9 +1123,13 @@ export default {
       setEnvScene: () => this.setEnvScene(),
       requestAppConfig: () => this.requestAppConfig(),
       appConfig: () => this.appConfig,
+      saveAppConfig: (mutate, options) => this.saveAppConfig(mutate, options),
+      sendConfigSave: (config, options) => this.sendConfigSave(config, options),
       openAppConfig: this.openAppConfig,
-      openAgentActionOverrides: () => this.$refs.agentActionOverrides?.open(),
-      openSceneTimeline: (options) => this.$refs.sceneTimeline.open(options),
+      notifyError: (error) => this.uxErrorHandler(error),
+      openAgentActionOverrides: (options) => this.$refs.agentActionOverrides?.open(options),
+      settingsDirty: () => this.appSettingsDirty,
+      openSceneRevisions: (options) => this.$refs.sceneRevisions.open(options),
       configurationRequired: () => this.configurationRequired(),
       getTrackedCharacterState: (name, question) => this.$refs.worldState.trackedCharacterState(name, question),
       getTrackedCharacterStates: (name) => this.$refs.worldState.trackedCharacterStates(name),
@@ -1067,7 +1251,6 @@ export default {
         }
       }
 
-      console.log("urls", { websocketUrl, currentUrl }, {env : import.meta.env});
 
       this.websocket = new WebSocket(websocketUrl);
       console.log("Websocket connecting ...")
@@ -1086,13 +1269,27 @@ export default {
         this.connecting = false;
         this.requestAppConfig();
         this.requestWorldStateTemplates();
-        this.requestPromptOutdatedCheck();
+        this.requestPromptOverrideCheck();
+        this.requestAgentActions();
+        this.requestDecisionLog();
       };
       this.websocket.onclose = (event) => {
         console.log('WebSocket connection closed', event);
+        // in-flight config saves can no longer be answered — drop them so a
+        // later save doesn't stack on a payload that may never have landed,
+        // and tell each sender, or its in-flight state (the wizard's
+        // finishing/waitingForClient) survives the socket it died on
+        this.configSaveQueue.dropAll('The connection to the backend was lost before the save was answered.');
+        // The hub writer's in-flight patch and any queued follow-ups cannot be
+        // answered on a dead socket either.
+        this.$refs.aiAgent?.resetSceneAgentOverrides?.();
+        this.$refs.sceneSaveDialog?.reset();
+        this.$refs.sceneMessages?.resetForkScene();
         this.connected = false;
+        this.configReceivedThisConnection = false;
         this.connecting = false;
         this.sceneActive = false;
+        this.setPlaythroughActive(false);
         this.scene = {};
         this.loading = false;
         if (this.reconnect) {
@@ -1121,11 +1318,30 @@ export default {
     handleMessage(event) {
       const data = JSON.parse(event.data);
 
+      if (this.handlePlaythroughMessage(data)) {
+        return;
+      }
+
       this.messageHandlers.forEach(handler => handler(data));
+
+      if (data.type === 'world_state_manager' && data.action === 'scene_saved'
+          && data.scene_identity === String(this.scene?.data?.id)) {
+        this.scene.saved = true;
+      }
+
+      if (data.type === 'decisions') {
+        applyDecisionFrame(decisionLog, data);
+        return;
+      }
 
       // Handle prompt_sent messages (capture prompts for PromptsMenu)
       if (data.type === 'prompt_sent') {
         this.handlePromptSent(data.data);
+        return;
+      }
+
+      if (data.type === 'config' && data.action === 'agent_actions') {
+        this.agentActions = data.data?.actions || [];
         return;
       }
 
@@ -1135,36 +1351,46 @@ export default {
         return;
       }
 
-      // Track outdated prompt template overrides
       if (data.type === 'prompts' && data.action === 'list_templates') {
         const templates = data.data?.templates || [];
-        this.promptsOutdatedCount = templates.filter(t => t.is_outdated).length;
+        this.promptsOverrideState = worstState(templates.map(overrideState));
       }
 
       // Scene loaded
       if (data.type === "system") {
-        if (data.id === 'scene.loaded') {
+        if (data.id === 'scene.loading') {
+          this.loading = true;
+          this.sceneActive = false;
+        } else if (data.id === 'scene.history_ready') {
+          this.loading = true;
+          this.showSceneView = true;
+          this.tab = 'main';
+        } else if (data.id === 'scene.loaded') {
           this.loading = false;
           this.sceneActive = true;
+          // a replay belongs to the scene it was started on: whatever the
+          // sender did or did not do, the mode cannot outlive the scene change
+          this.setPlaythroughActive(false);
           this.actAs = null;
           this.showSceneView = true;
-          this.mainTabScrollPosition = null; // Reset scroll position memory for new scene
           this.newSceneNavigationPending = true; // Allow one-time new-scene navigation on next scene_status
           this.clearUxInteractions(); // Clear any active UX interactions when loading a new scene
           this.clearPrompts(); // Clear prompts when loading a new scene
           this.$refs.generationErrorDialog.closeAll(); // Backend cancelled the outgoing scene's pending generations
           this.requestAppConfig();
           this.requestWorldStateTemplates();
-          this.requestPromptOutdatedCheck();
+          this.requestPromptOverrideCheck();
           this.$nextTick(() => {
             this.tab = 'main';
+            this.scrollInputIntoView();
             debounce(this.onNodeEditorContainerResize, 500)();
           });
-        } else if(data.id === 'scene.load_failure') {
+        } else if(data.id === 'scene.load_failure' || data.id === 'scene.closed') {
           this.loading = false;
           this.sceneActive = false;
           this.actAs = null;
           this.scene = {};
+          this.$refs.sceneMessages?.clear();
           this.clearUxInteractions(); // Clear any active UX interactions on load failure
           this.$refs.generationErrorDialog.closeAll(); // Backend cancelled the outgoing scene's pending generations
         } else if (data.id === 'load_scene_request') {
@@ -1188,6 +1414,14 @@ export default {
 
       if(data.type === 'client_status') {
         this.setClientStatus(data);
+      }
+
+      if(data.type === 'decision_model_status') {
+        this.decisionModelStatus = data.data;
+      }
+
+      if(data.type === 'config' && data.request_id) {
+        this.configSaveQueue.handleMessage(data);
       }
 
       if(data.type === 'rate_limited') {
@@ -1218,6 +1452,7 @@ export default {
       }
 
       if (data.type == "scene_status") {
+        const sceneChanged = this.scene?.data?.id !== data.data.id;
         this.scene = {
           name: data.name,
           title: data.data.title,
@@ -1234,6 +1469,9 @@ export default {
         this.activeCharacters = data.data.characters.map((character) => character.name);
         this.agentState = data.data.agent_state;
         this.syncActAs();
+        if (sceneChanged || !perspectiveCharacterValid(this.perspectiveCharacter, this.activeCharacters, data.data)) {
+          this.perspectiveCharacter = null;
+        }
 
         if(this.scene.environment === 'scene') {
           // always show scene view in scene mode
@@ -1257,7 +1495,15 @@ export default {
       }
 
       if (data.type === 'app_config') {
+        applyAppConfigTheme(data.data);
         this.appConfig = data.data;
+        this.configReceivedThisConnection = true;
+        // NOTE: the config-save queue's stacking base is deliberately NOT
+        // cleared here — a broadcast may belong to somebody else's save
+        // (another window, the help agent) and arrives before our own
+        // completion; dropping the base then would make an in-flight save's
+        // changes disappear from the next one. The queue clears it when the
+        // last of its own saves is answered.
         if(data.version) {
           this.version = data.version;
           if (!versionsMatch(data.version)) {
@@ -1300,7 +1546,6 @@ export default {
       } else if(data.type == 'world_state_manager') {
         if(data.action == 'templates') {
           this.worldStateTemplates = data.data;
-          console.debug("WorldStateTemplates", this.worldStateTemplates);
         }
       }
     },
@@ -1419,6 +1664,52 @@ export default {
       this.waitingForInput = false;
     },
 
+    // Runs while the story is still shown: a hidden scroller reads 0.
+    rememberSceneBottom() {
+      this.sceneBottomOffset = offsetAtBottom(this.$refs.sceneScroller);
+    },
+
+    // Runs before the browser paints the story again.
+    followSceneBottom() {
+      if(this.sceneBottomOffset !== null) {
+        setBottomOffset(this.$refs.sceneScroller, this.sceneBottomOffset);
+      }
+      this.sceneBottomOffset = null;
+    },
+
+    onDocumentMousedown(event) {
+      this._lastPressed = event.target;
+    },
+
+    onDocumentKeydown(event) {
+      const scroller = this.$refs.sceneScroller;
+      const options = { spaceTaken: this.playthroughTakesSpace, pressed: this._lastPressed };
+      if(this.tab !== 'main' || !forwardsScrollKey(event, scroller, options)) {
+        return;
+      }
+      event.preventDefault();
+      scrollByKey(scroller, event);
+    },
+
+    onDocumentWheel(event) {
+      const scroller = this.$refs.sceneScroller;
+      if(this.tab === 'main' && forwardsWheel(event, scroller)) {
+        scrollByWheel(scroller, event);
+      }
+    },
+
+    onStoryTabClick() {
+      // committedTab still holds the tab the click came from: a click while on
+      // the story jumps to the newest message, a click from another tab keeps
+      // the story where it was left
+      if(this.committedTab !== 'main') {
+        return;
+      }
+      this.$nextTick(() => {
+        this.$refs.sceneMessageInput?.scrollIntoView(false);
+      });
+    },
+
     scrollInputIntoView() {
       const scroll = () => this.$refs.sceneMessageInput?.scrollIntoView(false);
       this.$nextTick(scroll);
@@ -1448,10 +1739,17 @@ export default {
         action: 'get_templates'
       }));
     },
-    requestPromptOutdatedCheck() {
+    requestPromptOverrideCheck() {
       this.websocket.send(JSON.stringify({
         type: 'prompts',
         action: 'list_templates'
+      }));
+    },
+
+    requestAgentActions() {
+      this.websocket.send(JSON.stringify({
+        type: 'config',
+        action: 'request_agent_actions'
       }));
     },
 
@@ -1480,49 +1778,61 @@ export default {
     requestAppConfig() {
       this.websocket.send(JSON.stringify({ type: 'request_app_config' }));
     },
-    saveClients(clients) {
-      console.log("saveClients", clients)
 
-      const saveData = {}
-
-      for(let client of clients) {
-        saveData[client.name] = {
-          ...client,
-        }
-      }
-      this.websocket.send(JSON.stringify({ type: 'configure_clients', clients: saveData }));
+    // decisions captured before this browser connected only arrive in the snapshot
+    requestDecisionLog() {
+      this.websocket.send(JSON.stringify({ type: 'decisions', action: 'snapshot' }));
     },
-    saveAgents(agents) {
-      const saveData = {}
+    sendConfigSave(config, options = {}) {
+      return this.configSaveQueue.sendConfigSave(config, options);
+    },
+    saveAppConfig(mutate, options = {}) {
+      return this.configSaveQueue.saveAppConfig(mutate, options);
+    },
+    pinInferenceParams(clientName) {
+      this.saveAppConfig((config) => {
+        config.presets.inference_param_panel.client = clientName;
+      }, { label: 'inference presets' });
+    },
+    saveClients(clients) {
+      this.saveAppConfig((config) => {
+        // full map replacement — frontend-only keys (status, data, ...) are
+        // ignored by the pydantic client models
+        config.clients = buildNameKeyedPayload(clients, (client) => ({ ...client }));
+      }, { label: 'clients' });
+    },
+    saveAgents(agents, reply = null) {
+      const requestId = this.saveAppConfig((config) => {
+        config.agents = buildNameKeyedPayload(agents, (agent) => {
+          const requiresLLM = agent.data?.requires_llm_client || false;
 
-      for(let agent of agents) {
-        console.log("agent", agent)
-        const requiresLLM = agent.data?.requires_llm_client || false;
+          let client;
 
-        let client;
+          if(requiresLLM) {
 
-        if(requiresLLM) {
+            if(agent.client?.client) {
+              client = agent.client?.client?.value;
+            } else {
+              client = agent.client || null;
+            }
 
-          if(agent.client?.client) {
-            client = agent.client?.client?.value;
           } else {
-            client = agent.client || null;
+            client = null;
           }
 
-        } else {
-          client = null;
-        }
-
-        saveData[agent.name] = {
-          enabled: agent.enabled,
-          actions: agent.actions,
-          client: client,
-        }
-      }
-
-      console.log("saveAgents",{ saveData, agents })
-
-      this.websocket.send(JSON.stringify({ type: 'configure_agents', agents: saveData }));
+          const actions = Object.fromEntries(Object.entries(agent.actions || {}).map(([key, action]) => [key, {
+            ...action,
+            // Status hides legacy controls, but a drawer save must preserve their values.
+            config: { ...config.agents?.[agent.name]?.actions?.[key]?.config, ...action.config },
+          }]));
+          return {
+            enabled: agent.enabled,
+            actions: actions,
+            client: client,
+          }
+        });
+      }, { label: 'agents', onComplete: reply?.onComplete, onError: reply?.onError });
+      if (!requestId) reply?.onError('The settings could not be sent.');
     },
     requestSceneAssets(asset_ids) {
       if (this._sceneAssetsRequester) {
@@ -1539,6 +1849,8 @@ export default {
         this.drawer = true;
     },
     toggleNavigation(navigation, open) {
+      if (playthroughBlocksNavigation(navigation, this.playthroughActive))
+        return;
       if (navigation == "game")
         this.sceneDrawer = open || !this.sceneDrawer;
       else if (navigation == "settings")
@@ -1562,9 +1874,14 @@ export default {
         ],
         scene_active: this.sceneActive,
         scene_environment: this.sceneActive ? this.scene?.environment : null,
-        client_settings_modal: this.$refs.aiClient?.uxSnapshot() || null,
-        agent_settings_modal: this.$refs.aiAgent?.uxSnapshot() || null,
+        playthrough_active: this.playthroughActive,
+        // client and agent configuration live on the settings tab — the
+        // settings snapshot reports which page (and which client / agent on
+        // it) the user is looking at
         app_settings_modal: this.$refs.appSettings?.uxSnapshot() || null,
+        // themes are edited on the templates tab — the help agent's theme
+        // writes are gated on its unsaved edits
+        templates_view: this.$refs.templates?.uxSnapshot() || null,
         app_ready: this.ready,
         waiting_for_input: this.waitingForInput,
       };
@@ -1587,6 +1904,41 @@ export default {
         return [];
       }
       return this.$refs.aiAgent.state.agents;
+    },
+    // The agent drawer's quick-toggle chips are the one write path for a
+    // single agent setting; the World State knowledge hub goes through them.
+    toggleAgentAction(agentName, actionName) {
+      const agent = this.getAgents().find((candidate) => candidate.name === agentName);
+      const action = agent?.actions?.[actionName];
+      if (!action) return false;
+      this.$refs.aiAgent.toggleAction(agent, actionName, action);
+      return true;
+    },
+    applyAgentValues(agentName, actionName, values, reply = null, label = null) {
+      const agent = this.getAgents().find((candidate) => candidate.name === agentName);
+      if (!agent?.actions?.[actionName]) return false;
+      return this.$refs.aiAgent.applyActionValues(agent, actionName, values, reply, label);
+    },
+    // The scene-only writer outside the settings page: sparse patches against
+    // the scene overlay, never the global agent values.
+    applySceneAgentValues(entries, label, reply = null) {
+      if (!this.$refs.aiAgent) return reply?.onError('The agents are not available.');
+      this.$refs.aiAgent.applySceneAgentValues(entries, label, reply);
+    },
+    clearSceneAgentValues(entries, reply = null) {
+      if (!this.$refs.aiAgent) return reply?.onError('The agents are not available.');
+      this.$refs.aiAgent.clearSceneAgentValues(entries, reply);
+    },
+    patchSceneAgentValues(patch, label, reply = null) {
+      if (!this.$refs.aiAgent) return reply?.onError('The agents are not available.');
+      this.$refs.aiAgent.patchSceneAgentValues(patch, label, reply);
+    },
+    toggleAgentConfig(agentName, actionName, configName) {
+      const agent = this.getAgents().find((candidate) => candidate.name === agentName);
+      const config = agent?.actions?.[actionName]?.config?.[configName];
+      if (!config) return false;
+      this.$refs.aiAgent.toggleSubConfig(agent, actionName, configName, config);
+      return true;
     },
     activeClientName() {
       if (!this.$refs.aiClient) {
@@ -1611,8 +1963,26 @@ export default {
       }
       return null;
     },
+    // Agent and client settings live on the settings tab — both helpers take
+    // the same route into it as openAppConfig (so the unsaved-settings guard
+    // behaves identically) and then deep-link the page.
     openAgentSettings(agentName, section) {
-      this.$refs.aiAgent.openSettings(agentName, section);
+      this.openAppConfig();
+      this.$nextTick(() => {
+        if (this.$refs.appSettings) {
+          this.$refs.appSettings.navigate('agents', null, { agent: agentName, tab: section || '_config' });
+        }
+      });
+    },
+    // `item` is a client name, or {action: 'add'} to open the type picker
+    openClientSettings(item) {
+      const selection = typeof item === 'string' ? { client: item } : (item || {});
+      this.openAppConfig();
+      this.$nextTick(() => {
+        if (this.$refs.appSettings) {
+          this.$refs.appSettings.navigate('clients', selection.action === 'add' ? 'add-client' : null, selection);
+        }
+      });
     },
     callAgentTool(actionName, args) {
       const dispatch = {
@@ -1660,15 +2030,22 @@ export default {
       this.tab = 'package_manager';
     },
     onNavigateTemplate(templateIndex) {
+      // stashed, not fired directly: when leaving dirty settings the guard
+      // vetoes the tab switch and the $nextTick below finds no templates ref —
+      // the tab watcher re-flushes once the templates tab actually renders
+      this.pendingTemplateSelection = templateIndex || null;
       this.tab = 'templates';
       this.$nextTick(() => {
-        if(this.$refs.templates && templateIndex) {
-          // If templateIndex is a template type (like 'agent_persona'), we can't directly select it
-          // but we can navigate to templates tab - filtering could be added later if needed
-          // For now, if it's not a valid template index format, just navigate to templates
-          this.$refs.templates.selectTemplate(templateIndex);
-        }
+        this.flushPendingTemplateSelection();
       });
+    },
+    flushPendingTemplateSelection() {
+      if(this.pendingTemplateSelection === null || !this.$refs.templates) {
+        return;
+      }
+      const index = this.pendingTemplateSelection;
+      this.pendingTemplateSelection = null;
+      this.$refs.templates.selectTemplate(index);
     },
     onNavigatePromptTemplate(template) {
       this.$nextTick(() => {
@@ -1798,9 +2175,9 @@ export default {
       // when the guard vetoed the navigation
       targetTab.click();
     },
-    onAppSettingsNavigate({ page, anchor }) {
+    onAppSettingsNavigate({ page, anchor, item }) {
       if (this.$refs.appSettings) {
-        this.$refs.appSettings.navigate(page, anchor);
+        this.$refs.appSettings.navigate(page, anchor, item || null);
       }
     },
     uxErrorHandler(error) {
@@ -1810,7 +2187,12 @@ export default {
     sceneStartedLoading() {
       this.loading = true;
       this.sceneActive = false;
-      this.mainTabScrollPosition = null; // Reset scroll position memory when starting to load a new scene
+      // Requirement on every sender of `load_scene`: leave the playthrough
+      // before you send, from here or by calling the provided stopPlaythrough.
+      // The position can only be written while the backend still holds the
+      // scene it belongs to; a sender that forgets loses it, and `scene.loaded`
+      // then ends the mode without one.
+      this.stopPlaythrough();
 
       if(this.$refs.sceneMessages)
         this.$refs.sceneMessages.clear();
@@ -1830,6 +2212,10 @@ export default {
       // client status: a background agent operation — e.g. the world state
       // snapshot — keeps the shared client busy but must not lock the input.
       if (this.busy) {
+        return true;
+      }
+
+      if (this.playthroughActive) {
         return true;
       }
 
@@ -1901,100 +2287,68 @@ export default {
       this.activeUxInteractionIds = [];
     },
 
-    // Compute character-level prefix match ratio between two strings
-    computePrefixMatchRatio(a, b) {
-      const len = Math.min(a.length, b.length);
-      let i = 0;
-      while (i < len && a[i] === b[i]) i++;
-      return a.length > 0 ? i / a.length : 0;
-    },
-
-    // Handle prompt_sent messages (capture prompts for PromptsMenu)
     handlePromptSent(data) {
-      // agent_name here is the verbose display name (from agent_stack); the
-      // canonical type+action come straight from the server now.
-      let agent = null;
-      let agentName = null;
-      let agentAction = data.agent_action || null;
-
-      if (data.agent_stack && data.agent_stack.length > 0) {
-        agent = data.agent_stack[data.agent_stack.length - 1];
-        agentName = agent.split('.')[0];
-      }
-
-      // Compute prefix cache ratio against previous prompt with same template_uid + client_name
-      let prefixCacheRatio = null;
-      if (data.template_uid && data.client_name && data.prompt) {
-        const previous = this.prompts.find(
-          p => p.template_uid === data.template_uid && p.client_name === data.client_name
-        );
-        if (previous && previous.prompt) {
-          prefixCacheRatio = this.computePrefixMatchRatio(data.prompt, previous.prompt);
-        }
-      }
-
-      this.prompts.unshift({
-        prompt: data.prompt,
-        response: data.response,
-        kind: data.kind,
-        response_tokens: data.response_tokens,
-        prompt_tokens: data.prompt_tokens,
-        agent_stack: data.agent_stack,
-        agent: agent,
-        agent_name: agentName,
-        agent_type: data.agent_type || null,
-        agent_action: agentAction,
-        client_name: data.client_name,
-        client_type: data.client_type,
-        time: parseInt(data.time),
-        num: this.promptTotal++,
-        generation_parameters: data.generation_parameters,
-        inference_preset: data.inference_preset,
-        original_generation_parameters: JSON.parse(JSON.stringify(data.generation_parameters)),
-        original_prompt: data.prompt,
-        original_response: data.response,
-        reasoning: data.reasoning,
-        template_uid: data.template_uid,
-        prefix_cache_ratio: prefixCacheRatio,
-      });
-
-      // Truncate if exceeds max
-      while (this.prompts.length > this.maxPrompts) {
-        this.prompts.pop();
-      }
+      capturePrompt(this, data);
     },
 
-    // Clear prompts
     clearPrompts() {
-      this.prompts = [];
-      this.promptTotal = 0;
+      clearFinishedPrompts(this.prompts);
     }
+
   }
 }
 </script>
 
 <style scoped>
-.backdrop {
-  background-image: url('/src/assets/logo-13.1-backdrop.png');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 512px 512px;
-}
-
-.backdrop-active {
-  background-image: url('/src/assets/logo-13.1-backdrop.png');
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  background-position: center;
-  background-size: 512px 512px;
-}
-
 .logo {
   background-image: url('/src/assets/logo-13.1-transparent.png');
   background-repeat: no-repeat;
   background-position: center;
   background-size: fit;
   background-color: transparent;
+}
+
+/* prompt lists keep their row layout when the drawer becomes scrollable */
+.stable-scrollbar-gutter :deep(.v-navigation-drawer__content) {
+  scrollbar-gutter: stable;
+}
+
+/* the window clips with overflow: hidden, which makes it the scroll container
+   of the settings toolbar's sticky position; clip does not */
+.settings-pinned-window {
+  overflow: clip;
+}
+
+/* fixed over v-main via the layout offsets: an in-flow scroller shifts during
+   the window item's leave frames */
+.scene-scroller {
+  position: fixed;
+  top: var(--v-layout-top);
+  left: var(--v-layout-left);
+  right: var(--v-layout-right);
+  bottom: var(--v-layout-bottom);
+  overflow-y: auto;
+  /* a story keeps its track before it overflows, so its text does not reflow
+     when it first does */
+  scrollbar-gutter: stable;
+  /* covers the tab being left while it stays in the page */
+  z-index: 1;
+  background-color: rgb(var(--v-theme-background));
+  transition-property: left, right;
+  transition-duration: 0.2s;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-scroller {
+    transition: none;
+  }
+}
+
+/* the v-container's padding, on the content rather than the scroller: a
+   scroller's padding would hold the sticky header and toolbar off its edges */
+.scene-scroller > .v-row {
+  padding: 16px;
 }
 
 .scene-container {
@@ -2029,26 +2383,55 @@ export default {
   background-color: rgb(var(--v-theme-surface));
 }
 
-/* with a backdrop, stretch the scene column to at least the visible
-   main-area height so a short scene doesn't crop the image; the message
+/* Both a backdrop and a playthrough stretch the scene column to at least the
+   visible main-area height: with a backdrop so a short scene doesn't crop the
+   image, in a playthrough because it reveals messages one at a time and a short
+   reveal would otherwise leave the toolbar halfway up the column. The message
    list grows and the tools/input hug the bottom of the screen.
    --v-layout-top is set by vuetify on v-main (app bar offset); the 32px
-   accounts for the v-container's vertical padding. */
-.scene-backdrop-active .scene-column {
+   accounts for the vertical padding around the scene. */
+.scene-backdrop-active .scene-column,
+.playthrough-active .scene-column {
   min-height: calc(100dvh - var(--v-layout-top, 64px) - 32px);
 }
 
-.scene-backdrop-active .scene-container {
+.scene-backdrop-active .scene-container,
+.playthrough-active .scene-container {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
 }
 
-.scene-backdrop-active .scene-view {
+.scene-backdrop-active .scene-view,
+.playthrough-active .scene-view {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+/* A sticky toolbar sticks inside the nearest scrolling ancestor, and this is a
+   scroll container that never scrolls - so it would not stick to the screen at
+   all. The base .scene-container rule sets overflow-x, which alone makes an
+   element a scrollport. */
+.playthrough-active .scene-container {
+  overflow: visible;
+}
+
+/* the toolbar stays at the foot of the screen so the scrubber does not walk
+   out from under the cursor mid-drag */
+.playthrough-active .scene-controls {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  /* the whole strip, not just the tools: the agent activity bar above them is
+     transparent, and the message list now passes behind all of it */
+  background-color: rgb(var(--v-theme-background));
+}
+
+.playthrough-active.scene-backdrop-active .scene-controls {
+  background-color: rgba(var(--v-theme-background), 0.85);
+  backdrop-filter: blur(6px);
 }
 
 .scene-controls--locked {
@@ -2058,6 +2441,19 @@ export default {
 </style>
 
 <style>
+/* The page keeps the scrollbar track vuetify's reset reserves on every tab, so
+   the app bar and drawers keep their width across tab switches; while the
+   story (which has its own scroller) is shown, that empty track is painted as
+   background. body takes the colour back, so no scroller inside inherits it. */
+html.story-shown {
+  scrollbar-color: transparent transparent;
+  background-color: rgb(var(--v-theme-background));
+}
+
+html.story-shown body {
+  scrollbar-color: auto;
+}
+
 /* dialogs opt into this while the help chat drawer is open - shifts them
    left so the drawer stays visible and usable next to them */
 .v-overlay__content.yield-to-help-drawer {

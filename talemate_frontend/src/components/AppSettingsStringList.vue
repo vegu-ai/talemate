@@ -3,7 +3,7 @@
         <v-col cols="12">
             <v-list density="compact">
                 <v-list-item v-for="(value, index) in list" :key="index">
-                    <v-list-item-title><v-icon color="red-darken-1" class="mr-2" @click="remove(index)">mdi-close-box-outline</v-icon>{{ value }}</v-list-item-title>
+                    <v-list-item-title><v-icon color="delete" class="mr-2" @click="remove(index)">mdi-close-box-outline</v-icon>{{ value }}</v-list-item-title>
                 </v-list-item>
             </v-list>
             <v-divider></v-divider>

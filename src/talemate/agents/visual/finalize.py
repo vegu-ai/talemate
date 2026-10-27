@@ -13,12 +13,14 @@ from .schema import (
 
 import talemate.emit.async_signals as async_signals
 from talemate.agents.base import (
+    set_processing,
     AgentAction,
     AgentActionConfig,
     AgentActionNote,
     AgentEmission,
 )
 from talemate.prompts import Prompt
+from talemate.util.async_tools import bounded_gather
 from talemate.ux.schema import Column, Condition, DynamicLabel, DynamicSpan
 
 __all__ = [
@@ -357,6 +359,7 @@ class PromptFinalizationMixin:
             )
         return text
 
+    @set_processing
     async def apply_ai_finalizer(
         self,
         text: str,
@@ -422,11 +425,44 @@ class PromptFinalizationMixin:
         negative = emission.negative_prompt
 
         for finalizer in emission.finalizers:
-            if positive and finalizer.applies_to(vis_type, True):
+            apply_positive = bool(positive) and finalizer.applies_to(vis_type, True)
+            apply_negative = bool(negative) and finalizer.applies_to(vis_type, False)
+
+            # the positive and negative prompts don't feed each other, so an
+            # AI finalizer's two LLM calls can run concurrently
+            if (
+                apply_positive
+                and apply_negative
+                and finalizer.mode == FINALIZER_MODE.AI
+                and self.client
+                and self.client.supports_concurrent_inference
+            ):
+                # return_exceptions + raise-after-settle: a failing call must
+                # not orphan the sibling task (plain gather propagates the
+                # first exception while the other keeps running)
+                results = await bounded_gather(
+                    [
+                        self.apply_prompt_finalizer(
+                            finalizer, positive, vis_type, character_name
+                        ),
+                        self.apply_prompt_finalizer(
+                            finalizer, negative, vis_type, character_name
+                        ),
+                    ],
+                    max_concurrent=2,
+                    return_exceptions=True,
+                )
+                for result in results:
+                    if isinstance(result, BaseException):
+                        raise result
+                positive, negative = results
+                continue
+
+            if apply_positive:
                 positive = await self.apply_prompt_finalizer(
                     finalizer, positive, vis_type, character_name
                 )
-            if negative and finalizer.applies_to(vis_type, False):
+            if apply_negative:
                 negative = await self.apply_prompt_finalizer(
                     finalizer, negative, vis_type, character_name
                 )

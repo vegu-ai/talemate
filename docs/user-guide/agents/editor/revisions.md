@@ -4,6 +4,10 @@ Please see the [settings](/talemate/user-guide/agents/editor/settings/#revision)
 
 ## Automatic revision
 
+In Character perspectives stories, perception analysis runs after automatic revision and uses the final accepted text. Successful analysis makes that version ready immediately. Saving a manual text edit instead defers analysis until **Analyze perceptions** or your next send/choice.
+
+Automatic revision is off by default. Revision itself is on, so you can revise the latest message by hand without enabling it.
+
 Once automatic revisions are enabled, if the editor finds an issue in a message you will see the following status updates:
 
 ![Editor revision status](/talemate/img/0.30.0/editor-revision-issue-identified.png)
@@ -19,6 +23,8 @@ Click the :material-message-text-outline: icon to open the Agent Messages dialog
 ![Editor revision messages](/talemate/img/0.30.0/editor-revision-history.png)
 
 Which message types are revised automatically is controlled by the [Automatic Revision Targets](/talemate/user-guide/agents/editor/settings/#automatic-revision-targets) setting. Character and narrator messages are included by default; context-investigation messages (the results of **Look at**, **Investigate**, and **Query**) can be added by enabling their target, which is off by default.
+
+Automatic revision also runs when you regenerate a message, in both Standard and Character perspectives stories. If the history window needed for that revision is unavailable, the editor uses reader-visible scene history, which may include content the character does not know, without requesting a perception repair. Older failed views outside that window do not trigger this fallback. Cancelling revision keeps the unrevised text; other skipped revisions show a **Revision skipped: …** status with the reason. Finding nothing to fix leaves the text unchanged.
 
 ## Manual revision
 

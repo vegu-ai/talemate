@@ -14,7 +14,7 @@ The Visualizer agent supports multiple image generation backends, allowing you t
 - **Style Templates**: Configure different visual styles for different types of content (character cards, portraits, scene backgrounds, etc.)
 - **Visual Library Integration**: Generated images are managed through the Visual Library, where you can organize, iterate, and save visual assets
 - **[Inline Visuals](../../inline-visuals.md)**: Generated images can appear directly in your scene feed alongside messages, providing an immersive visual storytelling experience
-- **Automatic Generation**: Optionally allow the agent to automatically generate visual content based on scene context
+- **Automatic Generation**: Optionally allow features such as new portraits and new scene backgrounds to generate images without you asking (see [Automatic Generation](settings.md#automatic-generation))
 - **Prompt Generation**: Supports both direct prompts and natural language instructions that incorporate character and scene context
 
 ## Configuration
@@ -79,3 +79,7 @@ The Director agent can also generate images through director chat. When chatting
 
 For more information on director chat, see the [Director Chat documentation](../director/chat.md).
 
+
+### Scene Backgrounds during play
+
+The World State agent can keep the scene backdrop fitting the story as you play: it picks one of the scene's backgrounds, or asks the Visualizer for a new one in the scene background style. When an existing background is a good starting point, such as the same street at night, it is passed as a reference and an image editing backend creates a variation of it. The feature is off by default; see [Scene Backgrounds](../world-state/settings.md#scene-backgrounds) in the World State settings.

@@ -1,35 +1,38 @@
 import datetime
 import json
 import os
+import re
 import shutil
 import tempfile
 import pydantic
 from typing import Any
 
 import huggingface_hub
-import requests
+import httpx
 import structlog
 from jinja2 import Environment, FileSystemLoader
 
 __all__ = ["model_prompt", "PromptSpec"]
 
-# (connect, read) timeout in seconds applied to every huggingface_hub request.
-# Some HF calls (notably HfApi.list_models) issue requests without any timeout,
-# so a network issue reaching huggingface.co would otherwise hang indefinitely.
-HF_REQUEST_TIMEOUT = (10, 30)
+# HfApi.list_models otherwise inherits huggingface-hub's unbounded timeout.
+HF_REQUEST_TIMEOUT = httpx.Timeout(connect=10, read=30, write=30, pool=30)
 
 
-class _TimeoutHTTPSession(requests.Session):
-    """requests.Session that applies a default timeout to every request."""
+class _BoundedHFClient(httpx.Client):
+    def request(self, method: str, url: httpx.URL | str, **kwargs) -> httpx.Response:
+        # Hub pagination passes timeout=None explicitly, which disables HTTPX's
+        # client default. Treat only that unbounded value as the safe default;
+        # callers' finite per-request overrides still pass through unchanged.
+        if kwargs.get("timeout") is None:
+            kwargs["timeout"] = HF_REQUEST_TIMEOUT
+        return super().request(method, url, **kwargs)
 
-    def request(self, *args, **kwargs):
-        kwargs.setdefault("timeout", HF_REQUEST_TIMEOUT)
-        return super().request(*args, **kwargs)
+
+def _build_hf_http_client() -> httpx.Client:
+    return _BoundedHFClient(timeout=HF_REQUEST_TIMEOUT, follow_redirects=True)
 
 
-# Ensure all huggingface_hub HTTP requests fail fast on connection issues
-# instead of hanging forever. Calls that pass their own timeout are unaffected.
-huggingface_hub.configure_http_backend(backend_factory=_TimeoutHTTPSession)
+huggingface_hub.set_client_factory(_build_hf_http_client)
 
 BASE_TEMPLATE_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -53,6 +56,12 @@ TALEMATE_TEMPLATE_PATH = os.path.join(BASE_TEMPLATE_PATH, "talemate")
 USER_TEMPLATE_PATH = os.path.join(BASE_TEMPLATE_PATH, "user")
 
 DEFAULT_TEMPLATE = "default.jinja2"
+
+# GGUF quantization tag at the end of a model name (-Q4_K_M, -IQ3_XS, -UD-Q4_K_XL,
+# -BF16, ...); servers like KoboldCpp report the name without the .gguf extension
+GGUF_QUANT_SUFFIX = re.compile(
+    r"[-.](?:UD-)?(?:I?Q\d+(?:_[A-Z0-9]+)*|BF16|F16|F32)$", re.IGNORECASE
+)
 
 TEMPLATE_IDENTIFIERS = []
 
@@ -358,21 +367,23 @@ class ModelPrompt:
 
         log.debug("query_hf_for_prompt_template_suggestion", model_name=model_name)
 
-        # if file ends with .gguf, split - and remove the last part
-        if model_name.endswith(".gguf"):
-            model_name = model_name.rsplit("-", 1)[0]
-            model_name_alt = f"{model_name}-GGUF"
-        else:
-            model_name_alt = None
+        is_gguf = model_name.endswith(".gguf")
+        model_name = model_name.removesuffix(".gguf")
+        base_name = GGUF_QUANT_SUFFIX.sub("", model_name)
+        if is_gguf and base_name == model_name:
+            # unrecognized quant tag: drop the last dash-separated part
+            base_name = model_name.rsplit("-", 1)[0]
+        model_name_alt = f"{base_name}-GGUF" if base_name != model_name else None
+        model_name = base_name
 
         log.debug("query_hf_for_prompt_template_suggestion", model_name=model_name)
 
         branch_name = "main"
 
         try:
-            models = list(api.list_models(model_name=model_name))
+            models = list(api.list_models(search=model_name))
             if not models and model_name_alt:
-                models = list(api.list_models(model_name=model_name_alt))
+                models = list(api.list_models(search=model_name_alt))
         except Exception as e:
             log.warning(
                 "query_hf_for_prompt_template_suggestion: "
@@ -390,7 +401,7 @@ class ModelPrompt:
         repo_id = f"{model.id}"
 
         # Files are checked in priority order; the first matching identifier wins.
-        for filename in ("chat_template.jinja2", "README.md"):
+        for filename in ("chat_template.jinja2", "chat_template.jinja", "README.md"):
             content = self._download_hf_file(repo_id, filename, branch_name)
             if content:
                 match = self._match_template_identifier(content)
@@ -448,6 +459,24 @@ class Llama3Identifier(TemplateIdentifier):
 
 
 @register_template_identifier
+class Qwen35Identifier(TemplateIdentifier):
+    """
+    ChatML with hybrid reasoning: the template turns thinking off with an
+    empty think block when `enable_thinking` is false. Must be checked
+    before ChatML, which matches the same markers.
+    """
+
+    template_str = "Qwen3.5"
+
+    def __call__(self, content: str):
+        return (
+            "<|im_start|>" in content
+            and "enable_thinking" in content
+            and bool(re.search(r"<think>(?:\\n|\n)+</think>", content))
+        )
+
+
+@register_template_identifier
 class ChatMLIdentifier(TemplateIdentifier):
     template_str = "ChatML"
 
@@ -470,7 +499,7 @@ class CommandRIdentifier(TemplateIdentifier):
 
     def __call__(self, content: str):
         """
-        <BOS_TOKEN><|START_OF_TURN_TOKEN|><|USER_TOKEN|>{{ system_message }}
+        <|START_OF_TURN_TOKEN|><|USER_TOKEN|>{{ system_message }}
         {{ user_message }}<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|>
         <|CHATBOT_TOKEN|>{{ coercion_message }}
         """
@@ -488,7 +517,7 @@ class CommandRPlusIdentifier(TemplateIdentifier):
 
     def __call__(self, content: str):
         """
-        <BOS_TOKEN><|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>{{ system_message }}
+        <|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>{{ system_message }}
         <|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|USER_TOKEN|>{{ user_message }}
         <|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>{{ coercion_message }}
         """
@@ -650,4 +679,17 @@ class GLMIdentifier(TemplateIdentifier):
             and "<|system|>" in content
             and "<|user|>" in content
             and "<|assistant|>" in content
+        )
+
+
+@register_template_identifier
+class MuseGlimmerIdentifier(TemplateIdentifier):
+    template_str = "Muse-Glimmer"
+
+    def __call__(self, content: str):
+        return (
+            "<|start|>" in content
+            and "<|message|>" in content
+            and "<|eot|>" in content
+            and "<|eom|>" in content
         )

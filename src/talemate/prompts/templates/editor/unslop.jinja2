@@ -1,6 +1,7 @@
 {#-
 Extractors:
   - fix: AnchorExtractor("<FIX>", "</FIX>")
+  - no_fix: RegexExtractor for the NO_FIX_REQUIRED self-closing tag
 
 Override example:
   {{ set_anchor_extractor("fix", "<MY_TAG>", "</MY_TAG>") }}
@@ -343,10 +344,10 @@ I have identified no issues, i will mark with: <NO_FIX_REQUIRED/>
 
 {# SCENE CONTEXT #}
 {% set scene_context_text %}
-{% set history = scene.context_history(
+{% set history = revision_context_history(character,
     budget=1024, 
     min_dialogue=20, 
-    sections=False) 
+    sections=False)
 %}
 <|SECTION:SCENE|>
 {% for scene_context in history -%}
@@ -378,9 +379,9 @@ I have identified no issues, i will mark with: <NO_FIX_REQUIRED/>
 
 {% include "content-classification.jinja2" %}
 
-{% include "writing-style-instructions.jinja2" %}
+{% if not decision_findings %}{% include "writing-style-instructions.jinja2" %}{% endif %}
 
-{% include "dynamic-instructions.jinja2" %}
+{% include "decision-findings.jinja2" %}{% include "dynamic-instructions.jinja2" %}
 <|SECTION:TASK|>
 Fix bad AI writing by making it simpler, shorter, and more natural. 
 

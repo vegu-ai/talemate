@@ -9,6 +9,7 @@ the baselines don't churn whenever the real documentation changes.
 """
 
 import json
+import re
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -39,18 +40,37 @@ DOCS_INDEX = [
 ]
 
 UX_SNAPSHOT = {
-    "active_tab": "home",
+    "active_tab": "settings",
     "open_drawers": ["scene"],
     "scene_active": False,
     "scene_environment": None,
-    "client_settings_modal": None,
-    "agent_settings_modal": {
+    "app_settings_modal": {
+        "tab": "settings",
+        "page": "agents",
+        "dirty": False,
         "agent": "editor",
-        "agent_label": "Editor",
-        "tab": "revision",
+        "mode": "global",
+    },
+    "templates_view": {
+        "tab": "templates",
+        "dirty": False,
+        "selected": None,
+        "template_type": None,
     },
     "app_ready": True,
     "waiting_for_input": False,
+    "playthrough_active": False,
+}
+
+# The same view with a replay running: the mode's own section renders and the
+# director console links drop out of the rules and the navigation list.
+UX_SNAPSHOT_PLAYTHROUGH = {
+    **UX_SNAPSHOT,
+    "active_tab": "main",
+    "scene_active": True,
+    "scene_environment": "scene",
+    "app_settings_modal": None,
+    "playthrough_active": True,
 }
 
 READ_DOC_CALL = (
@@ -130,6 +150,45 @@ class TestHelpBaselines:
         baseline_checker(capture_prompt(help_agent), AGENT, "chat_send")
 
     @pytest.mark.asyncio
+    async def test_chat_send__settings_only(
+        self, help_agent, agent_registry, baseline_checker
+    ):
+        """Settings granted, templates withheld - the mixed cell where a tool
+        can be registered without its schema, or documented without existing."""
+        help_agent.actions["permissions"].config["allow_settings_changes"].value = True
+
+        chat = help_agent.chat_create()
+        help_agent.client.send_prompt = AsyncMock(return_value="Here is your answer.")
+        with patch.object(help_agent, "_chat_has_enough_for_title", return_value=False):
+            await help_agent.chat_send(
+                chat.id,
+                "Turn off auto save for me.",
+                ux_snapshot=UX_SNAPSHOT,
+            )
+        baseline_checker(capture_prompt(help_agent), AGENT, "chat_send__settings_only")
+
+    @pytest.mark.asyncio
+    async def test_chat_send__permissions_granted(
+        self, help_agent, agent_registry, baseline_checker
+    ):
+        """Both permissions on - the write tools and the theme slot reference
+        render, which the default-off cases above never show."""
+        for key in ("allow_settings_changes", "allow_template_changes"):
+            help_agent.actions["permissions"].config[key].value = True
+
+        chat = help_agent.chat_create()
+        help_agent.client.send_prompt = AsyncMock(return_value="Here is your answer.")
+        with patch.object(help_agent, "_chat_has_enough_for_title", return_value=False):
+            await help_agent.chat_send(
+                chat.id,
+                "Turn off auto save for me.",
+                ux_snapshot=UX_SNAPSHOT,
+            )
+        baseline_checker(
+            capture_prompt(help_agent), AGENT, "chat_send__permissions_granted"
+        )
+
+    @pytest.mark.asyncio
     async def test_chat_send__scene_aware(
         self,
         help_agent,
@@ -157,10 +216,10 @@ class TestHelpBaselines:
         self, help_agent, agent_registry, baseline_checker
     ):
         """
-        First round performs a doc lookup; with the lookup-round limit at 1
-        the follow-up renders the final-round instructions (no tools, answer
-        now) with the doc result in the chat history.
+        A 16k client has room for the final-round instructions and doc result
+        after one lookup. Exhausted budgets are covered separately below.
         """
+        help_agent.client.max_token_length = 16384
         help_agent.actions["chat"].config["doc_lookup_iterations"].value = 1
         chat = help_agent.chat_create()
         help_agent.client.send_prompt = AsyncMock(
@@ -175,6 +234,50 @@ class TestHelpBaselines:
         baseline_checker(
             capture_all_prompts(help_agent), AGENT, "chat_send__doc_lookup_final_round"
         )
+
+    @pytest.mark.asyncio
+    async def test_chat_send_exhausted_context_reports_omitted_results(
+        self, help_agent, agent_registry
+    ):
+        for setting in help_agent.actions["permissions"].config.values():
+            setting.value = True
+        help_agent.client.max_token_length = 8192
+        help_agent.actions["chat"].config["doc_lookup_iterations"].value = 1
+        chat = help_agent.chat_create()
+        help_agent.client.send_prompt = AsyncMock(
+            side_effect=[READ_DOC_CALL, "Please increase the context length."]
+        )
+        with patch.object(help_agent, "_chat_has_enough_for_title", return_value=False):
+            await help_agent.chat_send(
+                chat.id, "Explain this setting", ux_snapshot=UX_SNAPSHOT
+            )
+        final_prompt = capture_prompt(help_agent)
+        assert "Explain this setting" in final_prompt
+        assert (
+            "1 tool result of this turn omitted to fit context: read_doc"
+            in final_prompt
+        )
+        assert "Do not repeat these calls or claim their outcomes" in final_prompt
+
+    @pytest.mark.asyncio
+    async def test_chat_send__playthrough_active(
+        self, help_agent, agent_registry, baseline_checker
+    ):
+        """A replay is running - the replay section renders and no
+        `talemate://director-console` link is offered anywhere in the prompt."""
+        chat = help_agent.chat_create()
+        help_agent.client.send_prompt = AsyncMock(return_value="Here is your answer.")
+        with patch.object(help_agent, "_chat_has_enough_for_title", return_value=False):
+            await help_agent.chat_send(
+                chat.id,
+                "How do I open the director chat?",
+                ux_snapshot=UX_SNAPSHOT_PLAYTHROUGH,
+            )
+        prompt = capture_prompt(help_agent)
+        # sectioning sentence-cases the heading it renders
+        assert "Replay is running" in prompt
+        assert "talemate://director-console" not in prompt
+        baseline_checker(prompt, AGENT, "chat_send__playthrough_active")
 
     @pytest.mark.asyncio
     async def test_chat_generate_title(
@@ -192,3 +295,43 @@ class TestHelpBaselines:
         )
         await help_agent.chat_generate_title(chat.id)
         baseline_checker(capture_prompt(help_agent), AGENT, "chat_generate_title")
+
+
+PERMISSION_CELLS = [
+    (False, False),
+    (True, False),
+    (False, True),
+    (True, True),
+]
+
+
+@pytest.mark.parametrize("settings_on,templates_on", PERMISSION_CELLS)
+@pytest.mark.asyncio
+async def test_every_registered_tool_is_documented_and_no_other(
+    help_agent, agent_registry, settings_on, templates_on
+):
+    """The prompt and the callback list have to agree in both directions: a
+    tool the agent holds but was never told about is unusable, and one it was
+    told about but does not hold wastes a round or is claimed as done."""
+    config = help_agent.actions["permissions"].config
+    config["allow_settings_changes"].value = settings_on
+    config["allow_template_changes"].value = templates_on
+
+    chat = help_agent.chat_create()
+    help_agent.client.send_prompt = AsyncMock(return_value="Here is your answer.")
+    with patch.object(help_agent, "_chat_has_enough_for_title", return_value=False):
+        await help_agent.chat_send(chat.id, "What can you do?", ux_snapshot=UX_SNAPSHOT)
+
+    prompt = capture_prompt(help_agent)
+    documented = set(re.findall(r'"function": "([a-z_]+)"', prompt))
+    registered = {
+        callback.name
+        for callback in (
+            help_agent._chat_doc_callbacks()
+            + help_agent._chat_settings_callbacks()
+            + help_agent._chat_theme_callbacks()
+            + help_agent._chat_template_callbacks()
+        )
+    }
+
+    assert documented == registered

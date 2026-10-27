@@ -1,47 +1,54 @@
 <template>
-    <v-container fluid class="pa-0">
+    <v-container fluid class="pa-0" :data-request-id="prompt.request_id">
         <!-- Header with prompt metadata -->
         <div class="d-flex align-center flex-wrap mb-2">
-            <span class="text-h6 mr-2">#{{ prompt.num }}</span>
-            <v-chip color="grey-lighten-1" variant="text">{{ prompt.agent_name }}</v-chip>
+            <span class="text-title-large mr-2">#{{ prompt.num }}</span>
+            <PromptStatus :status="prompt.status" class="mr-2" />
+            <v-chip color="mutedheader" variant="text">{{ prompt.agent_name }}</v-chip>
             <v-chip size="small" label class="mr-1" color="primary" variant="tonal">
                 <strong class="mr-1">action</strong>{{ prompt.agent_action }}
             </v-chip>
             <v-tooltip
                 v-if="overrideKey"
                 location="top"
-                :text="reasoningOverrideActive
-                    ? `Reasoning is forced off for ${overrideLabel}. Click to remove the override.`
-                    : `Force reasoning off whenever ${overrideLabel} runs (clients that always reason will ignore it).`"
+                :text="settingsDirty()
+                    ? 'Save or discard your changes in Settings first — overrides are applied immediately, and a later save of the settings page would overwrite them.'
+                    : (reasoningOverrideActive
+                        ? `Reasoning is forced off for ${overrideLabel}. Click to remove the override.`
+                        : `Force reasoning off whenever ${overrideLabel} runs (clients that always reason will ignore it).`)"
             >
                 <template v-slot:activator="{ props }">
-                    <v-btn
-                        v-bind="props"
-                        size="x-small"
-                        variant="text"
-                        class="mr-1"
-                        icon="mdi-brain"
-                        :color="reasoningOverrideActive ? 'delete' : 'grey-darken-1'"
-                        @click="toggleReasoningOverride"
-                    />
+                    <span v-bind="props" tabindex="-1" @focusin="props.onFocus" @focusout="props.onBlur">
+                        <v-btn
+                            size="x-small"
+                            :variant="reasoningOverrideActive ? 'tonal' : 'text'"
+                            class="mr-1 text-none"
+                            prepend-icon="mdi-brain"
+                            :color="reasoningOverrideActive ? 'delete' : 'muted'"
+                            :disabled="settingsDirty()"
+                            data-testid="prompt-reasoning-override"
+                            @click="toggleReasoningOverride"
+                        >{{ reasoningOverrideActive ? `Reasoning: off for ${overrideLabel}` : 'Reasoning: client default' }}</v-btn>
+                    </span>
                 </template>
             </v-tooltip>
-            <v-chip class="mr-1" size="small" color="grey" label variant="tonal">
+            <v-chip class="mr-1" size="small" color="muted" label variant="tonal">
                 <strong class="mr-1">task</strong> {{ prompt.kind }}
             </v-chip>
-            <v-chip size="small" color="grey" label variant="tonal">
+            <v-chip size="small" color="muted" label variant="tonal">
                 <strong class="mr-1">preset</strong> {{ prompt.inference_preset }}
             </v-chip>
             <v-chip size="small" color="primary" variant="text" label>
-                {{ prompt.prompt_tokens }}<v-icon size="14" class="ml-1">mdi-arrow-down-bold</v-icon>
+                {{ promptMetric(prompt.prompt_tokens, prompt.status) }}<v-icon size="14" class="ml-1">mdi-arrow-down-bold</v-icon>
             </v-chip>
             <v-chip size="small" color="secondary" variant="text" label>
-                {{ prompt.response_tokens }}<v-icon size="14" class="ml-1">mdi-arrow-up-bold</v-icon>
+                {{ promptMetric(prompt.response_tokens, prompt.status) }}<v-icon size="14" class="ml-1">mdi-arrow-up-bold</v-icon>
             </v-chip>
-            <v-chip size="small" variant="text" label color="grey-darken-1">
-                {{ prompt.time }}s<v-icon size="14" class="ml-1">mdi-clock</v-icon>
+            <v-chip size="small" variant="text" label color="muted">
+                {{ promptMetric(prompt.time == null ? null : Math.floor(prompt.time), prompt.status, 's') }}<v-icon size="14" class="ml-1">mdi-clock</v-icon>
             </v-chip>
-            <v-chip color="grey" variant="text" prepend-icon="mdi-network-outline">
+            <v-chip v-if="prompt.attempts > 1" size="small" variant="text">{{ prompt.attempts }} attempts</v-chip>
+            <v-chip color="muted" variant="text" prepend-icon="mdi-network-outline">
                 {{ prompt.client_name }}
             </v-chip>
             <v-chip
@@ -83,10 +90,10 @@
                         <v-icon>mdi-transit-connection-variant</v-icon> Agent Stack
                     </v-list-subheader>
                     <v-list-item v-for="(agent, index) in prompt.agent_stack" :key="index">
-                        <v-list-item-subtitle class="text-grey-lighten-3">
+                        <v-list-item-subtitle opacity="1" class="text-high-emphasis">
                             {{ agentParts(agent).name }}
                         </v-list-item-subtitle>
-                        <v-list-item-subtitle class="text-grey-lighten-1 text-caption">
+                        <v-list-item-subtitle opacity="1" class="text-medium-emphasis text-body-small">
                             {{ agentParts(agent).action }}
                         </v-list-item-subtitle>
                     </v-list-item>
@@ -96,7 +103,7 @@
                             size="x-small"
                             variant="text"
                             v-if="promptHasDirtyParams"
-                            color="orange"
+                            color="warning"
                             @click.stop="resetParams"
                             prepend-icon="mdi-restore"
                         >Reset</v-btn>
@@ -130,7 +137,7 @@
                             size="x-small"
                             variant="text"
                             v-if="promptHasDirtyPrompt"
-                            color="orange"
+                            color="warning"
                             @click.stop="resetPrompt"
                             prepend-icon="mdi-restore"
                         >Reset</v-btn>
@@ -152,7 +159,7 @@
                 </v-tabs>
                 <v-window v-model="responseTab">
                     <v-window-item value="response">
-                        <v-card elevation="10" color="grey-darken-3" style="overflow-y:auto; max-height: calc(80vh - 200px);">
+                        <v-card elevation="3" color="surface-light" style="overflow-y:auto; max-height: calc(80vh - 200px);">
                             <v-card-title>
                                 Response
                                 <v-progress-circular
@@ -166,18 +173,21 @@
                                     size="x-small"
                                     variant="text"
                                     v-else-if="promptHasDirtyResponse"
-                                    color="orange"
+                                    color="warning"
                                     @click.stop="resetResponse"
                                     prepend-icon="mdi-restore"
                                 >Reset</v-btn>
                             </v-card-title>
-                            <v-card-text :class="busy ? 'text-grey' : 'text-white'">
+                            <v-card-text :style="{ opacity: busy ? 0.6 : 1 }">
+                                <p v-if="prompt.status === 'active'" role="status">Response pending.</p>
+                                <p v-else-if="localPrompt.response == null">No response received.</p>
+                                <p v-if="prompt.error" class="text-error">{{ prompt.error }}</p>
                                 <div class="prompt-view">{{ localPrompt.response }}</div>
                             </v-card-text>
                         </v-card>
                     </v-window-item>
                     <v-window-item value="reasoning">
-                        <v-card elevation="10" color="grey-darken-3" style="overflow-y:auto; max-height: calc(80vh - 200px);">
+                        <v-card elevation="3" color="surface-light" style="overflow-y:auto; max-height: calc(80vh - 200px);">
                             <v-card-title>Reasoning</v-card-title>
                             <v-card-text>
                                 <div class="prompt-view">{{ localPrompt.reasoning }}</div>
@@ -195,8 +205,8 @@
         >
             <template v-slot:activator="{ props }">
                 <v-btn
-                    :disabled="busy"
-                    color="orange"
+                    :disabled="busy || prompt.status === 'active'"
+                    color="warning"
                     variant="text"
                     @click.stop="testChanges"
                     v-bind="props"
@@ -204,7 +214,7 @@
                 >Test Changes</v-btn>
             </template>
         </v-tooltip>
-        <span v-if="reasoningOverrideActive" class="text-caption text-muted ml-2">
+        <span v-if="reasoningOverrideActive" class="text-body-small text-muted ml-2">
             Test Changes runs with the client's default reasoning setting — the per-action override does not apply.
         </span>
     </v-container>
@@ -214,13 +224,15 @@
 import { Codemirror } from 'vue-codemirror'
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
-import { oneDark } from '@codemirror/theme-one-dark'
-import { EditorView } from '@codemirror/view'
+import { codeEditorExtensions } from '@/utils/codeEditorTheme.js'
+import { promptMetric, syncPromptDraft } from '@/utils/promptLog';
+import PromptStatus from './PromptStatus.vue';
 
 export default {
     name: 'PromptDetailView',
     components: {
         Codemirror,
+        PromptStatus,
     },
     props: {
         prompt: {
@@ -293,10 +305,10 @@ export default {
     watch: {
         prompt: {
             immediate: true,
+            deep: true,
             handler(newPrompt) {
                 if (newPrompt) {
-                    // Create a deep copy to avoid mutating the original prop
-                    this.localPrompt = JSON.parse(JSON.stringify(newPrompt));
+                    this.localPrompt = syncPromptDraft(this.localPrompt, newPrompt);
                 }
             },
         },
@@ -307,8 +319,13 @@ export default {
     inject: [
         "getWebsocket",
         'registerMessageHandler',
+        'unregisterMessageHandler',
+        // the settings page's unsaved-edits state: this button writes the
+        // applied config, which a later save of that page would overwrite
+        'settingsDirty',
     ],
     methods: {
+        promptMetric,
         parameterType(name) {
             if (!this.localPrompt?.original_generation_parameters) return 'text';
             const typ = typeof this.localPrompt.original_generation_parameters[name];
@@ -409,15 +426,16 @@ export default {
     created() {
         this.registerMessageHandler(this.handleMessage);
     },
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
+    },
     setup() {
-        const extensions = [
+        const extensions = codeEditorExtensions(
             markdown({
                 base: markdownLanguage,
                 codeLanguages: languages,
             }),
-            oneDark,
-            EditorView.lineWrapping
-        ];
+        );
 
         return {
             extensions,

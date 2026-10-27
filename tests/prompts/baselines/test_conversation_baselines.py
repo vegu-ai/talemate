@@ -17,6 +17,7 @@ from ..test_conversation_templates import (  # noqa: F401
     active_context,
 )
 from .conftest import capture_prompt
+from ..helpers import set_scene_context_format
 
 AGENT = "conversation"
 
@@ -31,7 +32,7 @@ class TestConversationBaselines:
         agent = active_context
         npc = mock_scene.get_character("Elena")
         actor = npc.actor
-        agent.actions["generation_override"].config["format"].value = "movie_script"
+        set_scene_context_format("movie_script")
         await agent.converse(actor)
         baseline_checker(capture_prompt(agent), AGENT, "converse__movie_script")
 
@@ -40,7 +41,7 @@ class TestConversationBaselines:
         agent = active_context
         npc = mock_scene.get_character("Elena")
         actor = npc.actor
-        agent.actions["generation_override"].config["format"].value = "chat"
+        set_scene_context_format("chat")
         agent.client.send_prompt = AsyncMock(
             return_value='Elena: *nods thoughtfully* "Yes, I agree."\nEND-OF-LINE'
         )
@@ -54,7 +55,7 @@ class TestConversationBaselines:
         agent = active_context
         npc = mock_scene.get_character("Elena")
         actor = npc.actor
-        agent.actions["generation_override"].config["format"].value = "narrative"
+        set_scene_context_format("narrative")
         agent.client.send_prompt = AsyncMock(
             return_value='She paused. "The view is breathtaking."'
         )

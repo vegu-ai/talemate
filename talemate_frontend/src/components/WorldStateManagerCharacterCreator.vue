@@ -3,9 +3,9 @@
         <v-card-text>
             <v-row>
                 <v-col cols="12" lg="4" xl="3">
-                    <v-card elevation="7">
+                    <v-card elevation="3">
                         <v-card-text>
-                            <div class="text-caption text-uppercase text-muted mb-2"><v-icon>mdi-cube-scan</v-icon> Templates ({{ characterTemplateCount }})</div>
+                            <div class="text-body-small text-uppercase text-muted mb-2"><v-icon>mdi-cube-scan</v-icon> Templates ({{ characterTemplateCount }})</div>
                             <WorldStateManagerTemplateApplicator
                                 ref="templateApplicator"
                                 :validateTemplate="validateTemplate"
@@ -18,7 +18,7 @@
                     </v-card>
                 </v-col>
                 <v-col cols="12" lg="6" xl="5">
-                    <v-card elevation="7">
+                    <v-card elevation="3">
                         <v-card-text>
                             <v-checkbox :disabled="busy" v-model="character.generation_context.enabled" label="Enable AI Generation"></v-checkbox>
                             <div v-if="character.generation_context.enabled">
@@ -68,7 +68,7 @@
 
                             <v-checkbox density="compact" :disabled="!canBePlayer || busy" v-model="character.is_player" label="Controlled by the player" hide-details></v-checkbox>
 
-                            <p class="text-caption text-muted" v-if="!canBePlayer">
+                            <p class="text-body-small text-muted" v-if="!canBePlayer">
                                 There already is a player character in this scene. Currently only one player character is supported.
                             </p>
                         </v-card-text>
@@ -248,6 +248,9 @@ export default {
             // Handle director responses
             if (message.type === 'director' && message.action === 'character_persisted') {
                 this.busy = false;
+                if (!message.character) {
+                    return;
+                }
                 this.$emit('character-created', message.character)
                 if(this.character.created) {
                     this.character.created(message.character);

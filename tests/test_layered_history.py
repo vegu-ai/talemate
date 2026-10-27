@@ -11,6 +11,7 @@ import uuid
 from talemate.history import collect_source_entries, HistoryEntry
 from talemate.scene_message import (
     CharacterMessage,
+    CharacterTransitionMessage,
     DirectorMessage,
 )
 from talemate.tale_mate import Scene
@@ -33,7 +34,7 @@ def create_archived_entry(
     entry_id: str = None,
     start: int = None,
     end: int = None,
-    ts: str = "PT0S",
+    ts: int = 0,
 ) -> dict:
     """Create an archived history entry dict."""
     return {
@@ -52,7 +53,7 @@ def create_layered_entry(
     entry_id: str = None,
     start: int = None,
     end: int = None,
-    ts: str = "PT0S",
+    ts: int = 0,
 ) -> dict:
     """Create a layered history entry dict."""
     return {
@@ -83,7 +84,7 @@ def scene_factory():
         scene.history = history or []
         scene.archived_history = archived_history or []
         scene.layered_history = layered_history or []
-        scene.ts = "PT1H"
+        scene.ts = 3600
         return scene
 
     return _factory
@@ -110,7 +111,7 @@ class TestCollectSourceEntriesLayer0:
 
         entry = HistoryEntry(
             text="Summary of messages 1-3",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=0,
             start=1,
@@ -138,7 +139,7 @@ class TestCollectSourceEntriesLayer0:
 
         entry = HistoryEntry(
             text="Summary",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=0,
             start=0,
@@ -151,6 +152,21 @@ class TestCollectSourceEntriesLayer0:
         assert len(result) == 2
         assert all("Director" not in r.text for r in result)
 
+    def test_layer0_filters_character_transition_entries(self, scene_factory):
+        story = create_scene_message("Nora: I am leaving.")
+        departure = CharacterTransitionMessage(
+            character_name="Nora", kind="deactivated"
+        )
+        arrival = CharacterTransitionMessage(character_name="Nora")
+        later = create_scene_message("Mara: She is back.")
+        scene = scene_factory(history=[story, departure, arrival, later])
+
+        entry = HistoryEntry(text="Summary", ts=0, index=0, layer=0, start=0, end=3)
+
+        result = collect_source_entries(scene, entry)
+
+        assert [r.id for r in result] == [story.id, later.id]
+
     def test_layer0_returns_empty_for_no_start_end(self, scene_factory):
         """Layer 0 entries without start/end should return empty list."""
         messages = [create_scene_message("Message 0")]
@@ -158,7 +174,7 @@ class TestCollectSourceEntriesLayer0:
 
         entry = HistoryEntry(
             text="Static entry",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=0,
             start=None,
@@ -191,7 +207,7 @@ class TestCollectSourceEntriesLayer1:
 
         entry = HistoryEntry(
             text="Summary of archived 1-3",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=1,
             start=1,
@@ -215,7 +231,7 @@ class TestCollectSourceEntriesLayer1:
 
         entry = HistoryEntry(
             text="Summary of archived 0",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=1,
             start=0,
@@ -235,14 +251,14 @@ class TestCollectSourceEntriesLayer1:
                 entry_id="test-id-123",
                 start=5,
                 end=15,
-                ts="PT15M",
+                ts=900,
             ),
         ]
         scene = scene_factory(archived_history=archived)
 
         entry = HistoryEntry(
             text="Summary",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=1,
             start=0,
@@ -255,7 +271,7 @@ class TestCollectSourceEntriesLayer1:
         assert result[0].id == "test-id-123"
         assert result[0].start == 5
         assert result[0].end == 15
-        assert result[0].ts == "PT15M"
+        assert result[0].ts == 900
 
 
 # ---------------------------------------------------------------------------
@@ -290,7 +306,7 @@ class TestCollectSourceEntriesLayer2Plus:
         # Layer 2 entry (stored in layered_history[1]) should look in layered_history[0]
         entry = HistoryEntry(
             text="Summary of layer0 entries 1-2",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=2,
             start=1,
@@ -322,7 +338,7 @@ class TestCollectSourceEntriesLayer2Plus:
         # Layer 3 entry (stored in layered_history[2]) should look in layered_history[1]
         entry = HistoryEntry(
             text="Summary of layer1 entries 0-1",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=3,
             start=0,
@@ -350,7 +366,7 @@ class TestCollectSourceEntriesLayer2Plus:
         # Request indices that don't exist in layer_0
         entry = HistoryEntry(
             text="Summary with out-of-range indices",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=2,
             start=10,
@@ -377,7 +393,7 @@ class TestCollectSourceEntriesLayer2Plus:
 
         entry = HistoryEntry(
             text="Summary of all layer0 entries",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=2,
             start=0,
@@ -406,7 +422,7 @@ class TestCollectSourceEntriesEdgeCases:
 
         entry = HistoryEntry(
             text="Entry with no start",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=1,
             start=None,
@@ -422,7 +438,7 @@ class TestCollectSourceEntriesEdgeCases:
 
         entry = HistoryEntry(
             text="Entry with no end",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=1,
             start=0,
@@ -438,7 +454,7 @@ class TestCollectSourceEntriesEdgeCases:
 
         entry = HistoryEntry(
             text="Summary",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=1,
             start=0,
@@ -454,7 +470,7 @@ class TestCollectSourceEntriesEdgeCases:
 
         entry = HistoryEntry(
             text="Summary",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=2,
             start=0,
@@ -511,7 +527,7 @@ class TestCollectSourceEntriesRegressionBug:
         # These indices exist in layer_0 but NOT in layer_1
         entry = HistoryEntry(
             text="Summary of layer0 entries 5-8",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=2,
             start=5,
@@ -550,7 +566,7 @@ class TestCollectSourceEntriesRegressionBug:
 
         entry = HistoryEntry(
             text="Summary",
-            ts="PT30M",
+            ts=1800,
             index=0,
             layer=2,
             start=0,

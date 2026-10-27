@@ -26,9 +26,6 @@ from __future__ import annotations
 
 import pytest
 
-from conftest import MockScene, bootstrap_scene
-
-import talemate.instance as instance
 from talemate.character import Character
 from talemate.scene_message import (
     CharacterMessage,
@@ -40,18 +37,6 @@ from talemate.scene_message import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def scene():
-    s = MockScene()
-    bootstrap_scene(s)
-    return s
-
-
-@pytest.fixture
-def director(scene):
-    return instance.get_agent("director")
 
 
 async def _add_character(scene, name, *, is_player=False):
@@ -182,7 +167,7 @@ class TestAutoDirectCandidates:
         # Alice spoke first, then time passed → loop breaks before
         # encountering anything after the time passage marker
         scene.history.append(CharacterMessage("Alice: long ago"))
-        scene.history.append(TimePassageMessage(ts="P1D", message="A day passed."))
+        scene.history.append(TimePassageMessage(ts=86400, message="A day passed."))
         candidates = director.auto_direct_candidates()
         # Both characters end up as candidates because the loop breaks at TimePassage
         names = {c.name for c in candidates}

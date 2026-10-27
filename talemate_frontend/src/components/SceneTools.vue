@@ -6,7 +6,7 @@
         <v-tooltip v-for="(option, index) in visibleQuickSettings" :key="index" :text="option.description" location="top">
             <template v-slot:activator="{ props: tooltipProps }">
                 <v-chip size="x-small" v-bind="tooltipProps" @click="toggleQuickSetting(option.value)"
-                    :color="option.status() === true ? 'success' : 'grey'"
+                    :color="option.status() === true ? 'success' : 'muted'"
                     :disabled="appBusy || !appReady" class="ma-1">
                     <v-icon class="mr-1">{{ option.icon }}</v-icon>
                     {{ option.title }}
@@ -14,12 +14,40 @@
                     <v-icon class="ml-1" v-else-if="option.status() === false">mdi-circle-outline</v-icon>
                     <v-tooltip v-else :text="option.status()">
                         <template v-slot:activator="{ props }">
-                            <v-icon class="ml-1" v-bind="props" color="orange">mdi-alert-outline</v-icon>
+                            <v-icon class="ml-1" v-bind="props" color="warning">mdi-alert-outline</v-icon>
                         </template>
                     </v-tooltip>
                 </v-chip>
             </template>
         </v-tooltip>
+
+        <v-menu v-if="perspectivesActive">
+            <template v-slot:activator="{ props: menuProps }">
+                <v-tooltip text="Show what one character noticed of each message, beside the message." location="top">
+                    <template v-slot:activator="{ props: tooltipProps }">
+                        <v-chip size="x-small" v-bind="mergeProps(menuProps, tooltipProps)"
+                            :color="perspectiveCharacter ? 'success' : 'muted'"
+                            :disabled="!appReady" class="ma-1">
+                            <v-icon class="mr-1">mdi-eye-outline</v-icon>
+                            {{ perspectiveChipLabel }}
+                            <v-icon class="ml-1">mdi-menu-down</v-icon>
+                        </v-chip>
+                    </template>
+                </v-tooltip>
+            </template>
+            <v-list density="compact">
+                <v-list-item :active="!perspectiveCharacter" @click="$emit('update:perspectiveCharacter', null)">
+                    <v-list-item-title>None</v-list-item-title>
+                </v-list-item>
+                <v-list-item v-for="name in activeCharacters" :key="name"
+                    :active="name === perspectiveCharacter"
+                    @click="$emit('update:perspectiveCharacter', name)">
+                    <v-list-item-title>{{ name }}</v-list-item-title>
+                </v-list-item>
+            </v-list>
+        </v-menu>
+
+        <KnowledgeSyncIndicator v-if="perspectivesActive" :sync="scene?.data?.knowledge_sync" :disabled="appBusy || !appReady" />
 
         <SceneToolsSettings :app-busy="appBusy" :app-ready="appReady" />
 
@@ -70,6 +98,8 @@
         @cancel="pendingDirectedRegen = null"
     />
 
+    <SceneToolShortcutModal ref="shortcutModal" :catalog="sceneToolActions" :template-groups="templateGroups" />
+
     <!-- Hotbuttons Section -->
     <div class="hotbuttons-section">
 
@@ -102,7 +132,7 @@
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey mr-3" v-bind="props"
                             @click="cancelAudioQueue" 
-                            :color="audioPlayedForMessageId ? 'play_audio' : 'default'"
+                            :color="audioPlayedForMessageId ? 'play_audio' : ''"
                             :disabled="!audioPlayedForMessageId" 
                             icon>
                             <v-icon>mdi-volume-high</v-icon>
@@ -143,7 +173,7 @@
                             <v-icon>mdi-cancel</v-icon>
                             
                         </v-btn>
-                        <span class="mr-1 ml-3 text-caption text-muted">{{ commandName }}</span>
+                        <span class="mr-1 ml-3 text-body-small text-muted">{{ commandName }}</span>
                     </template>
                 </v-tooltip>
             </v-card-actions>
@@ -157,15 +187,46 @@
 
                 <!-- actor actions -->
 
-                <SceneToolsActor :disabled="appBusy || !appReady" :npc-characters="npc_characters" />
+                <SceneToolsActor
+                    :disabled="appBusy || !appReady"
+                    :npc-characters="npc_characters"
+                    :shortcut-catalog="sceneToolActions"
+                    :shortcuts="sceneToolShortcuts"
+                    :shortcut-templates="sceneToolShortcutTemplates"
+                    @shortcut-add="openShortcutModal"
+                    @shortcut-edit="editShortcut"
+                    @shortcut-add-template="installShortcutTemplate"
+                />
 
                 <!-- narrator actions -->
 
-                <SceneToolsNarrator :disabled="appBusy || !appReady" ref="narratorTools" :npc-characters="npc_characters" />
+                <SceneToolsNarrator
+                    :disabled="appBusy || !appReady"
+                    ref="narratorTools"
+                    :npc-characters="npc_characters"
+                    :shortcut-catalog="sceneToolActions"
+                    :shortcuts="sceneToolShortcuts"
+                    :shortcut-templates="sceneToolShortcutTemplates"
+                    @shortcut-add="openShortcutModal"
+                    @shortcut-edit="editShortcut"
+                    @shortcut-add-template="installShortcutTemplate"
+                />
 
                 <!-- director actions -->
 
-                <SceneToolsDirector :disabled="appBusy || !appReady" ref="directorTools" :npc-characters="npc_characters" :scene-characters="scene_characters" :agent-status="agentStatus" />
+                <SceneToolsDirector
+                    :disabled="appBusy || !appReady"
+                    ref="directorTools"
+                    :npc-characters="npc_characters"
+                    :scene-characters="scene_characters"
+                    :agent-status="agentStatus"
+                    :shortcut-catalog="sceneToolActions"
+                    :shortcuts="sceneToolShortcuts"
+                    :shortcut-templates="sceneToolShortcutTemplates"
+                    @shortcut-add="openShortcutModal"
+                    @shortcut-edit="editShortcut"
+                    @shortcut-add-template="installShortcutTemplate"
+                />
 
                 <!-- advance time -->
 
@@ -191,14 +252,24 @@
                     :scene="scene"
                     :world-state-templates="worldStateTemplates"
                 />
+                <!-- custom commands -->
+
+                <SceneToolsCommands :disabled="appBusy || !appReady" />
+
                 <!-- visualizer actions -->
-             
-                <SceneToolsVisual 
+
+                <SceneToolsVisual
                     :disabled="appBusy || !appReady"
                     :agent-status="agentStatus"
                     :visual-agent-ready="visualAgentReady"
                     :npc-characters="npc_characters"
                     :player-character="playerCharacterName"
+                    :shortcut-catalog="sceneToolActions"
+                    :shortcuts="sceneToolShortcuts"
+                    :shortcut-templates="sceneToolShortcutTemplates"
+                    @shortcut-add="openShortcutModal"
+                    @shortcut-edit="editShortcut"
+                    @shortcut-add-template="installShortcutTemplate"
                 />
 
                 <!-- save menu -->
@@ -218,30 +289,42 @@
 
 <script>
 import SceneToolsDirector from './SceneToolsDirector.vue';
+import { assetTarget, setAssetMessage } from '@/utils/assetTargets';
 import SceneToolsNarrator from './SceneToolsNarrator.vue';
 import SceneToolsActor from './SceneToolsActor.vue';
 import SceneToolsCreative from './SceneToolsCreative.vue';
+import SceneToolsCommands from './SceneToolsCommands.vue';
 import SceneToolsVisual from './SceneToolsVisual.vue';
 import SceneToolsWorld from './SceneToolsWorld.vue';
 import SceneToolsSettings from './SceneToolsSettings.vue';
+import KnowledgeSyncIndicator from './KnowledgeSyncIndicator.vue';
 import SceneToolsSave from './SceneToolsSave.vue';
 import SceneToolsTime from './SceneToolsTime.vue';
+import SceneToolShortcutModal from './SceneToolShortcutModal.vue';
 import RequestInput from './RequestInput.vue';
+import { mergeProps } from 'vue';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
+import { applyShortcutTemplateMessage } from '@/utils/sceneToolShortcuts';
+import { playthroughAvailable } from '@/utils/playthrough';
+import { perspectivesEnabled } from '@/utils/sceneSettings';
+import { perspectiveChipLabel } from '@/utils/messagePerspective';
 
 export default {
 
     name: 'SceneTools',
     components: {
+        KnowledgeSyncIndicator,
         SceneToolsDirector,
         SceneToolsNarrator,
         SceneToolsActor,
         SceneToolsCreative,
+        SceneToolsCommands,
         SceneToolsVisual,
         SceneToolsSave,
         SceneToolsWorld,
         SceneToolsSettings,
         SceneToolsTime,
+        SceneToolShortcutModal,
         RequestInput,
     },
     props: {
@@ -263,8 +346,20 @@ export default {
         // chip promotes when the scene has no backdrop set yet
         sceneBackdropCandidate: String,
         audioPlayedForMessageId: [Number, String],
+        perspectiveCharacter: {
+            type: String,
+            default: null,
+        },
     },
     computed: {
+        perspectivesActive() {
+            return perspectivesEnabled(this.scene?.data);
+        },
+
+        perspectiveChipLabel() {
+            return perspectiveChipLabel(this.perspectiveCharacter);
+        },
+
         // Mirrors the button :disabled binding — the hotkey path bypasses the
         // DOM disabled state, so the regenerate handlers must gate on this too.
         canStartRegen() {
@@ -308,6 +403,18 @@ export default {
         visibleQuickSettings() {
             return this.quickSettings.filter(option => !option.condition || option.condition());
         },
+
+        sceneToolShortcuts() {
+            return this.appConfig()?.shortcuts?.scene_tools || {};
+        },
+
+        sceneToolShortcutTemplates() {
+            return this.worldStateTemplates?.by_type?.scene_tool_shortcut || {};
+        },
+
+        templateGroups() {
+            return this.worldStateTemplates?.managed?.groups || [];
+        },
     },
     data() {
         return {
@@ -326,6 +433,7 @@ export default {
             canRegenerateReason: null,
             npc_characters: [],
             scene_characters: [],
+            sceneToolActions: [],
             agentMessages: {},
             messageHighlights: {},
             pendingDirectedRegen: null,
@@ -333,6 +441,7 @@ export default {
                 {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.canAutoSave ? this.autoSave : "Manually save scene for auto-save to be available"; }},
                 {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
                 {"value": "toggleImmersive", "title": "Immersive", "icon": "mdi-image-area", "description": "Render the scene backdrop image behind the scene", "condition": () => { return !!(this.sceneBackdropAssetId || this.sceneBackdropCandidate) }, "status": () => { return this.immersiveActive }},
+                {"value": "togglePlaythrough", "title": "Replay", "icon": "mdi-play-box-outline", "description": "Replay the scene from the beginning, one message at a time.", "condition": () => { return playthroughAvailable(this.scene?.data?.history_stats) }, "status": () => { return this.isPlaythroughActive() }},
             ],
         }
     },
@@ -348,6 +457,8 @@ export default {
         'getPlayerCharacterName',
         'formatWorldStateTemplateString',
         'openAppConfig',
+        'isPlaythroughActive',
+        'startPlaythrough',
         // Provided by SceneMessages; flags the last regen-eligible
         // message as `regenerating` so its pager spinner shows up
         // before the in-place edit lands.
@@ -357,8 +468,10 @@ export default {
         'open-world-state-manager',
         'open-agent-messages',
         'cancel-audio-queue',
+        'update:perspectiveCharacter',
     ],
     methods: {
+        mergeProps,
 
         sendHotButtonMessage(message) {
             if (message == "!abort" || !this.appBusy) {
@@ -376,6 +489,8 @@ export default {
                 this.getWebsocket().send(JSON.stringify({ type: 'quick_settings', action: 'set', setting: 'auto_progress', value: this.autoProgress }));
             } else if (setting == "toggleImmersive") {
                 this.toggleImmersive();
+            } else if (setting == "togglePlaythrough") {
+                this.startPlaythrough();
             }
         },
 
@@ -386,7 +501,9 @@ export default {
             if (this.sceneBackdropAssetId) {
                 message.enabled = !this.immersiveActive;
             } else if (this.sceneBackdropCandidate) {
-                message.asset_id = this.sceneBackdropCandidate;
+                this.getWebsocket().send(JSON.stringify(
+                    setAssetMessage(this.sceneBackdropCandidate, [assetTarget.sceneBackdrop()]),
+                ));
                 message.enabled = true;
             } else {
                 return;
@@ -401,6 +518,26 @@ export default {
         openAgentMessages(agent_name) {
             delete this.agentMessages[agent_name];
             this.$emit('open-agent-messages', agent_name);
+        },
+
+        requestSceneToolActions() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'config',
+                action: 'request_scene_tool_actions',
+                data: {},
+            }));
+        },
+
+        openShortcutModal(section) {
+            this.$refs.shortcutModal.open(section);
+        },
+
+        editShortcut(shortcut) {
+            this.$refs.shortcutModal.openEdit(shortcut);
+        },
+
+        installShortcutTemplate(template) {
+            this.getWebsocket().send(JSON.stringify(applyShortcutTemplateMessage(template)));
         },
 
         directedRegenerateContinue(direction) {
@@ -511,7 +648,15 @@ export default {
                     this.commandActive = false;
                     this.commandName = null;
                 }
+            } else if (data.type === "config" && data.action === "scene_tool_actions") {
+                this.sceneToolActions = data.data.actions;
+                return;
             } else if (data.type === "scene_status") {
+                // the catalog is static per backend build — keep requesting on
+                // scene_status until the first response lands, then never again
+                if (!this.sceneToolActions.length) {
+                    this.requestSceneToolActions();
+                }
                 this.canAutoSave = data.data.can_auto_save;
                 this.canRegenerate = data.data.can_regenerate;
                 this.canRegenerateReason = data.data.can_regenerate_reason;

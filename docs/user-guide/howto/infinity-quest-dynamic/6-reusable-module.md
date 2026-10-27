@@ -708,7 +708,7 @@ Filter the **Modules** library for `premise` and both should be available. (albe
 
 ![Modules library showing both modules](./img/6-0026.png)
 
-Extend the scene loop so we can edit it. (Remember how we did this in [part 1](./1-scene-project.md))
+Extend the scene loop so we can edit it. (Remember how we did this in [part 1](./1-create-the-scene-project.md))
 
 Search for the `Dynamic Premise` node and add it to the scene loop.
 

@@ -24,6 +24,7 @@ Override example:
 {% endfor %}
 <|CLOSE_SECTION|>
 {% endif -%}
+
 <|SECTION:{{ summary_target.upper() }} (To be summarized)|>
 
 SUMMARIZE THIS CONTENT:
@@ -41,6 +42,9 @@ END OF CONTENT TO SUMMARIZE
 
 {% include "dynamic-instructions.jinja2" %}
 <|SECTION:TASK|>
+{% if audience_summary %}
+{% include "audience-summary-instructions.jinja2" %}
+{% endif -%}
 Summarize {{ summary_target }} into a {{output_type}}.
 
 This is a specific chapter from {{ scene.context }}.
@@ -81,6 +85,7 @@ Your response must follow this format:
 ANALYSIS: <brief analysis the cross over point from previous chapters to {{ summary_target }}. How does {{ summary_target }} start and what should be in the summary.>
 {% if scene and scene.writing_style %}WRITING STYLE: <brief understanding of the writing style requirements and the story intention. Note at least one example where you will apply it.>{% endif %}
 SUMMARY: <summary of {{ summary_target }} based on analysis.{{ max_length }}>
+
 {% include "response-length.jinja2" %}
 <|CLOSE_SECTION|>
 

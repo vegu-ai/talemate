@@ -6,6 +6,8 @@ and client extra fields (`talemate.client.base.ExtraField`).
 
 from __future__ import annotations
 
+import typing
+
 import pydantic
 import pytest
 
@@ -81,6 +83,21 @@ def test_field_rejects_unknown_type():
         ux_schema.Field(type="select", label="Legacy")
 
 
+def test_field_type_is_secret_is_exhaustive():
+    """A new FieldType must be classified as secret or not before it ships."""
+    assert set(ux_schema.FIELD_TYPE_IS_SECRET) == set(
+        typing.get_args(ux_schema.FieldType)
+    )
+
+
+def test_secret_field_types_derived_from_the_mapping():
+    assert ux_schema.SECRET_FIELD_TYPES == frozenset({"password", "unified_api_key"})
+    assert all(
+        ux_schema.FIELD_TYPE_IS_SECRET[field_type]
+        for field_type in ux_schema.SECRET_FIELD_TYPES
+    )
+
+
 def test_field_table_type_with_columns():
     field = ux_schema.Field(
         type="table",
@@ -146,7 +163,6 @@ def test_agent_action_config_defaults_preserved():
     assert config.scope == "global"
     assert config.scene_overridable is True
     assert config.quick_toggle is False
-    assert config.save_on_change is False
     assert config.choices is None
     assert config.value_migration is None
 
@@ -192,7 +208,7 @@ def test_agent_action_serializes_config_via_shared_schema():
     assert config["choices"] == [{"label": "A", "value": "a"}]
     assert config["condition"] == {"attribute": "_config.config.x", "value": True}
     # uniform-schema keys are present for the frontend renderer
-    for key in ("required", "group", "note_on_value", "save_on_change"):
+    for key in ("required", "group", "note_on_value"):
         assert key in config
 
 
@@ -275,5 +291,5 @@ def test_anthropic_thinking_mode_select_migrated_to_choices():
     meta = CLIENT_CLASSES["anthropic"].Meta().model_dump()
     thinking_mode = meta["extra_fields"]["thinking_mode"]
     assert thinking_mode["type"] == "text"
-    assert {"label": "budget", "value": "budget"} in thinking_mode["choices"]
-    assert {"label": "adaptive", "value": "adaptive"} in thinking_mode["choices"]
+    assert [c["value"] for c in thinking_mode["choices"]] == ["budget", "adaptive"]
+    assert all(c["description"] for c in thinking_mode["choices"])

@@ -1,7 +1,6 @@
-<CHARACTER_EVIDENCE_FOR_HERO>
-This is Hero's available evidence, including last-known context. It is not an omniscient account of the world. Labelled items start with their label in brackets.
+<AUTHORED_KNOWLEDGE_FOR_HERO>
+This is the authored part of Hero's available evidence. The rest of Hero's evidence follows later. Labelled items start with their label in brackets.
 
-### Authored knowledge
 Hero's description: A traveler searching for the old forest shrine.
 ---
 Hero's gender: male
@@ -22,34 +21,17 @@ Elena's occupation: Healer
 ---
 Elena - background: Trained by forest hermits from a young age.
 ---
-# Internal note for Elena - She is hiding the moonpetal pouch until she trusts him.
----
 [World entry: forest-shrine]
 An overgrown shrine stands at the north edge of the clearing.
 ---
 [Static history]
 Long ago, the forest folk sealed the shrine against travelers.
 ---
-### Hero's history, oldest first
-Mist rolls across the clearing.
----
-Elena: "You walked a long way, traveler."
----
-Hero: "I am looking for the old shrine."
----
-### Last-known snapshot
-{
-  "location": "A misty forest clearing at dusk.",
-  "characters": [],
-  "items": [],
-  "places": []
-}
-</CHARACTER_EVIDENCE_FOR_HERO>
+</AUTHORED_KNOWLEDGE_FOR_HERO>
 
-<CHARACTER_EVIDENCE_FOR_ELENA>
-This is Elena's available evidence, including last-known context. It is not an omniscient account of the world. Labelled items start with their label in brackets.
+<AUTHORED_KNOWLEDGE_FOR_ELENA>
+This is the authored part of Elena's available evidence. The rest of Elena's evidence follows later. Labelled items start with their label in brackets.
 
-### Authored knowledge
 Hero's description: A traveler searching for the old forest shrine.
 ---
 Hero's gender: male
@@ -72,14 +54,42 @@ Elena - background: Trained by forest hermits from a young age.
 ---
 Elena - herb cache: Elena hid a pouch of moonpetal under the roots of the old oak.
 ---
-# Internal note for Elena - What is Elena hiding from Hero?
-She is hiding the moonpetal pouch until she trusts him.
----
 [World entry: forest-shrine]
 An overgrown shrine stands at the north edge of the clearing.
 ---
 [Static history]
 Long ago, the forest folk sealed the shrine against travelers.
+---
+</AUTHORED_KNOWLEDGE_FOR_ELENA>
+
+<CHARACTER_EVIDENCE_FOR_HERO>
+This is Hero's available evidence, including last-known context. It is not an omniscient account of the world. Authored knowledge for Hero is listed earlier.
+
+### Authored knowledge
+# Internal note for Elena - She is hiding the moonpetal pouch until she trusts him.
+---
+### Hero's history, oldest first
+Mist rolls across the clearing.
+---
+Elena: "You walked a long way, traveler."
+---
+Hero: "I am looking for the old shrine."
+---
+### Last-known snapshot
+{
+  "location": "A misty forest clearing at dusk.",
+  "characters": [],
+  "items": [],
+  "places": []
+}
+</CHARACTER_EVIDENCE_FOR_HERO>
+
+<CHARACTER_EVIDENCE_FOR_ELENA>
+This is Elena's available evidence, including last-known context. It is not an omniscient account of the world. Authored knowledge for Elena is listed earlier.
+
+### Authored knowledge
+# Internal note for Elena - What is Elena hiding from Hero?
+She is hiding the moonpetal pouch until she trusts him.
 ---
 ### Elena's history, oldest first
 Mist rolls across the clearing.

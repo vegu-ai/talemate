@@ -9,6 +9,7 @@
     - history, scene (context only)
 #}
 
+{% set volatile_placement = volatile_context_placement() %}
 {% set character_name_ids %}
 {% if has_character_callback%}
 <|SECTION:CHARACTER NAME IDS|>
@@ -20,17 +21,12 @@ These are how the system knows the characters internally, use these when setting
 {% endif %}
 
 {% endset %}
-{% set action_instructions %}
-<|SECTION:FUNCTION CALLING INSTRUCTIONS|>
-{{ focal.render_instructions() }}
-Execute in exact order:
-{% for s in selections %}
-  - {{ s.name }}: {{ s.instructions }}
-{% endfor %}
-
+{% set focal_call_instructions %}{{ focal.render_instructions(include_functions_header=False) if volatile_placement == "after_history" else focal.render_instructions() }}{% endset %}
+{% set callback_schemas %}
 {# Render each unique callback once with its generic instructions/examples #}
 {% set rendered = {} %}
-{% for cb in callbacks_unique %}
+{% set schema_callbacks = callbacks_unique|sort(attribute="name") if volatile_placement == "after_history" else callbacks_unique %}
+{% for cb in schema_callbacks %}
 {{ cb.render(
   (ordered_instructions.get(cb.name) or "When needed, call this function with the appropriate arguments."),
   (ordered_examples.get(cb.name) or []),
@@ -38,6 +34,16 @@ Execute in exact order:
 ) }}
 {% endfor %}
 
+{% endset %}
+{% set action_instructions %}
+<|SECTION:FUNCTION CALLING INSTRUCTIONS|>
+{{ focal_call_instructions }}
+Execute in exact order:
+{% for s in selections %}
+  - {{ s.name }}: {{ s.instructions }}
+{% endfor %}
+
+{% if volatile_placement != "after_history" %}{{ callback_schemas }}{% endif %}
 {# Final execution order #}
 Follow this sequence (repeat functions as listed):
 
@@ -50,11 +56,22 @@ Any context IDs passed MUST be passed along and be fenced with backticks (`).
 <|CLOSE_SECTION|>
 
 {% endset %}
-{% set planning_context %}{% include "character-evidence-planning.jinja2" %}{% endset %}
+{% set planning_evidence = agent_action("director", "guidance_context", budget=[max_tokens // 3, 16384]|min) if character_knowledge_enabled(scene) else [] %}
+{# Authored evidence is stable and leads the prompt; per-turn evidence follows the history. #}
+{% set authored_context %}{% with evidence_part="stable" %}{% include "character-evidence-planning.jinja2" %}{% endwith %}{% endset %}
+{% set planning_context %}{% with evidence_part="current" %}{% include "character-evidence-planning.jinja2" %}{% endwith %}{% endset %}
+{% set functions_section %}
+<|SECTION:FUNCTIONS|>
+{{ callback_schemas }}
+<|CLOSE_SECTION|>
+{% endset %}
+{% if volatile_placement != "after_history" %}
+{{ authored_context }}
 {{ planning_context }}
 {{ character_name_ids }}
+{% endif %}
 {% if character_knowledge_enabled(scene) %}
-{% set history = trim_action_history(history, [0, max_tokens - count_tokens(action_instructions + character_name_ids + planning_context) - 300]|max) %}
+{% set history = trim_action_history(history, [0, max_tokens - count_tokens(action_instructions + character_name_ids + authored_context + planning_context + (callback_schemas if volatile_placement == "after_history" else "")) - 300]|max) %}
 {% endif %}
 {% for m in history %}
 {# Support both DirectorChatMessage and DirectorChatActionResultMessage objects #}
@@ -68,4 +85,11 @@ Result: {{ json(m.result) }}
 {% endif %}
 {% endfor %}
 
+{# The history only grows at the end; the selected functions change per call. #}
+{% if volatile_placement == "after_history" %}
+{{ authored_context }}
+{{ functions_section }}
+{{ character_name_ids }}
+{{ planning_context }}
+{% endif %}
 {{ action_instructions }}

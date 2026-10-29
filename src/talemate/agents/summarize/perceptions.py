@@ -9,6 +9,7 @@ from pydantic import BaseModel, StrictInt, StrictStr, ValidationError
 from weakref import WeakKeyDictionary
 
 import structlog
+from jinja2.utils import htmlsafe_json_dumps
 
 import talemate.emit.async_signals as async_signals
 from talemate.agents.base import (
@@ -1091,6 +1092,9 @@ class PerceptionMixin:
             vars={
                 "scene": scene,
                 "context": request_context,
+                # Insertion order keeps the per-call passage last, behind the
+                # stable cast and prior context, so the cached prefix survives.
+                "context_json": htmlsafe_json_dumps(request_context, indent=2),
                 "validation_error": feedback,
                 "rewrite_hidden_traces": rewrite_hidden_traces,
             },

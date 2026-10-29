@@ -8,7 +8,7 @@
 {% set volatile_placement = volatile_context_placement() %}
 
 {# CONTEXT #}
-{% set rendered_context -%}
+{% set changing_context -%}
 {% if include_scene_intent -%}
   {%- if technical -%}
   {% include "scene-intent-hybrid.jinja2" %}
@@ -22,8 +22,10 @@
 {% include "user-controlled-character.jinja2" %}
 {% endif %}
 
+{% if volatile_placement != "after_history" %}
 {% if include_character_context %}
 {% include "character-context.jinja2" %}
+{% endif %}
 {% endif %}
 
 {% if include_gamestate_context %}
@@ -35,8 +37,18 @@
 {% endif %}
 {% endset %}
 
+{% set rendered_context -%}
+{% if volatile_placement == "after_history" %}
+{% if include_character_context %}
+{% include "character-context.jinja2" %}
+{% endif %}
+{% endif %}
+
+{% if volatile_placement != "after_history" %}{{ changing_context }}{% endif %}
+{% endset %}
 {# VOLATILE CONTEXT #}
 {% set volatile_context_text %}
+{% if volatile_placement == "after_history" %}{{ changing_context }}{% endif %}
 {% if include_memory_context %}
 {% with agent=agent, memory_prompt=memory_prompt, technical=technical %}
 {% include "memory-context.jinja2" %}
@@ -57,12 +69,14 @@
 {% endset %}
 
 {# FOCAL INSTRUCTIONS #}
+{% set focal_call_instructions %}{% if focal %}{{ focal.render_instructions(include_functions_header=False) if volatile_placement == "after_history" else focal.render_instructions() }}{% endif %}{% endset %}
 {% set focal_instructions_text -%}
 {% if focal %}
-<|SECTION:FUNCTION CALLING INSTRUCTIONS|>
-{{ focal.render_instructions() }}
+<|SECTION:{{ "FUNCTIONS" if volatile_placement == "after_history" else "FUNCTION CALLING INSTRUCTIONS" }}|>
+{% if volatile_placement != "after_history" %}{{ focal_call_instructions }}{% endif %}
 
-{% for cb in focal.callbacks.values() %}
+{% set schema_callbacks = focal.callbacks.values()|sort(attribute="name") if volatile_placement == "after_history" else focal.callbacks.values() %}
+{% for cb in schema_callbacks %}
 {{ cb.render(
   cb.instructions,
   cb.examples,
@@ -76,7 +90,7 @@
 {# SCENE CONTEXT #}
 {% set scene_context_text -%}
 {% if include_scene_context %}
-{% set budget = max_tokens-reserved_tokens-count_tokens(rendered_context + instructions_text + focal_instructions_text)-count_tokens(volatile_context_text) %}
+{% set budget = max_tokens-reserved_tokens-count_tokens(rendered_context + instructions_text + focal_instructions_text + (focal_call_instructions if volatile_placement == "after_history" else ""))-count_tokens(volatile_context_text) %}
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 {% endif %}
 {% endset %}
@@ -87,11 +101,17 @@
 {{ decensor_text }}
 <|CLOSE_SECTION|>
 {% endif %}
+{% if volatile_placement == "after_history" %}{{ focal_instructions_text }}{% endif %}
 {{ rendered_context }}
 {% if volatile_placement != "after_history" %}{{ volatile_context_text }}{% endif %}
 {{ scene_context_text }}
 {% if volatile_placement == "after_history" %}{{ volatile_context_text }}{% endif %}
-{{ focal_instructions_text }}
+{% if volatile_placement != "after_history" %}{{ focal_instructions_text }}{% endif %}
+{% if focal and volatile_placement == "after_history" %}
+<|SECTION:FUNCTION CALLING INSTRUCTIONS|>
+{{ focal_call_instructions }}
+<|CLOSE_SECTION|>
+{% endif %}
 {{ instructions_text }}
 
 {# PREFILL PROMPT #}

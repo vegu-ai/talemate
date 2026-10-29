@@ -6,9 +6,13 @@ Override example:
   {{ set_anchor_extractor("decision", "<MY_TAG>", "</MY_TAG>", tracked_tags=["ANALYSIS", "MY_TAG"]) }}
   {{ set_as_is_extractor("decision") }}
 -#}
+{% set volatile_placement = volatile_context_placement() %}
+{# CHARACTER EVIDENCE: authored entries are stable, everything else changes per turn #}
+{% set planning_evidence = agent_action("director", "guidance_context", budget=[max_tokens // 3, 16384]|min) if character_knowledge_enabled(scene) else [] %}
+{% set authored_evidence %}{% with evidence_part="stable" %}{% include "character-evidence-planning.jinja2" %}{% endwith %}{% endset %}
+{% set current_evidence %}{% with evidence_part="current" %}{% include "character-evidence-planning.jinja2" %}{% endwith %}{% endset %}
 {# RENDERED CONTEXT #}
 {% set rendered_context -%}
-{% include "character-evidence-planning.jinja2" %}
 <|SECTION:Scene Direction Context|>
 You are the Director operating in autonomous mode for a dynamic storytelling/roleplaying text-based experience provided through a system called Talemate.
 
@@ -33,11 +37,14 @@ These context IDs are currently pinned to all context.
 
 {% endset %}
 
-{# DIRECTION INSTRUCTIONS #}
+{# Capture once: identical content and budget in both layouts. #}
+{% set rules_text %}{% include "scene-direction-instructions.jinja2" %}{% endset %}
+{% set context_ids_text %}{% include "useful-context-ids.jinja2" %}{% endset %}
+{% set custom_instructions_text %}{% include "director-instructions.jinja2" %}{% endset %}
 {% set instructions_text %}
-{% include "useful-context-ids.jinja2" %}
-{% include "scene-direction-instructions.jinja2" %}
-{% include "director-instructions.jinja2" %}
+{{ context_ids_text }}
+{{ rules_text }}
+{{ custom_instructions_text }}
 {% endset %}
 
 {# GAMESTATE CONTEXT #}
@@ -46,7 +53,7 @@ These context IDs are currently pinned to all context.
 {% endset %}
 
 {# Compute reserved from context + instructions #}
-{% set reserved_tokens = count_tokens(rendered_context + instructions_text + gamestate_context) %}
+{% set reserved_tokens = count_tokens(authored_evidence + current_evidence + rendered_context + instructions_text + gamestate_context) %}
 {% set _ = budgets.set_reserved(reserved_tokens) %}
 
 {# SCENE CONTEXT #}
@@ -58,11 +65,9 @@ These context IDs are currently pinned to all context.
 {% set trimmed_history = direction_history_trim(history, budgets.direction_history) %}
 
 {# RENDER PROMPT #}
-{{ rendered_context }}
-{{ gamestate_context }}
-{{ scene_context_text }}
-{{ instructions_text }}
-
+{# Cached layout: stable rules and context first, then the direction history and
+   the scene (both only grow at the end), then everything that changes per turn. #}
+{% set direction_history_section %}
 <|SECTION:Direction History - Your Previous Decisions This Session|>
 {% if trimmed_history %}
 {% for m in trimmed_history %}
@@ -87,6 +92,28 @@ Result: {{ json(m.result) }}
 No previous decisions in this session yet. This is your first turn.
 {% endif %}
 <|CLOSE_SECTION|>
+{% endset %}
+{% if volatile_placement == "after_history" %}
+{{ rules_text }}
+{{ context_ids_text }}
+{# The scene only grows at its tail; character knowledge, intent and pins
+   change every few turns and would cost the whole scene behind them. #}
+{{ scene_context_text }}
+{{ rendered_context }}
+{{ authored_evidence }}
+{{ direction_history_section }}
+{{ current_evidence }}
+{{ gamestate_context }}
+{{ custom_instructions_text }}
+{% else %}
+{{ authored_evidence }}
+{{ current_evidence }}
+{{ rendered_context }}
+{{ gamestate_context }}
+{{ scene_context_text }}
+{{ instructions_text }}
+{{ direction_history_section }}
+{% endif %}
 
 REMINDER: You are the Director taking your autonomous turn. Analyze the scene state and decide what action(s) to take to progress or enhance the experience. If your last action in the history was `yield_to_user`, this means the user has already responded or the system has prompted you to take another turn—do NOT yield to the user again immediately; instead, take actions to progress the story or describe the consequences of the user's action.{% include "scene-direction-turn-balance.jinja2" %}{% if trimmed_history and trimmed_history[-1].type == 'action_result' %}
 Your last action returned a result - evaluate it and decide your next move.{% endif %}

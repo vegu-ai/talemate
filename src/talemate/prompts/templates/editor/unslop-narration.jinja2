@@ -102,6 +102,8 @@ I have identified no issues, i will mark with: <NO_FIX_REQUIRED/>
 
 <NO_FIX_REQUIRED/>
 
+{% set volatile_placement = volatile_context_placement() %}
+{% set revision_examples %}
 {% if repetition %}---
 
 {% if repetition_handling == "rewrite" %}
@@ -157,6 +159,9 @@ A figure crossed the far side, hood drawn, footprints filling almost as fast as 
 {% endif -%}
 ---
 
+{% endset %}
+{% if volatile_placement != "after_history" %}{{ revision_examples }}{% endif %}
+
 {# SCENE CONTEXT #}
 {% set scene_context_text %}
 {% set history = scene.context_history(
@@ -183,6 +188,7 @@ A figure crossed the far side, hood drawn, footprints filling almost as fast as 
 {# END SCENE ANALYSIS #}
 
 {{ scene_context_text }}
+{% if volatile_placement == "after_history" %}{{ revision_examples }}{% endif %}
 
 {% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
 

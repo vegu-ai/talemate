@@ -1,3 +1,11 @@
+## Scene
+
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
 ## Characters
 
 ### Hero
@@ -21,14 +29,6 @@ A wandering healer with knowledge of ancient herbs.
 Content Classification: Fantasy adventure story
 
 Narrative Perspective: Third person limited, past tense.
-
-## Scene
-
-Elena: Hello there, traveler.
-
-The sun filters through the leaves above.
-
-Marcus: What brings you to these woods?
 
 ## Task
 

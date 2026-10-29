@@ -189,6 +189,11 @@ He leaned over her shoulder. "That started after the firmware update. Want me to
 "Not yet. Let me check the secondary loop first."
 </FIX>
 
+## Scene
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
 ---
 
 <REVIEW>
@@ -244,11 +249,6 @@ I have identified no issues, i will mark with: <NO_FIX_REQUIRED/>
 <NO_FIX_REQUIRED/>
 
 ---
-
-## Scene
-Elena: Hello there, traveler.
-The sun filters through the leaves above.
-Marcus: What brings you to these woods?
 
 ## Character direction
 Elena: Hello there, traveler.

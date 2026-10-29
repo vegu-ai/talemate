@@ -7,11 +7,18 @@ Override example:
   {{ set_anchor_extractor("analysis", "<MY_TAG>", "</MY_TAG>") }}
   {{ set_as_is_extractor("analysis") }}
 -#}
-{% set planning_context %}{% include "character-evidence-planning.jinja2" %}{% endset %}
-{{ planning_context }}
-{% with max_tokens=max_tokens - count_tokens(planning_context) %}
+{#- Authored evidence is stable across turns and leads the prompt; the per-turn
+    evidence (notes, history window, snapshot) follows the scene history so the
+    cached prefix survives it. -#}
+{% set planning_evidence = agent_action("director", "guidance_context", budget=[max_tokens // 3, 16384]|min) if character_knowledge_enabled(scene) else [] %}
+{% set authored_context %}{% with evidence_part="stable" %}{% include "character-evidence-planning.jinja2" %}{% endwith %}{% endset %}
+{% set current_context %}{% with evidence_part="current" %}{% include "character-evidence-planning.jinja2" %}{% endwith %}{% endset %}
+{% set volatile_placement = volatile_context_placement() %}
+{% if volatile_placement != "after_history" %}{{ authored_context }}{% endif %}
+{% with max_tokens=max_tokens - count_tokens(authored_context) - count_tokens(current_context), history_first=(volatile_placement == "after_history") %}
 {% include "scene-context.jinja2" %}
 {% endwith %}
+{{ current_context }}
 {% include "world-state-snapshot.jinja2" %}
 {% include "scene-intent.jinja2" %}
 <|SECTION:TASK|>
@@ -58,6 +65,10 @@ Provide your response in the following format:
 <ANALYSIS>... your analysis ...</ANALYSIS>
 {% if deep_analysis %}
 <INVESTIGATE>... describe what specific information from long-term memory would be useful to retrieve to deepen the understanding of this moment. Be specific about what facts, events, or character history would be most valuable. ...</INVESTIGATE>
+{% endif %}
+{% if combined_guidance_instructions %}
+{% include "dynamic-instructions.jinja2" %}
+{{ combined_guidance_instructions }}
 {% endif %}
 <|CLOSE_SECTION|>
 {{ set_prepared_response("<ANALYSIS>", fallback="") }}

@@ -60,6 +60,11 @@ I have identified no issues, i will mark with: <NO_FIX_REQUIRED/>
 
 <NO_FIX_REQUIRED/>
 
+## Scene
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
 ---
 
 <REVIEW>
@@ -87,11 +92,6 @@ A figure crossed the far side, hood drawn, footprints filling almost as fast as 
 </FIX>
 
 ---
-
-## Scene
-Elena: Hello there, traveler.
-The sun filters through the leaves above.
-Marcus: What brings you to these woods?
 
 ## Intention of this story
 The overarching intention of this story. Use it to guide your decisions in the scene.

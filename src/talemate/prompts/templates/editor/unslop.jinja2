@@ -224,6 +224,8 @@ He leaned over her shoulder. "That started after the firmware update. Want me to
 "Not yet. Let me check the secondary loop first."
 </FIX>
 
+{% set volatile_placement = volatile_context_placement() %}
+{% set revision_examples %}
 {% if repetition %}---
 
 {% if repetition_handling == "rewrite" %}
@@ -342,6 +344,9 @@ I have identified no issues, i will mark with: <NO_FIX_REQUIRED/>
 
 ---
 
+{% endset %}
+{% if volatile_placement != "after_history" %}{{ revision_examples }}{% endif %}
+
 {# SCENE CONTEXT #}
 {% set scene_context_text %}
 {% set history = revision_context_history(character,
@@ -368,6 +373,7 @@ I have identified no issues, i will mark with: <NO_FIX_REQUIRED/>
 {# END SCENE ANALYSIS #}
 
 {{ scene_context_text }}
+{% if volatile_placement == "after_history" %}{{ revision_examples }}{% endif %}
 
 {% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
 

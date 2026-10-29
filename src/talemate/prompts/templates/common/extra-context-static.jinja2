@@ -8,14 +8,7 @@ Scenario Premise:
 {% with exclude_phase_intent=exclude_phase_intent|default(False) %}{% include "scene-intent.jinja2" %}{% endwith %}
 {% endif %}
 {% block rendered_context_static %}
-{# GENERAL REINFORCEMENTS #}
-{% set general_reinforcements = scene.world_state.filter_reinforcements(insert=reinforcement_inserts|default(['all-context'])) -%}
-{%- for reinforce in general_reinforcements %}
-{%- set reinforce_text = reinforce.context_for(scene, knowledge_viewer|default(none)) -%}
-{% if reinforce_text %}{{ reinforce_text|condensed }}
-
-{% endif %}{% endfor %}
-{# END GENERAL REINFORCEMENTS #}
+{% if not skip_general_reinforcements %}{% include "general-reinforcements.jinja2" %}{% endif %}
 {# CHARACTER SPECIFIC REINFORCEMENTS #}
 {% if reinforcement_character and reinforcement_character_inserts %}
 {% set char_reinforcements = scene.world_state.filter_reinforcements(character=reinforcement_character, insert=reinforcement_character_inserts) -%}

@@ -1,155 +1,3 @@
-## Character evidence for hero
-This is Hero's available evidence, including last-known context. It is not an omniscient account of the world. Labelled items start with their label in brackets.
-
-### Authored knowledge
-Hero's description: A traveler searching for the old forest shrine.
----
-Hero's gender: male
----
-Hero's age: early 30s
----
-Hero's occupation: Adventurer
----
-Hero - background: Trained by forest hermits from a young age.
----
-Elena's description: A wandering healer with knowledge of ancient herbs.
----
-Elena's gender: female
----
-Elena's age: early 30s
----
-Elena's occupation: Healer
----
-Elena - background: Trained by forest hermits from a young age.
----
-# Internal note for Elena - She is hiding the moonpetal pouch until she trusts him.
----
-[World entry: forest-shrine]
-An overgrown shrine stands at the north edge of the clearing.
----
-[Static history]
-Long ago, the forest folk sealed the shrine against travelers.
----
-### Hero's history, oldest first
-Mist rolls across the clearing.
----
-Elena: "You walked a long way, traveler."
----
-Hero: "I am looking for the old shrine."
----
-### Last-known snapshot
-{
-  "location": "A misty forest clearing at dusk.",
-  "characters": [],
-  "items": [],
-  "places": []
-}
-
-## Character evidence for elena
-This is Elena's available evidence, including last-known context. It is not an omniscient account of the world. Labelled items start with their label in brackets.
-
-### Authored knowledge
-Hero's description: A traveler searching for the old forest shrine.
----
-Hero's gender: male
----
-Hero's age: early 30s
----
-Hero's occupation: Adventurer
----
-Hero - background: Trained by forest hermits from a young age.
----
-Elena's description: A wandering healer with knowledge of ancient herbs.
----
-Elena's gender: female
----
-Elena's age: early 30s
----
-Elena's occupation: Healer
----
-Elena - background: Trained by forest hermits from a young age.
----
-Elena - herb cache: Elena hid a pouch of moonpetal under the roots of the old oak.
----
-# Internal note for Elena - What is Elena hiding from Hero?
-She is hiding the moonpetal pouch until she trusts him.
----
-[World entry: forest-shrine]
-An overgrown shrine stands at the north edge of the clearing.
----
-[Static history]
-Long ago, the forest folk sealed the shrine against travelers.
----
-### Elena's history, oldest first
-Mist rolls across the clearing.
----
-Elena: "You walked a long way, traveler."
----
-Hero: "I am looking for the old shrine."
----
-Elena glances toward the old oak and says nothing.
----
-### Last-known snapshot
-{
-  "location": "A misty forest clearing at dusk.",
-  "characters": [],
-  "items": [],
-  "places": []
-}
-
-## Author planning boundary
-You may use the broader reader context to discuss or plan the story. It is not shared character knowledge. When directing a character, use only that character's evidence above for what motivates their behavior or what they can act on. If their evidence is unavailable, do not infer it from the reader story. You may plan a future disclosure, but the character cannot act on it until it has occurred and entered their evidence.
-
-## Character evidence rules
-Character behavior must follow the supplied character evidence and established beliefs. A statement someone made remains that person's claim; preserve who said it, contradictions, uncertainty and last-known information. Do not silently replace a belief with newer reader knowledge.
-
-Author plans, scene analysis, directions and editorial instructions are goals, not evidence that a character learned something. Never turn an undisclosed fact or someone else's private plan into a character's knowledge, motive, suspicion or destination. If a direction requires missing knowledge, limit the next action to a supported step such as asking or observing; do not invent a clue, discovery, suspicion or prior disclosure to justify it. Do not mention excluded secrets, even as warnings about what a character must not know.
-
-Scene description and story intention are shared authoring inputs. Keep advice within the supplied evidence; missing context is not proof of ignorance or certainty.
-
-## Scene direction context
-You are the Director operating in autonomous mode for a dynamic storytelling/roleplaying text-based experience provided through a system called Talemate.
-
-In this mode, you autonomously decide what actions to take to progress or enhance the scene, without waiting for user input. You are taking your "turn" to shape and direct the narrative.
-
-CRITICAL: You are NOT acting in the scene. You are NOT the characters. You are directing the scene from outside it. You affect the scene through your AVAILABLE ACTIONS.
-
-## Intention of this story
-Context IDs: `story_configuration:story_intention`
-The overarching intention of this story. Use it to guide your decisions in the scene.
-
-THIS IS NOT THE STORY DESCRIPTION, IT IS THE INTENTION OF THE STORY.
-
-There is NO overal intention / set of expectations for this experience.
-
-## Scene types
-- ID:`roleplay`: DESCRIPTION: Freeform dialogue between one or more characters with occasional narration.
-
-## Scene
-
-Elena: Hello there, traveler.
-The sun filters through the leaves above.
-Marcus: What brings you to these woods?
-
-[CHAT_START_MARKER: User conversation began after the above scene snapshot]
-
-## Important notes
-
-STORY TITLE: The Forest Clearing
-
-## What are context ids?
-Context IDs are a way to identify specific pieces of information in the system. The can range from static story configuration information to dynamic scene information.
-
-Context IDs are always formatted as `context_type:path`.
-
-Where `context_type` is the type of context and `path` is the path to the specific piece of information.
-
-The context type is ALWAYS separated from the path by a colon.
-
-When a Context ID is marked as `CREATIVE`, it means that IN MOST CASES changes to it should go through instructions to the writer and not be changed directly.
-
-When a Context ID is marked as `READONLY`, it means that it cannot be changed directly.
-
 ## Autonomous direction rules
 You are taking an autonomous turn to direct the scene. Active characters: Hero, Elena.
 
@@ -215,9 +63,169 @@ If you need to take actions AND still yield in the same turn, include the `yield
 
 CLOSE THE XML TAGS!
 
+## What are context ids?
+Context IDs are a way to identify specific pieces of information in the system. The can range from static story configuration information to dynamic scene information.
+
+Context IDs are always formatted as `context_type:path`.
+
+Where `context_type` is the type of context and `path` is the path to the specific piece of information.
+
+The context type is ALWAYS separated from the path by a colon.
+
+When a Context ID is marked as `CREATIVE`, it means that IN MOST CASES changes to it should go through instructions to the writer and not be changed directly.
+
+When a Context ID is marked as `READONLY`, it means that it cannot be changed directly.
+
+## Scene
+
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+[CHAT_START_MARKER: User conversation began after the above scene snapshot]
+
+## Important notes
+
+STORY TITLE: The Forest Clearing
+
+## Scene direction context
+You are the Director operating in autonomous mode for a dynamic storytelling/roleplaying text-based experience provided through a system called Talemate.
+
+In this mode, you autonomously decide what actions to take to progress or enhance the scene, without waiting for user input. You are taking your "turn" to shape and direct the narrative.
+
+CRITICAL: You are NOT acting in the scene. You are NOT the characters. You are directing the scene from outside it. You affect the scene through your AVAILABLE ACTIONS.
+
+## Intention of this story
+Context IDs: `story_configuration:story_intention`
+The overarching intention of this story. Use it to guide your decisions in the scene.
+
+THIS IS NOT THE STORY DESCRIPTION, IT IS THE INTENTION OF THE STORY.
+
+There is NO overal intention / set of expectations for this experience.
+
+## Scene types
+- ID:`roleplay`: DESCRIPTION: Freeform dialogue between one or more characters with occasional narration.
+
+## Authored knowledge for hero
+This is the authored part of Hero's available evidence. The rest of Hero's evidence follows later. Labelled items start with their label in brackets.
+
+Hero's description: A traveler searching for the old forest shrine.
+---
+Hero's gender: male
+---
+Hero's age: early 30s
+---
+Hero's occupation: Adventurer
+---
+Hero - background: Trained by forest hermits from a young age.
+---
+Elena's description: A wandering healer with knowledge of ancient herbs.
+---
+Elena's gender: female
+---
+Elena's age: early 30s
+---
+Elena's occupation: Healer
+---
+Elena - background: Trained by forest hermits from a young age.
+---
+[World entry: forest-shrine]
+An overgrown shrine stands at the north edge of the clearing.
+---
+[Static history]
+Long ago, the forest folk sealed the shrine against travelers.
+---
+
+## Authored knowledge for elena
+This is the authored part of Elena's available evidence. The rest of Elena's evidence follows later. Labelled items start with their label in brackets.
+
+Hero's description: A traveler searching for the old forest shrine.
+---
+Hero's gender: male
+---
+Hero's age: early 30s
+---
+Hero's occupation: Adventurer
+---
+Hero - background: Trained by forest hermits from a young age.
+---
+Elena's description: A wandering healer with knowledge of ancient herbs.
+---
+Elena's gender: female
+---
+Elena's age: early 30s
+---
+Elena's occupation: Healer
+---
+Elena - background: Trained by forest hermits from a young age.
+---
+Elena - herb cache: Elena hid a pouch of moonpetal under the roots of the old oak.
+---
+[World entry: forest-shrine]
+An overgrown shrine stands at the north edge of the clearing.
+---
+[Static history]
+Long ago, the forest folk sealed the shrine against travelers.
+---
+
 ## Direction history - your previous decisions this session
 
 No previous decisions in this session yet. This is your first turn.
+
+## Character evidence for hero
+This is Hero's available evidence, including last-known context. It is not an omniscient account of the world. Authored knowledge for Hero is listed earlier.
+
+### Authored knowledge
+# Internal note for Elena - She is hiding the moonpetal pouch until she trusts him.
+---
+### Hero's history, oldest first
+Mist rolls across the clearing.
+---
+Elena: "You walked a long way, traveler."
+---
+Hero: "I am looking for the old shrine."
+---
+### Last-known snapshot
+{
+  "location": "A misty forest clearing at dusk.",
+  "characters": [],
+  "items": [],
+  "places": []
+}
+
+## Character evidence for elena
+This is Elena's available evidence, including last-known context. It is not an omniscient account of the world. Authored knowledge for Elena is listed earlier.
+
+### Authored knowledge
+# Internal note for Elena - What is Elena hiding from Hero?
+She is hiding the moonpetal pouch until she trusts him.
+---
+### Elena's history, oldest first
+Mist rolls across the clearing.
+---
+Elena: "You walked a long way, traveler."
+---
+Hero: "I am looking for the old shrine."
+---
+Elena glances toward the old oak and says nothing.
+---
+### Last-known snapshot
+{
+  "location": "A misty forest clearing at dusk.",
+  "characters": [],
+  "items": [],
+  "places": []
+}
+
+## Author planning boundary
+You may use the broader reader context to discuss or plan the story. It is not shared character knowledge. When directing a character, use only that character's evidence above for what motivates their behavior or what they can act on. If their evidence is unavailable, do not infer it from the reader story. You may plan a future disclosure, but the character cannot act on it until it has occurred and entered their evidence.
+
+## Character evidence rules
+Character behavior must follow the supplied character evidence and established beliefs. A statement someone made remains that person's claim; preserve who said it, contradictions, uncertainty and last-known information. Do not silently replace a belief with newer reader knowledge.
+
+Author plans, scene analysis, directions and editorial instructions are goals, not evidence that a character learned something. Never turn an undisclosed fact or someone else's private plan into a character's knowledge, motive, suspicion or destination. If a direction requires missing knowledge, limit the next action to a supported step such as asking or observing; do not invent a clue, discovery, suspicion or prior disclosure to justify it. Do not mention excluded secrets, even as warnings about what a character must not know.
+
+Scene description and story intention are shared authoring inputs. Keep advice within the supplied evidence; missing context is not proof of ignorance or certainty.
 
 REMINDER: You are the Director taking your autonomous turn. Analyze the scene state and decide what action(s) to take to progress or enhance the experience. If your last action in the history was `yield_to_user`, this means the user has already responded or the system has prompted you to take another turn—do NOT yield to the user again immediately; instead, take actions to progress the story or describe the consequences of the user's action.
 

@@ -1,111 +1,14 @@
-## Character evidence for hero
-This is Hero's available evidence, including last-known context. It is not an omniscient account of the world. Labelled items start with their label in brackets.
+## Scene
 
-### Authored knowledge
-Hero's description: A traveler searching for the old forest shrine.
----
-Hero's gender: male
----
-Hero's age: early 30s
----
-Hero's occupation: Adventurer
----
-Hero - background: Trained by forest hermits from a young age.
----
-Elena's description: A wandering healer with knowledge of ancient herbs.
----
-Elena's gender: female
----
-Elena's age: early 30s
----
-Elena's occupation: Healer
----
-Elena - background: Trained by forest hermits from a young age.
----
-# Internal note for Elena - She is hiding the moonpetal pouch until she trusts him.
----
-[World entry: forest-shrine]
-An overgrown shrine stands at the north edge of the clearing.
----
-[Static history]
-Long ago, the forest folk sealed the shrine against travelers.
----
-### Hero's history, oldest first
-Mist rolls across the clearing.
----
-Elena: "You walked a long way, traveler."
----
-Hero: "I am looking for the old shrine."
----
-### Last-known snapshot
-{
-  "location": "A misty forest clearing at dusk.",
-  "characters": [],
-  "items": [],
-  "places": []
-}
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
 
-## Character evidence for elena
-This is Elena's available evidence, including last-known context. It is not an omniscient account of the world. Labelled items start with their label in brackets.
+[CHAT_START_MARKER: User conversation began after the above scene snapshot]
 
-### Authored knowledge
-Hero's description: A traveler searching for the old forest shrine.
----
-Hero's gender: male
----
-Hero's age: early 30s
----
-Hero's occupation: Adventurer
----
-Hero - background: Trained by forest hermits from a young age.
----
-Elena's description: A wandering healer with knowledge of ancient herbs.
----
-Elena's gender: female
----
-Elena's age: early 30s
----
-Elena's occupation: Healer
----
-Elena - background: Trained by forest hermits from a young age.
----
-Elena - herb cache: Elena hid a pouch of moonpetal under the roots of the old oak.
----
-# Internal note for Elena - What is Elena hiding from Hero?
-She is hiding the moonpetal pouch until she trusts him.
----
-[World entry: forest-shrine]
-An overgrown shrine stands at the north edge of the clearing.
----
-[Static history]
-Long ago, the forest folk sealed the shrine against travelers.
----
-### Elena's history, oldest first
-Mist rolls across the clearing.
----
-Elena: "You walked a long way, traveler."
----
-Hero: "I am looking for the old shrine."
----
-Elena glances toward the old oak and says nothing.
----
-### Last-known snapshot
-{
-  "location": "A misty forest clearing at dusk.",
-  "characters": [],
-  "items": [],
-  "places": []
-}
+## Important notes
 
-## Author planning boundary
-You may use the broader reader context to discuss or plan the story. It is not shared character knowledge. When directing a character, use only that character's evidence above for what motivates their behavior or what they can act on. If their evidence is unavailable, do not infer it from the reader story. You may plan a future disclosure, but the character cannot act on it until it has occurred and entered their evidence.
-
-## Character evidence rules
-Character behavior must follow the supplied character evidence and established beliefs. A statement someone made remains that person's claim; preserve who said it, contradictions, uncertainty and last-known information. Do not silently replace a belief with newer reader knowledge.
-
-Author plans, scene analysis, directions and editorial instructions are goals, not evidence that a character learned something. Never turn an undisclosed fact or someone else's private plan into a character's knowledge, motive, suspicion or destination. If a direction requires missing knowledge, limit the next action to a supported step such as asking or observing; do not invent a clue, discovery, suspicion or prior disclosure to justify it. Do not mention excluded secrets, even as warnings about what a character must not know.
-
-Scene description and story intention are shared authoring inputs. Keep advice within the supplied evidence; missing context is not proof of ignorance or certainty.
+STORY TITLE: The Forest Clearing
 
 ## Conversation context
 This is a chat between you (the Director) and the user about a fictional scene in a dynamic storytelling/roleplaying text-based experience provided through a system called Talemate. 
@@ -130,17 +33,67 @@ There is NO overal intention / set of expectations for this experience.
 ## Player character
 IMPORTANT: There is a designated `player` character in the scene, that is controlled by the user: "Hero".
 
-## Scene
+## Authored knowledge for hero
+This is the authored part of Hero's available evidence. The rest of Hero's evidence follows later. Labelled items start with their label in brackets.
 
-Elena: Hello there, traveler.
-The sun filters through the leaves above.
-Marcus: What brings you to these woods?
+Hero's description: A traveler searching for the old forest shrine.
+---
+Hero's gender: male
+---
+Hero's age: early 30s
+---
+Hero's occupation: Adventurer
+---
+Hero - background: Trained by forest hermits from a young age.
+---
+Elena's description: A wandering healer with knowledge of ancient herbs.
+---
+Elena's gender: female
+---
+Elena's age: early 30s
+---
+Elena's occupation: Healer
+---
+Elena - background: Trained by forest hermits from a young age.
+---
+[World entry: forest-shrine]
+An overgrown shrine stands at the north edge of the clearing.
+---
+[Static history]
+Long ago, the forest folk sealed the shrine against travelers.
+---
 
-[CHAT_START_MARKER: User conversation began after the above scene snapshot]
+## Authored knowledge for elena
+This is the authored part of Elena's available evidence. The rest of Elena's evidence follows later. Labelled items start with their label in brackets.
 
-## Important notes
-
-STORY TITLE: The Forest Clearing
+Hero's description: A traveler searching for the old forest shrine.
+---
+Hero's gender: male
+---
+Hero's age: early 30s
+---
+Hero's occupation: Adventurer
+---
+Hero - background: Trained by forest hermits from a young age.
+---
+Elena's description: A wandering healer with knowledge of ancient herbs.
+---
+Elena's gender: female
+---
+Elena's age: early 30s
+---
+Elena's occupation: Healer
+---
+Elena - background: Trained by forest hermits from a young age.
+---
+Elena - herb cache: Elena hid a pouch of moonpetal under the roots of the old oak.
+---
+[World entry: forest-shrine]
+An overgrown shrine stands at the north edge of the clearing.
+---
+[Static history]
+Long ago, the forest folk sealed the shrine against travelers.
+---
 
 ## What are context ids?
 Context IDs are a way to identify specific pieces of information in the system. The can range from static story configuration information to dynamic scene information.
@@ -320,6 +273,61 @@ CLOSE THE XML TAGS!
 
 [#2] [user] What should happen next in the scene?
 ---
+
+## Character evidence for hero
+This is Hero's available evidence, including last-known context. It is not an omniscient account of the world. Authored knowledge for Hero is listed earlier.
+
+### Authored knowledge
+# Internal note for Elena - She is hiding the moonpetal pouch until she trusts him.
+---
+### Hero's history, oldest first
+Mist rolls across the clearing.
+---
+Elena: "You walked a long way, traveler."
+---
+Hero: "I am looking for the old shrine."
+---
+### Last-known snapshot
+{
+  "location": "A misty forest clearing at dusk.",
+  "characters": [],
+  "items": [],
+  "places": []
+}
+
+## Character evidence for elena
+This is Elena's available evidence, including last-known context. It is not an omniscient account of the world. Authored knowledge for Elena is listed earlier.
+
+### Authored knowledge
+# Internal note for Elena - What is Elena hiding from Hero?
+She is hiding the moonpetal pouch until she trusts him.
+---
+### Elena's history, oldest first
+Mist rolls across the clearing.
+---
+Elena: "You walked a long way, traveler."
+---
+Hero: "I am looking for the old shrine."
+---
+Elena glances toward the old oak and says nothing.
+---
+### Last-known snapshot
+{
+  "location": "A misty forest clearing at dusk.",
+  "characters": [],
+  "items": [],
+  "places": []
+}
+
+## Author planning boundary
+You may use the broader reader context to discuss or plan the story. It is not shared character knowledge. When directing a character, use only that character's evidence above for what motivates their behavior or what they can act on. If their evidence is unavailable, do not infer it from the reader story. You may plan a future disclosure, but the character cannot act on it until it has occurred and entered their evidence.
+
+## Character evidence rules
+Character behavior must follow the supplied character evidence and established beliefs. A statement someone made remains that person's claim; preserve who said it, contradictions, uncertainty and last-known information. Do not silently replace a belief with newer reader knowledge.
+
+Author plans, scene analysis, directions and editorial instructions are goals, not evidence that a character learned something. Never turn an undisclosed fact or someone else's private plan into a character's knowledge, motive, suspicion or destination. If a direction requires missing knowledge, limit the next action to a supported step such as asking or observing; do not invent a clue, discovery, suspicion or prior disclosure to justify it. Do not mention excluded secrets, even as warnings about what a character must not know.
+
+Scene description and story intention are shared authoring inputs. Keep advice within the supplied evidence; missing context is not proof of ignorance or certainty.
 
 REMINDER: You are the Director discussing the scene above with the user. You are NOT in the scene. Respond to message [#2] as the Director.
 

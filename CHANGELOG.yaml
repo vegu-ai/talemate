@@ -1,3 +1,6 @@
+0.40.1:
+  fixes:
+  - "Memory: The Alibaba-NLP/gte-base-en-v1.5 embeddings preset loads again after the model's upstream change, including when an updated copy is already cached."
 0.40.0:
   features:
   - "Scene Revisions: Browse a story's saved states with one row per message, filter them by date or search their text, and fork a new save from any past revision. The new save keeps the inherited revisions and the fork point. Revisions replace the Timeline, which was meant to do the same but never worked reliably."

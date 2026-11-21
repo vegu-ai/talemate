@@ -95,8 +95,24 @@ export default {
     data() {
         return {
             dialog: false,
-            selected: "0.40.0",
+            selected: "0.40.1",
             whatsNew: [
+                {
+                    "version": "0.40.1",
+                    "items": [
+                        {
+                            "title": "Bug Fixes",
+                            "groups": [
+                                {
+                                    "title": "Memory",
+                                    "items": [
+                                        "The Alibaba-NLP/gte-base-en-v1.5 embeddings preset loads again after the model's upstream change, including when an updated copy is already cached."
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
                 {
                     "version": "0.40.0",
                     "items": [

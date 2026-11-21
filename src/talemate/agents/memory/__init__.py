@@ -20,6 +20,10 @@ from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.memory import audience_where
 from talemate.agents.memory.audiences import AudienceMemoryMixin
+from talemate.agents.memory.embedding_compat import (
+    model_revision_kwargs,
+    restore_gte_buffers,
+)
 import talemate.util as util
 from talemate.client import ClientBase
 import talemate.instance as instance
@@ -1523,9 +1527,8 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 model_name=model_name,
                 trust_remote_code=self.trust_remote_code,
                 device=device,
+                **model_revision_kwargs(model_name),
             )
-            from .embedding_compat import restore_gte_buffers
-
             restore_gte_buffers(ef, model_name)
         except ValueError as e:
             if "`trust_remote_code=True` to remove this error" in str(e):

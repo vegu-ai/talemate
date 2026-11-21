@@ -1,4 +1,14 @@
 GTE_MODEL = "Alibaba-NLP/gte-base-en-v1.5"
+# Last revision before the model switched to native Transformers `gte`, which
+# the pinned transformers release cannot load.
+GTE_REVISION = "a829fd0e060bb84554da0dfd354d0de0f7712b7f"
+
+MODEL_REVISIONS = {GTE_MODEL: GTE_REVISION}
+
+
+def model_revision_kwargs(model_name: str) -> dict[str, str]:
+    revision = MODEL_REVISIONS.get(model_name)
+    return {"revision": revision} if revision else {}
 
 
 def restore_gte_buffers(embedding_function, model_name: str):

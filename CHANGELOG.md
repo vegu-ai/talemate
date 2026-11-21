@@ -2,6 +2,14 @@
 
 _Auto-generated. Do not edit by hand._
 
+## 0.40.1
+
+### Bug Fixes
+
+**Memory**
+
+- The Alibaba-NLP/gte-base-en-v1.5 embeddings preset loads again after the model's upstream change, including when an updated copy is already cached.
+
 ## 0.40.0
 
 ### Upgrade Notes

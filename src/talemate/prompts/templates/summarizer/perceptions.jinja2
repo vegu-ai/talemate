@@ -34,13 +34,13 @@ OBSERVABLE FACT CHECK: Resolve physical referents before excluding private menta
 Return a JSON object with a views array inside <PERCEPTIONS></PERCEPTIONS> tags. Exactly one entry per character in cast, using their exact name. Fields, in this order: audience (one-element array), status (ready or omitted), exclusions (array of {"span": exact passage text, "reason": one word, "forbidden": array of secret-bearing words or phrases{% if rewrite_hidden_traces %}, "trace": optional sensory rendering{% endif %}}; [] when nothing is excluded or the view is omitted), text (the accessible passage with bounded regions rewritten for ready, null for omitted), knowledge_ids (array of supplied established-knowledge IDs actually used for this view), passage_ids (array of prior physical-context message IDs actually used for this view). Both ID arrays are required; use [] when there are no citations for that array. Cite only decisive inputs, not every available context item. For an omission caused by an earlier passage (for example, unconsciousness), cite that passage even though the character did not perceive it. Do not include the current passage ID in passage_ids: the host always records it itself, and ignores any citation of it. Never invent IDs or cite another audience's knowledge. No other fields, and no explanation or prose outside the tags.
 Example shape: <PERCEPTIONS>{"views": [{"audience": ["Alice"], "status": "ready", "exclusions": [], "text": "<the passage, verbatim>", "knowledge_ids": [], "passage_ids": []}, {"audience": ["Bob"], "status": "ready", "exclusions": [{"span": "<exact passage text>", "reason": "inaudible", "forbidden": ["<secret-bearing phrase>"]}], "text": "<the accessible passage with bounded rewrites>", "knowledge_ids": [], "passage_ids": []}, {"audience": ["Cora"], "status": "omitted", "exclusions": [], "text": null, "knowledge_ids": [], "passage_ids": [12]}]}</PERCEPTIONS>
 <|CLOSE_SECTION|>
+<|SECTION:ANALYTICAL CONTEXT AND FINALIZED PASSAGE|>
+{{ context_json }}
+<|CLOSE_SECTION|>
 {% if validation_error %}
 <|SECTION:REPAIR|>
 The previous response failed validation: {{ validation_error }}
-Return valid views for every character in the cast below. Valid views for other characters have already been kept; do not repeat or replace them.
+Return valid views for every character in the cast above. Valid views for other characters have already been kept; do not repeat or replace them.
 <|CLOSE_SECTION|>
 {% endif %}
-<|SECTION:ANALYTICAL CONTEXT AND FINALIZED PASSAGE|>
-{{ context | tojson(indent=2) }}
-<|CLOSE_SECTION|>
 {{ bot_token }}

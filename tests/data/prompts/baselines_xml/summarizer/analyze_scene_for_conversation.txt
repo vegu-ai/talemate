@@ -16,6 +16,7 @@ occupation: Healer
 Mocked memory response
 A wandering healer with knowledge of ancient herbs.
 </CHARACTERS>
+
 <CLASSIFICATION>
 Content Classification: Fantasy adventure story
 

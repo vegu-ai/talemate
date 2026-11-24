@@ -1,0 +1,8 @@
+{# GENERAL REINFORCEMENTS #}
+{% set general_reinforcements = scene.world_state.filter_reinforcements(insert=reinforcement_inserts|default(['all-context'])) -%}
+{%- for reinforce in general_reinforcements %}
+{%- set reinforce_text = reinforce.context_for(scene, knowledge_viewer|default(none)) -%}
+{% if reinforce_text %}{{ reinforce_text|condensed }}
+
+{% endif %}{% endfor %}
+{# END GENERAL REINFORCEMENTS #}

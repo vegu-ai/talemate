@@ -597,30 +597,49 @@ async def test_director_action_evidence_labels_and_delimits_every_item(advice):
         for block in text.split("<|SECTION:CHARACTER EVIDENCE FOR ")[1:]
     ]
     assert [block.split("|>", 1)[0] for block in blocks] == ["ALICE", "BOB", "CARA"]
+    # Authored items lead the prompt in their own sections; the per-turn evidence
+    # follows the history and points back to them.
+    authored_blocks = [
+        block.split("<|CLOSE_SECTION|>", 1)[0]
+        for block in text.split("<|SECTION:AUTHORED KNOWLEDGE FOR ")[1:]
+    ]
+    assert [block.split("|>", 1)[0] for block in authored_blocks] == [
+        "ALICE",
+        "BOB",
+        "CARA",
+    ]
+    assert text.index("AUTHORED KNOWLEDGE FOR CARA") < text.index(
+        "CHARACTER EVIDENCE FOR ALICE"
+    )
     expected_authored = {
         (None, "Bob's personality: BOB-PERSONALITY"),
         (None, "Bob - ferry route: BOB-ROUTE"),
         ("World entry: the-lighthouse", "LIGHTHOUSE-LINE-1\n\nLIGHTHOUSE-LINE-2"),
     }
-    for block, item in zip(blocks, evidence, strict=True):
+    for block, authored_block, item in zip(
+        blocks, authored_blocks, evidence, strict=True
+    ):
         name = item["character"]
         assert {(entry.label, entry.text) for entry in item["authored"]} == (
             expected_authored
         )
         assert len(item["history"]) == 2
         assert "LATER-PASSAGE" in item["history"][-1]
-        authored = block.index("### Authored knowledge")
+        assert "### Authored knowledge" not in block
+        assert f"Authored knowledge for {name} is listed earlier." in block
         history = block.index(f"### {name}'s history, oldest first")
         snapshot = block.index("### Last-known snapshot")
-        assert authored < history < snapshot
+        assert history < snapshot
         for entry in item["authored"]:
             framed = f"[{entry.label}]\n{entry.text}" if entry.label else entry.text
-            assert f"\n{framed}\n---\n" in block[authored:history]
+            assert f"\n{framed}\n---\n" in authored_block
         for entry in item["history"]:
             assert f"\n{entry.strip()}\n---\n" in block[history:snapshot]
-        assert "[#" not in block
-        assert "---\n\n" not in block
-        assert block.count("\n---") == len(item["authored"]) + len(item["history"])
+        for part in (block, authored_block):
+            assert "[#" not in part
+            assert "---\n\n" not in part
+        assert block.count("\n---") == len(item["history"])
+        assert authored_block.count("\n---") == len(item["authored"])
 
 
 @pytest.mark.asyncio
@@ -1099,3 +1118,31 @@ async def test_chat_retains_action_inserted_message(advice, monkeypatch, mode, o
     else:
         assert len(results) == 1
     assert decisions.await_count == (2 if outcome == "complete" else 1)
+
+
+def test_reinforcement_notes_do_not_evict_authored_entries(advice):
+    scene, _ = advice
+
+    def doc(key, text, **meta):
+        return {
+            "id": key,
+            "text": text,
+            "group": ("authored",),
+            "label": key,
+            "meta": {"knowledge_common": True, **meta},
+        }
+
+    facts = [doc(f"fact-{i}", f"FACT-{i} detail " * 12) for i in range(5)]
+    note = doc("note", "NOTE grows every turn " * 30, knowledge_reinforcement=True)
+    budget = 3 * (sum(count_tokens(fact["text"]) for fact in facts) + 10)
+    # The note alone would displace the last authored facts under a shared budget.
+    assert count_tokens(note["text"]) > 10
+    documents = {d["id"]: d for d in [facts[0], note, *facts[1:]]}
+
+    context = advice_context(scene, "Bob", budget, documents=documents)
+
+    authored = [item.label for item in context["authored"] if not item.reinforcement]
+    assert authored == [fact["label"] for fact in facts]
+    assert [item.label for item in context["authored"] if item.reinforcement] == [
+        "note"
+    ]

@@ -1,3 +1,17 @@
+## Scene
+
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+[CHAT_START_MARKER: User conversation began after the above scene snapshot]
+
+## Important notes
+
+UNPLAYED: There has been no progress in the interactive story yet.
+
+STORY TITLE: The Forest Clearing
+
 ## Conversation context
 This is a chat between you (the Director) and the user about a fictional scene in a dynamic storytelling/roleplaying text-based experience provided through a system called Talemate. 
 
@@ -20,20 +34,6 @@ There is NO overal intention / set of expectations for this experience.
 
 ## Player character
 IMPORTANT: There is a designated `player` character in the scene, that is controlled by the user: "Hero".
-
-## Scene
-
-Elena: Hello there, traveler.
-The sun filters through the leaves above.
-Marcus: What brings you to these woods?
-
-[CHAT_START_MARKER: User conversation began after the above scene snapshot]
-
-## Important notes
-
-UNPLAYED: There has been no progress in the interactive story yet.
-
-STORY TITLE: The Forest Clearing
 
 ## What are context ids?
 Context IDs are a way to identify specific pieces of information in the system. The can range from static story configuration information to dynamic scene information.

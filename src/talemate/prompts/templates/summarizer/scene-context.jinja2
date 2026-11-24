@@ -3,12 +3,14 @@
 {% with query_personality=True -%}
 {% include "character-context.jinja2" -%}
 {% endwith %}
-{% include "extra-context-static.jinja2" -%}
+{# World-state notes change between turns; they render with the volatile context. #}
+{% with skip_general_reinforcements=True %}{% include "extra-context-static.jinja2" -%}{% endwith %}
 {% endset %}
 {# END RENDERED CONTEXT #}
 
 {# VOLATILE CONTEXT (for budget calculation) #}
 {% set volatile_context_text %}
+{% include "general-reinforcements.jinja2" %}
 {% include "memory-context.jinja2" %}
 {% endset %}
 {# END VOLATILE CONTEXT #}
@@ -37,6 +39,17 @@
 
 {# RENDER PROMPT #}
 {% set volatile_placement = volatile_context_placement() %}
+{% if volatile_placement == "after_history" and history_first|default(false) %}
+{# The scene only grows at its tail; the character context changes every
+   few turns and would cost the whole scene behind it. #}
+<|SECTION:SCENE|>
+{{ scene_context_text }}
+<|CLOSE_SECTION|>
+{{ rendered_context }}
+{% if authored_context is defined %}{{ authored_context }}{% endif %}
+{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
+{{ volatile_context_text }}
+{% else %}
 {{ rendered_context }}
 {% if volatile_placement != "after_history" %}
 {% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
@@ -48,4 +61,5 @@
 {% if volatile_placement == "after_history" %}
 {% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
 {{ volatile_context_text }}
+{% endif %}
 {% endif %}

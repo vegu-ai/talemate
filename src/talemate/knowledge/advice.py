@@ -35,6 +35,10 @@ ENTRY_SOURCE_KINDS = {"dialogue": "message", "archived": "summary", "layer": "su
 class AuthoredEvidence(pydantic.BaseModel):
     label: str | None = None
     text: str
+    # Reinforcement answers change from turn to turn; prompts that order for
+    # prefix caching render them apart from the stable authored entries.
+    # Excluded from dumps so analysis fingerprints stay unchanged.
+    reinforcement: bool = pydantic.Field(default=False, exclude=True)
 
 
 def advice_character(
@@ -107,21 +111,29 @@ def advice_context(
     read = read or PerspectiveReadContext(scene)
     if documents is None:
         documents = audience_documents(scene, groups={("authored",)}, read=read)
+    # Authored entries and reinforcement notes get separate budgets. Notes change
+    # length every turn; sharing one budget let them push authored facts in and
+    # out, which both hid authored knowledge and broke the cached prompt prefix.
     authored = []
-    used = 0
+    used = {False: 0, True: 0}
     for document in documents.values():
         meta = document["meta"]
         if not (
             meta["knowledge_common"] or viewer in meta.get("knowledge_audience", ())
         ):
             continue
+        reinforcement = bool(meta.get("knowledge_reinforcement"))
         size = count_tokens(document["text"])
-        if used + size > budget // 3:
+        if used[reinforcement] + size > budget // 3:
             continue
         authored.append(
-            AuthoredEvidence(label=document.get("label"), text=document["text"])
+            AuthoredEvidence(
+                label=document.get("label"),
+                text=document["text"],
+                reinforcement=reinforcement,
+            )
         )
-        used += size
+        used[reinforcement] += size
     snapshot = snapshot_for(scene, viewer, read=read)
     bounded_snapshot = {"location": None, "characters": [], "items": [], "places": []}
     for key, value in snapshot.items():

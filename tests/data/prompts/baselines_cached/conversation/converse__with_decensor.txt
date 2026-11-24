@@ -1,3 +1,12 @@
+## Scene
+(Broad character guidance for Elena: Speaks calmly and with wisdom. )
+
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
 ## Characters
 
 ### Hero
@@ -56,14 +65,5 @@ The length of your response must fit within 4 paragraphs.
 ## Acting instructions
 **TENSE**: Examine the existing conversation history and maintain the EXACT same tense (past/present) used in previous messages. **NEVER switch tenses mid-conversation**.
 **PERSPECTIVE**: The narrative perspective for this scene is — Third person limited, past tense.. Apply it consistently to Elena's actions and thoughts.
-
-## Scene
-(Broad character guidance for Elena: Speaks calmly and with wisdom. )
-
-Elena: Hello there, traveler.
-
-The sun filters through the leaves above.
-
-Marcus: What brings you to these woods?
 
 <|BOT|>ELENA

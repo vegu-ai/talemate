@@ -101,11 +101,12 @@ class Focal:
         for callback in self.callbacks.values():
             callback.state = self.state
 
-    def render_instructions(self) -> str:
+    def render_instructions(self, include_functions_header: bool = True) -> str:
         prompt = Prompt.get(
             "focal.instructions",
             {
                 "max_calls": self.max_calls,
+                "include_functions_header": include_functions_header,
                 "state": self.state,
                 "budget_exempt": [
                     cb.name

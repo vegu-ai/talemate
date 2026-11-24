@@ -26,6 +26,8 @@ Optimized placement:
                                        ^^^ changes often, but history cache is preserved
 ```
 
+With the option enabled, the agent-specific instructions, task text and function-call blocks are also rendered after the scene history, and reinforcement answers are kept apart from the authored character evidence. Everything that changes from turn to turn then sits behind the history, so the cached prefix covers the system prompt, the character definitions and the scene history itself.
+
 ## Configuration
 
 Volatile context placement is controlled at two levels: per-client and per-agent.

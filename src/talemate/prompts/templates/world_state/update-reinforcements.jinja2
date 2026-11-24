@@ -8,8 +8,8 @@ Override example:
 -#}
 {# RENDERED CONTEXT #}
 {% set rendered_context -%}
-{% include "extra-context-static.jinja2" %}
-{% include "extra-context-dynamic.jinja2" %}
+{# World-state notes and dynamic instructions change between turns; they render with the volatile context. #}
+{% with skip_general_reinforcements=True %}{% include "extra-context-static.jinja2" %}{% endwith %}
 {% if character and character.description %}
 {{ character.name }}'s description: {{ character.description|condensed }}
 {% endif %}
@@ -18,6 +18,8 @@ Override example:
 
 {# VOLATILE CONTEXT (for budget calculation) #}
 {% set volatile_context_text %}
+{% include "general-reinforcements.jinja2" %}
+{% include "extra-context-dynamic.jinja2" %}
 {%- with memory_query=scene.snapshot(), iterate=5, exclude_history=True -%}
 {% include "memory-query.jinja2" %}
 {% endwith %}

@@ -1,3 +1,12 @@
+## Scene
+Content Classification: Fantasy adventure story
+
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
 ## Characters
 
 ### Hero
@@ -19,15 +28,6 @@ A wandering healer with knowledge of ancient herbs.
 
 #### General character guide for Elena
 Speaks calmly and with wisdom.
-
-## Scene
-Content Classification: Fantasy adventure story
-
-Elena: Hello there, traveler.
-
-The sun filters through the leaves above.
-
-Marcus: What brings you to these woods?
 
 ## Analysis of scene
 The scene needs more description.

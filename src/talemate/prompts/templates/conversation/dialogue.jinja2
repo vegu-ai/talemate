@@ -12,7 +12,19 @@ Override example:
   {%- set speaker_role = "other" -%}
 {%- endif -%}
 {%- set resolved_perspective = scene.perspective_for_role(speaker_role) -%}
+{% set volatile_placement = volatile_context_placement() %}
 {# EXTRA CONTEXT CONTENT #}
+{% set additional_context_text -%}
+<|SECTION:ADDITIONAL INFORMATION|>
+{% with
+  reinforcement_character=talking_character.name,
+  reinforcement_character_inserts=["conversation-context"],
+  speaker_role=speaker_role
+%}
+  {% include "extra-context-static.jinja2" %}
+{% endwith %}
+<|CLOSE_SECTION|>
+{% endset %}
 {% set rendered_context_text -%}
 <|SECTION:CHARACTERS|>
 {% for character in characters %}
@@ -27,15 +39,7 @@ Override example:
 {{ scene.description }}
 <|CLOSE_SECTION|>
 {% endif -%}
-<|SECTION:ADDITIONAL INFORMATION|>
-{% with
-  reinforcement_character=talking_character.name,
-  reinforcement_character_inserts=["conversation-context"],
-  speaker_role=speaker_role
-%}
-  {% include "extra-context-static.jinja2" %}
-{% endwith %}
-<|CLOSE_SECTION|>
+{% if volatile_placement != "after_history" %}{{ additional_context_text }}{% endif %}
 {% endset -%}
 {# END EXTRA CONTEXT CONTENT #}
 
@@ -47,6 +51,7 @@ Override example:
 {% set memory_context_state = namespace(stack=none) -%}
 {% set memory_context_text %}{% include "memory-context.jinja2" %}{% endset -%}
 {% set other_volatile_context_text %}
+{% if volatile_placement == "after_history" %}{{ additional_context_text }}{% endif %}
 {% include "world-state-snapshot.jinja2" %}
 {% include "extra-context-dynamic.jinja2" %}
 {% include "character-knowledge.jinja2" %}
@@ -127,6 +132,12 @@ Override example:
 {% set volatile_placement = volatile_context_placement() %}
 {% set scene_context_length = count_tokens(scene_context_text) %}
 {% set large_context_threshold = 1024 %}
+{% if volatile_placement == "after_history" %}
+{# The scene only grows at its tail; the character sheets change every
+   few turns and would cost the whole scene behind them. #}
+{{ scene_context_text }}
+
+{% endif %}
 {{ rendered_context_text }}
 
 {% if volatile_placement != "after_history" %}
@@ -136,20 +147,26 @@ Override example:
 
 {{ scene_guidelines }}
 
+{% if volatile_placement != "after_history" %}
 {{ task_main_text }}
 
 <|RESPONSE_LENGTH_INSTRUCTIONS|>
+{% endif %}
 
-{% if scene_context_length < large_context_threshold %}{{ acting_instructions }}{% endif %}{# if scene context is relatively short, its beneficial to move the acting instructions into the task #}
+{% if volatile_placement != "after_history" and scene_context_length < large_context_threshold %}{{ acting_instructions }}{% endif %}{# if scene context is relatively short, its beneficial to move the acting instructions into the task #}
 
+{% if volatile_placement != "after_history" %}
 {{ scene_context_text }}
-
-{% if volatile_placement == "after_history" %}
+{% else %}
 {% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
 {{ volatile_context_text }}
 {% endif %}
 
-{% if scene_context_length >= large_context_threshold %}{{ acting_instructions }}{% endif %}{# if scene context is relatively long, acting instrctions should be close to the end of the prompt so they get more importance attributed to them #}
+{% if volatile_placement == "after_history" %}
+{{ task_main_text }}
+<|RESPONSE_LENGTH_INSTRUCTIONS|>
+{% endif %}
+{% if volatile_placement == "after_history" or scene_context_length >= large_context_threshold %}{{ acting_instructions }}{% endif %}{# if scene context is relatively long, acting instrctions should be close to the end of the prompt so they get more importance attributed to them #}
 {# END RENDER PROMPT #}
 
 {% block response_scaffolding %}{% endblock -%}

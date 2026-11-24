@@ -1,3 +1,10 @@
+## Scene
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
 ## Characters
 
 ### Hero
@@ -13,13 +20,6 @@ age: early 30s
 occupation: Healer
 
 A wandering healer with knowledge of ancient herbs.
-
-## Scene
-Elena: Hello there, traveler.
-
-The sun filters through the leaves above.
-
-Marcus: What brings you to these woods?
 
 ## Task
 Generate 3 interesting actions for Elena to advance the current scene in this text adventure game. Consider:

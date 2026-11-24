@@ -6,9 +6,13 @@ Override example:
   {{ set_anchor_extractor("message", "<MY_TAG>", "</MY_TAG>", tracked_tags=["ANALYSIS", "MY_TAG"]) }}
   {{ set_as_is_extractor("message") }}
 -#}
+{% set volatile_placement = volatile_context_placement() %}
+{# CHARACTER EVIDENCE: authored entries are stable, everything else changes per turn #}
+{% set planning_evidence = agent_action("director", "guidance_context", budget=[max_tokens // 3, 16384]|min) if character_knowledge_enabled(scene) else [] %}
+{% set authored_evidence %}{% with evidence_part="stable" %}{% include "character-evidence-planning.jinja2" %}{% endwith %}{% endset %}
+{% set current_evidence %}{% with evidence_part="current" %}{% include "character-evidence-planning.jinja2" %}{% endwith %}{% endset %}
 {# RENDERED CONTEXT #}
 {% set rendered_context -%}
-{% include "character-evidence-planning.jinja2" %}
 <|SECTION:Conversation Context|>
 This is a chat between you ({% if persona_name %}{{ persona_name }}, {% else %}the Director{% endif %}) and the user about a fictional scene in a dynamic storytelling/roleplaying text-based experience provided through a system called Talemate. 
 
@@ -63,7 +67,7 @@ The user explicitly rejected these calls and supplied replacement instructions. 
 {% endset %}
 
 {# Compute reserved from context + instructions (no Chat History here) #}
-{% set reserved_tokens = count_tokens(rendered_context + instructions_text) %}
+{% set reserved_tokens = count_tokens(authored_evidence + current_evidence + rendered_context + instructions_text) %}
 {% set _ = budgets.set_reserved(reserved_tokens) %}
 
 {# SCENE CONTEXT #}
@@ -75,8 +79,18 @@ The user explicitly rejected these calls and supplied replacement instructions. 
 {% set trimmed_history = director_history_trim(history, budgets.director_chat) %}
 
 {# RENDER PROMPT #}
+{% if volatile_placement == "after_history" %}
+{# The scene only grows at its tail; character knowledge, intent and pins
+   change every few turns and would cost the whole scene behind them. #}
+{{ scene_context_text }}
+{{ rendered_context }}
+{{ authored_evidence }}
+{% else %}
+{{ authored_evidence }}
+{{ current_evidence }}
 {{ rendered_context }}
 {{ scene_context_text }}
+{% endif %}
 {{ instructions_text }}
 
 <|SECTION:Chat History - THIS IS WHAT YOU RESPOND TO|>
@@ -99,6 +113,9 @@ Result: {{ json(m.result) }}
 {% endif %}
 {% endfor %}
 <|CLOSE_SECTION|>
+{% if volatile_placement == "after_history" %}
+{{ current_evidence }}
+{% endif %}
 
 REMINDER: You are the Director discussing the scene above with the user. You are NOT in the scene. Respond to message [#{{ history|length }}] as the Director.{% if trimmed_history[-1].type in ['action_result', 'batch_result'] %}
 Message [#{{ history|length }}] was the result to the action you executed, so you must evaluate the action result.{% endif %}

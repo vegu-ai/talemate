@@ -171,10 +171,13 @@ async def test_generate_without_images_raises(backend, monkeypatch):
 
 async def test_edit_posts_reference_image_and_returns_binary(backend, monkeypatch):
     calls = fake_http(monkeypatch, reply(content=IMAGE))
+    # reference_bytes is read from the scene's assets; stand in for it
+    monkeypatch.setattr(
+        GenerationRequest, "reference_bytes", property(lambda self: [IMAGE])
+    )
 
     response = await backend.generate(
-        request(GEN_TYPE.IMAGE_EDIT, reference_bytes=[IMAGE]),
-        GenerationResponse(),
+        request(GEN_TYPE.IMAGE_EDIT), GenerationResponse()
     )
 
     assert response.generated == IMAGE
@@ -192,5 +195,5 @@ async def test_edit_requires_a_reference_image(backend):
 async def test_unsupported_generation_type_is_rejected(backend):
     with pytest.raises(ValueError, match="only supports"):
         await backend.generate(
-            request(GEN_TYPE.IMAGE_ANALYSIS), GenerationResponse()
+            request(GEN_TYPE.UPLOAD), GenerationResponse()
         )

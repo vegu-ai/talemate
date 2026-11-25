@@ -1,12 +1,10 @@
 """
 Venice.ai image generation backend for Talemate's visual agent.
 
-Modeled on openai_image.py. Text-to-image only (no edit / analysis).
-Uses Venice's native POST /image/generate endpoint, which returns base64
-images in JSON.
-
-UNTESTED against a live Talemate install: verify the model name, supported
-resolutions and any parameter errors against Venice's current docs/models list.
+Modeled on openai_image.py. Supports text-to-image and image editing (no
+analysis). Generation uses Venice's native POST /image/generate endpoint, which
+returns base64 images in JSON; editing uses POST /image/edit, which returns
+binary image data.
 """
 
 import os

@@ -241,7 +241,7 @@ class VeniceMixin:
     def venice_shared_config(cls, model: str) -> dict[str, AgentActionConfig]:
         return {
             "api_key": AgentActionConfig(
-                type="text",
+                type="password",
                 value="",
                 label="Venice API Key",
                 description="Falls back to the VENICE_API_KEY environment variable if empty.",
